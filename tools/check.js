@@ -68,7 +68,7 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS, optional 'gear=
   ['Vhalgrath', 'wyrm', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1'],
   // set 2: Hrimgar, the Frost Titan
   ['Hrimgar', 'titan', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post1'],
-  ['Hrimgar', 'titan', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1', 'runs=5'],   // (this line-up clears Hrimgar about 40%: five tries keep a chance miss rare)
+  ['Hrimgar', 'titan', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1', 'runs=8'],   // (this line-up clears Hrimgar about a third of the time, 10 of 30 after the 2026-10-26 pass: eight tries keep a chance miss rare)
   ['Volkar', 'volkar', 'bastion:base', 'threadweaver:base', 'marionettist:base', 'pyromancer:base'],
   // Gloomsworn (class 18): the base kit and each spec tanking a boss (a Hollow's saves: tools/hollow-test.js)
   ['Grubnak', 'grubnak', 'gloomsworn:base', 'cleric:base', 'ranger:base', 'pyromancer:base'],
@@ -102,21 +102,21 @@ RAIDS.push(
 // set 2: the Hydra of the Drowned Temple (Boss VIII)
 RAIDS.push(
   ['the Hydra', 'hydra', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post1'],
-  ['the Hydra', 'hydra', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1'],
+  ['the Hydra', 'hydra', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1', 'runs=10'],   // (this line-up clears the Hydra about 20%, 8 of 40 before and after the 2026-10-26 pass: ten tries keep a chance miss rare)
 );
 // set 3: Corvane, the Unburied Blade (Boss IX). Set 3 Normal is for a party that has cleared set 2 on Normal and Hard (post3)
 RAIDS.push(
   ['Corvane', 'corvane', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post3'],
-  ['Corvane', 'corvane', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post3'],
+  ['Corvane', 'corvane', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post3', 'runs=8'],   // (this line-up clears Corvane about 40%, 7 of 15 before and 5 of 15 after the 2026-10-26 pass: eight tries)
 );
 // set 3: Brannoc the Undefeated (Boss X)
 RAIDS.push(
   ['Brannoc', 'brannoc', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post3'],
-  ['Brannoc', 'brannoc', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post3'],
+  ['Brannoc', 'brannoc', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post3', 'runs=6'],   // (this line-up clears Brannoc about 40-50% after the 2026-10-26 pass: six tries)
   ['Morrow-Oak', 'morrowoak', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post3'],
   ['Morrow-Oak', 'morrowoak', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post3'],
   ['Caelum Vey', 'caelum', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post3'],
-  ['Caelum Vey', 'caelum', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post3'],
+  ['Caelum Vey', 'caelum', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post3', 'runs=6'],   // (this line-up clears Caelum about 45% after the 2026-10-26 pass, which made his Normal busier: six tries)
 );
 // Hard smoke runs: one per boss, with the plain line-up. Bots aren't expected to clear Hard; the script just has to run
 // clean and the longest of 3 fights has to last a while (HARD_MIN seconds) before they wipe

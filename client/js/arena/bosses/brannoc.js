@@ -8,7 +8,8 @@
 //   Act I, First Blood (100% -> 75%): Sunwheel, Victory Leap (a jump onto a hero, then a pose that leaves him open; the wheel that
 //     follows is thrown from where he landed), Hammer Heel (the tank pair), Roar of the Stands.
 //   Act II, Crowd-Pleaser (75% -> 52%): Sand Furrow (a slow line of churned sand that stays a while) across a Sunwheel, Banner Fall
-//     (the wheel's bounces knock the banners loose), two Sunwheels in a row, a Leap and the wheel from its landing.
+//     (the wheel's bounces knock the banners loose), two Sunwheels in a row, a Leap and the wheel from its landing, a wheel then the
+//     tank's Heel, a Roar then the Heel.
 //   The Tide Rises (52%, PUSH): the colosseum floods and breaks apart; he rises from the sea as the Tidewrought and the party lands on
 //     a ring of stone (the room becomes 'brannoc:sea', fight.js setForm). The debris on the ring shelters from his waves and is a post
 //     for his giant wheel (Sunwheel Unbound bounces off the stones as well as the rim).
@@ -24,7 +25,11 @@
 //   Double Grip: both hands, on two heroes; the party splits to break them.
 //   Riposte:     a caught wheel is kicked back once more, along a new painted path.
 //   Riptide:     Breaker's wave bounces twice.
-// Hard also draws the first form's wheel walls, the Grip targets, the stones and the order of the titan's sets fresh each pull.
+// Hard also draws the first form's wheel walls, the Grip targets, the stones and the order of every act's middle sets fresh each pull
+// (never an order that leaves the tank a long stretch without a beat, or puts two of his beats too close together: mix()).
+// Pairs: Roar then Heel (the raidwide, then the tank's stamps while the healer tops up), Sunwheel then Heel (Act II), Unbound then
+// Fist Slam (Act III); with Deep Call then Fist Slam / a wheel, Breaker then a wheel and Grip then Breaker, tank and healer have a beat
+// about every half minute in every act.
 
 const BRANNOC = {
   id: 'brannoc', name: 'Brannoc', title: 'the Undefeated',
@@ -45,18 +50,67 @@ const BRANNOC = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      roar: H ? 11200 : 14000, heel1: H ? 15000 : 17000, heel2: H ? 19000 : 22000, leap: H ? 21000 : 24500, wheel: H ? 19800 : 23000,
+      roar: H ? 11800 : 14300, heel1: H ? 15000 : 17000, heel2: H ? 19000 : 22000, leap: H ? 21000 : 24500, wheel: H ? 19800 : 23000,
       catch: H ? 15500 : 18000, catchBig: H ? 11500 : 13000, burst: H ? 10500 : 14000,   // (a missed catch still stings the room, but never chains into dead healers)
       furrow: H ? 3400 : 3200, furrowLine: H ? 15800 : 18200, banner: H ? 17000 : 19600,
-      slam: H ? 20500 : 23500, wave: H ? 21000 : 24000, bleed: H ? 1300 : 1200, undertow: H ? 19000 : 27000, deep: H ? 14000 : 16400,
-      handHp: H ? 17000 : 30000, rise: H ? 9800 : 11200,
+      slam: H ? 20500 : 23500, wave: H ? 21000 : 24000, bleed: H ? 1300 : 1200, undertow: H ? 22200 : 27000, deep: H ? 14400 : 17400,
+      handHp: H ? 16000 : 31000,   // (Hard's hand is the weaker one on purpose: Double Grip holds two heroes, so the party splits to break two)
+      rise: H ? 9800 : 11200,
     };
     // (Hard closes every calm between sets by a sixteenth: the moves are the same, they come sooner)
     const S = (...steps) => { const st = steps.filter(Boolean); return H && st.length ? [[st[0][0] * 0.94, ...st[0].slice(1)], ...st.slice(1)] : st; };
     const live = id => f.alive().find(p => p.id === id);
     const nonTank = () => { const pool = f.nonTanks().length ? f.nonTanks() : f.alive(); return pool.length ? f.pick(pool) : null; };
     const hold = d => { B.holdUntil = Math.max(B.holdUntil || 0, f.t + d); };
-    const mix = (head, mid, tail) => [...head, ...(H ? f.shuffle(mid) : mid), ...tail];
+    // Hard draws the order of an act's middle sets each pull, but only from orders that are good for the tank and the healer: every
+    // order is tried once and one of the valid ones is drawn (never a "best of a bad lot"). An order is valid when
+    //   - the tank is never without a beat (Heel, fist) for more than `lim` s, nor given two under `near` s apart (a Heel pair is a
+    //     whole tank's health),
+    //   - two raidwides (Roar, Deep Call) never land under RW_NEAR s apart,
+    //   - a Twin Wheels set never follows another Twin Wheels set or a Sunwheel Unbound set (two roads to re-read at once).
+    // Normal keeps the order as written, which is held to the same rules (f.brannocMix has the counts, for tools/testing).
+    const BEAT_AT = { 'Hammer Heel': 4, 'Fist Slam': 3.8, 'Breaker': 3.8 };   // (a tank beat's stamp lands this long after its step begins)
+    const RW_AT = { 'Roar of the Stands': 4.4, 'Deep Call': 4.4 };            // (a raidwide lands this long after its step begins)
+    const RW_NEAR = 18;
+    const orderScore = (sets, lim, near) => {
+      let t = 0, last = 0, rwLast = -99, worst = 0, tight = 0, rw = 0, clash = 0, prev = null;
+      const beat = at => { worst = Math.max(worst, at - last); if (last > 0 && at - last < near) tight++; last = at; };
+      for (const set of sets) {
+        const twin = set.some(st => st[2] === 'Twin Wheels');
+        if (twin && prev && prev.some(st => st[2] === 'Twin Wheels' || st[2] === 'Sunwheel Unbound')) clash++;
+        for (const [dt, fn, name] of set) {
+          t += dt;
+          if (fn && BEAT_AT[name]) beat(t + BEAT_AT[name]);
+          if (fn && RW_AT[name]) { if (t + RW_AT[name] - rwLast < RW_NEAR) rw++; rwLast = t + RW_AT[name]; }
+        }
+        prev = set;
+      }
+      worst = Math.max(worst, t + 6 - last);
+      return { worst, tight, rw, clash, ok: worst <= lim && !tight && !rw && !clash };
+    };
+    const mix = (head, mid, tail, lim = 38, near = 18) => {
+      const keep = [...head, ...mid, ...tail], log = f.brannocMix = f.brannocMix || [];
+      if (!H) { log.push({ normal: orderScore(keep, lim, near) }); return keep; }
+      // every order of the middle sets (at most eight: 40320), valid ones kept
+      const valid = [], n = mid.length, idx = mid.map((_, k) => k), c = new Array(n).fill(0);
+      let bad = null, badPen = Infinity, total = 0;
+      const see = () => {
+        total++;
+        const sets = [...head, ...idx.map(k => mid[k]), ...tail], sc = orderScore(sets, lim, near);
+        if (sc.ok) valid.push(sets);
+        else { const pen = sc.worst + (sc.tight + sc.rw + sc.clash) * 30; if (pen < badPen) { badPen = pen; bad = sets; } }
+      };
+      see();
+      for (let k = 0; k < n;) {   // (Heap's algorithm)
+        if (c[k] < k) { const a = k % 2 ? c[k] : 0; [idx[a], idx[k]] = [idx[k], idx[a]]; see(); c[k]++; k = 0; } else { c[k] = 0; k++; }
+      }
+      log.push({ valid: valid.length, total });
+      return valid.length ? valid[Math.floor(f.rng() * valid.length)] : bad;
+    };
+    // a step that waits for a Riposte still on the floor to end (two cast bars never overlap): the Heel after Act II's Twin Wheels
+    // (the Riposte is Hard's, after a caught wheel; Normal has none)
+    let riposteEnd = 0;
+    const afterRiposte = fn => () => { const w = riposteEnd - f.t; if (w > 0) f.afterKeep(w + 0.05, fn); else fn(); };
     let pathN = 0;                // (each painted path is its own room moment: 'brpath:<n>', so two at once both show)
     let titan = false;            // the second form: he stands in the sea and never walks
     let stones = [];              // the debris on the ring (the wheel bounces off them): [[x, y], ...]
@@ -175,7 +229,8 @@ const BRANNOC = {
         for (let k = 0; k < 40 && !p2; k++) { const q = plan(a1 + Math.PI * (0.45 + f.rng() * 0.45) * (f.rng() < 0.5 ? -1 : 1)); if (Math.hypot(q.end[0] - p1.end[0], q.end[1] - p1.end[1]) > 340 && good(q)) p2 = q; }
         if (p2) throwOne(p2, TWIN_LATE);
       }
-      f.afterKeep(d + 0.4, () => { B.lockFacing = false; });
+      // (the titan never turns from the north edge: after a throw in the sea he faces the party again, he does not wander)
+      f.afterKeep(d + 0.4, () => { if (titan) { B.facing = Math.PI / 2; B.lockFacing = true; } else B.lockFacing = false; });
     };
     // (Twin Wheels: the second wheel is thrown a beat after the first and runs the second-painted road, so the crossing is clear for a
     // moment between the two: a hero who reads both roads can cut through it, one who stands in it is caught by the second)
@@ -184,6 +239,7 @@ const BRANNOC = {
     const riposte = (c) => {
       if (f.state !== 'live') return;
       const d = f.ct(2.6), path = bounce(c.x, c.y, throwAngle(c.x, c.y, 120, 380), 2);
+      riposteEnd = Math.max(riposteEnd, f.t + d);
       f.emit({ t: 'bcast', name: 'Riposte', dur: d, anim: 'riposte' });
       lay(path.pts, { w: 120, speed: 950, delay: d, tag: 'brRiposte' });
     };
@@ -251,22 +307,26 @@ const BRANNOC = {
 
     // --- the Tidewrought -----------------------------------------------------------------------------------------------------
     // Fist Slam: the great fist comes down where the tank stands (the tank keeps it away from everyone)
-    const fist = () => {
+    const fist = (lock = 1.0) => {
       const tank = f.tank(); if (!tank) return null;
       const d = f.ct(3.8);
       f.cast('Fist Slam', d, 'slam');
-      return f.mech({ type: 'buster', shape: { kind: 'circle', x: tank.x, y: tank.y, r: 175 }, delay: d, dmg: dmg.slam, target: tank.id, follow: tank.id, lockAt: 1.0, tag: 'brFist' });
+      return f.mech({ type: 'buster', shape: { kind: 'circle', x: tank.x, y: tank.y, r: 175 }, delay: d, dmg: dmg.slam, target: tank.id, follow: tank.id, lockAt: lock, tag: 'brFist' });
     };
     // Breaker: the slam sends a wave out to the rim, and it comes back off it (Hard: twice). Debris in the way shelters.
+    // The wave leaves from where the fist comes down, which is known only once the fist stops following the tank: Breaker's fist locks
+    // earlier than a plain Fist Slam's (WAVE_LOCK s before it lands), and the whole road is painted from that moment, so it shows for
+    // WAVE_LOCK + 0.6 s and more before the first piece lands (it used to show for about 1.6 s).
+    const WAVE_LOCK = 1.8;
     const breaker = () => {
-      const m = fist(); if (!m) return;
+      const m = fist(WAVE_LOCK); if (!m) return;
       const d = m.resolveAt - f.t;
       f.cast('Breaker', d, 'slam');
-      f.afterKeep(d - 1.0, () => {
+      f.afterKeep(d - WAVE_LOCK, () => {
         const sx = m.shape.x, sy = m.shape.y;
         const away = Math.atan2(sy - TITAN_AT.y, sx - TITAN_AT.x) + (f.rng() - 0.5) * 0.9;
         const path = bounce(sx, sy, away, H ? 2 : 1, 30);
-        const end = rest(path, 0.9), pts = [...path.pts, end], speed = 650, delay = 1.0 + 0.6;
+        const end = rest(path, 0.9), pts = [...path.pts, end], speed = 650, delay = WAVE_LOCK + 0.6;
         let s0 = 0;
         for (let i = 1; i < pts.length; i++) {
           const [ax, ay] = pts[i - 1], [bx, by] = pts[i], L = Math.hypot(bx - ax, by - ay), ang = Math.atan2(by - ay, bx - ax);
@@ -348,55 +408,58 @@ const BRANNOC = {
       const { path, end, mid } = unboundPlan(n, B.x, B.y + 120);
       lay([...path.pts, end], { w: 190, speed: 800, delay: d, catches: [mid, end], catchR: 100, dmg: 'wheel', catchDmg: 'catchBig', stones: path.st });
     };
-    // Deep Call: the sea heaves and drags everyone in toward the middle (never closer than a step or two from it). Nothing is thrown at
-    // the rim afterwards: the pull is the set-up for what follows (the fist, a wheel), not a trap against the wall.
+    // Deep Call: the sea heaves and drags everyone in to a ring a step or two from the middle (a hero already inside it stays where he is),
+    // so the party really is gathered whichever side it stood on. Nothing is thrown at the rim afterwards: the pull is the set-up for
+    // what follows (the fist, a wheel), not a trap against the wall.
+    const GATHER = 130;
     const deepCall = () => {
       const d = f.ct(4.4);
       f.cast('Deep Call', d, 'call');
       f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.deep, hidden: true, tag: 'brDeep',
-        onResolve: () => { for (const p of f.alive()) { const r = Math.hypot(p.x, p.y); f.knock(p, p.x * 3, p.y * 3, Math.min(170, Math.max(0, r - 70))); } } });
+        onResolve: () => { for (const p of f.alive()) { const r = Math.hypot(p.x, p.y); if (r > GATHER) f.knock(p, p.x * 3, p.y * 3, r - GATHER); } } });
     };
 
     // --- the acts -------------------------------------------------------------------------------------------------------------
     // A pair is two moves that make a new problem: the leap's landing is where the next wheel is thrown from (the party chooses where by
     // where it stands when the ring follows), the pull sets the fist down on a party that has just been dragged together, a wave is
     // still running when the next wheel is drawn, a hand holds someone in the lane of the wave.
+    const WHEEL_HEEL = 10;   // (the Heel is called once the wheel's road, and on Hard the Riposte after a catch, are done)
+    const ROAR_HEEL = 5.4;   // (the Heel is called as the Roar lands)
     const LEAP_WHEEL = 8.2;   // (the pose lasts until 8 s after the leap's cast began; the wheel starts as he is up again)
-    // I. First Blood
+    // I. First Blood. Roar then Heel is a pair (the party takes the raidwide, the tank's stamps follow while the healer is still topping
+    // up): four tank beats in the act, about half a minute apart.
     const first = from => f.course({
       until: 0.75, push: false,
       sets: mix([S([4, roar, 'Roar of the Stands']), S([9, () => sunwheel(), 'Sunwheel'])], [
-        S([13, heel, 'Hammer Heel']),
+        S([12, heel, 'Hammer Heel']),
         S([12, leap, 'Victory Leap'], [LEAP_WHEEL, () => sunwheel(), 'Sunwheel']),
-        S([12, roar, 'Roar of the Stands']),
-        S([11, heel, 'Hammer Heel']),
+        S([13, heel, 'Hammer Heel']),
         S([12, leap, 'Victory Leap']),
+        S([12, roar, 'Roar of the Stands'], [ROAR_HEEL, heel, 'Hammer Heel']),
         H && S([12, () => sunwheel({ twin: true }), 'Twin Wheels']),
       ].filter(Boolean), [
         S([13, () => sunwheel(), 'Sunwheel']),
-        S([12, heel, 'Hammer Heel']),
-        S([11, roar, 'Roar of the Stands']),
+        S([12, roar, 'Roar of the Stands'], [ROAR_HEEL, heel, 'Hammer Heel']),
         S([11, leap, 'Victory Leap']),
-      ]),
+      ], 38),
       closing: [[10, roar, 'Roar of the Stands'], [10, heel, 'Hammer Heel'], [10, () => sunwheel(), 'Sunwheel']],
       next: crowd,
     }, from);
 
-    // II. Crowd-Pleaser (its gate pushes straight into the Tide)
+    // II. Crowd-Pleaser (its gate pushes straight into the Tide). Hard draws the order of its middle sets.
     const crowd = from => f.course({
       until: 0.52, push: true,
-      sets: [
-        S([4, furrow, 'Sand Furrow'], [5, () => sunwheel({ banners: true }), 'Sunwheel']),
+      sets: mix([S([4, furrow, 'Sand Furrow'], [5, () => sunwheel({ banners: true }), 'Sunwheel'])], [
         S([13, heel, 'Hammer Heel']),
-        S([12, roar, 'Roar of the Stands']),
-        S([11, leap, 'Victory Leap'], [LEAP_WHEEL, () => sunwheel({ banners: true }), 'Sunwheel']),
-        S([12, () => sunwheel({ banners: true, twin: true }), H ? 'Twin Wheels' : 'Sunwheel']),
-        S([12, heel, 'Hammer Heel']),
-        S([12, furrow, 'Sand Furrow'], [6, leap, 'Victory Leap']),
-        S([12, roar, 'Roar of the Stands']),
         S([11, () => sunwheel({ banners: true }), 'Sunwheel'], [10, () => sunwheel({ banners: true, twin: true }), H ? 'Twin Wheels' : 'Sunwheel']),
         S([12, heel, 'Hammer Heel']),
-      ],
+        S([12, () => sunwheel({ banners: true, twin: true }), H ? 'Twin Wheels' : 'Sunwheel'], [WHEEL_HEEL, afterRiposte(() => heel()), 'Hammer Heel']),
+        S([12, furrow, 'Sand Furrow'], [6, leap, 'Victory Leap']),
+        S([12, roar, 'Roar of the Stands'], [ROAR_HEEL, heel, 'Hammer Heel']),
+        S([11, leap, 'Victory Leap'], [LEAP_WHEEL, () => sunwheel({ banners: true }), 'Sunwheel']),
+      ], [
+        S([12, roar, 'Roar of the Stands'], [ROAR_HEEL, heel, 'Hammer Heel']),
+      ], 40),
       closing: [[10, roar, 'Roar of the Stands'], [10, heel, 'Hammer Heel'], [10, () => sunwheel({ banners: true }), 'Sunwheel']],
       next: tide,
     }, from);
@@ -410,7 +473,8 @@ const BRANNOC = {
 
     const gripName = () => (H ? 'Double Grip' : 'Undertow Grip');
     const PULL = 5.4;   // (the fist is called as the pull lands)
-    // III. The Tidewrought (Hard draws the order of his middle sets)
+    const UNBOUND_FIST = 7.5;   // (the fist is called while the giant wheel is still running: the tank carries it clear of the road)
+    // III. The Tidewrought (Hard draws the order of his middle sets, never one that leaves the tank without a fist for long)
     const tidewrought = from => f.course({
       until: 0.2, push: true, onStart: () => { B.lockFacing = true; B.facing = Math.PI / 2; },
       sets: mix([S([6, fist, 'Fist Slam']), S([9, () => grip(H ? 2 : 1), gripName()])], [
@@ -419,16 +483,15 @@ const BRANNOC = {
         S([12, deepCall, 'Deep Call'], [PULL, fist, 'Fist Slam']),
         S([12, () => grip(H ? 2 : 1), gripName()]),
         S([12, breaker, 'Breaker'], [6.5, () => unbound(4), 'Sunwheel Unbound']),
-        S([10, fist, 'Fist Slam']),
-        S([10, () => unbound(5), 'Sunwheel Unbound']),
+        S([10, () => unbound(5), 'Sunwheel Unbound'], [UNBOUND_FIST, fist, 'Fist Slam']),
         S([12, deepCall, 'Deep Call'], [PULL, () => unbound(4), 'Sunwheel Unbound']),
         H && S([12, () => sunwheel({ twin: true }), 'Twin Wheels']),
       ].filter(Boolean), [
-        S([12, () => grip(H ? 2 : 1), gripName()], [8, breaker, 'Breaker']),
         S([12, fist, 'Fist Slam']),
+        S([12, () => grip(H ? 2 : 1), gripName()], [8, breaker, 'Breaker']),
         S([10, () => unbound(5), 'Sunwheel Unbound']),
         S([12, deepCall, 'Deep Call'], [PULL, fist, 'Fist Slam']),
-      ]),
+      ], 34),
       closing: [[10, deepCall, 'Deep Call'], [PULL, fist, 'Fist Slam'], [10, breaker, 'Breaker']],
       next: lastRound,
     }, from);
@@ -437,14 +500,14 @@ const BRANNOC = {
     // and the fist comes down on the tank
     const lastRound = from => f.course({
       onStart: () => f.emit({ t: 'roomev', k: 'lastround', dur: 4 }),   // (the sea and the ghost crowd answer the last bell: brannoc-fx.js)
-      sets: [
-        S([4, deepCall, 'Deep Call'], [PULL, fist, 'Fist Slam']),
+      sets: mix([S([4, deepCall, 'Deep Call'], [PULL, fist, 'Fist Slam'])], [
+        S([14, deepCall, 'Deep Call'], [PULL, () => unbound(5), 'Sunwheel Unbound']),
         S([11, breaker, 'Breaker'], [7, () => unbound(4), 'Sunwheel Unbound']),
         S([11, () => grip(H ? 2 : 1), gripName()], [7, breaker, 'Breaker']),
-        S([10, deepCall, 'Deep Call'], [PULL, () => unbound(5), 'Sunwheel Unbound']),
         H && S([10, () => sunwheel({ twin: true }), 'Twin Wheels']),
+      ].filter(Boolean), [
         S([11, () => grip(1), 'Undertow Grip'], [4.5, () => unbound(6), 'Sunwheel Unbound'], [6, fist, 'Fist Slam']),
-      ],
+      ], 40),
       closing: [[12, deepCall, 'Deep Call'], [9, fist, 'Fist Slam'], [9, breaker, 'Breaker']],
       ramp: 0.08,
     }, from);

@@ -52,3 +52,21 @@ Bots, 30 runs per seed set, three sets (`seed=1000/2000/3000`), default line-up 
 - **Looks.** Every head's cast gathers a charge ring at its foot and snaps with a burst; a cut head tumbles and ichor fountains from the wound; the Stump Echo is a ghost head rising and striking; Tail Thrash is a curl of tail round the ring; the Undertow is foam dragged inward; the Heart beats twice with a gold pulse down nine veins. The big landings hold the camera a beat.
 - **The whiff.** A hero a blow just missed gets a crest of water thrown past them (for your own hero a flash, a push and a whoosh): `HY_FX.impact` now gets the landing's `hits` from boss-vfx.js.
 - Bots, three seed sets of 30: Normal `GEAR=post1` 78 of 90 (87%), Hard `GEAR=post2` 47 of 90 (52%).
+
+## Fun pass (2026-10-26)
+
+- **Cutting is a choice now.** Every great head cut quickens the rest (about 3.5% off every gap of the head round per cut, up to six cuts, `rage`). Before, the round sat at its floor from five to nine heads, a head was 34k against 4.95M and "cut everything, gentlest first" was the bots' (and the obvious) answer. Now a cut buys fewer heads but a faster round, and the Heart is paid for in cuts: a stump never seared strikes harder in it (+0.2), and each head cut beyond the fifth adds a little to every echo. A missed Searing is also a small raidwide now (3.5 times the soak's hit), not a nuisance.
+- **The seam.** A last Rending Maul goes in before the Submerge's dive (the tank had 33 s with no beat across the seam). Act III's end: Last Heads now starts with the Maul, not a Cry, so the tank no longer waits out the Heart.
+- **The last stand.** About nine seconds after the Heart beats, the stump of the last head cut answers once more (two on Hard, the newest first) with the living heads holding their round (`salvo`). Same cast names as before (Stump Echo and the head's own move); it keeps clear of Cry/Maul landings.
+- **Hard draws its big beats.** A Dance takes a Thrash's place and a Gaze a Cry's, positions drawn each pull with at least three beats between any two: Act I one Dance (the Tide head has already taught the lines), Act II two, Act III two Dances and two Gazes (was five big moves in all, now seven; Hard only).
+- **Retune.** Heart 16600/16100 unchanged; every hit unchanged. Act II's rhythm is 18 beats (was 19) so Hard's script stays under 600 s.
+- Timeline: script 581 s Normal / 590 s Hard (was 584 / 591); longest stretch with no tank beat 28 s on both (was 33 s at the seam and the Heart); longest with no raidwide 27 s Normal / 28 s Hard (the Cry; the heads' hits fill the rest).
+- Bots, three seed sets of 30: Normal `GEAR=post1` 77 of 90 (86%), Hard `GEAR=post2` 45 of 90 (50%), Hard `GEAR=post1` 39 of 90 (43%). Line-up two (runeguard...) clears about 20% on Normal either way (8 of 40, same before and after).
+
+### Review fixes (2026-10-26, second round)
+
+- **Rage dropped.** The quickening round was a hidden rule with no tell and it broke the 3.7 s floor on Hard. Cutting still has visible costs only: a missed Searing is a raidwide, an unseared stump and every head cut beyond the fifth make the Heart's echoes hit harder. Said plainly: cutting is still mostly favourable (fewer heads, a faster Heart-free fight), so "cut everything, sear everything" remains the sound answer; a visible cost that made it a true trade-off would need a new move or a Heart that grows longer, and a longer Heart killed the bots (60 to 70% on Normal).
+- **Hard's big beats all take Thrash slots** (a Dance or a Gaze, drawn, at least three beats apart), so the Cry is never lost: longest stretch with no raidwide 27.8 s (28.9 s Normal), tank 28.7 s.
+- **Body casts never overlap.** Every body move reserves its cast time (`bodyEnd`), the Submerge waits for the seam's Maul (dive now 8 s / 7.2 s after the Maul starts), and two Mauls are never started closer than 13 s (the seam's Maul is skipped if the tank had one in the last 17 s). Act II is 19 beats again (ends on a Cry, so the seam Maul has room) and Act III 23 (ends on a Thrash, not a Cry before the closing Cry).
+- The last stand replays in the order they fell, like the Heart. Hard's HIT is 1.24 (was 1.22).
+- Bots: Normal `GEAR=post1` 78 of 90 (87%); Hard `GEAR=post2` 42 of 90 (47%); Hard `GEAR=post1` 45 of 90 (50%) (post1 sits above post2 here; the first pass had 43%).

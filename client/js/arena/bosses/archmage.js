@@ -26,8 +26,9 @@
 //   Sigil Flare: two neighbouring sigils light and blast together with the lens between them (Convergence on a small scale, so
 //     the finale is a shape the party has met). Hard: the opposite pair follows a moment later, so the party crosses the middle.
 //   Act V, Convergence (14% → dead): all four sigils light together; each circle's telegraph is its own element, and where two
-//     circles overlap a reaction fills the lens between them. The floor between the sigils, out near the wall, is clear. Then
-//     the closing passes until he falls or the tide comes in.
+//     circles overlap a reaction fills the lens between them. The floor between the sigils, out near the wall, is clear. Then the
+//     sets, and the last Convergence when he falls under 6% (a course of its own, so a party that clears meets it), and the closing
+//     passes until he falls or the tide comes in.
 // Acts use PUSH: a party that reaches a gate early cuts the rest of the act and moves on (no wall in this fight).
 // Every telegraph shows on the floor on every difficulty. Hard: casts 15% faster, 25% more damage, and:
 //   Counterspell: the last spell's areas (at most three) come again, thrown to the far side of the room, a few seconds later.
@@ -35,8 +36,11 @@
 //                 seconds from the jump to the lock). The Mark, the Swap, the spell and the Counterspell still run as one sequence; the
 //                 Counterspell now waits a breath longer after the spell, and echoes at most three shapes.
 //   Arcane Mark:  one hero's own elemental rises where they stood: a shared blow on that spot, for everyone.
-// Hard also shuffles the order of each act's middle sets each pull, lays a third elemental into the Binding's pulses, and a
-// fifth jump into the Leaping Bolt.
+// Hard also shuffles the order of each act's middle sets each pull, the last act's too (the opening and last sets stay; an order that
+// puts two Lances or two Pyre Rings in neighbouring sets, or two Bursts too close, is thrown back), and adds a fifth jump to the Leaping Bolt. The Binding
+// is the same on both: three Calls, five pulses.
+// The Lance is not the tank's only job: the tank bears the runes that want the pair together (every other one at least), starts every
+// other Leaping Bolt, and can be the hero an Arcane Mark rises beside.
 
 // Pure helpers shared with the clients (arena-view / main.js move the live shape of a shape that joins two heroes)
 const AZ = {
@@ -67,7 +71,7 @@ const AZERATH = {
   vuln: 0.5,
   spawn: { x: 0, y: 0 }, anchor: true,
   arena: { theme: 'tower' },
-  gates: [0.78, 0.55, 0.32, 0.14],   // where the acts change (ticks on the boss bar; fight.js course)
+  gates: [0.78, 0.55, 0.32, 0.14, 0.06],   // where the acts change (ticks on the boss bar; fight.js course)
   push: true,                         // reach a gate early and he moves on (fight.js course: push)
 
   script(f) {
@@ -76,16 +80,43 @@ const AZERATH = {
     const TAU = Math.PI * 2;
     const { ELS, RULE, SPELL, TAG, SIG, NAME } = AZ;
     const dmg = {
-      burst: H ? 19200 : 20900, lance: H ? 18600 : 18600, pyre: H ? 17000 : 22300, fire: H ? 16500 : 23900, react: H ? 19500 : 21500, frost: H ? 47500 : 49600,
-      beam: H ? 24300 : 21500, void: H ? 16500 : 19100, voidSelf: H ? 8800 : 11400, ice: H ? 25200 : 22300, bolt: H ? 19800 : 17500, rift: H ? 21600 : 19100,
+      burst: H ? 19200 : 20900, lance: H ? 18600 : 18600, pyre: H ? 17000 : 15400, fire: H ? 16500 : 23900, react: H ? 19500 : 21500, frost: H ? 47500 : 49600,
+      beam: H ? 24300 : 21500, void: H ? 16500 : 19100, voidSelf: H ? 8800 : 8000, ice: H ? 25200 : 22300, bolt: H ? 19800 : 17500, rift: H ? 21600 : 19100,
       conv: H ? 27900 : 24600, lens: H ? 18000 : 15900, counter: H ? 21500 : 19100, mark: H ? 47500 : 49600, pulse: H ? 16200 : 14300, surge: H ? 21600 : 23900,
       elBite: H ? 1500 : 1300, flare: H ? 16000 : 15500, flens: H ? 13500 : 13000,
     };
     const S = (...steps) => steps.filter(Boolean);
     const live = id => f.alive().find(p => p.id === id);
     const nonTank = () => { const pool = f.nonTanks().length ? f.nonTanks() : f.alive(); return pool.length ? f.pick(pool) : null; };
-    // Hard draws the order of an act's middle sets fresh each pull (the opening and the last sets stay put)
-    const mix = (head, mid, tail) => [...head, ...(H ? f.shuffle(mid) : mid), ...tail];
+    // Hard draws the order of an act's middle sets fresh each pull (the opening and the last sets stay put). An order is thrown back
+    // when two Arcane Lances or two Pyre Rings would sit in neighbouring sets (a tankbuster inside the tank's own cooldown, a floor
+    // that is read once and not twice), when two Bursts, or a Burst and a stack, would come too close (the healer's recovery), or when a
+    // run of more than four sets has no real tank beat (a Lance, a Rune Swap, a Rime or Storm Rune, the Binding) or a run of more than
+    // three has no raidwide or stack. prev: the last big hits of the act before, [seconds before this act began, 0 Burst | 1 stack];
+    // closing: the act's closing passes, whose first step comes right after the last set
+    const mix = (head, mid, tail, prev = [], closing = null) => {
+      if (!H) return [...head, ...mid, ...tail];
+      const has = (set, n) => set.some(st => st[2] === n);
+      const bad = o => {
+        const all = [...head, ...o, ...tail], seq = closing ? [...all, [closing[0]]] : all;
+        for (let i = 1; i < seq.length; i++) for (const n of ['Arcane Lance', 'Pyre Rings']) if (has(seq[i], n) && has(seq[i - 1], n)) return true;
+        // Bursts at least 33 s apart, a stack (Arcane Mark, Rime Rune) 14 s from a Burst and 20 s from another stack
+        const hits = [...prev];
+        let t = 0;
+        for (const st of seq) for (const [dt, , nm] of st) { t += dt; if (nm === 'Arcane Burst') hits.push([t, 0]); else if (nm === 'Arcane Mark' || nm === 'Rime Rune') hits.push([t, 1]); }
+        for (let i = 1; i < hits.length; i++) { const d = hits[i][0] - hits[i - 1][0], k = hits[i][1] + hits[i - 1][1]; if (d < (k === 0 ? 33 : k === 1 ? 14 : 20)) return true; }
+        let run = 0, hr = 0;
+        for (const st of all) { if (['Arcane Lance', 'Rune Swap', 'Rime Rune', 'Storm Rune', 'The Binding'].some(n => has(st, n))) run = 0; else if (++run > 4) return true; }
+        for (const st of all) { if (['Arcane Burst', 'Sigil Flare', 'Convergence', 'Counterspell', 'Arcane Mark', 'Rime Rune', 'The Binding'].some(n => has(st, n))) hr = 0; else if (++hr > 3) return true; }
+        return false;
+      };
+      let o = f.shuffle(mid), k = 0;
+      for (; k < 80 && bad(o); k++) o = f.shuffle(mid);
+      if (k >= 80) o = mid;   // (no order passed: the written order, which does)
+      return [...head, ...o, ...tail];
+    };
+    // the calm before a set: Hard's is a little shorter (its casts are faster too)
+    const g = n => (H ? Math.round((n - 0.2) * 100) / 100 : n);
 
     // shared with the bots and the host's view (raid-host.js)
     f.runePair = null;     // { a, b, ea, eb, el, rule: 'pair' | 'split', on: 1 }: who carries the runes, and what the coming spell wants of them
@@ -164,7 +195,9 @@ const AZERATH = {
       const al = f.alive(); if (!al.length) return;
       const d0 = f.ct(4.6), step = f.ct(H ? 0.82 : 0.95);
       f.cast('Leaping Bolt', d0, 'chain');
-      let cur = f.pick(f.nonTanks().length ? f.nonTanks() : al);
+      // (every other Bolt starts on the tank, who then steps out of the circle and leaves the chain to hop on to whoever is nearest)
+      const tk = f.tank();
+      let cur = boltN++ % 2 === 0 && tk ? tk : f.pick(f.nonTanks().length ? f.nonTanks() : al);
       const seq = [];
       while (cur && seq.length < (H ? 5 : 4)) {
         seq.push(cur);
@@ -192,15 +225,23 @@ const AZERATH = {
       f.clearTethers();
       if (b != null) f.tether(a, b, hold, { kind: 'short', len: 99999, dmg: 0, tag: 'rune:' + ea + ':' + eb + ':' + el });   // (el: the rune that is live, for the clients' drawing)
     };
-    let holdUntil = 0;
+    let holdUntil = 0, tankHad = false, boltN = 0, spellDue = false;
+    // an act cut short by its gate drops the spell of a Rune Mark it had begun: the pair would stay on the bots' map for good. The next act clears it
+    const unpair = () => { if (spellDue) { spellDue = false; f.runePair = null; f.clearTethers(); } };
     // hold: seconds from now until the spell has landed (the link on the two stays until then)
-    const runeMark = (el, hold) => {
+    const runeMark = (el, hold, swap) => {
       f.cast('Rune Mark', f.ct(2.4), 'rune');
       holdUntil = f.t + hold;
+      spellDue = true;
       f.emit({ t: 'roomev', k: 'live', el, dur: hold });   // the sigil of the coming spell's element lights until it lands (archmage-art.js towerLife)
-      const pool = f.nonTanks().length >= 2 ? f.nonTanks() : f.alive();
+      // (the tank bears a rune too, for a spell that wants the pair together (frost, lightning): a positioning job on a fight where the
+      // boss never walks. Chosen like anyone, except that when the last such spell left the tank out, this one brings it in: with a Swap,
+      // by sending the runes to two others first, as the Swap brings the tank in. A stand-apart rune stays with the others, as before)
+      const pool = f.alive();
       if (!pool.length) { f.runePair = null; return; }
-      const pr = f.shuffle(pool);
+      const nts = f.shuffle(f.nonTanks()), tk = RULE[el] === 'pair' && nts.length >= 2 ? f.tank() : null;
+      let pr = f.shuffle(tk ? pool : nts.length >= 2 ? nts : pool);
+      if (tk && !tankHad) pr = swap ? nts : [tk, nts[0]];
       const other = f.pick(ELS.filter(e => e !== el));
       const ea = f.rng() < 0.5 ? el : other, eb = ea === el ? other : el;
       setPair(pr[0].id, pr[1] ? pr[1].id : null, ea, eb, el, hold);
@@ -231,11 +272,13 @@ const AZERATH = {
     // the spell: one of the two runes' elements, and the rule that goes with it
     const runeSpell = el => {
       const rp = f.runePair;
+      spellDue = false;
       const d = f.ct(4.6);
       f.cast(SPELL[el], d, el);
       if (!rp) return;
       const A = live(rp.a), Bp = rp.b != null ? live(rp.b) : null;
       const ids = [rp.a, rp.b].filter(x => x != null);
+      if (RULE[el] === 'pair') { const tkn = f.tank(); tankHad = !!tkn && ids.includes(tkn.id); }   // (did the tank bear this one? the next together-rune brings it in if not)
       let ok = () => true;
       if (el === 'fire') {
         for (const id of ids) {
@@ -280,7 +323,7 @@ const AZERATH = {
     const runeSet = (gap, el, o = {}) => {
       // (a Swap leaves the new bearers about six seconds from the jump to the lock: the spell begins 5.4 s after the Swap's cast does)
       const swap = H && o.swap, g2 = swap ? 5.4 : 7.4, hold = (swap ? 4.2 : 0) + g2 + f.ct(4.6) + 0.35;
-      return [[gap, () => runeMark(el, hold), 'Rune Mark'], swap && [4.2, runeSwap, 'Rune Swap'], [g2, () => runeSpell(el), SPELL[el]]].filter(Boolean);
+      return [[gap, () => runeMark(el, hold, swap), 'Rune Mark'], swap && [4.2, runeSwap, 'Rune Swap'], [g2, () => runeSpell(el), SPELL[el]]].filter(Boolean);
     };
 
     // --- the Binding (the seam): lead each elemental to its own sigil ------------------------------------------------
@@ -394,93 +437,113 @@ const AZERATH = {
     };
     // Arcane Mark: one hero's own elemental rises where they stood: a blow for everyone to share, on that spot
     const arcaneMark = () => {
-      const t = nonTank(); if (!t) return;
+      const al = f.alive(); if (!al.length) return;
+      const t = f.pick(al);   // (the tank too)
       const el = f.pick(ELS), d = f.ct(5.6), n = f.alive().length;
       f.cast('Arcane Mark', f.ct(2.4), 'mark');
       f.mech({ type: 'stack', shape: { kind: 'circle', x: Math.round(t.x), y: Math.round(t.y), r: 130 }, delay: d, dmg: dmg.mark * Math.min(n, 4) / 4, need: n, tag: 'azMark:' + el });
     };
 
     // --- the acts ------------------------------------------------------------------------------------------------------
+    // (an act opens 5 s after the last step of the one before, or after the gate when a party pushes through it, so its first cast never
+    // cuts the last one's bar. The Bursts keep their old places: a Burst takes most of a hero's health, so they stay well apart)
     const runeS = (gap, el, o) => S(...runeSet(gap, el, o));
     const withCounter = (steps, after = 6.2) => S(...steps, H && [after, counterspell, 'Counterspell']);
 
     // I. Fire
+    const close1 = [[10, lance, 'Arcane Lance'], [10, burst, 'Arcane Burst'], [10, pyre, 'Pyre Rings']];
     const fire1 = from => f.course({
+      onStart: unpair,
       until: 0.78, push: true,
-      sets: mix([S([4, burst, 'Arcane Burst']), S([12, pyre, 'Pyre Rings']), S([12, lance, 'Arcane Lance'])], [
-        withCounter(runeSet(12, 'fire')),
-        S([12, pyre, 'Pyre Rings']),
-        S([12, lance, 'Arcane Lance'], [7.5, burst, 'Arcane Burst']),
-      ], [
-        runeS(12, 'fire', { swap: true }),
-        S([12, burst, 'Arcane Burst']),
-      ]),
-      closing: [[10, lance, 'Arcane Lance'], [10, burst, 'Arcane Burst'], [10, pyre, 'Pyre Rings']],   // (the last set ends on a Burst, so no Burst opens the closing passes)
+      sets: mix([S([4, burst, 'Arcane Burst']), S([g(12), pyre, 'Pyre Rings'])], [
+        S([g(12), lance, 'Arcane Lance']),
+        withCounter(runeSet(g(12), 'fire')),
+        S([g(12), pyre, 'Pyre Rings']),
+        S([g(12), lance, 'Arcane Lance'], [7.5, burst, 'Arcane Burst']),
+        runeS(g(12), 'fire', { swap: true }),
+      ], [S([g(12), burst, 'Arcane Burst'])], [], close1),   // (the act ends on a Burst, so no Burst opens its closing passes: an act's script must last as long as it did, or a party meets the closing passes' extra damage before the gate)
+      closing: close1,
       next: frost1,
     }, from);
 
     // II. Frost
+    const close2 = [[10, burst, 'Arcane Burst'], [10, lance, 'Arcane Lance'], [10, iceLances, 'Ice Lances']];
     const frost1 = from => f.course({
+      onStart: unpair,
       until: 0.55, push: true,
-      sets: mix([S([4, iceLances, 'Ice Lances']), S([12, lance, 'Arcane Lance'])], [
-        runeS(12, 'frost'),
-        S([12, pyre, 'Pyre Rings'], [8, iceLances, 'Ice Lances']),
-        H ? S([12, arcaneMark, 'Arcane Mark']) : S([12, burst, 'Arcane Burst']),
+      sets: mix([S([5, iceLances, 'Ice Lances'])], [
+        S([g(12), lance, 'Arcane Lance']),
+        runeS(g(12), 'frost'),
+        S([g(12), pyre, 'Pyre Rings'], [8, iceLances, 'Ice Lances']),
+        H ? S([g(12), arcaneMark, 'Arcane Mark']) : S([g(12), burst, 'Arcane Burst']),   // (Hard: the Mark is a shared blow for everyone, the act's heal check, where Normal has a Burst)
       ], [
-        withCounter(runeSet(12, f.pick(['frost', 'fire', 'frost']), { swap: true })),
-        S([12, lance, 'Arcane Lance'], [7.5, pyre, 'Pyre Rings']),
-      ]),
-      closing: [[10, burst, 'Arcane Burst'], [10, lance, 'Arcane Lance'], [10, iceLances, 'Ice Lances']],
+        withCounter(runeSet(g(12), f.pick(['frost', 'fire', 'frost']), { swap: true })),
+        S([g(12), lance, 'Arcane Lance'], [7.5, pyre, 'Pyre Rings']),
+      ], [], close2),
+      closing: close2,
       next: bound,
     }, from);
 
     // The Binding, then III. Lightning
+    const close3 = [[10, burst, 'Arcane Burst'], [10, lance, 'Arcane Lance'], [10, leapingBolt, 'Leaping Bolt']];
     const els = f.shuffle(ELS).slice(0, 3);
     const bound = from => f.course({
+      onStart: unpair,
       until: 0.32, push: true,
       sets: mix([
-        S([2, bindStart, 'The Binding'], [5, () => call(els[0]), 'Call of the Circle'], [8, () => call(els[1]), 'Call of the Circle'], [8, () => call(els[2]), 'Call of the Circle']),
+        S([5, bindStart, 'The Binding'], [5, () => call(els[0]), 'Call of the Circle'], [8, () => call(els[1]), 'Call of the Circle'], [8, () => call(els[2]), 'Call of the Circle']),
         S([10, burst, 'Arcane Burst']),
       ], [
-        S([12, leapingBolt, 'Leaping Bolt']),
-        runeS(12, 'bolt'),
-        S([12, lance, 'Arcane Lance'], [7.5, leapingBolt, 'Leaping Bolt']),
+        S([g(12), leapingBolt, 'Leaping Bolt']),
+        runeS(g(12), 'bolt'),
+        S([g(12), lance, 'Arcane Lance'], [7.5, leapingBolt, 'Leaping Bolt']),
       ], [
-        withCounter(runeSet(12, f.pick(['bolt', 'frost', 'bolt']), { swap: true })),
-        S([12, burst, 'Arcane Burst'], [8, sigilFlare, 'Sigil Flare']),
-      ]),
-      closing: [[10, burst, 'Arcane Burst'], [10, lance, 'Arcane Lance'], [10, leapingBolt, 'Leaping Bolt']],
+        withCounter(runeSet(g(12), f.pick(['bolt', 'frost', 'bolt']), { swap: true })),
+        S([g(12), burst, 'Arcane Burst'], [8, sigilFlare, 'Sigil Flare']),
+      ]),   // (its tail ends on a Burst and a Flare, so the closing passes' Burst is always near it: nothing to choose)
+      closing: close3,
       next: void1,
     }, from);
 
     // IV. Void
+    const close4 = [[10, lance, 'Arcane Lance'], [10, burst, 'Arcane Burst'], [10, voidRifts, 'Void Rifts']];
     const void1 = from => f.course({
+      onStart: unpair,
       until: 0.14, push: true,
-      sets: mix([S([4, voidRifts, 'Void Rifts']), S([12, lance, 'Arcane Lance'])], [
-        runeS(12, 'void'),
-        S([12, leapingBolt, 'Leaping Bolt'], [8, voidRifts, 'Void Rifts']),
-        S([12, burst, 'Arcane Burst'], [8, sigilFlare, 'Sigil Flare']),
+      sets: mix([S([5, voidRifts, 'Void Rifts'])], [
+        S([g(12), lance, 'Arcane Lance']),
+        S(...runeSet(g(12), 'void'), [8.5, lance, 'Arcane Lance']),   // (the act's second Lance: it used to hold the fight's longest stretch with none)
+        S([g(12), leapingBolt, 'Leaping Bolt'], [8, voidRifts, 'Void Rifts']),
+        S([g(12), burst, 'Arcane Burst'], [8, sigilFlare, 'Sigil Flare']),
       ], [
-        withCounter(runeSet(12, f.pick(['void', 'fire', 'void']), { swap: true })),
-        S([12, burst, 'Arcane Burst']),
-      ]),
-      closing: [[10, lance, 'Arcane Lance'], [10, burst, 'Arcane Burst'], [10, voidRifts, 'Void Rifts']],   // (as in Act I: the last set ends on a Burst)
+        withCounter(runeSet(g(12), f.pick(['void', 'fire', 'void']), { swap: true })),
+        H ? S([g(12), burst, 'Arcane Burst']) : S([12, lance, 'Arcane Lance'], [8.5, burst, 'Arcane Burst']),   // (Normal: a Lance before the last Burst, so the stretch up to the finale has a tank beat in it)
+      ], [[-8, 0]], close4),   // (Act III ended on a Burst and a Sigil Flare eight seconds after it)
+      closing: close4,
       next: finale,
     }, from);
 
-    // V. Convergence: no gate after it; the closing passes run until he falls
-    const finale = from => f.course({
-      sets: [
-        S([4, convergence, 'Convergence']),
-        S([13, lance, 'Arcane Lance']),
-        runeS(12, f.pick(ELS)),
-        !H && S([12, burst, 'Arcane Burst']),   // (Hard's long rune chains carry the finale's time: no plain Burst between them, so the script ends with the usual slack before the enrage)
-        withCounter(runeSet(12, f.pick(ELS), { swap: true })),
-        S([13, convergence, 'Convergence']),
-        S([13, H ? arcaneMark : iceLances, H ? 'Arcane Mark' : 'Ice Lances'], [7, leapingBolt, 'Leaping Bolt']),
-      ].filter(Boolean),
-      closing: [[10, burst, 'Arcane Burst'], [10, convergence, 'Convergence'], [10, lance, 'Arcane Lance']],
+    // V. Convergence. It is two courses: the sets up to 6% of his health, and the last Convergence, which opens when he falls under 6%
+    // (a party that clears in about 80 s meets it with half a minute still to go; the sets after it only play for a slow party). Then the
+    // closing passes until he falls.
+    const close5 = [[10, burst, 'Arcane Burst'], [10, convergence, 'Convergence'], [10, lance, 'Arcane Lance']];
+    const lastAct = from => f.course({
+      onStart: unpair,
+      sets: [S([5, convergence, 'Convergence'])],
+      closing: close5,
       ramp: 0.08,
+    }, from);
+    const finale = from => f.course({
+      onStart: unpair,
+      until: 0.06, push: true,
+      sets: mix([S([5, convergence, 'Convergence']), S([g(13), lance, 'Arcane Lance'])], [   // (the Lance after the first Convergence is the finale's sure tank beat)
+        runeS(g(12), f.pick(ELS)),
+        H ? withCounter(runeSet(g(12), f.pick(ELS), { swap: true })) : S([g(12), burst, 'Arcane Burst']),   // (Hard's long rune chains carry the finale's time: no plain Burst between them)
+        S([g(13), H ? arcaneMark : iceLances, H ? 'Arcane Mark' : 'Ice Lances'], [7, leapingBolt, 'Leaping Bolt']),
+      ], [], [[0, 0]], close5),   // (Act IV ended on a Burst)
+      closing: close5,
+      ramp: 0.08,
+      next: lastAct,
     }, from);
 
     fire1(0);

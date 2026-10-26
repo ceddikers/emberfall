@@ -14,6 +14,8 @@
 //   Stonegaze (everything the head can see: hide behind a column), Mire Spit (slowing bog under three heroes).
 //   The STUMP REMEMBERS: from the second cut on, the stump of the head cut before answers once ("Stump Echo", a gentler copy of
 //   that head's move from the stump), in place of the next head's turn: the Heart, in small.
+//   CUTTING COSTS (all of it shown): a stump nobody sears costs the whole party (a Searing missed is a small raidwide as well as
+//   two lesser heads), and the Heart hits harder for a stump left unseared and for every head cut beyond the fifth.
 //   The body keeps a three-beat rhythm: Rending Maul, Tail Thrash (a ring at her feet), Mother's Cry. No head lands within a beat
 //   and a half of a Cry or a Maul, and the big Hard moves (Gaze, Tidal Dance) hold the heads' round while they run.
 //   Tail Thrash has a second half, the Undertow: a ring just outside the first, landing a breath after it (both drawn from the
@@ -25,11 +27,14 @@
 //   Act III, Nine Heads (45% → 10%): Gaze and Mire rise, and the Elder.
 //   The Mother's Heart (10%): a WALL. She cannot be hurt while every head she has had strikes again, the cut ones first, in
 //   the order they were cut, from their stumps; then those still alive all at once; then the Heart beats.
-//   Last Heads (10% → dead): the last ten percent, until she falls or the Drowning comes.
+//   Last Heads (10% → dead): the last ten percent, until she falls or the Drowning comes. A while after the beat the stump of the
+//   last head cut answers once more (two on Hard, in the order they fell) with the living heads holding their round: the lesson again.
 // Acts use PUSH: a party that reaches a gate early cuts the rest of the act and moves on (fight.js course).
 // Every telegraph shows on the floor on every difficulty. Hard: casts 15% faster, 25% more damage, the heads come round
 // faster and each pull draws which head stands where, and:
 //   Regrowth: a missed searing grows three lesser heads, not two.
+//   Which beats the big moves take is drawn each pull: a Dance (one in Act I, two in Act II, two in Act III) or a Gaze (two, Act III)
+//   takes a Thrash's place, never within three beats of each other; the tank keeps every Maul and the healer every Cry.
 //   Tidal Dance: two heads' lines cross three times, each a step along; the wedges between the lines are the safe ground.
 //   Hydra's Gaze: the whole inside of the temple at once; only the ground by the wall is safe.
 
@@ -66,7 +71,7 @@ const HYDRA = {
       headHp: 34000, elderHp: 52000, lesserHp: 14000, surfHp: 16000,
     };
     // (Normal is tuned for a party in set-1 gear after set 2's step (items.js SET2_STEP): every hit, not the heads' HP, a notch up)
-    const HIT = H ? 1.22 : 1.26;
+    const HIT = H ? 1.24 : 1.26;
     for (const k in dmg) if (!/Hp$/.test(k)) dmg[k] = Math.round(dmg[k] * HIT);
     const S = (...steps) => steps.filter(Boolean);
     const HEAD_R = 210;                 // the heads stand this far from the middle, one to a slot (nine slots, the first due north)
@@ -99,6 +104,7 @@ const HYDRA = {
     const echoQ = [];                   // stumps waiting to answer (the stump remembers)
     const AVOID = 1.5;
     let lastTarget = null;
+    let heartDone = -1;                 // when the Heart beat (the last stand's echoes follow it)
     f.heads = heads; f.cutOrder = order;   // (tools and the host's view)
 
     const nonTank = () => { const pool = f.nonTanks().length ? f.nonTanks() : f.alive(); return pool.length ? pool : []; };
@@ -267,7 +273,7 @@ const HYDRA = {
       f.emit({ t: 'propfx', k: 'stump', x: Math.round(h.x), y: Math.round(h.y), el: h.el, slot: h.slot });
       if (col) f.setPropState(col, 1);
       f.afterKeep(1.0, () => {
-        f.mech({ type: 'tower', shape: { kind: 'circle', x: pos.x, y: pos.y, r: 62 }, delay: f.ct(10), dmg: dmg.sear, failDmg: dmg.sear, need: 1, tag: 'sear', from: 'Searing',
+        f.mech({ type: 'tower', shape: { kind: 'circle', x: pos.x, y: pos.y, r: 62 }, delay: f.ct(10), dmg: dmg.sear, failDmg: dmg.sear * 3.5, need: 1, tag: 'sear', from: 'Searing',
           onResolve: (inside) => {
             if (col) f.setPropState(col, 0);
             if (inside.length) {
@@ -323,14 +329,16 @@ const HYDRA = {
     // --- the body ---------------------------------------------------------------------------------------------
     // a body move that lands d after it starts never lands on top of a head: if one is about to, it starts a moment later, and
     // the heads' round keeps clear of the place it lands
+    let bodyEnd = 0;                    // when the body's latest (or latest laid) cast ends: no body cast starts before it
     const bodyAt = (d, go) => {
-      let delay = 0;
+      let delay = Math.max(0, bodyEnd - f.t + 0.1);
       for (let i = 0; i < 4; i++) {
         const land = f.t + delay + d, hit = headLands.find(x => Math.abs(x - land) < AVOID);
         if (hit === undefined) break;
         delay = Math.max(delay, hit + AVOID - f.t - d + 0.05);
       }
-      delay = Math.min(delay, 2.5);
+      delay = Math.min(delay, 4);
+      bodyEnd = f.t + delay + d;
       const run = () => { avoid.push([f.t + d - AVOID, f.t + d + AVOID]); relay(rot()[0] ? rot()[0].t : undefined); go(); };
       if (delay > 0.05) f.afterKeep(delay, run); else run();
     };
@@ -343,8 +351,14 @@ const HYDRA = {
         f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.cry, hidden: true, tag: 'cry' });
       });
     };
-    const maul = () => {
+    // two Mauls are never closer than 13 s: when a gate cuts an act the next act's first Maul waits for the last one's room
+    let lastMaul = -99;
+    const maul = (seam) => {
       const tank = f.tank(); if (!tank) return;
+      const wait = lastMaul + 13 - f.t;
+      if (seam === 'seam' && wait > -4) return;   // (the seam's own Maul only goes in when the tank has had a quiet stretch)
+      if (wait > 0.1) { f.afterKeep(wait, maul); return; }
+      lastMaul = f.t;
       const d = f.ct(4.4);
       bodyAt(d, () => {
         f.cast('Rending Maul', d, 'maul');
@@ -421,6 +435,7 @@ const HYDRA = {
     // where it will come up, rises, strikes once, and sinks again if it is not cut first.
     const submerge = () => {
       const d = f.ct(3.4), HOLD = 15;
+      bodyEnd = Math.max(bodyEnd, f.t + d);
       f.cast('Submerge', d, 'dive');
       f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.cry * 0.7, hidden: true, tag: 'surge' });
       f.afterKeep(d, () => {
@@ -459,6 +474,32 @@ const HYDRA = {
       });
     };
 
+    // --- the last stand ---------------------------------------------------------------------------------------------
+    // After the Heart has beaten, the stumps of the last heads cut answer once more, in the order they fell, with the living heads
+    // holding their round and the body's beats going on beneath: the fight's lesson once more, at the end.
+    const salvo = o => {
+      const c = castOf({ el: o.el, fast: false, lesser: false });
+      let delay = 0;
+      for (let k = 0; k < 4; k++) {
+        const land = f.t + delay + 1.2 + c, w = avoid.find(v => land > v[0] && land < v[1]);
+        if (!w) break;
+        delay = w[1] - 1.2 - c - f.t + 0.05;
+      }
+      delay = Math.min(delay, 2.5);
+      const go = () => { if (paused) return; headLands.push(f.t + 1.2 + c); stumpEcho(o); };
+      if (delay > 0.05) f.afterKeep(delay, go); else go();
+    };
+    let salvoDone = false;
+    f.ticker(() => {
+      if (salvoDone || heartDone < 0 || paused || f.t < heartDone + 9) return;
+      salvoDone = true;
+      const list = order.slice(-(H ? 2 : 1));   // (in the order they fell, as the Heart does: the newest answers last)
+      if (!list.length) return;
+      const step = f.ct(5.8);
+      quiet(step * list.length + 1.5);
+      list.forEach((o, i) => f.afterKeep(i * step, () => salvo(o)));
+    });
+
     // --- the Mother's Heart (the wall) ---------------------------------------------------------------------------
     // Sealed. Every cut head strikes again from its stump, in the order it was cut; then every head still alive at once;
     // then the Heart beats and the seal opens.
@@ -468,12 +509,18 @@ const HYDRA = {
       const gap = f.ct(3.3);
       // the Heart opens, and the stumps answer in the order the heads fell
       f.afterKeep(0.4, () => f.cast("Mother's Heart", f.ct(2.4), 'heart'), "Mother's Heart");
+      // the first five cut heads answer, in the order they fell. A stump that was never seared strikes harder than one that was, and each
+      // head cut beyond the fifth (up to four) adds to every echo: cutting everything is paid for here.
       let t = 3.2;
-      for (const o of order.slice(0, 5)) {
+      order.slice(0, 5).forEach((o, i) => {
         const pos = slotPos(o.slot);
-        f.afterKeep(t, () => { f.emit({ t: 'propfx', k: 'echo', x: pos.x, y: pos.y, el: o.el }); EL[o.el].run({ x: pos.x, y: pos.y, el: o.el, pw: 1.1, sz: 1, lesser: false, fast: false }); }, EL[o.el].name);
+        f.afterKeep(t, () => {
+          const st = stumps.get(o.slot), pw = 1.1 + (st && !st.seared ? 0.2 : 0) + Math.min(4, Math.max(0, order.length - 5)) * 0.015;
+          f.emit({ t: 'propfx', k: 'echo', x: pos.x, y: pos.y, el: o.el });
+          EL[o.el].run({ x: pos.x, y: pos.y, el: o.el, pw, sz: 1, lesser: false, fast: false });
+        }, EL[o.el].name);
         t += gap;
-      }
+      });
       // then the heads still standing (the Elder first, then round the ring from the north), one after another
       t += 1.0;
       const living = liveHeads().filter(h => !h.lesser).sort((a, b) => (b.elder ? 1 : 0) - (a.elder ? 1 : 0) || a.slot - b.slot).slice(0, 3);
@@ -489,7 +536,7 @@ const HYDRA = {
         const d = f.ct(3.0);
         f.cast("Mother's Heart", d, 'heart');
         f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.heart, hidden: true, tag: 'heartbeat' });
-        paused = false; relay(f.t + 6); f.wallHp = null;
+        paused = false; relay(f.t + 6); f.wallHp = null; heartDone = f.t;
       }, "Mother's Heart");
     };
 
@@ -509,11 +556,26 @@ const HYDRA = {
       return out;
     };
     const DANCE = [tidalDance, 'Tidal Dance', 10.5], GAZE = [hydraGaze, "Hydra's Gaze", 9];
+    // Hard draws which beats are given over to the big moves each pull: a Dance or a Gaze takes a Tail Thrash's place (the tank
+    // keeps his Mauls, the healer every Cry), never two within three beats of each other. `from` is where the act's rhythm
+    // starts (0 Maul, 1 Thrash, 2 Cry); `win` the beats to choose from; which of them is a Dance and which a Gaze is drawn too.
+    const drawSwaps = (from, win, dances, gazes) => {
+      if (!H) return {};
+      const n = dances + gazes, pool = range(win[0], win[1]).filter(i => (i + from) % 3 === 1);
+      for (let tries = 0; tries < 200; tries++) {
+        const at = f.shuffle(pool).slice(0, n).sort((a, b) => a - b);
+        if (at.length < n || !at.every((i, k) => !k || i - at[k - 1] >= 3)) continue;
+        const kinds = f.shuffle([...Array(dances).fill(DANCE), ...Array(gazes).fill(GAZE)]);
+        return Object.fromEntries(at.map((i, k) => [i, kinds[k]]));
+      }
+      return {};
+    };
+    const range = (a, b) => { const o = []; for (let i = a; i <= b; i++) o.push(i); return o; };
     const closingBeats = [[10, cry, "Mother's Cry"], [10, maul, 'Rending Maul'], [10, thrash, 'Tail Thrash'], [10, cry, "Mother's Cry"]];
     // I. Three Heads
     const actI = from => f.course({
       until: 0.75, push: true, onStart: actStart(1),
-      sets: rhythm(17, 5, 2),
+      sets: rhythm(17, 5, 2, drawSwaps(2, [4, 13], 1, 0)),
       closing: closingBeats,
       next: actII,
     }, from);
@@ -521,21 +583,22 @@ const HYDRA = {
     // II. Six Heads
     const actII = from => f.course({
       until: 0.45, push: true, onStart: actStart(2),
-      sets: rhythm(19, 3, 2, { 2: DANCE, 8: DANCE }),
+      sets: rhythm(19, 3, 2, drawSwaps(2, [2, 15], 2, 0)),
       closing: closingBeats,
       next: submerged,
     }, from);
 
     // The Submerge, then III. Nine Heads
     const submerged = from => f.course({
-      sets: [S([2, submerge, 'Submerge']), S([15.5, emerge, "Mother's Cry"]), S([3.2])],
+      // (a last Maul first, so the tank has a job going into the seam; the dive comes after the Maul has landed, even if a head's landing held the Maul back)
+      sets: [S([1.5, () => maul('seam'), 'Rending Maul']), S([H ? 7.2 : 8, submerge, 'Submerge']), S([15.5, emerge, "Mother's Cry"]), S([3.2])],
       next: actIII,
     }, from);
 
     const actIII = from => f.course({
       until: 0.1, push: true, onStart: actStart(3),
       wall: { label: "Mother's Heart", run: heartRun, until: 'resolved', timeout: 80 },
-      sets: rhythm(24, 4, 0, { 4: GAZE, 7: DANCE, 10: GAZE }),
+      sets: rhythm(23, 4, 0, drawSwaps(0, [3, 17], 2, 2)),
       closing: closingBeats,
       next: lastHeads,
     }, from);
@@ -543,7 +606,7 @@ const HYDRA = {
     // Last Heads: the Heart has beaten
     const lastHeads = from => f.course({
       onStart: () => { B.untargetable = false; },
-      sets: rhythm(7, 9, 2),   // (laid out a head before the Heart's end: the first beat is a Cry, a breath after the beat)
+      sets: rhythm(7, 9, 0),   // (laid out a head before the Heart's end: the tank's Maul comes first, well after the beat)
       closing: closingBeats,
       ramp: 0.08,
     }, from);

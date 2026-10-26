@@ -24,7 +24,11 @@
 //   a fall is always the walker's own step. One heavy move at a time (seeds, Inhale, Bloom, the limbs, Hungering Dark wait their turn, so a
 //   limb's turn is never stacked on a seed, a Hungering Dark or a Last Gasp: spacing, not cutting), the Lantern's marks never pass to the same hero twice, and Sap Tides are
 //   spaced. Act IV opens with an Inhale that rolls straight into a Fourfold Bloom (the pull puts you at his feet; the petals open there).
-// Every telegraph shows on every difficulty. Hard: casts 15% faster, 25% more damage, and:
+// THE TANK AND THE HEALER ALWAYS HAVE SOMETHING (fun pass): the acts are laid out in lanes (lay() below). The tank's beat is Root Lash about every 35 s
+//   (plus, in Act III, a Cleaver Bough soak that lands on the tank every other time); the healer's are Sap Tide and Inhale, whose haul bruises the whole
+//   party every time. Beats of the two lanes alternate, no named step is more than 14 s from the next, and Hard draws the order and moves every
+//   step a little each pull. The Swallowing holds a Fourfold Bloom, a Sap Tide and a Root Lash as well. The Cleaver chop feeds any hole it crosses.
+// Every telegraph shows on every difficulty. Hard: casts 15% faster, about 10% more damage on every move (hardDmg 1.2 on a table a notch lower), and:
 //   Twin Seed:      two seeds, joined: burst them far apart, or they open one giant hole between them.
 //   Hungering Dark: the holes breathe in; the ground round each one drags anyone on it over the edge.
 //   Deeper Roots:   set 2's monsters join the limbs (a wyrm wing, a frost fist, an archmage rune, a hydra head): each pull grows 4 of 8.
@@ -34,8 +38,8 @@
 const MORROWOAK = {
   id: 'morrowoak', name: 'Morrow-Oak', title: 'the Starved Grove',
   hp: { normal: 5000000, hard: 5000000 },
-  hardDmg: 1.15,   // (Hard's damage multiplier; fight.js default 1.25)
-  autoDmg: { normal: 2450, hard: 2400 },
+  hardDmg: 1.2,   // (Hard's damage multiplier; fight.js default 1.25. The Hard table below is a notch lower, so every move that Normal has too hits ~1.1x)
+  autoDmg: { normal: 2450, hard: 2300 },
   enrage: { normal: 612, hard: 597 },   // the cast starts here and lands 8 s later (10:20 / 10:05)
   enrageName: 'Nothing Left',
   vuln: 0.5,
@@ -50,15 +54,20 @@ const MORROWOAK = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      sap: H ? 11500 : 12600, lash: H ? 23800 : 26000, seed: H ? 16800 : 18000, fall: H ? 20500 : 22000, petal: H ? 19600 : 21500,
-      twin: H ? 15000 : 0, dark: H ? 9000 : 0, swallow: H ? 9000 : 10500, sapHp: H ? 11000 : 12000, limbHp: H ? 185000 : 200000,
-      cleave: H ? 52000 : 54000, chop: H ? 21400 : 23000, roots: H ? 10700 : 11500, rod: H ? 20200 : 22000, lantern: H ? 13100 : 13800, ebb: H ? 7800 : 8200,
-      wing: H ? 20000 : 0, rime: H ? 18400 : 0, rimePool: H ? 2400 : 0, rune: H ? 18900 : 0, head: H ? 19400 : 0,
+      // (Hard = Normal x 0.92, and fight.js multiplies Hard by hardDmg 1.2: about 1.1x Normal on every move both have; the Hard-only moves keep what they hit before)
+      sap: H ? 11600 : 12600, lash: H ? 23900 : 26000, seed: H ? 16500 : 18000, fall: H ? 20200 : 22000, petal: H ? 19800 : 21500, haul: H ? 3500 : 3800,
+      twin: H ? 14400 : 0, dark: H ? 8600 : 0, swallow: H ? 9700 : 10500, sapHp: H ? 11000 : 12000, limbHp: H ? 185000 : 200000,
+      cleave: H ? 49600 : 54000, chop: H ? 21200 : 23000, roots: H ? 10600 : 11500, rod: H ? 20200 : 22000, lantern: H ? 12700 : 13800, ebb: H ? 7600 : 8200,
+      wing: H ? 19200 : 0, rime: H ? 17600 : 0, rimePool: H ? 2300 : 0, rune: H ? 18100 : 0, head: H ? 18600 : 0,
     };
     const TUNE = H ? 1.13 : 1.13;   // (the spacing and caps below keep the room fair; this keeps the hits worth healing)
     for (const k of Object.keys(dmg)) if (k !== 'sapHp' && k !== 'limbHp') dmg[k] = Math.round(dmg[k] * TUNE);
     const S = (...steps) => steps.filter(Boolean);
     const live = id => f.alive().find(p => p.id === id);
+    // every cast bar but the tide's and the lash's is remembered, so a Root Lash never starts its bar inside another cast (it waits for it)
+    let castUntil = 0;
+    const rawCast = f.cast.bind(f);
+    f.cast = (name, d, ...r) => { if (name !== 'Sap Tide' && name !== 'Root Lash') castUntil = Math.max(castUntil, f.t + d); return rawCast(name, d, ...r); };
     const hold = d => { B.holdUntil = Math.max(B.holdUntil || 0, f.t + d); };
     let sapN = 0;                  // Sap Tide grows every time
     let riding = false;            // the Swallowing: the party rides the pieces down, nobody falls
@@ -162,12 +171,14 @@ const MORROWOAK = {
     }, 'Hunger Seed');
     // Inhale: the Hunger breathes in, and everyone is dragged toward him; a drag that crosses a hole ends in it
     const PULL = 300;
+    // (every Inhale: the haul slams everyone against his bark, a small hit on the whole party: the healer's beat between two Sap Tides)
     const inhale = serial(() => {
       const d = f.ct(4.4);
       f.cast('Inhale', d, 'inhale');
       hold(d + 0.6); busy(d + 1.2);
       f.mech({ type: 'drop', shape: { kind: 'circle', x: B.x, y: B.y, r: 0 }, delay: d, dmg: 0, avoidable: false, tag: 'mgInhale', pullDist: PULL,
         onResolve: () => {
+          for (const p of f.alive()) f.damagePlayer(p, dmg.haul, { kind: 'raidwide', avoidable: false, n: 'Inhale' });
           for (const p of f.alive()) {
             const dx = B.x - p.x, dy = B.y - p.y, D = Math.hypot(dx, dy);
             if (D < 110) continue;
@@ -194,7 +205,9 @@ const MORROWOAK = {
     };
     const bloom = serial(bloomRaw, 'Fourfold Bloom');
     // Root Lash: the tank's buster, and it roots them a moment (so the tank moves him off the holes before, not after)
-    const lash = () => {
+    const lash = o => {
+      const w = o && o.now ? 0 : castUntil - f.t;
+      if (w > 0.05 && f.state === 'live') { f.afterKeep(w + 0.1, lash, 'Root Lash'); return; }
       const tank = f.tank(); if (!tank) return;
       const d = f.ct(4.0);
       f.cast('Root Lash', d, 'lash');
@@ -267,9 +280,10 @@ const MORROWOAK = {
     }, 'Hungering Dark');
 
     // --- the Swallowing (the wall) ------------------------------------------------------------------------------------------
-    const SWALLOW = 21;
-    const swallowing = () => {
-      wallOn = true; lockUntil = 0;
+    // The wall: he swallows the grove (the ride), the party lands on what is left, and then the new room shows its first teeth: a Fourfold Bloom,
+    // a Sap Tide and a Root Lash, one after the other, while he unfolds (the DPS cannot touch him, so this is the party's to dodge and to heal).
+    const SWALLOW = 25.4;
+    const swallowBody = () => {
       f.cast('The Swallowing', 6, 'swallow');
       B.lockFacing = true; hold(SWALLOW);
       f.emit({ t: 'roomev', k: 'swallow', dur: SWALLOW });
@@ -291,8 +305,9 @@ const MORROWOAK = {
         }
       });
       f.afterKeep(10.5, () => { riding = false; });
-      f.afterKeep(11, sapTide, 'Sap Tide');
-      f.afterKeep(14.5, lash, 'Root Lash');
+      f.afterKeep(10.2, () => bloomRaw({ quick: true }), 'Fourfold Bloom');   // (the petals open three seconds after the landing; the cast ends before the tide begins)
+      f.afterKeep(16.5, sapTide, 'Sap Tide');
+      f.afterKeep(19.8, () => lash({ now: true }), 'Root Lash');   // (the old pair: the lash's bar begins while the tide's ends)
       f.afterKeep(SWALLOW - 4.5, () => f.cast(H ? 'Deeper Roots' : 'The Grove Remade', 4.5, 'unfold'));
       f.afterKeep(SWALLOW, () => {
         B.lockFacing = false;
@@ -304,22 +319,30 @@ const MORROWOAK = {
       // (and what the limbs do as they wake is laid now, so the feed reads across the wall into Act III)
       // (Hard: the first limb waits a few seconds more, the healer's breather after the Swallowing)
       f.atKeep(f.t + SWALLOW + (H ? 7 : 4), limbTurn, LIMB[order[0]].name);
-      f.afterKeep(SWALLOW + (H ? 17 : 13), lash, 'Root Lash');
+    };
+    // (a Sap Tide that was already on its way when the gate fell lands first: the Swallowing's hit never comes on top of it)
+    const swallowing = () => {
+      wallOn = true; lockUntil = 0;
+      const w = Math.max(0, tideAt + f.ct(4.4) + 0.4 - f.t);
+      if (w > 0.05) f.afterKeep(w, swallowBody); else swallowBody();
     };
 
     // --- the limbs --------------------------------------------------------------------------------------------------------------
     // Each limb is a breakable part (an inert add with its own bar) held at his side; each one's move is aimed from where it stands.
     const farFrom = (x, y, not) => { let best = null, bd = -1; for (const p of f.alive()) { if (not && (not instanceof Set ? not.has(p.id) : p.id === not)) continue; const d = Math.hypot(p.x - x, p.y - y); if (d > bd) { bd = d; best = p; } } return best; };
     const nonTank = () => { const pool = f.nonTanks().length ? f.nonTanks() : f.alive(); return pool.length ? f.pick(pool) : null; };
-    // Cleaver Bough: a soak on a hero; then a chop from the bough through where they stood
+    // Cleaver Bough: a soak on a hero (the tank every other time: the party gathers where he stands); then a chop from the bough through where they
+    // stood, and the chop feeds any hole it crosses (what the limbs strike, the Hunger takes: aim it away from the floor you have left)
+    let cleaveN = 0;
     const cleaver = L => {
-      const tgt = nonTank(); if (!tgt) return;
+      const tk = f.tank(), tgt = (cleaveN++ % 2 === 0 && tk) ? tk : nonTank(); if (!tgt) return;
       const d = f.ct(4.6), lx = L.x, ly = L.y;
       f.cast('Cleaver Bough', d, 'cleaver');
       f.mech({ type: 'stack', shape: { kind: 'circle', x: tgt.x, y: tgt.y, r: 120 }, delay: d, dmg: dmg.cleave, follow: tgt.id, lockAt: 0.6, need: 3, tag: 'mgCleave',
         onResolve: () => {
           const q = live(tgt.id) || tgt, a = Math.atan2(q.y - ly, q.x - lx);
-          f.aoe({ kind: 'rect', x: Math.round(lx), y: Math.round(ly), angle: +a.toFixed(3), len: 1500, w: 150 }, f.ct(2.2), dmg.chop, { tag: 'mgChop' });
+          f.aoe({ kind: 'rect', x: Math.round(lx), y: Math.round(ly), angle: +a.toFixed(3), len: 1500, w: 150 }, f.ct(2.2), dmg.chop, { tag: 'mgChop',
+            onResolve: () => { for (const h of holes) if (segDist(h.x, h.y, lx, ly, lx + Math.cos(a) * 1500, ly + Math.sin(a) * 1500) < h.r + 40) grow(h, 8); } });
         } });
     };
     // Brood Roots: strands from the limb, painted first; anyone standing in one when they close is held
@@ -344,7 +367,7 @@ const MORROWOAK = {
       f.cast('Storm Knot', d, 'storm');
       const group = new Set();
       // each rod follows its hero until the last breath and then sets: drag it clear of the others, then step out of it
-      for (const p of ps) f.mech({ type: 'aoe', shape: { kind: 'circle', x: Math.round(p.x), y: Math.round(p.y), r: 190 }, delay: d, dmg: dmg.rod, follow: p.id, lockAt: H ? 1.2 : 1.45, tag: 'mgRod', group });
+      for (const p of ps) f.mech({ type: 'aoe', shape: { kind: 'circle', x: Math.round(p.x), y: Math.round(p.y), r: 170 }, delay: d, dmg: dmg.rod, follow: p.id, lockAt: H ? 1.2 : 1.45, tag: 'mgRod', group });
     };
     // Barrow Lantern: a light mark bursts on a hero and passes to whoever is farthest from them, on a beat
     const lantern = () => {
@@ -460,24 +483,53 @@ const MORROWOAK = {
     }, 'Inhale');
 
     // --- the acts -------------------------------------------------------------------------------------------------------------
-    const mix = (head, mid, tail) => [...head, ...(H ? f.shuffle(mid) : mid), ...tail];
-    const seeds = n => H ? [() => seed(n, true), 'Twin Seed'] : [() => seed(n), 'Hunger Seed'];
+    // An act is laid out in lanes: T is the tank's beat (a Root Lash about every 35 s; in Act III a Cleaver Bough soak lands on the tank every other
+    // time as well), H the healer's (a Sap Tide, or an Inhale: every Inhale bruises the party as the haul slams it against his bark) and F the rest
+    // (seeds, Blooms, saplings, a limb's turn). Each slot is a time into the act, no two named steps more than 14 s apart. Normal plays the bags in
+    // the order written; Hard draws the order within each lane (the opening beat of a lane stays put where noted), moves every slot up to 2 s either
+    // way, and keeps drawing until the whole act keeps the spacing rules: a Root Lash 9 s clear of an Inhale and 8 s of a Sap Tide, a Bloom 11 s
+    // after an Inhale (the haul puts everyone at his feet, and the petals need the time to be read from there), and 8 to 14 s between named steps.
+    // (Normal's order keeps the rules by construction; if a Hard draw never does, Normal's order is played.)
+    const heal = fn => Object.assign(fn, { heal: 1 });
+    const TIDE = [sapTide, 'Sap Tide'], LASH = [lash, 'Root Lash'], BLOOM = [() => bloom(), 'Fourfold Bloom'];
+    const HAUL = [heal(() => inhale()), 'Inhale'], DRAWB = [heal(() => drawBloom()), 'Inhale'];
+    const SEED1 = [() => seed(1), 'Hunger Seed'];
+    const SEED2 = H ? [() => seed(2, true), 'Twin Seed'] : [() => seed(2), 'Hunger Seed'];
+    const SAPL = [saplings, 'Saplings'], DARK = [hungeringDark, 'Hungering Dark'];
+    const lay = (slots, bag, pin = {}) => {
+      const build = jit => {
+        const pools = {};
+        for (const k of Object.keys(bag)) { const a = bag[k], n = pin[k] || 0; pools[k] = [...a.slice(0, n), ...(jit ? f.shuffle(a.slice(n)) : a.slice(n))]; }
+        let prev = -99;
+        return slots.map(([t, lane], i) => {
+          let at = t;
+          if (jit && i) at = Math.min(prev + 14, Math.max(prev + 8, t + Math.round((f.rng() * 2 - 1) * 2)));
+          prev = at;
+          return { t: at, m: pools[lane].shift() };
+        });
+      };
+      const ok = pl => {
+        const L = pl.filter(x => x.m[1] === 'Root Lash').map(x => x.t);
+        // a Sap Tide is always drawn early enough, and never leaves more than 80 s between two (the one raidwide the party can count on)
+        const tides = pl.filter(x => x.m[1] === 'Sap Tide').map(x => x.t), endT = pl[pl.length - 1].t;
+        if (!tides.length || tides[0] > 70 || tides.some((t, i) => i && t - tides[i - 1] > 80) || endT - tides[tides.length - 1] > 70) return false;
+        return !pl.some(x => (x.m[0].heal && L.some(t => Math.abs(t - x.t) < 9)) || (x.m[1] === 'Sap Tide' && L.some(t => Math.abs(t - x.t) < 8)) ||
+          (x.m[1] === 'Fourfold Bloom' && pl.some(y => y.m[0].heal && x.t - y.t > 0 && x.t - y.t < 11)));
+      };
+      let pl = build(false);
+      if (H) for (let i = 0; i < 600; i++) { const c = build(true); if (ok(c)) { pl = c; break; } }
+      let prev = 0;
+      return pl.map(x => { const d = x.t - prev; prev = x.t; return S([d, ...x.m]); });
+    };
+    // the limb turns are the same step all act; the act's bag lists them where Normal wants them
+    const turn = [limbTurn, 'The Grove Remade'];
+
     // I. The Grove
     const grove = from => f.course({
       until: 0.75,
-      sets: mix([S([4, sapTide, 'Sap Tide']), S([9, () => seed(1), 'Hunger Seed'])], [
-        S([12, lash, 'Root Lash']),
-        S([10, inhale, 'Inhale']),
-        S([12, () => bloom(), 'Fourfold Bloom']),
-        S([12, sapTide, 'Sap Tide']),
-        S([10, () => seed(1), 'Hunger Seed']),
-        S([12, lash, 'Root Lash'], [8, inhale, 'Inhale']),
-      ], [
-        S([12, () => bloom(), 'Fourfold Bloom']),
-        S([11, sapTide, 'Sap Tide']),
-        S([10, () => seed(1), 'Hunger Seed']),
-        S([12, lash, 'Root Lash']),
-      ]),
+      sets: lay([[4, 'H'], [13, 'F'], [22, 'T'], [34, 'H'], [46, 'F'], [56, 'T'], [66, 'H'], [76, 'F'], [86, 'T'], [97, 'H'], [108, 'F'], [118, 'T']], {
+        H: [TIDE, HAUL, TIDE, HAUL], T: [LASH, LASH, LASH, LASH], F: [SEED1, BLOOM, SEED1, BLOOM],
+      }, { H: 1 }),
       closing: [[10, sapTide, 'Sap Tide'], [10, lash, 'Root Lash'], [10, () => bloom(), 'Fourfold Bloom']],
       next: hollowing,
     }, from);
@@ -485,68 +537,41 @@ const MORROWOAK = {
     // II. Hollowing (its gate is the Swallowing's wall)
     const hollowing = from => f.course({
       until: 0.48,
-      wall: { label: 'The Swallowing', run: swallowing, until: 'resolved', timeout: SWALLOW + 8 },
-      sets: [
-        S([4, saplings, 'Saplings']),
-        S([8, ...seeds(2)]),
-        S([12, lash, 'Root Lash'], [8, inhale, 'Inhale']),
-        S([12, sapTide, 'Sap Tide']),
-        S([10, () => bloom(), 'Fourfold Bloom']),
-        S([12, saplings, 'Saplings'], [6, ...seeds(2)]),
-        S([12, lash, 'Root Lash']),
-        S(H ? [9, hungeringDark, 'Hungering Dark'] : [9, inhale, 'Inhale']),
-        S([11, sapTide, 'Sap Tide']),
-        S([11, ...seeds(2)]),
-        S([12, () => bloom(), 'Fourfold Bloom']),
-        S([12, lash, 'Root Lash'], [8, inhale, 'Inhale']),
-        S([12, sapTide, 'Sap Tide']),
-      ].filter(Boolean),
-      closing: [[10, sapTide, 'Sap Tide'], [10, lash, 'Root Lash'], [10, inhale, 'Inhale']],
+      wall: { label: 'The Swallowing', run: swallowing, until: 'resolved', timeout: SWALLOW + 12 },
+      sets: lay([[4, 'F'], [12, 'F'], [22, 'H'], [32, 'T'], [42, 'F'], [52, 'H'], [62, 'T'], [72, 'F'], [82, 'H'], [92, 'T'], [102, 'F'], [112, 'H'], [124, 'T'], [133, 'F']], {
+        H: [HAUL, TIDE, HAUL, TIDE], T: [LASH, LASH, LASH, LASH], F: [SAPL, SEED2, BLOOM, SAPL, SEED2, H ? DARK : BLOOM],
+      }, { H: 1, F: 2 }),
+      closing: [[10, sapTide, 'Sap Tide'], [10, lash, 'Root Lash'], [10, () => inhale(), 'Inhale']],
       next: remade,
     }, from);
 
-    // III. The Grove Remade: the limbs take turns, the DPS choose which to break
-    const turn = [limbTurn, 'The Grove Remade'];
+    // III. The Grove Remade: the limbs take turns, the DPS choose which to break (the first three F slots are always limb turns: no Twin Seed
+    // before the limbs have taken three turns; the first healer beat is an Inhale)
     const remade = from => f.course({
       until: 0.15, push: true,
       onStart: () => { growLimbs(); relabel(); },
-      sets: [
-        S([22, ...turn]),
-        S([10, sapTide, 'Sap Tide']),
-        S([9, ...turn]),
-        S([10, ...turn]),
-        S([10, lash, 'Root Lash'], [8, ...turn]),
-        S([10, ...seeds(2)]),   // (the first seeds of the new room come after the limbs have found their rhythm, not on top of the Swallowing)
-        S([10, sapTide, 'Sap Tide']),
-        S(H ? [9, hungeringDark, 'Hungering Dark'] : [9, inhale, 'Inhale']),
-        S([9, ...turn]),
-        S([10, lash, 'Root Lash']),
-        S([10, drawBloom, 'Inhale']),
-        S([12, ...turn]),
-        S([10, sapTide, 'Sap Tide']),
-        S([9, ...turn]),
-        S([10, ...seeds(2)]),
-        S([10, lash, 'Root Lash'], [8, ...turn]),
-        S([10, sapTide, 'Sap Tide']),
-        S([10, () => bloom(), 'Fourfold Bloom']),
-        S([9, ...turn]),
-      ].filter(Boolean),
+      sets: lay([[16, 'F'], [28, 'H'], [37, 'T'], [47, 'F'], [56, 'F'], [66, 'H'], [76, 'T'], [85, 'F'], [94, 'F'], [104, 'H'], [114, 'T'], [123, 'F'], [132, 'F'], [142, 'H'], [152, 'T'], [161, 'F'], [170, 'F'], [180, 'H'], [190, 'T'], [199, 'F'], [208, 'F'], [218, 'H'], [228, 'T'], [237, 'F'], [246, 'F']], {
+        H: [HAUL, TIDE, DRAWB, TIDE, HAUL, TIDE], T: [LASH, LASH, LASH, LASH, LASH, LASH],
+        F: [turn, turn, turn, turn, SEED2, turn, turn, turn, SEED2, BLOOM, turn, H ? DARK : HAUL, turn],
+      }, { H: 1, F: 3 }),
       closing: [[10, sapTide, 'Sap Tide'], [9, lash, 'Root Lash'], [9, ...turn]],
       next: lastAct,
     }, from);
 
-    // IV. Last Bloom
+    // IV. Last Bloom: the climax comes last. It is a step late in the act, and also the moment the boss falls under 5% (so a fast party meets it too)
+    let lastDone = false;
+    const lastOnce = () => { if (lastDone || f.state !== 'live') return; lastDone = true; lastBloom(); };
     const lastAct = from => f.course({
-      onStart: () => relabel(),
+      onStart: () => { relabel(); f.onHp(0.05, lastOnce); },
       sets: [
-        S([4, drawBloom, 'Inhale']),
+        S([4, () => drawBloom(), 'Inhale']),
         S([9, sapTide, 'Sap Tide']),
         S([8, ...turn]),
         S([8, lash, 'Root Lash']),
-        S([9, lastBloom, 'Fourfold Bloom']),
-        S([11, sapTide, 'Sap Tide']),
         S([9, ...turn]),
-        S([8, lash, 'Root Lash']),
+        S([8, sapTide, 'Sap Tide']),
+        S([9, lash, 'Root Lash']),
+        S([9, lastOnce, 'Fourfold Bloom']),
       ],
       closing: [[10, sapTide, 'Sap Tide'], [9, lash, 'Root Lash'], [10, lastBloom, 'Fourfold Bloom']],
       ramp: 0.08,
