@@ -104,3 +104,30 @@ Burial Rites (the graves, the Writ, the Crown of Graves) and the call-and-respon
 **Numbers.** Bots, 30 runs per seed (1000, 2000, 3000): Normal `GEAR=fresh` before 24 / 26 / 30 (89%), after 26 / 27 / 26 (88%); Hard `GEAR=mid` before 18 / 19 / 21 (64%), after 16 / 18 / 16 (56%). The 13 "Bots clear" line-ups all clear at least twice in three. Scripted length: Normal 9:05, Hard 9:26 (the check allows 8:00 to 10:00); the timeline check passes for 14 different Hard draws.
 
 **Longest stretch now (scripted, tank / healer including the Cleave's bleed):** Normal: Summons 19 / 23, Testimony 28 / 24, Court (the Warden) / 17, Verdict 33 / 24, Judgement 28 / 23, Night 23 / 9. Hard, worst of 30 pulls: 24 / 40, 64 / 48, 9 / 17, 75 / 30, 61 / 51, 24 / 8. Hard's tank and healer stretches in Testimony, the Verdict and Judgement are long (the Tithe is a deliberate lull); shortening them needs more Cleaves than the tank's cooldowns allow, or Sweeps the knights have to answer on top of another read.
+
+## A move for the tank: Sceptre Rebuke (2026-10-26)
+
+Burial Rites (the graves, the Writ, the Crown of Graves) and the call-and-response spine are untouched. One new cast, **Sceptre Rebuke**, on both difficulties, from Testimony on (it needs the knights).
+
+**The move.** He drives the sceptre through his tank: a narrow lance from him through the tank (red from the cast, follows the tank, sets 0.9 s before it lands). The tank takes it; anyone standing in the line behind the tank takes 70% of it, so the tank chooses where it points (the same job as pointing a Sweep, with a lighter blow). A knight takes it in (the flash on the knight) and 0.8 s after the blow answers it: the same lance from the knight's wall, aimed at the **place the tank stood when it landed**, drawn on the floor for the Echo's warning (2.6 s Normal, 2.0 s Hard). So the tank's read is: point him at bare wall, take the blow (a defensive for the heavier Hard one if the Cleave is near), then lead the fight off that spot before the knight's lance arrives; the melee and the healer move with the tank. It is "stored swings that come back from somewhere else", and the lance only ever comes back to where it was called. The answer is its own thing (it never touches the knights' memory), so no Echo unit has to carry it and it is never an extra re-read stacked on an Echo.
+
+**Normal vs Hard.** Normal: lance 115 wide, blow 12000 on the tank, the answer 10500, one knight in turn. Hard: lance 130 wide, blow 14000 and answer 12500 (times `HARD_HIT`), the knight is drawn at random, the floor is 0.6 s shorter. No second layer on Hard (a second knight aimed where the tank has gone by then was tried on paper and left out: bots already lose 10 points to the denser Hard).
+
+**Where it sits** (units; `rebukeUnit`, lead 6 to 9 s). Normal: one in Testimony (before the Lids), one in the Verdict (after Doom and Marks), one in Judgement (first of its tank units). Hard: three in Testimony and three in Judgement, woven among the other units by the existing `lay` (each is a tank unit); two in the Verdict (after Doom and Marks, and after the Decree, before the Tithe, whose lead is 2 s shorter so the Verdict does not grow). Never next to the Cleave (Hard's Cleave still comes about once a minute and a half), never in the Tithe, the Court, the Rites or the Night.
+
+**To stay under the 600 s the timeline check allows.** The six Hard rebukes added about 40 s of script, so Hard's calms were trimmed by a second here and there (the Summons' Crown, Doom, Stomp and closing Knell; Testimony's Stomp, Bells, Lids, Lights, March and closing Knell; Judgement's Lids, Lights, Summons, Audience and closing Sweep; the Court's last pause; the Verdict's Lids and the Tithe). Normal is not trimmed.
+
+**The tank's longest wait without a beat of their own (scripted, worst of 20 Hard pulls):**
+
+| | Summons | Testimony | Court | Verdict | Judgement | Night |
+|---|---|---|---|---|---|---|
+| Normal before | 19 | 28 | 9 | 33 | 28 | 23 |
+| Normal after | 19 | 23 | 9 | 33 | 28 | 23 |
+| Hard before | 24 | 64 | 9 | 75 | 61 | 24 |
+| Hard after | 23 | 28 | 8 | 40 | 27 | 24 |
+
+The Verdict's remaining 33 / 40 s is the Tithe, the Dirge and the Crown, Gaze, March and volley that follow it: a deliberate lull, and nothing of the tank's fits between a party at a third of its health and a Tithe. The heavy moves are untouched, so the healer's gaps are as they were (Hard Judgement's longest 30 s, from the Summons' stack; the rebuke is a heal beat for them too).
+
+**Numbers (bots, 30 runs per seed).** Hard `GEAR=mid`: before 16 / 18 / 16 (seeds 1000, 2000, 3000: 56%); with the move at `HARD_HIT` 1.18 only 12 / 13 / 12 (41%). A tally of the first deaths showed the extra weight landing in the Court's Grave Summons and Marks (the stack leaves a bot just under what the Marks hit for, so a healer one beat late loses the party); the rebukes themselves were not the cause (all six off, with only the trimmed calms, was 13 of 30), so the bite was brought back with the one factor: `HARD_HIT` 1.18 to 1.14. After (final build): 16 / 14 / 17 (52%; seed 4000 earlier: 20). Scripted length: Normal 9:31, Hard 9:56 (the check allows 8:00 to 10:00). Normal `GEAR=fresh` with the move alone: 28 / 28 / 30 (95%), over the 85 to 90 target, so Normal alone was nudged up (Hard untouched; every Hard blow is still above 1.1x Normal): Knell 9000 to 10000, Normal swings and echoes 14000 to 16000, Grave Marks 8000 to 9000. Result: 25 / 27 / 27 (88%) on seeds 1000, 2000, 3000. (Marks above 9000 or Knell below 10000 broke the weakest line-up, bloodreaver, alembist, bladedancer, pyromancer at base gear, which only clears about one run in four.) The move itself is lighter than the swings (12000 / 10500). All 13 line-ups clear in the final check.
+
+Journal: Sceptre Rebuke for all 23 heroes (`journal-lint` clean). Sound: `bm-hollowking-sceptre-rebuke` (recipe handed over separately). The move's tags `rebuke` (the lance on the tank) and `erebuke` (the knight's answer) use the shared landing; a drawn landing for each (a sceptre thrust, a knight's lance along the floor) can be added to `hollowking-fx.js` later.

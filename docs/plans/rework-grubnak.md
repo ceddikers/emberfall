@@ -82,3 +82,28 @@ Normal, `GEAR=fresh`: before 20 of 20; after 89 of 90 (the bots dodge nearly eve
 - Normal at `GEAR=fresh` fell from 85 to 76 because of (a) the gate cut (fixed by the seam and by restoring the original first sets) and (b) the added Tenderizes beside Larder Toss, Meat Toss, Lid Slam, the Mains' Grease Fire and the toss-into-meal, which cost the weak-healer line-ups (Alembist, Thresher, Ironpalm) a third to two thirds of their clears. Dropped those; Normal damage numbers are the original.
 
 **Numbers (90 runs, seeds 1000/2000/3000).** Normal fresh: before 85, now 82 (91%; 26, 26, 30). Hard mid: before 51, now 53 (59%; 16, 20, 17). Base-gear line-ups (3 runs, the check's seeds), all at least 1 of 3: Cleric Aegis, Alembist, Oathbroker, Gloomsworn, Thresher, Lanternkeeper, Kenseier 2; Sentinel, Gorgemaw, Ironpalm, Threadweaver 3; Marionettist and Tidecaller 1 (Tidecaller is weak on its own: about 3 of 12 before and after). Timeline check passes (script 8:20 Normal, 8:44 Hard).
+
+## Tank move (2026-10-26): Skewer
+
+*Ask: the tank still waited 30 to 70 s between things of their own, because Tenderize and Butcher's Charge are the only tank beats and are too heavy to come more often. One new, light move for the tank on both difficulties.*
+
+**The move.** **Skewer**: he hurls a skewer along a line from himself through his tank (cast pose `throw`; a narrow red line drawn from the cast, out to the far wall). The line follows the tank until 1.3 s before it flies on Normal (1.0 s on Hard), so there is a moment to step off it. Type `buster` with `aimFromBoss`: the tank takes a light hit (Normal 5500, about a sixth of the tank's health; Hard 6100, x1.11), anyone else on the line takes 0.7 of it and the bots keep off it. Nothing is hidden, nothing safe is painted, and it never moves him.
+
+**Why it fits.** The fight asks "where do I stand?" and the tank's answer is where the whole kitchen is held. The line runs out from wherever the tank stood, so the tank decides which half of the room it sweeps and whether anyone is behind them on it; and it can be taken or sidestepped after the lock (a read the party can see in the red line). It is not a cleaver, so it does not touch the Tenderized rule.
+
+**Where it sits.** In the calm stretches, never inside a cleaver's cooldown window: Hard's `tankScan` now counts it as a beat and `bestOrder` refuses any order that puts a skewer within 8 s of a cleaver or a charge (`minSk`); the Hard sets that end on one (`sk()`, the next set's opening delay gives back what the skewer took, `fit()`; a Tenderize or charge never follows closer than 8.5 s, a rail, the Dinner Rush or a Belly Flop never closer than 8.5 s so the skewer has landed first) are the Mains' meat-toss and chop sets, the Second Sitting's spice, larder, mise, whisk, meal and Dinner Rush sets; inside sets: the Appetiser's toss-and-meal and larder sets. Both difficulties close the Flare-Up on one and the Gorge passes carry one between each Gorge (Normal 5.5 s after, Hard 6.5 s after). Never on a rail (Order Up!): skewers after the two rails cost Hard about 4 clears in 30 on their own (the rail's plates and Stuffed leave no room for a second line to read), so those two tails were dropped.
+
+**The numbers.** Longest stretch the tank waits between beats (cleaver, charge, skewer), worst over 80 Hard pulls:
+
+| | Appetiser | Mains | Flare-Up | Second Sitting | Dessert Trolley |
+|---|---|---|---|---|---|
+| Normal before | 58 | 69 | 37 | 56 | 34 (then 90 s of Gorge with none) |
+| Normal after | 31 | 34 | 25 | 30 | 34 (Gorge now has one every 15 s) |
+| Hard before | 38 | 46 | 40 | 49 | 37 |
+| Hard after | 24 | 35 | 25 | 32 | 37 |
+
+Normal's script ends about 19 s later (Last Orders at about 8:39), Hard's about 38 s later (9:22). The Hard Dinner Rush also ends on one skewer. The longer Hard script left 152 s between raidwides in the timeline check, so Hard's Family Meal set in the Second Sitting now carries a Grease Fire.
+
+**Bots** (90 runs, seeds 1000/2000/3000). Normal `GEAR=fresh`: before 82 of 90 (26, 26, 30), now 84 of 90 (29, 27, 28). Hard `GEAR=mid`: before 53 (16, 20, 17), now 54 (18, 13, 23; seed 3000 measured before the Grease Fire below was added). The first draft (9800 on Normal, a skewer after the rails, a skewer between the Ladle and the Lid, seam 11) cost Normal 7 clears and Hard 11. What fixed it: the damage down to 5500 / 6100; the Normal seam raised from 11 to 14 (the skewer after the casks moved the soup set two seconds later, so the 80% gate cut the Appetiser at once and the Mains' first charge-and-toss landed on people still healing the meal; this was the cause of most Normal losses); no skewer between the Ladle Spin and the Lid Slam on Normal (cost about 3 clears in 30); none after a rail on Hard.
+
+**Journal.** `Skewer` for every hero (no spoilers beyond the move itself; both difficulties). **Sound** is not in the repo yet: `scratchpad\newmoves\grubnak.md` has the recipe `bm-grubnak-skewer`.

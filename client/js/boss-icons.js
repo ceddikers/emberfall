@@ -109,6 +109,8 @@ const BossIcons = (() => {
   const G = {
     // Grubnak
     'Chop Chop': (c, A) => { cleaver(c, 26, 30, -0.5, 1, L); cleaver(c, 38, 34, 0.5, 1, A); },
+    // a long skewer flying down a line through a small figure
+    'Skewer': (c, A) => { stroke(c, rgba(A, 0.4), 8, [[6, 54], [58, 10]]); stroke(c, '#cfd6e0', 2.5, [[14, 48], [52, 16]]); fill(c, '#cfd6e0', [[52, 16], [58, 10], [55, 19]]); disc(c, 24, 40, 5, '#cfd6e0'); },
     'Tenderize': (c, A) => { cleaver(c, 32, 26, -0.15, 1.3, L); motion(c, A, [[[14, 50], [50, 50]], [[20, 56], [44, 56]]]); },
     'Cleaver Toss': (c, A) => { cleaver(c, 30, 30, 0.8, 1.1, L); c.beginPath(); c.arc(32, 32, 24, -0.6, 1.4); c.strokeStyle = A; c.lineWidth = 3; c.stroke(); },
     'Simmer': (c, A) => { fill(c, L, [[12, 30], [52, 30], [48, 52], [16, 52]]); fill(c, L, [[8, 28], [56, 28], [56, 32], [8, 32]]); for (const x of [22, 32, 42]) ring(c, x, 20 - (x % 3), 4, A, 2.5); },
@@ -184,6 +186,8 @@ const BossIcons = (() => {
     'Venom Spit': (c, A) => { drop(c, 42, 24, 1.3, A); for (const [x, y, r] of [[30, 34, 3.5], [22, 42, 3], [15, 49, 2.5]]) disc(c, x, y, r, A); ring(c, 44, 46, 8, L, 2); },
     'Venom Drip': (c, A) => { for (const [x, y] of [[20, 22], [34, 30], [46, 18]]) drop(c, x, y, 1, A); for (const x of [20, 34, 46]) ring(c, x, 48, 6, L, 2); },
     'Eightfold Lunge': (c, A) => { stroke(c, L, 6, [[10, 52], [24, 18], [46, 30]]); fill(c, '#d6304a', [[44, 26], [58, 40], [46, 36]]); fill(c, '#ff7ac0', [[20, 58], [12, 42], [30, 44]]); },
+    // one fang driven down a lane, venom left where it bit
+    'Fang Strike': (c, A) => { stroke(c, rgba(A, 0.4), 12, [[8, 10], [56, 54]]); fill(c, L, [[14, 10], [26, 14], [44, 46], [38, 50]]); for (const [x, y] of [[48, 52], [54, 46], [42, 56]]) disc(c, x, y, 2.6, '#b8ef5a'); },
     'Silk Wrap': (c, A) => { c.beginPath(); c.ellipse(32, 32, 12, 20, 0, 0, TAU); c.fillStyle = L; c.fill(); for (let i = 0; i < 6; i++) stroke(c, INK, 1.5, [[21, 16 + i * 6], [43, 20 + i * 6]]); },
     'Silk Lines': (c, A) => { disc(c, 12, 46, 6, L); disc(c, 52, 18, 6, L); stroke(c, A, 2.5, [[12, 46], [24, 28], [36, 38], [52, 18]]); },
     'Spin': (c, A) => { for (const [x, y] of [[12, 12], [52, 12], [52, 52], [12, 52]]) disc(c, x, y, 5, L); stroke(c, L, 2.5, [[12, 12], [52, 12], [52, 52], [12, 52]], true); disc(c, 18, 12, 4, A); },
@@ -228,6 +232,8 @@ const BossIcons = (() => {
     // Volkar
     'Thunderclap': (c, A) => { cloud(c, 32, 22, 1.1, '#5a6a84'); bolt(c, A, 32, 42, 0.9); },
     'Twin Fall': (c, A) => { for (const x of [20, 44]) { fill(c, 'rgba(223,244,255,0.85)', [[x - 6, 0], [x + 6, 0], [x + 8, 48], [x - 8, 48]]); c.beginPath(); c.ellipse(x, 50, 12, 5, 0, 0, TAU); c.strokeStyle = A; c.lineWidth = 2.5; c.stroke(); } },
+    // a crackling rope flung from a storm cloud through a small figure to the edge
+    'Static Lash': (c, A) => { stroke(c, rgba(A, 0.4), 9, [[8, 12], [56, 52]]); bolt(c, A, 20, 20, 0.5); bolt(c, A, 44, 42, 0.5); disc(c, 32, 32, 5, '#cfd6e0'); ring(c, 32, 32, 9, A, 2); },
     'Titan Fist': (c, A) => { fill(c, '#8a9ab0', [[14, 22], [42, 20], [50, 26], [50, 44], [16, 46]]); for (const y of [27, 33, 39]) stroke(c, INK, 2, [[38, y], [50, y]]); bolt(c, A, 54, 14, 0.4); bolt(c, A, 10, 52, 0.4); },
     'Thunder Crash': (c, A) => { cloud(c, 32, 14, 0.9, '#5a6a84'); stroke(c, '#ffe27a', 3, [[32, 22], [30, 32], [22, 46]]); stroke(c, '#ffe27a', 3, [[30, 32], [40, 46]]); disc(c, 22, 50, 4, L); disc(c, 40, 50, 4, L); },
     'Static Field': (c, A) => { ring(c, 32, 32, 18, '#d79bff', 3); bolt(c, '#d79bff', 32, 32, 0.6); },
@@ -280,6 +286,8 @@ const BossIcons = (() => {
       c.beginPath(); c.ellipse(32, 61, 12, 3, 0, 0, TAU); c.fillStyle = 'rgba(223,251,255,0.55)'; c.fill();
     },
     // the Hollow King
+    // the sceptre driven straight through a small figure, a knight's shield catching the far end
+    'Sceptre Rebuke': (c, A) => { stroke(c, rgba(A, 0.45), 10, [[8, 52], [56, 12]]); stroke(c, '#e8c15a', 4, [[12, 48], [40, 24]]); disc(c, 40, 24, 5, '#e8c15a'); disc(c, 26, 36, 5, '#cfd6e0'); fill(c, '#8a9ab0', [[48, 8], [60, 12], [58, 24], [50, 22]]); },
     'Sceptre Sweep': (c, A) => { c.beginPath(); c.moveTo(14, 50); c.arc(14, 50, 40, -1.4, -0.1); c.closePath(); c.fillStyle = 'rgba(232,193,90,0.55)'; c.fill(); stroke(c, '#e8c15a', 4, [[14, 50], [40, 18]]); disc(c, 40, 18, 5, '#e8c15a'); },
     'Barrow Stomp': (c, A) => { ring(c, 32, 40, 18, '#4fe0d0', 3); for (let i = 0; i < 6; i++) { const a = i * TAU / 6; stroke(c, '#4fe0d0', 2, [[32, 40], [32 + Math.cos(a) * 16, 40 + Math.sin(a) * 12]]); } fill(c, L, [[24, 6], [40, 6], [40, 24], [46, 28], [24, 28]]); },
     'Crown of Graves': (c, A) => { crown(c, 32, 20, 0.8, '#e8c15a'); for (const x of [12, 24, 40, 52]) { stroke(c, '#d0b0ff', 3, [[x, 58], [x, 42]]); for (const f of [-3, 0, 3]) stroke(c, '#d0b0ff', 1.6, [[x, 42], [x + f, 36]]); } },
@@ -397,6 +405,12 @@ const BossIcons = (() => {
       stroke(c, rgba(A, 0.7), 8, [[58, 6], [24, 46]]); stroke(c, '#fff4c8', 2, [[58, 6], [24, 46]]);
       ring(c, 22, 48, 9, A, 3); disc(c, 22, 48, 4, '#ffb04a');
     },
+    // a ring at a pair of boots, a dark shape springing down into it
+    'Pounce': (c, A) => {
+      ring(c, 32, 46, 17, A, 3); disc(c, 32, 46, 4, '#cfd6e0');
+      stroke(c, rgba(A, 0.5), 8, [[14, 14], [30, 38]]); stroke(c, '#ffd27a', 2, [[14, 14], [30, 38]]);
+      for (const [x, y] of [[44, 40], [50, 50], [20, 54]]) disc(c, x, y, 2.4, '#ff8a2a');
+    },
     // a line of embers down onto a ring round a small figure
     'Talon Dive': (c, A) => {
       stroke(c, rgba(A, 0.55), 10, [[12, 2], [32, 36]]); stroke(c, '#ffd27a', 2.5, [[12, 2], [32, 36]]);
@@ -466,6 +480,12 @@ const BossIcons = (() => {
       inked(c, '#cfeaff', [[10, 24], [4, 12], [16, 20]], 1.6); disc(c, 26, 28, 2, A);
     },
     // a great pale fist coming down on a cone of dark ground
+    // a fist coming down on a sheet of ice that splits under a small figure
+    'Icebreaker': (c, A) => {
+      fill(c, rgba('#cfeaff', 0.35), [[8, 40], [56, 40], [60, 58], [4, 58]]);
+      stroke(c, '#eaf6ff', 2, [[32, 40], [26, 48], [34, 52], [28, 58]]); stroke(c, '#eaf6ff', 2, [[34, 52], [44, 56]]);
+      fill(c, '#8ad0ee', [[20, 6], [44, 6], [46, 26], [18, 26]]); disc(c, 32, 36, 4, '#cfd6e0');
+    },
     'Glacial Fist': (c, A) => {
       fill(c, rgba(A, 0.35), [[32, 26], [8, 62], [56, 62]]);
       inked(c, '#9fb6c9', [[20, 4], [44, 4], [48, 24], [40, 34], [24, 34], [16, 24]], 2.2);
@@ -721,6 +741,11 @@ const BossIcons = (() => {
       disc(c, 53, 9, 3.4, '#ffffff'); motion(c, A, [[[40, 44], [30, 52]], [[50, 36], [42, 46]]]);
     },
     // a ring with a rune in it, two small marks orbiting
+    // a ring with a rune pressed into its middle: the mark laid on the shield alone
+    'Circle Brand': (c, A) => {
+      ring(c, 32, 34, 22, '#ffe08a', 3); ring(c, 32, 34, 15, rgba('#ffe08a', 0.45), 1.5);
+      disc(c, 32, 34, 5, '#ff8a2a'); stroke(c, L, 2.4, [[32, 22], [32, 46]]); stroke(c, L, 2.4, [[20, 34], [44, 34]]);
+    },
     'Rune Mark': (c, A) => {
       ring(c, 32, 32, 22, A, 3); ring(c, 32, 32, 17, rgba(A, 0.5), 1.5);
       stroke(c, L, 3, [[32, 18], [32, 46]]); stroke(c, L, 3, [[24, 26], [32, 32], [40, 26]]); stroke(c, L, 3, [[26, 40], [38, 40]]);

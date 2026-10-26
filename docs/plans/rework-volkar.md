@@ -78,3 +78,26 @@ Changes (all in `volkar.js`, no new cast names):
 After (landing to landing, Eye excluded): tank gaps Normal at most about 36 s, Hard about 35 s in the Front and 40 to 50 s around the Gathering Storm and the join into the finale; healer Normal at most 47 s (the Rod Strike, Gale and Walls stretch) and about 42 s late in the Front, Hard 25 to 40 s. Not the 20 to 30 s hoped for: Static Fields cannot sit on top of sweeping Walls, and full Fists cannot sit closer without the Normal weak-healer line-ups and Hard dying.
 
 Bots (90 runs each, three seed sets): Normal `GEAR=fresh` before 79 (88%), after 74 (82%); Hard `GEAR=mid` before 51 (57%), after 49 (54%). All 14 base-gear line-ups clear at least once in three (Undertow 3 of 8, Apothecary 2 of 3).
+
+## New tank move: Static Lash (2026-10-26)
+
+The ask: the tank still waited 30 to 36 s between beats on Normal and 35 to 50 s on Hard, because Titan Fist (a full tankbuster) cannot come more often. Volkar gets one lighter beat of the tank's own.
+
+**The move.** Static Lash, on both difficulties: a rope of lightning flung down the line to the tank (a red lane from him through the tank to the rim, 100 wide, 640 long, shown for the whole cast; boss pose is his Chain Lightning crackle, anim key `chain`). It follows the tank and fixes late (1.4 s before it lands on Normal, 1.0 s on Hard): the tank steps out sideways once it locks, or takes it with a mitigation; whoever stands in the lane takes it too, so nobody stands behind the tank on that line. Normal 7800, cast 3.2 s; Hard 9000 (15 percent over Normal), cast 2.7 s. Dodged it is nothing; hit, it is about a third of a Titan Fist and gives Vulnerability like any avoidable hit.
+
+**Why this shape.** Where's cover and who's in the line is the fight's second rule; the lane is the tank's own read and positioning job (which way to step, away from the party), not another number to heal. Never reuses the Fist's name or its cone; it is a lane you can dodge, so it can come every 15 to 25 s. A first version forked the rope to whoever shared the tank's charge on Hard ("like charges arc", a second lane aimed at that player). It was the best fit with the polarity rule but cost the bots about 20 points of Hard clears (seeds 1000 and 3000: 38 percent with the fork on every lash, 47 percent on three, 60 percent without), so it was dropped. If Hard wants a polarity layer later, that is the lever to try on one lash only.
+
+**Where it sits.** In units (`stepLash`), so Hard's shuffles keep it. Placed after the previous cast bar ends and well clear of the Fists (at least 7 s landing to landing), never inside sweeping Storm Walls, a Rod Strike or a Gale. Normal: the Front (after the first Fist; twice in the Squall Line unit; after the walls' Surge; after the Avalanche walls; after the Static Field; after Rods and Gale), the Back (straight off the stones before the Crash; after the Avalanche walls; during the Gathering Storm; after the late Surge and Field), the finale (after each Twin Fall's second pair). Hard: the Supercell unit, the Squall Line unit twice, the Surge + Crash, Static Field and Surge + Field units of the Front's shuffle, between Avalanche and Storm Walls (both Fronts), the Back's opening Crash, the Rods + Surge unit, the Gathering Storm, the late Surge, and the finale's units (after the scatter of each Heavens Fall, after each Twin Fall). The slow-party repeat of the finale carries one lash a pass. Hard's two Avalanche + Walls units grew by a second (the Walls cast later, the lash between); the opening Thunderclap unit is a few seconds shorter on both difficulties to pay for the extra length. Scripted 9:55 Normal (was 9:50), 9:57 Hard (was 9:55).
+
+**Tank gaps** (landing to landing, Titan Fist and Lash together, worst over eight Hard draws):
+
+| | Front | Back | Eye / finale |
+|---|---|---|---|
+| Normal before | 33 | 36 | 45 across the Eye |
+| Normal after | 22 | 25 | 32 across the Eye (its 20 s are calm by design) |
+| Hard before | 37 | 41 to 45 | 51 across the Eye, 39 in the finale |
+| Hard after | 28 | 28 | 32 across the Eye, 13 in the finale |
+
+**Bots.** Normal `GEAR=fresh`, 90 runs: 26 / 27 / 28 of 30 (90 percent; before 82 to 91 depending on the pass). Hard `GEAR=mid`: 15 / 14 / 19 (53 percent; before 54 percent). The bots dodge the lash well (one hit in 18 runs). All 14 Volkar line-ups in `check.js` clear (mostly on run 1), the timeline passes (no warning under 1.2 s, no cast cut short, the feed always three steps ahead), Hard runs clean.
+
+Tell art: the lane draws with the default red area (tag `lash`); a rope-of-lightning look in `boss-tells.js` would be the next polish. Sound: `bm-volkar-static-lash` (recipe in the scratchpad `newmoves/volkar.md`, not yet in the sfx files).

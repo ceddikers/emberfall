@@ -4,7 +4,8 @@
 // out of reach, and a faint trail of embers draws the line he will dive along four seconds ahead. The dive lands on one of
 // three crater spots (picked at random each time: the red circle on the floor is the only way to know), and everything on
 // the line or under the landing takes it. Every breath leaves molten ground for a dozen seconds (fourteen on Hard).
-//   Act I, Ground (100% → 75%): Tyrant's Roar, Rending Claws (tankbuster), Ember Breath (a cone at a random hero; molten
+//   Act I, Ground (100% → 75%): Tyrant's Roar, Rending Claws (tankbuster), Pounce (the tank's own: a ring on whoever holds him, he
+//     springs into it and the floor there burns for a few seconds; it rides between the claws), Ember Breath (a cone at a random hero; molten
 //     floor for 12 s, 14 on Hard), Tail Lash (the cone behind him), Magma Burst (spread; each puddle stays), Cinder Feast (stack),
 //     and one early flight (a plain Dragonfall, by about 70 s on Normal) so the fight's question is asked early.
 //   Act II, First Flight (75% → 50%): Take Flight, then Dragonfall (the dive) between ground stretches; Twin Pass (two lines
@@ -23,6 +24,7 @@
 //     (Roar, a Talon Dive and its Aftershock, Twin Breath, claws into tail); Hard draws their order.
 // Acts II to IV use PUSH: a party that reaches a gate early cuts the rest of the act and moves on.
 // Every telegraph shows on the floor on every difficulty. Hard: casts 15% faster, hits about 1.1x Normal's (hardDmg 1.7 on a lower table; the buster a touch lower, 1.07x), and:
+//   Pounce springs twice: a second, quicker spring a beat after the first, at wherever the tank has gone (ring and pool a little bigger).
 //   Wingbeat: each dive's wings shove everyone near the flight line away from it (into a wall, a slam).
 //   Cinder Rain: embers fall across the crater; each leaves a small molten pool.
 //   Heart Flare: a stack on a random hero, then a spread right after it.
@@ -54,7 +56,7 @@ const WYRM = {
     const dmg = {
       roar: H ? 12100 : 15900, buster: H ? 17000 : 23500, tail: H ? 17000 : 21800, breath: H ? 18700 : 23400, molten: H ? 2700 : 2500, puddle: H ? 2200 : 2100,
       magma: H ? 11400 : 14700, feast: H ? 32100 : 42000, gust: H ? 3600 : 3500, pass: H ? 14500 : 19200, land: H ? 20600 : 25800, wing: H ? 4600 : 5400, slam: H ? 6600 : 7500,
-      scale: H ? 12700 : 16500, boom: H ? 15100 : 18000, boil: H ? 10900 : 14300, scorch: H ? 15700 : 20300, burn: H ? 24800 : 27800, heart: H ? 9100 : 10500,
+      pounce: H ? 7600 : 10000, pounce2: H ? 5400 : 0, scale: H ? 12700 : 16500, boom: H ? 15100 : 18000, boil: H ? 10900 : 14300, scorch: H ? 15700 : 20300, burn: H ? 24800 : 27800, heart: H ? 9100 : 10500,
       rain: H ? 9100 : 10500, quake: H ? 11800 : 14000, flareStack: H ? 31000 : 30000, flareSpread: H ? 12500 : 13200, whelpHp: 30000, whelpBite: H ? 2300 : 2300, last: H ? 13400 : 14300,
     };
     const K = H ? 1.0 : 1.15;           // tuning: every hit but the floor fire and the whelps, together
@@ -68,27 +70,27 @@ const WYRM = {
     const PATH_W = 170, LAND_R = 225, SCORCH_R = 105;
     let rimR2 = 0;                       // the molten ring's inner edge once the Crater Boils (0: not yet)
     // Hard draws the order of an act's middle sets fresh each pull (the opening and the last sets stay put). A draw is only taken
-    // if it keeps the rhythm: the tank is never more than 30 s from a beat (Rending Claws, Talon Dive, Tail Lash), two Rending
+    // if it keeps the rhythm: the tank is never more than 26 s from a beat (Rending Claws, Talon Dive, Tail Lash, Pounce), two Rending
     // Claws are never closer than 12 s, the healer is never more than 36 s from work (a buster or a real hit on the whole party)
     // and never more than 75 s from a hit on the whole party (Twin Breath and the Aftershock are avoidable, so they do not count).
     // The act's start counts as a beat of every kind. Normal plays the written order, which is written to pass the same check
-    // (f.moves.orderOk, run by the scratch tools); if no draw passes, Hard falls back to the written order too.
-    const TANK_B = new Set(['Rending Claws', 'Talon Dive', 'Tail Lash']);
+    // (f.moves.orderOk, run by the scratch tools; an act with a wall after it also ends within endMax of a tank beat); if no draw passes, Hard falls back to the written order too.
+    const TANK_B = new Set(['Rending Claws', 'Talon Dive', 'Tail Lash', 'Pounce']);
     const RAID_B = new Set(["Tyrant's Roar", 'Cinder Feast', 'Magma Burst', 'Heart Flare', 'Cinder Rain', 'Crater Boils', 'The Roost']);
-    const orderOk = sets => {
+    const orderOk = (sets, endMax = 26) => {
       let t = 0, lastT = 0, lastH = 0, lastR = 0, lastC = -99;
       for (const set of sets) for (const [dt, , name] of set) {
         t += dt;
         if (name === 'Rending Claws') { if (t - lastC < 12) return false; lastC = t; }
-        if (TANK_B.has(name)) { if (t - lastT > 30) return false; lastT = t; }
+        if (TANK_B.has(name)) { if (t - lastT > 26) return false; lastT = t; }
         if (name === 'Rending Claws' || RAID_B.has(name)) { if (t - lastH > 36) return false; lastH = t; }
         if (RAID_B.has(name)) { if (t - lastR > 75) return false; lastR = t; }
       }
-      return t - lastT <= 30 && t - lastH <= 38;   // (and the act does not end on a long wait)
+      return t - lastT <= endMax && t - lastH <= 38;   // (and the act does not end on a long wait)
     };
-    const mix = (head, mid, tail) => {
+    const mix = (head, mid, tail, endMax) => {
       if (!H) return [...head, ...mid, ...tail];
-      for (let i = 0; i < 80; i++) { const c = [...head, ...f.shuffle(mid), ...tail]; if (orderOk(c)) return c; }
+      for (let i = 0; i < 80; i++) { const c = [...head, ...f.shuffle(mid), ...tail]; if (orderOk(c, endMax)) return c; }
       return [...head, ...mid, ...tail];
     };
 
@@ -118,6 +120,31 @@ const WYRM = {
       const d = f.ct(4.4);
       f.cast('Rending Claws', d, 'claws');
       f.mech({ type: 'buster', shape: { kind: 'cone', x: B.x, y: B.y, r: 340, arc: 1.4, angle: B.facing }, delay: d, dmg: dmg.buster, target: tank.id, aimFromBoss: tank.id, tag: 'buster' });
+    };
+    // Pounce (the tank's own, on the ground): he coils and springs at whoever holds him. A ring is drawn on the tank from the start of the
+    // cast and follows them until 1.3 s before the spring, then it stays; he comes down in it, and where he lands the floor is molten for a
+    // few seconds. The tank decides where he lands: stay and take it, or step out and he comes down on empty floor (then he has to be
+    // walked back out of his own fire). Lighter than Rending Claws (about 0.45x), so it comes between the claws. Hard: the same, with a
+    // second, quicker spring a beat later at wherever the tank has gone (no second cast bar, like Twin Breath's second cone).
+    const POUNCE_R = H ? 135 : 125, POUNCE_POOL = H ? 6 : 5;
+    const pounce = (second = false, single = false) => {
+      const t = f.tank(); if (!t) return;
+      const d = second ? f.ct(2.0) : f.ct(3.6), LOCK = second ? 1.2 : 1.3;
+      if (!second) f.cast('Pounce', d, 'dive');
+      const m = f.mech({ type: 'aoe', shape: { kind: 'circle', x: t.x, y: t.y, r: POUNCE_R }, delay: d, dmg: second ? dmg.pounce2 : dmg.pounce, follow: t.id, lockAt: LOCK, tag: 'pounce', ddown: true,
+        onResolve: () => {
+          const pd = f.puddle(Math.round(m.shape.x), Math.round(m.shape.y), POUNCE_R, POUNCE_POOL, dmg.puddle, 1, 'ember', { ddown: true });
+          for (const o of f.alive()) pd.last[o.id] = f.t + 0.5;   // (a second and a half to step off it before it first burns)
+        } });
+      // the spring: he is off the ground for the last half second and comes down in the ring
+      const SPRING = 0.55;
+      f.afterKeep(d - SPRING, () => {
+        const dx = m.shape.x - B.x, dy = m.shape.y - B.y, dist = Math.hypot(dx, dy);
+        B.untargetable = true; B.lockFacing = true; B.facing = Math.atan2(dy, dx);
+        B.moveTo = { x: m.shape.x, y: m.shape.y, speed: Math.max(300, dist / SPRING) };
+      });
+      f.afterKeep(d + 0.03, () => land([m.shape.x, m.shape.y], B.facing));
+      if (H && !second && !single) f.afterKeep(d + 0.3, () => pounce(true));
     };
     // Tail Lash: the cone behind him (he faces his tank, so it sweeps the other side of him)
     const tailLash = (delay = f.ct(3.6)) => {
@@ -398,15 +425,15 @@ const WYRM = {
       const waves = H ? 3 : 2, cl = f.ct(4.4), burn = f.ct(9), fl = f.ct(4.6);
       const flareSlot = H ? (f.rng() < 0.5 ? 0 : 1) : -1;
       const starts = [3], clawsAt = [];
-      let flareAt = 0;
+      let flareAt = 0, pounceAt = 0;
       for (let k = 0; k < waves - 1; k++) {
         const lands = starts[k] + burn;
-        if (k === flareSlot) { flareAt = lands + 4.5; clawsAt.push(flareAt + fl + 2.6 + 0.4); starts.push(flareAt + fl + 2.6 + 5.5); }
+        if (k === flareSlot) { flareAt = lands + 4.5; pounceAt = lands + 0.35; clawsAt.push(flareAt + fl + 2.6 + 0.4); starts.push(flareAt + fl + 2.6 + 5.5); }
         else { clawsAt.push(lands + 0.4); starts.push(lands + 0.4 + cl + 0.3); }
       }
       starts.forEach((t, k) => f.afterKeep(t, () => heartWave(k), 'Heart Burn'));
       clawsAt.forEach(t => f.afterKeep(t, claws, 'Rending Claws'));
-      if (H) f.afterKeep(flareAt, heartFlare, 'Heart Flare');
+      if (H) { f.afterKeep(pounceAt, () => pounce(false, true), 'Pounce'); f.afterKeep(flareAt, heartFlare, 'Heart Flare'); }
       // then a Roar as the last fire lands, and the Heart closes in the same breath as a buster, once the Roar has been cast (named in
       // the same tick, so the feed never runs short; the next act is laid out at once)
       const lastLands = starts[waves - 1] + burn, end = Math.max(lastLands + 1, lastLands - 3 + f.ct(4.5) + 0.1);
@@ -419,16 +446,17 @@ const WYRM = {
     // Every act opens on a beat for the tank and holds one about every 25 s; each flight rides on a beat (claws, tail or Talon Dive)
     // so a Hard shuffle of the middle sets cannot open a long gap (mix() checks each draw).
     const groundStart = () => { grounded(); };
+    const PD = 6.5;                      // a Pounce comes this long after the claws that open its set (the claws' bar has ended; the next step still has its 12 s)
     const clawsTail = () => { claws(); f.afterKeep(f.ct(4.4) + 0.6, () => tailLash()); };
     const doubleBreath = () => { breath(); f.afterKeep(f.ct(4.2) + 0.4, () => breath()); };
     // I. Ground. One early flight (a plain Dragonfall) so the fight's question is asked by about 70 s (Normal's written order).
     const ground = from => f.course({
       until: 0.75, push: true, onStart: groundStart,
-      sets: mix([S([4, roar, "Tyrant's Roar"]), S([10, claws, 'Rending Claws']), S([12, () => breath(), 'Ember Breath'])], [
+      sets: mix([S([4, roar, "Tyrant's Roar"]), S([10, claws, 'Rending Claws'], [PD, pounce, 'Pounce']), S([12 - PD, () => breath(), 'Ember Breath'])], [
         S([12, clawsTail, 'Rending Claws'], [12, magma, 'Magma Burst']),
         S([12, claws, 'Rending Claws'], [10, takeFlight, 'Take Flight'], [3, () => dive(), 'Dragonfall']),
-        H ? S([12, claws, 'Rending Claws'], [9.5, cinderRain, 'Cinder Rain']) : S([12, claws, 'Rending Claws'], [13, feast, 'Cinder Feast']),
-        S([12, claws, 'Rending Claws'], [12, roar, "Tyrant's Roar"]),
+        H ? S([12, claws, 'Rending Claws'], [9.5, cinderRain, 'Cinder Rain']) : S([12, claws, 'Rending Claws'], [PD, pounce, 'Pounce'], [13 - PD, feast, 'Cinder Feast']),
+        S([12, claws, 'Rending Claws'], [PD, pounce, 'Pounce'], [12 - PD, roar, "Tyrant's Roar"]),
       ], []),
       closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, () => breath(), 'Ember Breath'], [10, () => tailLash(), 'Tail Lash']],
       next: flight1,
@@ -441,7 +469,7 @@ const WYRM = {
         S([12, claws, 'Rending Claws'], [10, takeFlight, 'Take Flight'], [3, () => searingDescent(), 'Searing Descent']),
         S([12, clawsTail, 'Rending Claws'], H ? [12, cinderRain, 'Cinder Rain'] : [12, magma, 'Magma Burst']),
         S([12, claws, 'Rending Claws'], [10, takeFlight, 'Take Flight'], [3, () => twinPass(), 'Twin Pass']),
-        S([12, claws, 'Rending Claws'], [13, feast, 'Cinder Feast']),
+        S([12, claws, 'Rending Claws'], [PD, pounce, 'Pounce'], [13 - PD, feast, 'Cinder Feast']),
       ], [
         S([12, () => tailLash(), 'Tail Lash']),   // (the tank's beat before the Roost, where the gap would otherwise run long)
       ]),
@@ -454,11 +482,11 @@ const WYRM = {
       until: 0.24, push: true, onStart: groundStart,
       sets: mix([S([2, roost, 'The Roost']), S([15.5, claws, 'Rending Claws']), S([8, boils, 'Crater Boils'])], [
         S([12, clawsTail, 'Rending Claws'], [12, twinBreath, 'Twin Breath']),
-        H ? S([12, claws, 'Rending Claws'], [9.5, cinderRain, 'Cinder Rain']) : S([12, claws, 'Rending Claws'], [13, magma, 'Magma Burst']),
-        S([12, claws, 'Rending Claws'], [12, feast, 'Cinder Feast']),
-        S([12, claws, 'Rending Claws'], [12, roar, "Tyrant's Roar"]),
+        H ? S([12, claws, 'Rending Claws'], [9.5, cinderRain, 'Cinder Rain']) : S([12, claws, 'Rending Claws'], [PD, pounce, 'Pounce'], [13 - PD, magma, 'Magma Burst']),
+        S([12, claws, 'Rending Claws'], [PD, pounce, 'Pounce'], [12 - PD, feast, 'Cinder Feast']),
+        S([12, claws, 'Rending Claws'], [PD, pounce, 'Pounce'], [12 - PD, roar, "Tyrant's Roar"]),
       ], [
-        S([13, doubleBreath, 'Ember Breath']),
+        S([5, pounce, 'Pounce'], [8, doubleBreath, 'Ember Breath']),
       ]),
       closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, twinBreath, 'Twin Breath'], [10, () => tailLash(), 'Tail Lash']],
       next: flight2,
@@ -470,7 +498,7 @@ const WYRM = {
       wall: { label: 'Ember Heart', run: heartRun, until: 'resolved', timeout: 70 },
       sets: mix([S([4, takeFlight, 'Take Flight'], [3, () => talonDive(), 'Talon Dive'])], [
         S([12, claws, 'Rending Claws'], [10, takeFlight, 'Take Flight'], [3, () => searingDescent(), 'Searing Descent']),
-        S([12, claws, 'Rending Claws'], [11, H ? heartFlare : magma, H ? 'Heart Flare' : 'Magma Burst']),
+        H ? S([12, claws, 'Rending Claws'], [11, heartFlare, 'Heart Flare']) : S([12, claws, 'Rending Claws'], [PD, pounce, 'Pounce'], [11 - PD, magma, 'Magma Burst']),
         S([12, claws, 'Rending Claws'], [10, takeFlight, 'Take Flight'], [3, () => twinPass(), 'Twin Pass']),
         S([9, takeFlight, 'Take Flight'], [3, () => talonDive(), 'Talon Dive'], [9, roar, "Tyrant's Roar"]),
       ], []),
@@ -490,7 +518,7 @@ const WYRM = {
         S([8, takeFlight, 'Take Flight'], [3, () => talonDive(), 'Talon Dive']),
         S([8, twinBreath, 'Twin Breath']),
         S([12, clawsTail, 'Rending Claws']),
-      ], []),
+      ], [], 9),
       closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, twinBreath, 'Twin Breath']],
       ramp: 0.08,
       next: lastStand,
@@ -515,7 +543,7 @@ const WYRM = {
     ground(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.dive())
-    f.moves = { roar, claws, tailLash, breath, twinBreath, magma, feast, takeFlight, dive, talonDive, aftershock, cinderRun, twinPass, searingDescent, roost, boils, cinderRain, heartFlare, heartWave, heartRun, orderOk };
+    f.moves = { roar, claws, pounce, tailLash, breath, twinBreath, magma, feast, takeFlight, dive, talonDive, aftershock, cinderRun, twinPass, searingDescent, roost, boils, cinderRain, heartFlare, heartWave, heartRun, orderOk };
   },
 };
 

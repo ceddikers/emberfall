@@ -2,6 +2,7 @@
 // Morrow-Oak has no spoken lines in the journal; the heroes speak for him. Move keys are cast names (the journal fires on the cast bar's name).
 // The idea every page carries: what the Hunger eats stays gone, so the party chooses where the holes go (out at the edge, never the middle), and a hole is a fall, not a death.
 // The Grove Remade covers his second form and the first look at the four limbs; the limbs' own moves have their own pages. Deeper Roots is the Hard name of his unfolding.
+// Hunger's Reach is the tank's own beat between two Root Lashes (the lane of roots from the nearest hole; Hard layers a second hole's lane).
 // Twin Seed, Hungering Dark, Deeper Roots, Wyrm Wing, Frost Fist, Archmage Rune, Hydra Head and Last Gasp are the Hard-only pages.
 (window.JOURNAL_DATA = window.JOURNAL_DATA || {}).morrowoak = {
   // the first time this hero meets him (after the first pull)
@@ -156,6 +157,31 @@
       lanternkeeper: "The roots whipped at our knight, a heavy blow that holds whoever is near. I hung a light on him before it fell and stayed out of the ring. He had walked the old tree off the holes first. One lamp, one blow.",
       kenseier: "The lash is aimed at me, and has a count. I met it as it landed, and the roots held whoever was near, so the rest stayed out of the ring. I walked him off the holes first. An honest blow. Catch the beat.",
       houndmaster: "Roots up at the shield-man, and anyone near got held. Dogs kept out of the ring, me too. He walked the old bull off the holes first, since he'd not walk after. Sit. Good dogs.",
+    } },
+    "Hunger's Reach": { hard: false, learned: {
+      bastion: "A hole reaches for me with roots, a bar of them laid through my feet. I stand the old tree far from his holes, and when the bar is painted I take one step sideways. Held. On hard nights a second hole follows through wherever I land.",
+      gloomsworn: "Roots lunge from the nearest hole and run through where I stand. A light wound, and a drag toward the pit that stops at its brink. I sidestep and let it find nothing. On hard nights the next pit lunges at my new footing. I know the sensation.",
+      thresher: "Oh, the nearest hole sends a bar of roots through our shield, dear, and any of us behind him gets whipped along with it. He steps aside; we don't dawdle in the line. A second hole joins on hard nights. Not yet!",
+      bloodreaver: "A hole snatches for me with roots! A bar of them, right through my boots, and a drag to the rim if it lands. I take a stride sideways and let it grab air. Hard nights, another hole grabs where I ended up. A fine scar.",
+      runeguard: "The omen: a hole inscribes a bar of roots through my feet. The answer: one stride aside as it closes, and the party off the ground behind me. A second hole writes again where I stand on hard nights. As foreseen.",
+      gorgemaw: "A pit sets a long thin course of roots at me, straight through the plate. One stride aside and the dish goes cold. Anyone behind me gets it too, and gets dragged to the pit's lip. Hard nights bring a second pit, a second helping. Nearly full.",
+      oathbroker: "A hole serves a writ of roots: a strip through where I stand, light in penalty, and a forced march toward the pit that halts at its brink. I vacate the strip as it falls. Harder terms add a second hole, served at my new address. So noted.",
+      ironpalm: "Roots rise from the nearest hole in a bar through my stance. I do not stand in it. One quiet step aside, and the bar closes on nothing; my friends behind me take my place in it if I am careless. Hard nights, a second pit answers. Breathe.",
+      ranger: "Hole to the shield: a bar of roots, from the pit through him and out the back. He sidesteps when it paints. Archers stand wide of that line, always. Hard nights, a second pit shoots at wherever he lands. Clean line.",
+      shadowblade: "The mark's hole throws roots in a bar through our shield, and the shadow behind him is in it too. He steps aside, I am never standing there. It drags the careless to the brink. Hard nights, another hole tries again. It never saw me.",
+      pyromancer: "A hole spits roots at the knight in one long bar, and whoever lurks behind him cooks in it too! He steps aside, and I do not lurk. A light hit, and a tug to the lip. On hard nights a second hole spits again. Mostly unsinged.",
+      thermist: "Cold read: a strip of roots out of the nearest hole, through the shield and behind him. Hot read: sidestep as it paints, and nobody stands in his lee. A tug to the brink if it lands. Hard nights, the next pit strips again. Back to the middle.",
+      driftblade: "A pit flung roots down a straight line through the shield and past him, so I kept off the line, wide, and he took one step out of it as it landed, and nothing was dragged anywhere. A second pit tries again on the hard nights.",
+      alembist: "Ailment: a bar of roots from the nearest pit, through the shield and out behind. Remedy: a single step aside as it paints, and nobody sheltering in his lee. Side effect if neglected: a drag to the brink. Hard nights: a second pit, a second dose.",
+      threadweaver: "A pit pulls one taut line of roots through our knight, and my stitches behind him are in it too. He slips the thread, one step aside, and we keep clear of his back. Caught, you are towed to the brink. Hard nights, a second pit pulls again. Mind the slack.",
+      marionettist: "A trapdoor flings a strip of roots through our lead and out his back, so the chorus behind him is in it too. (He steps off his mark.) A tug to the footlights if it lands. Hard nights, the next trapdoor repeats the cue at his new mark.",
+      cleric: "Roots rise from a hole toward our dear knight, in one bar through him and behind. He steps out of it, and I never stand in his shadow. If it lands, a light wound and a pull to the hole's brink. A second hole follows on hard nights. Dawn keep him.",
+      grovekeeper: "Roots out of an empty hole, wanting company: one bar, through the knight and out his back. A sidestep and it finds none. My lot stay out of his wake. Caught, you are hauled to the brink like a pulled weed. Hard nights, another hole wants him too. Plant first.",
+      chronomancer: "I have seen where it falls: a bar of roots from the nearest pit, through the knight, and a beat after the paint. He steps off it in time. Whoever idles behind him is hauled to the brink. On hard nights a second pit comes after. I'll have known.",
+      tidecaller: "A pit draws roots out like an undertow, a bar from its mouth through our knight and beyond. He wades aside as it comes, and we keep out of his wake. Caught, you are towed to the brink, never in. Hard nights, a second pit pulls at his new place. Mind the tide.",
+      lanternkeeper: "The nearest pit sends a ribbon of roots through our knight, dark all the way down its length. He steps out of it. I keep my lamp out of his shadow, since it lands there too. Caught, you are led to the brink. Hard nights, another pit follows. One lamp, one lane.",
+      kenseier: "The roots have a measure: a bar from the pit, through the shield and out behind, closing on the count after the paint. He moves on it, and so do we, if we stood behind him. Caught, you are drawn to the brink. A second pit answers, on hard nights. Catch the beat.",
+      houndmaster: "Hole sends roots down a bar through the shield-man, and out the back where the dogs would be. He steps aside. Dogs and me wait wide. Whatever it grabs gets hauled to the lip. Hard nights, a second hole snaps at his new spot. Heel.",
     } },
     'Sap Tide': { hard: false, learned: {
       bastion: "Amber sap reached every one of us, heavier each time. Later the ground heaved a second time, a ring at his feet or the ring round them, painted the instant the sap landed. I stepped out or in at once, mended or not. Held.",

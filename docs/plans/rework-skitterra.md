@@ -69,3 +69,25 @@ Goal: no long stretch without a tank or healer beat, an ending that peaks, Hard 
 **Gaps now (worst of 40 pulls).** Tank: Normal 37 / 9 / 37 / 37; Hard 60 / 12 / 63 / 55 (Hard Act II and the Act I/III gaps are essentially unchanged: the shuffles had to stay where the spacing is calibrated). Healer: Normal 34 / 12 / 35 / 22; Hard 38 / 13 / 55 / 23. Not reached: 20 s for the tank. It needs one new tank-aimed beat (for example Venom Spit with a third cone on the tank, or a short tank-only Wrap-lite); reported, not built.
 
 **Bots.** Normal `GEAR=fresh`: 79/90 before; 77/90 (seeds 1000 to 3000) and 83/90 (4000 to 6000) after. Hard `GEAR=mid`: 48/90 before; 49/90 (1000 to 3000) and 41/90 (4000 to 6000) after, about 50%. The check.js base-gear line-ups: every one clears at least once in three, except the first (Runeblade) once at 0 of 3, then 7 of 18 against 6 of 18 on the old file.
+
+## Tank move: Fang Strike (2026-10-26)
+
+Goal: the tank waited 30 to 60 s between things of their own (the Wraps cost about 80% of the tank's health and cannot come more often). One new move for the tank, on both difficulties, lighter than the Wrap, to fill the waits.
+
+**The move.** She rears and drives a fang down a lane from her through the tank. The lane is drawn from the cast (a plain red lane, 150 wide, from her through where the tank stood when it began); whoever is in it when it lands takes it, the same for anyone behind the tank. So the tank's job is to step out of it (it is a short cast: 1.8 s Normal, 1.5 s Hard), and the party's is to keep out of the strip behind the tank. It follows the fight's own rule: she shot a line to the one who holds her, and what stands behind him is in it. Anim `fang`, tag `fangstrike`, sound `bm-skitterra-fang-strike` (scratchpad newmoves/skitterra.md). About 8000 on Normal, 7200 on Hard (9000 with Hard's 1.25: x1.125 Normal), a quarter of the tank's health, so it never needs a cooldown. No painted safe spot, nothing hidden.
+Hard sharper: faster cast, and in the Collapse a second lane follows the first the moment it has landed (1.4 s warning), set on wherever the tank stepped to dodge; on thinning silk the dodge has a cost.
+
+**Why static, not tracking.** A lane that follows the tank until it sets was tried first (the way Venom Spit follows its two targets): the bots' read for a line aimed at them walks the tank out to the wall to bait it, with the boss in tow (the tank sat 450 px out at every Strike). A lane drawn once, where the tank stands when the cast begins, plays as it should (the tank steps a few paces aside; the bots stay in melee).
+
+**Where it sits.** In the quiet stretches, as the tail of a set or between the two steps of one, never within about 11 s of a Wrap in either direction (checked: at least 11.1 s after, 11.4 s before on Normal; 13.3 and 12.7 on Hard), and each follows an act's own pace (the sets' calm before it was trimmed by what the Strike takes, so each act's script is as long as it was: Normal 149 / 36 / 213 / 117 s against 152 / 36 / 213 / 114; Hard 188 / 41 / 220 / 128 against 187 / 41 / 202 / 121, the Hard Act II set pairs being kept in order). Normal: eleven a fight (Act I four, Act II five, Act III two); Hard: fourteen (Act I five, Act II seven, Act III two, those with a second lane). In Hard Act II the Strikes sit on the sets that end in a Mist, a Spit, a Fang Rush or a Deluge, and after the Lunge sets; the order of every set is unchanged (the Swarm, the Snare Weave and the Spit sets keep their places). The last set of an act never carries one (the next act's first cast would run over it), and none comes in the Dark.
+
+**The tank's longest wait (a beat is a Wrap, adds appearing, being moved by a Strand Reel, Deluge, Molt, Fang Rush or Snare Weave, a Fang Strike, and the 25 s Chrysalis counted as a beat at both ends).**
+| | Act I | Dark | Act II | Act III |
+|---|---|---|---|---|
+| Normal before | 37 | 9 | 37 | 38 |
+| Normal after | 25 | 9 | 26 | 25 |
+| Hard before (worst of 30 draws) | 60 | 12 | 63 | 56 |
+| Hard after | 29 | 12 | 25 | 30 |
+The healer's gaps are untouched in the main (Normal 34 / 12 / 34 / 22 against 34 / 12 / 35 / 23; Hard 40 / 13 / 57 / 25 against 38 / 13 / 55 / 24: the Hard Act II one is a few seconds longer, as the sets are a little longer round the Strikes).
+
+**Bots.** The bots dodge it every time (no Strike hit anyone in 10 runs with the longer first cast); the move changes the pacing, not the damage. Longer acts mean fewer closing passes (a slow party running an act's last set again for +10%): the first version, with a 3 s cast and the calm untouched, lengthened Hard by 37 s and the closing passes in 20 runs fell from 10 to 1, which made both difficulties easier (Normal 94%, Hard 64%). The shorter cast and the trimmed calm brought the pacing back. Final, three seed sets of 30 twice over (1000 to 3000 and 4000 to 6000), before and after: Normal `GEAR=fresh` 156/180 (87%) before, 163/180 (91%) after; Hard `GEAR=mid` 94/180 (52%) before, 102/180 (57%) after. The check.js base-gear line-ups: every one clears at least once in its runs (the Marionettist line-up only once in three, run 2 of 3).

@@ -1,6 +1,7 @@
 // The boss journal: Brannoc the Undefeated, champion of the drowned colosseum, in each hero's own words (docs/plans/journal-voices.md)
 // Brannoc has no spoken lines in the journal; the heroes speak for him. Move keys are cast names (the journal fires on the cast bar's name).
 // Banner Fall lives inside Sunwheel (Act II); Riptide lives inside Breaker (the painted path shows how often the wave returns).
+// Rebound is the wheel thrown at the shield (a ring follows him, then holds, and the road is drawn to it); on Hard the caught wheel is kicked back (Riposte).
 // Twin Wheels, Double Grip and Riposte are the Hard-only pages.
 (window.JOURNAL_DATA = window.JOURNAL_DATA || {}).brannoc = {
   // the first time this hero meets him (after the first pull)
@@ -130,6 +131,31 @@
       lanternkeeper: "Two stamps at our shield, the second bigger, with a ring following him about. I hung a light on him for each and kept the rest of us out of the ring. One for the first, one for the heavier. I'll leave one burning.",
       kenseier: "Two stamps, and the second heavier. The ring follows me. I met the first as it landed, and drew the ash about me for the second. The others stayed out of the ring. Honest blows, both. Breathe, then strike.",
       houndmaster: "Two stamps at the shield-man, second bigger, ring following him. Kept the dogs well out. Healer saved her best for the second. Like standing near a bull's hoof. Heel.",
+    } },
+    'Rebound': { hard: false, learned: {
+      bastion: "A blue ring followed me about the sand and let go where I stood, and the road to it was drawn off the wall before the wheel flew. I picked my ground so the road ran clear of the line, planted, and caught it. Held.",
+      gloomsworn: "A blue ring clung to me and let go where I stood, and the wheel's road was drawn off the wall to it. I chose a patch of sand that kept the road away from the others and took it whole. A wound is only a wound.",
+      thresher: "A blue ring follows our shield about, dear, and lets go where he stands, and the wheel's road is drawn to it off the wall. So watch where he plants his feet, and keep off the stripe. An empty ring bursts on us all.",
+      bloodreaver: "The wheel came for ME! A blue ring stuck to me, then let go where I stood, and its road was drawn off the wall. I picked my spot so it missed my friends, stood in the ring and took it. Bleed first, then drink.",
+      runeguard: "The omen: a blue ring followed me, then held where I stood. The answer: choose the ground before it lets go, so the wheel's road, drawn off the wall, runs clear of the rest, and catch it in the ring. As foreseen.",
+      gorgemaw: "A blue plate followed me about the table and set down where I stood, with its route drawn off the wall. I chose my chair so the route missed the other guests, and swallowed the wheel in the ring. Light portion. An empty chair, and the whole room pays.",
+      oathbroker: "The terms: a blue ring follows the one in front and holds where he stood, and the wheel's route is drawn to it off the wall. I chose my ground before the ring let go, so the route missed the undersigned, and accepted delivery. So noted.",
+      ironpalm: "A ring of blue followed me, then held where I stood. The wheel's road was drawn to it off the wall. I chose where to stand before it let go, so the road passed the others by, and I caught it. Empty, it bursts on everyone. Breathe.",
+      ranger: "Ring follows the shield, then holds where he stood. The wheel's road is drawn to it off the wall. He picks the spot, so I watch where he plants and keep off the stripe. He catches it. Empty ring bursts on us all. Clean line.",
+      shadowblade: "A blue ring followed our shield about the sand and held where he stood, and the wheel's road was drawn to it off the wall. He chose his ground so the road missed us, and I stayed off the stripe. It never saw me.",
+      pyromancer: "A blue ring chased our shield about, then let go where he stood, and the wheel came off the wall to it along a road drawn in gold! He picked his spot so it missed us and caught it, and I kept off the stripe. Mostly unsinged.",
+      thermist: "Cold read: a blue ring follows the shield, then holds where he stood, and the wheel's road is drawn to it off the wall. Hot read: stay off the stripe. He chose his ground so the road missed us. The middle is not on the road, for once.",
+      driftblade: "A blue ring followed the shield, then held where he stood, and the wheel's road was drawn to it off the wall. He picked his ground so it missed us, and I ran round the stripe, never landing, while he caught it.",
+      alembist: "Ailment: a wheel thrown at our shield, its road drawn off the wall to a blue ring that follows him and then holds. Remedy: he chooses his ground so the road misses us, and stands in the ring. Note: an empty ring bursts on everyone.",
+      threadweaver: "A blue ring followed our shield about, then held where he stood, and the wheel's road was drawn to it off the wall. He chose his spot so the seam missed the rest of us, and I tied him tight before the catch. Mind the slack.",
+      marionettist: "A blue mark followed our lead about the stage, then held where he stood, and the wheel's blocking was chalked to it off the wall. He chose his mark so it cleared the company and took the catch. The rest kept off the chalk.",
+      cleric: "A blue ring followed our knight about the sand, then held where he stood, and the wheel's road was drawn to it off the wall. He chose his ground so it missed the rest of us. I laid the light on him before the catch, not after.",
+      grovekeeper: "A blue ring followed my big fellow about, then held where he stood, and the wheel came off the wall along a road drawn first. He chose his ground so it missed my lot, and caught it. I planted on him before. We kept off the stripe.",
+      chronomancer: "The ring found our shield, then held its place, and I had seen the road before it was drawn: off the wall, to him. He chose where to stand, and I mended him a beat ahead. We stayed off the stripe. I'll have said so.",
+      tidecaller: "A blue ring followed our shield about, then held where he stood like a tide mark, and the wheel's road was drawn to it off the wall. He chose his ground so it missed us, and I let the water rise on him before the catch.",
+      lanternkeeper: "I hung a lamp on our shield when the blue ring took him, and the ring stayed where he stopped. The wheel's road was drawn from the champion's hand and off the wall to it. He had chosen well. We waited in the dark, off the stripe. Keep your light.",
+      kenseier: "A blue ring followed me, then held where I stood, and the wheel's road was drawn to it off the wall. I chose my ground before it let go, so the road passed the others by, and I met the catch with the blade. Honest, for a thrown wheel.",
+      houndmaster: "Big lad flung a wheel at the shield-man. Blue ring stuck to him, then held where he stood, and the road was drawn to it off the wall. He picked his ground so it missed us and the dogs, and caught it. Dogs off the stripe. Heel.",
     } },
     'Roar of the Stands': { hard: false, learned: {
       bastion: "The stands roared and it reached every one of us at once. Nothing to block. I planted my feet, the line closed up near the healer, and we took it together, already mended. Held.",

@@ -78,3 +78,27 @@ Bots, 90 runs each (three seed sets), before to after: Normal `GEAR=post1` 77 to
 - The Long Night's casts now follow one another (arcs, frost, and the tank's Fist between the second and third arc), so no bar is cut; the act opens with a Fist, and the Night is about 40 s long (it was 24 with overlapping bars). Last Winter's tail has a Fist before the closing passes, which carry one every 30 s.
 - Header and doc: Winter's Grasp freezes three sheets on Hard and two on Normal; the Lake's Grasp always three.
 - Numbers: Normal damage x1.14 (was x1.12), Hard `hardDmg` 1.46 (was 1.42) to pay for the kinder seams. Bots, 90 runs: Normal post1 82 clears (91%), Hard post2 52 (58%), Hard post1 59 (66%; post1 keeps its 4-piece bonuses, so it stays above post2). Line-ups: four-class 8 of 8, weak runeguard 12 of 30.
+
+## The tank's own move: Icebreaker (2026-10-26)
+
+Found before changing: the tank waited 30/38/34/30 s (Normal, Acts I-IV) and 38/40/36/47 s (Hard) between blows of their own, with the first blow 33 s into the fight. Glacial Fist takes most of a tank's health (Hard 141%), so it cannot come more often than every 16 s.
+
+**The move** (`Icebreaker`, both difficulties, tag `tiice`, pose `slam`): his fist comes down on the sheet the tank stands on. A short cone at the tank (a lighter Fist, tank only; others in the cone take the usual cleave), and **where the tank stands when it lands, that sheet cracks**: red for the whole warning (4.6 s), then it sinks, so the tank steps off. It is the floor rule aimed at the tank, and the rule's other half pays: **a frozen sheet glances the blow** (a third of its weight, nothing cracks), so a tank who has read the ice, above all the ice Winter's Grasp has just made, leads the Titan onto it. The Last Winter's islands already are that ice. **Hard**: the sheet behind the tank, on the line from the Titan, cracks as well (the tank steps to the side, not back).
+
+Numbers: Normal 11400 x1.2 (the Normal multiplier, see below), Hard 10300 x1.46 = about 46% of Normal's Fist, no longer than 3.8 s cast (Hard 3.2). A Fist never lands within 9 s after an Icebreaker, an Icebreaker never within 9 s of a Fist or 14 s of another (a runtime wait like the Fist's 16 s clock, and a rule in Hard's draws). The "outside the Fist's 16 s window" of the brief was read as 9 s: a 30 s stretch cannot hold a Fist, a lighter blow and a second Fist 16 s apart on each side.
+
+Where it sits (kept inside the scripts' lengths: Normal 582 s, Hard 578-588 s, so most of it replaces tank-less sets or rides inside one):
+- Act I: the head Slam gives way to an Icebreaker (the first thing the tank does is read the floor; Normal keeps the Slam after it), and a second one sits in the middle sets. First beat now at about 20 s (was 33 s).
+- Act II: Winter's Grasp opens the act as Grasp-into-Icebreaker (the tank takes the first blow on the new ice), and the Whiteout set is Icebreaker-into-Whiteout.
+- Act III: the Long Night has an Icebreaker on the ice its first Grasp made (the seam's tank gap had no beat but one Fist), Whiteout is Icebreaker-into-Whiteout, one more sits in the middle sets.
+- Act IV: one in the middle sets (Normal replaces the Twin Slam, Hard the lone Frostbite); in the Plateau Tips the Icebreaker takes the middle Fist's slot when that Fist would not fit (it used to be skipped: a 47 s wait).
+- Hard's draws (`mix`): `mk` lists where the Icebreakers land; the tank (Fist or Icebreaker) never waits more than `TANK_MAX` 30 s; an Icebreaker keeps clear of Fists and of other Icebreakers; Act IV's first beat within 24 s. To keep the script under 600 s Hard lost Act I's second Howl-into-Fist (its Stomp is now Fist-into-Stomp), Act II's second Frostbite-and-Sweep and Act III's Twin Slam; Normal's Act IV Twin Slam became an Icebreaker. Distinct draws per act 10 / 18 / 15 / 12 (was 11 / 12 / 9 / 9).
+
+Tank's longest wait between beats (cast-timeline harness, Fist and Icebreaker landings; the first beat is not counted):
+- Normal Acts I-IV: 30/38/34/30 -> 27/30/30/30 (in the full script 25/29/26/30).
+- Hard Acts I-IV, worst of 30 draws: 38/40/36/47 -> 27/29/29/33.
+
+Bots, 90 runs each (three seed sets), before to after: Normal `GEAR=post1` 82 to 86 clears (91% to 96%: the acts have more sets, so the closing passes that used to run when a script ran out of sets come less often; Normal damage x1.14 to x1.2 to win some back, the weak runeguard line-up stays at 13 of 30, was 12); Hard `GEAR=post2` 52 to 50 (58% to 56%); Hard `GEAR=post1` 59 to 46 (66% to 51%: nearer its 40-45% target, still above post2 because of the gear table). Normal's x1.2 is a compromise: x1.25 gave 84 of 90 but only 9 of 30 for the weak line-up.
+
+Not done here: the `tiice` tell (the generic spike and cone are drawn), a boss-icons badge for `Icebreaker`, and a glance effect (the blow just takes less).
+Sound: `bm-titan-icebreaker` (recipe in the lead's `newmoves/titan.md`). Journal: `Icebreaker` for all 23 heroes.

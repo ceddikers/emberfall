@@ -19,6 +19,11 @@
 //     (Howl, Fist, a thicker Icefall; Hard adds the Grip) until he falls or Endless Winter lands.
 // Moves follow one another in places (Grasp into Fault Line, Frostbite into a Sweep, Fist into Slam / Icefall / Sweep / Twin Slam /
 // Fault Line, Howl into Fist), so the tank has a blow to meet about every half minute and the healer something to heal about as often.
+// Icebreaker (the tank's own, both difficulties): a lighter blow than the Fist at the tank, short enough to come between two of them. Where
+// the tank stands when it lands, the sheet cracks (red, then it sinks), so the tank steps off; a FROZEN sheet glances the blow (a third of
+// its weight, nothing cracks), so a tank who has read the ice leads the Titan onto it. It follows Winter's Grasp at the start of Act II,
+// comes before a Whiteout, between the Long Night's arcs, and fills the quiet between Fists; a Fist and an Icebreaker never land within 9 s
+// of each other and two Icebreakers never within 14 s. Hard also cracks the sheet behind the tank, on the line from the Titan.
 // docs/plans/rework-hrimgar.md has the questions and the reasons.
 // Acts II to IV use PUSH. Every telegraph shows on the floor on every difficulty. Hard: casts 15% faster, 25% more damage, and:
 //   Glacial Stomp: a stomp, then two rings of shards running out from it.
@@ -61,9 +66,9 @@ const TITAN = {
       howl: H ? 13000 : 13000, fist: H ? 31850 : 28750, slam: H ? 21450 : 20000, sink: H ? 11050 : 10000, fault: H ? 18850 : 18150, icicle: H ? 10650 : 10000,
       sweep: H ? 16250 : 15000, cold: H ? 34450 : 31250, frozen: H ? 17550 : 15000, water: H ? 3750 : 3650, slide: H ? 25350 : 23150, whiteout: H ? 14950 : 13750,
       arc: H ? 18850 : 17500, stomp: H ? 18850 : 16900, ring: H ? 15600 : 13750, breath: H ? 6250 : 5650, burst: H ? 18200 : 16250,
-      gripAim: H ? 6500 : 6250, gripStack: H ? 33800 : 30000, crush: H ? 31200 : 27500,
+      gripAim: H ? 6500 : 6250, gripStack: H ? 33800 : 30000, crush: H ? 31200 : 27500, maul: H ? 10300 : 11400,
     };
-    if (!H) for (const k in dmg) dmg[k] = Math.round(dmg[k] * 1.14);   // (Normal's hits are a little heavier than before the rework; Hard's table is its own)
+    if (!H) for (const k in dmg) dmg[k] = Math.round(dmg[k] * 1.2);   // (Normal's hits are a little heavier than before the rework; Hard's table is its own)
     const S = (...steps) => steps.filter(Boolean);
     // when the boss's latest cast ends: an act that begins (or the wall that rises) a heartbeat after a cast waits for it, so no cast bar is cut
     let castEnd = 0;
@@ -149,7 +154,7 @@ const TITAN = {
     // (two Glacial Fists never land less than FIST_GAP apart, wherever in the fight they fall: one that would waits for the tank's cooldown)
     let fistLand = -99;
     const FIST_GAP = 16;
-    const fistWait = () => Math.max(0, fistLand + FIST_GAP - (f.t + f.ct(4.8)));
+    const fistWait = () => Math.max(0, fistLand + FIST_GAP - (f.t + f.ct(4.8)), mauLand + MAUL_NEAR - (f.t + f.ct(4.8)));   // (a Fist never lands within MAUL_NEAR s after an Icebreaker)
     const fist = () => { const w = fistWait(); if (w > 0.05) { fistLand = f.t + w + f.ct(4.8); f.afterKeep(w, fistNow); } else fistNow(); return w; };
     const fistNow = () => {
       const tank = f.tank(); if (!tank) return;
@@ -157,6 +162,32 @@ const TITAN = {
       fistLand = f.t + d;
       f.cast('Glacial Fist', d, 'fist');
       f.mech({ type: 'buster', shape: { kind: 'cone', x: B.x, y: B.y, r: 400, arc: 1.5, angle: B.facing }, delay: d, dmg: dmg.fist, target: tank.id, aimFromBoss: tank.id, tag: 'tifist' });
+    };
+    // Icebreaker (the tank's own, lighter than the Fist, so it can come between two of them): his fist comes down on the sheet the
+    // tank stands on. The blow is a short cone at the tank (a lighter Fist), and where the tank stands when it lands the sheet cracks:
+    // red for the whole warning, then it sinks. A FROZEN sheet glances the blow (it falls at a third of its weight and cracks nothing),
+    // so the tank who has read the ice leads him onto it. Hard: the sheet behind the tank, on the line from the Titan, cracks as well.
+    let mauLand = -99;
+    const MAUL_NEAR = 9, MAUL_GAP = 14;   // (no nearer than MAUL_NEAR to a Fist, MAUL_GAP to another Icebreaker)
+    const maulWait = () => Math.max(0, fistLand + MAUL_NEAR - (f.t + f.ct(3.8)), mauLand + MAUL_GAP - (f.t + f.ct(3.8)));
+    const maul = () => { const w = maulWait(); if (w > 0.05) { mauLand = f.t + w + f.ct(3.8); f.afterKeep(w, maulNow); } else maulNow(); return w; };
+    const maulNow = () => {
+      const tank = f.tank(); if (!tank) return;
+      const d = f.ct(3.8);
+      mauLand = f.t + d;
+      f.cast('Icebreaker', d, 'slam');
+      const m = f.mech({ type: 'buster', shape: { kind: 'cone', x: B.x, y: B.y, r: 340, arc: 1.0, angle: B.facing }, delay: d, dmg: dmg.maul, target: tank.id, aimFromBoss: tank.id, tag: 'tiice',
+        onResolve: () => {
+          const q = f.alive().find(z => z.id === tank.id); if (!q) return;
+          const c = cellAt(q.x, q.y); if (c < 0 || sh[c].st !== 0) return;   // (frozen ground glances it and cracks nothing)
+          crack(c, f.ct(4.6));
+          if (H) {
+            const ux = q.x - B.x, uy = q.y - B.y, ul = Math.hypot(ux, uy) || 1;
+            const b = cellAt(cxOf(c) + ux / ul * W, cyOf(c) + uy / ul * W);
+            if (b >= 0 && b !== c) crack(b, f.ct(4.6));
+          }
+        } });
+      f.afterKeep(d - 0.05, () => { const q = f.alive().find(z => z.id === tank.id), c = q ? cellAt(q.x, q.y) : -1; if (c >= 0 && sh[c].st === 1) m.dmg = Math.round(m.dmg / 3); });
     };
     // Rime Slam: a circle on a random hero, following them until a second before it lands; the sheet under it then cracks
     const slamOn = (target, d, cast = true) => {
@@ -316,9 +347,11 @@ const TITAN = {
     // --- the Long Night (the seam) ---------------------------------------------------------------
     // The aurora dims and huge shapes loom. Four slow arcs, and twice the frost is called: where the marked heroes stand when it
     // lands is where the ice will be for what follows.
-    // The arcs and the frost are cast one after another (no bar is cut), and the tank's blow falls between the second and third arc.
-    const NIGHT_LEN = f.ct(2.8) + 0.4 + 4 * (f.ct(5.6) + 0.3) + 2 * (f.ct(3.6) + 0.3) + f.ct(4.8) + 0.3;
-    const NIGHT_FIST = f.ct(2.8) + 0.4 + 2 * (f.ct(5.6) + 0.3) + (f.ct(3.6) + 0.3) + f.ct(4.8);   // (when that blow lands, from the Night's first step)
+    // The arcs and the frost are cast one after another (no bar is cut); the tank's Icebreaker comes on the ice the first frost made,
+    // and the Fist falls between the second and third arc.
+    const NIGHT_LEN = f.ct(2.8) + 0.4 + 4 * (f.ct(5.6) + 0.3) + 2 * (f.ct(3.6) + 0.3) + (f.ct(3.8) + 0.3) + f.ct(4.8) + 0.3;
+    const NIGHT_MAUL = f.ct(2.8) + 0.4 + (f.ct(5.6) + 0.3) + (f.ct(3.6) + 0.3) + f.ct(3.8);   // (when the Icebreaker lands, from the Night's first step: on the ice the first frost made)
+    const NIGHT_FIST = f.ct(2.8) + 0.4 + 2 * (f.ct(5.6) + 0.3) + (f.ct(3.6) + 0.3) + (f.ct(3.8) + 0.3) + f.ct(4.8);   // (when the Fist lands)
     const longNight = () => {
       const HOLD = NIGHT_LEN;
       const d = f.ct(2.8);
@@ -330,7 +363,7 @@ const TITAN = {
       let at = d + 0.4;
       const next = (fn, len, name) => { f.afterKeep(at, fn, name); at += len + 0.3; };
       const arc = () => next(() => sweepAt(null, f.ct(5.6)), f.ct(5.6), "Titan's Sweep"), frost = () => next(() => grasp(), f.ct(3.6), "Winter's Grasp");
-      arc(); frost(); arc(); next(fist, f.ct(4.8), 'Glacial Fist'); arc(); frost(); arc();
+      arc(); frost(); next(maul, f.ct(3.8), 'Icebreaker'); arc(); next(fist, f.ct(4.8), 'Glacial Fist'); arc(); frost(); arc();
     };
 
     // --- Hard only ----------------------------------------------------------------------------------
@@ -399,7 +432,8 @@ const TITAN = {
         f.afterKeep(t0 + k * gap + dg + 0.1, () => avalanche(), 'Avalanche');
       }
       // the tank's blow comes while the first lanes run (the cast ends before the next frost is called)
-      f.afterKeep(t0 + dg + 0.1 + f.ct(5.4) + 0.2, () => { if (fistWait() < 1) fist(); }, 'Glacial Fist');   // (skipped if the tank's last blow was too near to fit before the next frost)
+      const slot = t0 + dg + 0.1 + f.ct(5.4) + 0.2, fistFits = Math.max(fistLand + FIST_GAP, mauLand + MAUL_NEAR) <= f.t + slot + f.ct(4.8) + 1;
+      f.afterKeep(slot, () => { if (fistWait() < 1) fist(); else if (maulWait() < 1) maul(); }, fistFits ? 'Glacial Fist' : 'Icebreaker');   // (the lighter Icebreaker comes in the Fist's place if the tank's last blow was too near)
       if (H) f.afterKeep(t0 + 2 * gap - 4.8, () => sweep(), "Titan's Sweep");
       const lastLands = t0 + (waves - 1) * gap + dg + 0.1 + da;
       const endAt = lastLands - 3 + f.ct(4.6) + 0.3;   // (the Fist waits for the Howl's cast to end)
@@ -424,6 +458,10 @@ const TITAN = {
     const fistThen = (move, len) => () => { const w = fistWait(); commit(w + f.ct(4.8) + 0.6 + f.ct(len)); fist(); f.afterKeep(w + f.ct(4.8) + 0.6, move); };
     const fistSlam = fistThen(slam, 5.2), fistIcefall = fistThen(icefall, 3.4), fistSweep = fistThen(sweep, 5.4), fistTwin = fistThen(twinSlam, 5.2), fistFault = fistThen(fault, 5.4);
     const fistBreath = fistThen(breath, 4.6), fistGrip = fistThen(grip, 3.6), fistStomp = fistThen(stomp, 4.8);
+    // the Icebreaker rides with moves that leave the floor to itself: it comes before a Whiteout (the tank's sheet is red while the
+    // raidwide is called) and after Winter's Grasp (the ice the Grasp makes is where the tank can take the blow)
+    const maulWhiteout = () => { const w = maulWait(); commit(w + f.ct(3.8) + 0.6 + f.ct(4.2)); maul(); f.afterKeep(w + f.ct(3.8) + 0.6, whiteout); };
+    const graspMaul = () => { commit(f.ct(3.6) + 0.45 + f.ct(3.8)); grasp(() => f.afterKeep(0.4, maul)); };
     const faultSlam = () => { commit(f.ct(5.4) + 0.8 + f.ct(5.2)); fault(); f.afterKeep(f.ct(5.4) + 0.8, slam); };
     const sweepSlam = () => { commit(sweepGap() + 0.3 + f.ct(5.2)); sweep(); f.afterKeep(sweepGap() + 0.3, slam); };
     const graspFault = () => { commit(f.ct(3.6) + 0.45 + f.ct(5.4)); grasp(() => f.afterKeep(0.4, fault)); };
@@ -437,27 +475,33 @@ const TITAN = {
     // ~34 s, raidwides at least 12 s apart, no two of Hard's new moves side by side, and no Sweep until the water from the first Slam has frozen over
     // again (sw: the Sweep that follows the Slam is not drawn in the first minute, when a hero wading is the likeliest to be caught by it).
     const c = s => f.ct(s), ho = c(4.6), fo = c(4.8), wo = c(4.2), fs = c(10), gs = fo + 0.6 + c(3.6) + c(7);
-    const LEN = { slam: c(5.2), fault: c(5.4), icefall: c(3.4), sweep: c(5.4), twin: c(5.2), breath: c(4.6), grip: c(3.6), stomp: c(4.8), frost: c(2.6) };
+    const LEN = { slam: c(5.2), fault: c(5.4), icefall: c(3.4), sweep: c(5.4), twin: c(5.2), breath: c(4.6), grip: c(3.6), stomp: c(4.8), frost: c(2.6), maul: c(3.8) };
     const M = (m, ...steps) => Object.assign(S(...steps), m);
     const HF = { len: ho + 0.5 + fo, tk: [ho + 0.5 + fo], rw: [ho] };                     // Howl into Fist
+    // the Icebreaker (mk: when it lands, from the set's first step): alone, before a Whiteout, or after Winter's Grasp
+    const MQ = { len: LEN.maul, mk: [LEN.maul] };
+    const MW = { len: LEN.maul + 0.6 + wo, mk: [LEN.maul], rw: [LEN.maul + 0.6 + wo] };
+    const GM = { len: c(3.6) + 0.45 + LEN.maul, mk: [c(3.6) + 0.45 + LEN.maul] };
     const FX = (len, extra) => Object.assign({ len: fo + 0.6 + len, tk: [fo] }, extra);   // Fist into a move of that length
     const tally = sets => {
-      let t = 0; const o = { tk: [], rw: [], hl: [], nov: [], sw: [] };
-      sets.forEach((s, i) => { const t0 = t + s[0][0]; for (const k of ['tk', 'rw', 'hl']) for (const x of (s[k] || [])) o[k].push(t0 + x); if (s.nov) o.nov.push(i); if (s.sw) o.sw.push(t0); for (const [dt] of s) t += dt; });
+      let t = 0; const o = { tk: [], mk: [], rw: [], hl: [], nov: [], sw: [] };
+      sets.forEach((s, i) => { const t0 = t + s[0][0]; for (const k of ['tk', 'mk', 'rw', 'hl']) for (const x of (s[k] || [])) o[k].push(t0 + x); if (s.nov) o.nov.push(i); if (s.sw) o.sw.push(t0); for (const [dt] of s) t += dt; });
       return o;
     };
     const gapMax = a => { a = [...a].sort((x, y) => x - y); let m = 0, l = a[0]; for (const x of a) { m = Math.max(m, x - l); l = x; } return m; };
     const gapMin = a => { a = [...a].sort((x, y) => x - y); let m = 99; for (let i = 1; i < a.length; i++) m = Math.min(m, a[i] - a[i - 1]); return m; };
     // a set begins only after the cast before it has ended
     const spaced = sets => sets.map((s, i) => {
-      const r = Object.assign(s.map(x => [...x]), { len: s.len, tk: s.tk, rw: s.rw, hl: s.hl, nov: s.nov, sw: s.sw }), p = sets[i - 1];
+      const r = Object.assign(s.map(x => [...x]), { len: s.len, tk: s.tk, mk: s.mk, rw: s.rw, hl: s.hl, nov: s.nov, sw: s.sw }), p = sets[i - 1];
       if (p && p.len != null) r[0][0] = Math.max(r[0][0], p.len + 0.3);
       return r;
     });
+    const TANK_MAX = 30;   // (Hard's draws: the tank never waits longer than this between a Fist or an Icebreaker landing and the next)
     const fits = (sets, lead = 99) => {
-      const o = tally(sets), busy = [...o.tk, ...o.rw, ...o.hl];
+      const o = tally(sets), tb = [...o.tk, ...o.mk], busy = [...tb, ...o.rw, ...o.hl];
       if (gapMin(o.tk) < FIST_GAP || gapMin(o.rw) < 12 || o.nov.some((x, i) => i && x === o.nov[i - 1] + 1) || o.sw.some(x => x < 58)) return 1e9;
-      const pen = Math.max(gapMax(o.tk) - 38, gapMax(busy) - 34, Math.min(...o.tk) - lead, 0);
+      if (o.mk.some(x => tb.some(y => y !== x && Math.abs(y - x) < (o.tk.includes(y) ? MAUL_NEAR : MAUL_GAP)))) return 1e9;   // (an Icebreaker keeps clear of every Fist and the next Icebreaker)
+      const pen = Math.max(gapMax(o.tk) - 45, gapMax(tb) - TANK_MAX, gapMax(busy) - 34, Math.min(...tb) - lead, 0);
       return pen > 0 ? pen * 10 + gapMax(o.tk) * 0.01 : 0;
     };
     // (lead: the latest the first Fist may land in the act, for an act the party is likely to leave early)
@@ -491,12 +535,12 @@ const TITAN = {
     // I. the Thaw
     const thawAct = from => f.course({
       until: 0.74, push: true, onStart: standing,
-      sets: mix([M(HOWL, [4, howl, "Winter's Howl"]), M({ len: LEN.slam }, [12, slam, 'Rime Slam']), M(FX(0), [13, fist, 'Glacial Fist'])], [
+      sets: mix([M(HOWL, [4, howl, "Winter's Howl"]), M(MQ, [12, maul, 'Icebreaker']), !H && M({ len: LEN.slam }, [13, slam, 'Rime Slam']), M(FX(0), [13, fist, 'Glacial Fist'])].filter(Boolean), [
         M({ len: LEN.fault }, [13, fault, 'Fault Line']),
-        H ? M({ len: LEN.stomp, nov: 1 }, [10, stomp, 'Glacial Stomp']) : M(HF, [12, howlFist, "Winter's Howl"]),
+        M(MQ, [13, maul, 'Icebreaker']),
+        H ? M(FX(LEN.stomp, { nov: 1 }), [12, fistStomp, 'Glacial Fist']) : M(HF, [12, howlFist, "Winter's Howl"]),
         M({ len: sweepGap() + 0.3 + LEN.slam, sw: 1 }, [13, sweepSlam, "Titan's Sweep"]),
         M(FX(LEN.slam), [13, fistSlam, 'Glacial Fist']),
-        H && M(HF, [12, howlFist, "Winter's Howl"]),
       ].filter(Boolean), [
         M(HOWL, [12, howl, "Winter's Howl"]),
         M(FX(LEN.icefall), [13, fistIcefall, 'Glacial Fist']),
@@ -508,12 +552,11 @@ const TITAN = {
     // II. the Freeze
     const freezeAct = from => f.course({
       until: 0.48, push: true, onStart: standing,
-      sets: mix([S([4, () => grasp(), "Winter's Grasp"]), M({ len: LEN.frost, hl: [fs] }, [12, frostbite, 'Frostbite']), M(FX(0), [13, fist, 'Glacial Fist'])], [
+      sets: mix([M(GM, [4, graspMaul, "Winter's Grasp"]), M({ len: LEN.frost, hl: [fs] }, [12, frostbite, 'Frostbite']), M(FX(0), [13, fist, 'Glacial Fist'])], [
         M({ len: c(3.6) + 0.45 + LEN.fault }, [13, graspFault, "Winter's Grasp"]),
-        M({ len: wo, rw: [wo] }, [12, whiteout, 'Whiteout']),
+        M(MW, [12, maulWhiteout, 'Icebreaker']),
         H ? M(FX(LEN.breath, { nov: 1 }), [12, fistBreath, 'Glacial Fist']) : M(FX(LEN.twin), [13, fistTwin, 'Glacial Fist']),
         H ? M(FX(LEN.grip, { nov: 1, hl: [gs] }), [12, fistGrip, 'Glacial Fist']) : M({ len: LEN.frost + 0.5 + LEN.sweep, hl: [fs] }, [12, frostSweep, 'Frostbite']),
-        H && M({ len: LEN.frost + 0.5 + LEN.sweep, hl: [fs] }, [12, frostSweep, 'Frostbite']),
         H && M({ len: LEN.twin }, [13, twinSlam, 'Twin Slam']),
       ].filter(Boolean), [
         M(HF, [12, howlFist, "Winter's Howl"]),
@@ -526,17 +569,17 @@ const TITAN = {
     // III. the Crack, opened by the Long Night
     const crackAct = from => f.course({
       until: 0.22, push: true, onStart: standing,
-      sets: mix([M(FX(0), [2, fist, 'Glacial Fist']), M({ len: NIGHT_LEN, rw: [c(2.8)], tk: [NIGHT_FIST] }, [6, longNight, 'The Long Night'])], [
-        M({ len: wo, rw: [wo] }, [9, whiteout, 'Whiteout']),
+      sets: mix([M(FX(0), [2, fist, 'Glacial Fist']), M({ len: NIGHT_LEN, rw: [c(2.8)], tk: [NIGHT_FIST], mk: [NIGHT_MAUL] }, [6, longNight, 'The Long Night'])], [
+        M(MW, [9, maulWhiteout, 'Icebreaker']),
         H ? M(FX(LEN.fault), [13, fistFault, 'Glacial Fist']) : M(FX(LEN.twin), [13, fistTwin, 'Glacial Fist']),
         H ? M({ len: LEN.frost + 0.5 + LEN.sweep, hl: [fs] }, [13, frostSweep, 'Frostbite']) : M({ len: LEN.frost, hl: [fs] }, [13, frostbite, 'Frostbite']),
         H ? M(FX(LEN.stomp, { nov: 1 }), [13, fistStomp, 'Glacial Fist']) : M(FX(LEN.fault), [13, fistFault, 'Glacial Fist']),
         H ? M({ len: LEN.grip, nov: 1, hl: [c(10.6)] }, [10, grip, "Titan's Grip"]) : M({ len: LEN.fault + 0.8 + LEN.slam }, [13, faultSlam, 'Fault Line']),
-        H && M({ len: LEN.twin }, [13, twinSlam, 'Twin Slam']),
+        M(MQ, [13, maul, 'Icebreaker']),
       ].filter(Boolean), [
+        H && M({ len: LEN.fault + 0.8 + LEN.slam }, [13, faultSlam, 'Fault Line']),
         M(HF, [12, howlFist, "Winter's Howl"]),
-        M({ len: LEN.fault + 0.8 + LEN.slam }, [13, faultSlam, 'Fault Line']),
-      ]),
+      ].filter(Boolean)),
       closing: [[12, howl, "Winter's Howl"], [10, fist, 'Glacial Fist'], [10, fault, 'Fault Line']],
       next: avalancheAct,
     }, nightFrom(from));
@@ -551,11 +594,11 @@ const TITAN = {
         M(FX(LEN.icefall), [13, fistIcefall, 'Glacial Fist']),
         GA(),
         M(HF, [12, howlFist, "Winter's Howl"]),
-        H ? M({ len: LEN.frost, hl: [fs] }, [12, frostbite, 'Frostbite']) : M({ len: LEN.frost + 0.5 + LEN.sweep, hl: [fs] }, [12, frostSweep, 'Frostbite']),
-        H ? M({ len: LEN.breath, nov: 1 }, [10, breath, 'Breath of Winter']) : M({ len: LEN.twin }, [12, twinSlam, 'Twin Slam']),
+        H ? M(MQ, [12, maul, 'Icebreaker']) : M({ len: LEN.frost + 0.5 + LEN.sweep, hl: [fs] }, [12, frostSweep, 'Frostbite']),
+        H ? M({ len: LEN.breath, nov: 1 }, [10, breath, 'Breath of Winter']) : M(MQ, [12, maul, 'Icebreaker']),
         GA(),
         M(FX(LEN.sweep), [13, fistSweep, 'Glacial Fist']),
-      ], [], [1, 5], 30),
+      ], [], [1, 5], 24),
       closing: [[12, howl, "Winter's Howl"], [10, fist, 'Glacial Fist'], [10, twinSlam, 'Twin Slam']],
       next: lastWinter,
     }, settle(from, 4));
@@ -579,7 +622,7 @@ const TITAN = {
     thawAct(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.fault())
-    f.moves = { howl, fist, slam, twinSlam, fault, icefall, sweep, grasp, frostbite, whiteout, avalanche, graspAvalanche, longNight, stomp, breath, grip, tipRun, lakeRises, lakeFlood };
+    f.moves = { maul, howl, fist, slam, twinSlam, fault, icefall, sweep, grasp, frostbite, whiteout, avalanche, graspAvalanche, longNight, stomp, breath, grip, tipRun, lakeRises, lakeFlood };
   },
 };
 

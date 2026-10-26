@@ -8,7 +8,9 @@
 //     only inside it, and in the last act it burns.
 //   Act I, Descent (100% -> 76%): Glint (a dash cut to an afterimage at the end of a line), Eightfold Wake (eight afterimages round the
 //     room, cut from one to the next), Cinder Crown (the tank's buster; a burning ring stays), Pinning Thrust (a lunge that drives the
-//     tank to the wall), Grace Withdrawn (the whole party drops to 1 HP, never lethal) and Nightfall (everyone, a few seconds later).
+//     tank to the wall), Trailing Cut (a silver copy is left at the tank's heel and a ring keeps pace with them until the last moment: he
+//     cuts where the tank stood, so the tank steps clear and leads it away from the party; it runs inside a dance too, with the dance's
+//     cuts still to read), Grace Withdrawn (the whole party drops to 1 HP, never lethal) and Nightfall (everyone, a few seconds later).
 //   Act II, Starfall (76% -> 52%): Anchored Wake (two of the afterimages form where heroes stand), Starfall (blue soaks fall inside the
 //     shadow), the shadow grows, and the first Horizon Cut (a wide lane along the rim, clear of the star: a taste of Act III's idea).
 //   The Starwyrm (52%, WALL): he lifts his blade and the constellations knot into a serpent of stars. It coils once round the room (a
@@ -19,6 +21,7 @@
 //   Act IV, The Sky Comes Down (18% -> dead, PUSH): the shadow covers most of the floor and burns; the last dance runs round what is clear.
 // Every telegraph shows on every difficulty. Hard: casts 15% faster, harder hits (hardDmg), and:
 //   Mirrored Wake:        the dance runs twice, the second pass mirrored.
+//   Trailing Cut, twice:  when it stands alone, a second ring comes where the tank has stepped to, a moment after the first lands (in a dance, one ring on both).
 //   Second Coil:          the Starwyrm returns in Act III and dives along a painted line.
 //   Chorus of the Fallen: once an act (in Act III, the first dance up in the sky), an afterimage of Corvane, Brannoc or Morrow-Oak joins a dance with one of its own moves (on Normal
 //                         and Hard alike all three strike in turn at the end of the last dance).
@@ -30,7 +33,7 @@
 const CAELUM = {
   id: 'caelum', name: 'Caelum Vey', title: 'the Starborn',
   hp: { normal: 5200000, hard: 5200000 },   // (Hard was 5.6M: the slowest clears used to land on the enrage cast; now 20 s or more clear)
-  hardDmg: 1.40,   // (Hard's damage multiplier; fight.js default 1.25; up as the health came down, so every hit still has to be earned)
+  hardDmg: 1.45,   // (Hard's damage multiplier; fight.js default 1.25; up as the health came down, so every hit still has to be earned)
   autoDmg: { normal: 2600, hard: 2600 },
   enrage: { normal: 605, hard: 625 },   // the cast starts here and lands 8 s later (10:13 / 10:33)
   enrageName: 'The Sky Comes Down',
@@ -58,10 +61,10 @@ const CAELUM = {
     const dmg = {
       glint: H ? 18800 : 20000, wake: H ? 17800 : 19800, crown: H ? 25000 : 26500, crownRing: H ? 1900 : 1900, thrust: H ? 22500 : 24000,
       pinSlam: H ? 8500 : 9500, night: H ? 3800 : 4400, star: H ? 8000 : 9000, starFail: H ? 11000 : 12000, starRain: H ? 5600 : 5900, ember: H ? 17500 : 20000,
-      coil: H ? 19800 : 21000, constellation: H ? 60000 : 70000, horizon: H ? 25000 : 27000, burn: H ? 2000 : 2000, shower: H ? 2600 : 2700, glow: H ? 2400 : 2600,
+      coil: H ? 19800 : 21000, trail: H ? 9800 : 10500, constellation: H ? 60000 : 70000, horizon: H ? 25000 : 27000, burn: H ? 2000 : 2000, shower: H ? 2600 : 2700, glow: H ? 2400 : 2600,
       secondCoil: H ? 20000 : 0, chorus: H ? 19500 : 18500, darkEmber: H ? 2200 : 0,
     };
-    if (!H) for (const k in dmg) if (!['night', 'ember', 'constellation'].includes(k)) dmg[k] = Math.round(dmg[k] * 1.06);   // (Normal hits 6% harder after the fun pass made the fight easier to survive; Nightfall, Embers of Heaven and Constellation Fall stay, so Hard keeps its 1.1x over them)
+    if (!H) for (const k in dmg) if (!['night', 'ember', 'constellation'].includes(k)) dmg[k] = Math.round(dmg[k] * 1.08);   // (Normal hits 8% harder: 6% after the fun pass made the fight easier to survive; Nightfall, Embers of Heaven and Constellation Fall stay, so Hard keeps its 1.1x over them)
     const S = (...steps) => steps.filter(Boolean);
     const live = id => f.alive().find(p => p.id === id);
     const hold = d => { B.holdUntil = Math.max(B.holdUntil || 0, f.t + d); };
@@ -109,6 +112,29 @@ const CAELUM = {
       seg(from, end, d, { tag: 'clGlint', dmg: dmg.glint, w: 120 });
       f.afterKeep(d, () => { B.x = end.x; B.y = end.y; B.lockFacing = false; });
     };
+    // Trailing Cut: an afterimage always marks the tank. A red ring is drawn round the tank and keeps pace with them; a moment before
+    // the cut it stops, a silver copy of him stands in it, and he cuts where the tank stood. The tank steps clear and takes care where
+    // the copy is left: whoever stands close is cut too, and in a dance the painted cuts are still to read. Lighter than Cinder Crown
+    // and Pinning Thrust, so it comes often. In a dance it is cast just after the dance's own bar (o.hosted: one ring only; the dance
+    // names its bar's length with echoAt); on its own, Hard sends a second ring where the tank has stepped to.
+    const ECHO_R = 135, ECHO_CAST = 2.8, ECHO_LOCK = 1.15, ECHO_TWIN = 1.7;
+    const echo = (o = {}) => {
+      if (!f.tank()) return;
+      const d = f.ct(ECHO_CAST);
+      f.cast('Trailing Cut', d, 'glint');
+      const ring = (delay, lockAt, dm) => {
+        const t = f.tank(); if (!t) return;
+        const m = f.mech({ type: 'aoe', shape: { kind: 'circle', x: Math.round(t.x), y: Math.round(t.y), r: ECHO_R }, delay, dmg: dm, follow: t.id, lockAt, tag: 'clEcho' });
+        // (the copy stands where the ring stops, facing him; it comes apart as the cut lands)
+        f.afterKeep(delay - lockAt, () => {
+          if (f.state !== 'live') return;
+          const x = Math.round(m.shape.x), y = Math.round(m.shape.y);
+          f.emit({ t: 'roomev', k: 'climgs:' + (++imgN), l: [[x, y, 1, +Math.atan2(B.y - y, B.x - x).toFixed(2)]], dur: +(lockAt + 0.7).toFixed(2) });
+        });
+      };
+      ring(d, ECHO_LOCK, dmg.trail);
+      if (H && !o.hosted) f.afterKeep(d + 0.1, () => { if (f.state === 'live') ring(ECHO_TWIN, 1.05, Math.round(dmg.trail * 0.8)); });
+    };
     // the Chorus of the Fallen (Hard): an afterimage of an earlier set 3 boss joins a dance with one of its own moves
     // (Normal: once, in the last dance, all three in turn; Hard: one in a dance of every act, and all three in the last)
     const chorusOrder = f.shuffle(['corvane', 'brannoc', 'morrowoak']);
@@ -144,7 +170,10 @@ const CAELUM = {
     const dance = (pts, o = {}) => {
       const lead = f.ct(o.lead || 3.4), step = f.ct(0.6), total = lead + pts.length * step;
       const name = o.name || (o.mirror && H ? 'Mirrored Wake' : o.anchored ? 'Anchored Wake' : 'Eightfold Wake');
-      if (!o.quiet) f.cast(name, o.bar ? lead : total, 'wake');   // (o.bar: the bar shows only the lead; the cuts run on, so a cast that begins during them does not cut it)
+      // o.echo (1 or 2: in the first or the second pass of a mirrored dance): the tank's Trailing Cut is cast just after the lead
+      const ep = o.echo ? ((o.mirror && H) ? o.echo : 1) : 0;
+      if (!o.quiet) f.cast(name, (o.bar || ep === 1) ? lead + (o.echoAt ? o.echoAt - 0.05 : 0) : total, 'wake');   // (o.bar: the bar shows only the lead; the cuts run on, so a cast that begins during them does not cut it)
+      if (ep === 1) f.afterKeep(lead + (o.echoAt || 0.25), () => { if (f.state === 'live') echo({ hosted: true }); }, 'Trailing Cut');
       B.lockFacing = true; hold(total + 0.8);
       const from = { x: Math.round(B.x), y: Math.round(B.y) };
       const flare = !o.noFlare;   // (Mirrored Wake: the flare closes each pass, so the healer has a beat in the middle of the long dance)
@@ -168,7 +197,7 @@ const CAELUM = {
       if (o.mirror && H) {
         const m = f.rng() * Math.PI, c = Math.cos(2 * m), s = Math.sin(2 * m);
         const mp = pts.map(q => ({ x: Math.round(q.x * c + q.y * s), y: Math.round(q.x * s - q.y * c) }));
-        f.afterKeep(total + 0.3, () => { if (f.state === 'live') dance(mp, { quiet: true, lead: 2.6 }); }, 'Mirrored Wake');
+        f.afterKeep(total + 0.3, () => { if (f.state === 'live') dance(mp, { quiet: true, lead: 2.6, echo: ep === 2 ? 1 : 0 }); }, 'Mirrored Wake');
         return total + 0.3 + f.ct(2.6) + mp.length * step;
       }
       return total;
@@ -302,7 +331,7 @@ const CAELUM = {
       f.afterKeep(STARWYRM, () => { B.lockFacing = false; if (f.wall) f.wallDown(); });
       // (and the Ascendant and his first dance up there are laid now, so the feed reads across the wall into Act III)
       f.afterKeep(STARWYRM + 0.5, ascend, 'Ascendant');
-      f.afterKeep(STARWYRM + 9.5, () => wake({ rings: 2, chorus: true }), H ? 'Chorus of the Fallen' : 'Eightfold Wake');
+      f.afterKeep(STARWYRM + 9.5, () => wake({ rings: 2, chorus: true, echo: 1 }), H ? 'Chorus of the Fallen' : 'Eightfold Wake');
     };
 
     // --- Ascendant (the second form) --------------------------------------------------------------------------------------------
@@ -384,10 +413,16 @@ const CAELUM = {
       horizon: o => ({ fn: () => horizon(o), name: 'Horizon Cut', tail: f.ct(5) + 0.4 }),
       coil: () => ({ fn: secondCoil, name: 'Second Coil', tail: f.ct(4.6) }),
       grace: quick => ({ fn: () => grace({ quick }), name: 'Grace Withdrawn', tail: f.ct(quick ? 2.4 : 3.2) + 10.4, heal: [f.ct(quick ? 2.4 : 3.2), f.ct(quick ? 2.4 : 3.2) + 10] }),
+      // (o.echo: the tank's Trailing Cut inside the dance; it lands near the start of the pass it is in)
       wake: (o = {}, name = 'Eightfold Wake') => {
         const n = (o.rings === 2 ? 12 : 8), one = f.ct(3.4) + n * f.ct(0.6), total = (o.mirror && H) ? one + 0.3 + f.ct(2.6) + n * f.ct(0.6) : one;
-        return { fn: () => wake(o), name, tail: total + 0.8, heal: o.noFlare ? [] : (o.mirror && H) ? [one + 0.7, total + 0.7] : [total + 0.7] };
+        const ep = o.echo ? ((o.mirror && H) ? o.echo : 1) : 0;
+        const at = o.echoAt || 0.25, tank = !ep ? [] : [ep === 1 ? f.ct(3.4) + at + f.ct(ECHO_CAST) : one + 0.3 + f.ct(2.6) + at + f.ct(ECHO_CAST)];
+        return { fn: () => wake(o), name, tail: total + 0.8, tank, heal: o.noFlare ? [] : (o.mirror && H) ? [one + 0.7, total + 0.7] : [total + 0.7] };
       },
+      // Trailing Cut on its own (Hard: the ring comes twice; one: the single ring, for a move that already asks a lot of the floor)
+      echoOne: () => ({ fn: () => echo({ hosted: true }), name: 'Trailing Cut', tail: f.ct(ECHO_CAST) + 0.2, tank: [f.ct(ECHO_CAST)] }),
+      echo: () => ({ fn: () => echo(), name: 'Trailing Cut', tail: f.ct(ECHO_CAST) + (H ? ECHO_TWIN + 0.6 : 0.6), tank: H ? [f.ct(ECHO_CAST), f.ct(ECHO_CAST) + 0.1 + ECHO_TWIN] : [f.ct(ECHO_CAST)] }),
     };
     // a block: its written lead, then a move and [gap, move] ...
     const BL = (lead, ...parts) => {
@@ -443,14 +478,14 @@ const CAELUM = {
     const descent = from => {
       const blocks = [
         BL(4, MV.glint()),
-        BL(8, MV.wake()),
+        BL(8, MV.wake({ echo: 1 })),
         BL(13, MV.crown()),
         BL(10, MV.glintT(), [6, MV.thrust()]),
-        BL(11, MV.wake({ mirror: true }, H ? 'Mirrored Wake' : 'Eightfold Wake')),
+        BL(11, MV.wake({ mirror: true, echo: 2 }, H ? 'Mirrored Wake' : 'Eightfold Wake')),
         BL(H ? 16 : 12, MV.crown()),
         BL(H ? 9 : 10, MV.grace()),
-        BL(H ? 14 : 15, MV.glint(), [7, MV.glintT()]),
-        BL(10, MV.wake({ chorus: true }, H ? 'Chorus of the Fallen' : 'Eightfold Wake')),
+        BL(H ? 14 : 15, MV.echo(), [7, MV.glintT()]),
+        BL(10, MV.wake({ chorus: true, echo: H ? 0 : 1 }, H ? 'Chorus of the Fallen' : 'Eightfold Wake')),
         BL(13, MV.thrust()),
         BL(10, MV.crown()),
       ];
@@ -461,7 +496,7 @@ const CAELUM = {
       };
       return f.course({
         until: 0.76, onStart: () => setShadow(150),
-        sets: sets(blocks, threes(1, 10), rules, 32),
+        sets: sets(blocks, threes(1, 10), rules, 28),
         closing: [[10, glint, 'Glint'], [10, crown, 'Cinder Crown'], [12, () => wake(), 'Eightfold Wake']],
         next: starfallAct,
       }, from);
@@ -471,21 +506,21 @@ const CAELUM = {
     const starfallAct = from => {
       const blocks = [
         BL(5, MV.starfall()),
-        BL(H ? 8 : 9, MV.wake({ anchored: 2 }, 'Anchored Wake')),
+        BL(H ? 8 : 9, MV.wake({ anchored: 2, echo: 1 }, 'Anchored Wake')),
         BL(H ? 11 : 13, MV.crown()),
         BL(10, MV.glintT(), [7, MV.thrust()]),
-        BL(H ? 11 : 12, MV.starfall(), ...(H ? [[4.6, MV.ember()]] : [])),
-        BL(H ? 11 : 10, MV.crown()),
-        BL(H ? 10 : 11, MV.wake({ anchored: 2, chorus: true }, H ? 'Chorus of the Fallen' : 'Anchored Wake')),
+        BL(H ? 11 : 12, MV.starfall(), ...(H ? [[4.6, MV.ember()], [4.4, MV.echoOne()]] : [])),
+        BL(H ? 6.6 : 10, MV.crown()),
+        BL(H ? 10 : 11, MV.wake({ anchored: 2, chorus: true, echo: H ? 0 : 1 }, H ? 'Chorus of the Fallen' : 'Anchored Wake')),
         BL(H ? 11 : 12, MV.starfall(), [6, MV.thrust()]),
         BL(H ? 9 : 10, MV.horizon({ rim: true }), [H ? 4.8 : 6, MV.glintT()]),
-        BL(H ? 9.5 : 10.5, MV.wake({ anchored: 2 }, 'Anchored Wake')),
+        BL(H ? 9.5 : 10.5, MV.wake({ anchored: 2, echo: 1 }, 'Anchored Wake')),
         BL(H ? 11 : 13, MV.crown()),
       ];
       return f.course({
         until: 0.52, onStart: () => setShadow(270),
         wall: { label: 'The Starwyrm', run: starwyrm, until: 'resolved', timeout: STARWYRM + 8 },
-        sets: sets(blocks, threes(1, 10), null, 36),
+        sets: sets(blocks, threes(1, 10), null, 29),
         closing: [[10, () => starfall(2), 'Starfall'], [10, crown, 'Cinder Crown'], [12, () => wake({ anchored: 2 }), 'Anchored Wake']],
         next: ascendant,
       }, from);
@@ -497,18 +532,18 @@ const CAELUM = {
         BL(22, MV.crown()),
         BL(H ? 9 : 10, MV.horizon({ star: true })),
         BL(H ? 9 : 10, MV.glintT(), [7, MV.thrust()]),
-        BL(H ? 10 : 11, MV.starfall(3), [f.ct(5) + 0.1, MV.grace(true)]),   // a second Grace Withdrawn as the Starfall comes down (his cast begins as the towers land)
+        BL(H ? 8 : 8.6, MV.echo(), [3.4, MV.starfall(3)], [f.ct(5) + 0.1, MV.grace(true)]),   // a second Grace Withdrawn as the Starfall comes down (his cast begins as the towers land)
         BL(H ? 12 : 14, MV.crown()),
         BL(H ? 9 : 10, MV.horizon({ cross: !H }), ...(H ? [[7, MV.coil()]] : [])),   // (Normal: two cuts at once, the bare floor where the gaps meet)
-        BL(H ? 8 : 15, MV.thrust(), [8, MV.glintT()]),   // (Normal: the Thrust keeps about 25 s from the Crown before it; the tank's mitigation is a cooldown too)
-        BL(H ? 8 : 9, MV.wake({ rings: 2, mirror: true }, H ? 'Mirrored Wake' : 'Eightfold Wake')),
+        BL(H ? 8 : 8.5, ...(H ? [MV.thrust()] : [MV.echo(), [6.5, MV.thrust()]]), [8, MV.glintT()]),   // (Normal: the Thrust keeps about 25 s from the Crown before it; the tank's mitigation is a cooldown too)
+        BL(H ? 8 : 9, MV.wake({ rings: 2, mirror: true, echo: 1 }, H ? 'Mirrored Wake' : 'Eightfold Wake')),
         BL(H ? 19 : 14, MV.crown()),
-        BL(H ? 8 : 9, MV.starfall(3), ...(H ? [[5, MV.ember()]] : [])),
-        BL(H ? 11 : 10, MV.glintT(), [7, MV.thrust()]),
-        BL(10, MV.wake({ rings: 2, noFlare: H, bar: H }), ...(H ? [[5, MV.grace(true)]] : [])),
+        BL(H ? 8 : 9, MV.starfall(3), ...(H ? [[5, MV.ember()], [4.4, MV.echoOne()]] : [])),
+        BL(H ? 6.6 : 10, MV.glintT(), [7, MV.thrust()]),
+        BL(10, MV.wake({ rings: 2, noFlare: H, bar: H, echo: H ? 0 : 1 }), ...(H ? [[5, MV.grace(true)]] : [])),
         BL(H ? 12 : 14, MV.crown()),
         BL(H ? 9 : 10, MV.horizon({ star: true })),
-        BL(H ? 8 : 11, MV.starfall(3), [7, MV.thrust()]),
+        BL(H ? 8 : 7.6, ...(H ? [MV.starfall(3)] : [MV.echo(), [3.4, MV.starfall(3)]]), [7, MV.thrust()]),
         BL(H ? 8 : 10, MV.horizon()),
       ];
       // (Hard: the two Graces keep a quarter of the act apart, and a dive and a dance are not neighbours: one read at a time)
@@ -521,7 +556,7 @@ const CAELUM = {
       return f.course({
         until: 0.18, push: true,
         onStart: () => { if (!ascended) ascend(); },   // (practice from here: the wall that lays it was passed over)
-        sets: sets(blocks, threes(1, 15), rules, 36, 9, [19]),   // (19: the flare that closes the dance laid at the wall)
+        sets: sets(blocks, threes(1, 15), rules, 30, 9, [19]),   // (19: the flare that closes the dance laid at the wall)
         closing: [[10, crown, 'Cinder Crown'], [10, horizon, 'Horizon Cut'], [12, () => wake({ rings: 2 }), 'Eightfold Wake']],
         next: skyComes,
       }, from);
@@ -533,14 +568,14 @@ const CAELUM = {
         BL(5, MV.crown()),
         BL(H ? 8 : 9, MV.horizon()),
         BL(H ? 9 : 10, MV.glintT(), [6, MV.thrust()]),
-        BL(11, MV.wake({ ringR: 455, fallen: true }, 'Chorus of the Fallen')),
+        BL(11, MV.wake({ ringR: 455, fallen: true, echo: 1, echoAt: 4.4 }, 'Chorus of the Fallen')),
         BL(H ? 14 : 15, MV.crown()),   // (the climax: the fallen's dance, a last Cinder Crown, then the party is taken to nothing and the sky comes down at once)
         BL(H ? 9 : 10, MV.grace()),
         BL(H ? 14 : 15, MV.horizon({ cross: H })),
       ];
       return f.course({
         onStart: () => { setShadow(340 - held, true); f.afterKeep(36, () => { if (f.state === 'live') setShadow(390 - held, true); }); },
-        sets: sets(blocks, [[0, 1, 2], [4, 5, 6]], (order) => !has(order[6], 'Grace Withdrawn'), 40, 12),   // (the dance, then the last three in some order, but Grace never last: the closing passes would meet a party held at nothing)
+        sets: sets(blocks, [[0, 1, 2], [4, 5, 6]], (order) => !has(order[6], 'Grace Withdrawn'), 31, 12),   // (the dance, then the last three in some order, but Grace never last: the closing passes would meet a party held at nothing)
         closing: [[10, crown, 'Cinder Crown'], [10, horizon, 'Horizon Cut'], [12, () => wake({ ringR: 455 }), 'Eightfold Wake']],
         ramp: 0.08,
       }, from);
@@ -549,7 +584,7 @@ const CAELUM = {
     descent(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.wake())
-    f.moves = { glint, wake, dance, crown, thrust, grace, starfall, darkEmber, coil, starwyrm, ascend, horizon, secondCoil, chorus, setShadow };
+    f.moves = { glint, echo, wake, dance, crown, thrust, grace, starfall, darkEmber, coil, starwyrm, ascend, horizon, secondCoil, chorus, setShadow };
     f.caelumShadow = shadow;
   },
 };

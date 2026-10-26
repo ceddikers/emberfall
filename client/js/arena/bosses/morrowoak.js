@@ -28,6 +28,11 @@
 //   (plus, in Act III, a Cleaver Bough soak that lands on the tank every other time); the healer's are Sap Tide and Inhale, whose haul bruises the whole
 //   party every time. Beats of the two lanes alternate, no named step is more than 14 s from the next, and Hard draws the order and moves every
 //   step a little each pull. The Swallowing holds a Fourfold Bloom, a Sap Tide and a Root Lash as well. The Cleaver chop feeds any hole it crosses.
+// THE TANK'S OWN BEAT BETWEEN TWO LASHES (tank move): Hunger's Reach. The Hunger reaches out of the nearest hole for the tank: a lane of roots
+//   from the hole's middle, through where the tank stands, a little way past him (red, painted at the cast; the party behind him is in it too).
+//   Step out of it and it takes nothing; stand in it and it hits lightly and drags you up to the hole's edge (never in), off your boss. The tank
+//   decides where the boss stands, so which hole answers and which way the lane runs. Hard layers a second lane from the next hole, painted
+//   where the tank stands as the first lands. lay() drops one into the quiet stretch between two Root Lashes (rules in withReach()).
 // Every telegraph shows on every difficulty. Hard: casts 15% faster, about 10% more damage on every move (hardDmg 1.2 on a table a notch lower), and:
 //   Twin Seed:      two seeds, joined: burst them far apart, or they open one giant hole between them.
 //   Hungering Dark: the holes breathe in; the ground round each one drags anyone on it over the edge.
@@ -56,18 +61,19 @@ const MORROWOAK = {
     const dmg = {
       // (Hard = Normal x 0.92, and fight.js multiplies Hard by hardDmg 1.2: about 1.1x Normal on every move both have; the Hard-only moves keep what they hit before)
       sap: H ? 11600 : 12600, lash: H ? 23900 : 26000, seed: H ? 16500 : 18000, fall: H ? 20200 : 22000, petal: H ? 19800 : 21500, haul: H ? 3500 : 3800,
-      twin: H ? 14400 : 0, dark: H ? 8600 : 0, swallow: H ? 9700 : 10500, sapHp: H ? 11000 : 12000, limbHp: H ? 185000 : 200000,
+      twin: H ? 14400 : 0, dark: H ? 8600 : 0, swallow: H ? 9700 : 10500, sapHp: H ? 11000 : 12000, limbHp: H ? 185000 : 270000,
       cleave: H ? 49600 : 54000, chop: H ? 21200 : 23000, roots: H ? 10600 : 11500, rod: H ? 20200 : 22000, lantern: H ? 12700 : 13800, ebb: H ? 7600 : 8200,
       wing: H ? 19200 : 0, rime: H ? 17600 : 0, rimePool: H ? 2300 : 0, rune: H ? 18100 : 0, head: H ? 18600 : 0,
+      reach: H ? 8200 : 8800, reach2: H ? 7000 : 0,
     };
-    const TUNE = H ? 1.13 : 1.13;   // (the spacing and caps below keep the room fair; this keeps the hits worth healing)
+    const TUNE = H ? 1.135 : 1.135;   // (the spacing and caps below keep the room fair; this keeps the hits worth healing)
     for (const k of Object.keys(dmg)) if (k !== 'sapHp' && k !== 'limbHp') dmg[k] = Math.round(dmg[k] * TUNE);
     const S = (...steps) => steps.filter(Boolean);
     const live = id => f.alive().find(p => p.id === id);
     // every cast bar but the tide's and the lash's is remembered, so a Root Lash never starts its bar inside another cast (it waits for it)
     let castUntil = 0;
     const rawCast = f.cast.bind(f);
-    f.cast = (name, d, ...r) => { if (name !== 'Sap Tide' && name !== 'Root Lash') castUntil = Math.max(castUntil, f.t + d); return rawCast(name, d, ...r); };
+    f.cast = (name, d, ...r) => { if (name !== 'Sap Tide' && name !== 'Root Lash' && name !== "Hunger's Reach") castUntil = Math.max(castUntil, f.t + d); return rawCast(name, d, ...r); };
     const hold = d => { B.holdUntil = Math.max(B.holdUntil || 0, f.t + d); };
     let sapN = 0;                  // Sap Tide grows every time
     let riding = false;            // the Swallowing: the party rides the pieces down, nobody falls
@@ -214,6 +220,41 @@ const MORROWOAK = {
       f.mech({ type: 'buster', shape: { kind: 'circle', x: tank.x, y: tank.y, r: 150 }, delay: d, dmg: dmg.lash, target: tank.id, follow: tank.id, lockAt: 0.8, tag: 'mgLash',
         onResolve: inside => { for (const p of inside) f.debuff(p.id, 'rooted', H ? 2 : 1.5); } });
     };
+    // Hunger's Reach: the tank's own beat between two Root Lashes. A lane of roots from the nearest hole's middle through the tank (painted from the
+    // cast, red, a little way past him: whoever stands behind him is in it too). Out of it, it takes nothing; in it, a light hit and a drag toward the
+    // hole that stops at its edge (never over it). Hard: as it lands the next hole sends a second lane through wherever the tank now stands.
+    // (Not a heavy move: it takes no floor. lay() keeps it clear of the moves the tank must read.)
+    const REACH_PULL = 240;
+    const reachLane = (h, who, delay, dm) => {
+      const group = new Set(); group.lb = true;   // (a tank's own beat is not a feat: a clean answer does not feed the party's Limit Break gauge)
+      const a = Math.atan2(who.y - h.y, who.x - h.x), D = Math.hypot(who.x - h.x, who.y - h.y);
+      return f.mech({ type: 'aoe', shape: { kind: 'rect', x: h.x, y: h.y, angle: +a.toFixed(3), len: Math.round(D + 260), w: 110 }, delay, dmg: dm, tag: 'mgRoots', group, from: "Hunger's Reach",
+        onResolve: (inside, hits, cov) => {
+          for (const p of inside) {
+            const dx = h.x - p.x, dy = h.y - p.y, D2 = Math.hypot(dx, dy) || 1, ux = dx / D2, uy = dy / D2;
+            let go = Math.min(REACH_PULL, D2 - (h.r + 28));
+            for (let s2 = 0; s2 <= go; s2 += 10) if (inHole(p.x + ux * s2, p.y + uy * s2, -22)) { go = Math.max(0, s2 - 12); break; }
+            if (go > 6) f.knock(p, p.x - ux, p.y - uy, go);
+          }
+          // Hard: the next hole reaches too, along a lane through wherever the tank stands now
+          if (H && who.second && f.state === 'live') {
+            const tk = f.tank(); if (!tk) return;
+            let h2 = null, nd = Infinity;
+            for (const q of holes) { if (q === h) continue; const d = Math.hypot(q.x - tk.x, q.y - tk.y) - q.r; if (d < nd) { nd = d; h2 = q; } }
+            if (h2) reachLane(h2, { x: tk.x, y: tk.y }, f.ct(2.4), dmg.reach2);
+          }
+        } });
+    };
+    const reach = o => {
+      if (f.state !== 'live' || (wallOn && !(o && o.wall)) || !holes.length) return;
+      const tk = f.tank(); if (!tk) return;
+      let h = null, nd = Infinity;
+      for (const q of holes) { const d = Math.hypot(q.x - tk.x, q.y - tk.y) - q.r; if (d < nd) { nd = d; h = q; } }
+      if (!h) return;
+      const d = f.ct(3.2);
+      if (castUntil <= f.t + 0.05 && lockUntil <= f.t + 0.05 && !(o && o.wall)) f.cast("Hunger's Reach", d, 'lash');   // (a cast bar only when it cuts none)
+      reachLane(h, { x: tk.x, y: tk.y, second: true }, d, dmg.reach);
+    };
     // Sap Tide: a raidwide, a little heavier every time
     // From the Grove Remade on, a tide is followed by the ground heaving: the ring at his feet (out) or the ring round them (in), painted the moment
     // the tide lands, and every other tide is plain, so the healer's beat is never the same twice
@@ -285,6 +326,7 @@ const MORROWOAK = {
     const SWALLOW = 25.4;
     const swallowBody = () => {
       f.cast('The Swallowing', 6, 'swallow');
+      f.afterKeep(1, () => reach({ wall: true }), "Hunger's Reach");   // (the tank's beat while the grove is still whole: it lands before the tide that opens the fall)
       B.lockFacing = true; hold(SWALLOW);
       f.emit({ t: 'roomev', k: 'swallow', dur: SWALLOW });
       f.afterKeep(4, () => f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: 2, dmg: dmg.swallow, hidden: true, tag: 'mgSwallow' }));
@@ -492,11 +534,39 @@ const MORROWOAK = {
     // (Normal's order keeps the rules by construction; if a Hard draw never does, Normal's order is played.)
     const heal = fn => Object.assign(fn, { heal: 1 });
     const TIDE = [sapTide, 'Sap Tide'], LASH = [lash, 'Root Lash'], BLOOM = [() => bloom(), 'Fourfold Bloom'];
-    const HAUL = [heal(() => inhale()), 'Inhale'], DRAWB = [heal(() => drawBloom()), 'Inhale'];
+    const HAUL = [heal(() => inhale()), 'Inhale'], DRAWB = [Object.assign(heal(() => drawBloom()), { long: 1 }), 'Inhale'];
     const SEED1 = [() => seed(1), 'Hunger Seed'];
     const SEED2 = H ? [() => seed(2, true), 'Twin Seed'] : [() => seed(2), 'Hunger Seed'];
     const SAPL = [saplings, 'Saplings'], DARK = [hungeringDark, 'Hungering Dark'];
-    const lay = (slots, bag, pin = {}) => {
+    // Hunger's Reach: one lands in the quiet between two Root Lashes (and, in the acts that follow another, between the act's start and its first lash).
+    // It is not a heavy move and takes no floor, so lay() fits it round the others by what the tank has to read: [seconds after a step starts before
+    // the Reach may come, seconds before it the Reach must be done]. Each window takes the legal time nearest its middle; no legal time, no draw.
+    const REACH = [reach, "Hunger's Reach"];
+    const CLEAR = { 'Root Lash': [9, 9], 'Inhale': [7, 8], 'Sap Tide': [5, 4], 'Fourfold Bloom': [7, 4], 'The Grove Remade': [8, 4], 'Hungering Dark': [6, 4], 'Hunger Seed': [3, 2], 'Twin Seed': [3, 2], Saplings: [3, 2] };
+    const withReach = (pl, pre) => {
+      const lashes = pl.filter(x => x.m[1] === 'Root Lash').map(x => x.t), out = pl.slice();
+      let worst = 0;
+      // (pre: the earliest the act's first Reach may come, when the act follows another; the first window runs from there, the rest from a Lash's landing)
+      // (the first act has no hole until its first seed has burst)
+      const seeds = pl.filter(x => x.m[1] === 'Hunger Seed').map(x => x.t), holeAt = pre == null && seeds.length ? Math.min(...seeds) + 8 : 0;
+      const wins = lashes.map((t, i) => i ? [lashes[i - 1] + 8, t, lashes[i - 1]] : [pre, t, 0]).filter(w => w[0] != null);
+      for (const [a, b, from] of wins) {
+        let best = null, bw = 1e9;
+        for (let r = Math.max(a, holeAt); r <= b - 9; r += 0.5) {
+          const bad = pl.some(x => { const c = x.m[0].long ? [12, 8] : (CLEAR[x.m[1]] || [8, 4]); return x.t <= r ? r - x.t < c[0] : x.t - r < c[1]; });
+          const w = Math.max(r - from, b - r);
+          if (!bad && w < bw) { bw = w; best = r; }
+        }
+        if (best == null) return null;
+        out.push({ t: best, m: REACH });
+        // (the longest the tank then waits for a beat of their own, from one landing to the next: a Lash lands 4 s after its step, a Reach 3.2 s)
+        worst = Math.max(worst, b - best + 0.8, from ? best - from - 0.8 : 0);
+      }
+      out.sort((x, y) => x.t - y.t);
+      out.worst = worst;
+      return out;
+    };
+    const lay = (slots, bag, pin = {}, pre) => {
       const build = jit => {
         const pools = {};
         for (const k of Object.keys(bag)) { const a = bag[k], n = pin[k] || 0; pools[k] = [...a.slice(0, n), ...(jit ? f.shuffle(a.slice(n)) : a.slice(n))]; }
@@ -516,8 +586,17 @@ const MORROWOAK = {
         return !pl.some(x => (x.m[0].heal && L.some(t => Math.abs(t - x.t) < 9)) || (x.m[1] === 'Sap Tide' && L.some(t => Math.abs(t - x.t) < 8)) ||
           (x.m[1] === 'Fourfold Bloom' && pl.some(y => y.m[0].heal && x.t - y.t > 0 && x.t - y.t < 11)));
       };
-      let pl = build(false);
-      if (H) for (let i = 0; i < 600; i++) { const c = build(true); if (ok(c)) { pl = c; break; } }
+      let pl = withReach(build(false), pre) || build(false);
+      if (H) {
+        // (Hard draws until the tank never waits much more than 24 s for a beat; failing that, the best draw found)
+        let best = null;
+        for (let i = 0; i < 600; i++) {
+          const c = build(true), r = ok(c) && withReach(c, pre);
+          if (r && (!best || r.worst < best.worst)) best = r;
+          if (best && best.worst <= 24.5) break;
+        }
+        if (best) pl = best;
+      }
       let prev = 0;
       return pl.map(x => { const d = x.t - prev; prev = x.t; return S([d, ...x.m]); });
     };
@@ -527,7 +606,7 @@ const MORROWOAK = {
     // I. The Grove
     const grove = from => f.course({
       until: 0.75,
-      sets: lay([[4, 'H'], [13, 'F'], [22, 'T'], [34, 'H'], [46, 'F'], [56, 'T'], [66, 'H'], [76, 'F'], [86, 'T'], [97, 'H'], [108, 'F'], [118, 'T']], {
+      sets: lay([[4, 'H'], [13, 'F'], [22, 'T'], [34, 'H'], [46, 'F'], [56, 'T'], [66, 'H'], [76, 'F'], [86, 'T'], [97, 'H'], [109, 'F'], [118, 'T']], {
         H: [TIDE, HAUL, TIDE, HAUL], T: [LASH, LASH, LASH, LASH], F: [SEED1, BLOOM, SEED1, BLOOM],
       }, { H: 1 }),
       closing: [[10, sapTide, 'Sap Tide'], [10, lash, 'Root Lash'], [10, () => bloom(), 'Fourfold Bloom']],
@@ -538,9 +617,9 @@ const MORROWOAK = {
     const hollowing = from => f.course({
       until: 0.48,
       wall: { label: 'The Swallowing', run: swallowing, until: 'resolved', timeout: SWALLOW + 12 },
-      sets: lay([[4, 'F'], [12, 'F'], [22, 'H'], [32, 'T'], [42, 'F'], [52, 'H'], [62, 'T'], [72, 'F'], [82, 'H'], [92, 'T'], [102, 'F'], [112, 'H'], [124, 'T'], [133, 'F']], {
-        H: [HAUL, TIDE, HAUL, TIDE], T: [LASH, LASH, LASH, LASH], F: [SAPL, SEED2, BLOOM, SAPL, SEED2, H ? DARK : BLOOM],
-      }, { H: 1, F: 2 }),
+      sets: lay([[4, 'F'], [12, 'F'], [22, 'H'], [32, 'T'], [40, 'F'], [52, 'H'], [62, 'T'], [70, 'F'], [82, 'H'], [92, 'T'], [100, 'F'], [112, 'H'], [124, 'T'], [133, 'F']], {
+        H: [TIDE, HAUL, TIDE, HAUL], T: [LASH, LASH, LASH, LASH], F: [SAPL, SEED2, SAPL, BLOOM, SEED2, H ? DARK : BLOOM],
+      }, { H: 1, F: 2 }, 15),
       closing: [[10, sapTide, 'Sap Tide'], [10, lash, 'Root Lash'], [10, () => inhale(), 'Inhale']],
       next: remade,
     }, from);
@@ -550,10 +629,10 @@ const MORROWOAK = {
     const remade = from => f.course({
       until: 0.15, push: true,
       onStart: () => { growLimbs(); relabel(); },
-      sets: lay([[16, 'F'], [28, 'H'], [37, 'T'], [47, 'F'], [56, 'F'], [66, 'H'], [76, 'T'], [85, 'F'], [94, 'F'], [104, 'H'], [114, 'T'], [123, 'F'], [132, 'F'], [142, 'H'], [152, 'T'], [161, 'F'], [170, 'F'], [180, 'H'], [190, 'T'], [199, 'F'], [208, 'F'], [218, 'H'], [228, 'T'], [237, 'F'], [246, 'F']], {
+      sets: lay([[16, 'F'], [26, 'H'], [35, 'T'], [44, 'F'], [56, 'F'], [64, 'H'], [73, 'T'], [82, 'F'], [94, 'F'], [102, 'H'], [111, 'T'], [120, 'F'], [132, 'F'], [140, 'H'], [149, 'T'], [158, 'F'], [170, 'F'], [178, 'H'], [187, 'T'], [196, 'F'], [208, 'F'], [216, 'H'], [225, 'T'], [234, 'F'], [243, 'F']], {
         H: [HAUL, TIDE, DRAWB, TIDE, HAUL, TIDE], T: [LASH, LASH, LASH, LASH, LASH, LASH],
         F: [turn, turn, turn, turn, SEED2, turn, turn, turn, SEED2, BLOOM, turn, H ? DARK : HAUL, turn],
-      }, { H: 1, F: 3 }),
+      }, { H: 1, F: 3 }, 12),
       closing: [[10, sapTide, 'Sap Tide'], [9, lash, 'Root Lash'], [9, ...turn]],
       next: lastAct,
     }, from);
@@ -566,12 +645,14 @@ const MORROWOAK = {
       sets: [
         S([4, () => drawBloom(), 'Inhale']),
         S([9, sapTide, 'Sap Tide']),
-        S([8, ...turn]),
+        S([5, reach, "Hunger's Reach"]),
+        S([6, ...turn]),
         S([8, lash, 'Root Lash']),
-        S([9, ...turn]),
+        S([9, reach, "Hunger's Reach"]),
+        S([5, ...turn]),
         S([8, sapTide, 'Sap Tide']),
-        S([9, lash, 'Root Lash']),
-        S([9, lastOnce, 'Fourfold Bloom']),
+        S([8, lash, 'Root Lash']),
+        S([7, lastOnce, 'Fourfold Bloom']),
       ],
       closing: [[10, sapTide, 'Sap Tide'], [9, lash, 'Root Lash'], [10, lastBloom, 'Fourfold Bloom']],
       ramp: 0.08,
@@ -580,7 +661,7 @@ const MORROWOAK = {
     grove(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.bloom())
-    f.moves = { seed, inhale, bloom, drawBloom, lash, sapTide, saplings, hungeringDark, swallowing, growLimbs, limbTurn, lastBloom, dig, cleaver, broodRoots, stormKnot, lantern, wing, rimeFist, rune, head,
+    f.moves = { seed, inhale, bloom, drawBloom, lash, sapTide, saplings, hungeringDark, swallowing, growLimbs, limbTurn, lastBloom, reach, dig, cleaver, broodRoots, stormKnot, lantern, wing, rimeFist, rune, head,
       limb: k => limbs[k] && LIMB[k].fn(limbs[k]) };
     f.morrowHoles = holes;
   },
