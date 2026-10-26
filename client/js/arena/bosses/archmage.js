@@ -71,7 +71,7 @@ const AZ = {
 
 const AZERATH = {
   id: 'archmage', name: 'Azerath', title: 'Master of the Seven Circles',
-  hp: { normal: 5800000, hard: 6350000 },
+  hp: { normal: 6100000, hard: 6400000 },
   autoDmg: { normal: 2000, hard: 1850 },
   enrage: { normal: 600, hard: 605 },   // the cast starts here and lands 8 s later
   enrageName: 'The Tide Rises',
@@ -87,8 +87,8 @@ const AZERATH = {
     const TAU = Math.PI * 2;
     const { ELS, RULE, SPELL, TAG, SIG, NAME } = AZ;
     const dmg = {
-      burst: H ? 19200 : 20900, lance: H ? 18600 : 18600, pyre: H ? 17000 : 15400, fire: H ? 16500 : 23900, react: H ? 19500 : 21500, frost: H ? 47500 : 49600,
-      beam: H ? 24300 : 21500, void: H ? 16500 : 19100, voidSelf: H ? 8800 : 8000, ice: H ? 25200 : 22300, bolt: H ? 19800 : 17500, rift: H ? 21600 : 19100,
+      burst: H ? 19200 : 21500, lance: H ? 18600 : 18600, pyre: H ? 17000 : 15400, fire: H ? 18000 : 20400, react: H ? 19500 : 21500, frost: H ? 47500 : 53900,
+      beam: H ? 24300 : 21500, void: H ? 16900 : 19100, voidSelf: H ? 8800 : 10000, ice: H ? 25200 : 22300, bolt: H ? 19800 : 17500, rift: H ? 21600 : 19100,
       conv: H ? 27900 : 24600, lens: H ? 18000 : 15900, counter: H ? 21500 : 19100, mark: H ? 47500 : 49600, pulse: H ? 16200 : 14300, surge: H ? 21600 : 23900,
       elBite: H ? 1500 : 1300, flare: H ? 16000 : 15500, flens: H ? 13500 : 13000,
       brand: H ? 9000 : 8000, brandVoid: H ? 12100 : 11000, brandSelf: H ? 5500 : 5000, brandStack: H ? 4000 : 3600, brandStackSelf: H ? 6600 : 6000,
@@ -163,7 +163,12 @@ const AZERATH = {
     // a Circle Brand laid into the calm before a set: its cast begins once the cast before has ended (every cast is 4.8 s at most; a Pyre
     // Ring, Ice Lance, Leaping Bolt or Flare may still be landing in the first moments of it), lands before the set's own first cast, and
     // the set's first step keeps its place. (el: 'fire' | 'frost' | 'bolt' | 'void', or null for any)
-    const brandIn = (el, set) => { const a = H ? 5.7 : 6.4, [dt, fn, nm, ...ex] = set[0]; return [[a, brandOf(el), 'Circle Brand', el || 'any'], [Math.round((dt - a) * 100) / 100, fn, nm, ...ex], ...set.slice(1)]; };
+    // (whole: the Brand rides on the tail of the cast before, beginning this many seconds after it (a Burst, Lance or rune spell has ended by then), and the
+    // set's first cast waits until six quiet seconds follow the Brand, so the calm is not split: it is one window, with a tank beat before it)
+    const brandIn = (el, set, whole) => {
+      const a = whole || (H ? 5.7 : 6.4), [dt, fn, nm, ...ex] = set[0], d1 = whole ? Math.max(dt, a + (H ? 2.4 : 2.8) + 6.1) : dt;
+      return [[a, brandOf(el), 'Circle Brand', el || 'any'], [Math.round((d1 - a) * 100) / 100, fn, nm, ...ex], ...set.slice(1)];
+    };
 
     // shared with the bots and the host's view (raid-host.js)
     f.runePair = null;     // { a, b, ea, eb, el, rule: 'pair' | 'split', on: 1 }: who carries the runes, and what the coming spell wants of them
@@ -526,12 +531,12 @@ const AZERATH = {
     const fire1 = from => f.course({
       onStart: unpair,
       until: 0.78, push: true,
-      sets: mix([S([4, burst, 'Arcane Burst']), brandIn('fire', S([g(12), pyre, 'Pyre Rings']))], [
+      sets: mix([S([4, burst, 'Arcane Burst']), brandIn('fire', S([g(12), pyre, 'Pyre Rings']), H ? 4.5 : 4.8)], [
         S([g(12), lance, 'Arcane Lance']),
         H ? brandIn('fire', withCounter(runeSet(g(12), 'fire'))) : withCounter(runeSet(g(12), 'fire')),   // (Hard: this long chain, the act's longest with no tank beat, takes a Brand)
         brandIn('fire', S([g(12), pyre, 'Pyre Rings'])),
         S([g(12), lance, 'Arcane Lance'], [7.5, burst, 'Arcane Burst']),
-        H ? runeS(g(12), 'fire', { swap: true }) : brandIn('fire', runeS(g(12), 'fire', { swap: true })),
+        H ? runeS(g(12), 'fire', { swap: true }) : brandIn('fire', runeS(g(12), 'fire', { swap: true }), 4.8),
       ], [brandIn('fire', S([g(12), burst, 'Arcane Burst']))], [], close1),   // (the act ends on a Burst, so no Burst opens its closing passes: an act's script must last as long as it did, or a party meets the closing passes' extra damage before the gate)
       closing: close1,
       next: frost1,
@@ -582,10 +587,10 @@ const AZERATH = {
       onStart: unpair,
       until: 0.14, push: true,
       sets: mix([S([5, voidRifts, 'Void Rifts'])], [
-        brandIn('void', S([g(12), leapingBolt, 'Leaping Bolt'], [8, voidRifts, 'Void Rifts'])),
+        brandIn('void', S([g(12), leapingBolt, 'Leaping Bolt'], [8, voidRifts, 'Void Rifts']), H ? 5.4 : 0),
         S([g(12), lance, 'Arcane Lance']),
         ...(H ? [brandIn('void', S(...runeSet(g(12), 'void'), [8.5, lance, 'Arcane Lance']))] : []),   // (the act's second Lance: it used to hold the fight's longest stretch with none)
-        H ? brandIn('void', S([g(12), burst, 'Arcane Burst'], [8, sigilFlare, 'Sigil Flare'])) : S([g(12), burst, 'Arcane Burst'], [8, sigilFlare, 'Sigil Flare']),
+        H ? brandIn('void', S([g(12), burst, 'Arcane Burst'], [8, sigilFlare, 'Sigil Flare']), 5.4) : S([g(12), burst, 'Arcane Burst'], [8, sigilFlare, 'Sigil Flare']),
         ...(H ? [] : [brandIn('void', withCounter(runeSet(g(12), f.pick(['void', 'fire', 'void']), { swap: true }))), brandIn('void', S(...runeSet(g(12), 'void'), [8.5, lance, 'Arcane Lance']))]),   // (Normal: the Brand's rune set sits ahead of the second Lance, so no Brand comes straight after a Lance)
       ], [
         ...(H ? [brandIn('void', withCounter(runeSet(g(12), f.pick(['void', 'fire', 'void']), { swap: true })))] : []),

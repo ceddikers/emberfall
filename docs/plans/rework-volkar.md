@@ -101,3 +101,38 @@ The ask: the tank still waited 30 to 36 s between beats on Normal and 35 to 50 s
 **Bots.** Normal `GEAR=fresh`, 90 runs: 26 / 27 / 28 of 30 (90 percent; before 82 to 91 depending on the pass). Hard `GEAR=mid`: 15 / 14 / 19 (53 percent; before 54 percent). The bots dodge the lash well (one hit in 18 runs). All 14 Volkar line-ups in `check.js` clear (mostly on run 1), the timeline passes (no warning under 1.2 s, no cast cut short, the feed always three steps ahead), Hard runs clean.
 
 Tell art: the lane draws with the default red area (tag `lash`); a rope-of-lightning look in `boss-tells.js` would be the next polish. Sound: `bm-volkar-static-lash` (recipe in the scratchpad `newmoves/volkar.md`, not yet in the sfx files).
+
+## De-cook pass (2026-10-27)
+
+The ask: "still hard but not to the point there's no time to damage". Volkar was already roomy (melee 85 / ranged 98 on the boss, 5% overlap) but had only 3.6 quiet windows of 6 s or more per run, because nearly every unit stacked a move with the next one a second or less behind it. Only the script changed (units, offsets, a few P values) plus the two health knobs; no cast name went away and no damage number changed (one Hard scatter multiplier, below).
+
+**Cut (a use, never a move):**
+- Normal Front: the lash and Static Field inside the Squall Line (it keeps the Titan Fist, the Surge and one lash after them), the Surge+Fist, Rod Strike+Fist, Fist+Field, Surge+Crash+Fist, Field+Lash and Rods+Lash pairs, one Rods unit and the Crash/Clap tail. The Rod Strike, Gale, Rods and Surge units now stand on their own with room after them.
+- Normal Back: the Fist cast on top of the Surge, the Fist on top of the Rod Strike, the Fist after the Thunderhead, the Static Field and Squall+Fist crammed together, the Rods+Fist pair, the closing Field/Surge/Fist run. Walls keep the Surge in the turning gap; the Squall Line keeps its Crash.
+- Normal finale: the Lash after the Twin Fall and the Fist after every Heavens Fall are now one beat per fall (a Fist or a Lash, every other unit); the first fall waits for a Lash instead of a Fist; the middle Twin Fall has room after it.
+- Hard Front: the three-deep Squall Line unit (lash, field, fist, surge, lash) is a Fist and a Surge; the Gale, Fist and Field triple, the Fist after the Rod Strike, the Surge+Fist, the Surge+Crash+Lash, Field+Lash and Surge+Field+Lash units lost the second or third move; the lone Static Field unit and the closing Crash and Clap+Fist are gone.
+- Hard Back: Rod Strike no longer shares its cast time with a Fist, Ball Lightning gives its Clap a longer gap (and the second-half Ball Lightning pairs with a Static Field instead of a Clap), the Rods+Surge+Lash chain lost the first lash's stack, the Squall Line's Fist and Surge+Field sit further apart, the closing Surge+Lash and Fist are gone.
+- Hard finale: one Heavens Fall stands alone with a full gap; each other unit keeps one beat (Fist or Lash).
+
+**Kept (signature moments):** Normal Front: the Crash into the Field, the Surge walking inside the Squall Line (with a Fist), the Surge in the turning Storm Walls, Rods with the Gale (the rod shelters you from it). Normal Back: Rods then the Surge after the gale, Avalanche into Walls with the Surge in the gap, the Squall Line with its Fist and Crash. Hard: Chain Lightning on the healer as the Fist lands, the Supercell dance, the Surge and Crash at once, Avalanche then Walls with the lash between, the Fist with the Surge, Rods then the Surge after the gale, the breaking wedges (each still with its own unit), Heavens Fall with its scatter and the Twin Fall with its second pair. Lashes stay in the units, so any Hard shuffle keeps a tank beat.
+
+**Shuffle limits updated:** the Back's first Hard half starts with a fixed Clap+Fist unit (a raidwide inside the first 30 s, so no shuffle opens a gap over the cadence limit; 60 seeds checked); the Front weave and the finale draws are as before, each unit carrying its own beat. The finale starts with a Lash 3 s after the gate (was 10 s) on both difficulties so the tank is not 40 s between beats across the Back's end.
+
+**Health / bite:** Normal health stays 3.75M (the uptime gain was small, 85 to 87 percent, so clear time stays about 450 s; 4.1M was tried and starved the weakest base-gear line-up, bastion/threadweaver/marionettist/pyromancer, which then wiped at the enrage with the boss at 5 percent); Hard 4.4M to 4.6M (mean clear about 556 s against 607). Hard clears climbed to about 79 percent with the extra uptime and the thinner script, and the extra health alone could not bring it back without eating the enrage's slack (the Pulse ramp then does the killing), so the answer got sharper instead: the scatter after each Heavens Fall is now 72 percent of a full Static Field (was 55; a Field is 7000, so about 5000, the same dance, a real cost for a misstep). Nothing was hidden or sped up.
+
+**Uptime (harness, 10 runs per line-up, Normal `fresh`, Hard `mid`):**
+
+| | melee / ranged on boss | quiet windows per run (6 s or more) | overlap (two moves live) |
+|---|---|---|---|
+| Normal before | 85 / 98 | 3.6 (act 1 2.0, act 3 1.5, act 4 0.1) | 5% |
+| Normal after | 87 / 98 | 9.9 (act 1 4.5, act 3 4.5, act 4 0.9; the Eye is calm by design) | 2% |
+| Hard before | 80 / 97 | 7.6 (act 1 3.7, act 3 3.9, act 4 0.1) | 7% |
+| Hard after | 81 / 98 | 12.2 (act 1 7.5, act 3 4.2, act 4 0.5) | 6% |
+
+A window about every 45 s on Normal and every 43 s on Hard (more than asked; Hard's act 4, the finale, stays the densest, 0.5 a run).
+
+**Tank and healer gaps (landing to landing, Eye aside):** Normal tank at most 37 s (31 before), up to 50 s across the Eye when the gate falls late (46 before); healer at most 36 s. Hard tank at most 39 s (41 before), healer 38 s. Not the 25 to 30 s hoped for in every draw: a Fist and a Lash each need room around them now, so they cannot sit closer without stacking again; the gaps are no worse than before.
+
+**Bots:** Normal `GEAR=fresh`, 90 runs: 28 / 28 / 27 (92 percent; before 90). Hard `GEAR=mid`, 90 runs: 16 / 16 / 20 (58 percent; before 53, with 79 percent at the first thinning). Timeline test passes (Normal 9:57, Hard about 9:40; the Hard shuffles pass the cadence limits on 60 seeds), all Volkar line-ups in `check.js` clear, Hard runs clean, journal-lint clean. (`check.js` also failed on Grubnak and Azerath lines, which are other bosses' work in the shared tree.)
+
+**Follow-up (same day): tank beats and Normal retune.** Normal: the Back's Rod Strike unit now opens with a lone Static Lash in the calm after the Surge (6 s clear before it, the Rod Strike 6 s after), instead of a lash tacked on behind the strike. Both difficulties: a lone Static Lash opens the Eye (0.3 s after the gate, Eye of the Storm 3.3 s later), so the tank has a beat across the calm however late the gate falls. Normal tank longest wait now 31 s with no Eye spike (was 37 / 50); Hard 31 to 40 s, the long ones in the finale where the lone Heavens Fall unit sits (a lash there would eat its only window). To pay for the script length, three trailing Normal units are 1 to 2 s shorter. Normal health 3.75M to 3.8M: bots `fresh` 24 / 26 / 28 of 30 (87 percent, in band); the weakest base-gear line-up still clears 2 of 3 on two seed sets. Hard `mid` after the Eye lash: 14 / 16 / 16 (51 percent). Uptime unchanged (Normal 88 / 98, 10.6 windows a run; Hard 81 / 98, 11.8).

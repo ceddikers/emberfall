@@ -461,6 +461,20 @@ const BotAI = {
     if (bot.role === 'healer' && view.bossId === 'skitterra') return { x: b.x + (idx % 2 ? 150 : -150), y: b.y + 175 };
     return { x: b.x + (idx % 2 ? 170 : -170), y: b.y + 250 };
   },
+  // a spot kept out of every solid prop's footprint: danger() charges 9000 inside sd 16, so a home that lands in a cask or pillar leaves
+  // the nearest candidate a ring step (60) away, and the bot parks there for as long as the boss stands still
+  freeOfProps(h, view) {
+    const solid = (view.props || []).filter(p => p.solid);
+    if (!solid.length || !h) return h;
+    const o = { x: h.x, y: h.y };
+    for (let pass = 0; pass < 3; pass++) for (const pr of solid) {
+      const d = PROPS.sd(pr, o.x, o.y);
+      if (d >= 24) continue;
+      const [nx, ny] = PROPS.normal(pr, o.x, o.y);
+      o.x += nx * (26 - d); o.y += ny * (26 - d);
+    }
+    return o;
+  },
   // which way Corvane's tank turns him (radians from the boss): a heading whose blow reaches no stone lantern, with room behind
   // the tank, kept while it still works so the tank doesn't dance about
   faceAway(view) {
@@ -881,7 +895,7 @@ const BotAI = {
     try { return this.think(bot, view); } finally { this._mc = prev; }
   },
   think(bot, view) {
-    const home = this.home(bot, view);
+    const home = this.freeOfProps(this.home(bot, view), view);
     bot.job = this.lanternJob(bot, view);
     // a thrown cleaver comes back along its line (Cleaver Toss): remember each line until the return has passed
     bot.backs = (bot.backs || []).filter(e => e.until > view.t);

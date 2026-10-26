@@ -2213,6 +2213,14 @@ const BossTells = (() => {
   function ground(ctx, tg, s, p, k, t, env) {
     const tell = get(tg, env);
     if (!tell) return false;
+    // Skitterra's Lunge: only the strike landing next is a full telegraph; the one after it is a thin outline (so the turn
+    // reads), later ones wait their turn (her legs still show the whole order). Each is on the floor 2 s or more before it lands.
+    if (tg.tag === 'lunge' && env.bossId === 'skitterra' && env.tgs) {
+      const ord = lungeOrder(tg, env);
+      if (ord >= 2) return true;
+      if (ord === 1) { lungeNextOutline(ctx, tg, s, k, t); return true; }
+      k *= lungeRamp(tg, t);
+    }
     k *= ghost(tg, env);
     // a blast you can hide from: drawn with every cover prop's shadow cut out of it, so the floor behind each prop is
     // simply left unpainted (no colour of its own: the players read it from the red around it)
@@ -2244,11 +2252,41 @@ const BossTells = (() => {
   // full strength, the one after it as a ghost, anything later fainter still.
   function ghost(tg, env) {
     if (!env.tgs || env.bossId === 'brannoc' || env.bossId === 'morrowoak' || env.bossId === 'caelum') return 1;   // (Brannoc's path pieces, waves and heel blows, Morrow-Oak's petals, strands and rods, Caelum's Wake cuts are read together, never ghosted)
+    if (tg.tag === 'lunge' && env.bossId === 'skitterra') return lungeOrder(tg, env) === 0 ? 1 : 0;   // (ground() draws the one after next as an outline)
     const at = tg.start + tg.dur;
     // (steps, not telegraphs: a layer of many circles landing together counts once)
     const ahead = new Set();
     for (const o of env.tgs.values()) if (o !== tg && o.tag === tg.tag && o.gone == null && o.start + o.dur < at - 0.05) ahead.add(Math.round((o.start + o.dur) * 10));
     return ghostK(ahead.size);
+  }
+  // Skitterra's Eightfold Lunge (tag 'lunge', hers and her husk's): how many strikes of the same chain land before this one.
+  // Both cones of a step land together and count once; the husk's chain stands on its own origin.
+  function lungeOrder(tg, env) {
+    const at = tg.start + tg.dur, a = tg.live || tg.shape, ahead = new Set();
+    for (const o of env.tgs.values()) {
+      if (o === tg || o.tag !== 'lunge' || o.gone != null) continue;
+      const b = o.live || o.shape;
+      if (Math.abs(b.x - a.x) > 3 || Math.abs(b.y - a.y) > 3) continue;
+      if (o.start + o.dur < at - 0.05) ahead.add(Math.round((o.start + o.dur) * 10));
+    }
+    return ahead.size;
+  }
+  const lungeSince = new WeakMap(), lungeNextSince = new WeakMap();
+  // the strike that has just become the next one eases up from its outline
+  function lungeRamp(tg, t) {
+    if (!lungeNextSince.has(tg)) lungeNextSince.set(tg, t);
+    return 0.45 + 0.55 * clamp((t - lungeNextSince.get(tg)) / 0.35, 0, 1);
+  }
+  // the strike after the next: the cone's edge only, thin, no fill, so the turn direction reads without a second red wash
+  function lungeNextOutline(ctx, tg, s, k, t) {
+    if (!lungeSince.has(tg)) lungeSince.set(tg, t);
+    const a = k * clamp((t - lungeSince.get(tg)) / 0.4, 0, 1);
+    if (a <= 0) return;
+    ctx.save();
+    SHAPES.trace(ctx, s);
+    ctx.setLineDash([14, 10]); ctx.lineDashOffset = -t * 20;
+    ctx.strokeStyle = rgba('#ffb0dc', 0.7 * a); ctx.lineWidth = 2; ctx.stroke();
+    ctx.restore();
   }
   function ghostK(ahead) {
     return ahead === 0 ? 1 : ahead === 1 ? 0.45 : 0.22;

@@ -131,3 +131,34 @@ The Verdict's remaining 33 / 40 s is the Tithe, the Dirge and the Crown, Gaze, M
 **Numbers (bots, 30 runs per seed).** Hard `GEAR=mid`: before 16 / 18 / 16 (seeds 1000, 2000, 3000: 56%); with the move at `HARD_HIT` 1.18 only 12 / 13 / 12 (41%). A tally of the first deaths showed the extra weight landing in the Court's Grave Summons and Marks (the stack leaves a bot just under what the Marks hit for, so a healer one beat late loses the party); the rebukes themselves were not the cause (all six off, with only the trimmed calms, was 13 of 30), so the bite was brought back with the one factor: `HARD_HIT` 1.18 to 1.14. After (final build): 16 / 14 / 17 (52%; seed 4000 earlier: 20). Scripted length: Normal 9:31, Hard 9:56 (the check allows 8:00 to 10:00). Normal `GEAR=fresh` with the move alone: 28 / 28 / 30 (95%), over the 85 to 90 target, so Normal alone was nudged up (Hard untouched; every Hard blow is still above 1.1x Normal): Knell 9000 to 10000, Normal swings and echoes 14000 to 16000, Grave Marks 8000 to 9000. Result: 25 / 27 / 27 (88%) on seeds 1000, 2000, 3000. (Marks above 9000 or Knell below 10000 broke the weakest line-up, bloodreaver, alembist, bladedancer, pyromancer at base gear, which only clears about one run in four.) The move itself is lighter than the swings (12000 / 10500). All 13 line-ups clear in the final check.
 
 Journal: Sceptre Rebuke for all 23 heroes (`journal-lint` clean). Sound: `bm-hollowking-sceptre-rebuke` (recipe handed over separately). The move's tags `rebuke` (the lance on the tank) and `erebuke` (the knight's answer) use the shared landing; a drawn landing for each (a sceptre thrust, a knight's lance along the floor) can be added to `hollowking-fx.js` later.
+
+## De-cook pass (2026-10-26, evening)
+
+The user played Queen Skitterra and found no time to damage her; four passes in one day had made two moves stacked into each other the default rhythm. "It should still be hard but not to the point there's no time to damage." The challenge stays in how hard each mechanic is to answer; the room around it grows. No cast name was dropped (no journal or sound changes; `journal-lint` clean). Burial Rites with the Writ and the Crown, the Tithe with the Dirge, Judgement, the call-and-response spine (a swing, its Echo, a Knell), the Lids with the Decree and the Verdict's double swing are the signature pairs and are untouched. Sceptre Rebuke stays on both difficulties.
+
+**Cut (uses, never a move).**
+- The Summons: the Crown no longer carries a Cleave or Sweep, Doom no longer carries a Knell and a Sweep, the Sweep's Backhand is only on the first Sweep, a Knell is a unit of its own.
+- Testimony: the Cleave and Knell that followed the Charge Sheet are one Cleave; the Cleave inside the Lids is gone (Normal keeps one standalone), Normal Lights Out and Bells are not both here (Normal: Bells; Hard: Lights Out), Hard's third Rebuke and its Funeral March are gone from this act.
+- The Verdict: Marks no longer ride with Doom; the Crown with the Gaze after the Tithe is a Sweep with its Echo (a tank job right after the lull); Normal's Lids moved first and the Cleave sits just before the Tithe.
+- Judgement: no Lids and Decree, no Lights Out on Hard, no Bells on Normal, no Audience as a standalone (it stays in the Charge Sheet and the Summons), Normal's Stomp-and-Echo became a Sweep-and-Echo, the Judgement cast and the Night each have a calm of 7 to 11 s before them (they used to start 2 to 3 s after the last cast).
+- Long Night: one pass has nothing but the Doom (a window in the ending); Hard's Rebukes are six (were eight): two in Testimony, two in the Verdict, two in Judgement.
+- Court of Bones and the Knights rising: 7 s after the previous Knell (were 2 to 3).
+
+**Drawn order (Hard).** `lay` flags units that hand the tank a job (`t`) or the healer a beat (`h`); Hard still draws every act's order per pull and keeps a draw only when no stretch of units longer than about 28 s lacks either (best of 80 draws). Hard Cleave spacing across 40 draws: never closer than 40 s.
+
+**Uptime (harness, 10 runs x 2 line-ups, bots, after the shared bot fix).**
+
+| | melee | ranged | quiet windows per run (6 s+) | overlap |
+|---|---|---|---|---|
+| Normal before | 78 | 87 | 7.7 | 2% |
+| Normal after | 82 | 89 | 15.2 | 1% |
+| Hard before | 77 | 89 | 3.3 | 3% (act 4: 14%) |
+| Hard after | 78 | 88 | 12.4 | 3% (act 4: 15%, the Rites) |
+
+Per act on Normal after (windows per run): Summons 5.3, Testimony 2.6, Verdict 1.1 (one long one), Judgement 3.0, Night 1.9. Melee time off the boss is mostly the Stomp (the circle), the Sweep, Bells and the Decree: that cost is the mechanic's own and was left in.
+
+**Longest scripted wait (tank / healer, s).** Normal: Summons 17/27, Testimony 24/24, Verdict 30/8, Judgement 35/27, Night 25/9. Hard, worst of 40 draws: 33/33, 32/29, 39/21, 40/38, 25/9.
+
+**Retune.** Normal HP 3.56M to 3.7M; Hard `HARD_HIT` 1.14 to 1.19. Bots (90 runs): Normal `GEAR=fresh` 79 of 90 (24 / 29 / 26); Hard `GEAR=mid` 50 of 90 (17 / 17 / 16; 49 on the run before). Scripted length: Normal 9:02, Hard 9:54.
+
+**Follow-up (same evening).** Hard `HARD_HIT` 1.19 to 1.34 so the Hollow King is the lowest Hard of set 1: bots at `GEAR=mid`, 180 runs (seeds 1000 to 6000), 89 clear (49%); 1.28 gave 57% and 1.4 gave 41%. Every shared move stays above 1.1x Normal. Uptime after: Hard melee 81, ranged 89, 9.8 quiet windows per run; Normal melee 82, ranged 89, 14.7. Judgement's tank wait: Normal 27 s (Lights Out moved ahead of the Crown unit, so the Cleave comes sooner after the Sweep), Hard worst of 80 draws 30 s (the draw tries up to 300 orders and keeps a stretch of at most about 24 s). Scripted length unchanged (Normal 9:02, Hard 9:54). Normal bots 79 of 90. `nc`/`tb` are gone from the file (the script plays on both difficulties); full `check.js`: All checks passed.

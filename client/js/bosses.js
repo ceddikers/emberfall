@@ -251,8 +251,9 @@ const BOSS_ART = {
     const body = husk ? '#b8a99a' : '#3a2448', dark = husk ? '#8a7c70' : '#24152e', mark = husk ? '#c8b8a8' : '#d6304a', gold = husk ? '#d8ccb8' : '#e8c15a';
     const rear = Math.max(pulse(actP(st, 'attack')), props.rear ? 0.55 + Math.sin(st.t * 7) * 0.12 : 0);
     const speed = st.moving ? 10 : 2.2;
+    const cr = props.crouch || 0;   // (the Dark Between: down on the stone with her legs splayed wide, skitterra-fx.js pose)
     // Silk: threads stream from her spinnerets and wheel around her
-    if (props.silk) {
+    if (props.silk || props.haul) {
       for (let i = 0; i < 5; i++) {
         const a = st.t * 2.2 + i * TAU / 5;
         ctx.beginPath(); ctx.moveTo(-50, 0);
@@ -265,15 +266,15 @@ const BOSS_ART = {
     for (const sy of [-1, 1]) for (let i = 0; i < 4; i++) {
       const bx = 12 - i * 5, by = 8 * sy, fi = clamp(fold * 1.6 - i * 0.2, 0, 1);
       const sw = Math.sin(st.t * speed + i * 1.4 + (sy > 0 ? Math.PI : 0)) * (st.moving ? 0.22 : 0.06) * (1 - fold) + (fold > 0 && fi < 1 ? Math.sin(st.t * 30 + i) * 0.08 * fi : 0);
-      const a = sy * (0.55 + i * 0.62 + sw - (i < 2 ? rear * 0.4 : 0));
-      const L1 = 30 * (1 - 0.45 * fi), kx = bx + Math.cos(a) * L1, ky = by + Math.sin(a) * L1;
+      const a = sy * (0.55 + i * 0.62 + sw - (i < 2 ? rear * 0.4 : 0)) * (1 + 0.14 * cr);
+      const L1 = 30 * (1 - 0.45 * fi) * (1 + 0.3 * cr), kx = bx + Math.cos(a) * L1, ky = by + Math.sin(a) * L1;
       const a2 = a + sy * (i < 2 ? -0.5 : 0.5) + sy * 2.2 * fi;
-      const fx = kx + Math.cos(a2) * 26 * (1 - 0.3 * fi), fy = ky + Math.sin(a2) * 26 * (1 - 0.3 * fi);
+      const fx = kx + Math.cos(a2) * 26 * (1 - 0.3 * fi) * (1 + 0.35 * cr), fy = ky + Math.sin(a2) * 26 * (1 - 0.3 * fi) * (1 + 0.35 * cr);
       limb(ctx, [bx, by, kx, ky, fx, fy], body, 4);
       circle(ctx, kx, ky, 3, dark, OUT, 1.2);
     }
     // abdomen with hourglass marking (Brood: the egg sacs inside glow)
-    ellipse(ctx, -26, 0, 28, 23, 0, body, OUT, 3);
+    ellipse(ctx, -26, 0, 28 + 3 * cr, 23 + 2 * cr, 0, body, OUT, 3);
     ellipse(ctx, -30, -7, 12, 8, 0, shade(body, 0.15));
     if (props.brood) {
       for (const [ex, ey] of [[-34, -9], [-20, 10], [-38, 8], [-22, -10]]) {
@@ -285,7 +286,7 @@ const BOSS_ART = {
     if (husk) for (const pts of [[-44, -6, -34, 0, -40, 8], [-14, -14, -20, -4, -12, 4]]) { tracePath(ctx, pts); ctx.strokeStyle = '#6a5c50'; ctx.lineWidth = 1.5; ctx.stroke(); }
     ellipse(ctx, 6, 0, 15, 13, 0, shade(body, 0.08), OUT, 2.5);
     // head, fangs, eyes, crown
-    const hx = 22 + rear * 6;
+    const hx = 22 + rear * 6 - 3 * cr;
     circle(ctx, hx, 0, 9, dark, OUT, 2.5);
     const open = 0.35 + rear * 0.5 + Math.sin(st.t * 6) * 0.05;
     for (const sy of [-1, 1]) {

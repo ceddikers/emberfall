@@ -117,3 +117,44 @@ The fun pass left the tank with a beat (Rending Claws, Talon Dive, Tail Lash) ab
 - **Tank gaps (fire to fire of Rending Claws, Talon Dive, Tail Lash, Pounce; a clean party at each gate, Hard worst case over 100 draws).** Before: Normal Acts I-IV 25 / 25 / 32 / 25, the wall and Last Ember 20; Hard 25 / 25 / 32 / 35, the wall and Last Ember 34. After: Normal 25 / 25 / 24 / 25 / 20; Hard 25 / 25 / 24 / 25 / 26. Mean gap 22 s down to 16.5 (Normal) and 17.4 (Hard); gaps over 20 s fall from 72-76% to 32-43%. The 25 s stretches left are all flight sets (claws, then the flight and the dive, then the next claws): the tank's beat there is the position of the dive itself.
 - **Bots** (seeds 1000/2000/3000, 30 each): Normal `GEAR=post1` 79 of 90 (88%; was 78); Hard `GEAR=post2` 44 of 90 (49%; the same machine and seeds on HEAD: 47 of 90, 52%). The bots step out of the ring every time (no Pounce hit in the 60 Hard runs logged), so the move costs them nothing but a walk; the Hard difference is chance. Deaths are the old ones (the Flare, the Heart wall, the breath).
 - **Journal.** New `Pounce` entry for every hero. **Sound** recipe and icon suggestion: handed over (not in the sfx files here).
+
+### Hard gear split (2026-10-26, leftover fix)
+
+`raid-host.js` now hands the bots the boss's own `hardDmg` (1.7 here) instead of 1.25, so they read Hard's hits correctly. Re-measured on seeds 1000-6000 (30 each, 180 runs per figure): Hard `post1` 47% and `post2` 48%, with the gears barely apart (the Roar and the other party-wide hits are what a thin-skinned set-1 party cannot shrug off; single-target hits are dodged by both).
+
+- **What changed (`wyrm.js`, Hard only).** The party-wide hits (Roar, Crater Boils, Heart pulse) are 5% up (`RAID_UP`), and the hits a party can dodge or avoid are eased (`EASE`: Heart Burn and the last-stand hit 0.85, Aftershock and the whelp blast 0.9, Cinder Rain, the Flare's stack and spread, the molten floor and puddles 0.85). Every shared move stays at least 1.1x Normal's (floor fire 1.15 / 1.11x; the Aftershock 1.12x). Normal untouched.
+- **Numbers (bots, 180 runs each).** Hard `post1` 77 (43%), Hard `post2` 93 (52%); before 85 (47%) and 87 (48%). Normal `post1` 157 (87%). Findings along the way: +4% Hard HP cost about 17 points on both gears, so the HP and the enrage stay as they are.
+
+### Hard buster to 1.1x (2026-10-26)
+
+The Hard buster was 1.07x Normal's hit; Hard's base is now 17500 (about 1.10x). Audit of every shared move at the final numbers (Hard hit / Normal hit): Roar 1.18, buster 1.10, Tail Lash 1.15, breath 1.18, Magma Burst 1.15, Cinder Feast 1.13, gust 1.12, dive line 1.12, landing 1.18, Pounce 1.12, Roost scales 1.14, whelp blast 1.12, Crater Boils 1.18, scorch 1.14, Heart Burn 1.12, Heart pulse 1.35, Aftershock 1.12, last-stand hit 1.18, molten floor 1.15, puddles 1.11, autos 1.14. None under 1.1 (Wingbeat, Cinder Rain, the Flare and the second Pounce are Hard-only). To make room the raid-hit bump (`RAID_UP`) is 1.04 (was 1.05).
+
+Bots, 180 runs each (seeds 1000-6000): Hard `post1` 77 (43%), Hard `post2` 95 (53%). With the buster at 1.10 and `RAID_UP` 1.05 they read 76 (42%) and 91 (51%); at 1.03, 82 (46%) and 95 (53%).
+
+## De-cook pass (2026-10-26): room between the moves
+
+Why: four passes in a day stacked moves into each other until there was almost no time to damage him (melee 69%, ranged 79%, acts IV and V the worst: melee about 50% on the boss). The challenge now comes from how hard each move is to answer, not from how little room there is between them. All in `wyrm.js`; no cast name was dropped (journal untouched, `journal-lint` clean).
+
+- **A step every 14 s (`G`)**, not 12, and no two moves stacked by default. Pounce no longer rides 6.5 s behind its claws: it is a step of its own. Cut uses: 9 Pounces to 4 (Normal), the double breath after the Roar in Act III, the Roar-after-claws sets, Magma/Feast doubled in Act III, Searing Descent and a second Talon Dive in Act IV, a Talon Dive and a Roar in Last Ember, and the filler claws sets. Normal's script has about 46 named steps in the place of about 62.
+- **Pairs kept (the signatures):** claws into tail (once an act: I, III, Last Ember), Twin Breath (Act III, Last Ember), Talon Dive with its Aftershock (Acts II and IV), Searing Descent (Act II), Twin Pass (Act IV, the crossing lines), the Heart wall and the Cinder Run.
+- **Flights:** one flight per act is the rule of thumb. Act II: Talon Dive and Searing Descent (Twin Pass moved to Act IV, last in Normal's written order so a quick party meets the wall first); Act IV: Talon Dive and Twin Pass; Last Ember: only the Cinder Run. Ten flights in the script became six plus the Run.
+- **Last Ember** is two sets (Twin Breath, claws into tail) 14 s apart, Hard drawing the order, then the Run. The wall itself (Ember Heart 28 s, Last Ember 14 s of script) is unchanged: the seal is the climax and it is the floor under the uptime numbers.
+- **`orderOk`** (the Hard draw check; Normal's written order passes it too): the tank limit is 28 s (was 26), a claws-into-tail step counts the tail as a second tank beat (a fourth value on the step), and Ember Breath and Twin Breath count as light healer beats. Every act has valid draws (Acts I to IV 48-58 of 80 shuffles pass, Last Ember 80) and none falls back to the written order. The longest tank wait (fire to fire) is 28 s; the longest stretch with nothing named is 15.5 s.
+- **Script length** (check.js timeline): Normal 9:11, Hard 9:31.
+
+### Uptime (harness, 10 runs per line-up, Normal `post1`, Hard `post2`)
+
+| | before | after |
+|---|---|---|
+| Normal melee / ranged on the boss | 69 / 79 | 77 / 83 (83 / 91 with the two seals left out) |
+| Hard melee / ranged | 75 / 78 | 78 / 83 (84 / 91 without the seals) |
+| quiet windows 6 s+ per run, Normal | 9.7 | 26.5 (median 9.4 s) |
+| Normal act IV, melee (seal left out) | 69 | 80 |
+| Normal act V, melee | 53 | 83 |
+| overlap (two moves live) | 1% | 1% |
+
+Per act, the quiet windows per run: I 6.5, II 6.7, III 7.3, IV 4.3 (93 s), V 1.8 (44 s): at least one about every 25-40 s everywhere. The Ember Heart and Last Ember seals (invulnerable) cost about 6 points of melee and 8 of ranged over the fight; they stay.
+
+### Retune (bots, 90 runs per figure unless stated)
+
+More time on him means faster kills and fewer deaths (Normal read 98% and Hard post2 70% with the new script), so the hits got harder, not the gaps shorter: Normal HP 4.8M to 5.2M (the clear takes about 8:45, the enrage lands at 9:50), Hard buster and every shared Hard hit up through K 1.0 to 1.06, `RAID_UP` 1.04 to 1.08 (the Roar, Crater Boils, Heart pulse). Normal `post1` 79 of 90 (88%); Hard `post2` 96 of 180 (53%), Hard `post1` 91 of 180 (51%). The gears still sit close (as in the leftover-fix note above): more room helps the thinner set-1 party, so `post1` reads above the 40-45 target; nothing tried (RAID_UP 1.10 read 33% on both, K 1.05 on three seed sets read 37% post1 but 52% post2, then 51/53 on six) separates them. Parity: every shared Hard hit is at least 1.1x Normal's (K 1.06 on Hard against 1.15 on Normal leaves the old ratios, a little higher).

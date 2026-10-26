@@ -40,7 +40,7 @@
 
 const VOLKAR = {
   id: 'volkar', name: 'Volkar', title: 'The Storm Titan',
-  hp: { normal: 3750000, hard: 4400000 },
+  hp: { normal: 3800000, hard: 4600000 },
   autoDmg: { normal: 1450, hard: 1550 },
   enrage: { normal: 592, hard: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
   enrageName: 'Skybreak',
@@ -549,7 +549,7 @@ const VOLKAR = {
           if (both && inside.length && signs.size < 2) for (const p of inside) f.damagePlayer(p, dmg.surgeSame, { kind: 'arc', avoidable: true });
         } });
       // (Hard: the sky that came down breaks over the summit as it lands: everyone is marked, and the party that held it up scatters)
-      if (H && n > 1) f.afterKeep(d + 0.1, () => field(3.3, true, 0.55));
+      if (H && n > 1) f.afterKeep(d + 0.1, () => field(3.3, true, 0.72));
     };
 
     // Twin Fall: the sky splits in two. Two columns on opposite sides of him, shown 5.5 s ahead; each wants a pair, one gold and one
@@ -596,6 +596,7 @@ const VOLKAR = {
     // Hard: a two-group shuffle, one group with a tank beat and one without, taken in turn
     const weave = (a, b) => { const out = []; for (let i = 0; i < Math.max(a.length, b.length); i++) { if (a[i]) out.push(a[i]); if (b[i]) out.push(b[i]); } return out; };
     const CLAP = [0, thunderclap, 'Thunderclap'];
+    const CLAP_AT = off => [off, thunderclap, 'Thunderclap'];
     const stepFist = off => [off, titanFist, 'Titan Fist'];
     const stepLash = off => [off, lash, 'Static Lash'];
     const stepSurge = off => [off, surge, 'Polarity Surge'];
@@ -613,53 +614,51 @@ const VOLKAR = {
     const front = at => f.course({
       until: 0.55,
       sets: lay(H ? [
+        // (de-cook pass: Hard keeps the layers and the dances, but a move stands on its own with room after it; the pairs left are the
+        // Squall Line's Surge, the Surge and the Crash at once, the Chain Lightning on the healer as the fist lands, and the Supercell)
         U(12, CLAP),
         U(15, stepFist(0)),
-        U(15, stepSurge(0), stepFist(5.5)),
-        U(13, stepCF(0)),
+        U(15, stepSurge(0), stepLash(9.8)),
+        U(14.5, stepCF(0)),
         // (the Squall Line comes early: the storm's circle drifts round him and the pairs walk it, the fist and a Surge landing inside)
-        U(30, stepSquall(0), stepLash(3.6), stepField(9), stepFist(14), stepSurge(18.5), stepLash(23.8)),
-        U(14, stepStrike(0), stepFist(9.6)),
+        U(30, stepSquall(0), stepFist(9.5), stepSurge(18.5)),
+        U(15.2, stepStrike(0), stepLash(11.2)),
         // (Hard: the rest comes in a fresh order each pull, one group without a Titan Fist and one with, taken in turn)
         // (a Thunderclap first and the Supercell dance in the middle, so the party always has a raidwide to heal within a couple of minutes)
-        ...weave([U(12, CLAP, stepFist(4.2)), ...f.shuffle([
-          U(14, stepGale(0), stepFist(4.5), stepField(8.5)),
-          U(10, [0, () => { titanFist(); chainLightning('healer'); }, 'Chain Lightning']),
-          U(16, stepRods(0, RODS + 1), stepFist(7)),
-          U(13, [0, skyfall, 'Skyfall'], stepFist(5.5)),
+        ...weave([U(13, CLAP, stepFist(7.5)), ...f.shuffle([
+          U(15, stepGale(0), stepFist(8)),
+          U(13, [0, () => { titanFist(); chainLightning('healer'); }, 'Chain Lightning']),
+          U(16, stepRods(0, RODS + 1), stepFist(9.5)),
+          U(14, [0, skyfall, 'Skyfall'], stepFist(8.5)),
         ]).flatMap((u, i) => (i === 2 ? [
           // the Supercell instead of the first Rods + Gale: the + players plant the rods, three fronts march past them, and the cell breaks
           // over the summit as the last one passes
           U(43, stepFist(0), stepLash(7.5), [12, groundingRods, 'Grounding Rods'], [12 + f.ct(4.5) + 0.6, supercell, 'Supercell'], [12 + f.ct(4.5) + 0.6 + f.ct(3) + 11, thunderclap, 'Thunderclap'], stepFist(34)), u] : [u]))],
         f.shuffle([
           U(12, stepWalls(0, WALL, 1)),
-          U(19, stepAv(0, AV), stepLash(3), stepWalls(6, WALL + 1, -1)),   // (the lash between the boulders and the walls)
-          U(12, stepSC(0), stepLash(5.3)),
-          U(9, stepField(0), stepLash(4.5)),
-          U(12, stepSF(0), stepLash(8.2)),
+          U(20, stepAv(0, AV), stepLash(4.5), stepWalls(8.5, WALL + 1, -1)),   // (the lash between the boulders and the walls)
+          U(14, stepSC(0), stepLash(8.8)),
+          U(15, stepSF(0), stepLash(11)),
         ])),
-        U(9, stepCF(0)),
-        U(8, CLAP, stepFist(3.6)),
       ] : [
+        // (de-cook pass: the Front keeps three pairs, the Crash into the Field, the Surge inside the Squall Line and the Surge in the turning
+        // Storm Walls; everything else stands alone with room after it, and a breather opens about every 40 s)
         U(12, CLAP),
-        U(15, stepFist(0), stepLash(10)),
-        U(15, stepSurge(0), stepFist(9)),
+        U(15, stepFist(0)),
+        U(16, stepSurge(0), stepLash(10.5)),
         U(13, stepCF(0)),
-        U(31, stepSquall(0), stepLash(4.2), stepField(9), stepFist(14), stepSurge(19), stepLash(25.2)),
-        U(16, stepStrike(0), stepFist(11.5)),
-        U(15, stepGale(0), stepFist(5.5)),
-        U(18, stepWalls(0, WALL, 1), stepSurge(4), stepLash(10.6)),   // (Surge lands in the walls: pair up and walk the gap together)
-        U(12, CLAP, stepFist(4.2)),
-        U(12, stepFist(0), stepField(5)),
-        U(15, stepRods(0, RODS), stepFist(10.2)),
-        U(22, stepAv(0, AV), stepWalls(5, WALL + 1, -1), stepLash(18.2)),
-        U(12, stepSC(0), stepFist(6.5)),
-        U(12, stepField(0), stepLash(5.2)),
-        U(14, stepSF(0)),
-        U(9, stepFist(0)),
-        U(13.5, stepRods(0, RODS + 1), stepLash(10.1)),
-        U(7, stepCF(0)),
-        U(8, CLAP, stepFist(4.2)),
+        U(33.5, stepSquall(0), stepFist(10), stepSurge(19), stepLash(27.5)),
+        U(16, stepStrike(0)),
+        U(16, stepGale(0), stepFist(7)),
+        U(18, stepWalls(0, WALL, 1), stepSurge(4)),   // (Surge lands in the walls: pair up and walk the gap together)
+        U(14, stepLash(0), CLAP_AT(6)),
+        U(15.8, stepRods(0, RODS)),
+        U(13, stepFist(0)),
+        U(24, stepAv(0, AV), stepLash(4.8), stepWalls(9, WALL + 1, -1)),
+        U(14, stepSC(0), stepFist(8.5)),
+        U(14, stepSF(0), stepLash(11)),
+        U(15.8, stepRods(0, RODS + 1)),
+        U(11, CLAP, stepFist(7)),
       ], 4),
       closing: [[8, surge, 'Polarity Surge'], [8, thunderclap, 'Thunderclap']],
       next: eye,
@@ -669,7 +668,8 @@ const VOLKAR = {
     const eye = at => f.course({
       onStart: () => { f.clearSweeps(); f.clearRollers(); },
       sets: [
-        S([2, eyeOpen, 'Eye of the Storm']),
+        S([0.3, lash, 'Static Lash']),   // (a lone lash as the storm drops, so the tank has a beat across the calm)
+        S([3.3, eyeOpen, 'Eye of the Storm']),
         S([5, () => stillAir(13), 'Still Air']),
         S([11, eyeCloses, 'Eye Closes']),
         S([4]),
@@ -707,47 +707,47 @@ const VOLKAR = {
       until: 0.15,
       onStart: () => { if (!H) { f.afterKeep(60, () => edgeStep(470, 5)); f.afterKeep(150, () => edgeStep(400, 5)); } },
       sets: lay(H ? [
-        U(14.5, stepLash(0), [2.9, () => crash(f.ct(6)), 'Thunder Crash']),   // straight off the stones: a lash, then into pairs
+        // (de-cook pass: Hard's Back keeps the Fist with the Surge, the rods with the Surge after the gale, the Chain Lightning on the healer
+        // as the fist lands, the Squall Line's Surge and Field, and one wedge with each unit; the rest stands alone with room after it)
+        U(14.5, stepLash(0), [5.5, () => crash(f.ct(6)), 'Thunder Crash']),   // straight off the stones: a lash, then into pairs
         // (the doubled front: the ones with a Titan Fist in them and the Ball Lightning, taken in turn)
-        ...weave(f.shuffle([
-          U(12, [0, () => { titanFist(); surge(); }, 'Titan Fist']),
-          U(15, CLAP, stepFist(6)),
-          U(14, [0, () => { rodStrike(); titanFist(); }, 'Rod Strike']),
-        ]), f.shuffle([
-          U(18, stepAv(0, AV + Math.PI), stepLash(3), stepWalls(6, WALL + Math.PI, -1)),
-          U(10, [0, () => ballLightning(0.3), 'Ball Lightning'], [3, thunderclap, 'Thunderclap']),
-          U(24, stepRods(0, RODS + Math.PI), stepSurge(9), stepLash(14.3)),
+        ...weave([U(15, CLAP, stepFist(8)), ...f.shuffle([
+          U(13, [0, () => { titanFist(); surge(); }, 'Titan Fist']),
+          U(16, [0, rodStrike, 'Rod Strike'], stepLash(11)),
+        ])], f.shuffle([
+          U(20, stepAv(0, AV + Math.PI), stepLash(4.5), stepWalls(8.5, WALL + Math.PI, -1)),
+          U(13, [0, () => ballLightning(0.3), 'Ball Lightning'], [7, thunderclap, 'Thunderclap']),
+          U(21.5, stepRods(0, RODS + Math.PI), stepSurge(9.8), stepLash(17.3)),
         ])),
-        gsUnit(GS_P + 7, stepLash(3.4)),
+        gsUnit(GS_P + 9, stepLash(3.4)),
         // --- the breaking of the summit begins here
-        U(10, [0, () => { titanFist(); chainLightning('healer'); }, 'Chain Lightning']),
-        U(24, [0, () => { squall(-1, -Math.PI / 2, 320, 120, 24, 232); brk(0); }, 'Squall Line'], stepFist(8), stepSF(13)),
+        U(12, [0, () => { titanFist(); chainLightning('healer'); }, 'Chain Lightning']),
+        U(28, [0, () => { squall(-1, -Math.PI / 2, 320, 120, 24, 232); brk(0); }, 'Squall Line'], stepFist(9), stepSF(17)),
         ...weave(f.shuffle([
-          U(13, stepFist(0), [4, () => { rods(RODS + 2); brk(2, 4); }, 'Lightning Rods'], stepField(8.5)),
-          U(10, stepFist(0), [5, () => { thunderclap(); brk(3, 5); }, 'Thunderclap']),
+          U(14, stepFist(0), [7, () => { rods(RODS + 2); brk(2, 4); }, 'Lightning Rods']),
+          U(11, stepFist(0), [6, () => { thunderclap(); brk(3, 5); }, 'Thunderclap']),
         ]), f.shuffle([
-          U(12, [0, () => { crashField(); brk(1, 6); }, 'Thunder Crash']),
-          U(10, [0, () => { ballLightning(2.2); brk(4, 5); }, 'Ball Lightning'], [3, thunderclap, 'Thunderclap']),
+          U(14.2, [0, () => { crashField(); brk(1, 6); }, 'Thunder Crash']),
+          U(13, [0, () => { ballLightning(2.2); brk(4, 5); }, 'Ball Lightning'], stepField(7)),
         ])),
-        U(9, stepSurge(0), stepLash(5.2)),
-        U(9, stepFist(0)),
       ] : [
-        U(15, stepLash(0), [3.3, () => crash(f.ct(6)), 'Thunder Crash']),   // straight off the stones: a lash, then into pairs
-        U(12, [0, () => { titanFist(); surge(); }, 'Titan Fist']),
-        U(15, CLAP, stepFist(6)),
-        U(24, stepRods(0, RODS + Math.PI), stepSurge(9), stepFist(15.5)),
-        U(26, stepAv(0, AV + Math.PI), stepWalls(5, WALL + Math.PI, -1), stepSurge(12), stepLash(18.2)),   // (the marked run for a stone with the walls turning: the Surge)
-        U(14, [0, () => { rodStrike(); titanFist(); }, 'Rod Strike']),
-        gsUnit(GS_P + 8.5, stepLash(3.6), stepFist(GS_P + 3.2)),
-        U(10, stepField(0)),
-        U(9, [0, () => squall(-1, -Math.PI / 2, 320, 120, 24, 270), 'Squall Line'], stepFist(4)),
-        U(10, stepCF(0)),
-        U(15, stepSF(0), stepLash(10.2)),
-        U(15, stepRods(0, RODS + 2), stepFist(10.2)),
-        U(12, stepCF(0)),
-        U(10, CLAP, stepFist(4.2)),
-        U(10, stepField(0)),
-        U(10, stepSurge(0), stepFist(6.2)),
+        // (de-cook pass: the Back keeps the Rods and then a Surge after the gale, the Surge in the turning walls and the Crash in the Squall Line
+        // as its pairs; the rest stands alone with room after it)
+        U(16, stepLash(0), [6.8, () => crash(f.ct(6)), 'Thunder Crash']),   // straight off the stones: a lash, then into pairs
+        U(12, stepFist(0)),
+        U(14, CLAP, stepLash(8)),
+        U(27, stepRods(0, RODS + Math.PI), stepFist(15.5)),
+        U(28, stepAv(0, AV + Math.PI), stepLash(4.8), stepWalls(9, WALL + Math.PI, -1), stepSurge(16)),   // (the marked run for a stone with the walls turning: the Surge)
+        U(22, stepLash(0), [9.5, rodStrike, 'Rod Strike']),   // (a lone lash in the calm after the Surge, then the Rod Strike)
+        gsUnit(GS_P + 9.5, stepLash(4.5)),
+        U(15, [0, () => squall(-1, -Math.PI / 2, 320, 120, 24, 270), 'Squall Line'], stepFist(7)),
+        U(15.5, stepCF(0)),
+        U(17, stepSF(0), stepLash(11)),
+        U(15.8, stepRods(0, RODS + 2)),
+        U(13, stepFist(0)),
+        U(13, stepCF(0)),
+        U(12, CLAP, stepFist(7.2)),
+        U(11, stepField(0)),
       ], 3),
       closing: [[10, surge, 'Polarity Surge'], [8, thunderclap, 'Thunderclap']],
       next: finale,
@@ -759,21 +759,21 @@ const VOLKAR = {
     const finale = at => f.course({
       onStart: () => { if (!H) edgeStep(330, 5); },
       sets: lay(H ? [
-        U(13, [0, heavensFall, 'Heavens Fall'], stepFist(9)),   // once the last set has landed
-        // (Hard: the three between come in a fresh order each pull; the first is always a Heavens Fall and the last a Twin Fall)
+        U(14.5, stepLash(0), [6, heavensFall, 'Heavens Fall']),   // (a lash first, so the tank has a beat as the sky starts to fall)
+        // (Hard: the three between come in a fresh order each pull; the last is always a Twin Fall)
         ...f.shuffle([
-          U(13, [0, heavensFall, 'Heavens Fall'], stepLash(7.8)),   // (after the scatter has gone off)
-          U(13, [0, twinFall, 'Twin Fall'], stepLash(8.2)),
-          U(13, [0, heavensFall, 'Heavens Fall'], stepLash(7.8)),
+          U(14.5, [0, heavensFall, 'Heavens Fall'], stepFist(9.5)),   // (after the scatter has gone off)
+          U(14.5, [0, twinFall, 'Twin Fall'], stepLash(10.3)),
+          U(14.5, [0, heavensFall, 'Heavens Fall']),
         ]),
         U(13, [0, twinFall, 'Twin Fall']),
       ] : [
-        U(14, [0, heavensFall, 'Heavens Fall'], stepFist(6)),
-        U(14, [0, heavensFall, 'Heavens Fall'], stepFist(6)),
-        U(14, [0, twinFall, 'Twin Fall'], stepLash(10.2)),
-        U(14, [0, heavensFall, 'Heavens Fall'], stepFist(6)),
+        U(13.5, stepLash(0), [6.5, heavensFall, 'Heavens Fall']),
+        U(14, [0, heavensFall, 'Heavens Fall'], stepFist(7.5)),
+        U(15.95, [0, twinFall, 'Twin Fall']),
+        U(15, [0, heavensFall, 'Heavens Fall'], stepLash(8)),
         U(14, [0, twinFall, 'Twin Fall']),
-      ], 10),
+      ], 3),
       closing: H ? [[13, heavensFall, 'Heavens Fall'], [8, lash, 'Static Lash'], [5, twinFall, 'Twin Fall']]
         : [[15, heavensFall, 'Heavens Fall'], [5.2, lash, 'Static Lash'], [4.3, titanFist, 'Titan Fist'], [5.5, twinFall, 'Twin Fall']],
       ramp: H ? 0.07 : 0.1,   // (Hard: the ramp is gentler; the scatter after each Heavens Fall is what bites)

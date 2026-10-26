@@ -14,8 +14,13 @@
 //     Hollow Breath (a cold circle that follows the healer), then a Comet Draw.
 //   The Vigil (the WALL at 42%): he kneels in the snow; cold wisps drift toward him, first from the broken lanterns, and each one
 //     that reaches him adds a notch. A lantern's wisp struck down on the way relights its lantern. He rises after a fixed time.
-//   Act III, The Whetted Edge (42% -> 16%): all three unleashings, one at a time, and the pairs that make new problems (a Draw Cut
-//     with a Scabbard Sweep laid just behind it, a Draw Cut at the tank on the glass of Still Water or at the healer inside Hollow Breath).
+//   Act III, The Whetted Edge (42% -> 16%): all three unleashings, one at a time, and the pairs that make new problems (the twin Draw, a
+//     Draw Cut at the tank on the glass of Still Water, one at the healer inside Hollow Breath).
+// DE-COOKED (2026-10-26): the passes of that day had stacked a move onto the one that answers it until a pull had no room to strike. A move now
+//   stands on its own with a breath after it, and a pair is only a signature: the Sundering Cut and Cracked Guard, a Comet Draw's line from the far
+//   wall, the Draw Cut inside Hollow Breath, the glass with a line at the tank, the twin Draw, one Draw Cut with a Sweep behind it in Act I, the
+//   three edges and the closing dance. The Sweep now begins when the Draw Cut's line has landed (not under its cast bar). Hard's draws keep their
+//   order rules (tank wait 28 to 30 s in the model, healer 31 to 33), a few more seconds of calm between moves, a script of about nine minutes.
 //   Act IV, The Last Vigil (16% -> dead): he kneels once more, rises and gives all three edges back to back, each stance shown as the last
 //     one lands (the sentence the whole fight has been spelling), then a Hundredfold Parting begun from each hero in turn.
 // THE TANK'S OWN CUT (2026-10-26): Answering Cut, a quick light cut at the tank from his draw stance (a buster, about a third of a Sundering
@@ -43,7 +48,7 @@
 
 const CORVANE = {
   id: 'corvane', name: 'Corvane', title: 'the Unburied Blade',
-  hp: { normal: 5900000, hard: 5250000 },
+  hp: { normal: 5900000, hard: 5125000 },
   hardDmg: 1.33,   // (Hard's damage multiplier; fight.js default 1.25: 1.33 before the 2026-10-26 fun pass, 1.42 before that: a numbers bump, part of that difficulty lives in the Hard-only skill moves below)
   autoDmg: { normal: 2300, hard: 2050 },
   enrage: { normal: 590, hard: 585 },   // the cast starts here and lands 8 s later (9:58 / 9:48: a minute after the script's end, 45 s on Hard)
@@ -68,7 +73,7 @@ const CORVANE = {
     const dmg = {
       gale: H ? 12250 : 14800, cut: H ? 18300 : 22000, guard: H ? 17000 : 20500, draw: H ? 19700 : 23800, sweep: H ? 20350 : 24600,
       still: H ? 9600 : 9200, breath: H ? 2900 : 3000, crane: H ? 23700 : 28600, comet: H ? 21550 : 26000, part: H ? 21900 : 26400,
-      sheathe: H ? 13900 : 16800, wispHp: 26000, last: H ? 14800 : 17800, answer: H ? 5500 : 6600,
+      sheathe: H ? 13900 : 16800, wispHp: 34000, last: H ? 14800 : 17800, answer: H ? 5500 : 6600,
     };
     const S = (...steps) => steps.filter(Boolean);
     const live = id => f.alive().find(p => p.id === id);
@@ -426,16 +431,15 @@ const CORVANE = {
         onTick: (a, dt) => {
           const dx = B.x - a.x, dy = B.y - a.y, d = Math.hypot(dx, dy);
           if (d < 70) return reach(a);
-          const sp2 = (H ? 52 : 44) * dt; a.x += dx / d * sp2; a.y += dy / d * sp2; a.facing = Math.atan2(dy, dx);
+          const sp2 = (H ? 52 : 48) * dt; a.x += dx / d * sp2; a.y += dy / d * sp2; a.facing = Math.atan2(dy, dx);
         } }));
       (H ? [4, 4] : [3, 3]).forEach((n, k) => f.afterKeep(2.6 + k * 6, () => {
         for (let i = 0; i < n; i++) { const home = broken.shift(); spawnWisp(home || snow.shift() || [0, 360], home || null); }
       }));
-      // the healer still has work and the tank takes the pair as he rises
+      // the healer still has work and the tank takes the pair as he rises (2026-10-26 de-cook: no Draw Cut inside the breath: the wisps are the wall's job)
       f.afterKeep(6, later(gale), 'White Gale');
       f.afterKeep(H ? 10 : 12, later(hollowBreath), 'Hollow Breath');
       f.afterKeep(H ? 13.3 : 14.4, later(answer), 'Answering Cut');   // (the tank has nothing else in the wall until the pair as he rises; clear of the gale's raidwide)
-      f.afterKeep(VIGIL - 5, later(() => drawCut()), 'Draw Cut');
       // (and what he does as he rises is laid now, so the feed reads across the wall into Act III)
       f.afterKeep(VIGIL + 3, later(cut), 'Sundering Cut');
       f.afterKeep(VIGIL + 14, later(gale), 'White Gale');
@@ -537,7 +541,7 @@ const CORVANE = {
     const healerDraw = () => drawCut(healer());    // a line through the healer, inside Hollow Breath's circle
     // how long an unleashing runs from its first step (U: Rising Crane or Comet Draw, V: Hundredfold Parting, with its return on Hard, Q: Hard's Comet Volley)
     const ULEN = H ? { U: 11.4, V: 20, Q: 15.5 } : { U: 11.1, V: 13.1, Q: 11.1 };
-    const EVT = { P: [[4.2, 3], [8.5, 3]], D: [[3, 1]], L: [[3, 2]], H: [[4.4, 2]], G: [[2.4, 1]], B: [[2, 2], [6.6, 2]], U: [[ULEN.U - 0.5, 2]], V: [[ULEN.V - 0.5, 2]], Q: [[ULEN.Q - 0.5, 2]], C: [[7, 1]], R: [[1.9, 1]] };   // [seconds in, 1 tank | 2 healer | 3 both]
+    const EVT = { P: [[4.2, 3], [8.5, 3]], D: [[3, 3]], L: [[3, 2]], H: [[4.4, 2]], G: [[2.4, 1]], B: [[2, 2], [6.6, 2]], U: [[ULEN.U - 0.5, 2]], V: [[ULEN.V - 0.5, 2]], Q: [[ULEN.Q - 0.5, 2]], C: [[7, 1]], R: [[1.9, 3]] };   // [seconds in, 1 tank | 2 healer | 3 both]
     const CAST = { R: 3.3, P: 8.5, D: 3, X: 3, L: 3, H: 4.4, G: 2.4, B: 2, C: 7.2, k: 7.2, c: 3.6, W: 3.8 };   // (how long its casts keep the bar busy; an unleashing the script waits for)
     // the steps of a run of sets with the time each one begins (an unleashing pushes what follows it later, as scripted() does)
     const walk = (sets, fn) => {
@@ -594,21 +598,23 @@ const CORVANE = {
     // I. The Pass (Hard draws the order of the middle sets)
     const pass = from => {
       const head = [S([4, gale, 'White Gale', 'H'])];
-      const tail = [S([5.5, scripted('crane'), 'Whetted Edge', 'U'])];
+      const tail = [S([9.5, scripted('crane'), 'Whetted Edge', 'U'])];
+      // (2026-10-26 de-cook: a move stands on its own with a breath after it; the Sundering pair and one Draw Cut with a Sweep laid behind it are the act's pairs)
       const mid = [
         S([8, ...tankPair]),
-        S([10, () => drawCut(), 'Draw Cut', 'X'], [8, () => sweep(), 'Scabbard Sweep', 'W'], [4.5, ...rip]),
-        S([3.5, gale, 'White Gale', 'H'], [6, tankDraw, 'Draw Cut', 'D'], [6, () => drawCut(), 'Draw Cut', 'X'], [4, ...rip]),
-        S([6, () => sweep(), 'Scabbard Sweep', 'W'], [4.2, gale, 'White Gale', 'H'], [6, tankDraw, 'Draw Cut', 'D']),
-        S([8, ...tankPair]),
-        S([12, () => drawCut(), 'Draw Cut', 'X'], [0.8, () => sweep(), 'Scabbard Sweep', 'W'], [8, tankDraw, 'Draw Cut', 'D']),
-        S([11, gale, 'White Gale', 'H'], [6, tankDraw, 'Draw Cut', 'D']),
-        S([10, ...tankPair]),
-        S([8.6, ...rip], [3.4, gale, 'White Gale', 'H']),
+        S([15, tankDraw, 'Draw Cut', 'D']),
+        S([11, () => sweep(), 'Scabbard Sweep', 'W']),
+        S([10, ...rip]),
+        S([9, tankDraw, 'Draw Cut', 'D']),
+        S([13, ...tankPair]),
+        S([15, () => drawCut(), 'Draw Cut', 'X'], [3.1, () => sweep(), 'Scabbard Sweep', 'W']),
+        S([9, ...rip]),
+        S([11, gale, 'White Gale', 'H']),
+        S([12, ...tankPair]),
       ];
       return f.course({
         until: 0.72, onStart: () => { act = 1; },
-        sets: mix([head, { mix: mid }, tail], {}, 31, 24),
+        sets: mix([head, { mix: mid }, tail], {}, 31, 28),
         closing: [[10, gale, 'White Gale'], [10, cut, 'Sundering Cut'], [12, () => drawCut(), 'Draw Cut']],
         next: shrine,
       }, from);
@@ -616,28 +622,28 @@ const CORVANE = {
 
     // II. The Shrine (its gate is the Vigil's wall)
     const shrine = from => {
-      const head = [S([12, stillWater, 'Still Water', 'G'])];
+      // (2026-10-26 de-cook: the act's pairs are the Comet Draw's line from the far wall and the Draw Cut inside Hollow Breath; the rest stand alone)
+      const head = [S([12.5, ...rip], [9, stillWater, 'Still Water', 'G'])];
       const mid = [
-        S([12, ...tankPair]),
-        S([12, () => cometDraw('tank'), 'Comet Draw', 'C']),
-        S([10, hollowBreath, 'Hollow Breath', 'B'], [H ? 4 + Math.round(f.rng() * 4) : 6, healerDraw, 'Draw Cut', 'L'], [3.4, ...rip]),
-        S([6.9, ...tankPair]),
-        S([9, stillWater, 'Still Water', 'G'], [3.4, tankDraw, 'Draw Cut', 'D']),
-        S([8, ...rip], [3.4, gale, 'White Gale', 'H']),
-        S([11, () => drawCut(), 'Draw Cut', 'X'], [0.8, () => sweep(), 'Scabbard Sweep', 'W'], [7, ...tankPair]),
-        S([11, H ? () => cometDraw('any') : () => comet(false), 'Comet Draw', H ? 'k' : 'c'], [7.4, ...rip]),
-        S([3.4, hollowBreath, 'Hollow Breath', 'B'], [6, tankDraw, 'Draw Cut', 'D']),
-        S([10, gale, 'White Gale', 'H'], [5, tankDraw, 'Draw Cut', 'D']),
+        S([15, ...tankPair]),
+        S([14, () => cometDraw('tank'), 'Comet Draw', 'C']),
+        S([14, hollowBreath, 'Hollow Breath', 'B'], [H ? 4 + Math.round(f.rng() * 4) : 6, healerDraw, 'Draw Cut', 'L']),
+        S([11, ...rip]),
+        S([9, ...tankPair]),
+        S([14, gale, 'White Gale', 'H']),
+        S([10, tankDraw, 'Draw Cut', 'D'], [9, () => sweep(), 'Scabbard Sweep', 'W']),
+        S([12, H ? () => cometDraw('any') : () => comet(false), 'Comet Draw', H ? 'k' : 'c']),
+        S([11, ...rip]),
       ];
-      const anchor = [S([6, scripted('comet'), 'Whetted Edge', 'U'])];
+      const anchor = [S([9, scripted('comet'), 'Whetted Edge', 'U'])];
       const late = [
-        S([13, stillWater, 'Still Water', 'G'], [3.4, tankDraw, 'Draw Cut', 'D']),
-        S([11, ...tankPair], [5.5, gale, 'White Gale', 'H']),
+        S([13, ...tankPair]),
+        S([14, stillWater, 'Still Water', 'G']),
       ];
       return f.course({
         until: 0.42, onStart: () => { act = 2; },
         wall: { label: 'The Vigil', run: vigil, until: 'resolved', timeout: VIGIL + 8 },
-        sets: mix([head, { mix: mid }, anchor, { mix: late }], { hl: [10.5] }, 31, 24),
+        sets: mix([head, { mix: mid }, anchor, { mix: late }], { hl: [10.5] }, 31, 30),
         closing: [[10, gale, 'White Gale'], [10, cut, 'Sundering Cut'], [12, stillWater, 'Still Water']],
         next: edge,
       }, from);
@@ -647,22 +653,23 @@ const CORVANE = {
     const edge = from => {
       const order = H ? f.shuffle(['crane', 'comet', 'parting']) : ['crane', 'comet', 'parting'];
       const uv = i => (order[i] === 'parting' ? 'V' : H && order[i] === 'comet' ? 'Q' : 'U');   // (which kind of unleashing the script lays third, for the Hard draw)
-      const s1 = [S([19, twinDraw, 'Draw Cut', 'X'], H ? [5.4, tankDraw, 'Draw Cut', 'D'] : [4.6, ...rip], [H ? 6 : 3.4, scripted(order[0]), 'Whetted Edge', uv(0)])];   // (Hard: and a line at the tank before the first edge)
+      // (2026-10-26 de-cook: the act's pairs are the twin Draw, the glass with a line at the tank on it, and the Draw Cut at the healer inside Hollow Breath; the three edges are its peaks)
+      const s1 = [S([19, twinDraw, 'Draw Cut', 'X'], [9, ...rip], [H ? 9 : 9, scripted(order[0]), 'Whetted Edge', uv(0)])];
       const a = [
-        S([14, stillWater, 'Still Water', 'G'], [3.4, () => sweep(), 'Scabbard Sweep', 'W']),   // the glass, and half of what is left taken from under it
-        S([10, ...tankPair]),
-        S([12, () => drawCut(), 'Draw Cut', 'X'], [0.8, () => sweep(), 'Scabbard Sweep', 'W'], [4.5, ...rip]),
+        S([14, stillWater, 'Still Water', 'G'], [3.4, tankDraw, 'Draw Cut', 'D']),   // the glass, and a line at the tank on it
+        S([13, ...tankPair]),
       ];
-      const s5 = [S([3.4, scripted(order[1]), 'Whetted Edge', uv(1)])];   // (3.4: the Answering Cut at the end of the set before it, where the 9 s was)
+      const s5 = [S([13, scripted(order[1]), 'Whetted Edge', uv(1)])];
       const b = [
-        S([12, hollowBreath, 'Hollow Breath', 'B'], [2.4, tankDraw, 'Draw Cut', 'D'], [3.2, healerDraw, 'Draw Cut', 'L'], [3.4, ...rip]),   // (a line at the tank, then one at the healer, inside the breath, then the tank's cut)
-        S([6.9, ...tankPair], [5.5, gale, 'White Gale', 'H'], [9.4, ...rip]),
+        S([13, tankDraw, 'Draw Cut', 'D']),
+        S([10, hollowBreath, 'Hollow Breath', 'B'], [5, healerDraw, 'Draw Cut', 'L']),   // (a line at the healer, inside the breath)
+        S([10, ...rip]),
       ];
-      const s8 = [S([3.4, scripted(order[2]), 'Whetted Edge', uv(2)])];
-      const s9 = [S([14, ...tankPair])];
+      const s8 = [S([6, scripted(order[2]), 'Whetted Edge', uv(2)])];
+      const s9 = [S([12, ...tankPair])];
       return f.course({
         until: 0.16, onStart: () => { act = 3; B.lockFacing = false; },
-        sets: mix([s1, { mix: [...a, ...s5, ...b, ...s8], keep: [s5[0], s8[0]] }, s9], { tk: [7.2, 11.5], hl: [7.2, 11.5, 18.4] }, 33, 29),   // (the Vigil's own Sundering pair and gale are just ahead)
+        sets: mix([s1, { mix: [...a, ...s5, ...b, ...s8], keep: [s5[0], s8[0]] }, s9], { tk: [7.2, 11.5], hl: [7.2, 11.5, 18.4] }, 33, 30),   // (the Vigil's own Sundering pair and gale are just ahead)
         closing: [[12, gale, 'White Gale'], [10, cut, 'Sundering Cut'], [12, twinDraw, 'Draw Cut']],
         ramp: 0.08,
         next: finale,
@@ -677,8 +684,8 @@ const CORVANE = {
         onStart: () => { act = 3; B.lockFacing = false; },
         sets: [
           S([3, () => lastVigil(order), 'The Last Vigil']),
-          S([afterEdges, ...tankPair]),
-          S([10, finalDance, 'Hundredfold Parting']),
+          S([afterEdges + 3, ...tankPair]),   // (a few breaths after the last edge's Cold Sheathe, and a longer one before the dance)
+          S([15.5, finalDance, 'Hundredfold Parting']),
         ],
         closing: [[44, gale, 'White Gale'], [9, cut, 'Sundering Cut'], [12, twinDraw, 'Draw Cut']],   // (the first waits out the dance)
         ramp: 0.08,

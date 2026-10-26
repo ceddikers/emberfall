@@ -97,7 +97,7 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS, optional 'gear=
 // set 2: Azerath, the Sunken Archmage (Boss VII)
 RAIDS.push(
   ['Azerath', 'archmage', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post1'],
-  ['Azerath', 'archmage', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1'],
+  ['Azerath', 'archmage', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1', 'runs=8'],   // (a knife-edge line-up: it clears Azerath about half the time)
 );
 // set 2: the Hydra of the Drowned Temple (Boss VIII)
 RAIDS.push(

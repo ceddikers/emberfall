@@ -2350,6 +2350,7 @@
     // the room changes shape mid-fight (fight.js setForm): the walls move here at once, and the floor is rebuilt for the new form
     if (msg.k === 'form') { raid.form = msg.form || null; ARENA.use(raid.def.id + (raid.form ? ':' + raid.form : '')); }
     ArenaView.roomEvent(raid.room, msg, now, entById);
+    if (msg.k === 'grounded' && SH) later(msg.dur, () => raid && SH.play('bm-skitterra-tightening-web', { vol: 0.5, key: 'skclimb', minGap: 0.5 }));   // (Skitterra hauls herself back up her silk: the web's creak, reused)
   });
 
   // --- the Hollow King
@@ -3063,6 +3064,7 @@
     }
     for (const key of Object.keys(raid.propsUntil)) if (now > raid.propsUntil[key]) { delete raid.props[key]; delete raid.propsUntil[key]; }
     bd.st.props = raid.props;
+    if (raid.def.id === 'skitterra' && typeof SK_FX !== 'undefined') SK_FX.pose(raid, now);   // (the Dark Between: her body comes down with a drop and climbs back, skitterra-fx.js)
     if (raid.def.id === 'hydra') { raid.props.dive = !!b.u; raid.props.heart = !!raid.wallLabel; }   // (the Mother sinks while she is out of reach; the Heart shows in her chest while she is sealed)
     // (Corvane: his stance, the notches on his blade and the Vigil's kneel, from the room's whet / vigil moments: corvane-art.js draws them)
     if (raid.def.id === 'corvane') { const ev = raid.room.ev, w = ev.whet, vg = ev.vigil; raid.props.stance = w ? w.st || null : null; raid.props.notch = w ? w.n | 0 : 0; raid.props.over = w ? w.over | 0 : 0; raid.props.kneel = !!(vg && now < vg.end && raid.wallLabel); }
@@ -3656,10 +3658,16 @@
         // [boss presentation] BOSS_VFX.drawBody: in the Long Night he's a shape in the dark; in a trial only a memory (pale,
         // cold, not quite there); in a Time Stop frosted; untargetable a ghost with an outline; his flinches, enrage,
         // entrance and fall. (Plain frames still draw him straight onto the scene.)
-        const ghost = clamp((1 - bd.fade) / 0.45, 0, 1);
-        BOSS_VFX.drawBody(ctx, bossDef, bd, { scale: RAID_BOSS_SCALE, ghost, dark: raid.nightK > 0.05 ? 0.55 * raid.nightK : 0,
-          alpha: raid.def.trial ? 0.72 + 0.06 * Math.sin(now * 2.3) : Math.max(bd.fade, 0.8),
-          tint: raid.def.trial ? 'memory' : raid.bossPause && now < raid.bossPause.end ? 'frost' : null, pending: !!raid.introAt && !raid.def.trial });
+        const sk = raid.def.id === 'skitterra' ? raid.skPose : null;   // (in the Dark Between: gone up, falling, crouched or climbing)
+        const ghost = sk ? 0 : clamp((1 - bd.fade) / 0.45, 0, 1);
+        if (!sk || sk.alpha > 0.01) {
+          if (sk) { ctx.save(); ctx.translate(bd.x, bd.y + sk.oy); ctx.scale(sk.sx, sk.sy); ctx.translate(-bd.x, -bd.y); }
+          BOSS_VFX.drawBody(ctx, bossDef, bd, { scale: RAID_BOSS_SCALE, ghost, dark: raid.nightK > 0.05 ? 0.55 * raid.nightK : 0,
+            alpha: sk ? sk.alpha : raid.def.trial ? 0.72 + 0.06 * Math.sin(now * 2.3) : Math.max(bd.fade, 0.8),
+            tint: raid.def.trial ? 'memory' : raid.bossPause && now < raid.bossPause.end ? 'frost' : null, pending: !!raid.introAt && !raid.def.trial });
+          if (sk) ctx.restore();
+          if (sk) SK_FX.thread(ctx, bd, sk);
+        }
         if (raid.wallLabel) ArenaView.wallShield(ctx, bd.x, bd.y, now, RAID_BOSS_SCALE);
       } else if (e.kind === 'knight') {
         const k = e.k, a = Math.min(1, (now - k.born) / 0.6) * (k.gone ? Math.max(0, 1 - (now - k.gone) / 0.8) : 1);

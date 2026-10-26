@@ -17,12 +17,14 @@
 //   Act V, Last Winter (10% → dead): Winter's Grasp marks three heroes and freezes the sheets under them, then The Lake Rises paints every
 //     other sheet red and sinks it, row by row, for good (no Whiteout, no thaw). The rest is fought on the islands the party chose
 //     (Howl, Fist, a thicker Icefall; Hard adds the Grip) until he falls or Endless Winter lands.
-// Moves follow one another in places (Grasp into Fault Line, Frostbite into a Sweep, Fist into Slam / Icefall / Sweep / Twin Slam /
-// Fault Line, Howl into Fist), so the tank has a blow to meet about every half minute and the healer something to heal about as often.
+// The moves stand on their own with room round them: each is one beat with a calm after it, and a quiet window (nothing live, the boss
+// free to be hit) opens about every 40 s in every act. A few pairs are kept as the fight's seasoning: Winter's Grasp into the Icebreaker
+// or into a Fault Line, an Icebreaker into a Whiteout, Frostbite into a Sweep, a Fist into the Last Winter's hail. The tank has a blow to
+// meet about every half minute (a Fist or an Icebreaker) and the healer something to heal about as often.
 // Icebreaker (the tank's own, both difficulties): a lighter blow than the Fist at the tank, short enough to come between two of them. Where
 // the tank stands when it lands, the sheet cracks (red, then it sinks), so the tank steps off; a FROZEN sheet glances the blow (a third of
 // its weight, nothing cracks), so a tank who has read the ice leads the Titan onto it. It follows Winter's Grasp at the start of Act II,
-// comes before a Whiteout, between the Long Night's arcs, and fills the quiet between Fists; a Fist and an Icebreaker never land within 9 s
+// comes before a Whiteout, between the Long Night's arcs, and stands between Fists; a Fist and an Icebreaker never land within 9 s
 // of each other and two Icebreakers never within 14 s. Hard also cracks the sheet behind the tank, on the line from the Titan.
 // docs/plans/rework-hrimgar.md has the questions and the reasons.
 // Acts II to IV use PUSH. Every telegraph shows on the floor on every difficulty. Hard: casts 15% faster, 25% more damage, and:
@@ -30,16 +32,16 @@
 //   Breath of Winter: a cone that freezes the sheets it crosses instead of hurting, and a burst a few seconds later that breaks them.
 //   Titan's Grip: his fist closes on a hero and holds them; a stack on them frees them or they are crushed.
 // Hard also shuffles the order of each act's middle sets each pull (the Avalanche act too, its Grasps kept in place), but only to an
-// order that keeps the tank and the healer busy (mix / fits below), adds a third wave to the Plateau Tips, and Winter's Grasp freezes
-// three sheets (two on Normal; the Lake's Grasp always three). Last Winter opens on a Howl into a Fist the moment the lake is up, then a
-// Rime Slam (it cannot crack the frozen
-// islands, so it is a test of where the party stands), a Fist into an Icefall (a thick hail on islands) and Howls.
+// order that keeps the tank and the healer busy and a quiet window open (mix / fits below), adds a third wave to the Plateau Tips, and
+// Winter's Grasp freezes three sheets (two on Normal; the Lake's Grasp always three). Last Winter opens on the Lake, then a Fist, a
+// Rime Slam (it cannot crack the frozen islands, so it is a test of where the party stands), an Icebreaker on the islands, a Howl, and
+// a thick Icefall (Hard adds the Grip).
 
 const TITAN = {
   id: 'titan', name: 'Hrimgar', title: 'Warden of the White Reach',
-  hp: { normal: 5150000, hard: 5700000 },
+  hp: { normal: 5000000, hard: 5550000 },
   autoDmg: { normal: 1800, hard: 1980 },
-  hardDmg: 1.46,   // (Hard's blows land a little heavier than the usual 1.25: Hrimgar's seams and shuffles are kinder than they were, so his Hard has to bite)
+  hardDmg: 1.56,   // (Hard's blows land a little heavier than the usual 1.25: Hrimgar's seams and shuffles are kinder than they were, so his Hard has to bite)
   enrage: { normal: 600, hard: 590 },   // the cast starts here and lands 8 s later (10:08 / 9:58)
   enrageName: 'Endless Winter',
   vuln: 0.5,
@@ -66,10 +68,9 @@ const TITAN = {
       howl: H ? 13000 : 13000, fist: H ? 31850 : 28750, slam: H ? 21450 : 20000, sink: H ? 11050 : 10000, fault: H ? 18850 : 18150, icicle: H ? 10650 : 10000,
       sweep: H ? 16250 : 15000, cold: H ? 34450 : 31250, frozen: H ? 17550 : 15000, water: H ? 3750 : 3650, slide: H ? 25350 : 23150, whiteout: H ? 14950 : 13750,
       arc: H ? 18850 : 17500, stomp: H ? 18850 : 16900, ring: H ? 15600 : 13750, breath: H ? 6250 : 5650, burst: H ? 18200 : 16250,
-      gripAim: H ? 6500 : 6250, gripStack: H ? 33800 : 30000, crush: H ? 31200 : 27500, maul: H ? 10300 : 11400,
+      gripAim: H ? 6500 : 6250, gripStack: H ? 33800 : 30000, crush: H ? 31200 : 27500, maul: H ? 11200 : 11400,
     };
-    if (!H) for (const k in dmg) dmg[k] = Math.round(dmg[k] * 1.2);   // (Normal's hits are a little heavier than before the rework; Hard's table is its own)
-    const S = (...steps) => steps.filter(Boolean);
+    if (!H) for (const k in dmg) dmg[k] = Math.round(dmg[k] * (k === 'fist' || k === 'maul' ? 1.2 : 1.41));   // (Normal's hits are a little heavier than before the rework; Hard's table is its own)
     // when the boss's latest cast ends: an act that begins (or the wall that rises) a heartbeat after a cast waits for it, so no cast bar is cut
     let castEnd = 0;
     { const cast0 = f.cast.bind(f); f.cast = (name, dur, ...rest) => { castEnd = Math.max(castEnd, f.t + dur); return cast0(name, dur, ...rest); }; }
@@ -454,58 +455,92 @@ const TITAN = {
     const lakeRises = () => { grasp(null, 3); f.afterKeep(f.ct(3.6) + 0.1, lakeFlood, 'The Lake Rises'); };
 
     // --- moves that follow one another: the second starts as the first lands (casts never overlap) ---------
-    const howlFist = () => { commit(f.ct(4.6) + 0.5 + f.ct(4.8)); howl(); f.afterKeep(f.ct(4.6) + 0.5, fist); };
+    // (a few only: the pairs are the fight's seasoning, not its rhythm. Grasp into Icebreaker, Grasp into Fault Line, Icebreaker into a
+    // Whiteout, Frostbite into a Sweep, a Fist into the Last Winter's hail)
     const fistThen = (move, len) => () => { const w = fistWait(); commit(w + f.ct(4.8) + 0.6 + f.ct(len)); fist(); f.afterKeep(w + f.ct(4.8) + 0.6, move); };
-    const fistSlam = fistThen(slam, 5.2), fistIcefall = fistThen(icefall, 3.4), fistSweep = fistThen(sweep, 5.4), fistTwin = fistThen(twinSlam, 5.2), fistFault = fistThen(fault, 5.4);
-    const fistBreath = fistThen(breath, 4.6), fistGrip = fistThen(grip, 3.6), fistStomp = fistThen(stomp, 4.8);
+    const fistIcefall = fistThen(icefall, 3.4);
     // the Icebreaker rides with moves that leave the floor to itself: it comes before a Whiteout (the tank's sheet is red while the
     // raidwide is called) and after Winter's Grasp (the ice the Grasp makes is where the tank can take the blow)
     const maulWhiteout = () => { const w = maulWait(); commit(w + f.ct(3.8) + 0.6 + f.ct(4.2)); maul(); f.afterKeep(w + f.ct(3.8) + 0.6, whiteout); };
     const graspMaul = () => { commit(f.ct(3.6) + 0.45 + f.ct(3.8)); grasp(() => f.afterKeep(0.4, maul)); };
-    const faultSlam = () => { commit(f.ct(5.4) + 0.8 + f.ct(5.2)); fault(); f.afterKeep(f.ct(5.4) + 0.8, slam); };
-    const sweepSlam = () => { commit(sweepGap() + 0.3 + f.ct(5.2)); sweep(); f.afterKeep(sweepGap() + 0.3, slam); };
     const graspFault = () => { commit(f.ct(3.6) + 0.45 + f.ct(5.4)); grasp(() => f.afterKeep(0.4, fault)); };
     const frostSweep = () => { commit(f.ct(2.6) + 0.5 + f.ct(5.4)); frostbite(); f.afterKeep(f.ct(2.6) + 0.5, sweep); };
 
     // --- laying the acts out -----------------------------------------------------------------------
-    // Each set says how long its casts run (len: the next set waits for it, so no cast bar is cut) and when its blows land, in
-    // seconds from its first step: tk the Glacial Fists, rw the raidwides, hl the other things only the healer meets (a stack), nov
-    // a move only Hard has. Hard draws the order of an act's middle sets afresh each pull, but only an order that keeps the tank and
-    // the healer busy: a Fist at least every ~38 s and never two within 14 s of each other, something for the healer at least every
-    // ~34 s, raidwides at least 12 s apart, no two of Hard's new moves side by side, and no Sweep until the water from the first Slam has frozen over
-    // again (sw: the Sweep that follows the Slam is not drawn in the first minute, when a hero wading is the likeliest to be caught by it).
-    const c = s => f.ct(s), ho = c(4.6), fo = c(4.8), wo = c(4.2), fs = c(10), gs = fo + 0.6 + c(3.6) + c(7);
-    const LEN = { slam: c(5.2), fault: c(5.4), icefall: c(3.4), sweep: c(5.4), twin: c(5.2), breath: c(4.6), grip: c(3.6), stomp: c(4.8), frost: c(2.6), maul: c(3.8) };
-    const M = (m, ...steps) => Object.assign(S(...steps), m);
-    const HF = { len: ho + 0.5 + fo, tk: [ho + 0.5 + fo], rw: [ho] };                     // Howl into Fist
-    // the Icebreaker (mk: when it lands, from the set's first step): alone, before a Whiteout, or after Winter's Grasp
-    const MQ = { len: LEN.maul, mk: [LEN.maul] };
-    const MW = { len: LEN.maul + 0.6 + wo, mk: [LEN.maul], rw: [LEN.maul + 0.6 + wo] };
-    const GM = { len: c(3.6) + 0.45 + LEN.maul, mk: [c(3.6) + 0.45 + LEN.maul] };
-    const FX = (len, extra) => Object.assign({ len: fo + 0.6 + len, tk: [fo] }, extra);   // Fist into a move of that length
+    // Every beat is one move that stands on its own. `live` is how long its own telegraphs stay up from its first step (the cast bar,
+    // then the red sheets it cracked), `rest` the calm after it: a short one (REST) between beats, a long one (WIN) is a quiet window,
+    // nothing live and the boss free to be hit. A set begins once the one before has gone quiet and rested, so no bar is cut and the
+    // windows come about every 40 s. The beats also say when their blows land, in seconds from their first step: tk the Glacial Fists,
+    // mk the Icebreakers, rw the raidwides, hl the other things only the healer meets (a stack), nov a move only Hard has, sw a Sweep.
+    // Hard draws the order of an act's middle beats afresh each pull, but only an order that keeps the tank and the healer busy and
+    // a window open: a Fist at least every ~38 s and never two within 16 s of each other, the tank (Fist or Icebreaker) never waiting
+    // over TANK_MAX, something for the healer at least every ~34 s, raidwides at least 12 s apart, a window about every 48 s,
+    // no two of Hard's new moves side by side, and no Sweep until the water from the first Slam has frozen over again.
+    const c = s => f.ct(s), ho = c(4.6), fo = c(4.8), wo = c(4.2), fs = c(10), CRK = c(4.6), SWL = c(5.4) + c(BACK_GAP);
+    const REST = 3.5, WIN = 7.5;
+    const GAL = c(3.6) + 0.45;   // (Winter's Grasp and the move that follows it: how long to the second cast)
+    const MV = {
+      howl: { fn: howl, nm: "Winter's Howl", len: ho, live: ho, rw: [ho] },
+      fist: { fn: fist, nm: 'Glacial Fist', len: fo, live: fo, tk: [fo] },
+      maul: { fn: maul, nm: 'Icebreaker', len: c(3.8), live: c(3.8) + CRK, mk: [c(3.8)] },
+      slam: { fn: slam, nm: 'Rime Slam', len: c(5.2), live: c(5.2) + CRK },
+      fault: { fn: fault, nm: 'Fault Line', len: c(5.4), live: c(5.4) + CRK },
+      icefall: { fn: icefall, nm: 'Icefall', len: c(3.4), live: c(3.4) + 3.2 },
+      sweep: { fn: sweep, nm: "Titan's Sweep", len: c(5.4), live: SWL, sw: 1 },
+      twin: { fn: twinSlam, nm: 'Twin Slam', len: c(5.2), live: c(5.2) + 1.7 + CRK },
+      frost: { fn: frostbite, nm: 'Frostbite', len: c(2.6), live: fs, hl: [fs] },
+      white: { fn: whiteout, nm: 'Whiteout', len: wo, live: wo, rw: [wo] },
+      ga: { fn: graspAvalanche, nm: "Winter's Grasp", len: c(3.6) + 0.05 + c(5.4), live: c(3.6) + 0.05 + c(5.4) + 3.2 },
+      // the pairs
+      gm: { fn: graspMaul, nm: "Winter's Grasp", len: GAL + c(3.8), live: GAL + c(3.8) + CRK, mk: [GAL + c(3.8)] },
+      gf: { fn: graspFault, nm: "Winter's Grasp", len: GAL + c(5.4), live: GAL + c(5.4) + CRK },
+      mw: { fn: maulWhiteout, nm: 'Icebreaker', len: c(3.8) + 0.6 + wo, live: Math.max(c(3.8) + CRK, c(3.8) + 0.6 + wo), mk: [c(3.8)], rw: [c(3.8) + 0.6 + wo] },
+      fsw: { fn: frostSweep, nm: 'Frostbite', len: c(2.6) + 0.5 + c(5.4), live: Math.max(fs, c(2.6) + 0.5 + SWL), hl: [fs], sw: 1 },
+      fi: { fn: fistIcefall, nm: 'Glacial Fist', len: fo + 0.6 + c(3.4), live: fo + 0.6 + c(3.4) + 3.2, tk: [fo] },
+      // Hard's own
+      stomp: { fn: stomp, nm: 'Glacial Stomp', len: c(4.8), live: c(4.8) + 3.4, nov: 1 },
+      breath: { fn: breath, nm: 'Breath of Winter', len: c(4.6), live: c(4.6) + c(5.6), nov: 1 },
+      grip: { fn: grip, nm: "Titan's Grip", len: c(3.6), live: c(3.6) + c(7), nov: 1, hl: [c(3.6) + c(7)] },
+    };
+    const NAMED_GAP = 15.5;   // (the timeline check wants a named step at least every 16 s: a long calm follows only a move that is soon over)
+    const bt = (key, rest = REST, lead = 0) => {
+      const m = MV[key];
+      rest = Math.max(1, Math.min(rest, NAMED_GAP - m.live));
+      return Object.assign([[lead, m.fn, m.nm]], { len: m.len, live: m.live, rest, tk: m.tk, mk: m.mk, rw: m.rw, hl: m.hl, nov: m.nov, sw: m.sw });
+    };
     const tally = sets => {
-      let t = 0; const o = { tk: [], mk: [], rw: [], hl: [], nov: [], sw: [] };
-      sets.forEach((s, i) => { const t0 = t + s[0][0]; for (const k of ['tk', 'mk', 'rw', 'hl']) for (const x of (s[k] || [])) o[k].push(t0 + x); if (s.nov) o.nov.push(i); if (s.sw) o.sw.push(t0); for (const [dt] of s) t += dt; });
+      let t = 0; const o = { tk: [], mk: [], rw: [], hl: [], nov: [], sw: [], win: [], end: 0 };
+      sets.forEach((s, i) => {
+        const t0 = t + s[0][0];
+        for (const k of ['tk', 'mk', 'rw', 'hl']) for (const x of (s[k] || [])) o[k].push(t0 + x);
+        if (s.nov) o.nov.push(i);
+        if (s.sw) o.sw.push(t0);
+        if (s.rest >= 6) o.win.push(t0 + s.live);
+        o.end = t0 + s.live;
+        for (const [dt] of s) t += dt;
+      });
       return o;
     };
     const gapMax = a => { a = [...a].sort((x, y) => x - y); let m = 0, l = a[0]; for (const x of a) { m = Math.max(m, x - l); l = x; } return m; };
     const gapMin = a => { a = [...a].sort((x, y) => x - y); let m = 99; for (let i = 1; i < a.length; i++) m = Math.min(m, a[i] - a[i - 1]); return m; };
-    // a set begins only after the cast before it has ended
+    // a set begins once the one before has gone quiet and rested (its cast has ended, its sheets are sunk)
     const spaced = sets => sets.map((s, i) => {
-      const r = Object.assign(s.map(x => [...x]), { len: s.len, tk: s.tk, mk: s.mk, rw: s.rw, hl: s.hl, nov: s.nov, sw: s.sw }), p = sets[i - 1];
-      if (p && p.len != null) r[0][0] = Math.max(r[0][0], p.len + 0.3);
+      const r = Object.assign(s.map(x => [...x]), { len: s.len, live: s.live, rest: s.rest, tk: s.tk, mk: s.mk, rw: s.rw, hl: s.hl, nov: s.nov, sw: s.sw }), p = sets[i - 1];
+      if (p && p.len != null) r[0][0] = Math.max(r[0][0], (p.live != null ? p.live + (p.rest != null ? p.rest : 0) : p.len) + 0.3);
       return r;
     });
-    const TANK_MAX = 30;   // (Hard's draws: the tank never waits longer than this between a Fist or an Icebreaker landing and the next)
-    const fits = (sets, lead = 99) => {
+    const TANK_MAX = 32;   // (Hard's draws: the tank never waits longer than this between a Fist or an Icebreaker landing and the next)
+    const WIN_MAX = 50;    // (and a quiet window opens at least this often)
+    const fits = (sets, lead = 99, endBeat = 0) => {
       const o = tally(sets), tb = [...o.tk, ...o.mk], busy = [...tb, ...o.rw, ...o.hl];
       if (gapMin(o.tk) < FIST_GAP || gapMin(o.rw) < 12 || o.nov.some((x, i) => i && x === o.nov[i - 1] + 1) || o.sw.some(x => x < 58)) return 1e9;
       if (o.mk.some(x => tb.some(y => y !== x && Math.abs(y - x) < (o.tk.includes(y) ? MAUL_NEAR : MAUL_GAP)))) return 1e9;   // (an Icebreaker keeps clear of every Fist and the next Icebreaker)
-      const pen = Math.max(gapMax(o.tk) - 45, gapMax(tb) - TANK_MAX, gapMax(busy) - 34, Math.min(...tb) - lead, 0);
+      const pen = Math.max(gapMax(o.tk) - 45, gapMax(endBeat ? [...tb, o.end + endBeat] : tb) - TANK_MAX, gapMax(busy) - 34, gapMax(o.win) - WIN_MAX, Math.min(...tb) - lead, 0);
       return pen > 0 ? pen * 10 + gapMax(o.tk) * 0.01 : 0;
     };
-    // (lead: the latest the first Fist may land in the act, for an act the party is likely to leave early)
-    const mix = (head, mid, tail, fixed = [], lead = 99) => {
+    // (lead: the latest the first Fist may land in the act, for an act the party is likely to leave early; endBeat: when the next act's
+    // first blow on the tank lands after this one's last set, so the wait across the seam counts)
+    const mix = (head, mid, tail, fixed = [], lead = 99, endBeat = 0) => {
       let cand = mid;
       if (H) {
         // every order of the sets that are free to move (the sets named in `fixed` keep their places), each one that keeps the tank and the healer busy equally
@@ -514,13 +549,14 @@ const TITAN = {
         let best = null, bs = 1e12;
         const walk = (left, got) => {
           if (!left.length) {
-            const rest = got.slice(), pick = mid.map((s, i) => (fixed.includes(i) ? s : rest.shift())), sc = fits(spaced([...head, ...pick, ...tail]), lead);
+            const rest = got.slice(), pick = mid.map((s, i) => (fixed.includes(i) ? s : rest.shift())), sc = fits(spaced([...head, ...pick, ...tail]), lead, endBeat);
             if (sc === 0) ok.push(pick); else if (sc < bs) { bs = sc; best = pick; }
             return;
           }
           left.forEach((x, i) => walk(left.filter((_, j) => j !== i), [...got, x]));
         };
         walk(free, []);
+        if (typeof process !== 'undefined' && process.env && process.env.TITAN_MIXDBG) console.log('MIX', head.length + '/' + mid.length + '/' + tail.length, 'valid', ok.length, ok.length ? '' : 'best ' + bs.toFixed(1) + ' ' + (() => { const o = tally(spaced([...head, ...best, ...tail])), tb = [...o.tk, ...o.mk]; return JSON.stringify({ tk: gapMax(o.tk).toFixed(0), tb: gapMax(tb).toFixed(0), busy: gapMax([...tb, ...o.rw, ...o.hl]).toFixed(0), win: gapMax(o.win).toFixed(0), tkmin: gapMin(o.tk).toFixed(0), rwmin: gapMin(o.rw).toFixed(0), first: Math.min(...tb).toFixed(0) }); })());
         cand = ok.length ? f.pick(ok) : best;
       }
       return spaced([...head, ...cand, ...tail]);
@@ -529,22 +565,33 @@ const TITAN = {
     // the Long Night opens its act with a raidwide: it waits until the last one is well behind (an act can end, and so begin, a heartbeat after a Howl;
     // two blows that close together killed the healer first)
     const RW_GAP = 15;
-    const nightFrom = from => Math.max(settle(from, 2), rwAt + RW_GAP - c(2.8) - (2 + c(4.8) + 0.3 + 0.3));
-    const HOWL = { len: ho, rw: [ho] };
+    const nightFrom = from => Math.max(settle(from, 2), rwAt + RW_GAP - c(2.8) - (2 + c(4.8) + 0.6));
+    const fistNight = () => { const w = fistWait(); commit(w + fo + 0.6 + NIGHT_LEN); fist(); f.afterKeep(w + fo + 0.6, longNight); };
+    MV.fn = { fn: fistNight, nm: 'Glacial Fist', len: fo + 0.6 + NIGHT_LEN, live: fo + 0.6 + NIGHT_LEN, tk: [fo, fo + 0.6 + NIGHT_FIST], rw: [fo + 0.6 + c(2.8)], mk: [fo + 0.6 + NIGHT_MAUL] };
+    MV.lake = { fn: lakeRises, nm: "Winter's Grasp", len: c(3.6) + 0.1 + c(5.2), live: c(3.6) + 0.1 + c(5.2) + 2.7 };
 
     // I. the Thaw
     const thawAct = from => f.course({
       until: 0.74, push: true, onStart: standing,
-      sets: mix([M(HOWL, [4, howl, "Winter's Howl"]), M(MQ, [12, maul, 'Icebreaker']), !H && M({ len: LEN.slam }, [13, slam, 'Rime Slam']), M(FX(0), [13, fist, 'Glacial Fist'])].filter(Boolean), [
-        M({ len: LEN.fault }, [13, fault, 'Fault Line']),
-        M(MQ, [13, maul, 'Icebreaker']),
-        H ? M(FX(LEN.stomp, { nov: 1 }), [12, fistStomp, 'Glacial Fist']) : M(HF, [12, howlFist, "Winter's Howl"]),
-        M({ len: sweepGap() + 0.3 + LEN.slam, sw: 1 }, [13, sweepSlam, "Titan's Sweep"]),
-        M(FX(LEN.slam), [13, fistSlam, 'Glacial Fist']),
-      ].filter(Boolean), [
-        M(HOWL, [12, howl, "Winter's Howl"]),
-        M(FX(LEN.icefall), [13, fistIcefall, 'Glacial Fist']),
-      ]),
+      sets: mix([bt('howl', 7.4, 4), bt('maul', REST)], H ? [
+        bt('slam', REST),
+        bt('fist', WIN),
+        bt('fault', 3.5),
+        bt('maul', REST),
+        bt('stomp', WIN),
+        bt('icefall', WIN),
+        bt('fist', REST),
+      ] : [
+        bt('sweep', WIN),
+        bt('fist', WIN),
+        bt('slam', REST),
+        bt('maul', WIN),
+        bt('fault', 3.5),
+        bt('fist', WIN),
+        bt('icefall', WIN),
+      ], [
+        bt('howl', WIN),
+      ], [], 99, 8),
       closing: [[10, howl, "Winter's Howl"], [10, fist, 'Glacial Fist'], [10, slam, 'Rime Slam']],
       next: freezeAct,
     }, from);
@@ -552,53 +599,61 @@ const TITAN = {
     // II. the Freeze
     const freezeAct = from => f.course({
       until: 0.48, push: true, onStart: standing,
-      sets: mix([M(GM, [4, graspMaul, "Winter's Grasp"]), M({ len: LEN.frost, hl: [fs] }, [12, frostbite, 'Frostbite']), M(FX(0), [13, fist, 'Glacial Fist'])], [
-        M({ len: c(3.6) + 0.45 + LEN.fault }, [13, graspFault, "Winter's Grasp"]),
-        M(MW, [12, maulWhiteout, 'Icebreaker']),
-        H ? M(FX(LEN.breath, { nov: 1 }), [12, fistBreath, 'Glacial Fist']) : M(FX(LEN.twin), [13, fistTwin, 'Glacial Fist']),
-        H ? M(FX(LEN.grip, { nov: 1, hl: [gs] }), [12, fistGrip, 'Glacial Fist']) : M({ len: LEN.frost + 0.5 + LEN.sweep, hl: [fs] }, [12, frostSweep, 'Frostbite']),
-        H && M({ len: LEN.twin }, [13, twinSlam, 'Twin Slam']),
-      ].filter(Boolean), [
-        M(HF, [12, howlFist, "Winter's Howl"]),
-        M({ len: LEN.frost, hl: [fs] }, [13, frostbite, 'Frostbite']),
-      ]),
-      closing: [[10, howl, "Winter's Howl"], [10, fist, 'Glacial Fist'], [10, twinSlam, 'Twin Slam']],
+      sets: mix([bt('gm', 4, 4)], [
+        bt('frost', 4),
+        bt('fist', WIN),
+        bt('gf', REST),
+        bt('maul', REST),
+        H ? bt('breath', WIN) : bt('white', WIN),
+      ], [
+        bt('fist', REST),
+        bt('howl', WIN),
+      ], [], 99, 8),
+      closing: [[16, howl, "Winter's Howl"], [10, fist, 'Glacial Fist'], [10, twinSlam, 'Twin Slam']],
       next: crackAct,
     }, settle(from, 4));
 
     // III. the Crack, opened by the Long Night
     const crackAct = from => f.course({
       until: 0.22, push: true, onStart: standing,
-      sets: mix([M(FX(0), [2, fist, 'Glacial Fist']), M({ len: NIGHT_LEN, rw: [c(2.8)], tk: [NIGHT_FIST], mk: [NIGHT_MAUL] }, [6, longNight, 'The Long Night'])], [
-        M(MW, [9, maulWhiteout, 'Icebreaker']),
-        H ? M(FX(LEN.fault), [13, fistFault, 'Glacial Fist']) : M(FX(LEN.twin), [13, fistTwin, 'Glacial Fist']),
-        H ? M({ len: LEN.frost + 0.5 + LEN.sweep, hl: [fs] }, [13, frostSweep, 'Frostbite']) : M({ len: LEN.frost, hl: [fs] }, [13, frostbite, 'Frostbite']),
-        H ? M(FX(LEN.stomp, { nov: 1 }), [13, fistStomp, 'Glacial Fist']) : M(FX(LEN.fault), [13, fistFault, 'Glacial Fist']),
-        H ? M({ len: LEN.grip, nov: 1, hl: [c(10.6)] }, [10, grip, "Titan's Grip"]) : M({ len: LEN.fault + 0.8 + LEN.slam }, [13, faultSlam, 'Fault Line']),
-        M(MQ, [13, maul, 'Icebreaker']),
-      ].filter(Boolean), [
-        H && M({ len: LEN.fault + 0.8 + LEN.slam }, [13, faultSlam, 'Fault Line']),
-        M(HF, [12, howlFist, "Winter's Howl"]),
-      ].filter(Boolean)),
+      sets: mix([bt('fn', 6.5, 2)], H ? [
+        bt('mw', WIN),
+        bt('fist', WIN),
+        bt('fsw', WIN),
+        bt('maul', REST),
+      ] : [
+        bt('mw', WIN),
+        bt('frost', 4),
+        bt('fist', WIN),
+        bt('fault', WIN),
+      ], [
+        bt('fist', WIN),
+      ]),
       closing: [[12, howl, "Winter's Howl"], [10, fist, 'Glacial Fist'], [10, fault, 'Fault Line']],
       next: avalancheAct,
     }, nightFrom(from));
 
-    // IV. the Avalanche: the lanes run, and at the last gate the plateau tips. The two later Grasps keep their places; the rest is
-    // drawn on Hard.
-    const GA = () => M({ len: c(3.6) + 0.05 + c(5.4) }, [13, graspAvalanche, "Winter's Grasp"]);
+    // IV. the Avalanche: the lanes run, and at the last gate the plateau tips. The later Grasp keeps its place; the rest is drawn on Hard.
     const avalancheAct = from => f.course({
       until: 0.1, push: true, onStart: standing,
       wall: { label: 'The Plateau Tips', run: tipRun, until: 'resolved', timeout: 80 },
-      sets: mix([M({ len: c(3.6) + 0.05 + c(5.4) }, [4, graspAvalanche, "Winter's Grasp"])], [
-        M(FX(LEN.icefall), [13, fistIcefall, 'Glacial Fist']),
-        GA(),
-        M(HF, [12, howlFist, "Winter's Howl"]),
-        H ? M(MQ, [12, maul, 'Icebreaker']) : M({ len: LEN.frost + 0.5 + LEN.sweep, hl: [fs] }, [12, frostSweep, 'Frostbite']),
-        H ? M({ len: LEN.breath, nov: 1 }, [10, breath, 'Breath of Winter']) : M(MQ, [12, maul, 'Icebreaker']),
-        GA(),
-        M(FX(LEN.sweep), [13, fistSweep, 'Glacial Fist']),
-      ], [], [1, 5], 24),
+      sets: mix([bt('ga', 5, 4)], H ? [
+        bt('fist', WIN),
+        bt('ga', REST),
+        bt('breath', WIN),
+        bt('maul', WIN),
+        bt('fist', WIN),
+        bt('howl', WIN),
+        bt('maul', WIN),
+      ] : [
+        bt('fist', WIN),
+        bt('ga', REST),
+        bt('maul', WIN),
+        bt('fsw', WIN),
+        bt('fist', WIN),
+        bt('howl', WIN),
+        bt('maul', WIN),
+      ], [], [1], 24, 15),
       closing: [[12, howl, "Winter's Howl"], [10, fist, 'Glacial Fist'], [10, twinSlam, 'Twin Slam']],
       next: lastWinter,
     }, settle(from, 4));
@@ -607,14 +662,14 @@ const TITAN = {
     const lastWinter = from => f.course({
       onStart: standing,
       sets: spaced([
-        S([5, lakeRises, "Winter's Grasp"]),
-        M(HF, [13, howlFist, "Winter's Howl"]),
-        M({ len: LEN.slam }, [10, slam, 'Rime Slam']),
-        M(FX(LEN.icefall), [12, fistIcefall, 'Glacial Fist']),
-        H ? M({ len: LEN.grip }, [10, grip, "Titan's Grip"]) : M(HOWL, [10, howl, "Winter's Howl"]),
-        M(FX(0), [11, fist, 'Glacial Fist']),
-        M({ len: LEN.icefall }, [11, icefall, 'Icefall']),
-      ]),
+        bt('lake', WIN, 5),
+        bt('fist', REST),
+        bt('slam', WIN),
+        bt('maul', REST),
+        bt('howl', WIN),
+        H ? bt('grip', WIN) : false,
+        bt('icefall', REST),
+      ].filter(Boolean)),
       closing: [[10, howl, "Winter's Howl"], [10, fist, 'Glacial Fist'], [10, icefall, 'Icefall']],
       ramp: 0.08,
     }, settle(from, 5));

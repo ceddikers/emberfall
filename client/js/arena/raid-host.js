@@ -264,7 +264,7 @@ class RaidHost {
       posture: sim.postureOn ? sim.kenPack() : null,   // (a Kenseier in the party: [p, max, break seconds left, held full, recovering, builder], for the bots: fight.js KENSEI_HOST)
       bossCast: b.cast ? { name: b.cast.name, left: b.cast.end - sim.t } : null,
       mechs: [...sim.mechs.values()], puddles: sim.puddles, players,
-      bossId: sim.def.id, dmgScale: sim.scale.dmg * (sim.hard ? 1.25 : 1), mitLog: this.mitLog,   // (what a telegraph's raw dmg comes to on a player, before mitigation)
+      bossId: sim.def.id, dmgScale: sim.scale.dmg * (sim.hard ? sim.def.hardDmg ?? 1.25 : 1), mitLog: this.mitLog,   // (what a telegraph's raw dmg comes to on a player, before mitigation)
       adds: [...sim.adds.values()], tethers: [...sim.tethers.values()], zones: sim.zones,
       rollers: [...sim.rollers.values()], rollPre: (this.rollPre || []).filter(r => r.end > sim.t), lungePlan: (this.lungePlan || []).filter(e => e.at > sim.t - 0.2), tauntAt: id => (this.tauntAt || {})[id] ?? -99, reels: [...sim.reels.values()], sweeps: [...sim.sweeps.values()],
       // Volkar: everyone's charge, the rods' posts, and where the closing wall is about to jump

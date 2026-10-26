@@ -45,7 +45,7 @@ const MORROWOAK = {
   hp: { normal: 5000000, hard: 5000000 },
   hardDmg: 1.2,   // (Hard's damage multiplier; fight.js default 1.25. The Hard table below is a notch lower, so every move that Normal has too hits ~1.1x)
   autoDmg: { normal: 2450, hard: 2300 },
-  enrage: { normal: 612, hard: 597 },   // the cast starts here and lands 8 s later (10:20 / 10:05)
+  enrage: { normal: 655, hard: 590 },   // the cast starts here and lands 8 s later (11:03 / 9:58); about 66 s (Normal) and 50 s (Hard) after the mean clear
   enrageName: 'Nothing Left',
   vuln: 0.5,
   spawn: { x: 0, y: -40 },
@@ -61,12 +61,12 @@ const MORROWOAK = {
     const dmg = {
       // (Hard = Normal x 0.92, and fight.js multiplies Hard by hardDmg 1.2: about 1.1x Normal on every move both have; the Hard-only moves keep what they hit before)
       sap: H ? 11600 : 12600, lash: H ? 23900 : 26000, seed: H ? 16500 : 18000, fall: H ? 20200 : 22000, petal: H ? 19800 : 21500, haul: H ? 3500 : 3800,
-      twin: H ? 14400 : 0, dark: H ? 8600 : 0, swallow: H ? 9700 : 10500, sapHp: H ? 11000 : 12000, limbHp: H ? 185000 : 270000,
+      twin: H ? 12200 : 0, dark: H ? 7300 : 0, swallow: H ? 9700 : 10500, sapHp: H ? 11000 : 12000, limbHp: H ? 170000 : 340000,
       cleave: H ? 49600 : 54000, chop: H ? 21200 : 23000, roots: H ? 10600 : 11500, rod: H ? 20200 : 22000, lantern: H ? 12700 : 13800, ebb: H ? 7600 : 8200,
-      wing: H ? 19200 : 0, rime: H ? 17600 : 0, rimePool: H ? 2300 : 0, rune: H ? 18100 : 0, head: H ? 18600 : 0,
-      reach: H ? 8200 : 8800, reach2: H ? 7000 : 0,
+      wing: H ? 16300 : 0, rime: H ? 15000 : 0, rimePool: H ? 2000 : 0, rune: H ? 15400 : 0, head: H ? 15800 : 0,
+      reach: H ? 8200 : 8800, reach2: H ? 6000 : 0,
     };
-    const TUNE = H ? 1.135 : 1.135;   // (the spacing and caps below keep the room fair; this keeps the hits worth healing)
+    const TUNE = H ? 1.14 : 1.14;   // (the spacing and caps below keep the room fair; this keeps the hits worth healing)
     for (const k of Object.keys(dmg)) if (k !== 'sapHp' && k !== 'limbHp') dmg[k] = Math.round(dmg[k] * TUNE);
     const S = (...steps) => steps.filter(Boolean);
     const live = id => f.alive().find(p => p.id === id);
@@ -542,7 +542,7 @@ const MORROWOAK = {
     // It is not a heavy move and takes no floor, so lay() fits it round the others by what the tank has to read: [seconds after a step starts before
     // the Reach may come, seconds before it the Reach must be done]. Each window takes the legal time nearest its middle; no legal time, no draw.
     const REACH = [reach, "Hunger's Reach"];
-    const CLEAR = { 'Root Lash': [9, 9], 'Inhale': [7, 8], 'Sap Tide': [5, 4], 'Fourfold Bloom': [7, 4], 'The Grove Remade': [8, 4], 'Hungering Dark': [6, 4], 'Hunger Seed': [3, 2], 'Twin Seed': [3, 2], Saplings: [3, 2] };
+    const CLEAR = { 'Root Lash': [9, 9], 'Inhale': [7, 8], 'Sap Tide': [5, 5], 'Fourfold Bloom': [7, 4], 'The Grove Remade': [8, 4], 'Hungering Dark': [6, 4], 'Hunger Seed': [3, 2], 'Twin Seed': [3, 2], Saplings: [3, 2] };
     const withReach = (pl, pre) => {
       const lashes = pl.filter(x => x.m[1] === 'Root Lash').map(x => x.t), out = pl.slice();
       let worst = 0;
@@ -554,7 +554,11 @@ const MORROWOAK = {
         let best = null, bw = 1e9;
         for (let r = Math.max(a, holeAt); r <= b - 9; r += 0.5) {
           const bad = pl.some(x => { const c = x.m[0].long ? [12, 8] : (CLEAR[x.m[1]] || [8, 4]); return x.t <= r ? r - x.t < c[0] : x.t - r < c[1]; });
-          const w = Math.max(r - from, b - r);
+          // (the tank never waits much past 27 s for a beat; of the times that keep it, the one that splits the longest quiet stretch of named steps)
+          const tw = Math.max(r - from, b - r);
+          let pv = 0, nx = 1e9;
+          for (const x of out) { if (x.t <= r && x.t > pv) pv = x.t; if (x.t > r && x.t < nx) nx = x.t; }
+          const w = Math.max(0, tw - 27) * 20 + Math.max(r - pv, nx - r) + tw * 0.01;
           if (!bad && w < bw) { bw = w; best = r; }
         }
         if (best == null) return null;
@@ -573,7 +577,7 @@ const MORROWOAK = {
         let prev = -99;
         return slots.map(([t, lane], i) => {
           let at = t;
-          if (jit && i) at = Math.min(prev + 14, Math.max(prev + 8, t + Math.round((f.rng() * 2 - 1) * 2)));
+          if (jit && i) at = Math.min(prev + Math.max(14, t - slots[i - 1][0] + 2), Math.max(prev + 8, t + Math.round((f.rng() * 2 - 1) * 2)));
           prev = at;
           return { t: at, m: pools[lane].shift() };
         });
@@ -582,18 +586,18 @@ const MORROWOAK = {
         const L = pl.filter(x => x.m[1] === 'Root Lash').map(x => x.t);
         // a Sap Tide is always drawn early enough, and never leaves more than 80 s between two (the one raidwide the party can count on)
         const tides = pl.filter(x => x.m[1] === 'Sap Tide').map(x => x.t), endT = pl[pl.length - 1].t;
-        if (!tides.length || tides[0] > 70 || tides.some((t, i) => i && t - tides[i - 1] > 80) || endT - tides[tides.length - 1] > 70) return false;
+        if (!tides.length || tides[0] > 70 || tides.some((t, i) => i && t - tides[i - 1] > 110) || endT - tides[tides.length - 1] > 100) return false;
         return !pl.some(x => (x.m[0].heal && L.some(t => Math.abs(t - x.t) < 9)) || (x.m[1] === 'Sap Tide' && L.some(t => Math.abs(t - x.t) < 8)) ||
           (x.m[1] === 'Fourfold Bloom' && pl.some(y => y.m[0].heal && x.t - y.t > 0 && x.t - y.t < 11)));
       };
       let pl = withReach(build(false), pre) || build(false);
       if (H) {
-        // (Hard draws until the tank never waits much more than 24 s for a beat; failing that, the best draw found)
+        // (Hard draws until the tank never waits much more than 27 s for a beat; failing that, the best draw found)
         let best = null;
         for (let i = 0; i < 600; i++) {
           const c = build(true), r = ok(c) && withReach(c, pre);
           if (r && (!best || r.worst < best.worst)) best = r;
-          if (best && best.worst <= 24.5) break;
+          if (best && best.worst <= 27.5) break;
         }
         if (best) pl = best;
       }
@@ -606,8 +610,8 @@ const MORROWOAK = {
     // I. The Grove
     const grove = from => f.course({
       until: 0.75,
-      sets: lay([[4, 'H'], [13, 'F'], [22, 'T'], [34, 'H'], [46, 'F'], [56, 'T'], [66, 'H'], [76, 'F'], [86, 'T'], [97, 'H'], [109, 'F'], [118, 'T']], {
-        H: [TIDE, HAUL, TIDE, HAUL], T: [LASH, LASH, LASH, LASH], F: [SEED1, BLOOM, SEED1, BLOOM],
+      sets: lay([[4, 'H'], [12, 'F'], [24, 'T'], [33, 'H'], [49, 'F'], [63, 'T'], [72, 'H'], [87, 'F'], [102, 'T'], [112, 'H']], {
+        H: [TIDE, HAUL, TIDE, HAUL], T: [LASH, LASH, LASH], F: [SEED1, BLOOM, SEED1],
       }, { H: 1 }),
       closing: [[10, sapTide, 'Sap Tide'], [10, lash, 'Root Lash'], [10, () => bloom(), 'Fourfold Bloom']],
       next: hollowing,
@@ -617,8 +621,8 @@ const MORROWOAK = {
     const hollowing = from => f.course({
       until: 0.48,
       wall: { label: 'The Swallowing', run: swallowing, until: 'resolved', timeout: SWALLOW + 12 },
-      sets: lay([[4, 'F'], [12, 'F'], [22, 'H'], [32, 'T'], [40, 'F'], [52, 'H'], [62, 'T'], [70, 'F'], [82, 'H'], [92, 'T'], [100, 'F'], [112, 'H'], [124, 'T'], [133, 'F']], {
-        H: [TIDE, HAUL, TIDE, HAUL], T: [LASH, LASH, LASH, LASH], F: [SAPL, SEED2, SAPL, BLOOM, SEED2, H ? DARK : BLOOM],
+      sets: lay([[4, 'F'], [14, 'F'], [28, 'H'], [39, 'T'], [50, 'F'], [67, 'H'], [79, 'T'], [89, 'F'], [105, 'H'], [119, 'T'], [128, 'F']], {
+        H: [TIDE, HAUL, TIDE], T: [LASH, LASH, LASH], F: [SAPL, SEED2, BLOOM, SAPL, H ? DARK : BLOOM],
       }, { H: 1, F: 2 }, 15),
       closing: [[10, sapTide, 'Sap Tide'], [10, lash, 'Root Lash'], [10, () => inhale(), 'Inhale']],
       next: remade,
@@ -629,9 +633,9 @@ const MORROWOAK = {
     const remade = from => f.course({
       until: 0.15, push: true,
       onStart: () => { growLimbs(); relabel(); },
-      sets: lay([[16, 'F'], [26, 'H'], [35, 'T'], [44, 'F'], [56, 'F'], [64, 'H'], [73, 'T'], [82, 'F'], [94, 'F'], [102, 'H'], [111, 'T'], [120, 'F'], [132, 'F'], [140, 'H'], [149, 'T'], [158, 'F'], [170, 'F'], [178, 'H'], [187, 'T'], [196, 'F'], [208, 'F'], [216, 'H'], [225, 'T'], [234, 'F'], [243, 'F']], {
-        H: [HAUL, TIDE, DRAWB, TIDE, HAUL, TIDE], T: [LASH, LASH, LASH, LASH, LASH, LASH],
-        F: [turn, turn, turn, turn, SEED2, turn, turn, turn, SEED2, BLOOM, turn, H ? DARK : HAUL, turn],
+      sets: lay([[16, 'F'], [26, 'H'], [40, 'T'], [48, 'H'], [56, 'F'], [78, 'H'], [92, 'T'], [100, 'F'], [113, 'H'], [131, 'F'], [144, 'T'], [152, 'H'], [160, 'F'], [182, 'H'], [196, 'T'], [204, 'F'], [217, 'H'], [235, 'F'], [248, 'T']], {
+        H: [HAUL, TIDE, HAUL, TIDE, TIDE, HAUL, TIDE], T: [LASH, LASH, LASH, LASH, LASH],
+        F: [turn, turn, turn, SEED2, H ? DARK : BLOOM, turn, turn],
       }, { H: 1, F: 3 }, 12),
       closing: [[10, sapTide, 'Sap Tide'], [9, lash, 'Root Lash'], [9, ...turn]],
       next: lastAct,
@@ -644,15 +648,11 @@ const MORROWOAK = {
       onStart: () => { relabel(); f.onHp(0.05, lastOnce); },
       sets: [
         S([4, () => drawBloom(), 'Inhale']),
-        S([9, sapTide, 'Sap Tide']),
-        S([5, reach, "Hunger's Reach"]),
-        S([6, ...turn]),
-        S([8, lash, 'Root Lash']),
-        S([9, reach, "Hunger's Reach"]),
-        S([5, ...turn]),
-        S([8, sapTide, 'Sap Tide']),
-        S([8, lash, 'Root Lash']),
-        S([7, lastOnce, 'Fourfold Bloom']),
+        S([15, reach, "Hunger's Reach"]),
+        S([10, sapTide, 'Sap Tide']),
+        S([12, lash, 'Root Lash']),
+        S([11, ...turn]),
+        S([14, lastOnce, 'Fourfold Bloom']),
       ],
       closing: [[10, sapTide, 'Sap Tide'], [9, lash, 'Root Lash'], [10, lastBloom, 'Fourfold Bloom']],
       ramp: 0.08,

@@ -2247,7 +2247,7 @@ Object.assign(FightSim.prototype, {
   // add Posture from pid (o.full: all of it). A Break begins if it fills (and the boss is not casting).
   kenAdd(pid, n, o = {}) {
     const b = this.boss;
-    if (b.untargetable || this.state !== 'live') return;
+    if (b.untargetable || b.noStagger || this.state !== 'live') return;   // (noStagger: a script's window where nothing can stagger it, Skitterra on the ground)
     const r = KENSEI.add(this.kenPost(), o.full ? KENSEI.MAX : n, this.t, { secs: o.secs, keep: o.keep, by: pid, casting: this.kenCasting() });
     if (r === 'break') this.kenBreak(pid);
   },

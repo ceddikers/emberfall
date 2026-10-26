@@ -96,3 +96,37 @@ The move, in his own language ("he appears before he cuts"): an afterimage alway
 - Tuning: Normal's table 6% to 8% up; Hard `hardDmg` 1.40 to 1.45 (a follow-up: at 1.40 the move left Hard at 56%, level with Corvane; the finale should be set 3's hardest: 1.44 gave 48 of 90, 1.45 gave 48 of 90 (61 of 120 with seed 4000, 51%), 1.46 gave 40 of 90). Bots, 90 runs per row: Normal `GEAR=post3` 78 (87%) before, 79 (88%) after; Hard `GEAR=post4` 46 (51%) before, 50 (56%; 65 of 120 with seed 4000) after; the weak line-up (Runeguard, Grovekeeper, Shadowblade, Pyromancer) 18 of 30 before and 13 of 30 after (about 45%).
 - Tried and dropped: moving the wall dance's and the finale's echo later (cast 3.4 s and 5.2 s into the dance) to keep it clear of the Chorus ghosts: Hard fell to 34 of 90 for no tank gain.
 - Journal: a Trailing Cut page for all 23 heroes. Sound: `bm-caelum-trailing-cut` (not yet in `sfx-synth.js` or `sfx-map.js`).
+
+### Hard re-tune after the raid-host damage fix (2026-10-26)
+
+- `raid-host.js` now hands the bots the boss's own `hardDmg` (they judge telegraphs by it). Hard `post4` at 1.45 read 42/90 (47%); 1.42 gave 51/90 (57%); `hardDmg` 1.435 gives 47/90 (52%; 14, 16, 17), the lowest of set 3. Hard stays about 1.23x Normal on the shared moves. Normal `post3` unchanged: 79/90 (88%; 27, 26, 26).
+
+## De-cook pass (2026-10-26): room to damage between the moves
+
+Why: after four density passes the fight was a string of stacked moves (melee on the boss 67%, ranged 87%, the most melee cut-offs per minute after the Hydra). Brief: pairs are seasoning; melee at least about 80% on Normal (about 72% on Hard), ranged about 90%, a quiet window of 6 s or more about every 40 s in every act. The challenge has to come from how hard each answer is, not from how little room there is.
+
+What melee were losing (uptime harness, melee line-up, Normal): the Starwyrm's wall (26 s, no damage can land), Cinder Crown's ring (12 s, 168 to 250 out from the tank, which is exactly where a melee behind the boss stands: about 28 s a fight), the dances (about 35 s), Starfall, Horizon Cut lanes drawn far from where the party stands, and Glint's long dash.
+
+Cut (uses, not names; every cast name is still in the fight):
+- **Cinder Crown's ring** now burns 7 s (was 12) and runs 168 to 222 from the tank (was 250). It still marks where the Crown fell; it no longer eats the ground behind the boss.
+- **The wall** is 22 s (was 26): the Starfall inside it is gone (Constellation Fall, the Embers and the Crown stay; the wall's Crown is the tank's beat).
+- **Act I** (Normal 9 blocks, Hard 10, was 11): the pair of Trailing Cut and a tank Glint, the third dance on Normal (Hard keeps the Chorus dance) and the last Crown are cut; one hosted Trailing Cut left on Normal's Mirrored-Wake slot, Hard keeps its signature (Mirrored Wake with its Trailing Cut).
+- **Act II** (8 blocks, was 11): one Starfall with a Thrust, one Anchored Wake, one Crown and the Glint after the rim Horizon Cut are cut. Pairs left: the first Anchored Wake with its Trailing Cut, the tank Glint with the Thrust.
+- **Act III** (Normal 13, Hard 14, was 16): the Glint-and-Thrust, Starfall-and-Thrust and Echo-Thrust-Glint stacks, one Horizon Cut and one dance on Normal are cut; Grace Withdrawn's Starfall pair stays (the signature), the Trailing Cut that was its third part now stands alone in front of it (it keeps the tank's beat before the 13 s hold). Hard keeps its second Grace dance, Second Coil and Dark Ember.
+- **Act IV**: the Glint before the Thrust is cut; leads lengthened.
+- **Calms**: leads grew about 1 to 4 s on most blocks (a Normal script is 511 s, was 595; Hard 509 to 518 s; a named step now always comes within 16 s, a draw that would leave a longer silence after a long dance is refused), so a quiet window of 6 s or more follows about every third block.
+- **Aimed, not random**: the first Starfall tower falls near where he is held; a plain or star Horizon Cut's gap is cut across where he stands (Act II's rim lane runs along the rim at his side); Glint dashes at most 480 (was 700). The party that holds him is no longer taken across the room by every move; the rest still have to read where the lane or tower lies. Crossed Horizon Cut stays fully random (it is the hard one).
+- **Hard draws**: the act windows are now drawn again (up to twelve times) when none of their orders fits, so Hard never falls back to the written order (150 pulls: no fallbacks); caps 28 / 31 / 30 / 31 s for the tank. Normal's longest tank wait is 29 / 25 / 30 / 26 s, Hard's 24 / 25 / 29 / 30; with busters counted the healer's longest gap is 28 s or less (raidwides and flares alone: Normal 46 / 46 / 63 / 40, Act III is the loose one).
+
+Uptime (harness, 10 runs per line-up, bots at `post3` Normal and `post4` Hard):
+
+| | melee on boss | ranged on boss | quiet windows 6 s+ per run | moves overlapping |
+|---|---|---|---|---|
+| Normal before | 67% | 87% | 8.0 | 6% |
+| Normal after | 80% (Act I 87, II 72 with the wall, III 81, IV 80) | 90% | 25 (5 to 9 per act) | 5% |
+| Hard before | 69% | 90% | 4.3 | 5% |
+| Hard after | 76% | 90% | 12.8 over shorter pulls (3 or more per act) | 5% |
+
+Retune: health 5.2M to 5.4M on both (more time on him means faster kills; Hard clears at 534 s on average, Normal 517 s), `hardDmg` unchanged at 1.435. Bots, 90 runs: Normal `GEAR=post3` 79 (88%) before, 80 (89%) after; Hard `GEAR=post4` 47 (52%) before, 47 (52%) after (44 of 90 on an earlier run of the same script: 50% over 180).
+
+Not changed: the wall is still the largest dead stretch (damage cannot land, melee 72% in Act II); shortening it further would crowd the breath, the Embers and the coil.

@@ -414,6 +414,9 @@ const PROPS = {
       if (t !== null && t < bt) { bt = t; pr = q; }
     }
     if (!pr) return to;
+    // props standing close together (a walker needs 2 x rad between two): route round the whole group, not one prop at a time
+    const near = this.cluster(pr, list, rad);
+    if (near.length > 1) { const w = this.steerGroup(from, to, near, list, rad); if (w) return w; }
     const ring = [], m = rad + 8;
     if (pr.shape === 'rect') for (const c of this.corners(pr, m)) ring.push({ x: c[0], y: c[1] });
     else for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; ring.push({ x: pr.x + Math.cos(a) * (pr.r + m) / Math.cos(Math.PI / 12), y: pr.y + Math.sin(a) * (pr.r + m) / Math.cos(Math.PI / 12) }); }
@@ -440,6 +443,55 @@ const PROPS = {
     const nx = -dy / L, ny = dx / L, side = (pr.x - from.x) * nx + (pr.y - from.y) * ny > 0 ? -1 : 1;
     const ext = (pr.shape === 'rect' ? hypot2(pr.w, pr.h) / 2 : pr.r) + rad + 16;
     return { x: pr.x + nx * side * ext + dx / L * ext * 0.3, y: pr.y + ny * side * ext + dy / L * ext * 0.3 };
+  },
+  // the solid props that crowd in on `pr` (an edge-to-edge gap under a walker's width plus a little, chained)
+  cluster(pr, list, rad = 14) {
+    const size = q => (q.shape === 'rect' ? hypot2(q.w, q.h) / 2 : q.r), out = [pr];
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const q of list) if (q.solid && !out.includes(q) && out.some(c => hypot2(c.x - q.x, c.y - q.y) - size(c) - size(q) < 2 * rad + 14)) { out.push(q); grew = true; }
+    }
+    return out;
+  },
+  // steer() for a group of close props: waypoints round every prop of the group (and in the middle of any gap a walker can
+  // squeeze through), joined wherever the walk is clear of ALL solid props; null if there is no way. The waypoint picked is
+  // kept (from._wp) while it still leads somewhere, so a walker that has just come within reach of one does not turn back.
+  steerGroup(from, to, group, list, rad = 14) {
+    const size = q => (q.shape === 'rect' ? hypot2(q.w, q.h) / 2 : q.r), solid = list.filter(q => q.solid), ring = [], m = rad + 8;
+    for (const c of group) {
+      if (c.shape === 'rect') for (const k of this.corners(c, m)) ring.push({ x: k[0], y: k[1] });
+      else for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; ring.push({ x: c.x + Math.cos(a) * (c.r + m) / Math.cos(Math.PI / 12), y: c.y + Math.sin(a) * (c.r + m) / Math.cos(Math.PI / 12) }); }
+    }
+    for (let i = 0; i < group.length; i++) for (let j = i + 1; j < group.length; j++) {   // the middle of each gap a walker fits through
+      const A = group[i], B = group[j], d = hypot2(A.x - B.x, A.y - B.y), gap = d - size(A) - size(B);
+      if (gap >= 2 * (rad - 2) && gap < 2 * rad + 14) { const t = (size(A) + gap / 2) / d; ring.push({ x: A.x + (B.x - A.x) * t, y: A.y + (B.y - A.y) * t, gap: true }); }
+    }
+    const ok = ring.map(w => ARENA.sd(w.x, w.y) <= -12 && hypot2(w.x - from.x, w.y - from.y) > 10 && !solid.some(q => this.sd(q, w.x, w.y) < (w.gap ? rad - 2.5 : rad)));
+    const free = (a, b) => !solid.some(q => this.walkHit(q, a, b, rad) !== null);
+    const n = ring.length, dist = new Array(n).fill(Infinity), first = new Array(n).fill(-1), done = new Array(n).fill(false);
+    for (let i = 0; i < n; i++) if (ok[i] && free(from, ring[i])) { dist[i] = hypot2(ring[i].x - from.x, ring[i].y - from.y); first[i] = i; }
+    for (;;) {
+      let u = -1;
+      for (let i = 0; i < n; i++) if (!done[i] && dist[i] < Infinity && (u < 0 || dist[i] < dist[u])) u = i;
+      if (u < 0) break;
+      done[u] = true;
+      for (let v = 0; v < n; v++) if (!done[v] && ok[v] && free(ring[u], ring[v])) {
+        const d = dist[u] + hypot2(ring[v].x - ring[u].x, ring[v].y - ring[u].y);
+        if (d < dist[v]) { dist[v] = d; first[v] = first[u]; }
+      }
+    }
+    let best = -1, bs = Infinity;
+    for (let i = 0; i < n; i++) if (dist[i] < Infinity && free(ring[i], to)) { const s = dist[i] + hypot2(to.x - ring[i].x, to.y - ring[i].y); if (s < bs) { bs = s; best = i; } }
+    if (best < 0) return null;
+    let pick = ring[first[best]];
+    const keep = from._wp;
+    if (keep && keep.exp > (from._wpN || 0) && hypot2(keep.to.x - to.x, keep.to.y - to.y) < 60 && hypot2(keep.x - from.x, keep.y - from.y) > 6 && free(from, keep)) {
+      const k = ring.findIndex(w => hypot2(w.x - keep.x, w.y - keep.y) < 1);
+      if (k >= 0 && dist[k] < Infinity && dist[k] + hypot2(to.x - keep.x, to.y - keep.y) < bs + 40) pick = ring[k];
+    }
+    from._wpN = (from._wpN || 0) + 1;
+    from._wp = { x: pick.x, y: pick.y, to: { x: to.x, y: to.y }, exp: from._wpN + 60 };
+    return pick;
   },
   // compact form for the 'props' message: [id, kind, rect?, x, y, r | w, h, a, hp, maxHp, flags, state]
   pack(pr) {

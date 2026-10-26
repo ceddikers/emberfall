@@ -6,7 +6,7 @@
 //     which cleaver glints), Ladle Spin (out), Lid Slam (in), Tenderize (tankbuster), Meat Toss (spread; each puddle
 //     leaves a grease stain for good), Family Meal (stack), Larder Toss (casks land on the farthest two) and Gut Blast
 //     (hide behind a cask).
-//   Mains (80% → 50%): everything comes back in pairs. Butcher's Charge (bait it into brick), Chop Chop (Mince then
+//   Mains (80% → 50%): the tools come back, a few of them in pairs (the de-cook pass kept only the signature ones; see the plan). Butcher's Charge (bait it into brick), Chop Chop (Mince then
 //     Ladle/Lid), the order rail (Order Up!: plates served one after another, the order shown by how fast each gold rim
 //     fills), toss into meal, the charge with the casks already down, the rail again under Rolling Meatballs. Normal adds
 //     casks with a Mince behind them and a Family Meal with a Ladle Spin behind it. On Normal each course casts a little
@@ -38,7 +38,7 @@
 
 const GRUBNAK = {
   id: 'grubnak', name: 'Grubnak', title: 'The Ogre Chef',
-  hp: { normal: 3415000, hard: 4225000 },
+  hp: { normal: 3900000, hard: 4350000 },
   autoDmg: { normal: 1750, hard: 1750 },
   enrage: { normal: 592, hard: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
   enrageName: 'Last Call',
@@ -49,12 +49,22 @@ const GRUBNAK = {
   script(f) {
     const H = f.hard;
     const B = f.boss;
-    const dmg = {
+    const mkDmg = H => ({
       grease: H ? 9800 : 9800, buster: H ? 29900 : 29900, mince: H ? 14950 : 14950, ladle: H ? 14950 : 14950, spread: H ? 7900 : 8650, stack: H ? 23500 : 25300,
       puddle: H ? 2850 : 3000, tower: H ? 5750 : 5750, towerFail: H ? 16100 : 16100, stuffed: H ? 16100 : 16100, simmer: H ? 14950 : 14950, whisk: H ? 14950 : 14950, spice: H ? 14950 : 14950, boil: H ? 50150 : 46000,
       gorge: H ? 7450 : 7450, heat: H ? 7450 : 7450, orders: H ? 12650 : 12650, meatball: H ? 14950 : 14950, flop: H ? 14950 : 14950, cleaver: H ? 14950 : 14950, flambe: H ? 15250 : 16100,
       skewer: H ? 6100 : 5500, charge: H ? 15250 : 16100, cask: H ? 9800 : 10350, gut: H ? 17450 : 17250, stove: H ? 4900 : 5200, burn: H ? 4350 : 4600, slam: H ? 5450 : 5750, hook: H ? 7650 : 8050,
-    };
+    });
+    // The challenge is in how hard a missed answer hits, not in how little room there is between moves. Normal's numbers are scaled by
+    // NORMAL_UP; Hard's by HARD_UP and never under HARD_MIN x Normal's on a shared move. Skewer (the light tank move) is left alone.
+    const NORMAL_UP = 1.0, HARD_UP = 1.12, HARD_MIN = 1.1;
+    const RAID = ['grease', 'heat', 'orders', 'gorge', 'boil', 'gut'], RAID_UP = 1;   // (the hits nobody can dodge, which the healer answers)
+    const dmgN = mkDmg(false), dmg = mkDmg(H);
+    for (const k of Object.keys(dmg)) {
+      if (k === 'skewer') continue;
+      const n = Math.round(dmgN[k] * NORMAL_UP * (RAID.includes(k) ? RAID_UP : 1));
+      dmg[k] = H ? Math.max(Math.round(dmg[k] * HARD_UP), Math.ceil(n * HARD_MIN)) : n;
+    }
     const HW = ARENA.hw, HH = ARENA.hh;
     const LL = { ladle: 'Ladle Spin', lid: 'Lid Slam' };
     const MINCE = H ? 'Double Chop' : 'Mince';
@@ -348,6 +358,8 @@ const GRUBNAK = {
       for (let k = 0; k < set.length; k++) { if (k) c += set[k][0]; if (set[k][2] === 'Tenderize' || set[k][2] === "Butcher's Charge") { floor = Math.max(floor, 8.5 - c); break; } }
       return [[Math.max(floor, set[0][0] - pv.sk), ...set[0].slice(1)], ...set.slice(1)];
     });
+    // Normal: the long gaps between a course's calls are stretched (k) so a quieter course still fills its time
+    const air = (k, sets) => (H ? sets : sets.filter(Boolean).map(set => set.map(st => (st && st[0] >= 8 ? [st[0] * k, ...st.slice(1)] : st))));
     const perms = a => (a.length < 2 ? [a] : a.flatMap((x, i) => perms([...a.slice(0, i), ...a.slice(i + 1)]).map(p => [x, ...p])));
     // Hard: the middle sets of an act come in a new order each pull (the head and tail stay put), so the fight is read, not memorised.
     // mid: [key, set] pairs; ok(keys) can refuse an order (two rails side by side, a set that has to come before another).
@@ -421,7 +433,7 @@ const GRUBNAK = {
             const at = ARENA.clamp({ x: m.shape.x, y: m.shape.y }, 120);
             if (hot) at.y = Math.max(at.y, -60);   // not into the fire
             for (let i = 0; i < 3; i++) for (const o of f.props) {   // not on top of another cask
-              const dd = Math.hypot(o.x - at.x, o.y - at.y), min = (o.r || 40) + 30 + 26;
+              const dd = Math.hypot(o.x - at.x, o.y - at.y), min = (o.r || 40) + 30 + 32;
               if (dd >= min) continue;
               if (dd < 1) at.x += min; else { const k = (min - dd) / dd; at.x += (at.x - o.x) * k; at.y += (at.y - o.y) * k; }
               ARENA.clamp(at, 120);
@@ -612,20 +624,20 @@ const GRUBNAK = {
 
     // --- the service ----------------------------------------------------------------------------
     const appetiser = from => {
-      const tossMeal = S([12, () => meatToss(), 'Meat Toss'], [H ? 6.2 : 6, skewer, 'Skewer'], [H ? 5.8 : 6, () => familyMeal(), 'Family Meal']);
+      const tossMeal = S([12, () => meatToss(), 'Meat Toss'], [H ? 6.2 : 7, skewer, 'Skewer'], [H ? 5.8 : 8, () => familyMeal(), 'Family Meal']);
       return f.course({
         until: 0.8,
         seam: H ? 8 : 14,   // (Normal: the Gut Blast that goes with the casks is never cut off by the gate)
         // (Hard shuffles the middle of the course; Normal's Lid Slam carries a cleaver)
         sets: mix(
-          H ? [S([3, drains, 'Clogged Drains'], [3, grease, 'Grease Fire'], [11, tenderize, 'Tenderize']), tossMeal]
-            : [S([4, grease, 'Grease Fire'], [5.5, skewer, 'Skewer'], [3.9, () => mince(), MINCE], [9, () => ladleOrLid(ct(4), 'ladle'), 'Ladle Spin'], [8, () => ladleOrLid(ct(4), 'lid'), 'Lid Slam']), S([9, tenderize, 'Tenderize'])],
+          H ? [S([3, drains, 'Clogged Drains'], [6, grease, 'Grease Fire'], [11.5, tenderize, 'Tenderize']), tossMeal]
+            : [S([4, grease, 'Grease Fire'], [7, () => mince(), MINCE], [8, skewer, 'Skewer'], [9, () => ladleOrLid(ct(4), 'ladle'), 'Ladle Spin'], [10, () => ladleOrLid(ct(4), 'lid'), 'Lid Slam']), S([11, tenderize, 'Tenderize'])],
           [
-            H && ['soup', S([10, () => mince(), MINCE], [ct(4.5) + 0.1, tenderize, 'Tenderize'], [12 - ct(4.5) - 0.1, soupsOn, 'Ladle Spin'])],
+            H && ['soup', S([10, () => mince(), MINCE], [ct(4.5) + 0.1, tenderize, 'Tenderize'], [13 - ct(4.5) - 0.1, soupsOn, 'Ladle Spin'])],
             !H && ['toss', tossMeal],
-            ['larder', S([12, larderToss, 'Larder Toss'], [H ? 5 : 5.2, skewer, 'Skewer'], [H ? 5 : 4.8, gutBlast, 'Gut Blast'])],
+            ['larder', S([12, larderToss, 'Larder Toss'], [H ? 5 : 6.5, skewer, 'Skewer'], [H ? 5 : 5.5, gutBlast, 'Gut Blast'])],
             // (Normal: one more round of the plain tools before the Mains, a little quicker each)
-            !H && ['soup', S([8, soupsOn, 'Ladle Spin'], [5.4, tenderize, 'Tenderize'], [4.7, () => mince(), 'Mince'])],
+            !H && ['soup', S([11, minceBuster, 'Mince'])],
           ],
           [S([H ? 11 : 9, grease, 'Grease Fire'])], null, H ? 50 : 0),
         closing: [[9, larderToss, 'Larder Toss'], [10, gutBlast, 'Gut Blast'], [10, grease, 'Grease Fire']],
@@ -633,25 +645,28 @@ const GRUBNAK = {
       }, from);
     };
 
+    const mGrease = ['grease', S([12, grease, 'Grease Fire'], H && [ct(4) + 2.5, tenderize, 'Tenderize'], !H && [5, skewer, 'Skewer'])];
     const mains = from => f.course({
       until: 0.5,
+      seam: 13,   // (an Order Up! rail is never cut by the gate)
       onStart: quicker(0.92),
       // (Hard: the middle of the course comes in a new order each pull; the two rails never sit side by side)
-      sets: mix(
-        [S([5, H ? butcherCharge : chargeToss, "Butcher's Charge"]), S([13, () => chopChop(), 'Chop Chop']), S([13, tenderize, 'Tenderize'])],
+      sets: air(1.15, mix(
+        [S([5, butcherCharge, "Butcher's Charge"]), ...(H ? [S([13, () => chopChop(), 'Chop Chop']), S([13, tenderize, 'Tenderize'])] : [S([13, tenderize, 'Tenderize']), S([7.5, skewer, 'Skewer']), S([8.5, () => chopChop(), 'Chop Chop'])])],
         [
-          ['rail', S(!H && [11, skewer, 'Skewer'], [H ? 12 : 8.5, H ? orderUp : orderCask, 'Order Up!'])],
-          ['toss', sk(S([15, tossThenMeal, 'Meat Toss'], !H && [10, skewer, 'Skewer']), 8.7)],
-          // (Normal: the casks come down with a Mince right behind them, then the charge with the casks already down)
-          ['larder', S(H && [10, () => bellyFlop(), 'Belly Flop'], H ? [12, larderToss, 'Larder Toss'] : [5, larderChop, 'Larder Toss'], [8, butcherCharge, "Butcher's Charge"], [10, gutBlast, 'Gut Blast'], !H && [5.8, skewer, 'Skewer'])],
+          
+          H && ['toss', sk(S([12.5, () => meatToss(), 'Meat Toss']), 8.7)],
+          !H && mGrease,
+          // (Normal: the casks come down, then the charge with the casks already down)
+          ['larder', S([H ? 12 : 10, larderToss, 'Larder Toss'], [8, butcherCharge, "Butcher's Charge"], H && [10, gutBlast, 'Gut Blast'], !H && [9, skewer, 'Skewer'])],
           // (Normal: a Family Meal with a Ladle Spin behind it, the stack made out past his reach)
-          !H && ['meal', S([5.2, mealLadle, 'Family Meal'])],
-          ['grease', S([12, grease, 'Grease Fire'], H && [ct(4) + 0.2, tenderize, 'Tenderize'], !H && [5, skewer, 'Skewer'])],
-          ['rail', S([H ? 12 : 8.5, orderUp, 'Order Up!'], [6, () => meatballs(LANES.rail), 'Rolling Meatballs'], H && [2.5, cleaverToss, 'Cleaver Toss'])],
+          
+          H && mGrease,
+          ['rail', S([H ? 12 : 10, orderUp, 'Order Up!'], H && [6, () => meatballs(LANES.rail), 'Rolling Meatballs'])],
         ],
-        [S([H ? 11.5 : 14, H ? tenderize : minceBuster, H ? 'Tenderize' : 'Mince']), sk(S([10, () => chopChop(), 'Chop Chop'], !H && [8.6, skewer, 'Skewer']), 7.8), S([H ? 12 : 5.4, tossThenMeal, 'Meat Toss'])],
-        keys => keys.every((k, i) => !(k === 'rail' && ['rail', 'larder', 'grease'].includes(keys[i + 1]))), 30),
-      closing: [[10, orderUp, 'Order Up!'], [6, () => meatballs(LANES.rail), 'Rolling Meatballs'], [16, () => chopChop(), 'Chop Chop'], [10, grease, 'Grease Fire']],
+        [S([H ? 11.5 : 12, tenderize, 'Tenderize']), ...(H ? [sk(S([10, () => chopChop(), 'Chop Chop']), 7.8), S([12, tossThenMeal, 'Meat Toss'])] : [S([9, tossThenMeal, 'Meat Toss']), S([12.5, skewer, 'Skewer'])])],
+        keys => keys.every((k, i) => !(k === 'rail' && ['rail', 'larder', 'grease'].includes(keys[i + 1]))), 30)),
+      closing: [[14, orderUp, 'Order Up!'], [6, () => meatballs(LANES.rail), 'Rolling Meatballs'], [16, () => chopChop(), 'Chop Chop'], [10, grease, 'Grease Fire']],
       next: flare,
     }, from);
 
@@ -662,41 +677,44 @@ const GRUBNAK = {
         // (the cleaver is called once the Flambé's cast is done, so the tank has a beat in the burning room; Normal has a second one at the end,
         // Hard's Tenderized rule leaves room for one)
         S([8, busterWith(() => flambe({ dir: 1, tall: true, first: 0 }), ct(5) + 0.1), 'Flambé']),
-        S([12, potToMiddle, 'Stockpot'], [2.5, () => simmerCast(true), 'Simmer'], [7.2, () => simmerCast(false), 'Simmer']),
+        S([H ? 12 : 15, potToMiddle, 'Stockpot'], [2.5, () => simmerCast(true), 'Simmer'], [7.2, () => simmerCast(false), 'Simmer']),
         H ? S([8.4, skewer, 'Skewer'], [3.6]) : S([6, tenderize, 'Tenderize'], [4]),
       ],
       next: secondSitting,
     }, from);
 
     // (Normal: the long gaps between the Second Sitting's calls close up a little; the Dinner Rush's own beats are fixed)
-    const closeUp = sets => (H ? sets : sets.filter(Boolean).map(set => set.map(st => (st && st[0] >= 8 ? [st[0] * 0.93, ...st.slice(1)] : st))));
+    const closeUp = sets => air(1.2, sets);
     // the Second Sitting's sets by name. Normal runs them in one order. Hard runs them in blocks of two that trade places inside the block
     // (so a pull never opens the same way and the fight is read, not memorised), each block built so the tank and the healer always have a job
     // coming: Mise en Place comes two blocks before Service!, and the cleaver (30 s of Tenderized) never lands twice inside the debuff.
     const SS = {
-      spice: sk(S([10, () => { spiceRack(SPICE.a); f.afterKeep(ct(6) + 0.3, () => ladleOrLid(ct(3))); }, 'Spice Rack'], !H && [9.8, skewer, 'Skewer']), 8.3),
-      larder: sk(S([H ? 14 : 4.5, H ? larderToss : caskBoil, 'Larder Toss'], H && [6, boilOver, 'Boil Over']), 6.6),
-      busters: S([10, () => { tenderize(); if (H) meatHook(); }, 'Tenderize'], [8, gutBlast, 'Gut Blast'], !H && [5.6, skewer, 'Skewer']),
+      spice: sk(S(!H && [10, skewer, 'Skewer'], [H ? 10 : 9, () => spiceRack(SPICE.a), 'Spice Rack']), 8.3),
+      larder: sk(S([H ? 14 : 8, larderToss, 'Larder Toss'], !H && [5.5, skewer, 'Skewer'], [H ? 9.5 : 8.5, boilOver, 'Boil Over']), 6.6),
+      busters: S([10, () => { tenderize(); if (H) meatHook(); }, 'Tenderize'], !H && [8, grease, 'Grease Fire'], !H && [8, skewer, 'Skewer']),
       mise: H && sk(S([8, greaseWith(mise, 3.0), 'Mise en Place']), 7.2),
       // the Dinner Rush: three beats at the stove, the plates coming up nearest him first (Hard: the party sets them down;
       // the cast names come with each beat)
-      rush: sk(S([H ? 10 : 8.5, dinnerRush, 'Dinner Rush'], [f.ct(4), () => f.cast(MINCE, RUSH_FIRST, 'mince', { side: 'left', second: 'right' }), MINCE],
-        [RUSH_FIRST + 0.05, () => f.cast('Lid Slam', RUSH_BEAT - 0.1, 'lid'), 'Lid Slam'], [RUSH_BEAT, () => { f.cast('Ladle Spin', RUSH_BEAT - 0.1, 'ladle'); f.anim('ladle', RUSH_BEAT); }, 'Ladle Spin']), 5.5),
+      rush: S([H ? 10 : 8.5, dinnerRush, 'Dinner Rush'], [f.ct(4), () => f.cast(MINCE, RUSH_FIRST, 'mince', { side: 'left', second: 'right' }), MINCE],
+        [RUSH_FIRST + 0.05, () => f.cast('Lid Slam', RUSH_BEAT - 0.1, 'lid'), 'Lid Slam'], [RUSH_BEAT, () => { f.cast('Ladle Spin', RUSH_BEAT - 0.1, 'ladle'); f.anim('ladle', RUSH_BEAT); }, 'Ladle Spin']),
+      // (its own set, so the gate never ends the act with plates still on the floor: the seam is after the last plate)
+      rushT: sk(S(!H && [5.8, skewer, 'Skewer'], !H && [7.5, grease, 'Grease Fire']), 5.5),
       charge: S([H ? 13 : 10, butcherCharge, "Butcher's Charge"]),
       grease: S([H ? 12 : 11, grease, 'Grease Fire'], H && [ct(4) + 0.2, tenderize, 'Tenderize'], !H && [5.2, skewer, 'Skewer']),
       service: H && S([8, service, 'Service!']),
-      whisk: sk(S([H ? 8.8 : 6.8, () => whisk(-1, 0.9), 'Whisk'], [3, () => meatballs(LANES.b), 'Rolling Meatballs']), 8.5),
-      meal: sk(S([10, () => { familyMeal(); f.afterKeep(1.5, () => spiceRack(SPICE.b, 2)); }, 'Family Meal'], H && [7.5, grease, 'Grease Fire'], !H && [8, skewer, 'Skewer']), H ? 9 : 7.5),
-      chop: S([H ? 14 : 5.5, () => (H ? mince() : chopChop()), H ? 'Double Chop' : 'Chop Chop'], H && [9, () => bellyFlop(), 'Belly Flop'], H && [ct(4) + 0.2, tenderize, 'Tenderize']),
+      whisk: sk(S([H ? 8.8 : 9, () => whisk(-1, 0.9), 'Whisk']), 8.5),
+      meal: sk(S([10, () => familyMeal(), 'Family Meal'], H && [7.5, grease, 'Grease Fire'], !H && [8, skewer, 'Skewer']), H ? 9 : 7.5),
+      chop: S([H ? 14 : 8, () => (H ? mince() : chopChop()), H ? 'Double Chop' : 'Chop Chop'], H && [10, () => bellyFlop(), 'Belly Flop'], H && [ct(4) + 2.8, tenderize, 'Tenderize']),
     };
-    const ssFirst = S([H ? 4.6 : 4, () => (H ? whisk(1, 0.3) : whiskBoil()), 'Whisk']), ssLast = S([10, tenderize, 'Tenderize']);
-    const ssSets = order => fit([ssFirst, ...order.map(k => SS[k]).filter(Boolean), ssLast]);
+    const ssFirst = S([H ? 4.6 : 5, () => whisk(1, 0.3), 'Whisk']), ssLast = S([10, tenderize, 'Tenderize']);
+    const ssSets = order => fit([ssFirst, ...order.flatMap(k => (k === 'rush' ? [SS.rush, SS.rushT] : [SS[k]])).filter(Boolean), ssLast]);
     // (Hard: refused any order that leaves the tank more than 45 s between cleavers and charges)
     const secondOrder = () => (H
-      ? bestOrder(Array.from({ length: 120 }, () => [['spice', 'grease'], ['larder', 'busters'], ['mise', 'rush'], ['charge', 'chop'], ['whisk', 'meal'], ['service']].flatMap(b => f.shuffle(b))), ssSets, 45, 27)
-      : ['spice', 'larder', 'busters', 'rush', 'charge', 'grease', 'whisk', 'meal', 'chop']);
+      ? bestOrder(Array.from({ length: 120 }, () => [['spice', 'grease'], ['larder', 'busters'], ['mise', 'rush'], ['charge', 'chop'], ['meal'], ['service']].flatMap(b => f.shuffle(b))), ssSets, 45, 27)
+      : ['spice', 'larder', 'busters', 'rush', 'charge', 'meal', 'chop']);
     const secondSitting = from => f.course({
       until: 0.18,
+      seam: 20,   // (a long set such as the Dinner Rush is never cut half-way by the gate)
       onStart: quicker(0.87),
       sets: closeUp(ssSets(secondOrder())),
       closing: [[10, () => whisk(1, 0.3), 'Whisk'], [3, () => meatballs(LANES.b), 'Rolling Meatballs'], [14, () => chopChop(), 'Chop Chop'], [10, grease, 'Grease Fire']],
@@ -713,15 +731,16 @@ const GRUBNAK = {
           // each beat lands just as the next is called: the fire passes, then the toss, the balls, the chop...; Last Orders follows the
           // Whisk straight on (no quiet between), then Gorge
           S([ct(4.5) + 0.2, () => flambe({ dir: -1, tall: false, first: 1 }), 'Flambé'],
-            [7 * k, () => meatToss(), 'Meat Toss'],
-            [2.5 * k, () => meatballs(LANES.c), 'Rolling Meatballs'],
-            H && [1.5, cleaverToss, 'Cleaver Toss'],
-            [H ? 2.5 : 3.4, A[0], A[1]],
-            [3.5 * k, B[0], B[1]],
-            [4 * k, () => spiceRack(SPICE.c), 'Spice Rack'],
-            [4 * k, () => familyMeal(), 'Family Meal'],
-            [4 * k, () => whisk(H ? -1 : 1, 0), 'Whisk'],
-            [11.5, lastOrders, 'Last Orders']),
+            [H ? 8 : 10, skewer, 'Skewer'],
+            [H ? 7 : 8, () => meatToss(), 'Meat Toss'],
+            !H && [2.5 * k, () => meatballs(LANES.c), 'Rolling Meatballs'],
+            H && [5, cleaverToss, 'Cleaver Toss'],
+            H && [6, A[0], A[1]],
+            [H ? 7 : 11, B[0], B[1]],
+            [H ? 6.5 : 7.5, skewer, 'Skewer'],
+            [H ? 6 : 8, () => familyMeal(), 'Family Meal'],
+            H && [7, () => whisk(-1, 0), 'Whisk'],
+            [H ? 11.5 : 10, lastOrders, 'Last Orders']),
         ],
         closing: H ? [[6.5, skewer, 'Skewer'], [5.5, gorge, 'Gorge']] : [[5.5, skewer, 'Skewer'], [9.5, gorge, 'Gorge']],
         ramp: 0,   // Gorge brings its own

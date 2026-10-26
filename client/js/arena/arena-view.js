@@ -1571,6 +1571,21 @@ const ArenaView = {
         ctx.restore();
       }
     }
+    // the way she turns: a curved arrow from the leg about to strike to the one after it (on both opposite legs)
+    if (first >= 0 && first + 1 < lg.n) {
+      const an = lg.a0 + lg.dir * first * Math.PI / 4, ae = an + lg.dir * Math.PI / 4, R = 178, dir = lg.dir;
+      for (const o of [0, Math.PI]) {
+        ctx.save(); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(x, y, R, an + o, ae + o, dir < 0);
+        ctx.strokeStyle = rgba('#ff4a8a', 0.3); ctx.lineWidth = 10; ctx.stroke();
+        ctx.setLineDash([14, 8]); ctx.lineDashOffset = -dir * t * 30;
+        ctx.strokeStyle = rgba('#ffe6f4', 0.95); ctx.lineWidth = 3.5; ctx.stroke(); ctx.setLineDash([]);
+        const tx = x + Math.cos(ae + o) * R, ty = y + Math.sin(ae + o) * R, ux = -Math.sin(ae + o) * dir, uy = Math.cos(ae + o) * dir, nx = Math.cos(ae + o), ny = Math.sin(ae + o);
+        ctx.beginPath(); ctx.moveTo(tx + ux * 16, ty + uy * 16); ctx.lineTo(tx - ux * 4 + nx * 11, ty - uy * 4 + ny * 11); ctx.lineTo(tx - ux * 4 - nx * 11, ty - uy * 4 - ny * 11); ctx.closePath();
+        ctx.fillStyle = rgba('#ffe6f4', 0.95); ctx.fill(); ctx.strokeStyle = rgba('#7a1244', 0.8); ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.restore();
+      }
+    }
   },
 
   // eggs on the floor just before Brood hatches
@@ -2529,6 +2544,9 @@ const ArenaView = {
     const lights = [];
     for (const pr of room.props) if (pr.kind === 'brazier' && pr.state === 1) lights.push({ x: pr.x, y: pr.y, r: lo.r + 30 });
     for (const L of lo.extra || []) { const e = L.id != null && v.entById ? v.entById(L.id) : null; lights.push({ x: e ? e.x : L.x, y: e ? e.y : L.y, r: lo.r + 30 }); }
+    // (Skitterra on the ground in the Dark Between: a pool of light round where she came down, so she can be found and hit)
+    const gd = room.ev.grounded;
+    if (gd && t >= gd.start && t < gd.end + 0.7) lights.push({ x: gd.x, y: gd.y, r: 250, inner: 120, k: clamp((t - gd.start) / 0.2, 0, 1) * clamp((gd.end + 0.7 - t) / 0.7, 0, 1) });
     // the dark, with a soft edge just outside each ring
     const cw = Math.max(1, Math.ceil(v.W * v.DPR)), ch = Math.max(1, Math.ceil(v.H * v.DPR));
     let c = this.loCv;
@@ -2540,13 +2558,13 @@ const ArenaView = {
     n.setTransform(s, 0, 0, s, -v.cam.x * s, -v.cam.y * s);
     n.globalCompositeOperation = 'destination-out';
     for (const L of lights) {
-      const g = n.createRadialGradient(L.x, L.y, lo.r, L.x, L.y, L.r);   // fully lit right out to the ring's edge
-      g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      const g = n.createRadialGradient(L.x, L.y, L.inner ?? lo.r, L.x, L.y, L.r);   // fully lit right out to the ring's edge
+      g.addColorStop(0, `rgba(0,0,0,${L.k ?? 1})`); g.addColorStop(1, 'rgba(0,0,0,0)');
       n.fillStyle = g; n.beginPath(); n.arc(L.x, L.y, L.r, 0, TAU); n.fill();
     }
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(c, 0, 0); ctx.restore();
     // (no painted edge: the light itself is the rule, lit fully out to lo.r, then the dark closes in)
-    for (const L of lights) glow(ctx, L.x, L.y, lo.r, '#3aff7a', 0.12 * k);
+    for (const L of lights) if (!L.inner) glow(ctx, L.x, L.y, lo.r, '#3aff7a', 0.12 * k);
     void t;
   },
   // Ceiling Ambush (Skitterra, Hard): only her shadow crosses the floor, gathering speed, until it stops and she drops

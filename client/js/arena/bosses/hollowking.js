@@ -37,15 +37,17 @@
 // Hard draws its dances fresh each pull (f.rng): the Charge Sheet's order, the Funeral March's open lane, who is Pardoned,
 // who is bound in Gravebind, and which grave is whose. The Echo replays and the Judgement's swings always land on the beat
 // (the order may be new; the timing never is).
-// Work for the tank and the healer (2026-10-26): every act is laid out in units (see `lay` in the hearing). Some hand the tank a job (a
-// Sweep to point, a Grave Cleave to take; the Crown of Graves, the Doom, the Lids and the Charge Sheet each have one riding with them) and
-// most of those carry a Knell or a Decree for the healer; the rest are the plain calls. Normal runs them in the authored order. Hard draws
-// the order of an act's units anew each pull, but weaves the two kinds one for one, so no order leaves either role idle for long. Not
-// drawn: the Verdict (Burial Rites runs to a fixed clock, and Hard's Cleaves must stay a cooldown apart), the Tithe and what follows it, the Court's casts
-// (the Knell, the stack and the Marks need the healer's time) and the Long Night (the order of the relay is the lesson). Drawn instead: which coffin
-// of each side wakes when. Hard's Cleave is more than the tank's health, so it can
-// only come as often as his cooldowns allow (about one a minute and a half), so Hard's tank has fewer jobs than Normal's. Every swing he makes once
-// the knights have risen is answered by an Echo, in the closing passes too (Burial Rites' Crown is the one he keeps to himself).
+// Work for the tank and the healer, and room to damage (2026-10-26): every act is laid out in units (see `lay` in the hearing). A unit is a call
+// and what rides with it; most are a single move with room after it, and two are stacked only at the fight's signature moments (a swing and the
+// Echo that answers it, the Lids and the Decree, the Tithe and the Dirge, the Rites and the Writ, the Charge Sheet and Judgement). Tank jobs
+// (a Sweep to point, a Cleave or a Rebuke to take) and healer beats (a Knell, a Decree, the stack) are flagged on the units. Normal runs the
+// units in the authored order. Hard draws the order of an act's units anew each pull, weaves the two kinds one for one and keeps a draw only
+// when no stretch goes about 28 s without a tank job or a healer beat. Not drawn: the Verdict (Burial Rites runs to a fixed clock, and Hard's
+// Cleaves must stay a cooldown apart), the Tithe and what follows it, the Court's casts (the Knell, the stack and the Marks need the healer's
+// time) and the Long Night (the order of the relay is the lesson). Drawn instead: which coffin of each side wakes when. Hard's Cleave is more
+// than the tank's health, so it can only come as often as his cooldowns allow (about one a minute and a half), so Hard's tank has fewer
+// jobs than Normal's. Every swing he makes once the knights have risen is answered by an Echo, in the closing passes too (Burial Rites' Crown is
+// the one he keeps to himself).
 // A move of the tank's own (2026-10-26, both difficulties, once the knights have risen): Sceptre Rebuke. He drives the sceptre through his
 // tank (a narrow lance; the tank takes it, anyone in the line behind takes most of it), a knight takes it in, and a beat after the blow
 // answers it from the wall: the same lance, aimed at the place the tank stood when it landed. Point him at bare wall, take it, and lead the
@@ -54,7 +56,7 @@
 
 const HOLLOWKING = {
   id: 'hollowking', name: 'The Hollow King', title: 'Lord of the Barrow',
-  hp: { normal: 3560000, hard: 4345000 },
+  hp: { normal: 3700000, hard: 4345000 },
   autoDmg: { normal: 1650, hard: 1800 },
   enrage: { normal: 622, hard: 632 },   // the cast starts here and lands 8 s later (10:30 / 10:40)
   enrageName: 'Moonset',
@@ -77,7 +79,7 @@ const HOLLOWKING = {
       marks: H ? 12800 : 9000, bell: H ? 5650 : 4500, bellFail: H ? 2500 : 2000, march: H ? 17500 : 14000, bind: H ? 20000 : 16000,
       throw: H ? 17500 : 14000, summons: H ? 21250 : 11000, lid: H ? 15000 : 12000, decree: H ? 21250 : 15000, masonry: H ? 15000 : 12000, writ: H ? 11250 : 9000, scorch: H ? 5000 : 4000, unburied: H ? 18750 : 15000, grave: H ? 12500 : 10000, restless: H ? 3150 : 2500, coffinHp: 7000, skelHp: 9000, skelBite: H ? 1650 : 1300, wardenHp: H ? 58000 : 48000, wardenBite: H ? 5200 : 3800, rebuke: H ? 14000 : 12000, rebukeEcho: H ? 12500 : 10500,
     };
-    const HARD_HIT = 1.14;   // (Hard's every blow, one factor: the bots dodge well since the prop-steering fix, so Hard is retuned here, not by changing a dance)
+    const HARD_HIT = 1.34;   // (Hard's every blow, one factor: the bots dodge well since the prop-steering fix, so Hard is retuned here, not by changing a dance)
     if (H) for (const k in dmg) if (!/Hp$/.test(k)) dmg[k] = Math.round(dmg[k] * HARD_HIT);
     const S = (...steps) => steps.filter(Boolean);
     const GAZE_ARC = 1.2;     // you're looking at him if he's within this angle of where you face (~70° either side)
@@ -666,38 +668,56 @@ const HOLLOWKING = {
     // --- the hearing ------------------------------------------------------------------------------------
     // Every act is laid out in units (a set each: a call and what rides with it). On Hard the units of an act are drawn in a fresh order each
     // pull, so it is read and not memorised. They are not drawn loose: the units that hand the tank a job (a Sweep to point, a Grave Cleave
-    // to take) and the others are woven one for one, so in any order the tank and the healer are never more than a unit or two from work.
-    const shuf = a => (H ? f.shuffle(a) : a);
+    // to take; flag 't') and the others are woven one for one, and a draw is kept only when no stretch of units longer than about 24 s goes without a job for the tank
+    // or a beat for the healer (flag 'h'), so in any order neither is far from work.
     const weave = (T, O) => { const out = [], first = O.length > T.length ? O : T, second = first === O ? T : O; for (let i = 0; i < first.length; i++) { out.push(first[i]); if (second[i]) out.push(second[i]); } return out; };
-    const lay = (head, T, O, tail) => [...head, ...weave(shuf(T.filter(Boolean)), shuf(O.filter(Boolean))), ...tail];
-    // a job for the tank besides the Sweeps the knights answer. Hard's Cleave is more than the tank's health, so on Hard it can only come as often as his
-    // cooldowns allow: there the extra jobs are Sweeps in the Summons (the knights are not there yet) and the units carry no extra job after that.
-    // Every swing he makes once the knights have risen is answered by an Echo, here and in the closing passes.
-    const tb = dt => H ? [dt, () => swing('sweep'), 'Sceptre Sweep'] : [dt, graveCleave, 'Grave Cleave'];
-    const nc = dt => (H ? [] : [[dt, graveCleave, 'Grave Cleave']]);
+    const fl = (k, u) => { u.fl = k; return u; };
+    // (seconds of units in a row with no job for the tank / no beat for the healer; a unit's length is its steps' leads)
+    const gap = (seq, k) => { let run = 0, worst = 0; for (const u of seq) { if (u.fl && u.fl.includes(k)) run = 0; else { run += u.reduce((x, st) => x + st[0], 0); worst = Math.max(worst, run); } } return worst; };
+    const lay = (head, T, O, tail) => {
+      const Tl = T.filter(Boolean), Ol = O.filter(Boolean);
+      if (!H) return [...head, ...weave(Tl, Ol), ...tail];
+      let best = null, bw = 1e9;
+      for (let i = 0; i < 300 && bw > 24; i++) {
+        const seq = [...head, ...weave(f.shuffle(Tl), f.shuffle(Ol)), ...tail], w = Math.max(gap(seq, 't'), gap(seq, 'h'));
+        if (w < bw) { bw = w; best = seq; }
+      }
+      return best;
+    };
+    // De-cook pass (2026-10-26): a move stands on its own with room after it; two moves are stacked only at the fight's signature moments
+    // (a call and the answer it gets, the Lids and the Decree, the Rites and the Writ, the Tithe and the Dirge, the Charge Sheet and
+    // Judgement). Every cast keeps its place in the order of each act; the calms between are what changed.
+    // Every swing he makes once the knights have risen is answered by an Echo, here and in the closing passes too.
     const lightsUnit = lead => S([lead, () => lightsOut(), 'Lights Out']);
-    const rebukeUnit = lead => S([lead, rebuke, 'Sceptre Rebuke']);
-    const lidsUnit = (lead, a, b) => S([lead, () => coffinLids(a, b), 'Coffin Lids'], ...nc(4), [H ? 8 : 4, decree, 'Royal Decree']);
+    const rebukeUnit = lead => fl('th', S([lead, rebuke, 'Sceptre Rebuke']));
+    const lidsUnit = (lead, a, b) => fl('h', S([lead, () => coffinLids(a, b), 'Coffin Lids'], [H ? 7 : 7.5, decree, 'Royal Decree']));
+    const sweepUnit = (lead, combo) => fl('t', S([lead, () => swing('sweep', false, false, combo), 'Sceptre Sweep']));
+    const sweepEcho = (lead, withKnell) => fl(withKnell ? 'th' : 't', S([lead, () => swing('sweep'), 'Sceptre Sweep'], [5, () => echo(1.5), 'Echo Knights'], ...(withKnell ? [[3.5, knell, 'Barrow Knell']] : []), [2]));
+    const cleaveUnit = lead => fl('th', S([lead, graveCleave, 'Grave Cleave']));
+    const knellUnit = lead => fl('h', S([lead, knell, 'Barrow Knell']));
     const L = n => (H ? n - 1 : n);   // (Hard's calms between the units are a second shorter)
     const cleaveBind = () => { graveCleave(); if (H) gravebind(); };
 
-    // I. The Summons: his calls, one at a time (a Sweep or a Cleave for the tank in every other call, a Knell now and then for the healer)
+    // I. The Summons: his calls, one at a time, each with room after it (a Sweep or a Cleave for the tank every other call, a Knell for the healer at each end)
     const summons = at => f.course({
       until: 0.8,
       sets: lay(
-        [S([5, knell, 'Barrow Knell'])],
+        [fl('h', S([5, knell, 'Barrow Knell']))],
         [
-          S([L(9), knell, 'Barrow Knell'], [5, () => swing('sweep', false, false, true), 'Sceptre Sweep']),
-          S([H ? 7 : 10, graveCleave, 'Grave Cleave']),
-          S([H ? 7 : 10, () => swing('ring'), 'Crown of Graves'], tb(4.5)),
-          S([H ? 8 : 11, () => royalDoom(), 'Royal Doom'], [5, knell, 'Barrow Knell'], [5, () => swing('sweep'), 'Sceptre Sweep']),
+          sweepUnit(L(10), true),
+          cleaveUnit(H ? 8 : 10),
+          sweepUnit(L(10)),
+          H && knellUnit(9),
         ],
         [
-          S([H ? 7 : 8, () => gaze(), 'Royal Gaze']),
-          H && S([7, () => audience(), 'Royal Audience']),
-          S([H ? 8 : 11, () => swing('stomp', false, false, true), 'Barrow Stomp']),
+          S([H ? 8 : 10, () => gaze(), 'Royal Gaze']),
+          H && S([8, () => audience(), 'Royal Audience']),
+          !H && knellUnit(11),
+          S([L(11), () => swing('stomp', false, false, true), 'Barrow Stomp']),
+          S([H ? 9 : 11, () => royalDoom(), 'Royal Doom']),
+          S([H ? 10 : 11, () => swing('ring'), 'Crown of Graves']),
         ],
-        [S([H ? 7 : 10, knellRocks, 'Barrow Knell'])]),
+        [fl('h', S([H ? 9 : 11, knellRocks, 'Barrow Knell']))]),
       closing: [[10, () => swing('sweep'), 'Sceptre Sweep'], [10, knell, 'Barrow Knell']],
       next: testimony,
     }, at);
@@ -706,23 +726,17 @@ const HOLLOWKING = {
     const testimony = at => f.course({
       until: 0.62,
       sets: lay(
-        [S([3, knightsRise, 'Echo Knights']), S([6, chargeSheet, 'The Charge Sheet'], [H ? 9 : 8, graveCleave, 'Grave Cleave'], [5, knell, 'Barrow Knell'])],
+        [S([7, knightsRise, 'Echo Knights']), fl('th', S([6, chargeSheet, 'The Charge Sheet'], [H ? 10 : 11, graveCleave, 'Grave Cleave']))],
         [
-          !H && S([10, graveCleave, 'Grave Cleave']),
-          S([H ? 6 : 8, () => swing('sweep'), 'Sceptre Sweep'], [5, () => echo(1.5), 'Echo Knights'], [3.5, knell, 'Barrow Knell']),
-          rebukeUnit(H ? 6 : 9),
-          !H && lidsUnit(10, 1, 2),
-          H && rebukeUnit(6),
-          H && rebukeUnit(6),
+          ...(H ? [sweepEcho(7, true), rebukeUnit(9), rebukeUnit(9)]
+            : [rebukeUnit(10), sweepEcho(9, true)]),
         ],
         [
-          S([H ? 9 : 11, () => swing('stomp'), 'Barrow Stomp'], [5.5, () => echoGaze(1.5), 'Royal Gaze']),
-          S([H ? 7 : 10, () => bells(0.6), 'Barrow Bells']),
-          H ? lidsUnit(8, 1, 2) : lightsUnit(11),
-          H && lightsUnit(8),
-          H && S([7, () => march(1, laneY()), 'Funeral March']),
+          S([H ? 9 : 11, () => swing('stomp'), 'Barrow Stomp'], [5.5, () => echoGaze(1.5), 'Royal Gaze'], [2]),
+          lidsUnit(H ? 9 : 11, 1, 2),
+          H ? lightsUnit(9) : S([10, () => bells(0.6), 'Barrow Bells']),
         ],
-        [S([H ? 7 : 9, knellRocks, 'Barrow Knell'])]),
+        [fl('h', S([H ? 8 : 10, knellRocks, 'Barrow Knell']))]),
       closing: [[10, graveCleave, 'Grave Cleave'], [10, () => swing('sweep'), 'Sceptre Sweep'], [5.5, () => echo(1.5), 'Echo Knights'], [8, knell, 'Barrow Knell']],
       next: court,
     }, at);
@@ -732,7 +746,7 @@ const HOLLOWKING = {
     // (Hard draws anew each pull which coffin of each side wakes when; every coffin shows its countdown. The casts keep their order: the Knell, the stack and the Marks need the healer's time)
     const court = at => f.course({
       sets: [
-        S([2, courtOfBones, 'Court of Bones']),
+        S([7, courtOfBones, 'Court of Bones']),
         S([5.5, sceptreThrow, 'Sceptre Throw']),
         S([5.5, H ? sceptreThrow : knell, H ? 'Sceptre Throw' : 'Barrow Knell']),   // (Hard: a Knell before the stack and the Marks was too much for the healer, so a second throw takes its place)
         S([5.5, graveSummons, 'Grave Summons'], [H ? 6 : 3.5, () => marks(), 'Grave Marks']),
@@ -773,10 +787,10 @@ const HOLLOWKING = {
       f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: 5, dmg: dmg.dirge, hidden: true, tag: 'knell' });
     };
 
-    // IV. The Verdict: the calls and their answers overlap; Judgement opens its second half, whatever the pace
+    // IV. The Verdict: the calls and their answers overlap (the double swing), Judgement opens its second half, whatever the pace
     // (Hard: the Cleave, Burial Rites, the Doom that follows it and the Lids keep this order: the Cleave must come within a cooldown of the one before it. The Tithe and what
     // follows it stay in their place: a party at a third of its health is not given a new problem.)
-    const lidsDecree = () => lidsUnit(H ? 9 : 10, 0, 3);
+    const lidsDecree = () => lidsUnit(H ? 9 : 11, 0, 3);
     const verdict = at => f.course({
       until: 0.46,
       sets: [
@@ -784,12 +798,12 @@ const HOLLOWKING = {
         ...(H
           // (Hard) the graves open, the Writ is read with them, then in close for a Crown of Graves and out to your grave
           ? [S([9, cleaveBind, 'Grave Cleave']), S([10, burialRites, 'Burial Rites'], [3.5, writ, 'Writ of Execution'], [8.5, () => swing('ring', false, true), 'Crown of Graves']),
-            S([12, () => royalDoom(2), 'Royal Doom'], [4, () => marks(), 'Grave Marks']), rebukeUnit(8), lidsDecree(), rebukeUnit(7)]
-          : [lidsDecree(), S([10, () => royalDoom(1), 'Royal Doom'], [4, () => marks(), 'Grave Marks']), rebukeUnit(8), S([9, cleaveBind, 'Grave Cleave'])]),
+            S([12, () => royalDoom(2), 'Royal Doom']), rebukeUnit(9), lidsDecree(), rebukeUnit(8)]
+          : [lidsDecree(), rebukeUnit(10), S([10, () => royalDoom(1), 'Royal Doom']), S([10, cleaveBind, 'Grave Cleave'])]),
         S([H ? 9 : 12, tithe, 'Royal Tithe'], [f.ct(5) + 3, dirge, 'Dirge']),
-        S([H ? 6 : 7, () => swing('ring'), 'Crown of Graves'], [5.5, () => echoGaze(1.5), 'Royal Gaze'], ...nc(7)),
-        H && S([7, () => march(-1, laneY()), 'Funeral March']),
-        S([H ? 9 : 10, sceptreVolley, 'Sceptre Throw']),
+        S([8, () => swing('sweep'), 'Sceptre Sweep'], [5.5, () => echo(1.5), 'Echo Knights']),
+        H && S([8, () => march(-1, laneY()), 'Funeral March']),
+        S([H ? 9 : 11, sceptreVolley, 'Sceptre Throw']),
       ].filter(Boolean),
       closing: [[10, graveCleave, 'Grave Cleave'], [10, () => swing('sweep'), 'Sceptre Sweep'], [5.5, () => echo(1.5), 'Echo Knights'], [8, knell, 'Barrow Knell']],
       next: judged,
@@ -797,42 +811,34 @@ const HOLLOWKING = {
     const judged = at => f.course({
       until: 0.25,
       sets: lay(
-        [S([3, judgement, 'Judgement']), S([H ? 9 : 15, knellRocks, 'Barrow Knell']), ...(H ? [S([9, cleaveBind, 'Grave Cleave'])] : [])],   // (Hard: the Cleave comes first, so it is never a long way from the one in the Verdict)
+        [S([H ? 10 : 11, judgement, 'Judgement']), fl('h', S([H ? 10 : 13, knellRocks, 'Barrow Knell'])), ...(H ? [fl('th', S([10, cleaveBind, 'Grave Cleave']))] : [])],   // (Hard: the Cleave comes first, so it is never a long way from the one in the Verdict)
         [
-          S([L(9), () => swing('stomp', false, false, true), 'Barrow Stomp'], [4.6, () => swing('sweep'), 'Sceptre Sweep'], [5, () => echo(1.5), 'Echo Knights'], [3.5, knell, 'Barrow Knell']),
-          rebukeUnit(H ? 6 : 9),
-          !H && S([9, cleaveBind, 'Grave Cleave']),
-          !H && lidsUnit(9, 2, 1),
-          H && rebukeUnit(6),
-          H && rebukeUnit(6),
-          S([L(9), () => swing('sweep'), 'Sceptre Sweep'], [5, () => echo(1.5), 'Echo Knights'], [3.5, knell, 'Barrow Knell']),
+          ...(H ? [sweepEcho(8), rebukeUnit(9), rebukeUnit(9), knellUnit(9)]
+            : [rebukeUnit(10), sweepEcho(10, true), cleaveUnit(10)]),
         ],
         [
-          S([L(9), () => swing('ring'), 'Crown of Graves'], [5.5, () => echoGaze(1.5), 'Royal Gaze']),
-          S([L(8), () => bells(2.2), 'Barrow Bells']),
-          H ? lidsUnit(7, 2, 1) : lightsUnit(8),
-          H && lightsUnit(7),
-          S([H ? 10 : 9, H ? gatherThenScatter : graveSummons, 'Grave Summons']),
-          H && S([7, () => audience(), 'Royal Audience']),
+          ...(H ? [S([L(10), () => swing('stomp', false, false, true), 'Barrow Stomp'], [5, () => echo(1.5), 'Echo Knights'], [2]),
+            S([L(11), () => swing('ring'), 'Crown of Graves'], [5.5, () => echoGaze(1.5), 'Royal Gaze'], [2]),
+            S([L(10), () => bells(2.2), 'Barrow Bells']), fl('h', S([10, gatherThenScatter, 'Grave Summons']))]
+            : [fl('h', S([10, graveSummons, 'Grave Summons'])), lightsUnit(11), S([11, () => swing('ring'), 'Crown of Graves'], [5.5, () => echoGaze(1.5), 'Royal Gaze'], [2])]),
         ],
-        [H ? S([7, () => swing('sweep'), 'Sceptre Sweep'], [5, () => echo(1.5), 'Echo Knights'], [3.5, knell, 'Barrow Knell']) : S([8, graveCleave, 'Grave Cleave'], [5.5, knell, 'Barrow Knell'])]),
+        [fl('h', S([H ? 9 : 10, knell, 'Barrow Knell']))]),
       closing: [[10, graveCleave, 'Grave Cleave'], [10, () => swing('sweep'), 'Sceptre Sweep'], [5.5, () => echo(1.5), 'Echo Knights'], [8, knell, 'Barrow Knell']],
       next: night,
     }, at);
 
     // V. Sentence: the Long Night. Doom passes on every 12 s; the lantern goes with it. Between the passes the whole hearing comes back, a little
-    // harder each time: a Cleave, a Sweep and the knight's answer to it, then the Stomp and the Sweep together and the knights' answer to both
+    // harder each time: a Cleave, a Sweep and its Backhand, then (after a pass with nothing else in it) the Stomp and the Sweep together and the knights' answer to both
     // (the order is the lesson, so Hard leaves it as it is; it has its two dooms and two lanterns)
     const night = at => f.course({
       sets: [
-        S([2, longNight, 'The Long Night']),
-        S([10, doomPass, 'Royal Doom']),
+        S([H ? 7 : 8, longNight, 'The Long Night']),
+        S([12, doomPass, 'Royal Doom']),
         S([6, graveCleave, 'Grave Cleave']),
         S([6, doomPass, 'Royal Doom']),
         S([6, () => swing('sweep', false, false, true), 'Sceptre Sweep']),
         S([6, doomPass, 'Royal Doom']),
-        S([6, () => echoGaze(1, true), 'Royal Gaze']),
-        S([6, doomPass, 'Royal Doom']),
+        S([12, doomPass, 'Royal Doom']),
         S([6, () => swing('stomp', false, false, true), 'Barrow Stomp'], [5, () => swing('sweep'), 'Sceptre Sweep'], [5.5, () => echo(1.5), 'Echo Knights']),
       ],
       closing: [[6, doomPass, 'Royal Doom'], [6, () => swing('stomp', false, false, true), 'Barrow Stomp'], [6, doomPass, 'Royal Doom'], [6, () => echo(1.5), 'Echo Knights']],

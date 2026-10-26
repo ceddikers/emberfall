@@ -14,9 +14,14 @@
 //   Stonegaze (everything the head can see: hide behind a column), Mire Spit (slowing bog under three heroes).
 //   The STUMP REMEMBERS: from the second cut on, the stump of the head cut before answers once ("Stump Echo", a gentler copy of
 //   that head's move from the stump), in place of the next head's turn: the Heart, in small.
+//   THE NECKS RECOIL: cutting a great head jerks the necks beside it. The nearest live great head each way round the ring rears
+//   and lashes out with its own move at half strength, ahead of the turn that was due (it shares the Stump Echo's queue). So what a cut wakes is
+//   whatever stands beside it, which is drawn fresh each pull: the right head to cut depends on the board (the first cut also
+//   returns as the Elder, so it wants a gentle element and gentle neighbours; a stump beside a stump has one neighbour to wake).
 //   CUTTING COSTS (all of it shown): a stump nobody sears costs the whole party (a Searing missed is a small raidwide as well as
 //   two lesser heads), and the Heart hits harder for a stump left unseared and for every head cut beyond the fifth.
-//   The body keeps a three-beat rhythm: Rending Maul, Tail Thrash (a ring at her feet), Mother's Cry. No head lands within a beat
+//   The body keeps a three-beat rhythm: Rending Maul, Tail Thrash (a ring at her feet; on Normal every other round), Mother's Cry,
+//   and after each Cry she draws breath: the heads hold their round too, a calm of ten seconds or so to strike her. No head lands within a beat
 //   and a half of a Cry or a Maul, and the big Hard moves (Gaze, Tidal Dance) hold the heads' round while they run.
 //   Tail Thrash has a second half, the Undertow: a ring just outside the first, landing a breath after it (both drawn from the
 //   start): out of the first, then in or out of the second. The head whose turn is next rears a breath before it casts.
@@ -30,8 +35,8 @@
 //   Last Heads (10% → dead): the last ten percent, until she falls or the Drowning comes. A while after the beat the stump of the
 //   last head cut answers once more (two on Hard, in the order they fell) with the living heads holding their round: the lesson again.
 // Acts use PUSH: a party that reaches a gate early cuts the rest of the act and moves on (fight.js course).
-// Every telegraph shows on the floor on every difficulty. Hard: casts 15% faster, 25% more damage, the heads come round
-// faster and each pull draws which head stands where, and:
+// Every telegraph shows on the floor on every difficulty; each pull draws which head stands where (both difficulties). Hard: casts
+// 15% faster, 25% more damage, the heads come round faster, and:
 //   Regrowth: a missed searing grows three lesser heads, not two.
 //   Which beats the big moves take is drawn each pull: a Dance (one in Act I, two in Act II, two in Act III) or a Gaze (two, Act III)
 //   takes a Thrash's place, never within three beats of each other; the tank keeps every Maul and the healer every Cry.
@@ -64,14 +69,14 @@ const HYDRA = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      cry: H ? 10200 : 10800, thrash: H ? 9800 : 8400, undertow: H ? 9000 : 7000, maul: H ? 22000 : 18000, gazeAll: H ? 21000 : 0, dance: H ? 12700 : 0, heart: H ? 16100 : 16600,
-      acid: H ? 16600 : 16200, pool: H ? 2100 : 2200, tide: H ? 18700 : 18700, bloom: H ? 30700 : 28300, bloomPool: H ? 1700 : 1700,
+      cry: H ? 10800 : 10800, thrash: H ? 9800 : 9200, undertow: H ? 9000 : 8200, maul: H ? 22000 : 18000, gazeAll: H ? 21000 : 0, dance: H ? 12700 : 0, heart: H ? 16600 : 16600,
+      acid: H ? 16600 : 16200, pool: H ? 2200 : 2200, tide: H ? 18700 : 18700, bloom: H ? 30700 : 29800, bloomPool: H ? 1700 : 1700,
       flame: H ? 13200 : 13200, ember: H ? 2000 : 2000, frost: H ? 15600 : 15600, storm: H ? 13500 : 13500, gaze: H ? 21500 : 21200,
-      mire: H ? 7300 : 7400, mirePool: H ? 1700 : 1700, sear: 1400, rise: H ? 7000 : 7500,
+      mire: H ? 7300 : 7400, mirePool: H ? 1700 : 1700, sear: 1400, rise: H ? 7500 : 7500,
       headHp: 34000, elderHp: 52000, lesserHp: 14000, surfHp: 16000,
     };
     // (Normal is tuned for a party in set-1 gear after set 2's step (items.js SET2_STEP): every hit, not the heads' HP, a notch up)
-    const HIT = H ? 1.24 : 1.26;
+    const HIT = H ? 1.16 : 1.29;
     for (const k in dmg) if (!/Hp$/.test(k)) dmg[k] = Math.round(dmg[k] * HIT);
     const S = (...steps) => steps.filter(Boolean);
     const HEAD_R = 210;                 // the heads stand this far from the middle, one to a slot (nine slots, the first due north)
@@ -215,6 +220,7 @@ const HYDRA = {
     // --- the turn order: one head after another, the one that has waited longest first ---
     const rot = () => f.events.filter(e => e.owner === 'rot');
     const rotClear = () => { f.events = f.events.filter(e => e.owner !== 'rot'); };
+    const dropLashes = () => { for (let i = echoQ.length - 1; i >= 0; i--) if (echoQ[i].recoil) echoQ.splice(i, 1); };   // (a seam or the Heart: nothing is left jerking)
     const liveHeads = () => [...heads.values()].filter(h => !h.sunk && f.adds.has(h.add.id));
     const gapFor = n => Math.min(11, Math.max(GAP_MIN, CYC / Math.max(1, n)));
     const castOf = h => cd(h, EL[h.el].base);
@@ -247,9 +253,51 @@ const HYDRA = {
       f.emit({ t: 'propfx', k: 'echo', x: pos.x, y: pos.y, el: o.el });
       f.afterKeep(d0, () => { if (!paused) EL[o.el].run({ x: pos.x, y: pos.y, el: o.el, pw: H ? 0.85 : 0.75, sz: 1, lesser: false, fast: false }); }, EL[o.el].name);
     };
+    // the necks recoil: a head cut jerks the necks either side of it. The nearest live great head each way round the ring rears and
+    // lashes out with its own move, ahead of the turn that was due, at RECOIL of its strength (the same on both difficulties; Hard's
+    // hits are the harder). The move is its own, drawn the same way from its own cast. A stump beside a stump has one live neighbour;
+    // the last head standing has none. So what a cut wakes is whatever stands beside it, and that is drawn fresh each pull.
+    const RECOIL = 0.5;
+    const greats = () => liveHeads().filter(h => !h.lesser && !h.surf);
+    const ringD = (a, b) => (b - a + 9) % 9;                       // steps clockwise from slot a to slot b
+    const neighboursOf = (slot, from = greats()) => {
+      const out = [];
+      let cw = null, ccw = null;
+      for (const o of from) {
+        if (o.slot === slot) continue;
+        const d = ringD(slot, o.slot);
+        if (!cw || d < cw.d) cw = { o, d };
+        if (!ccw || 9 - d < ccw.d) ccw = { o, d: 9 - d };
+      }
+      if (cw) out.push(cw);
+      if (ccw && (!cw || ccw.o !== cw.o)) out.push(ccw);
+      return out.map(x => x.o);
+    };
+    const lash = n => {
+      let wait = 1.2;
+      const c = castOf(n);
+      for (let k = 0; k < 4; k++) {
+        const land = f.t + wait + c, w = avoid.find(v => land > v[0] && land < v[1]);
+        if (!w) break;
+        wait = w[1] - c - f.t + 0.05;
+      }
+      wait = Math.min(wait, 3.5);
+      f.emit({ t: 'propfx', k: 'rear', x: Math.round(n.x), y: Math.round(n.y), el: n.el, dur: +wait.toFixed(2), s: 1, st: 0 });
+      f.afterKeep(wait, () => { if (!paused && heads.has(n.add.id) && f.adds.has(n.add.id) && !n.sunk) EL[n.el].run(Object.assign({}, n, { pw: n.pw * RECOIL })); }, EL[n.el].name);
+      return wait;
+    };
     const fire = h => {
       if (paused || !heads.has(h.add.id) || !f.adds.has(h.add.id) || h.sunk) return;
-      if (echoQ.length) { stumpEcho(echoQ.shift()); relay(f.t + 1.2 + gapFor(liveHeads().length)); return; }
+      while (echoQ.length) {
+        const o = echoQ.shift();
+        if (o.recoil) {
+          const n = o.recoil;
+          if (!heads.has(n.add.id) || !f.adds.has(n.add.id) || n.sunk) continue;
+          relay(f.t + lash(n) + gapFor(liveHeads().length));
+          return;
+        }
+        stumpEcho(o); relay(f.t + 1.2 + gapFor(liveHeads().length)); return;
+      }
       h.last = f.t;
       EL[h.el].run(h);
       relay(f.t + gapFor(liveHeads().length));
@@ -261,7 +309,8 @@ const HYDRA = {
       if (h.surf) { relay(nxt ? nxt.t : undefined); return; }
       if (!h.lesser) {
         order.push({ el: h.el, slot: h.slot }); stump(h);
-        if (order.length >= 2 && !paused && echoQ.length < 2) echoQ.push(order[order.length - 2]);   // (the stump before it answers)
+        if (!paused) for (const n of neighboursOf(h.slot)) if (echoQ.length < 4) echoQ.push({ recoil: n });   // (the necks beside it jerk)
+        if (order.length >= 2 && !paused && echoQ.filter(o => !o.recoil).length < 2) echoQ.push(order[order.length - 2]);   // (the stump before it answers)
       }
       relay(nxt ? nxt.t : undefined);
     };
@@ -308,8 +357,16 @@ const HYDRA = {
       if (surf.length) { surf.sort((a, b) => a.add.born - b.add.born)[0].add.prio = 9; return; }
       const lesser = hs.filter(h => h.lesser && !h.sunk);
       if (lesser.length) { lesser.sort((a, b) => a.add.hp - b.add.hp)[0].add.prio = 6; return; }
-      const great = hs.filter(h => !h.lesser && !h.sunk).sort((a, b) => (b.add.hp < b.add.maxHp ? 1 : 0) - (a.add.hp < a.add.maxHp ? 1 : 0) || PLAN.indexOf(a.el) - PLAN.indexOf(b.el));
-      if (great[0]) great[0].add.prio = 5;
+      const great = hs.filter(h => !h.lesser && !h.sunk);
+      if (!great.length) return;
+      // the read: the gentlest first (PLAN: so that the one that grows back, and the Heart's first echoes, are gentle), but not at any
+      // price: what a cut wakes (the necks beside it lash out, in PLAN's own measure of how bad each is) is added to a head's price, so
+      // a gentle head with savage neighbours waits while a head whose neighbours are already gone goes first. A head already hurt
+      // keeps the party's blows.
+      const live = great.filter(h => !h.surf);
+      const price = g => PLAN.indexOf(g.el) + 0.35 * neighboursOf(g.slot, live.filter(o => o !== g)).reduce((t, n) => t + PLAN.indexOf(n.el), 0);
+      great.sort((a, b) => (b.add.hp < b.add.maxHp ? 1 : 0) - (a.add.hp < a.add.maxHp ? 1 : 0) || price(a) - price(b));
+      great[0].add.prio = 5;
     });
 
     // the head whose turn is next rears a breath before its cast (a ring closes on its base): the read for which head is up
@@ -407,8 +464,8 @@ const HYDRA = {
     };
 
     // --- the births ---------------------------------------------------------------------------------------------
-    // which element stands where: fixed on Normal, drawn fresh each pull on Hard
-    const place = (els, slots) => { const sl = H ? f.shuffle(slots) : slots; return els.map((el, i) => [el, sl[i]]); };
+    // which element stands where: drawn fresh each pull (what a cut wakes is whatever stands beside it, so the answer is never learned)
+    const place = (els, slots) => { const sl = f.shuffle(slots); return els.map((el, i) => [el, sl[i]]); };
     const birth = (list, o = {}) => {
       for (const [el, slot] of list) { const h = mkHead(el, slot, Object.assign({}, o)); void h; }
       const first = rot()[0];
@@ -423,7 +480,7 @@ const HYDRA = {
       } else {
         f.emit({ t: 'propfx', k: 'rise', x: 0, y: 0, n: 3 });
         const elder = (order[0] && order[0].el) || 'acid';
-        const sl = H ? f.shuffle([2, 5, 8]) : [2, 5, 8];
+        const sl = f.shuffle([2, 5, 8]);
         mkHead('gaze', sl[0], { late: 6 }); mkHead('mire', sl[1], { late: 6 }); mkHead(elder, sl[2], { elder: true, late: 9 });
         const first = rot()[0];
         relay(first ? first.t : f.t + 6);
@@ -439,7 +496,7 @@ const HYDRA = {
       f.cast('Submerge', d, 'dive');
       f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.cry * 0.7, hidden: true, tag: 'surge' });
       f.afterKeep(d, () => {
-        paused = true; rotClear();
+        paused = true; rotClear(); dropLashes();
         for (const h of liveHeads()) h.sunk = true;
         B.untargetable = true;
         f.emit({ t: 'roomev', k: 'flood', dur: HOLD });
@@ -504,7 +561,7 @@ const HYDRA = {
     // Sealed. Every cut head strikes again from its stump, in the order it was cut; then every head still alive at once;
     // then the Heart beats and the seal opens.
     const heartRun = () => {
-      paused = true; rotClear(); B.lockFacing = false;
+      paused = true; rotClear(); dropLashes(); B.lockFacing = false;
       f.emit({ t: 'roomev', k: 'hheart', dur: 70 });
       const gap = f.ct(3.3);
       // the Heart opens, and the stumps answer in the order the heads fell
@@ -545,13 +602,24 @@ const HYDRA = {
     // round on theirs (relay above) and keep clear of the body's landings. Both are fixed: the same on every pull, the
     // targets are what change. `swap` puts one of Hard's big moves in a beat's place (the beat after it comes later).
     const BEAT = 8.5;
-    const rhythm = (n, first, from, swap = {}) => {
+    // After a Cry the body (and the heads) draw breath: nothing new is cast for BR more seconds than a beat. A window to strike the
+    // Mother, and for the healer to catch up, once every cycle of three beats. `span`: the act's length in seconds (the last beat
+    // that starts inside it is the last one).
+    const BR = 7;
+    const rhythm = (span, first, from, swap = {}) => {
       const seq = [[maul, 'Rending Maul'], [thrash, 'Tail Thrash'], [cry, "Mother's Cry"]], out = [];
-      let after = null;
-      for (let i = 0; i < n; i++) {
+      let after = null, t = 0;
+      for (let i = 0; ; i++) {
         const sw = H && swap[i], [fn, name] = sw ? [sw[0], sw[1]] : seq[(i + from) % 3];
-        out.push(S([i === 0 ? first : after || BEAT, fn, name]));
-        after = sw ? sw[2] : null;
+        // Normal: the Thrash comes every other cycle (the melee hands lose their ground to it, and the Maul and the Cry keep the beat)
+        if (!H && name === 'Tail Thrash' && Math.floor((i + from) / 3) % 2 === 1) continue;
+        const d = i === 0 ? first : after || BEAT;
+        if (t + d > span + 0.01) break;
+        t += d;
+        const breathe = !sw && name === "Mother's Cry";
+        // (the heads hold their round until the next body move is about to start)
+        out.push(S([d, breathe ? () => { fn(); quiet(BEAT + BR - 0.6); } : fn, name]));
+        after = sw ? sw[2] : breathe ? BEAT + BR : null;
       }
       return out;
     };
@@ -575,7 +643,7 @@ const HYDRA = {
     // I. Three Heads
     const actI = from => f.course({
       until: 0.75, push: true, onStart: actStart(1),
-      sets: rhythm(17, 5, 2, drawSwaps(2, [4, 13], 1, 0)),
+      sets: rhythm(141, 5, 2, drawSwaps(2, [4, 10], 1, 0)),
       closing: closingBeats,
       next: actII,
     }, from);
@@ -583,7 +651,7 @@ const HYDRA = {
     // II. Six Heads
     const actII = from => f.course({
       until: 0.45, push: true, onStart: actStart(2),
-      sets: rhythm(19, 3, 2, drawSwaps(2, [2, 15], 2, 0)),
+      sets: rhythm(156, 3, 2, drawSwaps(2, [2, 12], 2, 0)),
       closing: closingBeats,
       next: submerged,
     }, from);
@@ -598,7 +666,7 @@ const HYDRA = {
     const actIII = from => f.course({
       until: 0.1, push: true, onStart: actStart(3),
       wall: { label: "Mother's Heart", run: heartRun, until: 'resolved', timeout: 80 },
-      sets: rhythm(23, 4, 0, drawSwaps(0, [3, 17], 2, 2)),
+      sets: rhythm(190, 4, 0, drawSwaps(0, [3, 15], 2, 2)),
       closing: closingBeats,
       next: lastHeads,
     }, from);
@@ -606,7 +674,7 @@ const HYDRA = {
     // Last Heads: the Heart has beaten
     const lastHeads = from => f.course({
       onStart: () => { B.untargetable = false; },
-      sets: rhythm(7, 9, 0),   // (laid out a head before the Heart's end: the tank's Maul comes first, well after the beat)
+      sets: rhythm(51, 9, 0),   // (laid out a head before the Heart's end: the tank's Maul comes first, well after the beat)
       closing: closingBeats,
       ramp: 0.08,
     }, from);

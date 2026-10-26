@@ -130,6 +130,42 @@ const SK_FX = (() => {
     return Math.max(0, Math.min(step, pp.len));
   }
 
-  return { impact, gap, pullPath, pullStep };
+  // ---------------------------------------------------------------- her body in the Dark Between
+  // Up in the dark she is out of sight (only her shadow runs the cave); when a drop lands her body comes down with it, crouches on the
+  // stone for the window (the room moment 'grounded': x, y, dur) and hauls itself up the silk again. pose() is called a frame
+  // (main.js updateArena) and sets raid.skPose { alpha, oy, sx, sy } (null: drawn as ever) and the body's props.crouch / props.haul
+  // (bosses.js). Her body is drawn at the host's position, which is already the landing point.
+  const DROPT = 0.2, SQUASH = 0.28, CLIMBT = 0.65;
+  const fall = s => { const u = Math.min(1, s / DROPT); return -(1 - u * u) * 360; };   // (a heavy drop: it speeds up as it falls)
+  function pose(raid, now) {
+    const ev = raid.room.ev, lo = ev.lightsout, gr = ev.grounded, P = raid.props;
+    P.crouch = 0; P.haul = false;
+    raid.skPose = null;
+    if (!lo || now < lo.start || now >= lo.end + 0.5) return;
+    let out = { alpha: 0, oy: 0, sx: 1, sy: 1 };
+    const up = (s) => { const u = Math.min(1, s / CLIMBT); out = { alpha: 1 - u * u, oy: -u * u * 400, sx: 1, sy: 1 }; P.haul = true; P.crouch = 1 - u; };
+    const down = (s, hold) => {
+      out = { alpha: Math.min(1, s / 0.07), oy: fall(s), sx: 1, sy: 1 };
+      P.crouch = 1;   // (legs splayed as she comes down)
+      if (s > DROPT) { const k = Math.max(0, 1 - (s - DROPT) / SQUASH); out.sx = 1 + 0.14 * k; out.sy = 1 - 0.17 * k; P.crouch = hold ? 1 : k; }
+    };
+    if (now < lo.start + CLIMBT) up(now - lo.start);                      // into the dark: up the silk
+    else if (now >= lo.end - DROPT) down(now - (lo.end - DROPT), false);   // back out of it: she drops to the hub as the light returns
+    else if (gr && now >= gr.start && now < gr.end + CLIMBT) {
+      const s = now - gr.start, left = gr.end - now;
+      if (left > 0) { down(s, true); if (left < 0.45) out.oy -= (0.45 - left) * 18; }   // (she gathers herself, then goes)
+      else up(-left);
+    }
+    raid.skPose = out;
+  }
+  // the silk she hangs by, drawn from the top of the cave down to her while she falls or is hauled
+  function thread(ctx, bd, pose) {
+    if (!pose || pose.alpha < 0.03 || pose.oy > -10) return;
+    const x = bd.x, y = bd.y + pose.oy;
+    ctx.save(); ctx.globalAlpha = Math.min(1, pose.alpha + 0.4) * 0.8; ctx.strokeStyle = '#f4f0ff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x, y - 18); ctx.lineTo(x + Math.sin(y * 0.01) * 4, y - 1400); ctx.stroke(); ctx.restore();
+  }
+
+  return { impact, gap, pullPath, pullStep, pose, thread };
 })();
 

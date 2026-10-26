@@ -12,8 +12,8 @@
 //   Act I, First Blood (100% -> 75%): Sunwheel, Victory Leap (a jump onto a hero, then a pose that leaves him open; the wheel that
 //     follows is thrown from where he landed), Hammer Heel (the tank pair), Roar of the Stands, Rebound (alone, and after a Leap).
 //   Act II, Crowd-Pleaser (75% -> 52%): Sand Furrow (a slow line of churned sand that stays a while) across a Sunwheel, Banner Fall
-//     (the wheel's bounces knock the banners loose), a Sunwheel then a Rebound, a Leap and a Rebound from its landing, a Furrow then a
-//     Rebound, a wheel then the tank's Heel, a Roar then the Heel.
+//     (the wheel's bounces knock the banners loose), a Leap and a Rebound from its landing, a wheel then the tank's Heel; the rest
+//     stand alone (Heels, a Sunwheel, a Roar) with a calm after each.
 //   The Tide Rises (52%, PUSH): the colosseum floods and breaks apart; he rises from the sea as the Tidewrought and the party lands on
 //     a ring of stone (the room becomes 'brannoc:sea', fight.js setForm). The debris on the ring shelters from his waves and is a post
 //     for his giant wheel (Sunwheel Unbound bounces off the stones as well as the rim).
@@ -22,8 +22,9 @@
 //     bounces back; debris blocks it), Sunwheel Unbound (a giant wheel, more bounces, two catch points), Deep Call (a raidwide that
 //     drags everyone in toward the middle, the set-up for what comes next: the fist on the tank, a wheel at the gathered party).
 //     Pairs: pull then fist, pull then Rebound (the tank walks out of the gathered party before the ring lets go), wave then wheel (the
-//     wave is still running when the wheel is drawn), grip then wave. A lone Rebound fills the quiet between the fists.
-//   Act IV, Last Round (20% -> dead, PUSH): everything faster and in pairs (a pull then a Rebound); it ends on three jobs at once: a Grip held on a hero, a
+//     wave is still running when the wheel is drawn). Grip, Unbound and the lone fists stand alone; a lone Rebound fills the quiet
+//     between the fists.
+//   Act IV, Last Round (20% -> dead, PUSH): a pull then the fist, a wave then a wheel, and it ends on three jobs at once: a Grip held on a hero, a
 //     six-bounce wheel (break the hand, catch the rings) and the fist on the tank.
 // Every telegraph shows on every difficulty. Hard: casts 15% faster, 22% more damage, and:
 //   Twin Wheels: two wheels, the second thrown a beat after the first, crossing paths, two catch points (in the sea too).
@@ -34,14 +35,14 @@
 // Hard also draws the first form's wheel walls, the Grip targets, the stones and the order of every act's middle sets fresh each pull
 // (never an order that leaves the tank a long stretch without a beat, or puts two of his beats too close together: mix(); Rebound is
 // the light beat and may sit closer to another beat than two heavy ones may).
-// Pairs: Roar then Heel (the raidwide, then the tank's stamps while the healer tops up), Sunwheel then Heel (Act II), Unbound then
-// Fist Slam (Act III); with Deep Call then Fist Slam / a wheel, Breaker then a wheel and Grip then Breaker, tank and healer have a beat
-// about every half minute in every act.
+// Pairs are seasoning (2026-10-27 de-cook pass): Roar then Heel (Act I), Leap then Rebound (Acts I and II), Sunwheel then Heel (Act II),
+// Deep Call then Fist Slam / Rebound and Breaker then Unbound (Acts III and IV), and the last three jobs; everything else stands alone
+// with a calm after it (sets are 12 to 15 s apart), and tank and healer still have a beat about every half minute in every act.
 
 const BRANNOC = {
   id: 'brannoc', name: 'Brannoc', title: 'the Undefeated',
   hp: { normal: 5600000, hard: 5450000 },
-  hardDmg: 1.34,   // (Hard's damage multiplier; fight.js default 1.25; a little up as the health came down, so hits still bite)
+  hardDmg: 1.52,   // (Hard's damage multiplier; fight.js default 1.25; a little up as the health came down, so hits still bite; 1.34 before the 2026-10-26 fix pass, 1.43 before the de-cook pass)
   autoDmg: { normal: 2200, hard: 2050 },
   enrage: { normal: 607, hard: 632 },   // the cast starts here and lands 8 s later (10:15 / 10:40)
   enrageName: 'The Final Bell',
@@ -57,10 +58,10 @@ const BRANNOC = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      roar: H ? 11800 : 14300, heel1: H ? 15000 : 17000, heel2: H ? 19000 : 22000, leap: H ? 21000 : 24500, wheel: H ? 19800 : 23000,
-      catch: H ? 15500 : 18000, catchBig: H ? 11500 : 13000, burst: H ? 10500 : 14000,   // (a missed catch still stings the room, but never chains into dead healers)
+      roar: H ? 11800 : 15000, heel1: H ? 15000 : 17000, heel2: H ? 19000 : 22000, leap: H ? 21000 : 24500, wheel: H ? 19800 : 23000,
+      catch: H ? 15500 : 18000, catchBig: H ? 11500 : 13000, burst: H ? 11500 : 14000,   // (a missed catch still stings the room, but never chains into dead healers)
       furrow: H ? 3400 : 3200, furrowLine: H ? 15800 : 18200, banner: H ? 17000 : 19600,
-      slam: H ? 20500 : 23500, wave: H ? 21000 : 24000, bleed: H ? 1300 : 1200, undertow: H ? 22200 : 27000, deep: H ? 14400 : 17400,
+      slam: H ? 20500 : 23500, wave: H ? 21000 : 24000, bleed: H ? 1300 : 1200, undertow: H ? 22200 : 27000, deep: H ? 14400 : 18200,
       handHp: H ? 16000 : 31000,   // (Hard's hand is the weaker one on purpose: Double Grip holds two heroes, so the party splits to break two)
       rise: H ? 9800 : 11200,
       rbLane: H ? 11000 : 13000, rbCatch: H ? 11600 : 14000,   // (Rebound: the wheel thrown at the tank; lighter than a Heel pair or a Breaker)
@@ -389,7 +390,7 @@ const BRANNOC = {
       const tank = f.tank(); if (!tank) return null;
       const d = f.ct(3.8);
       f.cast('Fist Slam', d, 'slam');
-      return f.mech({ type: 'buster', shape: { kind: 'circle', x: tank.x, y: tank.y, r: 175 }, delay: d, dmg: dmg.slam, target: tank.id, follow: tank.id, lockAt: lock, tag: 'brFist' });
+      return f.mech({ type: 'buster', shape: { kind: 'circle', x: tank.x, y: tank.y, r: 150 }, delay: d, dmg: dmg.slam, target: tank.id, follow: tank.id, lockAt: lock, tag: 'brFist' });
     };
     // Breaker: the slam sends a wave out to the rim, and it comes back off it (Hard: twice). Debris in the way shelters.
     // The wave leaves from where the fist comes down, which is known only once the fist stops following the tank: Breaker's fist locks
@@ -500,25 +501,25 @@ const BRANNOC = {
     // --- the acts -------------------------------------------------------------------------------------------------------------
     // A pair is two moves that make a new problem: the leap's landing is where the next wheel is thrown from (the party chooses where by
     // where it stands when the ring follows), the pull sets the fist down on a party that has just been dragged together, a wave is
-    // still running when the next wheel is drawn, a hand holds someone in the lane of the wave.
+    // still running when the next wheel is drawn. A pair is a highlight, about two or three to an act; the rest stand alone.
     const WHEEL_HEEL = 10;   // (the Heel is called once the wheel's road, and on Hard the Riposte after a catch, are done)
     const ROAR_HEEL = 5.4;   // (the Heel is called as the Roar lands)
     const LEAP_WHEEL = 8.2;   // (the pose lasts until 8 s after the leap's cast began; the wheel starts as he is up again)
     // I. First Blood. Roar then Heel is a pair (the party takes the raidwide, the tank's stamps follow while the healer is still topping
-    // up): four tank beats in the act, about half a minute apart.
+    // up); the tank has a beat about every half minute.
     const first = from => f.course({
       until: 0.75, push: false,
       sets: mix([S([4, roar, 'Roar of the Stands']), S([9, () => sunwheel(), 'Sunwheel'])], [
         S([12, heel, 'Hammer Heel']),
-        S([12, leap, 'Victory Leap'], [LEAP_WHEEL, rebound, 'Rebound']),
-        S([13, heel, 'Hammer Heel']),
-        S([12, rebound, 'Rebound']),
-        S([12, roar, 'Roar of the Stands'], [ROAR_HEEL, heel, 'Hammer Heel']),
-        H && S([12, () => sunwheel({ twin: true }), 'Twin Wheels']),
-      ].filter(Boolean), [
+        S([13, leap, 'Victory Leap'], [LEAP_WHEEL, rebound, 'Rebound']),
+        S([14, heel, 'Hammer Heel']),
         S([13, rebound, 'Rebound']),
         S([12, roar, 'Roar of the Stands'], [ROAR_HEEL, heel, 'Hammer Heel']),
-        S([11, leap, 'Victory Leap']),
+        H && S([14, () => sunwheel({ twin: true }), 'Twin Wheels']),
+      ].filter(Boolean), [
+        S([13, roar, 'Roar of the Stands']),
+        S([14, rebound, 'Rebound']),
+        S([14, heel, 'Hammer Heel']),
       ], 30),
       closing: [[10, roar, 'Roar of the Stands'], [10, heel, 'Hammer Heel'], [10, () => sunwheel(), 'Sunwheel']],
       next: crowd,
@@ -528,16 +529,15 @@ const BRANNOC = {
     const crowd = from => f.course({
       until: 0.52, push: true,
       sets: mix([S([4, furrow, 'Sand Furrow'], [5, () => sunwheel({ banners: true }), 'Sunwheel'])], [
-        S([13, heel, 'Hammer Heel']),
-        S([11, () => sunwheel({ banners: true }), 'Sunwheel'], [10, rebound, 'Rebound']),
-        S([12, heel, 'Hammer Heel']),
-        S([12, () => sunwheel({ banners: true, twin: true }), H ? 'Twin Wheels' : 'Sunwheel'], [WHEEL_HEEL, afterRiposte(() => heel()), 'Hammer Heel']),
-        S([12, furrow, 'Sand Furrow'], [8, rebound, 'Rebound']),
-        S([12, roar, 'Roar of the Stands'], [ROAR_HEEL, heel, 'Hammer Heel']),
-        S([11, leap, 'Victory Leap'], [LEAP_WHEEL, rebound, 'Rebound']),
+        S([14, heel, 'Hammer Heel']),
+        S([15, () => sunwheel({ banners: true }), 'Sunwheel']),
+        S([14, heel, 'Hammer Heel']),
+        S([13, leap, 'Victory Leap'], [LEAP_WHEEL, rebound, 'Rebound']),
+        S([14, () => sunwheel({ banners: true, twin: true }), H ? 'Twin Wheels' : 'Sunwheel'], [WHEEL_HEEL, afterRiposte(() => heel()), 'Hammer Heel']),
+        S([12, roar, 'Roar of the Stands']),
       ], [
-        S([12, roar, 'Roar of the Stands'], [ROAR_HEEL, heel, 'Hammer Heel']),
-      ], 28),
+        S([13, heel, 'Hammer Heel']),
+      ], 30),
       closing: [[10, roar, 'Roar of the Stands'], [10, heel, 'Hammer Heel'], [10, () => sunwheel({ banners: true }), 'Sunwheel']],
       next: tide,
     }, from);
@@ -551,41 +551,41 @@ const BRANNOC = {
 
     const gripName = () => (H ? 'Double Grip' : 'Undertow Grip');
     const PULL = 5.4;   // (the fist is called as the pull lands)
-    const UNBOUND_FIST = 7.5;   // (the fist is called while the giant wheel is still running: the tank carries it clear of the road)
     // III. The Tidewrought (Hard draws the order of his middle sets, never one that leaves the tank without a fist for long)
     const tidewrought = from => f.course({
       until: 0.2, push: true, onStart: () => { B.lockFacing = true; B.facing = Math.PI / 2; },
       sets: mix([S([6, fist, 'Fist Slam']), S([9, () => grip(H ? 2 : 1), gripName()])], [
-        S([12, breaker, 'Breaker']),
-        S([12, rebound, 'Rebound']),
-        S([12, deepCall, 'Deep Call'], [PULL, fist, 'Fist Slam']),
-        S([12, () => grip(H ? 2 : 1), gripName()]),
-        S([12, breaker, 'Breaker'], [6.5, () => unbound(4), 'Sunwheel Unbound']),
-        S([10, () => unbound(5), 'Sunwheel Unbound'], [UNBOUND_FIST, fist, 'Fist Slam']),
-        S([12, deepCall, 'Deep Call'], [PULL, rebound, 'Rebound']),
-        H && S([12, () => sunwheel({ twin: true }), 'Twin Wheels']),
+        S([14, breaker, 'Breaker']),
+        S([13, rebound, 'Rebound']),
+        S([13, deepCall, 'Deep Call'], [PULL, fist, 'Fist Slam']),
+        S([14, () => grip(H ? 2 : 1), gripName()]),
+        S([13, breaker, 'Breaker'], [6.5, () => unbound(4), 'Sunwheel Unbound']),
+        S([13, deepCall, 'Deep Call'], [PULL, rebound, 'Rebound']),
+        S([14, () => unbound(5), 'Sunwheel Unbound']),
+        H && S([14, () => sunwheel({ twin: true }), 'Twin Wheels']),
       ].filter(Boolean), [
-        S([12, fist, 'Fist Slam']),
-        S([12, () => grip(H ? 2 : 1), gripName()], [8, breaker, 'Breaker']),
-        S([10, () => unbound(5), 'Sunwheel Unbound']),
-        S([12, deepCall, 'Deep Call'], [PULL, fist, 'Fist Slam']),
-      ], 28),
+        S([14, fist, 'Fist Slam']),
+        S([14, () => grip(H ? 2 : 1), gripName()]),
+        S([14, breaker, 'Breaker']),
+        S([12, () => unbound(5), 'Sunwheel Unbound']),
+      ], 30),
       closing: [[10, deepCall, 'Deep Call'], [PULL, fist, 'Fist Slam'], [10, breaker, 'Breaker']],
       next: lastRound,
     }, from);
 
-    // IV. Last Round: everything faster and in pairs, and at the last three jobs at once: a hand holds someone, a six-bounce wheel runs
-    // and the fist comes down on the tank
+    // IV. Last Round: everything faster, and at the last three jobs at once: a hand holds someone, a six-bounce wheel runs and the fist
+    // comes down on the tank
     const lastRound = from => f.course({
       onStart: () => f.emit({ t: 'roomev', k: 'lastround', dur: 4 }),   // (the sea and the ghost crowd answer the last bell: brannoc-fx.js)
       sets: mix([S([4, deepCall, 'Deep Call'], [PULL, fist, 'Fist Slam'])], [
-        S([14, deepCall, 'Deep Call'], [PULL, rebound, 'Rebound']),
-        S([11, breaker, 'Breaker'], [7, () => unbound(4), 'Sunwheel Unbound']),
-        S([11, () => grip(H ? 2 : 1), gripName()], [7, breaker, 'Breaker']),
-        H && S([10, () => sunwheel({ twin: true }), 'Twin Wheels']),
+        S([13, rebound, 'Rebound']),
+        S([14, deepCall, 'Deep Call']),
+        S([12, breaker, 'Breaker'], [7, () => unbound(4), 'Sunwheel Unbound']),
+        S([12, breaker, 'Breaker']),
+        H && S([12, () => sunwheel({ twin: true }), 'Twin Wheels']),
       ].filter(Boolean), [
-        S([11, () => grip(1), 'Undertow Grip'], [4.5, () => unbound(6), 'Sunwheel Unbound'], [6, fist, 'Fist Slam']),
-      ], 28),
+        S([12, () => grip(1), 'Undertow Grip'], [4.5, () => unbound(6), 'Sunwheel Unbound'], [6, fist, 'Fist Slam']),
+      ], 30),
       closing: [[12, deepCall, 'Deep Call'], [9, fist, 'Fist Slam'], [9, breaker, 'Breaker']],
       ramp: 0.08,
     }, from);
