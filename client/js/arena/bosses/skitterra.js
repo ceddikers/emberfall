@@ -645,105 +645,141 @@ const SKITTERRA = {
       });
     };
 
-    // Act I, The Web: seven movements (two Silk Wraps in all, a long way apart: the tank's cooldowns have to be back), a move and the one that answers it (the pools under a Lunge, the roots under a Reel).
+    // Act I, The Web: eight movements (two Silk Wraps in all, a long way apart: the tank's cooldowns have to be back), a move and the one that answers it (the pools under a Lunge, the roots under a Reel).
     // 10 to 12 s of calm between movements, 5 to 8 s inside one. The threads (Spin) go up only after the Spit-Lunge and the
     // charges (Strand Reel, Fang Rush) are done, so the first Lunge is fought across pools with no silk to cross, and the
-    // charges land on a bare floor; the Wrap-Lunge later is fought across the threads with no pools left.
+    // charges land on a bare floor; the Wrap-Lunge later is fought across the threads with no pools left. Hard reads these
+    // in a new order each pull: the brood and the charges (both fought before there is any silk) trade places round the
+    // Spit-Lunge, and so do the two movements that close the act.
+    const closers = () => [S([11, () => silkLines(), 'Silk Lines'], [9, venomMist, 'Venom Mist']), S([12, () => silkReel(), 'Silk Reel'], [7, venomMist, 'Venom Mist'])];
+    // the three movements before the Spin: the brood, the Spit-Lunge (nothing for tank or healer but the dodge, so it stands
+    // between the other two) and the charges. Hard trades the brood and the charges round each pull.
+    const beforeSpin = () => {
+      const brd = S([H ? 13 : 12, brood, 'Brood'], [7, () => silkReel(), 'Silk Reel'], H && [10, eggSacs, 'Egg Sacs']);
+      const spit = S([H ? 14 : 11, venomSpit, 'Venom Spit'], [6.5, () => lunge(), 'Eightfold Lunge'], H && [9, venomMist, 'Venom Mist']);
+      const chg = S([H ? 13 : 11, strandReel, 'Strand Reel'], H ? [8, fangRush, 'Fang Rush'] : [7, venomMist, 'Venom Mist'], H && [8, venomMist, 'Venom Mist']);
+      const ends = H ? f.shuffle([brd, chg]) : [brd, chg];
+      return [ends[0], spit, ends[1]];
+    };
     const actOne = at => f.course({
       until: 0.7,
       sets: [
         S([5, venomMist, 'Venom Mist'], [9, () => silkWrap(), 'Silk Wrap']),
-        S([13, brood, 'Brood'], [7, () => silkReel(), 'Silk Reel'], H && [10, eggSacs, 'Egg Sacs']),
-        S([14, venomSpit, 'Venom Spit'], [6.5, () => lunge(), 'Eightfold Lunge']),
-        S([13, strandReel, 'Strand Reel'], H ? [8, fangRush, 'Fang Rush'] : [7, venomMist, 'Venom Mist']),
+        ...beforeSpin(),
         S([11, spin, 'Spin'], [12, deluge, 'Acid Deluge']),
-        S([13, wrapLunge, 'Eightfold Lunge'], [9, venomSpit, 'Venom Spit']),
-        S([11, () => silkLines(), 'Silk Lines'], [9, venomMist, 'Venom Mist']),
-        S([12, () => silkReel(), 'Silk Reel'], [7, venomMist, 'Venom Mist']),
+        ...(H ? [S([13, wrapLunge, 'Eightfold Lunge'], [9, venomSpit, 'Venom Spit']), ...f.shuffle(closers())]
+          : [closers()[0], S([13, wrapLunge, 'Eightfold Lunge'], [9, venomSpit, 'Venom Spit']), closers()[1]]),   // (Normal: the Lines and the Mist before the Wrap-Lunge, so the Wraps and the Deluge are spread out)
       ].filter(Boolean),
       closing: [[10, venomMist, 'Venom Mist'], [12, () => silkReel(), 'Silk Reel']],   // (a party that is behind meets the Reel, not a Lunge over the Spit pools and the threads)
       next: dark,
     }, at);
 
     // (cast-free gaps stay under 4 s whatever the party cuts; the Hard drop's second landing is 3.6 s behind its first)
-    const dark = at => f.course({
+    // (Hard: the cocoon and the drip trade places each pull, read from their casts)
+    const dark = at => { const dripFirst = H && f.rng() < 0.5; return f.course({
       onStart: () => { f.clearTethers(); f.clearReels(); },
       sets: [
         S([2, intoDark, 'Into the Dark']),
         S([3, () => dropFrom(0), 'From the Dark']),
-        S([6, cocoonDrop, 'Cocoon Drop']),
+        S([6, ...(dripFirst ? [() => venomDrip(), 'Venom Drip'] : [cocoonDrop, 'Cocoon Drop'])]),
         S([3.5, () => dropFrom(1), 'From the Dark']),
-        S([H ? 8 : 5.5, venomDrip, 'Venom Drip']),
+        S([H ? 8 : 5.5, ...(dripFirst ? [cocoonDrop, 'Cocoon Drop'] : [() => venomDrip(), 'Venom Drip'])]),
         S([H ? 5 : 4.5, () => dropFrom(2), 'From the Dark']),
         S([H ? 7 : 5.5, comeBack, 'Tightening Web']),   // (three drops: the dark ran long with four)
         S([6]),
       ],
       next: actTwo,
-    }, at);
+    }, at); };
 
     // Act II, The Brood: movements of two (a move and the one that answers it), 10 to 12 s of calm between them and 4 to 10 s
     // inside. The rim Lunge: Strand Reel hangs her on a pillar and the Lunge that follows is struck from there, sweeping the
     // cave like a wiper from the wall. Reel into Spit drags someone across the pools; Lines into Lunge lands the strikes as the
     // lines come due; the Swarm into the Wrap holds the tank under what hatched.
+    // Tank and healer: the tank's work is the Wrap, the brood to hold and the places she is moved to (a Strand Reel, the Deluge,
+    // Molt, Fang Rush, Snare Weave), the healer's the Mists, the Reels and the Deluge; the movements are laid so that one or the
+    // other has a beat in nearly every one of them, and the two Wraps stay a long way apart.
     const rimLunge = () => lunge(Math.hypot(B.x, B.y) > 150 ? { a0: Math.atan2(-B.y, -B.x) + (f.rng() - 0.5) * 0.6 } : {});
-    const twoSets = () => (H ? [
-      S([3, venomMist, 'Venom Mist'], [8, () => lunge(), 'Eightfold Lunge']),
-      S([10, volley, 'Spinneret Volley'], [9, () => { silkReel('healer'); silkWrap(); }, 'Silk Reel']),
-      S([9, venomMist, 'Venom Mist'], [7, molt, 'Molt']),
-      S([11, linesThenSpit, 'Silk Lines']),
-      S([10, eggSacs, 'Egg Sacs'], [9, fangRush, 'Fang Rush']),
-      S([10, swarm, 'The Swarm'], [7, () => silkWrap(), 'Silk Wrap']),
-      S([9, strandReel, 'Strand Reel'], [6, rimLunge, 'Eightfold Lunge']),
-      S([9, snareWeave, 'Snare Weave'], [9, deluge, 'Acid Deluge']),
-      S([9, ambush, 'Ceiling Ambush'], [7, venomMist, 'Venom Mist']),
-      S([9, () => silkLines(), 'Silk Lines'], [4, () => lunge(), 'Eightfold Lunge']),
-      S([9, () => silkReel('healer'), 'Silk Reel'], [6, () => lunge(), 'Eightfold Lunge']),
-      S([9, venomMist, 'Venom Mist'], [8, wrapLunge, 'Eightfold Lunge']),
-      S([9, venomSpit, 'Venom Spit'], [6, () => silkReel('healer'), 'Silk Reel']),
-    ] : [
+    // Hard reads Act II in a new order each pull, but only where the swap is safe: the Wrap-Lunge and the Volley (with its Wrap)
+    // trade the first and last Wrap slots, Molt and the Snare Weave trade places, and the Ambush-and-Mist and the Reel-and-Lunge
+    // do too. The Spit pools (45 s) must never lie under a Lunge, the Swarm needs the middle of the act for the clutches to be
+    // broken first, and the Wraps must stay far apart, so those movements keep their places.
+    const hardTwo = () => {
+      const swap = (a, b) => (f.rng() < 0.5 ? [a, b] : [b, a]);
+      const [w1, w2] = swap(S([10, volley, 'Spinneret Volley'], [9, () => { silkReel('healer'); silkWrap(); }, 'Silk Reel']), S([9, venomMist, 'Venom Mist'], [8, wrapLunge, 'Eightfold Lunge']));
+      const [k1, k2] = [S([9, venomMist, 'Venom Mist'], [7, molt, 'Molt']), S([9, snareWeave, 'Snare Weave'], [9, deluge, 'Acid Deluge'])];
+      const [n1, n2] = swap(S([9, ambush, 'Ceiling Ambush'], [7, venomMist, 'Venom Mist']), S([9, () => silkReel('healer'), 'Silk Reel'], [6, () => lunge(), 'Eightfold Lunge']));
+      return [
+        S([3, venomMist, 'Venom Mist'], [8, () => lunge(), 'Eightfold Lunge']),
+        w1, k1,
+        S([11, linesThenSpit, 'Silk Lines']),
+        S([10, eggSacs, 'Egg Sacs'], [9, fangRush, 'Fang Rush']),
+        S([10, swarm, 'The Swarm'], [7, () => silkWrap(), 'Silk Wrap']),
+        S([9, strandReel, 'Strand Reel'], [6, rimLunge, 'Eightfold Lunge']),
+        k2, n1,
+        S([9, () => silkLines(), 'Silk Lines'], [4, () => lunge(), 'Eightfold Lunge']),
+        n2, w2,
+        S([9, venomSpit, 'Venom Spit'], [6, () => silkReel('healer'), 'Silk Reel']),
+      ];
+    };
+    const twoSets = () => (H ? hardTwo() : [
       S([3, venomMist, 'Venom Mist'], [8, wrapLunge, 'Eightfold Lunge']),
       S([12, linesThenSpit, 'Silk Lines']),
-      S([11, () => silkReel(), 'Silk Reel'], [7, venomSpit, 'Venom Spit']),
       S([11, venomMist, 'Venom Mist'], [10, deluge, 'Acid Deluge']),
+      S([11, () => silkReel(), 'Silk Reel'], [7, venomSpit, 'Venom Spit']),
       S([12, strandReel, 'Strand Reel'], [6, rimLunge, 'Eightfold Lunge']),
-      S([12, swarm, 'The Swarm'], [8, () => silkWrap(), 'Silk Wrap']),
-      S([11, () => silkLines(), 'Silk Lines'], [4, () => lunge(), 'Eightfold Lunge']),
-      S([11, venomSpit, 'Venom Spit'], [7, () => silkReel(), 'Silk Reel']),
       S([11, venomMist, 'Venom Mist'], [9, () => lunge(), 'Eightfold Lunge']),
-      S([12, () => silkLines(), 'Silk Lines'], [8, venomMist, 'Venom Mist']),
+      S([12, swarm, 'The Swarm'], [8, () => silkWrap(), 'Silk Wrap']),
+      S([11, venomSpit, 'Venom Spit'], [7, () => silkReel(), 'Silk Reel']),
       S([14, strandReel, 'Strand Reel'], [7, venomMist, 'Venom Mist']),
-      S([12, () => silkReel(), 'Silk Reel'], [7, () => lunge(), 'Eightfold Lunge']),
+      S([11, venomMist, 'Venom Mist'], [10, deluge, 'Acid Deluge']),
+      S([11, () => silkLines(), 'Silk Lines'], [4, () => lunge(), 'Eightfold Lunge']),
+      S([12, strandReel, 'Strand Reel'], [6, rimLunge, 'Eightfold Lunge']),
     ]).filter(Boolean);
     const actTwo = at => {
       // the Swarm's own clock on the clutches follows where its step falls in the sets
+      const sets = twoSets();
       let swarmIn = 0, tt = 0;
-      for (const set of twoSets()) for (const [dt, , name] of set) { tt += dt; if (name === 'The Swarm') swarmIn = tt; }
+      for (const set of sets) for (const [dt, , name] of set) { tt += dt; if (name === 'The Swarm') swarmIn = tt; }
       return f.course({
         until: 0.28,
         onStart: () => { swarmAt = f.t + swarmIn + f.ct(3); broodClock(0, swarmAt - f.t); },
-        sets: twoSets(),
+        sets,
         closing: [[10, venomMist, 'Venom Mist'], [12, () => lunge(), 'Eightfold Lunge']],
         next: actThree,
       }, at);
     };
 
     // Act III, The Collapse: nothing is quiet for long. The Reel, the Lines and the Lunge are all fought on thinning silk,
-    // a fourth ring takes the hub down to a disc, and she hunts whoever stands farthest out along the spokes.
-    const actThree = at => f.course({
-      sets: [
-        S([2, chrysalis, 'Chrysalis'], [12, () => venomDrip(true), 'Venom Drip']),   // venom drips from the cocoon as it closes
-        S([H ? 10 : 11, () => giveWay(0), 'The Web Gives Way'], [6, venomMist, 'Venom Mist']),
-        S([8, () => silkLines(), 'Silk Lines'], [4, () => lunge(), 'Eightfold Lunge']),
-        S([6, () => giveWay(1), 'The Web Gives Way'], [5, () => silkReel(), 'Silk Reel']),
-        S([7, wrapLunge, 'Eightfold Lunge'], H && [8, volley, 'Spinneret Volley']),
-        S([5, () => giveWay(2), 'The Web Gives Way'], [5, () => silkWrap(), 'Silk Wrap']),
-        S([8, () => silkLines(), 'Silk Lines'], [5, lastHunt, 'From the Dark']),
-        S([4, () => giveWay(3), 'The Web Gives Way'], [6, venomMist, 'Venom Mist']),
-        S([9, () => lunge(), 'Eightfold Lunge'], H ? [9, () => silkReel('healer'), 'Silk Reel'] : [9, () => silkWrap(), 'Silk Wrap']),
-      ].filter(Boolean),
-      closing: [[12, venomMist, 'Venom Mist'], [9, () => lunge(), 'Eightfold Lunge'], H && [8, lastHunt, 'From the Dark']].filter(Boolean),
-      ramp: 0.06,   // the burn: gentler, it never ends
-    }, at);
+    // a fourth ring takes the hub down to a disc, and the hunt comes last: she hunts whoever stands farthest out along the
+    // spokes, the whole act's lesson in the last half minute (the Wraps are spread out: one early, one in the middle, one
+    // before the end). Hard moves the Wrap and the Mist/Reel that follow the rings round each pull.
+    const actThree = at => {
+      // (each follows a ring, so it waits out the ring's 6 s cast: a step any sooner would cut its cast bar short)
+      const wrapStep = [6, () => silkWrap(), 'Silk Wrap'], mistStep = [6, venomMist, 'Venom Mist'], reelStep = [6, () => silkReel('healer'), 'Silk Reel'];
+      let R = [wrapStep, [6, venomMist, 'Venom Mist'], [6, () => silkReel(), 'Silk Reel']];
+      // Hard: the Wrap comes first (then the Wrap-Lunge in the middle) or last (the Wrap-Lunge early), the Mist and the Reel
+      // fill the other two rings, so the tank's two blows are always a long way apart and the order is read each pull
+      const wrapFirst = !H || f.rng() < 0.5;
+      if (H) { const ends = f.shuffle([mistStep, reelStep]); R = wrapFirst ? [wrapStep, ends[0], ends[1]] : [ends[0], ends[1], wrapStep]; }
+      const linesLunge = S([8, () => silkLines(), 'Silk Lines'], [4, () => lunge(), 'Eightfold Lunge']);
+      const wrapLungeSet = S([7, wrapLunge, 'Eightfold Lunge'], H && [8, volley, 'Spinneret Volley']);
+      const [early, mid] = wrapFirst ? [linesLunge, wrapLungeSet] : [wrapLungeSet, linesLunge];
+      return f.course({
+        sets: [
+          S([2, chrysalis, 'Chrysalis'], [12, () => venomDrip(true), 'Venom Drip']),   // venom drips from the cocoon as it closes
+          S([H ? 10 : 11, () => giveWay(0), 'The Web Gives Way'], R[0]),
+          early,
+          S([6, () => giveWay(1), 'The Web Gives Way'], H ? R[1] : [6, venomMist, 'Venom Mist']),
+          mid,
+          S([5, () => giveWay(2), 'The Web Gives Way'], [6, venomMist, 'Venom Mist']),
+          S([4, () => giveWay(3), 'The Web Gives Way'], R[2]),
+          S([9, () => lunge(), 'Eightfold Lunge'], H ? [9, () => silkReel('healer'), 'Silk Reel'] : [9, () => silkWrap(), 'Silk Wrap']),
+          S([8, () => silkLines(), 'Silk Lines'], [5, lastHunt, 'From the Dark']),
+        ].filter(Boolean),
+        closing: [[12, venomMist, 'Venom Mist'], [9, () => lunge(), 'Eightfold Lunge'], H && [8, lastHunt, 'From the Dark']].filter(Boolean),
+        ramp: 0.06,   // the burn: gentler, it never ends
+      }, at);
+    };
 
     actOne(0);
     { const br = f.events.find(e => e.step && e.name === 'Brood'); broodClock(br ? br.t - f.t + f.ct(3) : 0, 0); }   // (the Brood step's time, plus its cast)

@@ -34,7 +34,7 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS, optional 'gear=
   ['the Hollow King', 'hollowking', 'runeguard:spellwarden', 'cleric:base', 'ranger:venomstrike', 'shadowblade:nightstalker'],
   // the advanced classes (classes-a): each spec somewhere
   ['Grubnak', 'grubnak', 'bastion:sentinel', 'cleric:base', 'thermist:base', 'driftblade:base'],   // (the base Bastion cleared only 2 of 8 here, before and after the class rework: a marginal party, not a fault)
-  ['Skitterra', 'skitterra', 'runeguard:base', 'grovekeeper:base', 'thermist:pendulum', 'driftblade:orbit'],   // (both advanced DPS together again since the Driftblade bot keeps moving)
+  ['Skitterra', 'skitterra', 'runeguard:base', 'grovekeeper:base', 'thermist:pendulum', 'driftblade:orbit', 'runs=6'],   // (both advanced DPS together again since the Driftblade bot keeps moving; it clears about half the time, 7 of 12 before the 2026-10-26 pass and 6 of 12 after: six tries)
   ['Volkar', 'volkar', 'bastion:base', 'cleric:base', 'thermist:zenith', 'driftblade:comet'],   // (with the reworked Volkar, an Accelerant plus two advanced DPS was too tight)
   ['the Hollow King', 'hollowking', 'runeguard:base', 'cleric:aegis', 'thermist:base', 'driftblade:base'],
   // Alembist (classes-b): the base kit and each spec healing a boss
