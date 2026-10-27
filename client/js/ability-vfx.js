@@ -2126,16 +2126,17 @@ const CAST_VFX = (() => {
       c.later(0.2, () => { V.ink(w.x, w.y, { r: 90, dur: 1.4 }); V.sigil(w.x, w.y, { r: 90, style: 'petals', color: '#ffb8d8', dur: 1.4, spin: 1.5 });
         V.burst(w.x, w.y - 20, { color: '#ffd0e4', color2: '#ffffff', n: 14, speed: 220, kind: 'petal', flashR: 90 }); V.plus(w.x, w.y, { color: '#fff2a0', n: 8 });
         V.motes(w.x, w.y, { kind: 'petal', color: '#ffc0dc', n: 10, r: 60, rise: 0.6 }); }); },
-    // Dawn Sanctum: a great circle of dawn at the cleric's feet for 12s, petals and light drifting up out of it
-    dawnsanctum: c => { const x = c.x, y = c.y, r = 130;
+    // Dawn Sanctum: a halo of dawn round the cleric for 15s that follows them, petals and light drifting up out of it
+    dawnsanctum: c => { const w = c.ent, x = c.x, y = c.y, r = 200, fo = w ? { follow: w } : {};
       // (QA: two full-strength circles for 12s hid telegraphs; the pillar whited out the cleric) both settle faint
       V.pillar(x, y, { r: 30, h: 220, color: '#ffe680', dur: 1 });
-      vfxLingerSettle(V.ink(x, y, { r, dur: 12 }), 0.5, 1); vfxLingerSettle(V.sigil(x, y, { r, style: 'star4', color: '#ffd65a', dur: 12, spin: 0.25 }), 0.26, 1.2); vfxLingerSettle(V.sigil(x, y, { r: r * 0.6, style: 'petals', color: '#ffc0dc', dur: 12, spin: -0.4 }), 0.22, 1.2);
+      vfxLingerSettle(V.ink(x, y, { r, dur: 15, ...fo }), 0.5, 1); vfxLingerSettle(V.sigil(x, y, { r, style: 'star4', color: '#ffd65a', dur: 15, spin: 0.25, ...fo }), 0.26, 1.2); vfxLingerSettle(V.sigil(x, y, { r: r * 0.6, style: 'petals', color: '#ffc0dc', dur: 15, spin: -0.4, ...fo }), 0.22, 1.2);
       V.shock(x, y, { r: r + 30, color: '#ffe680', dur: 0.6, w: 7 });
-      V.fx({ dur: 12, layer: 'ground', draw: () => {}, tick: (p, dt, e) => {
+      V.fx({ dur: 15, layer: 'ground', draw: () => {}, tick: (p, dt, e) => {
+        const cx = w ? w.x : x, cy = w ? w.y : y;
         if (Math.random() < 0.4) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * r * 0.9, pet = Math.random() < 0.35;
-          V.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.78, z: 0, vz: rand(25, 60), vx: rand(-10, 10), life: rand(1, 1.6), size: pet ? 10 : rand(5, 8), size1: pet ? 10 : 0, color: pet ? '#ffc0dc' : '#fff2a0', kind: pet ? 'petal' : 'glow', add: pet ? false : undefined, flutter: pet ? 5 : 0 }); }
-        e.n = e.n || 0; if (p * 12 >= (e.n + 1) * 1.5) { e.n++; V.shock(x, y, { r: r * 0.9, r0: 30, color: '#fff2a0', dur: 0.5, w: 3 }); }
+          V.spawn({ x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d * 0.78, z: 0, vz: rand(25, 60), vx: rand(-10, 10), life: rand(1, 1.6), size: pet ? 10 : rand(5, 8), size1: pet ? 10 : 0, color: pet ? '#ffc0dc' : '#fff2a0', kind: pet ? 'petal' : 'glow', add: pet ? false : undefined, flutter: pet ? 5 : 0 }); }
+        e.n = e.n || 0; if (p * 15 >= (e.n + 1) * 1.5) { e.n++; V.shock(cx, cy, { r: r * 0.9, r0: 30, color: '#fff2a0', dur: 0.5, w: 3 }); }
       } }); },
   });
 
@@ -3576,8 +3577,8 @@ function windLaneBoost(x, y, vx, vy, now) {
     stagger: e => { V.smoke(e.x, e.y, { n: 4, color: '#8a7a68', size: 18, a: 0.5, speed: 30 }); V.shock(e.x, e.y, { r: 40, color: '#8a6a50', dur: 0.3, w: 3 }); },
     // Heaven's Drop (Mountain Falls talent): the ground under the boss gives a second later
     aftershock: Object.assign((e, target) => { const t = target || e; V.shock(t.x, t.y, { r: 110, color: '#c8a070', dur: 0.5, w: 6 }); V.debris(t.x, t.y, { n: 6, color: '#7a6a58' }); V.decal(t.x, t.y, { style: 'crack', r: 50, dur: 1.8, a: 0.5, seed: Math.random() * 6 }); shake(3); }, { atTarget: true }),
-    // Thousand Palms (Echoing Palm talent): three faint palm prints, half a second behind
-    'echo-palm': Object.assign((e, target) => { const t = target || e; for (let i = 0; i < 3; i++) FX.later(i * 0.08, () => print(t.x + rand(-16, 16), t.y + rand(-10, 10), Math.atan2(t.y - e.y, t.x - e.x), '#ffe0b0', 0.9, 0.35)); }, { atTarget: true }),
+    // Thousand Palms (Echoing Palm talent): four faint palm prints, half a second behind
+    'echo-palm': Object.assign((e, target) => { const t = target || e; for (let i = 0; i < 4; i++) FX.later(i * 0.08, () => print(t.x + rand(-16, 16), t.y + rand(-10, 10), Math.atan2(t.y - e.y, t.x - e.x), '#ffe0b0', 0.9, 0.35)); }, { atTarget: true }),
     // Perfect Form (talent): a move pressed all Crisp lands again: a pale gold ghost of the blow, one big print, a clean ring and a glint
     perfectForm: Object.assign((e, target) => { const t = target || e, a = Math.atan2(t.y - e.y, t.x - e.x);
       print(t.x, t.y, a, '#fff2c8', 1.4, 0.45); V.shock(t.x, t.y, { r: 60, color: '#fff6d8', dur: 0.3, w: 3 });
@@ -8960,7 +8961,7 @@ Object.assign(KIT_VFX, {
   KIT_VFX['ken-spin'] = (e, target, d) => {
     const n = Math.max(1, (d && d.n) || 1);
     for (let i = 0; i < 3; i++) later(e, i * 0.05, () => V.slash(e.x, e.y, (e.angle || 0) + i * TAU / 3, { r: 78, span: 2.0, color: EMB, core: WGOLD, dur: 0.24, sparks: 2 }));
-    V.shock(e.x, e.y, { r0: 14, r: 112, color: EMB2, dur: 0.4, w: 3 });
+    V.shock(e.x, e.y, { r0: 14, r: Math.max(112, (d && d.r) || 0), color: EMB2, dur: 0.4, w: 3 });
     V.sparks(e.x, e.y, { color: GOLD, n: 5 + Math.min(n, 6) * 2, speed: 300, z: 20, up: 120 });
   };
   // Flash of Ash: a ring of a thousand thin cuts through the boss, over half a second, ending in a ring of ember and white-gold (the Deathblow that follows is

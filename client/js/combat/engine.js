@@ -250,7 +250,7 @@ class Kit {
   abById(id) { return this.abilities.find(a => a.id === id); }
   recast(ab) {
     let r = typeof ab.cd === 'function' ? ab.cd(this) : (ab.cd || 0);
-    if (r) r = Math.max(1, r + this.talentMod('cd', ab));   // talents: shorter cooldowns (talents.js `cd`)
+    if (r) { const m = this.talentMod('cd', ab); r = Math.max(1, ab.replaces && m < 0 ? Math.max(r * 0.75, r + m) : r + m); }   // talents: shorter cooldowns (talents.js `cd`); a spec's replacement move keeps at least three quarters of its own cooldown (a cut sized for the base move, e.g. Long Thread on Severance)
     return r && ab.type === 'ogcd' ? r * (1 - Math.min(0.3, this.fxMod('recast'))) : r;   // item effects: shorter oGCD cooldowns
   }
   refreshCharges(ab) {
@@ -587,7 +587,7 @@ class Kit {
     this.damage(au.potency, { auto: true });
   }
   refill(id) { const ab = this.abById(id); if (!ab) return; this.cd[id] = ab.charges ? { charges: ab.charges, next: 0 } : 0; }
-  resetCooldown(ab) { if (ab.charges) this.cd[ab.id] = { charges: Math.min(ab.charges, this.cd[ab.id].charges + 1), next: this.cd[ab.id].next }; else this.cd[ab.id] = 0; }
+  resetCooldown(ab) { if (ab.charges) { const n = Math.min(ab.charges, this.cd[ab.id].charges + 1); this.cd[ab.id] = { charges: n, next: n >= ab.charges ? 0 : this.cd[ab.id].next }; } else this.cd[ab.id] = 0; }   // (at full charges the recharge stops, as refundCharge does)
 
   // Messages from the fight (host) or training sim: e.g. 'perfect' block, 'shieldEnd', 'reflect'.
   notify(type, data) { if (this.def.onNotify) this.def.onNotify(this, type, data || {}); }
@@ -688,9 +688,9 @@ class Kit {
   allyBuff(target, id, opts = {}) {
     const b = ALLY_BUFFS[id];
     if (!b || target == null) return;
-    this.env.emit({ type: 'allyBuff', target, id, kind: b.kind, value: b.value, dur: b.dur, ab: opts.ab });
+    this.env.emit({ type: 'allyBuff', target, id, kind: b.kind, value: b.value, dur: b.dur, ab: opts.ab, not: opts.not });   // (target 'lowest': the most hurt ally, other than opts.not)
   }
-  debuffTarget(kind, value, dur, opts = {}) { this.env.emit({ type: 'targetDebuff', kind, value, dur, ab: opts.ab }); }
+  debuffTarget(kind, value, dur, opts = {}) { this.env.emit({ type: 'targetDebuff', kind, value, dur, ab: opts.ab, tag: opts.tag }); }   // (tag: a weakness of its own that stacks with the holder's others, fight.js)
   selfDamage(pctMaxHp, opts = {}) { this.env.emit({ type: 'selfDamage', pct: pctMaxHp, ab: opts.ab }); }
   // instant: not at the end of a cast (a talent, a seed, a Draught), which leaves the heavier raise sickness (fight.js FIGHT.SICK)
   raise(target, opts = {}) { this.env.emit({ type: 'raise', target, ab: opts.ab, instant: !this._fromCast }); }

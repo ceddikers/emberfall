@@ -301,6 +301,7 @@
     },
     threads: () => (inArena() ? Stagecraft.threadsOf(Net.id, entById) : null),
     dolls: (a, list) => Stagecraft.setMine(list, player.cls && player.cls.id, actor && actor.kit),
+    allies: () => (inArena() ? [...raid.party].filter(([, s]) => s.alive !== false && !s.left).map(([id, s]) => ({ id: Number(id), hp: s.maxHp ? s.hp / s.maxHp : 1 })) : [{ id: Net.id, hp: 1 }]),   // the living party (actor.js allies)
     lamps: (a, list) => Lamps.setMine(list, now),   // a Lanternkeeper's lanterns (lanterns.js; sent to the host 10 times a second)
     hounds: (a, list) => Kennel.setMine(list, player.cls && player.cls.id, actor && actor.kit),   // a Houndmaster's hounds (kennel.js; sent to the host 10 times a second)
     // a telegraph about to land on a spot (a circle, cone, spread or cleave due within `within` s): Pirouette glows for its Doll
@@ -411,6 +412,8 @@
     'all', 'op', 'older', 'mark', 'freeze', 'drop', 'merge', 'hit', 'push', 'due', 'col', 'small', 'tithe', 'mult',   // (jaw and Ledger orders)
     'pair', 'mx', 'st', 'dp', 'hm', 'seam', 'both', 'mit', 'keep', 'ub',
     'lid', 'full', 'last',
+    'x', 'y', 'dist',   // (a Reaper's gather and field: fight.js reaperEvent reads the spot)
+    'pay', 'solo', 'sht', 'rg', 'dfl', 'min',   // (Overdraft's share, the Alembist's lone splash and Salve shield, the Loomwright ring)
     'instant'];   // (an instant raise: the heavier raise sickness, fight.js FIGHT.SICK)   // (a lantern's burst: fight.js lampEvent)   // (threads; ub: a hit of an Ultimate or its window)
   function packEv(ev) {
     const o = {};
@@ -689,6 +692,7 @@
     if (kenK) {
       kenK.sim.t = now;
       if (kenK.s.offbal > now) amt *= 1 + KENSEI.OFF_DMG;
+      if (!d.heavy && kenK.sim.boss.duelUntil > now) amt *= KENSEI.DUEL_SOFT;   // (Ember Duel: quicker, lighter swings)
       kPre = amt;
       kd = kenK.sim.kenIncoming({ id: Net.id, x: player.x, y: player.y, s: kenK.s }, kenK.s, kPre, { kind });
       if (kd) amt *= kd.mult;
@@ -972,6 +976,12 @@
       else return;
     } else dest = kitMoveDest(ev.where, player, tgt, player.target || mouseWorld(), ev.d);
     if (inArena()) clampArena(dest); else townClamp(dest, 40, player);
+    if (ev.safe && inArena()) {   // (ev.safe: never onto a marked floor, e.g. Wings of Dawn: the hop shortens to the last clear spot, or stays put)
+      const marked = (x, y) => [...raid.tgs.values()].some(tg => tg.gone == null && !tg.hidden && ['aoe', 'spread', 'buster', 'line', 'cone'].includes(tg.type) && SHAPES.contains(tg.live || tg.shape, x, y, 12));
+      const sx = player.x, sy = player.y, fr = [1, 0.75, 0.5, 0.25].find(q => !marked(sx + (dest.x - sx) * q, sy + (dest.y - sy) * q));
+      if (fr == null) return;
+      dest.x = sx + (dest.x - sx) * fr; dest.y = sy + (dest.y - sy) * fr;
+    }
     player.dashMove = { sx: player.x, sy: player.y, tx: dest.x, ty: dest.y, t0: now };
     if (face) player.angle = tgt && ev.where !== 'dash' ? Math.atan2(tgt.y - dest.y, tgt.x - dest.x) : Math.atan2(dest.y - player.y, dest.x - player.x);
     player.target = null; player.interact = null;
@@ -1476,7 +1486,8 @@
     // a buff on one chosen ally: only a known one (engine.js ALLY_BUFFS), at its own strength, on a player id
     if (ev.type === 'allyBuff') {
       const b = typeof ev.id === 'string' && Object.prototype.hasOwnProperty.call(ALLY_BUFFS, ev.id) ? ALLY_BUFFS[ev.id] : null;
-      if (!b || !Number.isFinite(ev.target)) return;
+      if (!b || !(Number.isFinite(ev.target) || ev.target === 'lowest' || ev.target === 'self')) return;   // ('lowest': the most hurt ally, Twin Blessing's second press; 'self': Pace Setter)
+      if (ev.not !== undefined && !Number.isFinite(ev.not)) ev.not = undefined;
       ev.kind = b.kind; ev.value = b.value; ev.dur = b.dur;
     }
     host.onPlayerEvent(pid, ev);

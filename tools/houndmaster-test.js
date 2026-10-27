@@ -192,10 +192,13 @@ function drift(m, secs) {
   check(rust.mode !== 'down' && rust.hp === rust.maxHp && m.fx('houndUp').length === 1, `back after 10s (${rust.mode})`);
   m.kit.engagedAt = m.st.t; m.step(3);
   check(rust.goal && rust.ring != null, 'and back at work');
-  // Thick Coat: 6s
+  // Thick Coat: the first hit in 20s leaves it on one health; a second one downs it, and it is back in 4s
   const m2 = make({ seed: 22, talents: ['houndmaster_thickcoat'] });
-  m2.engage(); const r2 = m2.hs()[0]; m2.kit.notify('houndhit', { h: r2.id }); m2.step(6.3);
-  check(r2.mode !== 'down', 'Thick Coat: a downed hound is back in 6s');
+  m2.engage(); const r2 = m2.hs()[0]; m2.kit.notify('houndhit', { h: r2.id });
+  check(r2.mode !== 'down' && r2.hp === 1, 'Thick Coat: a hit that would down a hound leaves it on one health');
+  m2.kit.notify('houndhit', { h: r2.id }); m2.step(0.1);
+  check(r2.mode === 'down', 'and a second one within 20s downs it'); m2.step(4.3);
+  check(r2.mode !== 'down', 'Thick Coat: a downed hound is back in 4s');
   // the shield (the loot) takes one hit, a raidwide is the lesser blow, a spectral hound takes nothing
   const m3 = make({ seed: 23 });
   m3.kit.gear = () => ({ perks: new Set(['houndmaster_a2']) });
@@ -276,10 +279,10 @@ function drift(m, secs) {
   m2.engage(); put(m2, 'left', 'right'); m2.kit.g.ult = 0; m2.kit.g.bond = 100;
   const u0 = m2.kit.g.ult; m2.kit.press(E);
   check(m2.kit.g.ult - u0 > 2 && m2.kit.g.ult - u0 < 4, `a finisher charges Wild Hunt 2.8% (${(m2.kit.g.ult - u0).toFixed(2)})`);
-  // King of the Pack: the spectral hounds stay 4s more
+  // King of the Pack: the spectral hounds stay 10s more
   const m3 = make({ seed: 53, talents: ['houndmaster_kingofpack'] });
-  m3.engage(); m3.kit.g.ult = 100; m3.kit.press(T); m3.step(12);
-  check(m3.kit.g.hounds.some(h => h.spectral) && !m3.kit.g.all, 'King of the Pack: they stay 4s past the window');
+  m3.engage(); m3.kit.g.ult = 100; m3.kit.press(T); m3.step(18);
+  check(m3.kit.g.hounds.some(h => h.spectral) && m3.kit.g.all, 'King of the Pack: they stay 10s past the window, and the free finisher with them');
   m3.step(4);
   check(!m3.kit.g.hounds.some(h => h.spectral), 'and then go');
   // the loot: the pack opens with a pounce
@@ -417,7 +420,7 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   check(m0.kit.g.pair === null, 'without Heel Nip two hounds on one side stay a Snap');
   check(mn.kit.g.pair === 'rend' && (mn.kit.stats.nips || 0) === 1, `Heel Nip: the third hit sends one hound across, and the pair is a Rend (${mn.kit.g.pair}, ${mn.hs().map(h => h.goal)})`);
   const ms = run3([TN('heelnip')], 'left', 'right');
-  check(ms.kit.g.pair === 'rend' && !ms.kit.stats.nips, 'Heel Nip leaves a pair that already stands alone');
+  check(ms.kit.g.pair === 'rend' && ms.kit.stats.nips === 1 && ms.hs().map(h => h.goal).join() === 'left,right', 'Heel Nip: a pair that already stands is left where it is, and the pack bites again');
   const mf = run3([TN('heelnip')], 'front', 'front');
   check(mf.kit.g.pair === 'hamstring', `two hounds in front: the nip makes a Hamstring (${mf.kit.g.pair})`);
   const mh = make({ seed: 61, talents: [TN('heelnip')] }); mh.engage(); put(mh, 'left', 'left'); mh.kit.press(R); press3(mh);
@@ -431,28 +434,26 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   check(m0.dmg('flank').length === 0, 'and without it the Whistle is only a word');
 }
 {
-  // Echo Bark: the same pair twice in a row repeats at 30%; another pair or a Snap does not
+  // Echo Bark: every finisher echoes a moment later at a quarter, a half when it is a different pair from the one before
   const m = make({ seed: 63, talents: [TN('echobark')] });
   m.engage(); put(m, 'left', 'right');
   m.kit.g.bond = 100; m.st.emits.length = 0;
   m.kit.press(E); m.step(1);
-  check(m.dmg('finisher').length === 1, `the first Rend has no echo (${m.dmg('finisher').length} blows)`);
+  const d1 = m.dmg('finisher');
+  check(d1.length === 2 && near(d1[1].potency, 210, 0.5), `the first Rend echoes at half of 420, being a different pair from none (${d1.map(d => d.potency)})`);
   m.step(1.6); m.kit.g.bond = 100; m.kit.press(E); m.step(0.2);
-  check(m.dmg('finisher').length === 2, 'the echo waits a moment');
+  check(m.dmg('finisher').length === 3, 'the echo waits a moment');
   m.step(0.5);
   const ds = m.dmg('finisher');
-  check(ds.length === 3 && near(ds[2].potency, 84, 0.5), `a second Rend in a row echoes at 20% of 420 (${ds.map(d => d.potency)})`);
-  m.step(2.6); m.kit.g.bond = 100; m.st.emits.length = 0;
-  m.kit.press(E); m.step(1);
-  check(m.dmg('finisher').length === 2, 'a third Rend in a row echoes again (it and its echo)');
+  check(ds.length === 4 && near(ds[3].potency, 105, 0.5), `a second Rend in a row echoes at a quarter of 420 (${ds.map(d => d.potency)})`);
   const m2 = make({ seed: 63, talents: [TN('echobark')] });
   m2.engage(); put(m2, 'left', 'left'); m2.kit.g.bond = 100; m2.kit.press(E); m2.step(2.6); m2.kit.g.bond = 100; m2.st.emits.length = 0; m2.kit.press(E); m2.step(1);
-  check(m2.dmg('finisher').length === 1, 'a Snap twice does not echo');
+  check(m2.dmg('finisher').length === 2, 'a Snap echoes too (it and its echo)');
 }
 {
   // Guard Dog: Call Off sets a hound in the way, a shield on you for 8s
   const go = talents => { const m = make({ seed: 64, talents }); m.engage(); m.st.emits.length = 0; m.kit.press(D); return m; };
-  const sh = go([TN('guarddog')]).st.emits.find(e => e.type === 'shield'), none = go(null).st.emits.find(e => e.type === 'shield');
+  const sh = go([TN('guarddog')]).st.emits.find(e => e.type === 'shield' && e.target === 'self'), none = go(null).st.emits.find(e => e.type === 'shield');
   check(sh && sh.target === 'self' && sh.dur === 8 && sh.amount > 50, `Guard Dog: a shield on you for 8s (${JSON.stringify(sh)})`);
   check(!none, 'and Call Off alone gives none');
 }
@@ -470,22 +471,22 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   check(!m0.st.emits.some(e => e.type === 'teleport'), 'without Fetch, Call Off moves nobody');
 }
 {
-  // Shared Kill: a finisher on a boss below 30% gives 20 Bond back (the world's boss() reports its health)
+  // Shared Kill: a finisher gives 6 Bond back, 20 on a boss below 30% (the world's boss() reports its health)
   const go = hp => { const m = make({ seed: 66, talents: [TN('sharedkill')] }); m.engage(); put(m, 'left', 'right'); m.st.bossHp = hp; m.kit.g.bond = 100; m.kit.press(E); return m.kit.g.bond; };
-  check(near(go(0.2), 80, 0.01) && near(go(0.5), 60, 0.01) && near(go(0.3), 60, 0.01), `Shared Kill: 60 Bond left, 80 below 30% (${go(0.5)}, ${go(0.2)})`);
+  check(near(go(0.2), 80, 0.01) && near(go(0.5), 66, 0.01) && near(go(0.3), 66, 0.01), `Shared Kill: 66 Bond left, 80 below 30% (${go(0.5)}, ${go(0.2)})`);
 }
 {
-  // Howl: a move on W; the party deals 5% more for 8s, both hounds hold, and the Hold button now pounces
+  // Howl: a move on W; the party deals 8% more for 8s, both hounds hold, and the Hold button now pounces
   const m = make({ seed: 67, talents: [TN('howl')] });
   const ab = m.kit.abilities[W];
   check(ab.id === 'howl' && ab.replaces === 'flank' && ab.fromTalent === TN('howl'), `Howl takes Whistle: Flank's button (${ab.id})`);
   m.engage(); put(m, 'left', 'right'); m.st.emits.length = 0;
   check(m.kit.press(W), 'Howl');
   const pb = m.st.emits.find(e => e.type === 'partyBuff');
-  check(pb && pb.kind === 'dmg' && near(pb.value, 0.05) && pb.dur === 8, `the party deals 5% more for 8s (${JSON.stringify(pb)})`);
+  check(pb && pb.kind === 'dmg' && near(pb.value, 0.08) && pb.dur === 8, `the party deals 8% more for 8s (${JSON.stringify(pb)})`);
   check(m.fx('howl').length === 1 && hdHolding(m.kit) && m.hs().every(h => h.mode === 'hold'), 'and the hounds hold');
   check(m.kit.label(m.kit.abilities[R]) === 'Pounce', 'so the Hold button says Pounce');
-  check(m.kit.readyIn(ab) > 20, `a 25s cooldown (${m.kit.readyIn(ab).toFixed(1)})`);
+  check(m.kit.readyIn(ab) > 19 && m.kit.readyIn(ab) <= 20, `a 20s cooldown (${m.kit.readyIn(ab).toFixed(1)})`);
   m.st.face += 1.2; m.step(5);
   check(m.kit.g.pair === 'rend', 'a held pincer rides out a turn');
   m.kit.press(R); m.step(2.2);
@@ -522,6 +523,7 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   check(m.dmg('pounce').length === 0, 'no pounce while the Mark lasts');
   m.run(2);
   check(m.fx('pounce').length === 1 && m.dmg('pounce').length === 2, `Cornered: the Mark ends in a pounce from both (${m.fx('pounce').length}, ${m.dmg('pounce').length})`);
+  check(m.dmg('pounce').every(d => near(d.potency, 750, 1)), `and the closing pounce hits three times as hard (${m.dmg('pounce').map(d => d.potency)})`);
   m.run(2);
   check(m.kit.g.pair === 'bringdown', 'and they land behind');
 }
@@ -537,7 +539,7 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   check(m.dmg('longchase').length === 0, 'the first quarter takes a moment');
   m.step(1.4);
   const ds = m.dmg('longchase');
-  check(ds.length === 4 && ds.every(d => near(d.potency, 250, 0.5)), `four bites of 250 (${ds.map(d => d.potency)})`);
+  check(ds.length === 4 && ds.every(d => near(d.potency, 300, 0.5)), `four bites of 300 (${ds.map(d => d.potency)})`);
   m.step(3);
   check(m.kit.g.pair === 'bringdown', `and it ends in a Bring Down pair (${m.kit.g.pair})`);
   check(m.kit.readyIn(ab) > 40, `a 45s cooldown (${m.kit.readyIn(ab).toFixed(1)})`);
@@ -549,6 +551,15 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   check(full.crit === true && full.n === 1 && part.n === 0, `Alpha: sure crit at full Bond only (${JSON.stringify(full)} / ${JSON.stringify(part)})`);
   const m = make({ seed: 73, talents: [TN('alpha')] }); m.engage(); put(m, 'left', 'right'); m.hs().forEach(h => { h.bond = 100; }); m.kit.g.bond = 100; m.kit.press(E);
   check(!m.kit.stats.alphas, 'and for a Bring Down only');
+  // ... and a pounce that formed the pair makes the next Bring Down a sure crit, with 10 Bond back (no full Bond needed)
+  const p = make({ seed: 73, talents: [TN('alpha')] }); p.engage(); put(p, 'left', 'right'); p.kit.press(R); p.step(0.8); p.kit.press(R); p.step(2.5);
+  check(p.kit.g.pair === 'bringdown' && p.kit.g.alphaUntil > p.st.t, `a pounce that makes a Bring Down pair arms Alpha (${p.kit.g.pair}, ${p.kit.g.alphaUntil})`);
+  p.kit.g.bond = 100; p.st.emits.length = 0; p.kit.press(E);
+  check(p.dmg('finisher')[0].crit === true && p.kit.stats.alphas === 1 && p.kit.g.bond >= 69.9, `Alpha after a pounce: a sure crit and 10 Bond (${p.kit.g.bond})`);
+  p.kit.g.bond = 100; p.step(2.6); p.kit.press(E);
+  check(p.kit.stats.alphas === 1, 'and it is spent: the next Bring Down is plain');
+  const q = make({ seed: 73, talents: [TN('alpha')] }); q.engage(); put(q, 'behind', 'behind'); q.kit.g.bond = 100; q.step(11); q.kit.g.bond = 100; q.kit.press(E);
+  check(!q.kit.stats.alphas, 'a Bring Down that did not follow a pounce (and no full Bond) is plain');
 }
 
 // the cooldowns and reach: Call Off 15s, Whistle 1s, the finisher from any range
@@ -621,7 +632,7 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   check(d && d.opts.tgt === 'imp1', `Pincer Drill: Rend's bleed also bleeds the nearest add (${d && d.opts.tgt})`);
   check(!go(['houndmaster_pincerdrill'], 'front', 'behind') && !go(null, 'left', 'right'), 'and only a Rend, and only with the talent');
   const m = make({ spec: 'packleader', seed: 84, talents: ['houndmaster_pincerdrill'] }); m.engage(); put(m, 'left', 'right'); m.kit.g.bond = 100; m.kit.press(E);
-  check(!m.kit.dots.has('rend2'), 'with no add there is nothing to jump to');
+  check(m.kit.dots.has('rend2') && m.kit.dots.get('rend2').opts.tgt !== 'imp1', 'with no add the bleed digs in twice as deep, on the boss');
 }
 {
   // Tag Team: after a Call Off the next finisher counts every pair
@@ -759,13 +770,14 @@ const stand = (m, slot) => { const a = m.st.face + HD_OFF[slot]; m.st.pos = { x:
   check(!nl.st.emits.some(e => e.type === 'teleport'), 'and it stays put without the talent');
 }
 {
-  // Old Scars: Greyfang takes 30% less from a raidwide
+  // Old Scars: Greyfang takes 30% less from every telegraph
   const go = talents => { const m = make({ spec: 'lonewolf', seed: 101, talents }); m.engage(); m.kit.notify('houndhit', { h: 'greyfang', w: 1 }); return m.hs()[0].hp; };
   check(near(go(['houndmaster_oldscars']), 220 - 42, 0.01) && near(go(null), 160, 0.01), `Old Scars: a raidwide costs Greyfang 42, not 60 (${go(['houndmaster_oldscars'])} / ${go(null)})`);
   const m = make({ spec: 'lonewolf', seed: 101, talents: ['houndmaster_oldscars'] }); m.engage(); m.kit.notify('houndhit', { h: 'greyfang' }); m.kit.notify('houndhit', { h: 'greyfang' });
-  check(m.hs()[0].hp === 20 && m.hs()[0].mode !== 'down', 'and a telegraph proper is still 100 (a bigger hound takes two)');
-  m.kit.notify('houndhit', { h: 'greyfang' });
-  check(m.hs()[0].mode === 'down', 'and the third downs it');
+  check(near(m.hs()[0].hp, 80, 0.01) && m.hs()[0].mode !== 'down', 'and a telegraph proper costs 70, not 100: any telegraph counts');
+  check(m.kit.g.scarUntil > m.st.t && m.kit.g.bond >= 40, `and a hit it stands through gives 20 Bond each time and sharpens its bites (${m.kit.g.bond})`);
+  m.kit.notify('houndhit', { h: 'greyfang' }); m.kit.notify('houndhit', { h: 'greyfang' });
+  check(m.hs()[0].mode === 'down', 'and the fourth downs it');
   // Fang and Knife: the bite a knife hit lets Greyfang have is twice as hard
   const fk = talents => { const w = make({ spec: 'lonewolf', seed: 102, talents }); w.engage(); w.step(2.6); w.kit.press(Q); w.step(2.6); w.st.emits.length = 0; w.kit.press(Q); return w.dmg('bite').map(d => d.potency); };
   const a = fk(['houndmaster_fangknife']), b = fk(null);
@@ -774,6 +786,34 @@ const stand = (m, slot) => { const a = m.st.face + HD_OFF[slot]; m.st.pos = { x:
   const w2 = make({ spec: 'lonewolf', seed: 102, talents: ['houndmaster_fangknife'] }); w2.engage(); w2.kit.press(Q); w2.step(1.5); w2.st.emits.length = 0;
   w2.kit.engagedAt = w2.st.t; w2.step(8);
   check(w2.dmg('bite').every(d => near(d.potency, 82.5, 0.5)), 'and a bite long after the knife is plain');
+}
+
+{
+  // the Lone Wolf's row I: Heel Nip, Scent Line and Howl do something with one hound
+  const lw = (seed, talents) => make({ spec: 'lonewolf', seed, talents });
+  // Heel Nip: the third knife hit calls Greyfang to where it pairs with you (you stand behind the boss)
+  const nip = talents => { const m = lw(61, talents); m.engage(); hdOrder(m.kit, m.hs()[0], 'left'); m.step(3); press3(m); m.step(1.5); return m; };
+  const n1 = nip([TN('heelnip')]), n0 = nip(null);
+  check(!n0.kit.g.pair && !n0.kit.stats.nips, `Lone Wolf without Heel Nip: Greyfang on a flank with you behind is no pair (${n0.kit.g.pair})`);
+  check((n1.kit.stats.nips || 0) >= 1 && (n1.kit.g.pair === 'hamstring' || n1.kit.g.pair === 'bringdown'), `Lone Wolf Heel Nip: the Gut calls Greyfang to a pair with you (${n1.kit.g.pair}, ${n1.kit.stats.nips})`);
+  const nf = lw(61, [TN('heelnip')]); nf.engage(); hdOrder(nf.kit, nf.hs()[0], 'front'); nf.step(3); const g0 = nf.kit.stats.nips || 0; press3(nf);
+  check((nf.kit.stats.nips || 0) === g0 + 1 && nf.kit.g.pair === 'hamstring', 'and a pair that already stands is left where it is, and Greyfang bites again');
+  // Scent Line: Ride Down sends Greyfang through the boss for a bite of 300
+  const sl = talents => { const m = lw(62, talents); m.engage(); m.kit.press(W); m.step(0.7); m.st.emits.length = 0; m.kit.press(W); return m; };
+  const s1 = sl([TN('scentline')]), s0 = sl(null);
+  const bite = m => m.dmg('mount').filter(d => near(d.potency, 300, 0.5));
+  check(bite(s1).length === 1, `Lone Wolf Scent Line: Ride Down brings a bite of 300 (${s1.dmg('mount').map(d => d.potency)})`);
+  check(bite(s0).length === 0, 'and without it the bite is not there');
+  // Howl: Mount stays, and the end of the ride is a howl (5% for 8s)
+  const hw = lw(67, [TN('howl')]);
+  check(hw.kit.abilities[W].id === 'mount' && !hw.kit.abilities.some(a => a.id === 'howl'), 'Lone Wolf Howl: Mount keeps its button');
+  hw.engage(); hw.kit.press(W); hw.step(0.7); hw.st.emits.length = 0; hw.kit.press(W);
+  const pb = hw.st.emits.find(e => e.type === 'partyBuff');
+  check(pb && pb.kind === 'dmg' && near(pb.value, 0.05) && pb.dur === 8 && hw.fx('howl').length === 1, `and Ride Down ends in a howl: 5% for 8s (${JSON.stringify(pb)})`);
+  const hr = lw(67, [TN('howl')]); hr.engage(); hr.kit.press(W); hr.step(0.7); hr.st.emits.length = 0; hr.step(6.5);
+  check(hr.st.emits.some(e => e.type === 'partyBuff' && e.kind === 'dmg'), 'a ride that runs out howls as well');
+  const hp = make({ spec: 'packleader', seed: 67, talents: [TN('howl')] });
+  check(hp.kit.abilities[W].id === 'howl', 'and the Pack Leader still has Howl as a move');
 }
 
 // 17. both specs in a headless raid: the bots keep their hounds, make pairs, and the Lone Wolf rides

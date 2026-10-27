@@ -489,7 +489,7 @@ class RaidHost {
     }
     if (ev.type === 'allyBuff') {
       // one chosen ally (a fallen one takes nothing); the same buff again replaces the old one
-      const to = ev.target === 'self' ? pid : ev.target, s = this.sim.ps.get(to);
+      const to = ev.target === 'self' ? pid : ev.target === 'lowest' ? this.sim.resolveTarget(pid, 'lowest', ev.not) : ev.target, s = this.sim.ps.get(to);
       if (!s || !s.alive || s.left) return;
       this.allyBuffs = this.allyBuffs.filter(x => !(x.to === to && x.id === ev.id));
       this.allyBuffs.push({ to, id: ev.id, kind: ev.kind, value: ev.value, end: this.sim.t + ev.dur, from: pid });
@@ -587,6 +587,7 @@ class RaidHost {
       aim: () => bot.aim || bot.plan || null,
       collide: (actor, o, r) => { ARENA.clamp(o, 16); if (host.sim.props.length) PROPS.collide(o, host.sim.props, r); },
       dolls: (actor, list) => host.sim.setDoll(bot.id, list),
+      allies: () => host.sim.alive().map(p => ({ id: p.id, hp: p.s.hp / p.s.maxHp })),   // the living party (actor.js allies)
       lamps: (actor, list) => host.sim.setLamps(bot.id, list),   // a Lanternkeeper bot's lanterns go straight to the host
       // a Houndmaster bot's hounds go straight to the host; the boss's facing is where its hounds' sides are measured from; Shift is the bot's own say (bot.shift)
       hounds: (actor, list) => host.sim.setHounds(bot.id, list),
@@ -634,6 +635,12 @@ class RaidHost {
           case 'teleport': {
             const b = host.sim.boss, a = b.facing + Math.PI;
             if (ev.where === 'point') { const to = ARENA.clamp({ x: Number(ev.x) || 0, y: Number(ev.y) || 0 }, 20); bot.x = to.x; bot.y = to.y; break; }   // a spot named by the kit (Swap)
+            if (ev.where === 'ally') {   // toward an ally, up to ev.d, stopping short of them (Wings of Dawn; ev.safe: the bot only presses it to a clear landing, bots.js)
+              const a = host.sim.players().find(p => p.id === ev.to); if (!a || a.id === bot.id) break;
+              const dist = Math.hypot(a.x - bot.x, a.y - bot.y), k = Math.max(0, Math.min(ev.d || 140, dist - 40)) / (dist || 1);
+              const to = ARENA.clamp({ x: bot.x + (a.x - bot.x) * k, y: bot.y + (a.y - bot.y) * k }, 40); bot.x = to.x; bot.y = to.y;
+              break;
+            }
             if (ev.where && ev.where !== 'behind' && typeof kitMoveDest !== 'undefined') {   // a kit move (kits.js): dash, swing round, charge through
               const en = bot.lastEnemy && bot.lastEnemy !== 'boss' ? host.sim.adds.get(bot.lastEnemy) : null;
               const tg = en || (b.untargetable ? null : b), tgt = tg ? { x: tg.x, y: tg.y } : null;

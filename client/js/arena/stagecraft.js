@@ -20,7 +20,7 @@ const Stagecraft = (() => {
   function endFight() { S.threads = []; S.tapestry = null; S.dolls.clear(); S.stage = 0; }
   function onThreads(msg, now) {
     S.threads = Array.isArray(msg.l) ? msg.l.filter(t => Array.isArray(t) && t.length >= 3) : [];
-    S.tapestry = Array.isArray(msg.tp) ? { from: msg.tp[0], end: now + Math.min(12, Number(msg.tp[1]) || 0) } : null;
+    S.tapestry = Array.isArray(msg.tp) ? { from: msg.tp[0], end: now + Math.min(16, Number(msg.tp[1]) || 0) } : null;
   }
   function onSnaps(msg, now, entById) {
     for (const s of msg.l || []) {

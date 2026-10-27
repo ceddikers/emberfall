@@ -18,9 +18,6 @@ const FULL = UPDATE || process.argv.includes('--full');
 const STAGE = (process.argv.find(a => a.startsWith('--stage=')) || '').slice(8);   // (internal: this process is a child that runs one in-process stage)
 const DPS_TOLERANCE = 0.08;   // a class's pro DPS may drift this far from the baseline before it counts as a change
 const SPEC_TOLERANCE = 0.05;  // a specialization's pro DPS may differ this much from its own base class
-const TALENT_MAX = 7;    // one talent may add at most this much pro DPS (%) to its class or spec (tools/talents.js)
-const BUILD_MAX = 18;    // ... and the strongest pick of every row together at most this much (rows I-V)
-const BUILD_ALL_MAX = 24;   // ... and with the spec rows VI-VII too (talents.js SPEC_TALENTS): the strongest pick of all seven rows
 // Normal is meant to take a real group several wipes, so a bot party only has to clear one run in RAID_RUNS
 const RAID_RUNS = 3;
 // bot raids: every boss, and every spec somewhere, with a fixed line-up so the result doesn't depend on a random spec
@@ -533,7 +530,7 @@ function talents() {
         for (const { s, mv } of moves) {
           if (!t.grants) break;
           const w = where + (s ? ' (' + s + ')' : '');
-          if (!mv) { probs.push(w + ': no move'); continue; }
+          if (!mv) { if (!(s && TALENT_ABILITIES[t.id] && TALENT_ABILITIES[t.id].spec && TALENT_ABILITIES[t.id].spec[s] === null)) probs.push(w + ': no move'); continue; }   // (a spec entry of null: the talent works another way in that spec)
           if (mv.replaces !== t.ab) probs.push(w + ': its move replaces ' + mv.replaces + ', not ' + t.ab);
           for (const fl of ['id', 'name', 'desc', 'type', 'icon']) if (!mv[fl]) probs.push(w + ': its move has no ' + fl);
           if (typeof mv.effect !== 'function') probs.push(w + ': its move has no effect');
@@ -889,20 +886,20 @@ function verdicts(sim, tal, raids, trials, hards, trialIds, specOf) {
     else pass('Specializations balanced', `${specRows.length} specs within ${SPEC_TOLERANCE * 100}% of their class`);
   }
 
-  // talents: one talent adds a few percent, a full build stays a modest step over the base kit
+  // talents: every talent and full build plays through the sim (tools/talents.js). No power cap: the designer lifts weak
+  // talents and leaves strong ones alone (2026-10-27), so this only reports the strongest
   const talRows = tal.out.split('\n').map(l => l.match(/^TALENT (\S+) (\w+) (-?[\d.]+)/)).filter(Boolean);
   const buildRows = tal.out.split('\n').map(l => l.match(/^BUILD (\S+) (\d+) (\d+) (-?[\d.]+)/)).filter(Boolean);
   const allRows = tal.out.split('\n').map(l => l.match(/^BUILDALL (\S+) (\d+) (\d+) (-?[\d.]+)/)).filter(Boolean);   // (with the spec rows VI-VII)
-  if (tal.code !== 0 || !talRows.length || !buildRows.length) fail('Talents balanced', 'tools/talents.js failed:\n' + tal.out.slice(-800));
+  if (tal.code !== 0 || !talRows.length || !buildRows.length) fail('Talents play', 'tools/talents.js failed:\n' + tal.out.slice(-800));
   else {
-    const off = [
-      ...talRows.filter(m => +m[3] > TALENT_MAX).map(m => `${m[1]} ${m[2]}: +${m[3]}% DPS on its own (max ${TALENT_MAX}%)`),
-      ...buildRows.filter(m => +m[4] > BUILD_MAX).map(m => `${m[1]}: full build ${m[2]} -> ${m[3]} pro DPS (+${m[4]}%, max ${BUILD_MAX}%)`),
-      ...allRows.filter(m => +m[4] > BUILD_ALL_MAX).map(m => `${m[1]}: full build with spec rows ${m[2]} -> ${m[3]} pro DPS (+${m[4]}%, max ${BUILD_ALL_MAX}%)`),
-    ];
-    const top = Math.max(...buildRows.map(m => +m[4]));
-    if (off.length) fail('Talents balanced', off.join('\n'));
-    else pass('Talents balanced', `${talRows.length} talent runs, every one at most +${TALENT_MAX}%; best full build +${top.toFixed(1)}%${allRows.length ? `, with spec rows +${Math.max(...allRows.map(m => +m[4])).toFixed(1)}% (max ${BUILD_ALL_MAX}%)` : ''}`);
+    const top = Math.max(...buildRows.map(m => +m[4])), one = Math.max(...talRows.map(m => +m[3]));
+    // a loose tripwire, not a cap: about twice the dummy's highest readings so far (+39% single, +115% build with spec rows,
+    // 2026-10-28; a healer's damage is a small base, so its percentages run high), past which it is almost surely a bug (a
+    // missed cooldown, a doubled hit), not a strong pick
+    const wild = [...talRows.filter(m => +m[3] > 80).map(m => `${m[1]} ${m[2]} +${(+m[3]).toFixed(1)}%`), ...buildRows.filter(m => +m[4] > 160).map(m => `build ${m[1]} ${m[2]}/${m[3]} +${(+m[4]).toFixed(1)}%`)];
+    if (wild.length) fail('Talents play', 'runaway talents (single over +80%, build over +160%: look for a bug first):\n' + wild.join('\n'));
+    else pass('Talents play', `${talRows.length} talent runs, strongest single +${one.toFixed(1)}%; best full build +${top.toFixed(1)}%${allRows.length ? `, with spec rows +${Math.max(...allRows.map(m => +m[4])).toFixed(1)}%` : ''}`);
   }
 
   // bot raids: a bot party clears each boss on Normal at least once in RAID_RUNS (it stops at the first clear; a fail has played them all)

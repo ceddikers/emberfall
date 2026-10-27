@@ -19,7 +19,7 @@ const BUFF_NAMES = {
   combust: 'Combustion', heating: 'Heating Up', hotstreak: 'Hot Streak', burnt: 'Burnt Out', growth: 'Wild Growth',
   awaken: 'Awakened', surge: 'Surge', lag: 'Time Lag', radiant: 'Radiant', verdict: 'Swift Verdict', chamber: 'Echo Chamber', moonlit: 'Moonlit', aim: 'Steady Aim', incircle: 'Ember Circle',
   // the advanced classes
-  brink: 'On the Brink', overheat: 'Overheat', frostbite: 'Frostbite', attuned: 'Attuned', momentum: 'Momentum', corona: 'Corona', redgiant: 'Red Giant', rebound: 'Rebound', flicker: 'Flicker',
+  brink: 'On the Brink', overheat: 'Overheat', frostbite: 'Frostbite', attuned: 'Attuned', momentum: 'Momentum', corona: 'Corona', redgiant: 'Red Giant', rebound: 'Rebound', flicker: 'Flicker', latentwin: 'Latent Heat',
   still: 'Stillpoint', gale: 'Gale Run', orbit: 'Orbit', tailwind: 'Tailwind',
   looseend: 'Loose End',
 };
@@ -29,7 +29,7 @@ const BUFF_ICON = {
   oath: 'oath', frenzy: 'frenzy', gorge: 'drain', undying: 'undying', overload: 'overload', markself: 'mark', keen: 'pierce',
   barrage: 'barrage', truenorth: 'step', dance: 'dance', combust: 'combust', heating: 'fireblast', hotstreak: 'pyro', burnt: 'vent',
   growth: 'growth', awaken: 'bloom', surge: 'shift', lag: 'shift', radiant: 'edge', verdict: 'smite', chamber: 'accel', moonlit: 'growth', aim: 'pierce', incircle: 'combust',
-  brink: 'flare', overheat: 'cinder', frostbite: 'rime', attuned: 'invert', momentum: 'equil', corona: 'flare', redgiant: 'invert', rebound: 'lance', flicker: 'rime',
+  brink: 'flare', overheat: 'cinder', frostbite: 'rime', attuned: 'invert', momentum: 'equil', corona: 'flare', redgiant: 'invert', rebound: 'lance', flicker: 'rime', latentwin: 'flare',
   still: 'still', gale: 'gale', orbit: 'slip', tailwind: 'hook',
   looseend: 'needle',
 };
@@ -106,16 +106,16 @@ GAUGE_TIPS.ironpalm = {
 
 // talents whose proc shows in the tracker (named after the talent)
 Object.assign(BUFF_NAMES, { answer: 'Answering Rune', beat: 'Skipped Beat', feint: 'Feint', haze: 'Heat Haze', pinned: 'Pinning Shot', quickmend: 'Quick Mend',
-  secondwind: 'Second Wind', sharpen: 'Sharpened Shadows', steady: 'Steady Hands', unbreak: 'Unbreakable', tempo: 'Tempo', oncue: 'Stage Cross', smoulder: 'Smoulder', stalk: 'Stalking' });
-Object.assign(BUFF_ICON, { tempo: 'fury', oncue: 'swap', smoulder: 'smolder', stalk: 'step', answer: 'strike', beat: 'bolt', feint: 'strike', haze: 'fireball', pinned: 'quick', quickmend: 'mend', secondwind: 'cloak', sharpen: 'evis', steady: 'brace', unbreak: 'bulwark' });
+  secondwind: 'Second Wind', sharpen: 'Sharpened Shadows', steady: 'Steady Hands', unbreak: 'Unbreakable', sprinted: 'Shadow Sprint', tempo: 'Tempo', oncue: 'Stage Cross', smoulder: 'Smoulder', stalk: 'Stalking' });
+Object.assign(BUFF_ICON, { sprinted: 'step', tempo: 'fury', oncue: 'swap', smoulder: 'smolder', stalk: 'step', answer: 'strike', beat: 'bolt', feint: 'strike', haze: 'fireball', pinned: 'quick', quickmend: 'mend', secondwind: 'cloak', sharpen: 'evis', steady: 'brace', unbreak: 'bulwark' });
 
 // what each buff does while it's up, for its hover text. n(id) is the move's name as this hero has it (a spec may rename it).
 const BUFF_TIPS = {
   oath: n => `You deal 10% more damage. Judgment gives double Resolve and ${n('edge')} hits harder.`,
   avatar: n => `You deal 10% more damage, Judgment gives double Resolve and ${n('edge')} hits harder. Every Perfect Block calls a pillar of light down on the boss.`,
   radiant: n => `Your next ${n('edge')} is a beam of light, 50% stronger.`,
-  steady: n => `${n('edge')} costs 35 Resolve instead of 50.`,
-  unbreak: () => 'Every Perfect Block gives its Brace charge straight back.',
+  steady: n => `Your next ${n('edge')} costs 20 Resolve instead of 50 and hits a quarter harder.`,
+  unbreak: () => 'Every Perfect Block gives its Brace charge straight back, gives 15 Resolve, and takes 4s off the recharge of the guard.',
   frenzy: () => 'You deal 15% more damage.',
   gorge: n => `Your next ${n('drain')} costs no Blood and hits harder.`,
   undying: () => 'You can\'t drop below 1 HP, and every heal and shield you give is doubled.',
@@ -127,26 +127,27 @@ const BUFF_TIPS = {
   keen: n => `Your next ${n('pierce')} hits harder and gives its charge back. Banks up to two.`,
   smoulder: () => 'Your Heat can\'t boil over: it stops at 99.',
   oncue: n => `Your next ${n('cross')} cuts twice as hard and gives 1 more Encore.`,
-  strung: () => 'Each String still tied to the Doll gives you 5% more damage and makes its Jabs 5% faster. A torn String takes its share with it.',
+  strung: () => 'Each String still tied to the Doll gives you 5% more damage (8% with Slack Line) and makes its Jabs just as much faster. A torn String takes its share with it.',
   tempo: n => `At three Tempo your next ${n('step')} is a Flourish. A spilled combo point loses them all.`,
   stalk: n => `Your next ${n('evis')} hits 6% harder.`,
   barrage: n => `Your next ${n('quick')} hits three times as hard and gives triple Focus.`,
   falconHunt: () => 'Your falcon is hunting: every Keen Eye you light sends it diving at the boss.',
-  pinned: n => `Your next ${n('quick')} is a critical hit.`,
-  secondwind: n => `Your next ${n('quick')} also heals you for 15% of your HP.`,
+  pinned: n => `Your next two ${n('quick')}s are critical hits.`,
+  secondwind: n => `Your next ${n('quick')} also heals you for 20% of your HP and you take 20% less damage for 4s.`,
   aim: () => 'You deal 4% more damage for each stack. Moving loses them all.',
   truenorth: () => 'Every hit counts as a positional, wherever you stand.',
   dance: n => `Your attacks are faster, every positional lands, and ${n('evis')} hits 25% harder.`,
-  feint: n => `Your next ${n('evis')} lands as a hit from the side, wherever you stand.`,
-  sharpen: n => `Your next ${n('evis')} hits 12% harder for each stack.`,
+  feint: n => `Your next ${n('evis')} hits 12% harder. After a Strike from the front it also lands as a hit from the side, wherever you stand.`,
+  sprinted: () => 'Your next Strike hits 80% harder.',
+  sharpen: n => `Every combo point you gain sharpens your next ${n('evis')} by 2.5% (up to 12.5%), and a point that spills sharpens it 12%. Each stack is 2.5%.`,
   combust: () => 'Everything you cast is a critical hit.',
   heating: n => `Your next critical hit gives you Hot Streak. A ${n('fireball')} or ${n('pyro')} that doesn't crit loses it.`,
   hotstreak: n => `Your next ${n('pyro')} is instant and hits harder.`,
   burnt: () => 'You overheated: you deal 20% less damage.',
-  haze: n => `Your next ${n('fireball')} is instant.`,
-  firestep: n => `Your next ${n('fireball')} is instant.`,
+  haze: n => `Your next ${n('fireball')} is instant and 35% harder.`,
+  firestep: n => `Your next ${n('fireball')} is instant and 30% harder.`,
   incircle: () => 'While you stand in your circle you cast 20% faster and deal 15% more damage.',
-  quickmend: n => `Your next ${n('mend')} is instant.`,
+  quickmend: n => `Your next ${n('mend')} is instant${n('mend') === 'Mend' ? ' and heals half again as much' : ''}.`,
   verdict: n => `Your next ${n('smite')} is instant.`,
   growth: n => `Your heals are 25% stronger, and ${n('bloom')} heals the whole party.`,
   moonlit: n => `Your heals are 25% stronger, and ${n('bloom')} heals the whole party.`,
@@ -160,26 +161,27 @@ const BUFF_TIPS = {
   distill: () => 'Your next two reagents recover almost at once.',
   catalyst: () => 'Your next brew takes three reagents. Three that make a Reaction brew it; three that don\'t brew the pair you put in twice, fully heated.',
   brink: () => 'If your next spell is the same element, you overload. The other element, or letting this run out, is safe.',
-  flicker: n => `Your next ${n('flare')} or ${n('lance')} is instant.`,
+  flicker: n => `Your next ${n('flare')} or ${n('lance')} is instant and 50% harder.`,
+  latentwin: () => 'You can cast on past the edge without overloading. Swing back inside it before this runs out and your next Thermal Shock is twice as strong; stay past it and you overload.',
   overheat: n => `You can't cast ${n('cinder')} or ${n('flare')}.`,
   frostbite: () => 'Your casts are 30% slower.',
   attuned: () => 'Every step from 0 makes both fire and frost spells stronger.',
   momentum: () => 'You deal 4% more damage for each stack. Cross 0 again within 6s to keep them.',
   corona: n => `Your next Thermal Shock is 25% stronger for each stack. ${n('equil')} drops them on the target as stars instead.`,
-  redgiant: () => 'You can hold up to 5 Corona at the edge, and the 4th and 5th edge casts hit half again as hard.',
-  rebound: () => 'Your next spell is instant.',
+  redgiant: () => 'You can hold up to 5 Corona at the edge, and the 4th and 5th edge casts hit 125% harder, and a Thermal Shock set off meanwhile is half again as strong.',
+  rebound: () => 'Your next spell is instant and 70% harder.',
   still: () => 'Your Drift holds instead of draining.',
   gale: () => 'Your Drift can\'t drain, and Passing Strikes hit three times as hard.',
   orbit: n => `At 5 stacks, ${n('carve')} cuts on its own every moment or so while you keep circling. Every whole loop round your target ends in a Full Circle dive.`,
-  tailwind: n => `Your next ${n('carve')} is a critical hit.`,
+  tailwind: n => `Your next three ${n('carve')}s are critical hits.`,
   read: () => 'You take 20% less damage. A hit in the first 0.4s is read.',
   wall: () => 'You take 25% less damage.',
   opening: () => 'Your next Heavy is a free Thousand Palms, 30% stronger.',
   wind: () => 'Breath refills twice as fast, and you deal 10% more damage.',
   skin: () => 'You take 40% less damage, and your Breath refills at its resting pace.',
-  rush: () => 'You deal 3% more damage for each stack. Break or drop a string and it\'s gone.',
+  rush: () => 'You deal 2% more damage for each stack. Break or drop a string and it\'s gone.',
   stagger: () => 'You lost your string: you can\'t act for a moment.',
-  guard: () => 'Your Light presses hit 30% harder.',
+  guard: () => 'Your presses hit 35% harder.',
   pond: () => 'You take 25% less damage, and Read comes back moments after you use it.',
   slide: () => 'A broken or dropped string doesn\'t stagger you, and your Momentum holds.',
   bellows: () => 'You take 30% less damage, Breath refills half again as fast, and every named move you finish sends out a shockwave and gives back 6 Breath.',
@@ -198,6 +200,7 @@ Object.assign(BUFF_TIPS, {
 Object.assign(BUFF_NAMES, { stasis: 'Stasis' });
 Object.assign(BUFF_ICON, { stasis: 'stasis' });
 Object.assign(BUFF_TIPS, { stasis: n => `Your ${n('bolt')}s' heals are held, 25% stronger. Press ${n('stasis')} again (or wait) to release them all to the party.` });
+Object.assign(BUFF_TIPS, { looseend: n => `A thread snapped: your next ${n('needle')} within 10s is instant.` });   // (Threadweaver)
 Object.assign(BUFF_NAMES, { eclipse: 'Crimson Eclipse' });
 Object.assign(BUFF_ICON, { eclipse: 'undying' });
 Object.assign(BUFF_TIPS, {
@@ -217,13 +220,15 @@ Object.assign(BUFF_TIPS, {
   banner: () => 'The banner stands: every Perfect Block gives 10 more Resolve.',
 });
 // the spec rows (VI, VII) of the Driftblade and the Ironpalm: the windows a talent leaves open
-Object.assign(BUFF_NAMES, { ricochet: 'Ricochet', zenith: 'Zenith', roost: 'Roost', flood: 'Flood Tide' });
-Object.assign(BUFF_ICON, { ricochet: 'hook', zenith: 'cross', roost: 'gale', flood: 'palm' });
+Object.assign(BUFF_NAMES, { ricochet: 'Ricochet', zenith: 'Zenith', roost: 'Roost', flood: 'Flood Tide', calm: 'Calm Before the Blow', heron: 'Heron\'s Stance' });
+Object.assign(BUFF_ICON, { ricochet: 'hook', zenith: 'cross', roost: 'gale', flood: 'palm', calm: 'read', heron: 'read' });
 Object.assign(BUFF_TIPS, {
   ricochet: n => `Impact lit the way back: your next ${n('hook')} also flings you back through the boss, a Passing Strike, and gives 20 more Drift.`,
   zenith: n => `Your charge hangs at its peak: Drift cannot drain, and ${n('cross')} needs only 60.`,
   roost: () => 'Settled on the wind: your Orbit stays full whether you circle or not, Carve cuts on its own every second, and your Drift holds.',
-  flood: () => 'The tide is in: your next named moves each wash out a second blow.',
+  flood: () => 'The tide is in: your next two named moves each wash out a second blow.',
+  calm: () => 'Your presses cost no Breath.',
+  heron: () => 'You take 20% less damage, and a hit in the first 0.4s is read.',
 });
 const tipAttr = s => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 // the system's reduced-motion setting (the slot's denied shake stays still under it; style.css stops the loops)
@@ -301,7 +306,8 @@ const Hud = {
       const meta = [ab.meta || (ab.type === 'gcd' ? 'GCD' : 'oGCD')];   // (a paced kit's moves say what limits them instead)
       if (ab.ultOf) meta.unshift('Ultimate');
       if (typeof ab.cast === 'number' && ab.cast) meta.push(`${ab.cast}s cast`);
-      if (ab.charges) meta.push(`${ab.charges} charges · ${ab.cd}s`); else if (typeof ab.cd === 'number' && ab.cd) meta.push(`${ab.cd}s cooldown`);
+      const cdv = typeof ab.cd === 'function' && k ? ab.cd(k) : ab.cd;   // (a cooldown that depends on a talent: Severance with Long Thread)
+      if (ab.charges) meta.push(`${ab.charges} charges · ${ab.cd}s`); else if (typeof cdv === 'number' && cdv) meta.push(`${cdv}s cooldown`);
       const perks = k ? [...(k.gear().perks || [])].filter(p => ITEM_PERKS[p] && ITEM_PERKS[p].ab === (ab.replaces || ab.id)) : [];
       const enh = perks.map(p => `<div class="it-perk"><span><u>Enhanced (${ITEMS[p].name}):</u> ${ITEM_PERKS[p].text}</span></div>`).join('');
       // talents (talents.js) that change this move, or the move its spec version replaced
@@ -710,7 +716,7 @@ Object.assign(BUFF_TIPS, {
   hollow: n => `You cannot fall below 1 HP and you deal 30% more damage. Everything you take is written down as a debt: your healer must heal at least that much before the grace after it ends, or you fall. A Sentinel covers the party (15% less damage) while it lasts; a Reaver of Dusk's ${n('strike')} echoes and Dusk Reave costs nothing.`,
   shade: n => `Your next ${n('strike')}s echo, hitting again for 85%.`,
   mantle: () => 'You take 40% less damage.',
-  omen: n => `Your next ${n('rend')} strike builds 12 extra Gloom.`,
+  omen: n => `Your next ${n('rend')} strike builds 20 extra Gloom.`,
 });
 GAUGE_TIPS.gloomsworn = {
   desc: 'Every hit of yours fills 8 Gloom, every hit you take 6. Gloom Strike spends 40, Black Pall 30, Last Rite all of it. Out of combat it drains slowly. When Gloom is full and a blow would kill you, you go Hollow instead: held at 1 HP for 8s, 30% more damage, every wound written down as a debt that your healer must heal back in the 4s after, or you fall. Once a minute.',
@@ -820,14 +826,15 @@ GAUGE_TIPS.gloomsworn = {
 
 // ======================================================================= Reaper (id thresher; damage, class 19)
 // Drawn icons (art.icons === false in data.js) and the gauge's tooltip; the painted set replaces them later.
-Object.assign(BUFF_NAMES, { frenzy: 'Insane Reaper', deathmark: 'Death Mark', gatebreaker: 'Gatebreaker', blinked: 'Blinked', stepthrough: 'Step Through', afterimage: 'Afterimage' });
-Object.assign(BUFF_ICON, { frenzy: 'wisp', deathmark: 'slash', gatebreaker: 'reapersgate', blinked: 'blink', stepthrough: 'blink', afterimage: 'blink' });
+Object.assign(BUFF_NAMES, { frenzy: 'Insane Reaper', deathmark: 'Death Mark', gatebreaker: 'Gatebreaker', blinked: 'Blinked', stepthrough: 'Step Through', tollstep: 'Last Toll', afterimage: 'Afterimage' });
+Object.assign(BUFF_ICON, { frenzy: 'wisp', deathmark: 'slash', gatebreaker: 'reapersgate', blinked: 'blink', stepthrough: 'blink', tollstep: 'blink', afterimage: 'blink' });
 Object.assign(BUFF_TIPS, {
   frenzy: () => 'Insane Reaper: the party acts 10% faster (it stacks with other party haste), and your own swings come faster still.',
   deathmark: () => 'Your next hits strike 30% harder (each swing or finisher uses one).',
   gatebreaker: () => 'Gatebreaker: your finishers, Snaps and the release strike 25% harder until the Gate closes.',
   blinked: () => 'Phantom: your next finisher teleports you to the far side of the target.',
-  stepthrough: () => 'Your next string starts at swing 2.',
+  stepthrough: () => 'Your next string starts at swing 3, and its finisher hits twice as hard.',
+  tollstep: () => 'Your next string starts at swing 3, and its finisher hits 30% harder.',
   afterimage: () => 'An afterimage waits: your next finisher is repeated at 50%.',
 });
 GAUGE_TIPS.thresher = {

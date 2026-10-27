@@ -55,7 +55,8 @@ class CombatActor {
       collide: (o, r) => { if (world.collide) world.collide(actor, o, r); },
       threads: () => (world.threads ? world.threads(actor) : null),
       dolls: list => { if (world.dolls) world.dolls(actor, list); },
-      lamps: list => { if (world.lamps) world.lamps(actor, list); },   // a Lanternkeeper's lanterns (kits.js lkShare; the host heals with them)
+      lamps: list => { if (world.lamps) world.lamps(actor, list); },
+      allies: () => (world.allies ? world.allies(actor) : null),   // the living party, you too: [{ id, hp 0..1 }] (Lantern Festival hangs a lantern over each)   // a Lanternkeeper's lanterns (kits.js lkShare; the host heals with them)
       hounds: list => { if (world.hounds) world.hounds(actor, list); },   // a Houndmaster's hounds (kennel.js draws them; the host damages them with telegraphs)
       bossFace: enemy => (world.bossFace ? world.bossFace(actor, enemy) : Math.PI / 2),   // the facing of the enemy a Houndmaster works (its hounds' left and right are the boss's own)
       shift: () => (world.shift ? !!world.shift(actor) : false),   // Shift held at the press (Whistle: Flank sends the other hound)

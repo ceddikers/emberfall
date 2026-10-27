@@ -42,7 +42,7 @@ const TalentPanel = (() => {
     // follows unless the talent's text already tells the whole move
     const mv = t.grants && typeof talentMoveFor === 'function' ? talentMoveFor(cls.id, spec, t.id) : null;
     const text = numText(talentText(t, spec), cls.id, spec);
-    if (mv) return `<div class="tip-ab"><i class="ab-icon ${mv.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(Object.assign({ fromTalent: t.id }, mv)))})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · new move, replaces ${where}</em></div></div>${text}${text.includes(mv.name) ? '' : `<div class="it-talent"><span><u>${mv.name}:</u> ${mv.desc}</span></div>`}`;
+    if (mv) return `<div class="tip-ab"><i class="ab-icon ${mv.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(Object.assign({ fromTalent: t.id }, mv)))})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · ${mv.name === where ? 'rides on' : 'new move, replaces'} ${where}</em></div></div>${text}${text.includes(mv.name) ? '' : `<div class="it-talent"><span><u>${mv.name}:</u> ${mv.desc}</span></div>`}`;
     return `<div class="tip-ab"><i class="ab-icon ${ab ? ab.type : ''}" style="background-image:url(${abilityIcon(cls.id, t.ab)})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · ${where}</em></div></div>${text}`;
   }
 

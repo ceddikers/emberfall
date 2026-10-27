@@ -157,7 +157,7 @@ Object.assign(ITEM_PERKS, {
   gorgemaw_a2: { ab: 'wide', text: 'Open Wide stays open 0.4s longer.' },
   gorgemaw_w2: { ab: 'spit', text: 'A critical Spit hits again for about 60 (Regurgitate: every Morsel that crits).' },
   gorgemaw_w3: { ab: 'bottomless', text: 'Bottomless also shields the party.' },
-  gorgemaw_a4: { ab: 'iron', text: 'Iron Gut takes 50% off instead of 40% (Stone Belly 40% instead of 30%).' },
+  gorgemaw_a4: { ab: 'iron', text: 'Iron Gut takes 50% off instead of 40% (Stone Belly 45% instead of 35%).' },
   oathbroker_w1: { ab: 'collect', text: 'Your combo pays down 50% more of the Ledger.' },
   oathbroker_a2: { ab: 'reneg', text: 'Renegotiate (or Moratorium) also shields you.' },
   oathbroker_w2: { ab: 'settle', text: 'Settle (or Audit) also heals you for 5% of your HP.' },

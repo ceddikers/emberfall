@@ -219,16 +219,19 @@ const pdmgs = (sent, id = 1) => sent.filter(m => m.t === 'pdmg' && m.id === id);
   check(near(sim.curCourse.seams[0], 100 + 20 + 4) && near(sim.curCourse.end, 100 + 500 + 4), 'the course seams and end slide too');
 }
 
-// 10. Ember Duel: the boss's autos come every 2 s
+// 10. Ember Duel: the boss's autos come every 2 s, a quarter lighter
 {
-  const { sim } = make();
+  const { sim, sent } = make();
   sim.boss.autoAt = sim.t + 2.8;
   sim.onEvent(1, { type: 'kensei', op: 'duel', dur: 10 });
   check(sim.boss.duelUntil > sim.t && sim.boss.autoAt <= sim.t + 2.0001, 'the next auto comes within 2 s');
   sim.boss.autoAt = sim.t; sim.updateBoss(0.05);
   check(near(sim.boss.autoAt, sim.t + 2, 0.001), `and the next after it 2 s on (${sim.boss.autoAt - sim.t})`);
+  const duelHit = pdmgs(sent).pop();
   sim.t += 11; sim.boss.autoAt = sim.t; sim.updateBoss(0.05);
   check(near(sim.boss.autoAt, sim.t + FIGHT.AUTO_EVERY, 0.001), 'back to the usual beat afterward');
+  const plainHit = pdmgs(sent).pop();
+  check(duelHit && plainHit && plainHit.a > 0 && near(duelHit.a / plainHit.a, KENSEI.DUEL_SOFT, 0.02), `a swing in the Duel is a quarter lighter (${duelHit && duelHit.a} against ${plainHit && plainHit.a})`);
 }
 
 // 11. Guard Stance's shield: a deflect shields the nearest ally (two with Fireside Guard); only a deflect that caught something
@@ -308,6 +311,63 @@ const pdmgs = (sent, id = 1) => sent.filter(m => m.t === 'pdmg' && m.id === id);
   check(near(a.ultCharge(), was), `the Break Flash of Ash forces gives Last Spark nothing (${was} -> ${a.ultCharge()})`);
   t += 20; a.notify('kbrk', { secs: 4 });
   check(near(a.ultCharge(), was + 25), `a later Break of your own charges again (${a.ultCharge()})`);
+}
+
+// 15. Feint makes the Perfect Shatter reads: a Good deflect on a tankbuster, turned into a Perfect by the Pommel, Breaks the boss if the bar is over a third
+{
+  let t = 0;
+  const run = (tal, bar, buster) => {
+    const evs = [];
+    const kit = new Kit(kitFor('kenseier', null), { now: () => t, rng: Math.random, moving: () => false, target: () => ({ id: 'boss', x: 0, y: -40 }), positional: () => 'rear', partyMods: () => ({}), targetMods: () => ({}), selfMods: () => ({}),
+      recentDamage: () => 0, maxHp: () => 1000, hpFrac: () => 1, isDead: () => false, talents: () => new Set(tal), boss: () => null, emit: ev => evs.push(ev) });
+    t += 20; kit.update();
+    kit.notify('kdef', { q: 1, b: buster ? 1 : 0, a: 500, late: 0, p: bar });
+    t += 0.2; kit.update(); kit.press(3);
+    return { kit, full: evs.filter(e => e.type === 'kensei' && e.op === 'posture' && e.full).length, add: evs.filter(e => e.type === 'kensei' && e.op === 'posture' && !e.full).reduce((n, e) => n + e.amount, 0) };
+  };
+  let r = run(['kenseier_feint', 'kenseier_shatter'], 0.6, true);
+  check(r.full === 1 && r.kit.stats.perfects === 1, `a Feint-made Perfect on a tankbuster with the bar over a third Shatters (full ${r.full}, perfects ${r.kit.stats.perfects})`);
+  r = run(['kenseier_feint', 'kenseier_shatter'], 0.1, true);
+  check(r.full === 0, `...but not with the bar low (${r.full})`);
+  r = run(['kenseier_feint', 'kenseier_shatter'], 0.25, true);
+  check(r.full === 1, 'the Posture the Feint adds counts toward the third: 0.25 plus the Pommel and what the Good missed is over it');
+  r = run(['kenseier_feint', 'kenseier_shatter'], 0.6, false);
+  check(r.full === 0, 'an auto is not a tankbuster: no Shatter');
+  r = run(['kenseier_feint'], 0.6, true);
+  check(r.full === 0 && near(r.add, KENSEI.POST.pommel + KENSEI.POST.buster - KENSEI.POST.good), `a Feint on a tankbuster brings the Posture the Good missed (${r.add})`);
+}
+
+// 16. Grand Deathblow pays only in the last 2 s of a Break; Long Step widens a Whirlwind Slash
+{
+  let t = 0;
+  const mk = tal => {
+    const evs = [];
+    const kit = new Kit(kitFor('kenseier', null, new Set(tal)), { now: () => t, rng: () => 0.999, moving: () => false, target: () => ({ id: 'boss', x: 0, y: -40 }), positional: () => 'rear', partyMods: () => ({}), targetMods: () => ({}), selfMods: () => ({}),
+      recentDamage: () => 0, maxHp: () => 1000, hpFrac: () => 1, isDead: () => false, talents: () => new Set(tal), boss: () => null, emit: ev => evs.push(ev), enemiesNear: r => { evs.push({ type: 'reach', r }); return [{ id: 'boss' }]; } });
+    return { kit, evs };
+  };
+  const blow = (tal, wait) => { const { kit, evs } = mk(tal); t += 30; kit.update(); kit.notify('kbrk', { secs: 4 }); t += wait; kit.update(); kit.press(3); return { kit, evs }; };
+  const dmgOf = evs => { const e = evs.find(x => x.type === 'damage'); return e ? (e.amount != null ? e.amount : e.pot != null ? e.pot : e.dmg) : null; };
+  const early = blow(['kenseier_grand'], 0.5), late = blow(['kenseier_grand'], 2.5), none = blow([], 2.5);
+  const de = dmgOf(early.evs), dl = dmgOf(late.evs), dn = dmgOf(none.evs);
+  check(de && dl && dn && near(de, dn, 0.5) && near(dl / dn, 1.35, 0.01), `Grand Deathblow: nothing early (${de}), 35% more in the last 2 s (${dl} against ${dn})`);
+  check(late.evs.some(e => e.type === 'partyBuff' && e.kind === 'dmg' && near(e.value, 0.15) && near(e.dur, 3.5, 0.05)), 'the party keeps the Break bonus of 15% at once, for what is left of the Break and 2 s past it');
+  t += 2; early.kit.update();
+  check(!early.evs.some(e => e.type === 'partyBuff'), 'an early Deathblow keeps nothing');
+  // Whirlwind Slash reaches 110, or twice that with Long Step
+  const spin = tal => { const { kit, evs } = mk(tal); t += 30; kit.update(); kit.press(2); return evs.find(e => e.type === 'reach'); };
+  const w1 = spin(['kenseier_whirlwind']), w2 = spin(['kenseier_whirlwind', 'kenseier_longstep']);
+  check(w1 && w2 && w1.r === 110 && w2.r === 220, `Long Step doubles a Whirlwind Slash reach (${w1 && w1.r} -> ${w2 && w2.r})`);
+}
+
+// 17. the swing the boss owed during a Break does not land the instant the Break ends: it comes a beat later, so a deflect can meet it
+{
+  const { sim, find } = make();
+  sim.boss.autoAt = sim.t + 1;
+  sim.onEvent(1, { type: 'kensei', op: 'posture', amount: 0, full: 1, secs: 4, keep: 0 });
+  check(KENSEI.broken(sim.kenPost(), sim.t), 'a full bar Breaks the boss');
+  sim.t += 4.1; sim.kenTick(0.05);
+  check(!KENSEI.broken(sim.kenPost(), sim.t) && sim.boss.autoAt >= sim.t + KENSEI.RESUME - 0.01, `the first swing after a Break comes ${KENSEI.RESUME} s after it ends (in ${(sim.boss.autoAt - sim.t).toFixed(2)})`);
 }
 
 // 14. the training yard (main.js townKen): FightSim.kenYard stands in for the host, the sparring dummy's swings are the blows (every fourth

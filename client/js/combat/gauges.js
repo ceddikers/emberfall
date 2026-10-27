@@ -607,7 +607,7 @@ Object.assign(GAUGES, {
   // Gorgemaw: the Belly. Its Morsels sit in a row of hollows (oldest on the left: that's what Spit fires), each in its
   // shape's colour. A jaw over the row opens while Open Wide is up; a Glutton's matching pair is bracketed (a Fusion).
   belly(c, k, w, h, t) {
-    const g = k.g, max = (k.def.gauge && k.def.gauge.max) || 3, b = g.belly || [], cx = w / 2, cy = 70;
+    const g = k.g, max = ((k.def.gauge && k.def.gauge.max) || 3) + (k.talent && k.talent('gorgemaw_overflow') ? 1 : 0), b = g.belly || [], cx = w / 2, cy = 70;   // (Second Stomach: one more hollow)
     const R = max > 3 ? 54 : 46;
     ellipse(c, cx, cy, R + 6, 34, 0, '#3a2018', OUT, 2.2);
     ellipse(c, cx, cy - 4, R, 27, 0, '#5a3020');
