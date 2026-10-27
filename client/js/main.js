@@ -2735,12 +2735,13 @@
     if (a[0] !== 's') return;
     const idx = Number(a.slice(1));
     if (e.repeat && idx >= 6) return;
+    if (e.repeat && actor && actor.abilities[idx] && actor.abilities[idx].charges) return;   // a held key never spends a second charge (Fire Blast): each charge is its own press
     if (e.repeat && actor && actor.kit.pace && actor.kit.pace.repeat === false) return;   // a paced kit counts presses, not a held key
     if (e.shiftKey && idx < 6 && actor && actor.abilities[idx] && actor.abilities[idx].target === 'ally') selfCast = { i: idx, until: now + ENGINE.QUEUE_WINDOW + 0.3 };
     else if (!e.repeat && selfCast && selfCast.i === idx) selfCast = null;
     pressSlot(idx);
   }
-  const heldSlots = new Map(), HOLD_REPEAT = 0.1;   // (skill keys held down, by physical key: repeatHeld)
+  const heldSlots = new Map(), HOLD_FIRST = 0.3, HOLD_REPEAT = 0.1;   // (skill keys held down, by physical key: repeatHeld; the first repeat waits HOLD_FIRST)
   let shiftDown = false;   // (Shift held at a key press: a Houndmaster's Whistle: Flank sends the other hound)
   window.addEventListener('keydown', e => { shiftDown = !!e.shiftKey; }, true);
   window.addEventListener('keyup', e => { shiftDown = !!e.shiftKey; }, true);
@@ -2794,7 +2795,7 @@
     if (act && /^s[0-5]$/.test(act)) {
       e.preventDefault();
       if (e.repeat) return;
-      heldSlots.set(e.code, { a: act, next: now + HOLD_REPEAT });
+      heldSlots.set(e.code, { a: act, next: now + HOLD_FIRST });   // (a tap lasts up to a few tenths: only a real hold repeats)
       runAction(act, e);
       return;
     }
