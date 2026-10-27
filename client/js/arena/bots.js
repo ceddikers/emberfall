@@ -9,6 +9,19 @@ function segsCross(ax, ay, bx, by, cx, cy, dx, dy) {
 
 // the bosses' tankbusters by cast name, and the tank cooldowns that answer them
 const BUSTER_CASTS = /^(Tenderize|Silk Wrap|Titan Fist|Grave Cleave|Arcane Lance)$/;
+// ... and the same for the tanks' own reading, without a hand list: every telegraph a boss lays as type 'buster' names the cast it
+// came from (m.from), and the bots learn those names as they appear, so a boss's newer tank moves count from their first sighting
+// (BUSTER_CASTS' five are known from the pull, as every player knows them). The set starts afresh with each fight (fight time
+// running backwards), so a run never depends on the one before it. Tank code reads this; healer code still reads BUSTER_CASTS.
+const BUSTER_SEEN = {
+  known: null, lastT: 0,
+  test(name) { return BUSTER_CASTS.test(name) || (!!this.known && this.known.has(name)); },
+  learn(view) {
+    if (!this.known || view.t < this.lastT - 1) this.known = new Set();
+    this.lastT = view.t;
+    for (const m of view.mechs) if (m.type === 'buster' && m.from) this.known.add(m.from);
+  },
+};
 const TANK_CDS = ['bulwark', 'zeal', 'undying', 'banner', 'sanctum', 'warcry', 'mantle'];
 // ... and the casts that hurt the whole party, which healers top people up for
 const RAID_CASTS = /^(Grease Fire|Simmer|Venom Mist|Tightening Web|Thunderclap|Thunder Crash|Static Field|Polarity Surge|Skyfall|Barrow Knell|Grave Marks|Gathering Storm|Thunderhead|Royal Tithe|Dirge|Gut Blast|Flare-Up|Last Orders|Gorge|Boil Over|Heavens Fall|Twin Fall|Arcane Burst|Convergence|The Tide Rises)$/;
@@ -890,6 +903,7 @@ const BotAI = {
   },
 
   move(bot, view) {
+    if (bot.human && !bot.human.inner) return BotHuman.move(bot, view);   // (human-like play, below: off unless a bot carries .human)
     const prev = this._mc;
     this._mc = { view };
     try { return this.think(bot, view); } finally { this._mc = prev; }
@@ -1006,7 +1020,7 @@ const BotAI = {
     // plates that leave you Stuffed (Order Up! on Hard) coming up soon that aren't ours: don't walk across one as it lands
     const myT = view.mechs.some(m => m.type === 'tower' && m.stuff) ? this.towerFor(bot.id, view) : null;
     const plates = view.mechs.filter(m => m.type === 'tower' && m.stuff && m.id !== myT && m.resolveAt - view.t < 3);
-    const burns = (view.zones || []).filter(z => z.effect === 'burn' && (z.tag === 'writburn' || z.tag === 'drown') && view.t > z.startAt - 1);
+    const burns = (view.zones || []).filter(z => z.effect === 'burn' && (z.tag === 'writburn' || z.tag === 'drown' || (bot.role === 'healer' && z.tag !== 'stovefire')) && view.t > z.startAt - 1);
     const pathCost = c => {
       let pen = 0;
       const dist = hypot2(c.x - bot.x, c.y - bot.y);
@@ -1185,7 +1199,7 @@ const BotAI = {
     const tid = bot.role === 'tank' && bot.cls && bot.cls.id;
     const onMe = m => (m.target ?? m.follow) == null || (m.target ?? m.follow) === bot.id;
     const buster = !!tid && (view.mechs.some(m => m.type === 'buster' && m.resolveAt - t < 3 && onMe(m)) ||
-      !!(view.bossCast && BUSTER_CASTS.test(view.bossCast.name) && view.bossCast.left < 3 && view.bossTarget === bot.id));
+      !!(view.bossCast && BUSTER_SEEN.test(view.bossCast.name) && view.bossCast.left < 3 && view.bossTarget === bot.id));
     // (a Gorgemaw never bites with a tankbuster on its way: the lock would cost it the Open Wide that eats the buster)
     if (tid === 'gorgemaw' && buster) return false;
     // (a Kenseier's Flash of Ash is a Break on demand: into the party's burst, never into a Break already open, and not with a blow
@@ -1214,6 +1228,8 @@ const BotAI = {
 
   // pick an ability index for this bot (or null)
   act(bot, k, view) {
+    if (bot.human && !bot.human.inner) return BotHuman.act(bot, k, view);
+    BUSTER_SEEN.learn(view);
     const ab = i => k.abilities[i];
     const readyIdx = i => { const a = ab(i); return a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
     const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);   // a spec's replacement answers to the base id
@@ -1223,6 +1239,7 @@ const BotAI = {
     const moving = bot.moving;
     // the boss's next tankbuster in the upcoming-moves feed: [name, seconds until its cast starts]
     const nextBuster = (view.next || []).find(([n]) => BUSTER_CASTS.test(n));
+    const nextTankBuster = (view.next || []).find(([n]) => BUSTER_SEEN.test(n));   // (tanks hold their cooldowns for every buster the boss has laid)
     // ... and party-wide damage being cast, or close in the feed
     const raidSoon = (view.next || []).some(([n, s]) => s < 6 && RAID_CASTS.test(n)) || !!(view.bossCast && RAID_CASTS.test(view.bossCast.name));
     if (bot.cls.id === 'alembist') return BotAI.alembist(bot, k, view);   // brews ahead and throws (below)
@@ -1255,10 +1272,16 @@ const BotAI = {
       // a Gloomsworn gone Hollow (held at 1 HP, its damage written down as a debt): heal it until the debt is covered
       const hollowN = BotAI.hollowNeed(view);
       if (hollowN) low = { p: hollowN.p, f: Math.min(low ? low.f : 1, 0.04) };
-      // a tankbuster is coming (being cast, or next in the feed): get the tank topped first
-      const busterSoon = view.mechs.some(m => m.type === 'buster' && m.resolveAt - view.t < 4) || (nextBuster && nextBuster[1] < 4);
+      // a tankbuster is coming (being cast, or next in the feed, any boss's): get the tank topped first. (Not earlier than 4s: a
+      // longer look ahead kept the healer on the tank while the party sat low into the next raidwide, on a boss with frequent busters)
+      const bEta = BotAI.busterEta(view), busterSoon = bEta < 5.5;
       const tankH = hurt.find(h => h.p.role === 'tank');
-      if (busterSoon && tankH && tankH.f < 0.85 && (!low || low.f > 0.3)) low = { p: tankH.p, f: Math.min(tankH.f, 0.5) };
+      if (bEta < 4 && tankH && tankH.f < 0.85 && (!low || low.f > 0.3)) low = { p: tankH.p, f: Math.min(tankH.f, 0.5) };
+      // a raidwide is being cast, or about to land
+      const raidBegins = !!(view.bossCast && RAID_CASTS.test(view.bossCast.name)) || view.mechs.some(m => m.type === 'raidwide' && m.resolveAt - view.t < 3);
+      // (a raidwide is close and the healer is the one short of health: its own life first, unless the tank is nearly gone; a healer has no more health than a damage dealer)
+      const meH = hurt.find(h => h.p.id === bot.id);
+      if (meH && (raidBegins || raidSoon) && meH.f < 0.85 && low && low.p.id !== bot.id && low.f > 0.3) low = meH;
       // a chosen-ally buff (Benediction's Blessed, Rebirth's Wildheart, Accelerando's Quickened) on the top damage dealer
       const buffI = BotAI.allyBuff(bot, k, view, hurt, moving, busterSoon);
       if (buffI != null) return buffI;
@@ -1316,7 +1339,9 @@ const BotAI = {
           // (in real danger the quickest heal first; otherwise the big cast heal standing, the instant one on the move)
           if (low.f < 0.4 + top / 2 && instant.length) return instant[0];
           // (an instant heal first, a Petal say, which also builds toward damage; the cast heal is the fallback)
-          if (low.f < 0.65 - lazy * 0.7 + top && heals.length) return instant.length && (moving || low.f > 0.55) ? instant[0] : (moving ? null : heals[0]);
+          // (a cast heal on the move: when this spot is clear and about as safe as the planned one, plant and cast it, as a player does for a heal that matters)
+          const plant = i => { if (!moving) return i; const ct = k.castTime(ab(i)); if (ct && low.f < 0.55 && BotAI.stillOk(bot, view) && BotAI.danger(bot, bot.x, bot.y, view) < 400) { bot.stillUntil = view.t + ct + 0.15; return i; } return null; };
+          if (low.f < 0.65 - lazy * 0.7 + top && heals.length) return instant.length && (moving || low.f > 0.55) ? instant[0] : plant(heals[0]);
           if (low.f < 0.78 - lazy + top && instant.length) return instant[0];
         }
       }
@@ -1329,6 +1354,15 @@ const BotAI = {
     if (wardI >= 0 && k.abilities[wardI].target === 'ally' && readyIdx(wardI) && k.gcdRemaining() <= 0 && !k.cast) {
       const hit = view.mechs.find(m => m.type === 'buster' && m.resolveAt - view.t < 3 && (m.target ?? m.follow) != null && (m.target ?? m.follow) !== bot.id);
       if (hit) { bot.healTarget = hit.target ?? hit.follow; return wardI; }
+      // ahead of a raidwide: the Ward goes on whoever it would help most (the lowest ally under 85%, else the healer), one Rune kept
+      // back for a buster of its own; it refunds the Rune once it has taken half.
+      const mineSoon = view.mechs.some(m => m.type === 'buster' && m.resolveAt - view.t < 4 && (m.target ?? m.follow) === bot.id);
+      const raidIn = (view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left < 3) || BotAI.incoming(view, 4.5) >= 0.3;
+      if (raidIn && !mineSoon && (k.g.runes || 0) >= 2 && view.t - (bot.wardAt ?? -99) > 7) {
+        const allies = hurt.filter(h => h.p.id !== bot.id), low = allies[0], healer = allies.find(h => h.p.role === 'healer');
+        const to = low && low.f < 0.85 ? low : healer || low;
+        if (to) { bot.wardAt = view.t; bot.healTarget = to.p.id; return wardI; }
+      }
     }
     // tanks: answer a buster aimed at them with a cooldown (and Brace timed for a Perfect Block)
     const myBuster = view.mechs.find(m => m.type === 'buster' && (m.target ?? m.follow) === bot.id);
@@ -1340,7 +1374,7 @@ const BotAI = {
         if (!readyIdx(i)) continue;
         if (a.id === 'brace' && left < 0.6) return i;
         if (a.id === 'mirror' && left < 0.9) return i;
-        if (a.id === 'ward' && left < 3 && k.gcdRemaining() <= 0 && !k.cast) return i;
+        if (a.id === 'ward' && left < 3 && k.gcdRemaining() <= 0 && !k.cast) { bot.healTarget = bot.id; return i; }
         if (!mitigated && left < 3 && TANK_CDS.includes(a.id)) { bot.mitUntil = view.t + 4; return i; }
       }
     }
@@ -1378,11 +1412,12 @@ const BotAI = {
         markMit = true;
       } else if (defensive && !(castingBig && view.bossCast.left < 3)) continue;
       // a tank keeps what it answers busters with when the feed shows the next buster close
-      if (bot.role === 'tank' && TANK_CDS.includes(a.id) && nextBuster && nextBuster[1] < 15) continue;
+      if (bot.role === 'tank' && TANK_CDS.includes(a.id) && nextTankBuster && nextTankBuster[1] < 15) continue;
       if (a.id === 'shift') {
         const groupHurt = hurt.filter(h => h.f < 0.8).length >= 2;
         // (Haste heals the whole party: go early when party-wide damage is coming and people are already hurt)
-        if (k.g.stance === 'slow' && (k.g.flux >= 95 || (groupHurt && k.g.flux >= (raidSoon ? 25 : 40)))) return i;
+        if (k.g.stance === 'slow' && (k.g.flux >= 95 || (groupHurt && k.g.flux >= (raidSoon ? 25 : 40)) ||
+          (k.def.spec === 'echoist' && view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left > 1.2 && k.g.flux >= 25))) return i;   // (an Echoist's echoes come 3s after the Bolt: begin as the cast does)
         // (back to Slow before the Flux runs dry, for Paradox)
         if (k.g.stance === 'haste' && (k.g.flux < 14 || (!groupHurt && k.g.flux < 45 && hurt[0] && hurt[0].f < 0.6))) return i;
         continue;
@@ -1497,7 +1532,7 @@ BOT_CLASS.ironpalm = {
     const g = k.g, free = k.lockUntil <= k.now;
     const mine = view.mechs.filter(m => m.type === 'buster' && (m.target ?? m.follow) === bot.id).sort((a, b) => a.resolveAt - b.resolveAt)[0];
     const hitIn = mine ? mine.resolveAt - view.t : Infinity;
-    const next = (view.next || []).find(([n]) => BUSTER_CASTS.test(n)), toBuster = Math.min(hitIn, next ? next[1] + 3 : Infinity);
+    const next = (view.next || []).find(([n]) => BUSTER_SEEN.test(n)), toBuster = Math.min(hitIn, next ? next[1] + 3 : Infinity);
     const ri = idx('read'), si = idx('skin'), bi = idx('bell');
     if (free && ok(ri) && hitIn < 0.36 && hitIn > 0.03) return ri;
     // Still Water: Read has two charges and comes back with Still Pond, so the raidwide is read too (a full Breath and a counter), keeping a charge for the buster
@@ -1532,6 +1567,19 @@ BOT_CLASS.ironpalm = {
     if (ok(ri) && hitIn > 0.03 && hitIn < IP_INPUT[x].lock + 0.4) return null;
     return ok(IP_SLOT[x]) ? IP_SLOT[x] : null;
   },
+};
+
+// ======================================================================= healers: the next tankbuster
+// every boss's tankbuster cast by name (BUSTER_CASTS at the top only knows the first sets'), for the healers' look ahead
+const HEAL_BUSTERS = /^(Tenderize|Skewer|Silk Wrap|Titan Fist|Grave Cleave|Sceptre Rebuke|Rending Claws|Rending Maul|Icebreaker|Glacial Fist|Arcane Lance|Sundering Cut|Cracked Guard|Answering Cut|Hammer Heel|Root Lash|Cinder Crown|Pinning Thrust)$/;
+// seconds until the next tankbuster lands (Infinity if none is known): a telegraph already down, a buster being cast, or the next one in
+// the upcoming-moves feed (view.next gives when its cast starts; the blow lands at least 1.6s after that)
+BotAI.busterEta = function (view) {
+  let eta = Infinity;
+  for (const m of view.mechs) if (m.type === 'buster' && m.resolveAt >= view.t - 0.05) eta = Math.min(eta, m.resolveAt - view.t);
+  if (view.bossCast && HEAL_BUSTERS.test(view.bossCast.name)) eta = Math.min(eta, view.bossCast.left);
+  for (const [nm, sec] of view.next || []) if (HEAL_BUSTERS.test(nm)) { eta = Math.min(eta, sec + 1.6); break; }
+  return eta;
 };
 
 // ======================================================================= chosen-ally buffs (engine.js ALLY_BUFFS)
@@ -1579,7 +1627,8 @@ BotAI.alembist = function (bot, k, view) {
   const party = view.players.filter(p => !p.left), alive = party.filter(p => p.alive), dead = party.filter(p => !p.alive);
   const frac = p => p.hp / p.maxHp, hurt = alive.filter(p => frac(p) < 0.82).sort((a, b) => frac(a) - frac(b));
   const tank = alive.find(p => p.role === 'tank');
-  const busterSoon = view.mechs.some(m => m.type === 'buster' && m.resolveAt - view.t < 4);
+  // (a cure is about 4s from the first reagent to the splash: brew 9s ahead through the feed, and throw the shields nearer the blow)
+  const bEta = BotAI.busterEta(view), busterNear = bEta < 9, busterSoon = bEta < 5;
   const raidwideSoon = view.mechs.some(m => m.type === 'raidwide' && m.resolveAt - view.t < 3.5) ||
     (view.bossCast && view.bossCast.left < 3.5 && /Grease|Venom Mist|Thunderclap|Knell|Gorge|Dead Wind|Twin Knell|Pulse/.test(view.bossCast.name));
   const room = vials.length < A.slots, gcdFree = k.gcdRemaining() <= 0 && !k.cast && k.lockUntil <= k.now;
@@ -1590,7 +1639,8 @@ BotAI.alembist = function (bot, k, view) {
   const kindOf = v => (v.parts ? 'blend' : alemInfo(v.r).kind);
   const enemyNear = !!k.env.target({ target: 'enemy', range: RANGED });
   const hollowN = BotAI.hollowNeed(view);   // (a Hollow Gloomsworn: heals on it pay its debt)
-  const needHeal = !!hollowN || hurt.length >= 2 || (hurt[0] && frac(hurt[0]) < 0.62);
+  // (a lone tank also counts: it is the one the blows land on)
+  const needHeal = !!hollowN || hurt.length >= 2 || (hurt[0] && frac(hurt[0]) < 0.62) || !!(tank && frac(tank) < (busterNear ? 0.95 : 0.82));
 
   // oGCDs: Catalyst whenever a brew is about to start; Distill when healing is urgent; Grand Batch / Blend in a crunch
   const di = idx('distill'), bi = idx('batch');
@@ -1620,7 +1670,11 @@ BotAI.alembist = function (bot, k, view) {
     const fuseLow = v.fuse && v.fuse - k.now < 1.4, spoiling = !v.fuse && !v.keep && alemSpoilTime(k) - (k.now - v.born) < 3;
     let score = 0, who = bot.id;
     if ((kind === 'heal' || kind === 'blend') && hollowN) { score = 10; who = hollowN.p.id; }
-    else if (kind === 'heal' || kind === 'blend') { const s = healSpot(); if (s && (needHeal || s.v > 0.5)) { score = 5 + s.v * 4; who = s.q.id; } }
+    else if (kind === 'heal' || kind === 'blend') {
+      const s = healSpot();
+      if (s && (needHeal || s.v > 0.2)) { score = 5 + s.v * 4; who = s.q.id; }
+      if (busterNear && tank && frac(tank) < 0.9) { score = Math.max(score, 6); who = tank.id; }   // (a blow coming: the cure goes to the tank)
+    }
     else if (kind === 'salve' && hollowN) { score = 6; who = hollowN.p.id; }
     else if (kind === 'salve') { if (busterSoon && tank) { score = 7; who = tank.id; } else if (hurt.length >= 2) { const s = healSpot(); score = 4; who = s.q.id; } }
     else if (kind === 'ward') { if (raidwideSoon || (busterSoon && tank)) { const s = raidwideSoon ? crowdSpot() : { q: tank }; score = 6; who = s.q.id; } }
@@ -1640,11 +1694,14 @@ BotAI.alembist = function (bot, k, view) {
     const heals = vials.filter(alemIsHeal).length, shields = vials.filter(v => ['salve', 'ward'].includes(kindOf(v))).length;
     const S = idx('salt') >= 0 && k.abilities[idx('salt')].reagent === 'Q' ? 'Q' : 'S';
     let plan;
+    const bombs = vials.filter(v => kindOf(v) === 'bomb').length, under = alive.some(p => frac(p) < 0.9);
     if (needHeal && heals < 2) plan = need === 3 ? 'DDD' : (hurt.length >= 3 ? 'DE' : 'DD');
-    else if (busterSoon && !shields) plan = need === 3 ? 'DD' + S : 'D' + S;
+    else if (busterNear && !shields) plan = need === 3 ? 'DD' + S : 'D' + S;
     else if (heals < 1) plan = need === 3 ? 'DDD' : 'DD';
+    else if (busterNear && heals < 2) plan = need === 3 ? 'DDD' : 'DD';   // (a Draught and a Salve or Ward stocked for the blow)
     else if (need === 3 && raidwideSoon && !shields) plan = 'DES';
     else if (need === 2 && view.burst && !vials.some(v => kindOf(v) === 'quick')) plan = 'ES';   // (a Quickpowder for the burst: Galvanized)
+    else if (under && bombs >= 1) plan = need === 3 ? 'DDD' : 'DD';   // (never a second bomb held while someone is hurt)
     else plan = need === 3 ? 'EEE' : 'EE';
     k.g.botPlan = plan.replace(/S/g, S);
   }
@@ -1679,7 +1736,7 @@ Object.assign(BOT_CLASS, {
       const iron = idx('iron');
       if (myBuster && ok(iron) && (k.abilities[iron].id === 'stonebelly' || k.charges(k.abilities[wide]) === 0 || hp < 0.55)) return iron;
       const dig = idx('digest'), giz = k.def.spec === 'gizzard';
-      const partySoon = view.mechs.some(m => (m.type === 'raidwide' || m.type === 'buster') && m.resolveAt - view.t < 3) || (view.next || []).some(([n, s]) => s < 4 && (RAID_CASTS.test(n) || BUSTER_CASTS.test(n)));
+      const partySoon = view.mechs.some(m => (m.type === 'raidwide' || m.type === 'buster') && m.resolveAt - view.t < 3) || (view.next || []).some(([n, s]) => s < 4 && (RAID_CASTS.test(n) || BUSTER_SEEN.test(n)));
       if (ok(dig) && b.length && k.gcdRemaining() > 0.4 && (hp < 0.45 || (giz ? (b.length >= 2 && partySoon) || b.length >= max : b.length >= max && hp < 0.85))) return dig;
       if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
       const sp = idx('spit'), regur = k.abilities[sp].id === 'regurgitate';
@@ -1874,8 +1931,10 @@ BotAI.tidecaller = function (bot, k, view) {
   const free = !k.cast && k.lockUntil <= k.now, weave = free && k.gcdRemaining() > 0.45;
   const g = k.g, tide = g.tide || 0;
   const spray = idx('spray'), sip = idx('sip'), rip = idx('riptide'), surge = idx('surge'), cur = idx('current'), wall = idx('breakwater');
+  const bEta = BotAI.busterEta(view);
   if (weave) {
-    if (ready(wall) && raidNow && tide >= 50) return wall;
+    // Breakwater as a raidwide lands, or ahead of a tankbuster when no raidwide wants it (or the tank is already hurt)
+    if (ready(wall) && ((raidNow && tide >= 50) || (bEta < 2.5 && tank && (frac(tank) < 0.8 || !raidSoon)))) return wall;
     if (ready(cur) && raidSoon && !tideFlood(k) && (g.tphase === 'ebb' || (g.tphase === 'rise' && tide > 55))) return cur;
   }
   if (k.gcdRemaining() > 0.0001 || k.cast) return null;
@@ -1886,9 +1945,10 @@ BotAI.tidecaller = function (bot, k, view) {
     if (BotAI.stillOk(bot, view)) { bot.stillUntil = view.t + ct + 0.15; return surge; }
   }
   if (low && frac(low) < 0.4 && ready(sip)) { bot.healTarget = low.id; return sip; }
+  if (bEta < 6 && tank && frac(tank) < 0.9 && ready(sip) && !(low && frac(low) < 0.5)) { bot.healTarget = tank.id; return sip; }   // (the tank topped up ahead of the blow)
   const ripAb = k.abilities[rip];
   if (ripAb && ripAb.id === 'maelstrom') { if (ready(rip) && hurtN >= 2) return rip; }
-  else if (ready(rip) && !tideMarked(k)) { const t = tank && frac(tank) < 0.97 ? tank : (low && frac(low) < 0.9 ? low : tank); if (t) { bot.healTarget = t.id; return rip; } }
+  else if (ready(rip) && (!tideMarked(k) || (bEta < 6 && tank))) { const t = tank && frac(tank) < 0.97 ? tank : (low && frac(low) < 0.9 ? low : tank); if (t) { bot.healTarget = t.id; return rip; } }
   if (low && frac(low) < (tideLow(k) ? 0.78 : 0.6) && ready(sip)) { bot.healTarget = low.id; return sip; }
   return ready(spray) ? spray : null;
 };
@@ -1916,10 +1976,13 @@ BotAI.lanternkeeper = function (bot, k, view) {
   for (const l of g.lan) { const c = at(l); if (c) for (const p of alive) if (hypot2(p.x - c.x, p.y - c.y) <= l.r) lit.add(p.id); }
   const nearMe = alive.filter(p => p.role !== 'tank' && hypot2(p.x - me.x, p.y - me.y) <= LANTERN.R * 0.9).length;
   const flare = idx('flare'), carry = idx('carry'), set = idx('set'), hand = idx('hand'), rel = idx('relight'), trim = idx('trim');
+  const bEta = BotAI.busterEta(view);
   if (weave) {
-    // Flare as a raidwide lands, or as soon as the hurt stand in the light (it is back every 20s: use it)
+    // Flare as a raidwide lands, or as soon as the hurt stand in the light (it is back every 12s: use it); the tank hung with a Hand Lantern
+    // and hurt by a blow is the best of those
     const hurtLit = alive.filter(p => lit.has(p.id) && frac(p) < 0.85).length;
-    if (ready(flare) && g.lan.length && (lit.size >= 2 || lkLight(k)) && (raidNow || hurtLit >= 2 || (hurtLit >= 1 && avg < 0.9) || lkLight(k))) return flare;
+    const tankLit = !!tank && lit.has(tank.id) && frac(tank) < 0.7;
+    if (ready(flare) && g.lan.length && (lit.size >= 2 || lkLight(k) || tankLit) && (raidNow || hurtLit >= 2 || (hurtLit >= 1 && avg < 0.9) || lkLight(k) || tankLit)) return flare;
     // a lantern left behind: carry it to where the party is now
     const ca = k.abilities[carry];
     if (ca && ca.id === 'carry' && ready(carry) && nearMe >= 2) {
@@ -1931,11 +1994,12 @@ BotAI.lanternkeeper = function (bot, k, view) {
   if (k.gcdRemaining() > 0.0001 || k.cast) return null;
   // an emergency: Relight's heal (or a wisp) on the most hurt
   const ra = k.abilities[rel];
+  if (ready(rel) && ra.id === 'relight' && tank && low === tank && (frac(tank) < 0.5 || (bEta < 6 && frac(tank) < 0.8)) && g.emb >= 2) return rel;   // (the tank after a blow: Relight heals the most hurt, and it is that one)
   if (ready(rel) && low && frac(low) < (g.emb >= 4 ? 0.85 : g.emb >= 3 ? 0.6 : 0.25)) return rel;   // (spare Embers are spent: they come back every 5s and stop at 4)
   if (ready(rel) && ra.id === 'relight' && floor.filter(l => lkStub(l)).length >= 2 && avg < 0.8) return rel;
   if (ready(rel) && ra.id === 'wisp' && low && frac(low) < 0.6) return rel;
   const handUp = g.lan.some(l => l.kind === 'hand' && l.end - k.now > 1.5);
-  if (ready(hand) && tank && !handUp && (frac(tank) < 0.8 || g.emb >= 3)) { bot.healTarget = tank.id; return hand; }
+  if (ready(hand) && tank && !handUp && (frac(tank) < 0.8 || g.emb >= 3 || (bEta < 7 && frac(tank) < 0.97))) { bot.healTarget = tank.id; return hand; }   // (hung before the blow, so the Flare after it reaches the tank)
   // someone hurt and out of every glow: the Hand Lantern goes to them (the tank is fine)
   const lost = hurt.find(p => p.id !== bot.id && p.role !== 'tank' && frac(p) < 0.55 && !lit.has(p.id));
   if (ready(hand) && lost && (!tank || frac(tank) > 0.6)) { bot.healTarget = lost.id; return hand; }
@@ -1962,7 +2026,10 @@ BOT_CLASS.lanternkeeper = {
   home(bot, view) {
     const b = view.boss, others = view.players.filter(p => p.alive && !p.left && p.id !== bot.id && p.role !== 'tank');
     if (!others.length) return null;
-    const c = others.reduce((a, p) => ({ x: a.x + p.x / others.length, y: a.y + p.y / others.length }), { x: 0, y: 0 });
+    // (leaning toward whoever is hurt: the middle of the party weighted by missing health, the tank counting once it is low)
+    const wt = p => 1 + 4 * Math.max(0, 1 - p.hp / p.maxHp), tk = view.players.find(p => p.alive && !p.left && p.role === 'tank' && p.hp / p.maxHp < 0.6), pool = tk ? [...others, tk] : others;
+    const wsum = pool.reduce((a, p) => a + wt(p), 0);
+    const c = pool.reduce((a, p) => ({ x: a.x + p.x * wt(p) / wsum, y: a.y + p.y * wt(p) / wsum }), { x: 0, y: 0 });
     const d = hypot2(c.x - b.x, c.y - b.y) || 1, keep = Math.max(d, 210);
     // a Wayfarer keeps walking a small loop through them while its Stride is lit, so its lights fall among them
     const k = bot.actor && bot.actor.kit, walk = bot.spec === 'wayfarer' && k && k.now < (k.g.strideUntil || 0) ? 55 : 0, a = view.t * 1.6;
@@ -2072,8 +2139,8 @@ BOT_CLASS.gloomsworn = {
     const me = view.players.find(p => p.id === bot.id), hp = me ? me.hp / me.maxHp : 1, gloom = k.g.gloom || 0;
     const weave = k.gcdRemaining() > 0.5 && !k.cast && k.lockUntil <= k.now;
     const myBuster = view.mechs.find(m => m.type === 'buster' && (m.target ?? m.follow) === bot.id && m.resolveAt - view.t < 3);
-    const nb = (view.next || []).find(([n]) => BUSTER_CASTS.test(n));
-    const busterSoon = !!myBuster || !!(nb && nb[1] < 9) || !!(view.bossCast && BUSTER_CASTS.test(view.bossCast.name));
+    const nb = (view.next || []).find(([n]) => BUSTER_SEEN.test(n));
+    const busterSoon = !!myBuster || !!(nb && nb[1] < 9) || !!(view.bossCast && BUSTER_SEEN.test(view.bossCast.name));
     const hollow = k.has('hollow') || (k.g.graceUntil || 0) > k.now;
     const mantle = idx('mantle'), pall = idx('pall'), rite = idx('rite'), shade = idx('shade'), strike = idx('strike');
     if (weave || (myBuster && k.gcdRemaining() > 0.1)) {
@@ -2107,7 +2174,9 @@ BOT_CLASS.thresher = {
     const ending = reapAllMarks(k).some(e => e.kinds.some(kd => k.g.marks[e.id][kd].until - k.now < 3));
     // a Phantom blinks about every 7s between strings (in place: a bot walks, it does not dash), so its next finisher is the teleport slash
     if (k.def.phantom && !open && k.now >= (bot.rpBlink || 0) && bot.actor.dashReady(k.now)) { bot.rpBlink = k.now + 7; bot.actor.useDash(k.now, { from: { x: bot.x, y: bot.y }, to: { x: bot.x, y: bot.y }, through: false }); }
-    if (!open && k.gcdRemaining() > 0.4 && !k.cast && k.lockUntil <= k.now) {
+    // (a finisher locks 0.55s inside a 1.0s GCD, so a gate of "lock over and 0.4s of GCD left" was one 0.05s tick wide: ok() already
+    // waits for the lock, so all that is asked of the GCD is that one is running, for a window of about 0.4s)
+    if (!open && k.gcdRemaining() > 0.1 && !k.cast) {
       if (ok(frenzy) && view.burst) return frenzy;
       if (ok(veil) && hit) return veil;
       if (ok(star) && (tm >= 3 || (view.burst && tm >= 2))) return star;
@@ -2279,4 +2348,158 @@ BOT_CLASS.kenseier = {
   },
 };
 
-if (typeof module !== 'undefined') module.exports = { BotAI };
+// ------------------------------------------------------------------------------------------------------------------------------
+// Human-like play (a measurement tool, off unless a bot carries `bot.human`: tools/bot-raid.js HUMAN=..., tools/comp-sweep.js human=...).
+// A "human" bot runs the same AI as any bot, but through a filter that loses what a decent (not newbie) player loses: it only sees a
+// telegraph after a reaction time, now and then notices one late and dodges short or the wrong way, waits out the end of a cast rather
+// than slidecasting, stays a moment where it dodged to before heading back, is a little late on each global cooldown (with the odd
+// longer lapse), is slower to start again after a walk, and sometimes presses the plain filler instead of the best button.
+// Everything is drawn from the host's seeded rng, so a run is the same every time. Tune with the HUMANP env (JSON) or HUMAN_DEFAULTS.
+const HUMAN_DEFAULTS = {
+  react: [0.40, 0.65],       // seconds from a telegraph appearing to the bot acting on it
+  misjudge: 0.18,            // chance per telegraph that it is only noticed late ...
+  misjudgeLeft: 0.45,        // ... this many seconds before it lands
+  wrongWay: 0.30,            // of the late ones, the chance the first step goes the wrong way (for 0.3 s)
+  shortFrac: [0.6, 0.9],     // of the late ones that go the right way, how much of the dodge's distance is covered at first
+  returnDelay: [0.6, 1.8],   // seconds spent where it dodged to before heading back
+  castHold: 0.5,             // a cast with this many seconds left (and nothing landing first) is waited out, not slid out of
+  gcdSlop: [0.05, 0.30],     // seconds late on each global cooldown
+  lapseChance: 0.12,         // chance a global cooldown is a longer lapse (looking at the floor, the feed) ...
+  lapse: [0.8, 2.2],         // ... of this many seconds
+  fillerChance: 0.15,        // chance a damage dealer's global cooldown is the plain first button instead of the best one
+  reengage: [0.30, 0.80],    // seconds before pressing again after a walk of more than 0.4 s
+};
+const BotHuman = {
+  rand(h, r) { return r[0] + h.rng() * (r[1] - r[0]); },
+  // who plays human: 'dps' | 'tank' | 'healer' | 'all' | 'none' (or a comma list); params override HUMAN_DEFAULTS
+  attach(host, who, params) {
+    const want = String(who || 'none').split(',');
+    if (want.includes('none') && want.length === 1) return;
+    let env = null;
+    try { if (typeof process !== 'undefined' && process.env && process.env.HUMANP) env = JSON.parse(process.env.HUMANP); } catch (e) { env = null; }
+    const p = Object.assign({}, HUMAN_DEFAULTS, env || {}, params || {});
+    for (const b of host.bots) if (want.includes('all') || want.includes(b.role)) b.human = { p, rng: host.rng, seen: new Map(), gate: 0, reGate: 0, holdUntil: 0, sig: null, late: null, vc: null, filler: false, mvStart: null, evading: false };
+  },
+  // the view as this player sees it: a telegraph shows up after a reaction time (a late one, only just before it lands)
+  view(bot, view) {
+    const h = bot.human, P = h.p, t = view.t;
+    if (h.vc && h.vc.view === view) return h.vc.hv;
+    const seen = h.seen;
+    if (seen.size > 300) for (const id of seen.keys()) if (!view.mechs.some(m => m.id === id)) seen.delete(id);
+    const mechs = [];
+    for (const m of view.mechs) {
+      let s = seen.get(m.id);
+      if (!s) {
+        const free = m.type === 'raidwide' || m.type === 'buster';   // (nothing to step out of)
+        const late = !free && h.rng() < P.misjudge;
+        s = { at: late ? Math.max(m.start + 0.1, m.resolveAt - P.misjudgeLeft) : m.start + BotHuman.rand(h, P.react), late, fired: false };
+        seen.set(m.id, s);
+      }
+      if (t < s.at) continue;
+      if (s.late && !s.fired) {
+        s.fired = true;
+        h.late = { until: t + 0.3, wrong: h.rng() < P.wrongWay, frac: BotHuman.rand(h, P.shortFrac) };
+      }
+      mechs.push(m);
+    }
+    const hv = Object.assign({}, view, { mechs });
+    h.vc = { view, hv };
+    return hv;
+  },
+  move(bot, view) {
+    const h = bot.human, P = h.p, t = view.t, hv = BotHuman.view(bot, view);
+    let plan;
+    h.inner = true;
+    try { plan = BotAI.move(bot, hv); } finally { h.inner = false; }
+    const here = { x: bot.x, y: bot.y };
+    const unsafe = BotAI.danger(bot, bot.x, bot.y, hv) >= 400;
+    // having dodged: stay where you are a moment before going back
+    if (unsafe) { h.evading = true; h.holdUntil = 0; }
+    else if (h.evading) { h.evading = false; h.holdUntil = t + BotHuman.rand(h, P.returnDelay); }
+    if (!unsafe && t < h.holdUntil) plan = here;
+    // a telegraph noticed late: a short first step, or one the wrong way
+    if (unsafe && h.late && t < h.late.until && plan) {
+      const dx = plan.x - bot.x, dy = plan.y - bot.y;
+      plan = h.late.wrong ? ARENA.clamp({ x: bot.x - dx * 0.6, y: bot.y - dy * 0.6 }, 50) : { x: bot.x + dx * h.late.frac, y: bot.y + dy * h.late.frac };
+    }
+    // no slidecasting: with the end of a cast near and nothing landing on this spot first, finish it
+    const k = bot.actor && bot.actor.kit;
+    if (k && k.cast && plan && Math.hypot(plan.x - bot.x, plan.y - bot.y) > 6) {
+      const left = k.cast.end - k.now;
+      if (left <= P.castHold) {
+        let hit = Infinity;
+        for (const m of view.mechs) if (m.type === 'aoe' && m.resolveAt > t && SHAPES.contains(m.shape, bot.x, bot.y, 22)) hit = Math.min(hit, m.resolveAt - t);
+        if (hit > left + 0.25) plan = here;
+      }
+    }
+    return plan;
+  },
+  act(bot, k, view) {
+    const h = bot.human, P = h.p, t = view.t;
+    // a walk just ended: a moment before pressing again
+    if (bot.moving) { if (h.mvStart == null) h.mvStart = t; }
+    else if (h.mvStart != null) { if (t - h.mvStart > 0.4) h.reGate = t + BotHuman.rand(h, P.reengage); h.mvStart = null; }
+    // each global cooldown: a little late, now and then a lot, now and then the filler
+    const sig = k.gcdFree() ? k.lockUntil : k.gcdReady;
+    if (sig !== h.sig) {
+      h.sig = sig;
+      const slop = h.rng() < P.lapseChance ? BotHuman.rand(h, P.lapse) : BotHuman.rand(h, P.gcdSlop);
+      h.gate = Math.max(h.gate, Math.max(k.gcdReady, k.lockUntil, k.cast ? k.cast.end : 0) + slop);
+      h.filler = bot.role === 'dps' && h.rng() < P.fillerChance;
+    }
+    if (t < h.reGate) return null;
+    const hv = BotHuman.view(bot, view);
+    let i;
+    h.inner = true;
+    try { i = BotAI.act(bot, k, hv); } finally { h.inner = false; }
+    if (i != null && t < h.gate) { const g = k.abilities[i]; if (g && g.type === 'gcd') return null; }   // (late on the global cooldown: the weaves are not held)
+    if (h.filler && i != null && i !== 0) {
+      const a = k.abilities[i], a0 = k.abilities[0];
+      if (a && a.type === 'gcd' && !a.allowDead && a0 && a0.type === 'gcd' && a0.target === 'enemy' && !a0.ult && k.usable(a0) && k.readyIn(a0) <= 0.0001 && k.available(a0)) { i = 0; h.filler = false; }
+    }
+    return i;
+  },
+};
+
+// DPS-loss breakdown per player (tools/bot-raid.js BREAKDOWN=1, tools/comp-sweep.js breakdown=1): call sample(dt) after every host.tick(dt).
+// dead: seconds down. out: alive but with nothing of the first damaging button's reach to hit (the boss untargetable counts for nobody).
+// moving: seconds walking. idle: alive, in reach, standing, not casting, global cooldown up and still no press. interrupts: casts cancelled.
+const BotBreakdown = {
+  make(host) {
+    const per = {};
+    for (const b of host.bots) per[b.id] = { name: b.name, cls: b.cls.id, role: b.role, human: !!b.human, alive: 0, dead: 0, out: 0, moving: 0, idle: 0, interrupts: 0, avoidable: 0, damage: 0 };
+    return {
+      per,
+      sample(dt) {
+        const sim = host.sim;
+        if (sim.state !== 'live') return;
+        for (const b of host.bots) {
+          const r = per[b.id], s = sim.ps.get(b.id);
+          if (!s || !s.alive) { r.dead += dt; continue; }
+          r.alive += dt;
+          const k = b.actor.kit;
+          if (b.moving) r.moving += dt;
+          if (sim.boss.untargetable) continue;
+          const ab = k.abilities.find(a => a.target === 'enemy' && !a.ult);
+          if (!ab) continue;
+          if (!k.env.target(ab)) { r.out += dt; continue; }
+          if (!b.moving && !k.cast && k.now >= k.lockUntil && k.gcdRemaining() <= 0) r.idle += dt;
+        }
+      },
+      result() {
+        const out = {};
+        for (const b of host.bots) {
+          const r = per[b.id], st = host.sim.stats[b.id] || {};
+          out[b.id] = Object.assign({}, r, { interrupts: (b.actor.kit.stats && b.actor.kit.stats.interrupts) || 0, avoidable: st.avoidable || 0, damage: st.damage || 0 });
+        }
+        return out;
+      },
+    };
+  },
+  // one line per player, seconds as a share of the time alive where that reads better
+  format(res, dur) {
+    return Object.values(res).map(r => `${r.name}/${r.cls}${r.human ? '*' : ''}: ${(r.damage / dur).toFixed(0)} dps | dead ${r.dead.toFixed(0)}s, out of reach ${r.out.toFixed(0)}s, moving ${r.moving.toFixed(0)}s, gcd idle ${r.idle.toFixed(0)}s, casts cancelled ${r.interrupts}, avoidable hits ${r.avoidable}`).join('\n   ');
+  },
+};
+
+if (typeof module !== 'undefined') module.exports = { BotAI, BotHuman, BotBreakdown, HUMAN_DEFAULTS };

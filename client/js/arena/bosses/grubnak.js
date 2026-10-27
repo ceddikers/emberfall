@@ -39,6 +39,7 @@
 const GRUBNAK = {
   id: 'grubnak', name: 'Grubnak', title: 'The Ogre Chef',
   hp: { normal: 3900000, hard: 4350000 },
+  hardDmg: 1.04,   // (Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
   autoDmg: { normal: 1750, hard: 1750 },
   enrage: { normal: 592, hard: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
   enrageName: 'Last Call',

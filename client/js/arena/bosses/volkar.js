@@ -40,7 +40,8 @@
 
 const VOLKAR = {
   id: 'volkar', name: 'Volkar', title: 'The Storm Titan',
-  hp: { normal: 3800000, hard: 4600000 },
+  hp: { normal: 3800000, hard: 4400000 },   // (Hard 4.6M before 2026-10-27)
+  hardDmg: 1.02,   // (Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
   autoDmg: { normal: 1450, hard: 1550 },
   enrage: { normal: 592, hard: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
   enrageName: 'Skybreak',

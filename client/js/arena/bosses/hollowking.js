@@ -57,6 +57,7 @@
 const HOLLOWKING = {
   id: 'hollowking', name: 'The Hollow King', title: 'Lord of the Barrow',
   hp: { normal: 3700000, hard: 4345000 },
+  hardDmg: 1.03,   // (Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
   autoDmg: { normal: 1650, hard: 1800 },
   enrage: { normal: 622, hard: 632 },   // the cast starts here and lands 8 s later (10:30 / 10:40)
   enrageName: 'Moonset',

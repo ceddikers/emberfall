@@ -264,7 +264,7 @@ class RaidHost {
       posture: sim.postureOn ? sim.kenPack() : null,   // (a Kenseier in the party: [p, max, break seconds left, held full, recovering, builder], for the bots: fight.js KENSEI_HOST)
       bossCast: b.cast ? { name: b.cast.name, left: b.cast.end - sim.t } : null,
       mechs: [...sim.mechs.values()], puddles: sim.puddles, players,
-      bossId: sim.def.id, dmgScale: sim.scale.dmg * (sim.hard ? sim.def.hardDmg ?? 1.25 : 1), mitLog: this.mitLog,   // (what a telegraph's raw dmg comes to on a player, before mitigation)
+      bossId: sim.def.id, dmgScale: sim.scale.dmg * (sim.hard ? sim.def.hardDmg ?? 1.25 : sim.def.normalDmg ?? 1), mitLog: this.mitLog,   // (what a telegraph's raw dmg comes to on a player, before mitigation)
       adds: [...sim.adds.values()], tethers: [...sim.tethers.values()], zones: sim.zones,
       rollers: [...sim.rollers.values()], rollPre: (this.rollPre || []).filter(r => r.end > sim.t), lungePlan: (this.lungePlan || []).filter(e => e.at > sim.t - 0.2), tauntAt: id => (this.tauntAt || {})[id] ?? -99, reels: [...sim.reels.values()], sweeps: [...sim.sweeps.values()],
       // Volkar: everyone's charge, the rods' posts, and where the closing wall is about to jump
@@ -561,6 +561,27 @@ class RaidHost {
       recentDamage: (actor, secs) => bot.taken.filter(d => d.t > host.sim.t - secs).reduce((a, d) => a + d.a, 0),
       maxHp: () => { const s = host.sim.ps.get(bot.id); return s ? s.maxHp : playerBaseHp(bot.role); },
       hpFrac: () => { const s = host.sim.ps.get(bot.id); return s && s.maxHp ? Math.max(0, s.hp / s.maxHp) : 1; },
+      // the boss as the kits see it (kits.js bossNow), built from the sim as main.js builds it from the host's messages:
+      // without it every boss-reactive kit rule (a Doll at work, Digest, Rampage's guard) was off for bots
+      boss: () => {
+        const sim = host.sim, b = sim.boss, t = sim.t;
+        if (sim.state !== 'live') return null;
+        const c = b.cast && t <= b.cast.end ? b.cast : null, s = sim.ps.get(bot.id), up = sim.upcoming(3);
+        const RW = typeof RAID_CASTS !== 'undefined' ? RAID_CASTS : null;
+        const wide = (c && RW && RW.test(c.name)) || [...sim.mechs.values()].some(m => m.type === 'raidwide' && t < m.resolveAt) ||
+          !!(RW && up.some(e => RW.test(e.name) && e.t - t < 5));
+        // (hitIn / hitKind: the next blow aimed at this bot, as main.js kenRing)
+        let ring = b.target === bot.id && b.autoAt != null ? { at: b.autoAt - t, kind: 'auto' } : null;
+        for (const m of sim.mechs.values()) {
+          if (m.type !== 'buster' || !(m.target === bot.id || m.follow === bot.id)) continue;
+          const at = m.resolveAt - t;
+          if (at > -0.3 && (!ring || at < ring.at)) ring = { at, kind: 'buster' };
+        }
+        return { casting: !!c, castLeft: c ? c.end - t : 0, next: up.length ? Math.max(0, up[0].t - t) : null, onMe: b.target === bot.id,
+          vuln: b.vulnEnd > t ? b.vuln : 0, selfVuln: !!(s && s.vulnEnd > t && s.vuln), wide: !!wide,
+          hitIn: ring ? ring.at : null, hitKind: ring ? ring.kind : null, posture: sim.postureOn ? sim.kenPack() : null,
+          hp: b.maxHp > 0 ? Math.max(0, Math.min(1, b.hp / b.maxHp)) : null };
+      },
       // classes-c: a bot aims where its AI says (bot.aim), else where it's walking; Dolls collide with the room's props
       // and go straight to the host; a Threadweaver bot reads its threads from the sim
       aim: () => bot.aim || bot.plan || null,

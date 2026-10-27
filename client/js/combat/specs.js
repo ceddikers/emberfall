@@ -113,7 +113,7 @@ const SPECS = {
         abilities: {
           drain: {
             id: 'rampage', replaces: 'drain', name: 'Rampage', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
-            desc: 'Spend 40 Rage: a wild blow for {d:320}, up to {d:250} more the more the bank holds (the damage you took since your last Rampage, 6s at most). Within 1.2s of a hit that took a tenth of your HP your blood is warm: {d:340} more; after that the bank has gone cold and counts for 30%. It hits harder the lower your HP (up to 70% harder near death) and heals you for 20% of the bank. It also guards you: 15% less damage for 2s, or 35% for 3s when thrown below half HP.',
+            desc: 'Spend 40 Rage: a wild blow for {d:320}, up to {d:250} more the more the bank holds (the damage you took since your last Rampage, 6s at most). Within 1.2s of a hit that took a tenth of your HP your blood is warm: {d:340} more; after that the bank has gone cold and counts for 30%. It hits harder the lower your HP (up to 70% harder near death) and heals you for 20% of the bank. It also guards you: 15% less damage for 2s, or 35% for 3s when thrown below half HP. Thrown while the boss is winding up a big blow at you, that blow also lands 35% lighter.',
             usable: k => reaverDrainOk(k),
             glow: k => reaverDrainGlow(k) || (k.g.blood >= 40 && k.env.hpFrac() < 0.5),
             effect(k) {
@@ -439,8 +439,10 @@ const SPECS = {
       passive: { name: 'Echo', desc: 'Temporal Bolt and Recall repeat 3s later at half strength (full strength during Echo Chamber). Accelerando becomes Echo Chamber.' },
       build: base => {
         // one Bolt hit, at a share of its strength: damage, then the stance's heal
-        const bolt = (k, ab, share) => chronoBolt(k, ab, share, 0.56, 1.35);
+        const bolt = (k, ab, share, to) => chronoBolt(k, ab, share, 0.56, 1.35, to);
         const echo = (k, fn) => k.g.echoes.push({ at: k.now + 3, fn });
+        // an echo goes to the most hurt ally when the one it was meant for is above 90% by the time it lands
+        const echoTo = (k, t) => { const f = k.env.allyHp && typeof t === 'number' ? k.env.allyHp(t) : null; return f != null && f > 0.9 ? 'lowest' : t; };
         const share = k => (k.has('chamber') ? 1 : k.talent('chronomancer_second') ? 0.6 : 0.5);   // Second Hand: stronger echoes
         return {
           potMult: 0.47,
@@ -455,20 +457,20 @@ const SPECS = {
           },
           abilities: {
             bolt: {
-              desc: '1.5s cast attack for {d:280} that repeats 3s later at half strength. Slow: heals your linked ally for 135% of its damage. Haste: heals everyone for 56%.',
+              desc: '1.5s cast attack for {d:280} that repeats 3s later at half strength. Slow: heals your linked ally for 135% of its damage (the echo goes to the most hurt ally instead if your link is above 90%). Haste: heals everyone for 56%.',
               effect(k) {
                 const ab = this;
                 // (Resonance, spec row VI: an echo that crits echoes once more)
-                const ring = again => echo(k, () => { const r = bolt(k, ab, share(k)); k.fx('echo'); if (again && r && r.crit && k.talent('chronomancer_resonance')) ring(false); });
+                const ring = again => echo(k, () => { const r = bolt(k, ab, share(k), echoTo(k, k.g.link ?? k.env.defaultLink())); k.fx('echo'); if (again && r && r.crit && k.talent('chronomancer_resonance')) ring(false); });
                 bolt(k, this, chronoInstant(k)); ring(true); chronoBoltAfter(k, this, 0.56, 1.35, true);
               },
             },
             recall: {
-              desc: '5s cast: bring a fallen ally back. They rise with Raise Sickness: 15% less damage and healing for 20s, more for every fall this pull. On a living one it is a 2.5s cast that heals them for {h:1400}, and the heal repeats 3s later at half strength.',
+              desc: '5s cast: bring a fallen ally back. They rise with Raise Sickness: 15% less damage and healing for 20s, more for every fall this pull. On a living one it is a 2.5s cast that heals them for {h:1400}, and the heal repeats 3s later at half strength (on the most hurt ally instead, if they are above 90%).',
               effect(k, t) {
                 if (k.env.isDead(t)) { k.raise(t, { ab: this }); chronoSecondChance(k, this, t); return; }
                 k.heal(t, 1400, { ab: this });
-                echo(k, () => { if (!k.env.isDead(t)) { k.heal(t, 1400 * share(k), { ab: this }); k.fx('echo'); } });
+                echo(k, () => { if (!k.env.isDead(t)) { k.heal(echoTo(k, t), 1400 * share(k), { ab: this }); k.fx('echo'); } });
               },
             },
             accel: {
@@ -672,10 +674,12 @@ const SPECS = {
       focus: 'Burst from behind. Backstab hits very hard from the rear, a Shadowstep sets up the next one and carries you out of a blow, and Shadow Dance lasts longer.',
       gaugeTip: 'Strike gives 1 point, or 2 from behind. Backstab spends every point and hits for {d:115} more for each, with a {d:160} bonus at 5, and more again from behind. A sixth point is lost. A Shadowstep starts you Stalking: your next Backstab hits harder. Shadow Dance entered at 5 points lets the first Backstab in it keep them.',
       passive: { name: 'From the Shadows', desc: 'Eviscerate becomes Backstab: much stronger from behind. Shadowstep starts you Stalking (your next Backstab within 6s hits 6% harder) and nothing can touch you for 1s. Shadow Dance lasts 14s.' },
+      // (its Backstabs need the rear, which a raid often denies: it aims above its class on the dummy so its raid damage lands level)
+      balance: 1.12,
       build: base => {
         const stepBase = base.abilities.find(a => a.id === 'step');
         return {
-        potMult: 0.93,
+        potMult: 1.0,
         abilities: {
           step: {
             desc: 'Teleport behind the target, and nothing can touch you for 1s. For 5s every hit counts as a positional, and you start Stalking: your next Backstab within 6s is 6% harder.',
@@ -825,15 +829,15 @@ SPECS.alembist = [
   },
   {
     id: 'volatile', name: 'Volatile', title: 'The Unstable Mix', accent: '#ff8a3a',
-    gaugeTip: 'Every vial heats up to full strength in 4s, and its fuse burns out at 6s: still in the bandolier, it goes off on you at 60%. Catalyst makes the next brew take three reagents; three that make no Reaction brew the pair you put in twice, fully heated. Throw takes the vial on the left, or the one you marked with its number. The three coals under the still are the Kiln: every vial you throw that is not a bomb lights one, and with all three lit your next Throw also launches a free Kiln Bomb for {d:900}.',
+    gaugeTip: 'Every vial heats up to full strength in 4s, and its fuse burns out at 8s: still in the bandolier, it goes off on you at 60%. Catalyst makes the next brew take three reagents; three that make no Reaction brew the pair you put in twice, fully heated. Throw takes the vial on the left, or the one you marked with its number. The three coals under the still are the Kiln: every vial you throw that is not a bomb lights one, and with all three lit your next Throw also launches a free Kiln Bomb for {d:900}.',
     blurb: 'Nothing in the bandolier stays quiet for long. Some mixtures do things no book admits to.',
     focus: 'Reactions. Three-reagent brews make stronger, stranger vials you find by experimenting, but every vial is on a short fuse.',
-    passive: { name: 'Short Fuse', desc: 'Every vial heats up to full strength in 4s and has a 6s fuse: if it\'s still in your bandolier when the fuse runs out, it goes off on you, weaker, and a bomb burns you. Distill becomes Catalyst.' },
+    passive: { name: 'Short Fuse', desc: 'Every vial heats up to full strength in 4s and has an 8s fuse: if it\'s still in your bandolier when the fuse runs out, it goes off on you, weaker, and a bomb burns you. Distill becomes Catalyst.' },
     build: base => ({
       potMult: base.potMult * 0.86,
-      alem: { slots: 3, fuse: 6, heat: 4 },
+      alem: { slots: 3, fuse: 8, heat: 4 },
       abilities: {
-        throw: { desc: 'Throw a vial at your heal target (1.25s): it shatters and splashes everyone close by; a bomb flies at the enemy instead. Throw takes the vial on the left, or the one you marked with its number key (the mark holds until you throw, then goes back to the first). Every vial that is not a bomb heats the Kiln by 1: at 3, your next Throw also launches a free Kiln Bomb for {d:900}. Vials heat up 30% stronger over 4s, and go off on you when their 6s fuse runs out.' },
+        throw: { desc: 'Throw a vial at your heal target (1.25s): it shatters and splashes everyone close by; a bomb flies at the enemy instead. Throw takes the vial on the left, or the one you marked with its number key (the mark holds until you throw, then goes back to the first). Every vial that is not a bomb heats the Kiln by 1: at 3, your next Throw also launches a free Kiln Bomb for {d:900}. Vials heat up 30% stronger over 4s, and go off on you when their 8s fuse runs out.' },
         distill: {
           id: 'catalyst', replaces: 'distill', name: 'Catalyst', type: 'ogcd', target: 'self', cd: 14, charges: 2, anim: 'cast', lock: 0.3,
           get desc() { return `Your next brew takes three reagents. Three that make a Reaction brew it; three that don't brew the pair you put in twice, fully heated. It glows while the still is empty.<div class="alem-book">${alemBook(alemSavedKnown(), true)}</div>`; },
@@ -1005,10 +1009,18 @@ Object.assign(SPECS, {
       blurb: 'Build speed across the whole hall. Then hit like something falling from the sky.',
       focus: 'Big, readable burst. Drift holds twice as much and fills faster in straight lines, and Crosswind becomes Impact, a charge clean through the boss.',
       passive: { name: 'Long Charge', desc: 'Drift holds up to 200, fills faster while you run in a straight line, every Carve winds it 6, and it holds 3s when you stop. Crosswind becomes Impact: a charge clean through your target that releases everything at once.' },
-      build: () => ({
-        potMult: 0.533,
+      // (a raid keeps it off its straight lines more than the dummy does: it aims above its class here so its raid damage lands level)
+      balance: 1.12,
+      build: base => {
+      const slipBase = base.abilities.find(a => a.id === 'slip');
+      return {
+        potMult: 0.533 * 1.12,
         driftMax: 200, straight: true, driftHold: 3, carveDrift: 6,   // (a Comet holds its charge 3s standing still before it drains)
         abilities: {
+          slip: {
+            desc: slipBase.desc + ' Nothing can touch you for 0.5s as you go.',
+            effect(k) { slipBase.effect.call(this, k); k.mitigate('self', 1, 0.5, { ab: this, kind: 'invuln' }); },   // (a Comet lives in the boss's body: the dash is a dodge, like Shadowstep)
+          },
           cross: {
             id: 'impact', replaces: 'cross', name: 'Impact', type: 'gcd', target: 'enemy', range: SPEC_RANGED, anim: 'big',
             desc: 'Needs 100 Drift. Spend it all: charge clean through your target and out the far side, releasing it all at once: {d:120}, plus {d:40} for every 10 Drift you spend. The charge through its body is a Passing Strike too. From 160 it always crits (it glows then).',
@@ -1028,7 +1040,8 @@ Object.assign(SPECS, {
             fx: { type: 'line', color: '#ffe0a8', range: 440 },
           },
         },
-      }),
+      };
+      },
     },
   ],
 });
@@ -1220,9 +1233,9 @@ Object.assign(SPECS, {
       focus: 'Positioning. The strings always cut what they cross and reach 400 px, and Cross-Cut is off the global cooldown with two charges.',
       passive: { name: 'Bladed String', desc: 'The strings reach 400 px before they tear, and they cut whatever enemy they cross for {d:48}, once a second. Taut String: every second the line stays across, the cut grows by {d:12}, up to {d:120}; the line leaving the enemy or a String tearing slackens it. Cross-Cut is off the global cooldown, with two charges, and the strings are Drawn Tight: Cross-Cut and Grand Finale cut up to 50% harder the longer the line has stayed across the enemy with all three Strings tied (10s for the most). A torn String, a String left untied or a line that leaves the enemy slackens it.' },
       // (a pro keeps the line drawn tight on the dummy, but a raid breaks it often: it aims above its class here so the raid index lands level)
-      balance: 1.12,
+      balance: 1.30,
       build: base => ({
-        potMult: base.potMult * 0.66 * 0.98,   // balance knob (Draw Tight lifts it)
+        potMult: base.potMult * 0.76 * 0.98,   // balance knob (Draw Tight lifts it)
         stretch: 400, bladed: true,
         abilities: {
           cross: { type: 'ogcd', charges: 2, cd: 9, lock: 0.4, desc: 'Off the global cooldown, two charges: your strings become blades and cut along the line between you and the Doll. With the enemy on that line it\'s a {d:560} cut, up to 50% harder with a long unbroken line, and 2 Encore; otherwise it cuts nothing.' },
@@ -1236,9 +1249,10 @@ Object.assign(SPECS, {
       focus: 'Teamwork. Two smaller Dolls, and the triangle between you and them is the Stage: an enemy standing in it takes more damage from everyone.',
       passive: { name: 'The Stage', desc: 'You work two Dolls, each hitting for a little over half. The triangle between you and both Dolls is the Stage: an enemy inside it takes 10% more damage from the whole party. W and Swap move the Doll nearest where you aim.' },
       // (its own damage is a little lower: the Stage pays the rest to the party)
-      balance: 0.93,
+      // (a raid lifts it back: in a real pull its own damage came out under the field)
+      balance: 0.93 * 1.06,
       build: base => ({
-        potMult: base.potMult * 0.9035,
+        potMult: base.potMult * 0.9035 * 1.06,
         dolls: 2, dollMult: 0.58,
         // (each Doll hits at 58%: the numbers here are per Doll)
         abilities: {
@@ -1312,8 +1326,10 @@ SPECS.thresher = [
     blurb: 'Long strings, one great sweep.',
     focus: 'Rhythm. A string can wait longer between presses, and the four-swing finisher is much stronger: keep the dance going, finish on the fourth.',
     passive: { name: 'Long Waltz', desc: 'A string holds 60% longer between presses, and the four-swing finisher (the wide sweep) hits 40% harder.' },
+    // (a raid breaks its strings more than the dummy does: it aims a little above its class so its raid damage lands level)
+    balance: 1.05,
     build: base => ({
-      potMult: base.potMult * 0.915,   // balance knob (tools/simulate.js)
+      potMult: base.potMult * 0.915 * 1.05,   // balance knob (tools/simulate.js)
       gapMult: 1.6, fourthMult: 1.4,
       abilities: {
         finish: { desc: "Ends the string. After one swing a hooking cut ({d:80}) leaves a Drain mark; after two, the blade driven into the floor ({d:120}, a small ring) leaves a Bind that holds adds; after three, a skewer down a line ({d:170}) leaves a Death Mark; after four, a wide sweep ({d:350}) that leaves a Thread on everything in the arc. Needs a string in hand." },
@@ -1326,8 +1342,10 @@ SPECS.thresher = [
     blurb: 'Blink, cut, vanish.',
     focus: 'Mobility. Blink has one more charge, and a Blink turns your next finisher into a slash from the far side of the target.',
     passive: { name: 'Vanishing Edge', desc: 'Blink holds three charges. For 4s after a Blink, W also teleports you to the far side of the target for {d:80} more and leaves a Phantom mark (Snap pops it for {d:70}).' },
+    // (a raid moves it off the target more than the dummy does: it aims a little above its class here so its raid damage lands level)
+    balance: 1.06 * 1.14,
     build: base => ({
-      potMult: base.potMult * 0.94,
+      potMult: base.potMult * 1.14,
       dashPlus: 1, phantom: true,
       abilities: {
         finish: { desc: "Ends the string. After one swing a hooking cut ({d:80}) leaves a Drain mark; after two, the blade driven into the floor ({d:120}, a small ring) leaves a Bind that holds adds; after three, a skewer down a line ({d:170}) leaves a Death Mark; after four, a wide sweep ({d:250}) that leaves a Thread on everything in the arc. Within 4s of a Blink it also teleports you to the target's far side for {d:80} more and leaves a Phantom mark. Needs a string in hand." },
@@ -1350,12 +1368,12 @@ SPECS.tidecaller = [
       potMult: base.potMult * 1.05,   // balance knob (tools/simulate.js)
       tideHold: 3, kingTide: true, surgeShield: true,
       abilities: {
-        surge: { desc: '1.5s cast: spend all the tide in a wave that heals the whole party, from {h:120} at low water up to {h:480} at high water. At full high water it heals 30% more and leaves a shield of {s:100} on everyone.' },
+        surge: { desc: '1.5s cast: spend all the tide in a wave that heals the whole party, from {h:220} at low water up to {h:560} at high water. At full high water it heals 30% more and leaves a shield of {s:100} on everyone.' },
         sip: {
           id: 'swell', replaces: 'sip', name: 'Swell', type: 'gcd', target: 'ally', anim: 'cast',
-          desc: 'Instant: heals one ally for {h:160}, and raises the tide instead of spending it.',
+          desc: 'Instant: heals one ally for {h:200}, 80% more on an ally under half health, and raises the tide instead of spending it.',
           glow: k => !!k.g.lowWater,
-          effect(k, t) { tideSip(k, this, t, 160, -8); },
+          effect(k, t) { tideSip(k, this, t, 200, -8); },
           fx: { type: 'ring', color: '#d7f2ee', r: 36, onTarget: true },
         },
       },
@@ -1371,10 +1389,10 @@ SPECS.tidecaller = [
       potMult: base.potMult * 1.0,   // balance knob (tools/simulate.js)
       markDeep: true, stillWater: true,
       abilities: {
-        riptide: { desc: 'Mark an ally: they heal {h:80} every 2s for 12s and take a shield of {s:120}, and when the tide next crests the mark pops for {h:200}.' },
+        riptide: { desc: 'Mark an ally: they heal {h:100} every 2s for 12s and take a shield of {s:120}, their next big hit (a fifth of their health or more) lands 30% lighter, and when the tide next crests the mark pops for {h:300}.' },
         surge: {
           id: 'undertow', replaces: 'surge', name: 'Undertow', type: 'gcd', target: 'self', cast: k => tideSurgeCast(k), anim: 'big',
-          desc: '1.5s cast: spend all the tide and pull the party\'s hurt down into the deep. Everyone heals over 8s, from {h:140} at low water up to {h:550} at high water, and you take a Deep Shield of {s:150} up to {s:400} for 8s.',
+          desc: '1.5s cast: spend all the tide and pull the party\'s hurt down into the deep. Everyone heals at once and over 8s, from {h:220} at low water up to {h:560} at high water (a quarter lands first), and you take a Deep Shield of {s:150} up to {s:400} for 8s.',
           glow: k => tideSurgeGlow(k),
           effect(k) { tideUndertow(k, this); },
           fx: { type: 'zone', style: 'wave', color: '#3a8a9a', r: 180, range: 0, dur: 1.4 },
@@ -1393,7 +1411,7 @@ SPECS.lanternkeeper = [
     gaugeTip: 'Embers light your lanterns. One comes back every 5s, and every third Trim the Wick gives one more. Set Lantern and Hand Lantern cost one, Relight two.',
     blurb: 'A few bright fixed lights, big heals.',
     focus: 'Two tall Great Beacons with wide glows that never burn below half. Allies inside them take less damage, and Call the Beacon pulls one to your feet when the party moves on.',
-    passive: { name: 'Steady Glow', desc: 'Set Lantern becomes Great Beacon. Carry the Flame becomes Call the Beacon. Allies inside a Great Beacon\'s glow take 8% less damage while they stay.' },
+    passive: { name: 'Steady Glow', desc: 'Set Lantern becomes Great Beacon. Carry the Flame becomes Call the Beacon. Allies inside a Great Beacon\'s glow take 12% less damage while they stay.' },
     build: base => ({
       potMult: base.potMult * 1.0,   // balance knob (tools/simulate.js)
       steadyGlow: true,
@@ -1415,7 +1433,7 @@ SPECS.lanternkeeper = [
     gaugeTip: 'Embers light your lanterns. One comes back every 5s, and every third Trim the Wick gives one more. Lamplighter\'s Stride and Hand Lantern cost one, Relight two.',
     blurb: 'Lights trail behind you as you move: healing on the go.',
     focus: 'Small lights fall wherever you walk. Lead the party through the fight and the light follows, and the walking itself mends whoever is hurt most; Trailblaze drags every light along with you.',
-    passive: { name: 'Road Worn', desc: 'Set Lantern becomes Lamplighter\'s Stride and Carry the Flame becomes Trailblaze. You heal 10% more while moving, and every few steps you walk a light lands on the most hurt ally near you, healing them {h:110}. Stand still for 3s and your newest light dims.' },
+    passive: { name: 'Road Worn', desc: 'Set Lantern becomes Lamplighter\'s Stride and Carry the Flame becomes Trailblaze. You heal 20% more while moving, and every few steps you walk a light lands on the most hurt ally near you, healing them {h:200}. Allies inside your small lights take 12% less damage. Stand still for 3s and your newest light dims.' },
     build: base => ({
       potMult: base.potMult * 1.1,   // balance knob (tools/simulate.js)
       roadWorn: true,
@@ -1423,7 +1441,7 @@ SPECS.lanternkeeper = [
         set: {
           id: 'stride', replaces: 'set', icon: 'stride', name: 'Lamplighter\'s Stride', type: 'gcd', target: 'self', anim: 'cast',
           usable: k => k.g.emb >= 1,
-          desc: 'Instant, 1 Ember: for 10s, every few steps you take drops a small light behind you. Each glows for 6s and heals everyone in it {h:25} every second. Six at most.',
+          desc: 'Instant, 1 Ember: for 10s, every few steps you take drops a small light behind you. Each glows for 6s and heals everyone in it {h:40} every second. Six at most.',
           glow: k => k.g.emb >= 1 && k.now >= (k.g.strideUntil || 0),
           effect(k) { lkStride(k, this); },
           fx: { type: 'aura', color: '#ff9f5a', r: 30, dur: 0.6 },
@@ -1511,6 +1529,8 @@ SPECS.houndmaster = [
     blurb: 'One great hound, and the two of you move as one. Ride in for the big blows.',
     focus: 'Position and the ride. Greyfang is bigger and bites harder, and you are the second half of every pair, so where you stand counts. Mount for a quick ride, a mounted charge, and a blow from the saddle.',
     passive: { name: 'One Heart', desc: 'You have one hound, Greyfang, bigger than the pack: it fights with your buffs, and its bites give half again the Bond. A pair is Greyfang\'s place and yours; you on a flank with it behind is a Bring Down. Whistle: Flank becomes Mount.' },
+    // (a raid pulls Greyfang and its rider apart more than the dummy does: it aims above its class so its raid damage lands level)
+    balance: 1.18,
     build: base => {
       const knife = base.abilities.find(a => a.id === 'knife');
       const mount = {
@@ -1523,7 +1543,7 @@ SPECS.houndmaster = [
       const stand = Object.defineProperties({}, Object.getOwnPropertyDescriptors(hdRideFace(mount)));
       stand.id = 'ridedown';   // (how other players find the move a cast names: abilityById looks in `moves`)
       return {
-        potMult: base.potMult * 0.98,   // balance knob (tools/simulate.js)
+        potMult: base.potMult * 0.98 * 1.18,   // balance knob (tools/simulate.js; the spec's balance below)
         hounds: ['greyfang'], solo: true, houndHp: 220, houndMult: 1.5, bondMult: 1.5,
         moveMult: k => (hdMounted(k) ? HDS.SPEED : 1),
         moves: [stand],

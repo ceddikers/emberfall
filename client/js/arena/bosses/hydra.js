@@ -46,6 +46,7 @@
 const HYDRA = {
   id: 'hydra', name: 'The Hydra', title: 'Mother of Nine Heads',
   hp: { normal: 4950000, hard: 5600000 },
+  hardDmg: 1.13,   // (Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
   autoDmg: { normal: 1500, hard: 1650 },
   enrage: { normal: 612, hard: 622 },   // the cast starts here and lands 8 s later (10:20 / 10:30)
   enrageName: 'The Drowning',

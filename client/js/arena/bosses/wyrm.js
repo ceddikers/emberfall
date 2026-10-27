@@ -40,7 +40,8 @@ const HD = 1.7;
 const WYRM = {
   id: 'wyrm', name: 'Vhalgrath', title: 'Tyrant of the Cinder Peaks',
   hp: { normal: 5200000, hard: 5430000 },
-  hardDmg: HD,
+  normalDmg: 0.84,   // (Normal's damage multiplier, fight.js default 1: 2026-10-27, tuned for a human party rather than perfect bots, CLAUDE.md)
+  hardDmg: HD * 0.88,   // (2026-10-27: every Hard hit 12% lighter, tuned for a human party rather than perfect bots, CLAUDE.md)
   autoDmg: { normal: 2300, hard: Math.round(2100 * 1.25 / HD) },
   enrage: { normal: 582, hard: 622 },   // the cast starts here and lands 8 s later (9:50 / 10:30)
   enrageName: 'Ashfall',

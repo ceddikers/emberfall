@@ -646,11 +646,13 @@ class FightSim {
     const at = all ? null : (this.players().find(q => q.id === this.resolveTarget(pid, ev.target, ev.not)) || this.players().find(q => q.id === pid));
     if (!all && !at) return;
     const r = Math.max(0, Math.min(200, ev.r || 0)), num = v => Math.max(0, Math.min(3000, Number(v) || 0));
+    // (ev.solo: a heal vial that finds nobody else in reach heals its target that much more; ev.sht: the shield on the target itself, when stronger than the splash's)
+    const alone = !all && !!ev.solo && !this.alive().some(q => q !== at && Math.hypot(q.x - at.x, q.y - at.y) <= r);
     for (const p of this.alive()) {
       if (!all && Math.hypot(p.x - at.x, p.y - at.y) > r) continue;
       const s = p.s;
-      if (ev.amount) this.applyHeal(pid, p.id, num(ev.amount) * (ev.up ? 2 - s.hp / s.maxHp : 1));
-      if (ev.sh) this.giveShield(pid, p.id, s, num(ev.sh), ev.dur || 10);
+      if (ev.amount) this.applyHeal(pid, p.id, num(ev.amount) * (ev.up ? 2 - s.hp / s.maxHp : 1) * (alone ? Math.max(1, Math.min(1.5, Number(ev.solo) || 1)) : 1));
+      if (ev.sh || (ev.sht && p === at)) this.giveShield(pid, p.id, s, p === at && ev.sht ? Math.max(num(ev.sh), num(ev.sht)) : num(ev.sh), ev.dur || 10);
       if (ev.cl & 1) { s.vuln = 0; s.vulnEnd = 0; s.dmgDownEnd = 0; }
       if (ev.cl & 2) { delete s.debuffs.slowed; delete s.debuffs.rooted; }
     }
@@ -761,18 +763,19 @@ class FightSim {
       return amt;
     }
     // (opts.scaled: already in small numbers, e.g. a share passed along a thread, but still mitigated as usual)
-    let amt = opts.raw || opts.scaled ? raw : raw * this.scale.dmg * (this.hard ? this.def.hardDmg ?? 1.25 : 1) * (1 + this.boss.dmgUp);   // (def.hardDmg: a boss's own Hard multiplier)
+    let amt = opts.raw || opts.scaled ? raw : raw * this.scale.dmg * (this.hard ? this.def.hardDmg ?? 1.25 : this.def.normalDmg ?? 1) * (1 + this.boss.dmgUp);   // (def.hardDmg / def.normalDmg: a boss's own multiplier on each difficulty)
     if (this.recoverEnd > this.t && !opts.raw) amt *= 1 - FIGHT.REC.CUT;   // recovering after a death (Hard)
     if (!opts.shared) amt = this.threadSplit(p, s, amt, opts);   // threads split the hit evenly along them (classes-c)
     if (s.vulnEnd > this.t && !opts.raw) amt *= 1 + s.vuln;
     if (s.def && !opts.raw) amt *= 1 - s.def;
-    let mult = 1, perfect = null, reflect = null, invuln = false, read = null;
+    let mult = 1, perfect = null, reflect = null, invuln = false, read = null, onceHit = null;
     for (const m of (opts.nomit ? [] : s.mits)) {   // (nomit: a bill from the Ledger, mitigated when it was written)
       if (m.kind === 'invuln') { invuln = true; break; }
       if (m.kind === 'living') continue;
       if (m.kind === 'brace' && this.t - m.start <= FIGHT.PERFECT_WINDOW && !perfect) { perfect = m; mult *= 0.4; continue; }
       if (m.kind === 'parry' && !opts.raw && this.t - m.start <= FIGHT.READ_WINDOW && !read) { read = m; mult *= 0.5; continue; }
       if (m.kind === 'reflect') { if (!reflect) { reflect = m; mult *= 0.2; } continue; }
+      if (m.kind === 'once') { if (onceHit || amt < s.maxHp * 0.2) continue; onceHit = m; }   // (a Tidecaller's Riptide Mark: the next big hit, a fifth of their health or more, is cut and the cut is used up)
       mult *= 1 - m.pct;
     }
     if (invuln) mult = 0;
@@ -798,6 +801,7 @@ class FightSim {
       this.emit({ t: 'fev', k: 'read', id: p.id, b: opts.kind === 'buster' ? 1 : 0 });
     }
     const before = amt;
+    if (onceHit) s.mits = s.mits.filter(m => m !== onceHit);
     amt *= mult;
     if (this.classHit) amt = this.classHit(p, s, amt, opts);   // a Gorgemaw's open jaw, an Oathbroker's Ledger (end of this file)
     const st = this.stats[p.id];
@@ -1978,7 +1982,7 @@ Object.assign(FightSim.prototype, {
 // out the wick, its gear and Lighthouse), w the wick (0-100), k the kind (0 floor, 1 Great Beacon, 2 hand, 3 small,
 // 4 floating, 5 eternal). on: an ally it hangs on (or 'c', the party's centre), placed at that ally plus ox, oy.
 //   - Once a second every alive player inside a glow heals that lantern's h (glows stack). all: everyone counts (Lighthouse).
-//   - st (Steady Glow): 8% less damage while inside it. ln (Lighthouse Keeper): its most hurt
+//   - st (Steady Glow, a Wayfarer's small lights too): 12% less damage while inside it. ln (Lighthouse Keeper): its most hurt
 //     player heals 30% more. sg (Signal Fire): with two of them, a player on the line between (outside both) heals half.
 //     hh (Hearth): 6s in its glow heals hh, and again every 6s more.
 //   - 'lamp' events: op 'burst' (every lantern, or lid's: everyone in its glow heals amount and takes a shield sh;
@@ -1988,7 +1992,7 @@ Object.assign(FightSim.prototype, {
 //   - Everyone gets the list ('lamps', 10 a second) to draw other keepers' lanterns.
 // Nothing here is trusted: positions, radii and amounts are clamped like any other combat event.
 // ===================================================================================================================
-const LAMP_HOST = { MAX: 12, R: 220, HEAL: 2000, STALE: 1.5, PULSE: 1, STEADY: 0.08, WAY_R: 240, LINE: 30, HEARTH: 6, LAST_CD: 90 };
+const LAMP_HOST = { MAX: 12, R: 220, HEAL: 2000, STALE: 1.5, PULSE: 1, STEADY: 0.12, WAY_R: 240, LINE: 30, HEARTH: 6, LAST_CD: 90, LOW_AT: 0.5, LOW_MULT: 2 };
 Object.assign(FightSim.prototype, {
   setLamps(pid, list) {
     if (!Array.isArray(list) || !this.ps.has(pid)) return;
@@ -2090,7 +2094,7 @@ Object.assign(FightSim.prototype, {
         const inside = al.filter(p => this.inLamp(p, l, at));
         // Lighthouse Keeper: the most hurt one inside heals 30% more
         const lean = l.ln && inside.length ? inside.reduce((a, b) => (b.s.hp / b.s.maxHp < a.s.hp / a.s.maxHp ? b : a)) : null;
-        for (const p of inside) { this.applyHeal(pid, p.id, l.h * (p === lean ? 1.3 : 1)); n++; lit.add(p.id); }
+        for (const p of inside) { this.applyHeal(pid, p.id, l.h * (p === lean ? 1.3 : 1) * (p.s.hp / p.s.maxHp < LAMP_HOST.LOW_AT ? LAMP_HOST.LOW_MULT : 1)); n++; lit.add(p.id); }   // (a pulse heals more on an ally under half health)
         // Hearth: seconds in a Great Beacon's glow
         if (l.hh) for (const p of al) {
           const key = l.id + ':' + p.id, was = L.inside.get(key) || 0;

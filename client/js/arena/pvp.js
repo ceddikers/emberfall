@@ -115,7 +115,7 @@ class PvpSim extends FightSim {
       case 'shield': ev = Object.assign({}, ev, { amount: (ev.amount || 0) * PVP.SHIELD }); break;
       case 'mit': ev = Object.assign({}, ev, { dur: Math.min(PVP.MIT_DUR, ev.dur || 5) }); break;
       case 'pool': ev = Object.assign({}, ev, { amount: (ev.amount || 0) * PVP.HEAL }); break;
-      case 'splash': ev = Object.assign({}, ev, { amount: (ev.amount || 0) * PVP.HEAL, sh: (ev.sh || 0) * PVP.SHIELD, pa: (ev.pa || 0) * PVP.HEAL, ps: (ev.ps || 0) * PVP.SHIELD, pct: 0 }); break;
+      case 'splash': ev = Object.assign({}, ev, { amount: (ev.amount || 0) * PVP.HEAL, sh: (ev.sh || 0) * PVP.SHIELD, sht: (ev.sht || 0) * PVP.SHIELD, pa: (ev.pa || 0) * PVP.HEAL, ps: (ev.ps || 0) * PVP.SHIELD, pct: 0 }); break;
     }
     if (foe(ev.target)) ev = Object.assign({}, ev, { target: pid });   // help aimed at an opponent lands on yourself
     this.ctxTeam = tm;

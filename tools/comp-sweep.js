@@ -13,6 +13,11 @@
 //   only=...  force members by class (or class:spec; a bare class gets a random spec). Roles come from the class; forced DPS fill
 //             the DPS slots, the rest of the party is drawn as usual. e.g. only=pyromancer:sigilmancer,driftblade:orbit
 //   jobs=N    worker processes (default 2)         SUMMARY=1  print one JSON line only      FEAST=pie|stew|broth|tarts  as bot-raid.js
+//   human=W   which roles play like a decent human instead of a perfect bot: dps|tank|healer|all|none, or a comma list (default none;
+//             bots.js BotHuman / HUMAN_DEFAULTS, HUMANP='{"react":[0.4,0.7]}' overrides single parameters). Off, output is unchanged.
+//             Measures how much of a fight's damage human play loses: compare a sweep with and without it. e.g. human=dps
+//   breakdown=1  each pull also carries, per player, where DPS is lost (seconds dead, out of reach, moving, GCD-idle in reach, casts
+//             cancelled, avoidable hits, damage); printed per comp as a mean per pull (with SUMMARY=1 it goes into the JSON as `breakdown`)
 // How comps are drawn (deterministic from seed): line-up order is tank, healer, dps1, dps2. Each role draws from a shuffled "bag" of
 // every class:spec of that role, refilled when empty, so a 20-comp sweep reaches every tank/healer/DPS class and spec as evenly as the
 // counts allow. DPS pairs are stratified by comp number: 2 melee, 2 ranged, then melee + ranged, repeating (melee = shadowblade,
@@ -51,8 +56,14 @@ if (process.argv[2] === '--worker') {
       try {
         const host = new RaidHost({ def, mode: job.mode, humans: () => [], bots: job.comp, seed: job.seed + r * 77, bond: GEARSET ? GEARSET.bond : undefined, emit: () => {} });
         if (GEARSET) host.bots.forEach((b, i) => { b.actor.kit.env.gearMods = () => GEARSET.sets[i].mods; });
-        while (host.sim.state === 'countdown' || host.sim.state === 'live') { host.tick(0.05); if (host.sim.t > 900) break; }
-        pulls.push({ clear: host.sim.state === 'clear', t: host.sim.t, hp: host.sim.boss.hp / host.sim.boss.maxHp * 100 });
+        BotHuman.attach(host, job.human);
+        const bd = job.breakdown ? BotBreakdown.make(host) : null;
+        let hp480 = null;   // (breakdown=1: the boss's health 8 minutes in, the point the calibration against a real pull reads)
+        while (host.sim.state === 'countdown' || host.sim.state === 'live') { host.tick(0.05); if (bd) { bd.sample(0.05); if (hp480 == null && host.sim.t >= 480) hp480 = host.sim.boss.hp / host.sim.boss.maxHp * 100; } if (host.sim.t > 900) break; }
+        const pull = { clear: host.sim.state === 'clear', t: host.sim.t, hp: host.sim.boss.hp / host.sim.boss.maxHp * 100 };
+        if (bd) pull.hp480 = hp480 == null ? pull.hp : hp480;
+        if (bd) pull.breakdown = Object.values(bd.result()).map(r => ({ name: r.name, cls: r.cls, role: r.role, human: r.human, dps: r.damage / host.sim.t, dead: r.dead, out: r.out, moving: r.moving, idle: r.idle, interrupts: r.interrupts, avoidable: r.avoidable, damage: r.damage }));
+        pulls.push(pull);
       } catch (e) { pulls.push({ error: String(e && e.stack || e).split('\n').slice(0, 3).join(' | ') }); }
     }
     process.send({ idx: job.idx, pulls });
@@ -64,7 +75,7 @@ if (process.argv[2] === '--worker') {
 // ------------------------------------------------------------------------------------------------------------ parent
 loadGame();
 const bossIds = fs.readdirSync(path.join(__dirname, '../client/js/arena/bosses')).filter(f => f.endsWith('.js')).map(f => f.replace('.js', ''));
-let mode = 'normal', boss = null, ncomps = 20, runs = 10, seed0 = 1000, gear = 'mid', mix = null, only = [], jobs = 2;
+let mode = 'normal', boss = null, ncomps = 20, runs = 10, seed0 = 1000, gear = 'mid', mix = null, only = [], jobs = 2, human = process.env.HUMAN || 'none', breakdown = false;
 const die = (m) => { console.error(m); process.exit(1); };
 for (const a of process.argv.slice(2)) {
   let m;
@@ -72,6 +83,8 @@ for (const a of process.argv.slice(2)) {
   else if ((m = /^(comps|runs|seed|jobs)=(\d+)$/.exec(a))) { const v = Number(m[2]); if (m[1] === 'comps') ncomps = v; else if (m[1] === 'runs') runs = v; else if (m[1] === 'seed') seed0 = v; else jobs = v; }
   else if (/^gear=\w+$/.test(a)) gear = a.slice(5);
   else if (a.startsWith('mix=')) mix = a.slice(4);
+  else if (/^human=[\w,]+$/.test(a)) human = a.slice(6);
+  else if (a === 'breakdown=1') breakdown = true;
   else if (a.startsWith('only=')) only = a.slice(5).split(',').filter(Boolean);
   else if (bossIds.includes(a) || a === 'archmage') boss = a;
   else die(`unknown argument: ${a}\nusage: node tools/comp-sweep.js <normal|hard> <boss> [comps=20] [runs=10] [seed=1000] [gear=<level>] [mix=<spec>] [only=<class:spec,...>] [jobs=2]\nbosses: ${bossIds.join(', ')}`);
@@ -174,7 +187,7 @@ function finish() {
 for (let w = 0; w < nworkers; w++) {
   const child = fork(__filename, ['--worker'], { env: process.env, stdio: ['ignore', 'inherit', 'inherit', 'ipc'] });
   const feed = () => {
-    if (next < comps.length) { const c = comps[next++]; child.send({ idx: c.idx, comp: c.comp, levels: c.levels, boss, mode, seed: c.seed, runs }); }
+    if (next < comps.length) { const c = comps[next++]; child.send({ idx: c.idx, comp: c.comp, levels: c.levels, boss, mode, seed: c.seed, runs, human, breakdown }); }
     else child.kill();
   };
   child.on('message', (m) => {
@@ -193,13 +206,23 @@ function pct(sorted, p) {   // linear interpolation
   return sorted[lo] + (sorted[hi] - sorted[lo]) * (x - lo);
 }
 const mean = (a) => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
+// breakdown=1: the mean per pull of each player's loss figures (seconds per pull; dps over the pull's length)
+function breakdownOf(pulls) {
+  const withBd = pulls.filter(p => p.breakdown);
+  if (!withBd.length) return undefined;
+  return withBd[0].breakdown.map((_, i) => {
+    const f = (k) => mean(withBd.map(p => p.breakdown[i][k]));
+    return { name: withBd[0].breakdown[i].name, cls: withBd[0].breakdown[i].cls, human: withBd[0].breakdown[i].human, dps: f('dps'), dead: f('dead'), out: f('out'), moving: f('moving'), idle: f('idle'), interrupts: f('interrupts'), avoidable: f('avoidable') };
+  });
+}
 function report() {
   if (!SUMMARY) process.stderr.write('\n');
   const rows = comps.map(c => {
     const pulls = (results[c.idx] || []).filter(p => !p.error), errs = (results[c.idx] || []).filter(p => p.error);
     const clears = pulls.filter(p => p.clear), wipes = pulls.filter(p => !p.clear);
     return { idx: c.idx, comp: c.comp, gear: gearLabel(c.levels), levels: c.levels, played: pulls.length, clears: clears.length, errors: errs.length, errMsg: errs[0] && errs[0].error,
-      rate: pulls.length ? clears.length / pulls.length : null, clearT: mean(clears.map(p => p.t)), wipeHp: mean(wipes.map(p => p.hp)) };
+      rate: pulls.length ? clears.length / pulls.length : null, clearT: mean(clears.map(p => p.t)), wipeHp: mean(wipes.map(p => p.hp)),
+      allHp: mean(pulls.map(p => p.hp)), allT: mean(pulls.map(p => p.t)), hp480: mean(pulls.filter(p => p.hp480 != null).map(p => p.hp480)), bd: breakdownOf(pulls) };
   });
   const ok = rows.filter(r => r.rate != null);
   const rates = ok.map(r => r.rate).sort((a, b) => a - b);
@@ -217,12 +240,18 @@ function report() {
     best: sorted.slice(-5).reverse().map(r => ({ comp: r.comp.join(' / '), gear: r.gear, rate: r.rate })),
     classes: classTable,
   };
+  if (human !== 'none') sum.human = human;
+  if (breakdown) { sum.meanBossHpLeft = mean(ok.map(r => r.allHp).filter(x => x != null)); sum.breakdown = ok.map(r => ({ comp: r.comp.join(' / '), gear: r.gear, bossHpLeft: r.allHp, bossHpAt480s: r.hp480, meanPullLength: r.allT, players: r.bd })); }
   if (SUMMARY) { console.log(JSON.stringify(sum, (k, v) => typeof v === 'number' ? +v.toFixed(3) : v)); return process.exit(failed ? 1 : 0); }
   const P = (x) => x == null ? '  -' : (x * 100).toFixed(0).padStart(3) + '%';
   console.log(`${boss}, ${mode}, gear ${sum.gear}, ${comps.length} comps x ${runs} runs, seed ${seed0}${only.length ? ', only ' + only.join(',') : ''}`);
   for (const r of rows) {
     console.log(`#${String(r.idx + 1).padStart(2)} ${r.comp.map(e => e.replace(':', ':')).join(' / ')} | ${r.gear} | ${r.clears}/${r.played}${r.errors ? ` (+${r.errors} errors)` : ''} ${P(r.rate)} | clear ${r.clearT == null ? '-' : r.clearT.toFixed(0) + 's'} | wipe boss ${r.wipeHp == null ? '-' : r.wipeHp.toFixed(0) + '% left'}`);
     if (r.errMsg) console.log('     error: ' + r.errMsg);
+    if (r.bd) {
+      console.log(`     boss HP left (mean over all pulls): ${r.allHp.toFixed(0)}%, mean pull length ${r.allT.toFixed(0)}s, mean boss HP left at 480s of the pull: ${r.hp480 == null ? '-' : r.hp480.toFixed(0) + '%'}`);
+      for (const p of r.bd) console.log(`     ${p.name}/${p.cls}${p.human ? '*' : ''}: ${p.dps.toFixed(0)} dps | dead ${p.dead.toFixed(0)}s, out ${p.out.toFixed(0)}s, moving ${p.moving.toFixed(0)}s, gcd idle ${p.idle.toFixed(0)}s, cancelled ${p.interrupts.toFixed(1)}, avoidable ${p.avoidable.toFixed(1)}`);
+    }
   }
   console.log(`\nclear rate over ${ok.length} comps (${sum.pulls} pulls): median ${P(sum.median)}, mean ${P(sum.mean)}, 10th pct ${P(sum.p10)}, 90th pct ${P(sum.p90)}; mean clear time ${sum.meanClearT == null ? '-' : sum.meanClearT.toFixed(0) + 's'}; ${sum.seconds}s`);
   const line = (r) => `  ${P(r.rate)}  ${r.comp} | ${r.gear}`;

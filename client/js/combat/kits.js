@@ -1002,7 +1002,11 @@ function reaverAfterDrain(k, ab, healed, tide) {
   if (k.talent('bloodreaver_second') && healed > mx * (k.def.spec === 'berserker' ? 0.1 : 0.15)) { reaverGain(k, 20); k.fx('secondHelping'); }
   if (k.talent('bloodreaver_hemorrhage')) { k.dot('hemorrhage', 30, 9, 3, { ab }); k.fx('hemorrhage'); }
   // the spec rows VI-VII: Scar Tissue (Berserker), Spill Over and Blood Font (Hemomancer)
-  if (k.def.spec === 'berserker') { const low = hpOf(k) < 0.5; k.mitigate('self', low ? 0.35 : 0.15, low ? 3 : 2, { ab }); }   // (a Rampage guards you for a moment, better below half HP)
+  if (k.def.spec === 'berserker') {   // (a Rampage guards you for a moment, better below half HP; thrown into a tankbuster's cast, that blow also lands 35% lighter)
+    const low = hpOf(k) < 0.5, b = bossNow(k);
+    k.mitigate('self', low ? 0.35 : 0.15, low ? 3 : 2, { ab });
+    if (b && b.casting && b.onMe) k.mitigate('self', 0.35, Math.min(6, b.castLeft + 0.5), { ab, kind: 'once' });
+  }
   if (k.talent('bloodreaver_scar') && hpOf(k) < 0.5) { k.mitigate('lowest', 0.15, 3, { ab }); k.fx('cauterize'); }
   if (k.talent('bloodreaver_spill')) { const over = healed - (1 - hpOf(k)) * mx; if (over > 1) { k.healRaw('lowest', over, { ab }); k.fx('secondHelping'); } }
   if (k.talent('bloodreaver_font') && k.now >= (k.g.fontAt || 0)) {
@@ -1503,11 +1507,11 @@ const chronoWideDone = k => { const s = k.g.stash, b = bossNow(k); return !!s &&
 // is the boss's cast about to land? (Last Moment)
 const chronoLate = k => { const b = bossNow(k); return !!(b && b.casting && b.castLeft <= 1.5); };
 // one Temporal Bolt hit (share of its strength; the party / link heal shares)
-function chronoBolt(k, ab, share, party, link) {
+function chronoBolt(k, ab, share, party, link, to) {
   const r = k.damage(280 * share, { ab });
   if (k.g.stash) k.g.stash.amt += r.amount * (k.g.stance === 'haste' ? party * 4 : link);   // (Stasis holds it: chronoRelease)
   else if (k.g.stance === 'haste') k.healRaw('party', r.amount * party, { ab });
-  else k.healRaw(k.g.link ?? k.env.defaultLink(), r.amount * link, { ab });
+  else k.healRaw(to ?? k.g.link ?? k.env.defaultLink(), r.amount * link, { ab });   // (to: an Echoist's echo, sent to the most hurt ally when the link is healthy)
   if (k.g.stance === 'haste' && r.crit && k.talent('chronomancer_borrowed')) k.gain('flux', 6);
   if (k.talent('chronomancer_future')) {
     if (!k.g.future && k.now >= (k.g.futureAt || 0)) { const f = k.g.future = { pot: 0 }; k.after(6, () => { k.g.future = null; k.g.futureAt = k.now + 6; k.damage(f.pot * 0.1, { ab }); k.fx('futureBurst'); }); k.fx('futureMark'); }
@@ -1724,11 +1728,11 @@ const ALEMBIC = {
   },
   // two-reagent recipes, keyed by their reagents in sorted order. kind: heal | bomb | ward | salve | quick
   recipes: {
-    DD: { name: 'Mending Draught', color: '#4fe0c0', glyph: 'plus', kind: 'heal', text: 'a {h:480} splash heal. It raises a fallen ally it lands on (once every 30s). A raise this way is instant, so it leaves heavy Raise Sickness: 30% less damage and healing for 30s, more for every fall this pull.' },
+    DD: { name: 'Mending Draught', color: '#4fe0c0', glyph: 'plus', kind: 'heal', text: 'a {h:480} splash heal, 40% more on an ally with nobody else close. It raises a fallen ally it lands on (once every 30s). A raise this way is instant, so it leaves heavy Raise Sickness: 30% less damage and healing for 30s, more for every fall this pull.' },
     EE: { name: 'Fire Bomb', color: '#ff5a1a', glyph: 'flame', kind: 'bomb', text: 'flies at the enemy and hits for {d:360}.' },
     SS: { name: 'Salt Ward', color: '#f4ecd2', glyph: 'ward', kind: 'ward', text: 'a circle of salt: allies inside take 20% less damage for 6s.' },
     DE: { name: 'Steam', color: '#bfe8ec', glyph: 'cloud', kind: 'heal', text: 'a healing cloud: everyone inside heals {h:80} every 1.5s for 9s.' },
-    DS: { name: 'Salve', color: '#7ff0a8', glyph: 'drop', kind: 'salve', text: 'shields everyone it splashes for {s:280} and washes off Vulnerability and Damage Down.' },
+    DS: { name: 'Salve', color: '#7ff0a8', glyph: 'drop', kind: 'salve', text: 'shields everyone it splashes for {s:280} (the ally it lands on, {s:500}) and washes off Vulnerability and Damage Down.' },
     ES: { name: 'Quickpowder', color: '#ffd23a', glyph: 'bolt', kind: 'quick', text: 'the whole party acts 10% faster for 10s; allies it splashes heal {h:100} and shake off slows and roots, and the ally it lands on is Galvanized: 10% more damage dealt for 10s.' },
     // Quicksilver (a talent: it takes Salt's place)
     QQ: { name: 'Silver Mirror', color: '#dfe6f2', glyph: 'mirror', kind: 'ward', text: 'a pool of quicksilver: everyone inside keeps a {s:120} shield for 6s.' },
@@ -1858,10 +1862,12 @@ function alemSplash(k, t, o) {
   if (o.heal) {
     const h = k.healAmount(o.heal, { ab }); ev.amount = h.amount; ev.crit = h.crit;
     if (o.up) ev.up = 1;
+    if (t !== 'party') ev.solo = 1.4;   // (a heal vial that finds nobody else in reach heals its target 40% more)
     // Scorch: a heal vial landing while the enemy is scorched flicks a spark into it
     if (k.talent('alembist_scorch') && k.now < (k.g.scorchUntil || 0)) k.damage(40, { ab });
   }
   if (o.sh) { ev.sh = alemShieldAmt(k, o.sh); ev.dur = o.sdur || 10; }
+  if (o.sht) ev.sht = alemShieldAmt(k, o.sht);   // (a stronger shield on the target itself; the allies in the splash get sh)
   if (o.cl) ev.cl = o.cl;
   if (o.pool) {
     const p = o.pool;
@@ -1904,7 +1910,7 @@ function alemRecipe(k, key, c, m) {
     case 'EE': alemBomb(k, c, 360 * m, k.perk('alembist_w2') ? 45 * m : 0, 6); break;
     case 'SS': alemSplash(k, t, { pool: { r: 120, ticks: 12, interval: (k.perk('alembist_a2') ? 8 : 6) * m / 12, pct: 0.2 } }); break;
     case 'DE': alemSplash(k, t, { pool: { r: 120, ticks: 6, interval: 1.5, heal: 80 * m, fol: k.talent('alembist_cling') } }); break;
-    case 'DS': alemSplash(k, t, { r: 110, sh: 280 * m, cl: 1 }); break;
+    case 'DS': alemSplash(k, t, { r: 110, sh: 280 * m, sht: 500 * m, cl: 1 }); break;
     case 'ES': k.partyBuff('haste', 0.1, Math.min(13, 10 * m), { ab: alemAb(k) }); alemSplash(k, t, { r: 110, heal: 100 * m, cl: 2, chain: false }); if (!c.self) k.allyBuff(t, 'galvanized', { ab: alemAb(k) }); break;
     case 'QQ': alemSplash(k, t, { pool: { r: 120, ticks: k.perk('alembist_a2') ? 5 : 4, interval: 1.5, sh: 120 * m } }); break;   // (Quicksilver takes Salt's key: the Salt Ward enhancement holds its Mirror a tick longer)
     case 'DQ': alemSplash(k, t, { r: 110, heal: 400 * m, up: 1 }); alemRaise(k, c); break;
@@ -5845,7 +5851,7 @@ function tideCrest(k) {
 function tidePop(k) {
   const m = k.g.mark, ab = abBase(k, 'riptide');
   k.g.mark = null;
-  const pop = 200;
+  const pop = 300;
   k.heal(m.t, pop, { ab });
   if (m.t2 != null) k.heal(m.t2, pop, { ab });   // (Grip of the Deep)
   if (k.perk('tidecaller_w2')) k.after(1.5, () => { k.heal(m.t, pop / 2, { ab }); if (m.t2 != null) k.heal(m.t2, pop / 2, { ab }); });   // (item: the pop rings twice, the second at half)
@@ -5924,7 +5930,7 @@ function tideWave(k, ab, f, full) {
 }
 function tideSurge(k, ab) {
   const f = tideF(k), full = tideFull(k), flood = tideFlood(k);
-  k.heal('party', tideSurgePot(k, 120, 480), { ab });
+  k.heal('party', tideSurgePot(k, 220, 560), { ab });
   k.fx('surge', { f: +f.toFixed(2), full: full ? 1 : 0, flood: flood ? 1 : 0 });
   tideWave(k, ab, f, full);
 }
@@ -5932,7 +5938,8 @@ const tideSurgeCast = k => (tideFlood(k) || (k.talent('tidecaller_sealegs') && t
 // Undertow (the Undertow spec's R): the water pulls the party's hurt down into your Deep Shield and gives it back over 8s
 function tideUndertow(k, ab) {
   const f = tideF(k), full = tideFull(k);
-  const pot = tideSurgePot(k, 120, 480);
+  const pot = tideSurgePot(k, 220, 560);
+  k.heal('party', pot / 4, { ab });   // (the first tick lands at once)
   k.hot('party', pot / 4, 4, 2, { ab, id: 'undertow' });
   k.g.deepAmt = k.shield('self', 150 + 250 * f, 8, { ab, tag: 'deep' });
   k.g.deepUntil = k.now + 8;
@@ -5943,7 +5950,8 @@ function tideUndertow(k, ab) {
 function tideSip(k, ab, t, pot, cost) {
   const free = !!k.g.lowWater, low = tideLow(k);
   k.g.lowWater = false;
-  k.heal(t, pot * (low && cost > 0 ? 1.3 : 1) * (free ? 1.5 : 1), { ab });
+  const af = k.env.allyHp && t != null && t !== true ? k.env.allyHp(t) : null;   // (an ally under half health: the sip heals 60% more)
+  k.heal(t, pot * (low && cost > 0 ? 1.3 : 1) * (free ? 1.5 : 1) * (af != null && af < 0.5 ? 1.8 : 1), { ab });
   if (cost > 0 && !free) tideSpend(k, cost); else if (cost < 0) tideGain(k, -cost);
   if (k.talent('tidecaller_foam') && tideMarked(k) && k.g.mark.t === t) k.env.emit(Object.assign({ type: 'heal', target: 'lowest', not: t, ab }, { amount: k.healAmount(60, { ab }).amount }));
   if (k.talent('tidecaller_seawall') && tideWall(k)) k.shield(t, 80, 6, { ab });
@@ -6007,17 +6015,18 @@ KITS.tidecaller = {
     },
     {
       id: 'sip', name: 'Sip', type: 'gcd', target: 'ally', anim: 'cast',
-      desc: 'Instant: heals one ally for {h:210}. Costs a small slice of the tide; at low water it heals 30% more.',
+      desc: 'Instant: heals one ally for {h:260}. Costs a small slice of the tide; at low water it heals 30% more, and on an ally under half health 80% more.',
       glow(k) { return tideSipGlow(k, this); },
-      effect(k, t) { tideSip(k, this, t, 210, TIDE.SIP); },
+      effect(k, t) { tideSip(k, this, t, 260, TIDE.SIP); },
       fx: { type: 'ring', color: '#d7f2ee', r: 36, onTarget: true },
     },
     {
       id: 'riptide', name: 'Riptide Mark', type: 'gcd', target: 'ally', cd: 12, anim: 'cast',
-      desc: 'Mark an ally: they heal {h:80} every 2s for 12s, and when the tide next crests the mark pops for {h:200}.',
+      desc: 'Mark an ally: they heal {h:100} every 2s for 12s, their next big hit (a fifth of their health or more) lands 30% lighter, and when the tide next crests the mark pops for {h:300}.',
       glow: k => !tideMarked(k),
       effect(k, t) {
-        k.hot(t, 80, 6, 2, { ab: this, id: 'riptide' });
+        k.hot(t, 100, 6, 2, { ab: this, id: 'riptide' });
+        k.mitigate(t, 0.3, 20, { ab: this, kind: 'once' });   // (their next big hit, a fifth of their health or more, lands 30% lighter and uses it up)
         k.g.mark = { t, until: k.now + 20 };
         if (k.talent('tidecaller_grip')) { k.g.mark.t2 = 'lowest'; k.hot('lowest', 80, 6, 2, { ab: this, id: 'riptide2' }); }
         if (k.talent('tidecaller_kelp')) k.mitigate(t, 0.05, 12, { ab: this });
@@ -6028,7 +6037,7 @@ KITS.tidecaller = {
     },
     {
       id: 'surge', name: 'Surge', type: 'gcd', target: 'self', cast: k => tideSurgeCast(k), anim: 'big',
-      desc: '1.5s cast: spend all the tide in a wave that heals the whole party, from {h:120} at low water up to {h:480} at high water.',
+      desc: '1.5s cast: spend all the tide in a wave that heals the whole party, from {h:220} at low water up to {h:560} at high water.',
       glow: k => tideSurgeGlow(k),
       effect(k) { tideSurge(k, this); },
       fx: { type: 'zone', style: 'wave', color: '#bff3ea', r: 180, range: 0, dur: 1.2 },
@@ -6120,7 +6129,7 @@ if (typeof module !== 'undefined') Object.assign(module.exports, { TIDE, tideF, 
 //   stride, drop {x, y} (a small light), trail {dx, dy}, festival, wisp, eternal {x, y}, sparks {x, y}, pillar {x, y}.
 // ===================================================================================================================
 const LANTERN = { R: 110, LIFE: 18, BURN: 12, HAND_R: 90, HAND_LIFE: 12, MAX: 3, EMB_MAX: 4, EMB_EVERY: 5, TRIM: 0.25, REACH: 200,
-  BEACON_R: 150, CALL_REACH: 420, CALL_POT: 150, WAY_STEP: 80, WAY_CD: 1.5, WAY_POT: 110, BEACON_MAX: 2, SMALL_R: 75, SMALL_LIFE: 6, SMALL_MAX: 6, STRIDE: 10, STEP: 60, FLOAT_R: 70, FLOAT_LIFE: 12, LIGHT: 8,
+  BEACON_R: 150, CALL_REACH: 420, CALL_POT: 150, WAY_STEP: 80, WAY_CD: 1.5, WAY_POT: 200, BEACON_MAX: 2, SMALL_R: 75, SMALL_LIFE: 6, SMALL_MAX: 6, STRIDE: 10, STEP: 60, FLOAT_R: 70, FLOAT_LIFE: 12, LIGHT: 8,
   FLARE: 340 };   // (Flare's burst for each glow: big enough to lift a party out of a Hard raidwide)
 const LK_KIND = { floor: 0, beacon: 1, hand: 2, small: 3, float: 4, eternal: 5 };
 const lkEmbMax = k => (k.talent('lanternkeeper_hoard') ? 5 : LANTERN.EMB_MAX);
@@ -6231,6 +6240,7 @@ function lkShare(k) {
     if (l.dash) h *= 2;
     const o = { id: l.id, x: Math.round(l.x), y: Math.round(l.y), r: Math.round(l.r), h, w: Math.round(Math.max(0, Math.min(1, l.wick)) * 100), k: LK_KIND[l.kind] };
     if (l.on != null) { o.on = l.on; o.ox = Math.round(l.ox); o.oy = Math.round(l.oy); }
+    if (l.kind === 'small' && k.def.roadWorn) o.st = 1;   // (Road Worn: a Wayfarer's lights shelter like a Beacon's glow)
     if (l.kind === 'beacon') { if (st) o.st = 1; if (lean) o.ln = 1; if (sig) o.sg = 1; if (hh) o.hh = Math.round(hh); }
     if (lkLight(k)) o.all = 1;
     return o;
@@ -6238,7 +6248,7 @@ function lkShare(k) {
 }
 // Lamplighter's Stride: a small light where you stand
 function lkSmall(k, o = {}) {
-  const l = lkAdd(k, 'small', Object.assign({ r: LANTERN.SMALL_R, pot: 25, end: k.now + LANTERN.SMALL_LIFE }, o));
+  const l = lkAdd(k, 'small', Object.assign({ r: LANTERN.SMALL_R, pot: 40, end: k.now + LANTERN.SMALL_LIFE }, o));
   if (k.talent('lanternkeeper_breadcrumbs')) for (const s of k.g.lan.filter(x => x.kind === 'small').slice(-3)) s.end = Math.max(s.end, s.born + LANTERN.SMALL_LIFE + 4);
   k.fx('lk-drop', { x: Math.round(l.x), y: Math.round(l.y) });
   return l;
@@ -6277,7 +6287,7 @@ KITS.lanternkeeper = {
     k.g.inGlow = d.c || 0;
     k.ultGain((d.n || 0) * 0.08);
   },
-  healMod: k => (k.def.roadWorn && k.g.moveFor > 0 ? 0.1 : 0),   // (Road Worn: you heal 10% more while moving)
+  healMod: k => (k.def.roadWorn && k.g.moveFor > 0 ? 0.2 : 0),   // (Road Worn: you heal 20% more while moving)
   signature: 'Lanterns',
   floor: 'Press Q to attack. W sets a lantern at your feet: everyone near it heals. E hangs one on an ally. R makes every lantern burst.',
   ceiling: [
@@ -6321,11 +6331,12 @@ KITS.lanternkeeper = {
     {
       id: 'hand', name: 'Hand Lantern', type: 'gcd', target: 'ally', cd: 8, anim: 'cast',
       usable: k => k.g.emb >= 1,
-      desc: 'Instant, 1 Ember: hang a lantern on an ally for 12s. It goes where they go and heals them and anyone close for {h:80} every second.',
+      desc: 'Instant, 1 Ember: hang a lantern on an ally for 12s. It heals them at once for {h:400}, then goes where they go and heals them and anyone close for {h:80} every second.',
       glow: k => k.g.emb >= 1 && !k.g.lan.some(l => l.kind === 'hand'),
       effect(k, t) {
         k.g.emb -= 1;
         lkAdd(k, 'hand', { on: typeof t === 'number' ? t : 'self', r: LANTERN.HAND_R, pot: 80, end: k.now + LANTERN.HAND_LIFE + (k.perk('lanternkeeper_w2') ? 3 : 0), ox: 0, oy: -6 });
+        k.heal(t, 400, { ab: this });   // (hanging it heals them at once)
         if (k.talent('lanternkeeper_ward')) k.mitigate(t, 0.1, LANTERN.HAND_LIFE, { ab: this });
         k.itemHook('heal');
         k.fx('lk-hang', { to: typeof t === 'number' ? t : null });
@@ -6362,12 +6373,12 @@ KITS.lanternkeeper = {
     {
       id: 'relight', name: 'Relight', type: 'gcd', target: 'self', anim: 'big',
       usable: k => k.g.emb >= 2,
-      desc: 'Instant, 2 Embers: every lantern\'s wick back to full, and the most hurt ally heals {h:320} (one standing in a glow first).',
+      desc: 'Instant, 2 Embers: every lantern\'s wick back to full, and the most hurt ally heals {h:520} (one standing in a glow first).',
       glow: k => k.g.emb >= 2 && k.g.lan.filter(l => l.kind !== 'hand' && lkStub(l)).length >= 2,
       effect(k) {
         k.g.emb -= 2;
         for (const l of k.g.lan) l.wick = 1;
-        k.env.emit({ type: 'lamp', op: 'relight', amount: k.healAmount(320, { ab: this }).amount, last: k.talent('lanternkeeper_lastlight') ? 1 : 0, ab: this });
+        k.env.emit({ type: 'lamp', op: 'relight', amount: k.healAmount(520, { ab: this }).amount, last: k.talent('lanternkeeper_lastlight') ? 1 : 0, ab: this });
         k.itemHook('heal');
         k.fx('lk-relight', { n: k.g.lan.length });
       },

@@ -33,7 +33,8 @@
 const CAELUM = {
   id: 'caelum', name: 'Caelum Vey', title: 'the Starborn',
   hp: { normal: 5400000, hard: 5400000 },   // (Hard was 5.6M: the slowest clears used to land on the enrage cast; now 20 s or more clear)
-  hardDmg: 1.435,   // (Hard's damage multiplier; fight.js default 1.25; up as the health came down, so every hit still has to be earned)
+  normalDmg: 0.78,   // (Normal's damage multiplier, fight.js default 1: 2026-10-27, tuned for a human party rather than perfect bots, CLAUDE.md)
+  hardDmg: 1.19,   // (Hard's damage multiplier; fight.js default 1.25; 1.435 before 2026-10-27's retune for a human party)
   autoDmg: { normal: 2600, hard: 2600 },
   enrage: { normal: 605, hard: 625 },   // the cast starts here and lands 8 s later (10:13 / 10:33)
   enrageName: 'The Sky Comes Down',

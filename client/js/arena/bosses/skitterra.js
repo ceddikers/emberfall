@@ -45,7 +45,8 @@
 
 const SKITTERRA = {
   id: 'skitterra', name: 'Queen Skitterra', title: 'Spider Broodmother',
-  hp: { normal: 3700000, hard: 4300000 },
+  hp: { normal: 3700000, hard: 4000000 },   // (Hard 4.3M before 2026-10-27)
+  hardDmg: 1.09,   // (Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
   autoDmg: { normal: 1800, hard: 1650 },
   enrage: { normal: 602, hard: 568 },   // the cast starts here and lands 8 s later (10:10 / 9:36)
   enrageName: 'Devour',

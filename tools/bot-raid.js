@@ -1,5 +1,11 @@
 // Headless raid with a full bot party: checks the boss script, the kits and the bot AI together,
 // and gives a rough idea of clear times and death counts.
+// Human-like play (a measurement tool; off by default, so every other output is unchanged): HUMAN=dps|tank|healer|all|none (or a comma
+//   list, e.g. dps,healer; default none) makes those roles play like a decent human instead of a perfect bot: reaction delay on new
+//   telegraphs, the odd late or short dodge, no slidecasting, a staying put after a dodge, a little late on each GCD, the odd filler press
+//   (bots.js BotHuman and HUMAN_DEFAULTS; HUMANP='{"react":[0.4,0.7]}' overrides single parameters). Also human=dps as an argument.
+//   BREAKDOWN=1 prints, per player and run, where DPS is lost: seconds dead, alive but out of reach, moving, GCD-idle while in reach,
+//   casts cancelled, avoidable hits, dps (a * marks a human-like bot), and at the end the mean over the runs.
 //   node tools/bot-raid.js [normal|hard] [runs] [classes comma-separated] [boss id]
 //   e.g. node tools/bot-raid.js normal 5 skitterra   (arguments can come in any order; the boss defaults to grubnak)
 //   seed=N uses another set of seeds; first=K starts at run K (0-based) of the set, so first=5 with 5 runs plays what runs 6-10 of a
@@ -36,6 +42,8 @@ DEFS.caelum = CAELUM;   // (set 3, Boss XII, the finale)
 const { TRIALS, trialDef } = load('arena/trials.js');
 
 let gearLevel = process.env.GEAR || '';
+let humanWho = process.env.HUMAN || 'none';
+const BREAKDOWN = !!process.env.BREAKDOWN;
 let mode = 'normal', runs = 3, comp = 'bastion,cleric,ranger,pyromancer'.split(','), def = GRUBNAK, seed0 = 1000, first = 0, stopOnClear = false;
 for (const a of process.argv.slice(2)) {
   if (a === 'normal' || a === 'hard') mode = a;
@@ -43,6 +51,7 @@ for (const a of process.argv.slice(2)) {
   else if (/^first=\d+$/.test(a)) first = Number(a.slice(6));
   else if (a === 'stop=clear') stopOnClear = true;
   else if (/^gear=\w+$/.test(a)) gearLevel = a.slice(5);
+  else if (/^human=[\w,]+$/.test(a)) humanWho = a.slice(6);
   else if (/^\d+$/.test(a)) runs = Number(a);
   else if (DEFS[a]) def = DEFS[a];
   // trial:<spec> runs that spec's trial, with a bot taking it (or 'trial:<spec>:base' to try it with the base kit)
@@ -63,6 +72,7 @@ if (GEARSET) {
 log(`${def.name}, ${mode}, ${comp.join('/')}`);
 
 let clears = 0, totDeaths = 0, totClearT = 0;
+const bdTot = {};   // BREAKDOWN=1: the sums over the runs, per player
 const hollowTot = { started: 0, saved: 0, failed: 0 };   // a Gloomsworn's Hollow (fight.js HOLLOW_HOST), over every run
 for (let r = first; r < first + runs; r++) {
   const casts = [];
@@ -74,6 +84,8 @@ for (let r = first; r < first + runs; r++) {
     if (msg.t === 'bnext' && process.env.NEXT) console.log(`   ${host.sim.t.toFixed(1)} next: ${msg.l.map(([n, s]) => `${n} ${s}s`).join(', ')}`);
   } });
   if (GEARSET) host.bots.forEach((b, i) => { b.actor.kit.env.gearMods = () => GEARSET.sets[i].mods; });
+  BotHuman.attach(host, humanWho);
+  const bd = BREAKDOWN ? BotBreakdown.make(host) : null;
   let deaths = [];
   const raises = [];
   const origEmit = host.emitOut;
@@ -99,6 +111,7 @@ for (let r = first; r < first + runs; r++) {
   };
   while (host.sim.state === 'countdown' || host.sim.state === 'live') {
     host.tick(0.05);
+    if (bd) bd.sample(0.05);
     if (host.sim.t > 900) break;
   }
   if (host.sim.state === 'clear') clears++;
@@ -107,6 +120,11 @@ for (let r = first; r < first + runs; r++) {
   totDeaths += deaths.length; if (host.sim.state === 'clear') totClearT += dur;
   log(`run ${r + 1}: ${host.sim.state} at ${dur.toFixed(0)}s, boss ${(host.sim.boss.hp / host.sim.boss.maxHp * 100).toFixed(1)}%, phase ${host.sim.phase}, deaths: ${deaths.join(', ') || 'none'}${raises.length ? `, raised: ${raises.join(', ')}` : ''}`);
   log('   ' + Object.values(st).map(s => `${s.name}/${s.cls}: ${(s.damage / dur).toFixed(0)} dps, ${(s.healing / dur).toFixed(0)} hps, avoidable ${s.avoidable}, deaths ${s.deaths}${s.ults ? `, ults ${s.ults}` : ""}`).join('\n   '));
+  if (bd) {
+    const res = bd.result();
+    log('   breakdown:\n   ' + BotBreakdown.format(res, dur));
+    for (const [id, r] of Object.entries(res)) { const a = (bdTot[id] = bdTot[id] || { name: r.name, cls: r.cls, human: r.human, n: 0 }); a.n++; for (const k of ['damage', 'dead', 'out', 'moving', 'idle', 'interrupts', 'avoidable']) a[k] = (a[k] || 0) + r[k]; a.dur = (a.dur || 0) + dur; }
+  }
   // contribution points (scoring.js): the MVP on a clear, and with SCORE=1 each player's points, raw tracking and the awards
   const sc = Scoring.score(st, { time: dur }), mv = host.sim.state === 'clear' ? Scoring.mvp(st, sc) : null;
   if (process.env.SCORE) log('   ' + Object.entries(st).map(([id, s]) => `${s.name}/${s.role} ${sc[id].total} pts ${JSON.stringify(Object.fromEntries(Object.entries(sc[id].pts).map(([k, v]) => [k, Math.round(v)])))} pen ${sc[id].pen.avoid}/${sc[id].pen.deaths} | ` +
@@ -118,5 +136,9 @@ for (let r = first; r < first + runs; r++) {
   if (stopOnClear && host.sim.state === 'clear') { log(`stopped after the first clear (run ${r + 1})`); runs = r - first + 1; break; }
 }
 log(`cleared ${clears} of ${runs}`);
+if (BREAKDOWN && !SUMMARY) {
+  log(`mean per run over ${runs} runs (seconds per run; dps over the time played):`);
+  for (const a of Object.values(bdTot)) log(`   ${a.name}/${a.cls}${a.human ? '*' : ''}: ${(a.damage / a.dur).toFixed(0)} dps | dead ${(a.dead / a.n).toFixed(0)}s, out of reach ${(a.out / a.n).toFixed(0)}s, moving ${(a.moving / a.n).toFixed(0)}s, gcd idle ${(a.idle / a.n).toFixed(0)}s, casts cancelled ${(a.interrupts / a.n).toFixed(1)}, avoidable hits ${(a.avoidable / a.n).toFixed(1)}`);
+}
 if (hollowTot.started) log(`Hollow over ${runs} runs: ${hollowTot.started} started, ${hollowTot.saved} saved, ${hollowTot.failed} fell`);
 if (SUMMARY) console.log(JSON.stringify({ boss: def.id, mode, gear: gearLevel || 'base', runs, clears, deathsPerRun: +(totDeaths / runs).toFixed(2), meanClearT: clears ? Math.round(totClearT / clears) : null, hollow: hollowTot.started ? hollowTot : undefined }));

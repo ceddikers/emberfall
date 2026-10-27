@@ -41,7 +41,7 @@ const TITAN = {
   id: 'titan', name: 'Hrimgar', title: 'Warden of the White Reach',
   hp: { normal: 5000000, hard: 5550000 },
   autoDmg: { normal: 1800, hard: 1980 },
-  hardDmg: 1.56,   // (Hard's blows land a little heavier than the usual 1.25: Hrimgar's seams and shuffles are kinder than they were, so his Hard has to bite)
+  hardDmg: 1.48,   // (Hard's blows land a little heavier than the usual 1.25: Hrimgar's seams and shuffles are kinder than they were, so his Hard has to bite. 1.56 before 2026-10-27's retune for a human party)
   enrage: { normal: 600, hard: 590 },   // the cast starts here and lands 8 s later (10:08 / 9:58)
   enrageName: 'Endless Winter',
   vuln: 0.5,

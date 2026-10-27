@@ -42,8 +42,9 @@
 
 const MORROWOAK = {
   id: 'morrowoak', name: 'Morrow-Oak', title: 'the Starved Grove',
-  hp: { normal: 5000000, hard: 5000000 },
-  hardDmg: 1.2,   // (Hard's damage multiplier; fight.js default 1.25. The Hard table below is a notch lower, so every move that Normal has too hits ~1.1x)
+  hp: { normal: 4830000, hard: 5000000 },   // (Normal 5.0M before 2026-10-27)
+  normalDmg: 0.76,   // (Normal's damage multiplier, fight.js default 1: 2026-10-27, tuned for a human party rather than perfect bots, CLAUDE.md)
+  hardDmg: 1.08,   // (Hard's damage multiplier; fight.js default 1.25. 1.2 before 2026-10-27's retune for a human party, when every move Normal has too hit ~1.1x)
   autoDmg: { normal: 2450, hard: 2300 },
   enrage: { normal: 655, hard: 590 },   // the cast starts here and lands 8 s later (11:03 / 9:58); about 66 s (Normal) and 50 s (Hard) after the mean clear
   enrageName: 'Nothing Left',
