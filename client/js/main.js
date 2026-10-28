@@ -2067,6 +2067,7 @@
     if (msg.stats) raid.meter = { ft: msg.time, d: Object.entries(msg.stats).map(([id, st]) => Scoring.pack(Number(id), st)) };   // (the meter ends on the final tally)
     if ((msg.s === 'clear' || msg.s === 'wipe') && msg.stats && !raid.def.trial && !raid.practice && !raid.fightLogged) { raid.fightLogged = true; Pastimes.logFight(msg, raid.def.id); }   // (the Logbook's Fights tab)
     raid.state = msg.s; raid.result = msg; raid.resultAt = now + (msg.s === 'clear' ? 3.4 : 2.8);   // [boss presentation] (after his fall / the wipe's beat)
+    if (msg.s === 'clear' && raid.boss) raid.boss.hp = 0;   // (the health stream stops with the fight: the bar would keep the last reading short of zero)
     if (SH && (msg.s === 'clear' || msg.s === 'wipe')) { SH.castEnd(); SH.play(msg.s, { vol: 1 }); SH.music(msg.s === 'clear' ? 'mus-victory' : 'mus-wipe', { fade: 1, loop: false }); SH.vo(msg.s === 'clear' ? 'boss-death' : 'boss-wipe', { bossId: raid.def.id }); if (msg.s === 'clear') SH.vo('clear', { bossId: raid.def.id, classId: player.cls ? player.cls.id : null }); }
     if (player.cls && !raid.def.trial && !raid.practice && msg.s === 'clear') Journal.won(player.cls.id, raid.def.id);
     if (!raid.def.trial && msg.s === 'clear') Pastimes.event('clear', { boss: raid.def.id, mode: raid.mode, secs: Number(msg.time) || 0, practice: !!raid.practice,

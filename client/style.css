@@ -1241,6 +1241,7 @@ body.link-lost #combat-hud { opacity: .55; }
 /* the kill banner as he falls (RaidUI.victory): his name, Defeated, the time */
 #kill-banner { position: fixed; left: 50%; top: 30%; transform: translate(-50%, -50%); z-index: 6; display: grid; justify-items: center; gap: 4px; pointer-events: none; text-align: center; opacity: 0; }
 #kill-banner.hidden { display: none; }
+#kill-banner::before { content: ''; position: absolute; inset: -34px -120px; z-index: -1; background: radial-gradient(ellipse closest-side, #0b0908e6 0%, #0b0908b0 50%, transparent 100%); }
 #kill-banner.in { animation: kill-in 1s cubic-bezier(.2,.8,.2,1) .55s forwards; }
 #kill-banner.out { animation: intro-out .9s ease-in forwards; }
 #kill-banner small { font-size: 10.5px; letter-spacing: .3em; text-transform: uppercase; color: #ff9a7a; min-height: 12px; }

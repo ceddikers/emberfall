@@ -71,7 +71,7 @@ const RaidUI = (() => {
     wm.addEventListener('click', e => { const b = e.target.closest('.wm'); if (!b) return; if (b.dataset.k === '*') handlers.onWaymark({ all: 'clear' }); else if (b.dataset.k === '@') handlers.onCallouts(); else if (b.dataset.k === '#') handlers.onPullIn(); else handlers.onPlaceMark(b.dataset.k); });
     $('rez-ask').addEventListener('click', () => { if (handlers.onRezAsk) handlers.onRezAsk(); });
     wm.addEventListener('contextmenu', e => { const b = e.target.closest('.wm'); if (b && !'*@#'.includes(b.dataset.k)) { e.preventDefault(); handlers.onWaymark({ k: b.dataset.k, clear: true }); } });
-    for (const b of wm.children) b.dataset.tip = b.dataset.k === '*' ? 'Pick up every waymark' : b.dataset.k === '@' ? 'Callouts: the ping wheel (Alt + drag). Middle-click pings.' : b.dataset.k === '#' ? 'Pull in 5: the boss engages when the count runs out' : `Waymark ${b.dataset.k}: click, then click the floor. Right-click to pick it up.`;
+    for (const b of wm.children) b.dataset.tip = b.dataset.k === '*' ? 'Pick up every waymark' : b.dataset.k === '@' ? 'Callouts: the ping wheel (Alt + drag). Middle-click pings.' : b.dataset.k === '#' ? 'Pull in 5: the boss engages when the count runs out' : b.dataset.k === '!' ? 'Ready check: everyone answers, and when all are ready the pull countdown starts' : `Waymark ${b.dataset.k}: click, then click the floor. Right-click to pick it up.`;
     castFrameDrag();
     $('party-frames').addEventListener('mousedown', e => {
       const row = e.target.closest('.pf');
@@ -1092,7 +1092,7 @@ const RaidUI = (() => {
     const pct = msg.maxHp > 0 ? Math.max(0, Math.min(100, Math.round(msg.hp / msg.maxHp * 1000) / 10)) : null;
     const best = raid.prog && raid.prog.best && Number.isFinite(raid.prog.best.pct) ? raid.prog.best.pct : null;
     const bar = pct != null && best != null && best < pct
-      ? `<div class="rw-prog" data-t="${esc(`<b>Against your best pull</b><em>The boss was at ${pct.toFixed(1)}% this time; your best left him at ${best.toFixed(1)}%.</em>`)}"><span>Your best</span><div class="rw-bar"><i style="width:${(100 - pct).toFixed(1)}%"></i><u style="left:${(100 - best).toFixed(1)}%"></u></div><em>${best.toFixed(1)}%</em></div>` : '';
+      ? `<div class="rw-prog" data-t="${esc(`<b>Against your best pull</b><em>The boss was at ${pct.toFixed(1)}% this time; ${best <= 0 ? 'you have cleared him before' : `your best left him at ${best.toFixed(1)}%`}.</em>`)}"><span>Your best</span><div class="rw-bar"><i style="width:${(100 - pct).toFixed(1)}%"></i><u style="left:${(100 - best).toFixed(1)}%"></u></div><em>${best <= 0 ? 'Cleared' : best.toFixed(1) + '%'}</em></div>` : '';
     return body || bar ? `<div class="res-why"><h6>What got us</h6>${body}${bar}</div>` : '';
   }
   // a click on a cause: open the pull review and select its first mark
