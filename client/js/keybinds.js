@@ -10,6 +10,8 @@ const Keybinds = (() => {
     { id: 's4', def: 'd' }, { id: 's5', def: 'f' }, { id: 's6', def: ' ', name: 'Dash' }, { id: 's7', def: 't', name: 'Ultimate' },
     { id: 'focus', def: 'v', name: 'Set focus' }, { id: 'limit', def: 'g', name: 'Limit Break' }, { id: 'meter', def: 'm', name: 'Damage meter' }, { id: 'metermode', def: 'b', name: 'Meter: next view' },
     { id: 'rezask', def: 'h', name: 'Ask for a raise' },
+    { id: 'readycheck', def: '', name: 'Ready check' },   // (unbound until you choose a key; the waymark bar's button works too)
+    { id: 'rcyes', def: 'y', name: 'Ready check: ready' }, { id: 'rcno', def: 'x', name: 'Ready check: not ready' },
     { id: 'resync', def: '', name: 'Resync with the host' },   // (unbound until you choose a key)
     { id: 'bags', def: 'i', name: 'Inventory' }, { id: 'talents', def: 'n', name: 'Talents' },
     { id: 'journal', def: 'j', name: 'Journal' }, { id: 'logbook', def: 'l', name: 'Logbook' }, { id: 'options', def: 'k', name: 'Options' },

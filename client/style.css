@@ -1051,7 +1051,7 @@ body:has(#loot:not(.hidden)) #results { padding-right: 332px; }
 .bb-hp .goal { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: #fff0c8; box-shadow: 0 0 0 1px #000, 0 0 6px #ffd27a; pointer-events: none; z-index: 2; }
 .bb-hp .goal.hidden { display: none; }
 /* waymarks: A B C D (circles) and 1 2 3 4 (squares), under the Leave button */
-#waymarks { position: fixed; right: 16px; top: 52px; z-index: 4; display: grid; grid-template-columns: repeat(4, 24px) 20px 20px 20px; gap: 3px; padding: 4px; background: #0a0807d8; border: 1px solid #3a2a1c; border-radius: 3px; }
+#waymarks { position: fixed; right: 16px; top: 52px; z-index: 4; display: grid; grid-template-columns: repeat(4, 24px) 20px 20px 20px 20px; gap: 3px; padding: 4px; background: #0a0807d8; border: 1px solid #3a2a1c; border-radius: 3px; }
 #waymarks.hidden { display: none; }
 #waymarks .wm { width: 24px; height: 24px; padding: 0; display: grid; place-items: center; font-family: var(--fantasy); font-weight: 700; font-size: 12px; color: var(--c); background: #14100c; border: 1px solid #3a2a1c; cursor: pointer; }
 #waymarks .wm-ci { border-radius: 50%; }
@@ -1066,6 +1066,30 @@ body:has(#loot:not(.hidden)) #results { padding-right: 332px; }
 #waymarks .wm-clear svg { width: 11px; height: 11px; }
 #waymarks .wm:hover { filter: brightness(1.25); }
 body.placing-mark canvas { cursor: crosshair; }
+/* the ready check before a pull: a row for each hero, your answer, and the outcome */
+#waymarks .wm-ready { grid-column: 8; grid-row: 1 / span 2; width: 20px; height: auto; color: var(--muted); border-radius: 2px; }
+#waymarks .wm-ready svg { width: 12px; height: 12px; }
+#ready-check { position: fixed; left: 50%; top: 17%; transform: translateX(-50%); z-index: 6; width: 320px; max-width: calc(100vw - 32px); padding: 10px 12px 9px; text-align: center; background: linear-gradient(180deg, #15120fee, #0c0a08ee); border: 1px solid #6e4426; border-radius: 3px; box-shadow: 0 0 0 1px #000, 0 10px 28px #000a; transition: border-color .2s, box-shadow .2s; }
+#ready-check .rc-head b { display: block; font: 600 11px/1 var(--fantasy); letter-spacing: .2em; text-transform: uppercase; color: var(--gold-hi); }
+#ready-check .rc-head span { display: block; min-height: 14px; margin-top: 5px; font-size: 11px; letter-spacing: .04em; color: var(--muted); }
+#ready-check .rc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 6px; margin: 8px 0; }
+#ready-check .rc-m { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 3px 6px; text-align: left; font-size: 12px; color: #d8cfbc; background: #ffffff08; border-left: 3px solid var(--rc); }
+#ready-check .rc-m em { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: normal; }
+#ready-check .rc-m u { display: grid; place-items: center; flex: none; width: 12px; height: 12px; text-decoration: none; color: #5d5446; }
+#ready-check .rc-m u svg { width: 12px; height: 12px; }
+#ready-check .rc-m.yes u { color: #8fd68a; }
+#ready-check .rc-m.no { background: #ff4a3a14; }
+#ready-check .rc-m.no u { color: #ff6a5a; }
+#ready-check .rc-act { display: flex; justify-content: center; gap: 8px; margin-bottom: 8px; }
+#ready-check .rc-act button { display: inline-flex; align-items: center; gap: 7px; padding: 6px 14px; font: 600 11px/1 var(--fantasy); letter-spacing: .14em; text-transform: uppercase; color: #e8dcc4; background: #0a0807e8; border: 1px solid #6e4426; border-radius: 3px; cursor: pointer; }
+#ready-check .rc-act button:hover { border-color: #c9973f; color: #fff0d8; }
+#ready-check .rc-act .rc-no { color: var(--muted); border-color: #3a2a1c; }
+#ready-check .rc-act kbd { font: 600 9px/13px var(--fantasy); padding: 0 4px; margin: 0; border: 1px solid #3a2a1c; border-radius: 2px; background: none; color: var(--muted); }
+#ready-check .rc-bar { height: 2px; background: #ffffff14; }
+#ready-check .rc-bar i { display: block; height: 100%; width: 100%; background: #a9803a; }
+#ready-check.ok { border-color: #c9973f; box-shadow: 0 0 0 1px #000, 0 0 22px #c9973f55, 0 10px 28px #000a; }
+#ready-check.ok .rc-head span { color: var(--gold-hi); }
+#ready-check.bad { border-color: #8a3a2a; }
 /* Limit Break: the party's three bars, under the frames */
 #lb-gauge { display: flex; align-items: center; gap: 7px; margin-top: 4px; padding: 4px 8px; background: linear-gradient(90deg, #15120fea, #100e0cd8); border: 1px solid #ffffff1a; border-radius: 3px; cursor: default; }
 #lb-gauge.hidden { display: none; }

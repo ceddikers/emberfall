@@ -301,11 +301,57 @@ function lootTests() {
   check(host.hostChestFor(9) === null, 'nobody outside the run is sent a chest');
 }
 
+// ------------------------------------------------------------------------------------------------ 4. the ready check
+// (raid-host.js readyCheck: needs raidTests' globals) Bots are always ready; it closes on the last yes, on a no, or when
+// time runs out (pending is not ready); it starts the pull countdown when all are ready; a leaver stops being asked.
+function readyTests() {
+  const GRUBNAK = require(path.join(__dirname, '../client/js/arena/bosses/grubnak.js')).GRUBNAK;
+  const mkPeople = () => [1, 2, 3].map(id => ({ id, name: 'P' + id, cls: 'bastion', spec: null, role: 'tank', x: 0, y: 320, a: -1.57 }));
+  const make = n => {
+    const people = mkPeople().slice(0, n), gone = new Set(), sent = [];
+    const host = new RaidHost({ def: GRUBNAK, mode: 'normal', humans: () => people.filter(p => !gone.has(p.id)).map(p => Object.assign({}, p)), bots: ['ranger', 'pyromancer'], emit: m => sent.push(m), seed: 5, waitPull: true });
+    const of = t => sent.filter(m => m.t === t);
+    return { host, gone, sent, of };
+  };
+  let r = make(1);   // alone with the bots: no question, the countdown starts
+  check(r.host.readyCheck(1) === true && r.of('rc').length === 0 && r.of('pcd').length === 1, 'ready check: alone, the pull countdown starts at once');
+  r = make(3);       // everyone says yes
+  check(r.host.readyCheck(1) && r.of('rc').length === 1 && r.of('rc')[0].by === 1, 'ready check: opens for the party');
+  check(r.host.readyCheck(2) === false && r.of('rc').length === 1, 'ready check: a second one while one runs is ignored');
+  check(r.host.readyAnswer(2, true) && r.host.rc, 'ready check: one yes of two does not close it');
+  check(r.host.readyAnswer(2, false) === false, 'ready check: an answer is final');
+  check(r.host.readyAnswer(9, true) === false, 'ready check: a stranger cannot answer');
+  r.host.readyAnswer(3, true);
+  check(!r.host.rc && r.of('rce').length === 1 && r.of('rce')[0].ok === 1 && r.of('pcd').length === 1, 'ready check: all ready closes it and starts the countdown');
+  check(r.host.readyCheck(1) === false, 'ready check: none once the countdown runs');
+  r = make(3);       // a no closes it at once
+  r.host.readyCheck(1); r.host.readyAnswer(3, false);
+  check(!r.host.rc && r.of('rce')[0].ok === 0 && r.of('rce')[0].no.join() === '3' && r.of('pcd').length === 0, 'ready check: a no closes it and names who');
+  r = make(3);       // silence times out; pending counts as not ready
+  r.host.readyCheck(1); r.host.readyAnswer(2, true);
+  for (let i = 0; i < 20 * 19; i++) r.host.tick(0.05);
+  check(r.host.rc && r.of('rce').length === 0, 'ready check: still open before 20 seconds');
+  for (let i = 0; i < 20 * 2; i++) r.host.tick(0.05);
+  check(!r.host.rc && r.of('rce')[0].ok === 0 && r.of('rce')[0].no.join() === '3' && r.of('pcd').length === 0, 'ready check: times out, naming the one who did not answer');
+  r = make(3);       // the one still pending leaves: the rest are all ready
+  r.host.readyCheck(1); r.host.readyAnswer(2, true); r.gone.add(3);
+  r.host.tick(0.05);
+  check(!r.host.rc && r.of('rce')[0].ok === 1 && r.of('pcd').length === 1, 'ready check: a leaver stops being asked');
+  r = make(3);       // the fight begins meanwhile
+  r.host.readyCheck(1); r.host.sim.pull(); r.host.tick(0.05);
+  check(!r.host.rc && r.of('rce')[0].c === 1, 'ready check: called off when the fight begins');
+  r = make(3);       // a snapshot carries a running check
+  r.host.readyCheck(1); r.host.readyAnswer(2, true);
+  const sn = r.host.snapshot().msgs.map(e => e.m).find(m => m.t === 'rc');
+  check(sn && sn.by === 1 && sn.a.length === 2 && sn.n > 0 && sn.n <= 20, 'ready check: a snapshot carries the check as it stands');
+}
+
 (async () => {
   try { await netTests(); } catch (e) { probs.push('net tests threw: ' + (e && e.stack || e)); }
   try { lootTests(); } catch (e) { probs.push('loot tests threw: ' + (e && e.stack || e)); }
   try { raidTests(); } catch (e) { probs.push('raid tests threw: ' + (e && e.stack || e)); }
+  try { readyTests(); } catch (e) { probs.push('ready check tests threw: ' + (e && e.stack || e)); }
   if (probs.length) { console.log('Rejoin FAILED:\n  ' + [...new Set(probs)].slice(0, 30).join('\n  ')); process.exit(1); }
-  console.log('Rejoin OK: hold, rejoin, expiry, a gone slot, a silent drop; the loot chest once only; stand-in and snapshots across all eight bosses on both modes');
+  console.log('Rejoin OK: hold, rejoin, expiry, a gone slot, a silent drop; the loot chest once only; stand-in and snapshots across all eight bosses on both modes; the ready check');
   process.exit(0);
 })();

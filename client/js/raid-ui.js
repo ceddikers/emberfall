@@ -44,6 +44,14 @@ const RaidUI = (() => {
       <div id="waymarks" class="hidden">${['A', 'B', 'C', 'D', '1', '2', '3', '4'].map(k => `<button type="button" class="wm wm-${/\d/.test(k) ? 'sq' : 'ci'}" data-k="${k}">${k}</button>`).join('')}<button type="button" class="wm wm-clear" data-k="*">${svg('<path d="M3 3l6 6M9 3 3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>')}</button><button type="button" class="wm wm-pull" data-k="#">${svg('<circle cx="6" cy="6.6" r="4.2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M6 4.2v2.6l1.6 1M4.6 1.2h2.8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>')}</button><button type="button" class="wm wm-callouts" data-k="@">${svg('<path d="M2 2.5h8v5H5.5L3 9.5v-2H2Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>')}</button></div>
       <button id="raid-leave" class="btn2" type="button">Leave raid</button>`;
     document.body.appendChild(root);
+    // the ready check: a prompt with the party's answers (readyCheck below), and its button on the waymark bar
+    root.insertAdjacentHTML('beforeend', `<div id="ready-check" class="hidden"><div class="rc-head"><b>Ready check</b><span></span></div><div class="rc-row"></div>
+      <div class="rc-act"><button type="button" class="rc-yes">Ready <kbd></kbd></button><button type="button" class="rc-no">Not ready <kbd></kbd></button></div><div class="rc-bar"><i></i></div></div>`);
+    $('ready-check').addEventListener('mousedown', e => e.stopPropagation());
+    $('ready-check').addEventListener('click', e => { const bt = e.target.closest('button'); if (bt && handlers.onReady) handlers.onReady(bt.classList.contains('rc-yes')); });
+    $('waymarks').insertAdjacentHTML('beforeend', `<button type="button" class="wm wm-ready" data-k="!" data-tip="Ready check: everyone answers, and when all are ready the pull countdown starts">${svg('<path d="M2.4 6.3 5 8.8 9.7 3.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>')}</button>`);
+    $('waymarks').querySelector('.wm-ready').addEventListener('click', e => { e.stopPropagation(); if (handlers.onReadyCheck) handlers.onReadyCheck(); });
+    $('waymarks').querySelector('.wm-ready').addEventListener('contextmenu', e => e.stopPropagation());
     // in a live fight, leaving takes a second click (so a stray click doesn't walk you out of a pull)
     let leaveArmed = 0;
     $('raid-leave').addEventListener('click', () => {
@@ -381,6 +389,49 @@ const RaidUI = (() => {
     el.classList.toggle('hidden', !marks);
     if (!marks) return;
     for (const b of el.children) { b.classList.toggle('on', !!marks[b.dataset.k]); b.classList.toggle('placing', b.dataset.k === placing); }
+  }
+
+  // the ready check (raid.rc, main.js): a small prompt with a row for each hero (bots are always ready), your Ready / Not ready
+  // while you have not answered, and the outcome for a moment once it closes
+  const RC_MARK = {
+    yes: svg('<path d="M2.4 6.3 5 8.8 9.7 3.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'),
+    no: svg('<path d="M3 3l6 6M9 3 3 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'),
+    wait: svg('<circle cx="6" cy="6" r="1.5" fill="currentColor"/>'),
+  };
+  let rcId = -1;
+  function readyCheck(raid, now, myId) {
+    const el = $('ready-check'), c = raid.rc;
+    const res = c && c.res, show = !!c && raid.state === 'prepull' && (!res || now - c.resAt < (res.ok ? 1.3 : 3.4));
+    if (!show) { if (rcId !== -1) { el.classList.add('hidden'); rcId = -1; } return; }
+    const list = [...raid.roster].sort((a, b) => ({ tank: 0, healer: 1, dps: 2 }[a.role] - { tank: 0, healer: 1, dps: 2 }[b.role]) || a.id - b.id);
+    if (rcId !== c.id) {   // a new check: the rows
+      rcId = c.id;
+      const by = list.find(r => r.id === c.by);
+      setText(el.querySelector('.rc-head span'), by ? `Called by ${by.name}` : '');
+      el.querySelector('.rc-row').innerHTML = list.map(r => `<span class="rc-m" data-id="${r.id}" style="--rc:${(ROLES[r.role] || ROLES.dps).color}"><em>${esc(r.name)}</em><u></u></span>`).join('');
+      el.classList.remove('hidden');
+    }
+    const no = new Set(res && res.no || []);
+    for (const m of el.querySelector('.rc-row').children) {
+      const id = Number(m.dataset.id), r = list.find(x => x.id === id);
+      const st = res && res.ok ? 'yes' : no.has(id) ? 'no' : r && r.bot ? 'yes' : c.ans.has(id) ? (c.ans.get(id) ? 'yes' : 'no') : 'wait';
+      if (m._s !== st) { m._s = st; m.className = 'rc-m ' + st; m.querySelector('u').innerHTML = RC_MARK[st]; }
+    }
+    el.classList.toggle('ok', !!(res && res.ok)); el.classList.toggle('bad', !!(res && !res.ok));
+    if (res) {
+      const names = [...no].map(id => (list.find(r => r.id === id) || {}).name).filter(Boolean);
+      setText(el.querySelector('.rc-head span'), res.ok ? 'Everyone is ready' : names.length ? `Not ready: ${names.join(', ')}` : 'Called off');
+    }
+    const mine = c.ans.has(myId) || c.sent;
+    el.querySelector('.rc-act').classList.toggle('hidden', !!res || mine);
+    el.querySelector('.rc-bar').classList.toggle('hidden', !!res);
+    if (!res) {
+      el.querySelector('.rc-bar i').style.width = Math.max(0, Math.min(1, (c.end - now) / c.dur)) * 100 + '%';
+      const kb = typeof Keybinds !== 'undefined' ? Keybinds : null, kyes = kb ? kb.label(kb.keyFor('rcyes')) : 'Y', kno = kb ? kb.label(kb.keyFor('rcno')) : 'X';
+      const ks = el.querySelectorAll('.rc-act kbd');
+      setText(ks[0], kyes); setText(ks[1], kno);
+      ks[0].classList.toggle('hidden', kyes === '—'); ks[1].classList.toggle('hidden', kno === '—');
+    }
   }
 
   // ---------------------------------------------------------------- Limit Break
@@ -1025,5 +1076,5 @@ const RaidUI = (() => {
       `<div class="rr ${cls}"><b>${n}</b><span>${esc(v)}</span><small>${esc(tip)}</small></div>`).join('')}</div>`;
   }
 
-  return { waymarks, prog, intro, toggleMeter, cycleMeter, init, show, setRoster, update, ultFlash, meter, showResults, hideResults, townPosture, dock, resetRoster: () => { rosterKey = ''; } };
+  return { waymarks, readyCheck, prog, intro, toggleMeter, cycleMeter, init, show, setRoster, update, ultFlash, meter, showResults, hideResults, townPosture, dock, resetRoster: () => { rosterKey = ''; } };
 })();
