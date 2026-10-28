@@ -1288,7 +1288,7 @@ Object.assign(SPECS, {
       gaugeTip: 'Builds from Cue and the Dolls\' other moves (not their own Jabs); Grand Finale spends it. The triangle between you and both Dolls is the Stage: an enemy inside it takes 10% more damage from the whole party.',
       blurb: 'Two dolls, one bar, and a stage the whole party plays on.',
       focus: 'Teamwork. Two smaller Dolls, and the triangle between you and them is the Stage: an enemy standing in it takes more damage from everyone.',
-      passive: { name: 'The Stage', desc: 'You work two Dolls, each hitting for a little over half. The triangle between you and both Dolls is the Stage: an enemy inside it takes 10% more damage from the whole party. W and Swap move the Doll nearest where you aim.' },
+      passive: { name: 'The Stage', desc: 'You work two Dolls, each hitting for a little over half. The triangle between you and both Dolls is the Stage: an enemy inside it takes 10% more damage from the whole party. W flings the Doll nearest you to where you aim; Swap trades places with the Doll nearest where you aim.' },
       // (its own damage is a little lower: the Stage pays the rest to the party)
       // (a raid lifts it back: in a real pull its own damage came out under the field)
       balance: 0.93 * 1.06,
@@ -1298,7 +1298,7 @@ Object.assign(SPECS, {
         // (each Doll hits at 58%: the numbers here are per Doll)
         abilities: {
           cue: { desc: 'You snap your fingers: each Doll in reach lunges at once for a {d:104.4} stab, and their next six Jabs (three each) come twice as fast. Builds 1 Encore. On their own the Dolls jab for {d:23.2} each every 4s all through a fight while they have the enemy in reach, whatever you press (5% faster for each String still tied).' },
-          pull: { desc: 'Fling the Doll nearest where you aim to that spot (within its strings\' reach). It cuts anything it passes through for {d:92.8}, and stays there until you pull it again or pick another target. Builds 1 Encore on a hit. Every pull also ties all three Strings back, and gets limp Dolls up at once. Two charges.' },
+          pull: { desc: 'Fling the Doll nearest you to where you aim (within its strings\' reach). It cuts anything it passes through for {d:92.8}, and stays there until you pull it again or pick another target. Builds 1 Encore on a hit. Every pull also ties all three Strings back, and gets limp Dolls up at once. Two charges.' },
           cross: { desc: 'Your strings become blades and cut along the lines between you and the Dolls. Each line with the enemy on it cuts for {d:324.8}, and a cut gives 2 Encore; otherwise it cuts nothing.' },
           swap: { desc: 'You and the Doll nearest where you aim trade places in a flutter of silk. It\'s your escape, and the Doll takes your spot. Stage Cross: your next Cross-Cut within 6s cuts twice as hard and gives 1 more Encore.' },
           pirouette: { desc: 'The Dolls spin, each cutting all around it for {d:174}, and nothing can touch them for 1.5s. Builds 1 Encore.' },

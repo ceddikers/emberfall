@@ -4840,7 +4840,7 @@ function mariStation(k, i, p, e) {
   }
   return { x: e.x - Math.cos(base) * R, y: e.y - Math.sin(base) * R };
 }
-// the Doll nearest where you aim (Understudy: W and Swap move that one)
+// the Doll nearest a point (Understudy: Swap moves the one nearest your aim, W the one nearest you)
 function mariPick(k, aim) {
   const ds = k.g.dolls;
   if (!aim || ds.length < 2) return 0;
@@ -5094,7 +5094,7 @@ KITS.marionettist = {
       desc: 'Fling the Doll to where you aim (within its strings\' reach). It cuts anything it passes through for {d:160}, and stays there until you pull it again or pick another target. Builds 1 Encore on a hit. Every pull also ties all three Strings back (1 Encore for each one tied back), and gets a limp Doll up at once. Two charges.',
       usable: k => k.g.dolls.length > 0,
       effect(k) {
-        const p = mariPos(k), aim = mariAim(k), i = k.def.dolls === 2 ? mariPick(k, aim) : mariPick(k, p), d = k.g.dolls[i];   // (Understudy's two Dolls: the one nearest your aim)
+        const p = mariPos(k), aim = mariAim(k), i = mariPick(k, p), d = k.g.dolls[i];   // (the Doll nearest you, flung to where you aim: Understudy's two Dolls too)
         if (!d || !aim) return;
         mariRestring(k);
         const free = !!k.g.freeThrow; k.g.freeThrow = false;   // (Second Act: the pull Pirouette gave back is a free throw)

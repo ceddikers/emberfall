@@ -2370,8 +2370,8 @@ BOT_CLASS.marionettist = {
           for (let s = 0; s < 8; s++) { const a = s * Math.PI / 4; cands.push({ x: me.x + Math.cos(a) * 60, y: me.y + Math.sin(a) * 60 }); }
           const safe = cands.filter(c => hypot2(c.x - me.x, c.y - me.y) <= lim && ARENA.sd(c.x, c.y) < -30 && !BotAI.dollDanger(view, c.x, c.y, 4.5))
             .sort((a, b) => hypot2(a.x - d.x, a.y - d.y) - hypot2(b.x - d.x, b.y - d.y));
-          // (W moves the Doll nearest the aim: aim from beside this one)
-          if (safe.length) { bot.aim = safe[0]; if (k.g.dolls.length > 1 && mariPick(k, safe[0]) !== i) bot.aim = { x: (safe[0].x + d.x * 3) / 4, y: (safe[0].y + d.y * 3) / 4 }; return pull; }
+          // (W flings the Doll nearest you: with two Dolls, only when that is this one)
+          if (safe.length && (k.g.dolls.length < 2 || mariPick(k, me) === i)) { bot.aim = safe[0]; return pull; }
         }
         const land = view.mechs.some(m => m.resolveAt - view.t < 1);
         if (land && ok(pir) && k.gcdRemaining() <= 0 && !k.cast && k.abilities[pir].id === 'pirouette') return pir;
