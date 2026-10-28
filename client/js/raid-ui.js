@@ -150,6 +150,15 @@ const RaidUI = (() => {
       hpV: null, alive: null, healAt: -9 };
   }
 
+  // a teammate's Ultimate: their frame rings in their class's colour and a light sweeps across it, once
+  function ultFlash(id, color) {
+    const f = frames[id];
+    if (!f) return;
+    if (color) f.row.style.setProperty('--uc', color);
+    f.row.classList.remove('ulted'); void f.row.offsetWidth; f.row.classList.add('ulted');
+    clearTimeout(f.ultT); f.ultT = setTimeout(() => f.row.classList.remove('ulted'), 1000);
+  }
+
   // a lighter chunk that lingers where health just was, then drains away: shows who just got hit and how hard
   function trailStep(v, cur, hitAt, now, dt) {
     if (cur >= v) return cur;
@@ -1009,5 +1018,5 @@ const RaidUI = (() => {
       `<div class="rr ${cls}"><b>${n}</b><span>${esc(v)}</span><small>${esc(tip)}</small></div>`).join('')}</div>`;
   }
 
-  return { waymarks, prog, intro, toggleMeter, cycleMeter, init, show, setRoster, update, meter, showResults, hideResults, townPosture, dock, resetRoster: () => { rosterKey = ''; } };
+  return { waymarks, prog, intro, toggleMeter, cycleMeter, init, show, setRoster, update, ultFlash, meter, showResults, hideResults, townPosture, dock, resetRoster: () => { rosterKey = ''; } };
 })();
