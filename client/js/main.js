@@ -1476,6 +1476,42 @@
   Net.onHost('pci', hostPullIn);
   Net.on('pcd', msg => { if (raid && raid.state === 'prepull') raid.pullAt = now + (Number(msg.n) || 5); });
   function startPullCountdown() { if (!raid || raid.state !== 'prepull' || raid.pullAt) return; if (Net.isHost) hostPullIn(Net.id); else Net.send({ t: 'pci' }); }
+  // the ready check before a pull (raid-host.js readyCheck): anyone calls it ('rcq'), humans answer ('rcr'); the host relays
+  // 'rc' (opened), 'rca' (an answer) and 'rce' (closed: all ready starts the pull countdown, or who wasn't)
+  const hostInRaid = pid => !!raidHost && hostRoster.some(h => h.id === pid && !h.left);
+  Net.onHost('rcq', pid => { if (hostInRaid(pid)) raidHost.readyCheck(pid); });
+  Net.onHost('rcr', (pid, msg) => { if (hostInRaid(pid)) raidHost.readyAnswer(pid, !!msg.r); });
+  let rcSeq = 0;
+  Net.on('rc', msg => {
+    if (!raid || raid.state !== 'prepull' || !Number.isInteger(msg.by) || !Number.isFinite(msg.n)) return;
+    const ans = new Map([[msg.by, true]]);
+    if (Array.isArray(msg.a)) for (const a of msg.a) if (Array.isArray(a) && Number.isInteger(a[0])) ans.set(a[0], !!a[1]);
+    raid.rc = { id: ++rcSeq, by: msg.by, dur: 20, end: now + msg.n, ans, sent: ans.has(Net.id), res: null, resAt: 0 };
+    if (SH) SH.play('ping', { bus: 'ui', vol: 0.8, key: 'rc-open', minGap: 0.3 });
+  });
+  Net.on('rca', msg => {
+    const c = raid && raid.rc;
+    if (!c || c.res || !Number.isInteger(msg.id)) return;
+    c.ans.set(msg.id, !!msg.r);
+    if (SH && msg.id !== c.by) SH.play(msg.r ? 'ui-click' : 'ui-error', { bus: 'ui', key: 'rc-answer', minGap: 0.1 });
+  });
+  Net.on('rce', msg => {
+    const c = raid && raid.rc;
+    if (!c || c.res) return;
+    if (msg.c) { raid.rc = null; return; }   // (called off: the fight began, or the countdown started another way)
+    c.res = { ok: !!msg.ok, no: Array.isArray(msg.no) ? msg.no.filter(Number.isInteger) : [] }; c.resAt = now;
+    if (SH) SH.play(c.res.ok ? 'ui-feat' : 'ui-error', { bus: 'ui', vol: c.res.ok ? 0.7 : 1, key: 'rc-end', minGap: 0.3 });
+  });
+  function startReadyCheck() {
+    if (!raid || raid.state !== 'prepull' || raid.pullAt || (raid.rc && !raid.rc.res)) return;
+    if (Net.isHost) { if (hostInRaid(Net.id)) raidHost.readyCheck(Net.id); } else Net.send({ t: 'rcq' });
+  }
+  function answerReady(yes) {
+    const c = raid && raid.rc;
+    if (!c || c.res || c.sent || c.ans.has(Net.id)) return;
+    c.sent = true;
+    if (Net.isHost) { if (hostInRaid(Net.id)) raidHost.readyAnswer(Net.id, yes); } else Net.send({ t: 'rcr', r: yes ? 1 : 0 });
+  }
   Net.on('pg', msg => {
     if (!raid || !Number.isFinite(msg.x) || !Number.isFinite(msg.y)) return;
     const r = raid.roster.find(x => x.id === msg.id);
@@ -2801,6 +2837,8 @@
     if (a === 'focus') { if (!e.repeat) setFocus(); return; }
     if (a === 'limit') { if (inArena() && !e.repeat) useLimit(); return; }
     if (a === 'rezask') { if (inArena() && !e.repeat) askRaise(); return; }
+    if (a === 'readycheck') { if (inArena() && !e.repeat) startReadyCheck(); return; }
+    if (a === 'rcyes' || a === 'rcno') { if (inArena() && !e.repeat) answerReady(a === 'rcyes'); return; }
     if (a === 'resync') { if (inArena() && !e.repeat) requestResync(); return; }
     if (a === 'options') { if (Keybinds.panelOpen()) Keybinds.closePanel(); else openOptions(); return; }
     if (a === 'journal') { Journal.toggle(); return; }
@@ -3243,6 +3281,7 @@
     }
     RaidUI.update(raid, now, Net.id, frameMarks());
     RaidUI.waymarks(raid.def.trial || raid.pvp ? null : raid.marks, placingMark);
+    RaidUI.readyCheck(raid, now, Net.id);
     if (!raid.pvp) Journal.tick(now, raid.state === 'live' && !amDead());
     if ((raid.state === 'clear' || raid.state === 'wipe') && !raid.pagesTaken) { raid.pagesTaken = true; raid.newPages = Journal.newPages(); }
     if (raid.introAt && now >= raid.introAt) {
@@ -4893,7 +4932,7 @@
 
   // clicking your locked ally's frame again lets go of them
   RaidUI.init({ onFrame: id => { lockedAlly = lockedAlly === id ? null : id; }, onLeave: () => leaveRaid(true),
-    onPlaceMark: k => placeMark(k), onWaymark: msg => sendWaymark(msg), onCallouts: () => Pings.openPanel(), onPullIn: () => startPullCountdown(), onRezAsk: () => askRaise(),
+    onPlaceMark: k => placeMark(k), onWaymark: msg => sendWaymark(msg), onCallouts: () => Pings.openPanel(), onPullIn: () => startPullCountdown(), onReadyCheck: () => startReadyCheck(), onReady: yes => answerReady(yes), onRezAsk: () => askRaise(),
     onDock: where => { if (player.cls) Save.setSetting(`frames-${player.cls.role}`, where); } });
   // where the party frames sit for your role: healers start with them above the hotbar
   // party frames sit in the corner unless you moved them above your skills (Options, or the dock button on them)

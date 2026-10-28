@@ -195,6 +195,7 @@ class RaidHost {
     for (const k of ['fb', 'fps', 'adds', 'props', 'bnext']) if (rep.has(k)) add(rep.get(k));
     if (sim.state === 'live') add({ t: 'mtr', ft: +t.toFixed(1), d: Object.entries(sim.stats).map(([id, st]) => Scoring.pack(Number(id), st)) });
     if (this.pullAt != null && this.pullAt > 0) add({ t: 'pcd', n: this.pullAt });
+    if (this.rc) add({ t: 'rc', by: this.rc.by, n: Math.max(0.5, this.rc.left), a: [...this.rc.ans].map(([id, r]) => [id, r ? 1 : 0]) });
     // what is on the floor and in the air, in the order it began
     this.pruneSeen();
     const live = [...this.seen].sort((a, b) => a[1].at - b[1].at);
@@ -231,11 +232,48 @@ class RaidHost {
     return true;
   }
 
+  // A ready check before the pull: any human in the raid calls it, every human answers (the bots are always ready, and
+  // so is whoever called it). It closes when all are ready (the pull countdown starts), when one says no, or when the time
+  // runs out (an unanswered check counts as not ready). Messages: rc (opened: by, n secs, a answers so far), rca (id, r),
+  // rce (closed: ok, no: who wasn't ready, c: called off). A player who leaves, or is held, stops being asked.
+  readyCheck(by) {
+    if (this.sim.state !== 'prepull' || this.pullAt != null || this.rc) return false;
+    if (this.humans().filter(h => h.id !== by).length === 0) return this.pullIn(5);   // (alone with the bots: nothing to ask)
+    this.rc = { by, left: 20, ans: new Map([[by, true]]) };
+    this.emit({ t: 'rc', by, n: 20 });
+    return true;
+  }
+  readyAnswer(id, ready) {
+    const rc = this.rc;
+    if (!rc || rc.ans.has(id) || !this.humans().some(h => h.id === id)) return false;
+    rc.ans.set(id, !!ready);
+    this.emit({ t: 'rca', id, r: ready ? 1 : 0 });
+    this.readyStep(false);
+    return true;
+  }
+  // close the check if it is settled: someone said no, all are ready, or (timeout) the time is up
+  readyStep(timeout) {
+    const rc = this.rc; if (!rc) return;
+    const ids = this.humans().map(h => h.id);
+    if (!ids.length) { this.rc = null; this.emit({ t: 'rce', ok: 0, no: [], c: 1 }); return; }
+    const no = ids.filter(id => rc.ans.get(id) === false), pending = ids.filter(id => !rc.ans.has(id));
+    if (!no.length && pending.length && !timeout) return;
+    const bad = timeout ? [...no, ...pending] : no;
+    this.rc = null;
+    this.emit({ t: 'rce', ok: bad.length ? 0 : 1, no: bad });
+    if (!bad.length) this.pullIn(5);
+  }
+
   // ---------------------------------------------------------------- per-frame
   tick(dt) {
     this.t += dt;
     // a pull countdown someone started (pullIn): the boss engages when it runs out, if nobody hit it first
     if (this.pullAt != null) { this.pullAt -= dt; if (this.pullAt <= 0) { this.pullAt = null; this.sim.pull(); } }
+    if (this.rc) {   // (a ready check: called off if the fight began or the countdown was started another way)
+      this.rc.left -= dt;
+      if (this.sim.state !== 'prepull' || this.pullAt != null) { this.rc = null; this.emit({ t: 'rce', ok: 0, no: [], c: 1 }); }
+      else this.readyStep(this.rc.left <= 0);
+    }
     this.sim.tick(dt);
     // the live meter: everyone's damage, healing (overheal not counted) and damage taken so far, twice a second
     if (this.sim.state === 'live' && this.t - (this.lastMeter || -9) >= 0.5) {
