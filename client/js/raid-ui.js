@@ -19,7 +19,7 @@ const RaidUI = (() => {
     dps: svg('<path d="M10.5 1.5 9.8 4 4.6 9.2 2.8 7.4 8 2.2ZM2.8 7.4 1.5 10.5l3.1-1.3" fill="currentColor"/>'),
   };
   let docked = 'left', onDock = null, hudObserved = false, lastState = '';
-  let root, frames = {}, onFrame = null, rosterKey = '', lastT = 0, bossTrail = 1, roster = [], nextKey = '', statusKey = '';
+  let root, frames = {}, onFrame = null, rosterKey = '', lastT = 0, roster = [], nextKey = '', statusKey = '';
 
   function init(handlers) {
     onFrame = handlers.onFrame;
@@ -29,7 +29,7 @@ const RaidUI = (() => {
     root.innerHTML = `
       <div id="boss-bar">
         <div class="bb-top"><b class="bb-name"></b><i class="bb-title"></i><span class="bb-mode"></span><em class="bb-tot"></em><span class="bb-time"></span></div>
-        <div class="bb-hp"><div class="trail"></div><div class="fill"></div><div class="ticks"></div><div class="gates"></div><div class="vuln"></div><div class="goal hidden"></div><span></span></div>
+        <div class="bb-hp"><div class="under"></div><div class="trail"></div><div class="fill"></div><div class="ticks"></div><div class="gates"></div><div class="vuln"></div><div class="goal hidden"></div><span></span><b class="bb-x"></b></div>
         <div class="bb-post hidden"><div class="back"></div><div class="fill"></div><div class="crack"></div></div>
         <div class="bb-status"></div>
         <div class="bb-next hidden"></div>
@@ -186,16 +186,7 @@ const RaidUI = (() => {
     setText(tot, totR ? `→ ${totR.id === myId ? 'You' : totR.name}` : '');
     if (totR) tot.style.setProperty('--rc', ROLES[totR.role].color);
     setText(q('.bb-time'), raid.state === 'live' || raid.state === 'clear' || raid.state === 'wipe' ? mmss(raid.fightTime || 0) : raid.state === 'prepull' ? 'Waiting for the pull' : '');
-    const frac = b.mx ? b.hp / b.mx : 1;
-    bossTrail = frac > bossTrail ? frac : Math.max(frac, bossTrail - dt * 0.08 - (bossTrail - frac) * dt * 1.5);
-    setX(q('.bb-hp .fill'), frac);
-    setX(q('.bb-hp .trail'), bossTrail);
-    q('.bb-hp .vuln').classList.toggle('on', !!b.v);
-    // a damage check running: where her health has to be when the cast ends
-    const goal = raid.cast && raid.cast.goal != null && now < raid.cast.start + raid.cast.dur ? raid.cast.goal : null, gEl = q('.bb-hp .goal');
-    gEl.classList.toggle('hidden', goal == null);
-    if (goal != null) { const v = (goal * 100).toFixed(2) + '%'; if (gEl._l !== v) { gEl._l = v; gEl.style.left = v; } }
-    setText(q('.bb-hp span'), `${(frac * 100).toFixed(1)}%`);
+    layeredHp(raid, now, dt, fm);
     q('#boss-bar').classList.toggle('untargetable', !!b.u);
     q('#boss-bar').classList.toggle('walled', !!raid.wallLabel);   // sealed at a gate (fight.js raiseWall)
     posture(raid, now, dt);
@@ -707,7 +698,44 @@ const RaidUI = (() => {
     el.innerHTML = rows.map(([name, s]) => `<span>${icon(name)}<b>${esc(name)}</b><i>${Math.max(0, Math.ceil(s))}</i></span>`).join('');
   }
 
+  // The boss's health in stacked bars of BAR_HP each, counted down (×N): every blow takes a real bite out of the bar on
+  // top, and the one below shows through in its own colour. The colours just cycle (they say nothing about the acts).
+  // A pale ghost lingers where the health just was, holds a beat after a big blow, then drains after it; a blow that
+  // breaks several bars leaves the whole top bar ghosted until it catches up.
+  const BAR_HP = 10000;
+  const BAR_COLS = ['#c2412c', '#c7772a', '#b39a2e', '#5f9a3c', '#2f8f88', '#3f6fb3', '#7d52b0', '#b04a86'];
+  const FORM_COLS = ['#37a7a4', '#3f86b8', '#4aa67e', '#6e86c4', '#2f9890', '#5a9ab0'];   // (a second form: sea tones)
+  let ghostDmg = 0, ghostHold = 0, lastDmg = 0;
+  function layeredHp(raid, now, dt, fm) {
+    const b = raid.boss, mx = b.mx || 0, hp = Math.max(0, Math.min(mx, b.hp || 0)), dmg = mx - hp;
+    const layers = mx ? Math.max(1, Math.ceil(mx / BAR_HP)) : 1, idx = Math.min(layers - 1, Math.floor(dmg / BAR_HP));
+    const cur = hp > 0 ? layers - idx : 0, within = hp > 0 ? Math.min(1, (hp - (layers - idx - 1) * BAR_HP) / BAR_HP) : 0;
+    if (dmg - lastDmg > BAR_HP * 0.25) ghostHold = now + 0.35;
+    lastDmg = dmg;
+    if (dmg < ghostDmg || !mx || dmg - ghostDmg > mx * 0.1) ghostDmg = dmg;   // (healed, a new pull, or joined mid-fight)
+    else if (now >= ghostHold) ghostDmg = Math.min(dmg, ghostDmg + dt * (BAR_HP * 0.6 + (dmg - ghostDmg) * 3));
+    const ghost = Math.floor(ghostDmg / BAR_HP) < idx ? 1 : Math.min(1, (hp + dmg - ghostDmg - (layers - idx - 1) * BAR_HP) / BAR_HP);
+    const cols = fm ? FORM_COLS : BAR_COLS, col = n => cols[(n - 1) % cols.length];
+    const fill = q('.bb-hp .fill'), under = q('.bb-hp .under');
+    if (fill._c !== cur) { fill._c = cur; fill.style.setProperty('--lc', col(Math.max(1, cur))); under.style.setProperty('--lc', cur > 1 ? col(cur - 1) : 'transparent'); }
+    setX(fill, within);
+    setX(q('.bb-hp .trail'), hp > 0 ? ghost : 0);
+    q('.bb-hp .vuln').classList.toggle('on', !!b.v);
+    // a damage check running: where her health has to be when the cast ends (on the bar once it's the bar on top; the count to reach until then)
+    const goal = raid.cast && raid.cast.goal != null && now < raid.cast.start + raid.cast.dur ? raid.cast.goal : null, gEl = q('.bb-hp .goal');
+    let goalCur = 0;
+    if (goal != null) {
+      const gd = mx * (1 - goal), gi = Math.min(layers - 1, Math.floor(gd / BAR_HP));
+      goalCur = layers - gi;
+      if (gi === idx) { const v = ((mx - gd - (layers - gi - 1) * BAR_HP) / BAR_HP * 100).toFixed(2) + '%'; if (gEl._l !== v) { gEl._l = v; gEl.style.left = v; } }
+    }
+    gEl.classList.toggle('hidden', goal == null || goalCur !== cur);
+    setText(q('.bb-hp span'), mx ? `${fmt(hp)} / ${fmt(mx)}` : '');
+    setText(q('.bb-x'), mx ? `×${cur}${goal != null && goalCur < cur ? ` → ×${goalCur}` : ''}` : '');
+  }
+
   // the HP gates (where the acts change) as ticks on the boss's health; a gate with a wall on it is marked, and lit while it holds
+  // (hidden while the health is shown in stacked bars: players learn where the acts turn)
   let gateKey = '';
   function gateTicks(raid) {
     const g = Array.isArray(raid.gates) ? raid.gates : [], key = g.map(x => x[0] + ':' + x[1]).join('|') + (raid.wallLabel ? '!' : '');

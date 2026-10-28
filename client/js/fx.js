@@ -19,7 +19,7 @@ const TEXT_KINDS = {
   dot: { group: 'out', lanes: TEXT_LANES.out, laneHold: 0.4, from: 0.85, peak: 1.08, pop: 0.1, hold: 0.12, rise: 16, floor: 10, alpha: 0.8, durK: 0.85, weight: 700 },
   hit: { group: 'out', lanes: TEXT_LANES.out, laneHold: 0.45, from: 0.6, peak: 1.3, pop: 0.16, hold: 0.28, rise: 32, floor: 12 },
   crit: { group: 'out', lanes: TEXT_LANES.out, laneHold: 0.45, from: 0.5, peak: 1.45, pop: 0.2, hold: 0.38, rise: 28, floor: 12.5, durK: 1.15, weight: 900 },
-  ult: { group: 'out', lanes: TEXT_LANES.out, laneHold: 0.5, from: 0.4, peak: 1.6, pop: 0.24, hold: 0.5, rise: 24, floor: 13, durK: 1.3, weight: 900 },
+  ult: { group: 'out', lanes: TEXT_LANES.out, laneHold: 0.5, from: 0.3, peak: 1.75, pop: 0.26, hold: 0.75, rise: 30, floor: 26, durK: 1.6, weight: 900 },
   heal: { group: 'heal', lanes: TEXT_LANES.heal, laneHold: 0.45, dx: 16, align: 'left', from: 0.6, peak: 1.25, pop: 0.16, hold: 0.3, rise: 6, driftX: 12, floor: 12 },
   taken: { group: 'in', lanes: TEXT_LANES.in, laneHold: 0.45, dx: -16, align: 'right', from: 0.6, peak: 1.3, pop: 0.15, hold: 0.3, rise: -10, driftX: -10, floor: 12 },
   absorb: { group: 'in', lanes: TEXT_LANES.in, laneHold: 0.45, dx: -16, align: 'right', from: 0.8, peak: 1.12, pop: 0.12, hold: 0.3, rise: -8, driftX: -8, floor: 11, alpha: 0.9, weight: 700 },

@@ -574,6 +574,15 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 .bb-hp { height: 14px; margin-top: 6px; background: #0a0807; border: 1px solid #000; border-radius: 2px; box-shadow: 0 0 0 1px var(--line); }
 .bb-hp .fill { background: linear-gradient(#cf5a40, #8f2c1d 55%, #6c1f14); box-shadow: inset 0 1px 0 #ffffff2e; transition: width .12s; }
 .bb-hp .trail { position: absolute; inset: 0 auto 0 0; background: #f2dcb4; opacity: .5; }
+/* stacked bars (raid-ui.js layeredHp): the bar on top in its colour, the next one showing through under it, the ghost
+   between; the full health centred, the count of bars left on the right. The act ticks stay hidden. */
+.bb-hp { height: 20px; }
+.bb-hp .fill, #boss-bar.form .bb-hp .fill { --lc: #c2412c; background: linear-gradient(color-mix(in srgb, var(--lc) 70%, #fff), var(--lc) 45%, color-mix(in srgb, var(--lc) 60%, #000)); box-shadow: inset 0 1px 0 #ffffff38, inset -2px 0 0 #ffffffa0; }
+.bb-hp .under { position: absolute; inset: 0; --lc: transparent; background: linear-gradient(color-mix(in srgb, var(--lc) 60%, #fff), var(--lc) 45%, color-mix(in srgb, var(--lc) 60%, #000)); filter: brightness(.8) saturate(.9); }
+.bb-hp .trail, #boss-bar.form .bb-hp .trail { background: #fff4dc; opacity: .62; }
+.bb-hp .ticks, .bb-hp .gates { display: none; }
+.bb-hp span { left: 0; right: 0; text-align: center; font-size: 11.5px; line-height: 20px; color: #fff; text-shadow: 0 1px 2px #000, 0 0 3px #000; }
+.bb-hp .bb-x { position: absolute; right: 7px; top: 0; font-size: 12px; font-weight: 800; line-height: 20px; color: #fff3d8; letter-spacing: .02em; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px #000, 0 0 3px #000; z-index: 1; }
 .bb-hp .ticks { position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(90deg, transparent calc(25% - 1px), #000000a0 0 25%, transparent 0 calc(50% - 1px), #000000a0 0 50%, transparent 0 calc(75% - 1px), #000000a0 0 75%, transparent 0); }
 .bb-hp .vuln { background: repeating-linear-gradient(-45deg, #ffb34722 0 4px, transparent 4px 10px); }
@@ -585,7 +594,7 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 #boss-bar.walled .bb-hp { box-shadow: 0 0 0 1px #d8b45a, 0 0 8px #ffd27a88; }
 #boss-bar.walled .bb-hp .fill { filter: saturate(.5) brightness(1.1); }
 .bst.wall { border-color: #d8b45a; color: #ffe6a0; }
-.bb-hp span { right: 7px; font-size: 11px; line-height: 14px; letter-spacing: .03em; font-variant-numeric: tabular-nums; }
+.bb-hp span { letter-spacing: .03em; font-variant-numeric: tabular-nums; }
 .bb-cast { width: 66%; height: 18px; margin-top: 8px; background: #0a0807f2; border: 1px solid #6e4426; border-radius: 2px; box-shadow: 0 0 0 1px #000; }
 .bb-cast .fill { background: linear-gradient(90deg, #5a2410, #b85a26 75%, #f0a066); }
 .bb-cast .fill::after { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 2px; background: #fff0d0; box-shadow: 0 0 6px 1px #ffb070; }
@@ -1745,7 +1754,7 @@ b.num, #tip b.num, .pt-panel b.num, .tu-body b.num, #sel-detail b.num { display:
 @keyframes bf-exp { from { opacity: 1; } to { opacity: .45; } }
 /* boss, party and Limit Break bars slide (raid-ui.js setX / setS) */
 .bb-hp .fill, .bb-hp .trail, .pf-hp .hp, .pf-hp .trail, #boss-cast .bc-bar .fill { width: 100%; transform: translateX(-100%); will-change: transform; }
-.bb-hp .fill, .pf-hp .hp { transition: transform .12s; }
+.pf-hp .hp { transition: transform .12s; }   /* (the boss's stacked bars snap: the ghost does the easing, and a bar breaking never slides back to full) */
 .pf-cast i { width: 100%; transform-origin: 0 50%; transform: scaleX(0); }
 #lb-gauge .lb-bars b { width: 100%; transform-origin: 0 50%; transform: scaleX(0); }
 /* party frames: a heal's green sweep, and a softer greying when someone goes down */

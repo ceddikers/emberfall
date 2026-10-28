@@ -560,13 +560,23 @@
     return Math.max(0.85, Math.min(1.7, 1 + 0.4 * Math.log2(ev.amount / avg)));
   }
 
+  // your class's colour, lifted toward white so the darker ones (Shadowblade, Gloomsworn) still read over the floor
+  const ultCols = {};
+  function ultColor() {
+    const a = (player.cls && player.cls.accent) || '#ffe9a8';
+    if (ultCols[a]) return ultCols[a];
+    const n = parseInt(a.slice(1), 16), up = v => Math.round(v + (255 - v) * 0.3);
+    return (ultCols[a] = `rgb(${up(n >> 16)},${up((n >> 8) & 255)},${up(n & 255)})`);
+  }
+
   function onMyDamage(ev) {
     // auto-attacks and DoTs get small, muted numbers so the abilities stay the headline
     const sc = hitScale(ev);
-    // (an Ultimate's own hit is the one big number of its moment)
-    const ultHit = !!(ev.ab && ev.ab.ult);
-    const big = Math.round((ev.auto ? (ev.crit ? 15 : 12) : ev.crit ? 21 : ev.dot ? 12 : 15) * sc * (ultHit ? 1.55 : 1));
-    const col = ultHit ? '#ffe9a8' : ev.auto ? (ev.crit ? '#f2d488' : '#cfc6b4') : ev.crit ? '#ffd84a' : ev.dot ? '#d8d0c0' : '#ffffff';
+    // (an Ultimate's own hit is the one huge number of its moment, in your class's colour; a window's empowered blows
+    // wear the colour too, a size up)
+    const ultHit = !!(ev.ab && ev.ab.ult), ultWin = !ultHit && !!(ev.ab && ev.ab.ultOf) && !ev.dot;
+    const big = Math.round((ev.auto ? (ev.crit ? 15 : 12) : ev.crit ? 21 : ev.dot ? 12 : 15) * (ultHit ? Math.max(1, sc) * 2.6 : sc * (ultWin ? 1.25 : 1)));
+    const col = ultHit || ultWin ? ultColor() : ev.auto ? (ev.crit ? '#f2d488' : '#cfc6b4') : ev.crit ? '#ffd84a' : ev.dot ? '#d8d0c0' : '#ffffff';
     const txt = rnd(ev.amount) + (ev.crit ? '!' : '') + (ev.positional ? ' ◆' : '');
     // how it moves (fx.js TEXT_KINDS): autos and DoTs small and quick, a crit pops harder, an Ultimate's hit hardest
     const tk = { kind: ultHit ? 'ult' : ev.auto || ev.dot ? (ev.dot ? 'dot' : 'auto') : ev.crit ? 'crit' : 'hit' };
