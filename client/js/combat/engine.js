@@ -67,6 +67,22 @@ const ALLY_BUFFS = {
   galvanized: { name: 'Galvanized', kind: 'dmg', value: 0.1, dur: 10, cls: 'alembist', icon: 'throw', text: 'Dealing 10% more damage.' },
 };
 
+// Projectiles: a move's hit is rolled when the move resolves (buffs, crit, the number) and lands when its projectile
+// arrives, so the bar drops and the number pops on impact. Speeds in px/s, by class and move; ability-vfx.js flies
+// them at the same speeds (TRV). { cast, instant }: a move that flies differently hard-cast or instant (Pyroblast's lob
+// and its Hot Streak bolt); lead: a beat before it leaves the hand. Kits without a position (the simulator) land at once.
+const TRAVEL = {
+  bastion: { edge: 800 },
+  bloodreaver: { lance: 1000 },
+  runeguard: { glyph: { speed: 850, lead: 0.05 } },
+  ranger: { aimed: 1700, caustic: 1400, explosive: 1400 },
+  pyromancer: { fireball: 900, pyro: { cast: 800, instant: 950 } },
+  cleric: { condemn: 1100 },
+  thermist: { cinder: 900, rime: 1000, thermocline: 1100 },
+  driftblade: { cross: { speed: 1300, lead: 0.08 } },
+};
+const travelSpeed = (e, instant) => (typeof e === 'number' ? e : e.speed || (instant ? e.instant : e.cast) || e.instant);
+
 class Kit {
   // def: a kit from KITS. env: {
   //   now(), emit(evt), rng() -> [0,1), moving() -> bool,
@@ -507,7 +523,9 @@ class Kit {
     if (this.def.tauntOn && this.env.taunt && this.baseId(ab) === this.def.tauntOn && (!this.def.tauntWhen || this.def.tauntWhen(this, ab))) this.env.taunt(target);
     if (ab.ult) this.ultFire(ab);
     const share = ab.type === 'gcd' ? this.itemGcdShare(ab) : 0;   // (read before the effect: a Distill it spends shortens the GCD)
-    ab.effect(this, target);
+    const was = [this._resolving, this._aimAt];
+    this._resolving = ab; this._aimAt = target;   // (a projectile's hits land when it arrives: travelDelay)
+    try { ab.effect(this, target); } finally { [this._resolving, this._aimAt] = was; }
     if (this.def.afterUse) this.def.afterUse(this, ab);
     if (ab.type !== 'gcd') this.fxOgcd(ab);
     else {
@@ -624,11 +642,22 @@ class Kit {
     if (party.dmg || tgt.vuln || self.dmg) this.stats.burstDamage += amount;
     this.stats.last = this.now;
     // (opts.tgt: an enemy id when a hit lands on something other than what you last aimed at: a Passing Strike)
-    this.env.emit({ type: 'damage', amount, crit, potency: pot, positional: posHit, ab: opts.ab, dot: !!opts.dot, auto: !!opts.auto, threat: opts.threat || (this.now < (this._ultThrUntil || 0) && this.def.role !== 'tank' ? ENGINE.ULT_THREAT : 1), tgt: opts.tgt });
+    const ev = { type: 'damage', amount, crit, potency: pot, positional: posHit, ab: opts.ab, dot: !!opts.dot, auto: !!opts.auto, threat: opts.threat || (this.now < (this._ultThrUntil || 0) && this.def.role !== 'tank' ? ENGINE.ULT_THREAT : 1), tgt: opts.tgt };
+    const delay = opts.dot || opts.auto || opts.item ? 0 : this.travelDelay(this._resolving);
+    if (delay > 0) this.after(delay, () => this.env.emit(ev)); else this.env.emit(ev);
     if (opts.item) return { amount, crit, posHit };   // an item's extra hit doesn't feed the kit or other items
     if (this.def.onDamage) this.def.onDamage(this, amount, crit, opts);
     if (crit) this.fxCrit();
     return { amount, crit, posHit };
+  }
+  // how long the move being resolved takes to reach what it was aimed at (TRAVEL), or 0: it lands at once
+  travelDelay(ab) {
+    const tab = ab && this.env.clsId && TRAVEL[this.env.clsId], aim = this._aimAt;
+    const e = tab && (tab[ab.id] || tab[this.baseId(ab)]);
+    if (!e || !this.env.pos || !aim || !Number.isFinite(aim.x)) return 0;
+    const p = this.env.pos();
+    if (!p) return 0;
+    return Math.min(1.2, (e.lead || 0) + Math.hypot(aim.x - p.x, aim.y - p.y) / travelSpeed(e, !this._fromCast));
   }
   // Damage over time, ticking every `interval`. Re-applying keeps up to 30% of the old duration (pandemic).
   dot(id, potency, dur, interval = 3, opts = {}) {

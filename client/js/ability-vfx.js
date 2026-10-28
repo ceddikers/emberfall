@@ -2,6 +2,12 @@
 // recipe(c) gets c = { ent, x, y (caster), tx, ty (where it lands), tent (the ally it lands on, if any), ang (facing), later(delay, fn) }.
 // Spammed GCD fillers stay small and quick; cooldowns and big hits get the show.
 
+// a projectile's speed, the same one its hit waits for (engine.js TRAVEL), so the number pops as it lands
+const TRV = (cls, id, mode) => {
+  const e = typeof TRAVEL !== 'undefined' && TRAVEL[cls] && TRAVEL[cls][id];
+  return !e ? 900 : typeof travelSpeed === 'function' ? travelSpeed(e, mode !== 'cast') : 900;
+};
+
 // ======================================================================= SHARED SHAKE (shared-fx polish)
 // Every class block's local `shake` routes here. It respects whose effect it is: a recipe runs under VFX.setScale
 // (yours 1, your autos 0.85, a teammate's or a bot's 0.6 / 0.5), so a dimmed effect never moves YOUR camera, and your
@@ -665,7 +671,7 @@ const ABILITY_VFX = (() => {
       edge: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#ffe08a', size: 34, z: 26 }); V.flash(h.x, h.y - 20, 36, BAST_GOLD, 0.18);
         // (online-refs pass: FF14 Holy Spirit / WoW Avenger's Shield) it lands as a standing cross of light on the target, the
         // starburst and one ring after it; the old floor seal before the boss is gone
-        V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#ffe08a', speed: 800, size: 1.9, onHit: (x, y) => { bastionCross(x, y, 1); V.hit(x, y, '#ffe9a0', 0.9);
+        V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#ffe08a', speed: TRV('bastion', 'edge'), size: 1.9, onHit: (x, y) => { bastionCross(x, y, 1); V.hit(x, y, '#ffe9a0', 0.9);
           V.spikeburst(x, y, { r: 50, n: 12, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', dur: 0.32 });
           V.shock(x, y, { r: 76, color: '#ffe08a', dur: 0.36, w: 4, delay: 0.05 }); V.burst(x, y - 20, { color: '#ffe9a0', color2: '#ffffff', n: 8, speed: 200, kind: 'star', flash: false }); shake(2); } }); },
       // Brace: a glint on the shield face, the tower shield set in front for the whole guard: 3s, or what Hold Fast
@@ -758,7 +764,7 @@ const ABILITY_VFX = (() => {
         c.later(0.16, () => { V.flare(c.tx, c.ty, { n: 16, r: 18, color: '#ff5a1a' }); V.hit(c.tx, c.ty, '#ffb060', 1.2); V.decal(c.tx, c.ty, { style: 'crack', r: 50, dur: 2.5, a: 0.6, seed: Math.random() * 6 }); V.decal(c.tx, c.ty, { r: 36, embers: true, dur: 2 }); vfxShake(4); });
       },
       // Hemomancer: a spear of liquid blood, droplets trailing, a splash where it strikes
-      lance: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#ff2d4b', speed: 1000, onHit: (x, y) => { V.splash(x, y, { n: 12, speed: 1.2 }); V.hit(x, y, '#ff5a6a', 0.9); V.spawn({ x, y, z: 16, life: 0.3, size: 54, size1: 18, color: '#c0204a', kind: 'star', vr: 6 }); } }),
+      lance: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#ff2d4b', speed: TRV('bloodreaver', 'lance'), onHit: (x, y) => { V.splash(x, y, { n: 12, speed: 1.2 }); V.hit(x, y, '#ff5a6a', 0.9); V.spawn({ x, y, z: 16, life: 0.3, size: 54, size1: 18, color: '#c0204a', kind: 'star', vr: 6 }); } }),
     },
     runeguard: {
       // Rune Strike (the filler, so quick and cheap): three presses make a round. The first two are hooks of the rune gauntlet,
@@ -787,7 +793,7 @@ const ABILITY_VFX = (() => {
       // (the three Runes it spends fly off the guard at the target, the glyph blooms under it, and the detonation is a ring of
       // spikes with a pillar of light through it and a kick of the screen)
       glyph: c => { V.ink(c.tx, c.ty, { r: 70, dur: 0.5 }); V.sigil(c.tx, c.ty, { r: 70, style: 'runes', color: RUNE_DEEP, dur: 0.5, spin: 8 });
-        for (let i = 0; i < 3; i++) c.later(i * 0.05, () => V.missile(c.x, c.y - 24 - i * 4, c.tx, c.ty - 10, { style: 'orb', color: i === 1 ? RUNE_PALE : '#9aa4ff', speed: 850, size: 0.5, onHit: () => {} }));
+        for (let i = 0; i < 3; i++) c.later(i * 0.05, () => V.missile(c.x, c.y - 24 - i * 4, c.tx, c.ty - 10, { style: 'orb', color: i === 1 ? RUNE_PALE : '#9aa4ff', speed: TRV('runeguard', 'glyph'), size: 0.5, onHit: () => {} }));
         c.later(0.4, () => { V.flash(c.tx, c.ty - 20, 56, '#c8ceff', 0.2); V.crystals(c.tx, c.ty, { color: '#9aa4ff', n: 8, r: 50, h: 66 }); V.spikeburst(c.tx, c.ty, { r: 60, n: 14, color: RUNE_DEEP, core: '#eef1ff', ink: RUNE_INK, dur: 0.34 });
           V.pillar(c.tx, c.ty, { r: 22, h: 190, color: '#8e98ff', dur: 0.5 }); V.shock(c.tx, c.ty, { r: 110, color: RUNE_VIO, dur: 0.45, w: 6 });
           V.decal(c.tx, c.ty, { style: 'crack', r: 50, dur: 1.8, a: 0.55, seed: Math.random() * 6 }); shake(5); if (c.cam) c.cam.punch(0.03, 0.3); if (c.ent.st && typeof hitStop === 'function') hitStop(c.ent.st, 0.07, FX.now); }); },
@@ -994,7 +1000,7 @@ const ABILITY_VFX = (() => {
       // flame puffs round a white-hot heart, a modest starburst and two puffs of smoke; no scorch and no shake, so the
       // Pyroblast's hit is the one that feels big. A crit that lights Heating Up / Hot Streak flashes on your hands
       fireball: c => { const h = ahead(c, 16), pr = pyroProcs(c); V.glint(h.x, h.y, { color: '#ffb040', size: 24, z: 24 }); V.spawn({ x: h.x, y: h.y, z: 22, life: 0.22, size: 22, size1: 6, color: '#ff8a2a' });
-        V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ff8c2a', speed: 700, arc: 16, size: 1.4, onHit: (x, y) => { V.flash(x, y - 16, 56, '#ffb050', 0.18); pyroPillow(x, y, 30);
+        V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ff8c2a', speed: TRV('pyromancer', 'fireball'), arc: 16, size: 1.4, onHit: (x, y) => { V.flash(x, y - 16, 56, '#ffb050', 0.18); pyroPillow(x, y, 30);
           V.spikeburst(x, y, { r: 50, n: 12, color: '#ff8a2a', core: '#fff0b0', dur: 0.3 }); V.shock(x, y, { r: 66, color: '#ffa040', dur: 0.32, w: 4 });
           V.smoke(x, y, { n: 2, r: 14, color: '#5a4a48', size: 22, a: 0.4, speed: 35, life: 1 }); } });
         pyroProcBeat(c, pr); },
@@ -1005,9 +1011,9 @@ const ABILITY_VFX = (() => {
         const hit = (x, y) => { V.spikeburst(x, y, { r: 72, n: 16, color: '#ff6a1a', core: hs ? '#fff6d0' : '#fff0b0', dur: 0.42 }); pyroPillow(x, y, 40); V.flare(x, y, { n: 6, r: 22, size: 1.2, h: 1.2 }); V.shock(x, y, { r: 110, color: '#ff8a3a', dur: 0.5, w: 7 });
           V.flash(x, y - 18, 80, hs ? '#ffe08a' : '#ffb050', 0.22); V.debris(x, y, { n: 3, hot: true, color: '#4a3226' }); V.decal(x, y, { r: 40, embers: true, dur: 1.4 }); V.smoke(x, y, { n: 3, r: 26, color: '#5a4a48', size: 30, a: 0.42, speed: 50, life: 1.4 }); shake(hs ? 5 : 6); };
         if (hs) { V.glint(h.x, h.y, { color: '#fff2c0', size: 40, z: 26 }); V.shock(c.x, c.y, { r: 58, r0: 12, color: '#ffb040', dur: 0.3, w: 4 }); V.blaze(c.ent, { r: 34, dur: 0.45 });
-          V.missile(h.x, h.y, c.tx, c.ty, { style: 'fire', color: '#ff7a1a', speed: 950, arc: 12, size: 2.2, onHit: hit }); }
+          V.missile(h.x, h.y, c.tx, c.ty, { style: 'fire', color: '#ff7a1a', speed: TRV('pyromancer', 'pyro', 'instant'), arc: 12, size: 2.2, onHit: hit }); }
         else { V.glint(h.x, h.y, { color: '#ffd070', size: 30, z: 26 }); V.charge(c.x, c.y, { color: '#ff8a3a', r: 40, n: 8, dur: 0.25 });
-          V.missile(c.x, c.y, c.tx, c.ty, { style: 'meteor', color: '#ff5a1a', speed: 560, arc: 50, onHit: hit }); }
+          V.missile(c.x, c.y, c.tx, c.ty, { style: 'meteor', color: '#ff5a1a', speed: TRV('pyromancer', 'pyro', 'cast'), arc: 50, onHit: hit }); }
         if (pr && pr.now > (hs ? 0 : pr.prev)) { const e = c.ent; c.later(0.1, () => pyroHandProc(e, pr.now)); } },
       // (online-refs pass: WoW Fire Blast, instant and always a crit) a snap of flame off the fingertips, a white crit star
       // inside a fat starburst on the boss, a few sparks and grey smoke; the proc it lights flashes on your hands
@@ -1051,7 +1057,7 @@ const ABILITY_VFX = (() => {
       // Aegis: holy light falls on the ally and hardens into a golden dome
       barrier: c => { V.lightfall(c.tx, c.ty, { color: '#ffe9a8', r: 30, h: 220, dur: 0.9, feathers: 5 }); const w = c.tent || c.ent; c.later(0.25, () => V.dome(w, { color: '#ffd86a', r: 52, dur: 2.6 })); },
       // Inquisitor: a lance of holy fire that scorches a brand into the boss
-      condemn: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ffb04a', speed: 1100, size: 1.2, onHit: (x, y) => {
+      condemn: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ffb04a', speed: TRV('cleric', 'condemn'), size: 1.2, onHit: (x, y) => {
         V.flare(x, y, { n: 18, r: 16, color: '#ff9a3c' }); V.sigil(x, y, { r: 54, style: 'star4', color: '#ff9a3c', dur: 1.6, spin: 1.5 }); V.shock(x, y, { r: 90, color: '#ffc070', dur: 0.4, w: 5 });
         V.burst(x, y, { color: '#ffe0a0', color2: '#ffffff', n: 14, speed: 260, flashR: 60 }); V.decal(x, y, { r: 40, embers: true, dur: 3 }); vfxShake(4); } }),
       // holy light falls on the ally in shafts, a few feathers drift down, a golden ring lingers
@@ -1947,9 +1953,9 @@ const CAST_VFX = (() => {
     aimed: c => { const a = Math.atan2(c.ty - c.y, c.tx - c.x), hx = c.x + Math.cos(a) * 18, hy = c.y + Math.sin(a) * 18, ex = c.tx + Math.cos(a) * 60, ey = c.ty + Math.sin(a) * 60;
       V.spawn({ x: hx, y: hy, z: 20, life: 0.25, size: 34, size1: 8, color: '#fff2c0', kind: 'star', vr: 6 });
       OLD_PAINT.thrust(hx, hy, ex, ey, { w: 11, color: '#f2d27a', core: '#fffbe8', ink: '#2a1c04', head: true, dur: 0.32, z: 18 });
-      V.missile(c.x, c.y, c.tx, c.ty, { style: 'helix', color: '#f2d27a', speed: 1700, size: 1.3, onHit: (x, y) => { V.hit(x, y, '#fff2c0', 1.2); V.spikeburst(x, y, { r: 44, n: 10, color: '#ffd65a', core: '#ffffff', ink: '#2a1c04', dur: 0.28, z: 20 }); V.shock(x, y, { r: 70, color: '#ffe9a0', dur: 0.35, w: 4 }); V.smoke(x, y, { n: 3, color: '#d8ccb0', size: 22, a: 0.5, speed: 50 }); vfxShake(3); } }); },
+      V.missile(c.x, c.y, c.tx, c.ty, { style: 'helix', color: '#f2d27a', speed: TRV('ranger', 'aimed'), size: 1.3, onHit: (x, y) => { V.hit(x, y, '#fff2c0', 1.2); V.spikeburst(x, y, { r: 44, n: 10, color: '#ffd65a', core: '#ffffff', ink: '#2a1c04', dur: 0.28, z: 20 }); V.shock(x, y, { r: 70, color: '#ffe9a0', dur: 0.35, w: 4 }); V.smoke(x, y, { n: 3, color: '#d8ccb0', size: 22, a: 0.5, speed: 50 }); vfxShake(3); } }); },
     // Venomstrike: a dripping green arrow that splashes acid, which bubbles for a moment
-    caustic: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'arrow', color: '#9aff4a', speed: 1400, size: 1.2, onHit: (x, y) => {
+    caustic: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'arrow', color: '#9aff4a', speed: TRV('ranger', 'caustic'), size: 1.2, onHit: (x, y) => {
       V.splash(x, y, { color: '#7adf3a', n: 12, speed: 1.2 }); V.puddle(x, y, { r: 40, color: '#9aff4a', dark: '#1e3a0a', dur: 3 }); V.hit(x, y, '#c8ff8a', 1); V.shock(x, y, { r: 60, color: '#9aff4a', dur: 0.35, w: 4 });
       for (let i = 0; i < 10; i++) V.spawn({ x: x + (Math.random() - 0.5) * 50, y: y + (Math.random() - 0.5) * 24, z: 4, vz: 20 + Math.random() * 40, life: 0.8 + Math.random() * 0.6, size: 7, size1: 12, color: '#9adf3a', kind: 'soft' }); } }),
   });
@@ -2095,7 +2101,7 @@ const CAST_VFX = (() => {
 
   Object.assign(ABILITY_VFX.ranger, {
     // Explosive Shot: an arrow that sticks in the boss with a charge blinking faster and faster (the blast is KIT_VFX.explode)
-    explosive: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'arrow', color: '#ff8a3a', speed: 1400, onHit: (x, y) => {
+    explosive: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'arrow', color: '#ff8a3a', speed: TRV('ranger', 'explosive'), onHit: (x, y) => {
       V.hit(x, y, '#ffb060', 0.6);
       V.fx({ dur: 2.4, layer: 'air', draw: (c2, p, t, e) => { const blink = Math.sin(t * (6 + p * 20)) > 0 ? 1 : 0.35; V.glowAt(c2, x, y - 24, 14 + p * 10, '#ff5a1a', blink * e.a); V.glowAt(c2, x, y - 24, 5, '#ffffff', blink * e.a); } });
     } }),
@@ -2934,10 +2940,10 @@ function windLaneBoost(x, y, vx, vy, now) {
   ABILITY_VFX.thermist = {
     // a spark in the right hand, a small fire bolt, a little burst
     // (online-refs pass: FF14 Fire / WoW Fire Blast as the mover) a quick flame crescent flicks round the hand first
-    cinder: c => { const h = ahead(c, 16); THERM_PAINT.handArcs(c.ent, { r: 22, dur: 0.16 }); V.glint(h.x, h.y, { color: '#ffb050', size: 16 }); V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ff8a3a', speed: 900, size: 0.8, onHit: (x, y) => { V.spikeburst(x, y, { r: 26, n: 9, ...FIRE, dur: 0.24 }); V.hit(x, y, '#ffc080', 0.35); } }); },
+    cinder: c => { const h = ahead(c, 16); THERM_PAINT.handArcs(c.ent, { r: 22, dur: 0.16 }); V.glint(h.x, h.y, { color: '#ffb050', size: 16 }); V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ff8a3a', speed: TRV('thermist', 'cinder'), size: 0.8, onHit: (x, y) => { V.spikeburst(x, y, { r: 26, n: 9, ...FIRE, dur: 0.24 }); V.hit(x, y, '#ffc080', 0.35); } }); },
     // frost on the left hand, a shard of ice, a few chips where it breaks
     // (online-refs pass: WoW Ice Lance as the mover) a quick frost crescent flicks round the hand first
-    rime: c => { const h = ahead(c, 16); THERM_PAINT.handArcs(c.ent, { r: 22, dur: 0.16, color: '#6fb2f0', color2: '#cfeeff' }); V.glint(h.x, h.y, { color: '#cfeeff', size: 16 }); V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#8fd0ff', speed: 1000, size: 0.75, onHit: (x, y) => { V.spikeburst(x, y, { r: 24, n: 8, ...ICE, dur: 0.24 }); V.crystals(x, y, { color: '#bfe6ff', n: 3, r: 14, h: 20, dur: 0.5 }); } }); },
+    rime: c => { const h = ahead(c, 16); THERM_PAINT.handArcs(c.ent, { r: 22, dur: 0.16, color: '#6fb2f0', color2: '#cfeeff' }); V.glint(h.x, h.y, { color: '#cfeeff', size: 16 }); V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#8fd0ff', speed: TRV('thermist', 'rime'), size: 0.75, onHit: (x, y) => { V.spikeburst(x, y, { r: 24, n: 8, ...ICE, dur: 0.24 }); V.crystals(x, y, { color: '#bfe6ff', n: 3, r: 14, h: 20, dur: 0.5 }); } }); },
     // (painted pass, thermist.png) Flare: flame crescents whirl round the hand and a fire glyph opens on the boss; a bold
     // orange starburst with flame tongues leaping out of it; then cracks glowing in the floor that cool, and a little smoke
     // (online-refs pass: FF14 Fire IV) at the edge (instant, a sure crit) a white-hot crit star flashes over the burst
@@ -2964,8 +2970,8 @@ function windLaneBoost(x, y, vx, vy, now) {
         ctx.restore(); } });
       c.later(0.35, () => { V.shock(c.ent.x, c.ent.y, { r: 110, color: '#ff9a5a', dur: 0.5, w: 5 }); V.shock(c.ent.x, c.ent.y, { r: 90, color: '#7ac0f0', dur: 0.5, w: 5, delay: 0.06 }); V.aura(c.ent, { color: '#e8d8ff', dur: 10, r: 28, rate: 0.15 }); }); },
     // Thermocline (talent): a bolt that changes colour in flight, from the side it left to the side it swings toward
-    thermocline: c => { V.missile(c.x, c.y, c.tx, c.ty, { style: 'orb', color: '#ffb08a', speed: 1100, size: 0.9, onHit: (x, y) => { V.spikeburst(x, y, { r: 30, n: 10, ...ICE, dur: 0.26 }); V.flare(x, y, { n: 4, r: 8, color: '#ff8a3a', size: 0.6 }); } });
-      V.missile(c.x, c.y, c.tx, c.ty, { style: 'orb', color: '#7ac0f0', speed: 1050, size: 0.6, arc: 10 }); },
+    thermocline: c => { V.missile(c.x, c.y, c.tx, c.ty, { style: 'orb', color: '#ffb08a', speed: TRV('thermist', 'thermocline'), size: 0.9, onHit: (x, y) => { V.spikeburst(x, y, { r: 30, n: 10, ...ICE, dur: 0.26 }); V.flare(x, y, { n: 4, r: 8, color: '#ff8a3a', size: 0.6 }); } });
+      V.missile(c.x, c.y, c.tx, c.ty, { style: 'orb', color: '#7ac0f0', speed: TRV('thermist', 'thermocline'), size: 0.6, arc: 10 }); },
     // Absolute Zero (talent): a frost glyph opens under the boss, a pillar of cold drops, a ring of ice and a hanging mist
     zero: c => { V.ink(c.tx, c.ty, { r: 70, dur: 0.6 }); V.sigil(c.tx, c.ty, { r: 70, style: 'hex', color: '#cfeeff', dur: 0.6, spin: 6 });
       c.later(0.25, () => { V.pillar(c.tx, c.ty, { r: 40, h: 240, color: '#bfe6ff', dur: 0.9 }); V.crystals(c.tx, c.ty, { color: '#d8f2ff', n: 10, r: 60, h: 64, dur: 1.4 }); V.spikeburst(c.tx, c.ty, { r: 70, n: 16, ...ICE, dur: 0.4 }); V.shock(c.tx, c.ty, { r: 140, color: '#cfeeff', dur: 0.6, w: 7 }); shake(4); });
@@ -3045,7 +3051,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     // burst and the shake scale with the Drift (yours as last read; another hero's a middling 50), and two slits cross on the body
     cross: c => { const DP = DRIFT_PAINT, col = windCol(c.ent), aim = Math.atan2(c.ty - c.y, c.tx - c.x), sp = dbDrift(c, true), q = 0.55 + 0.45 * sp / 100;
       for (const s of [-1, 1]) DP.windStrip(Array.from({ length: 17 }, (_, i) => { const a = c.ang + i / 16 * 5.4; return [c.x + Math.cos(a) * 44 * Math.cos(s * 0.7) - Math.sin(a) * 18 * Math.sin(s * 0.7), c.y + Math.cos(a) * 44 * Math.sin(s * 0.7) * 0.62 + Math.sin(a) * 18 * Math.cos(s * 0.7)]; }), { w: 5, color: s > 0 ? col : '#e8fff8', dur: 0.34, z: 20 });
-      c.later(0.08, () => V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: col, speed: 1300, size: 1.6, onHit: (x, y) => {
+      c.later(0.08, () => V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: col, speed: TRV('driftblade', 'cross'), size: 1.6, onHit: (x, y) => {
         for (const s of [-1, 1]) { DP.streaks(x, y, aim + s * 0.7, { n: sp >= 70 ? 3 : 2, back: 130 * q, on: 130 * q, w: 9.5 * q, gap: 9, color: col, dur: 0.44, stay: 1.4, leaves: sp >= 50 ? 2 : 1 }); dbSlit(x, y, aim + s * 0.7, 46 * q, col, { w: 5 * q, dur: 0.3 }); }
         V.spikeburst(x, y, { r: 64 * q, n: Math.round(14 * q), color: col, core: '#ffffff', ink: '#0a2a24', dur: 0.32 }); shake(1 + 3 * q * q);
         FX.later(0.3, () => V.smoke(x, y, { n: 3, r: 30, color: '#c8d0c0', size: 22, a: 0.3, speed: 40, life: 1.3 })); } })); },

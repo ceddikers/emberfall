@@ -19,6 +19,7 @@ class CombatActor {
     // the kit with this hero's spec, and any moves its talents grant (TALENT_ABILITIES in kits.js)
     this.kit = new Kit(kitFor(cls.id, this.spec, world.talents ? world.talents(this) : null), {
       now: () => world.now(),
+      clsId: cls.id,   // (engine.js TRAVEL: which class's projectile speeds)
       rng,
       moving: () => world.moving(actor),
       canAuto: () => (world.canAuto ? world.canAuto(actor) : true),
