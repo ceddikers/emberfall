@@ -34,7 +34,7 @@
   let townLayer = null, roomLayer = null, layerScale = 1, minimapBase = null;
   let scene = 'town', zoom = 1;
   // an Ultimate's screen moments (screenFlash, zoomPunch, hitStop... next to hurtVignette) and a fall noticed once
-  const screenFx = { flash: null, dim: null, edge: null, cut: null };
+  const screenFx = { flash: null, dim: null };
   let punch = null, vfxClock = 0, hitStopUntil = -9, wasDown = false;
   const cam = { x: 0, y: 0 };
 
@@ -1006,7 +1006,6 @@
   function kitFx(name, data) {
     const x = player.x, y = player.y;
     if (name === 'ult-ready') ultReadyCue();
-    if (name === 'ult-spent' && !(data && data.lost)) ultCutIn();
     const label = { perfect: ['Perfect!', '#ffe27a'], reflect: ['Reflect!', '#e0d4ff'], overheat: ['Overheat', '#ff6a3a'], lag: ['Time Lag', '#9ab8c0'], frostbite: ['Frostbite', '#9ad8ff'], riposte: ['Riposte!', '#e8fff8'], read: ['Read!', '#ffd9a0'] }[name];
     if (label) FX.text(x, y - 62, label[0], label[1], 17, 1.1, { kind: 'call' });
     playKitFx(player, name, true, data);
@@ -3577,7 +3576,7 @@
     for (const h of lineup) drawDeckPad(ctx, h.home ? h.home.x : h.x, h.home ? h.home.y : h.y, lineup.filter(o => o.cls.role === h.cls.role).length > 3);
     const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv), ...Kennel.entities(now, scEnv), ...TownLife.entities(HERO_SCALE), ...BarrowGate.entities(now), ...plaques].filter(e => !TownLife.hides(e) && (e.x == null || inTrophyRoom(e) === inRoom()));   // (what is in the Trophy Hall's room is only drawn from inside it, and the town only from outside)
     ents.sort((a, b) => a.y - b.y);
-    for (const e of ents) { if (e.kind === 'stagecraft') e.draw(ctx); else { if (e === player) drawCutIn(); drawEntity(e); } }
+    for (const e of ents) { if (e.kind === 'stagecraft') e.draw(ctx); else drawEntity(e); }
     Stagecraft.drawOver(ctx, now, scEnv);
     Lamps.drawOver(ctx, now, scEnv);
 
@@ -3612,7 +3611,6 @@
       label(ctx, hov.label, mouseWorld().x, mouseWorld().y - 18, '#ffe9a8', 13);
     }
     drawScreenFx('flash');
-    drawScreenFx('edge');
   }
 
   // [boss presentation] the boss's own layer (the Long Night's dark, a Time Stop's frost, a trial's memory, his flinch,
@@ -3724,7 +3722,7 @@
       else if (e.kind === 'husk') { ctx.save(); ctx.globalAlpha = 0.8; drawBoss(ctx, bossDef, e.h.x, e.h.y, e.h.f, e.h.st, RAID_BOSS_SCALE); ctx.restore(); }
       else if (e.kind === 'post') BossTells.rodPost(ctx, e.p.x, e.p.y, now, Math.min(1, (now - e.p.start) / 0.3, Math.max(0, (e.p.end - now) / 0.5)));
       else if (e.kind === 'stagecraft') e.draw(ctx);
-      else { if (e === player) drawCutIn(); drawEntity(e); }   // (your Ultimate's slash goes behind you)
+      else drawEntity(e);
     }
     // the Hollow King: lanterns held up by whoever carries them, and the Doom sigil over each doomed head
     for (const l of raid.lanterns) { const c = l.carrier != null ? entById(l.carrier) : null; if (c) ArenaView.lantern(ctx, c.x + 14, c.y - (c.lift || 0), now, true, l.last); }
@@ -3769,7 +3767,6 @@
     Pings.draw(ctx, now);
     hurtVignette();
     drawScreenFx('flash');
-    drawScreenFx('edge');
   }
   // ---- an Ultimate's screen moments (your own only: FX.camFor in fx.js). All cosmetic: `now` never slows.
   //  screenFlash(color, alpha, dur): a bright wash over everything, fading fast
@@ -3795,52 +3792,11 @@
     if (!f) return;
     const age = now - f.t0, q = age / f.dur;
     if (q >= 1) { screenFx[kind] = null; return; }
-    if (kind === 'edge') { drawEdgeSweep(f, q); return; }
     const a = f.alpha * (kind === 'dim' ? Math.min(1, age / 0.1) * Math.min(1, (1 - q) / 0.45) : (1 - q) * (1 - q));
     ctx.save();
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.globalCompositeOperation = kind === 'flash' ? 'lighter' : 'source-over';
     ctx.globalAlpha = Math.min(1, a); ctx.fillStyle = f.color; ctx.fillRect(0, 0, W, H);
-    ctx.restore();
-  }
-  // ---- your Ultimate fired (never anyone else's: theirs flash their party frame, RaidUI.ultFlash). No words, no
-  // portrait, nothing stops: a streak of your class's colour sweeps behind you while the world dims a little, and the
-  // screen's edges glow in that colour as thin bars close in at the top and bottom and open again.
-  function ultCutIn() {
-    const color = (player.cls && player.cls.accent) || '#ffd65a';
-    screenFx.cut = { color, t0: now, dur: 0.55 };
-    screenFx.edge = { color, t0: now, dur: 0.7 };
-    screenDim(0.4, 1);
-  }
-  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
-  // (drawn in the world just before your hero, so the streak is behind you)
-  function drawCutIn() {
-    const f = screenFx.cut;
-    if (!f) return;
-    const u = (now - f.t0) / f.dur;
-    if (u >= 1 || u < 0) { if (u >= 1) screenFx.cut = null; return; }
-    const len = 760 * easeOut(u), th = 40 * Math.sin(Math.PI * u), a = Math.sin(Math.PI * u);
-    ctx.save();
-    ctx.translate(player.x, player.y - (player.lift || 0) - 18); ctx.rotate(-0.42);
-    const g = ctx.createLinearGradient(-380, 0, 380, 0);
-    g.addColorStop(0, rgba(f.color, 0)); g.addColorStop(0.5, rgba(f.color, 0.8)); g.addColorStop(1, rgba(f.color, 0));
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.moveTo(-len / 2, 0); ctx.quadraticCurveTo(0, -th, len / 2, 0); ctx.quadraticCurveTo(0, th * 0.35, -len / 2, 0); ctx.fill();
-    ctx.fillStyle = `rgba(255,250,235,${0.75 * a})`; ctx.fillRect(-len / 2, -1, len, 2);
-    ctx.restore();
-  }
-  let edgeGrad = null, edgeFor = '';
-  function drawEdgeSweep(f, q) {
-    const a = Math.sin(Math.PI * q), bar = Math.round(Math.min(16, H * 0.022) * a);
-    ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    if (edgeFor !== W + 'x' + H + f.color) {
-      edgeFor = W + 'x' + H + f.color;
-      edgeGrad = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.hypot(W, H) * 0.55);
-      edgeGrad.addColorStop(0, rgba(f.color, 0)); edgeGrad.addColorStop(1, rgba(f.color, 1));
-    }
-    ctx.globalAlpha = 0.38 * a; ctx.fillStyle = edgeGrad; ctx.fillRect(0, 0, W, H);
-    ctx.globalAlpha = 1; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bar); ctx.fillRect(0, H - bar, W, bar);
     ctx.restore();
   }
   // your Ultimate is full: a soft ring and a rising shimmer round you, once (the T slot glows: hud.js)

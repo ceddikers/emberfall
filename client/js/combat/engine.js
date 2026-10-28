@@ -202,7 +202,7 @@ class Kit {
     this.ultClose();
     const full = (this.g.ult || 0) >= 100;
     this.g.ult = Math.floor((this.g.ult || 0) * ((this.ult.charge && this.ult.charge.keep) ?? 0.5));
-    if (full) this.fx('ult-spent', { lost: true });   // (lost, not used: no cut-in, no frame flash)
+    if (full) this.fx('ult-spent', { lost: true });   // (lost, not used: no frame flash for teammates)
   }
   // put a different set of moves on the bar (the same slots): presses waiting in the queue follow their slot
   swapBar(list) {
