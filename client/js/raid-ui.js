@@ -714,6 +714,7 @@ const RaidUI = (() => {
   const BAR_HP = 10000;
   const BAR_COLS = ['#c2412c', '#c7772a', '#b39a2e', '#5f9a3c', '#2f8f88', '#3f6fb3', '#7d52b0', '#b04a86'];
   const FORM_COLS = ['#37a7a4', '#3f86b8', '#4aa67e', '#6e86c4', '#2f9890', '#5a9ab0'];   // (a second form: sea tones)
+  const GORGED_COLS = ['#c9852a', '#a8521e', '#d8a63a', '#8a5a1e', '#b8742a'];   // (Grubnak gorged: gravy, crust and fat)
   let ghostDmg = 0, ghostHold = 0, lastDmg = 0;
   function layeredHp(raid, now, dt, fm) {
     const b = raid.boss, mx = b.mx || 0, hp = Math.max(0, Math.min(mx, b.hp || 0)), dmg = mx - hp;
@@ -724,9 +725,9 @@ const RaidUI = (() => {
     if (dmg < ghostDmg || !mx || dmg - ghostDmg > mx * 0.1) ghostDmg = dmg;   // (healed, a new pull, or joined mid-fight)
     else if (now >= ghostHold) ghostDmg = Math.min(dmg, ghostDmg + dt * (BAR_HP * 0.6 + (dmg - ghostDmg) * 3));
     const ghost = Math.floor(ghostDmg / BAR_HP) < idx ? 1 : Math.min(1, (hp + dmg - ghostDmg - (layers - idx - 1) * BAR_HP) / BAR_HP);
-    const cols = fm ? FORM_COLS : BAR_COLS, col = n => cols[(n - 1) % cols.length];
-    const fill = q('.bb-hp .fill'), under = q('.bb-hp .under');
-    if (fill._c !== cur) { fill._c = cur; fill.style.setProperty('--lc', col(Math.max(1, cur))); under.style.setProperty('--lc', cur > 1 ? col(cur - 1) : 'transparent'); }
+    const cols = fm ? (raid.form === 'gorged' ? GORGED_COLS : FORM_COLS) : BAR_COLS, col = n => cols[(n - 1) % cols.length];
+    const fill = q('.bb-hp .fill'), under = q('.bb-hp .under'), ckey = cur + '|' + (fm ? raid.form : '');   // (the colour is kept per bar AND per form: the form arrives mid-bar)
+    if (fill._c !== ckey) { fill._c = ckey; fill.style.setProperty('--lc', col(Math.max(1, cur))); under.style.setProperty('--lc', cur > 1 ? col(cur - 1) : 'transparent'); }
     setX(fill, within);
     setX(q('.bb-hp .trail'), hp > 0 ? ghost : 0);
     q('.bb-hp .vuln').classList.toggle('on', !!b.v);

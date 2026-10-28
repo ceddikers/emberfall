@@ -583,6 +583,63 @@ const BossTells = (() => {
         ctx.restore();
       },
     },
+    // Spit Up (Hard, Gorged): a half-chewed cask comes back up out of his mouth and sails over to where the circle sits: a cask's shadow
+    // and dashed rim, but the cask is slick and green-brown, a string of drool running back to his mouth
+    spit: {
+      color: '#e0d890',
+      ground(ctx, tg, s, p, k) {
+        shadow(ctx, s.x, s.y, s.r * (0.4 + 0.6 * p), (0.25 + 0.35 * p) * k);
+        ctx.save(); ctx.setLineDash([12, 9]); circle(ctx, s.x, s.y, s.r, null, rgba('#e8e8a0', (0.3 + 0.4 * p) * k), 2.5); ctx.restore();
+      },
+      air(ctx, tg, s, p, k, t, env) {
+        if (p < 0.5) return;   // still in his cheek
+        const q = (p - 0.5) / 0.5, b = env.boss, f = b.f || 0, mx = b.x + Math.cos(f) * 72, my = b.y + Math.sin(f) * 72;
+        const to = caskRest(s, env);
+        const x = mx + (to.x - mx) * q, y = my + (to.y - my) * q - Math.sin(q * Math.PI) * 230 - 44 * (1 - q);
+        ctx.save(); ctx.globalAlpha = k;
+        line(ctx, mx, my - 44, x, y, rgba('#eef4c8', 0.4 * (1 - q)), 2.2);
+        ctx.translate(x, y); ctx.rotate(q * 8); ctx.scale(1.3, 1.3);
+        rrect(ctx, -22, -16, 44, 32, 9, '#6e5a2c', OUT, 2.5);
+        line(ctx, -12, -16, -12, 16, '#4a4a42', 3); line(ctx, 12, -16, 12, 16, '#4a4a42', 3);
+        ellipse(ctx, -5, -6, 13, 5, -0.3, 'rgba(210,255,150,0.5)');
+        for (let i = 0; i < 3; i++) circle(ctx, -14 + i * 14, 17 + 3 * Math.sin(t * 9 + i), 2.4, 'rgba(200,235,140,0.8)');
+        ctx.restore();
+      },
+    },
+    // Sour Burp (Hard, Gorged): a sick-green fog down the cone, bubbles rising along it
+    burp: {
+      color: '#d8e060',
+      ground(ctx, tg, s, p, k, t) {
+        const ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        const g = ctx.createLinearGradient(s.x, s.y, s.x + ca * s.r, s.y + sa * s.r);
+        g.addColorStop(0, rgba('#6a8a14', (0.36 + 0.3 * p) * k)); g.addColorStop(0.5, rgba('#8aa622', (0.16 + 0.22 * p) * k)); g.addColorStop(1, rgba('#9ab42a', 0.03 * k));
+        ctx.fillStyle = g; ctx.fillRect(-AR() - 80, -AR() - 80, AR() * 2 + 160, AR() * 2 + 160);
+        for (let i = 0; i < 16; i++) {
+          const q = (t * (0.35 + 0.5 * p) + hash(i, tg.id)) % 1, d = 90 + q * (Math.min(s.r, AR() * 1.6) - 90), a = s.angle + (hash(i + 3, tg.id) - 0.5) * s.arc * 0.85;
+          circle(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 4 + hash(i, 7) * 9 * (0.5 + q), null, rgba('#f0f8a8', 0.55 * (1 - q) * k), 2);
+        }
+        ctx.restore();
+      },
+    },
+    // Second Helping (Hard, Gorged): the circle at his feet is the mouth of a vortex: dusty streaks run inward along spiral arms
+    helping: {
+      color: '#ffd8a0',
+      ground(ctx, tg, s, p, k, t) {
+        const R = s.r;
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        const g = ctx.createRadialGradient(s.x, s.y, 10, s.x, s.y, R);
+        g.addColorStop(0, rgba('#1a0604', (0.5 + 0.3 * p) * k)); g.addColorStop(0.6, rgba('#2e0e08', (0.18 + 0.18 * p) * k)); g.addColorStop(1, rgba('#2e0e08', 0.04 * k));
+        ctx.fillStyle = g; ctx.fillRect(s.x - R, s.y - R, R * 2, R * 2);
+        ctx.lineCap = 'round'; ctx.setLineDash([16, 20]); ctx.lineDashOffset = t * (50 + 90 * p);   // (the arms are drawn from the middle out, so a growing offset runs the dashes in)
+        for (let i = 0; i < 5; i++) {
+          ctx.beginPath();
+          for (let j = 0; j <= 24; j++) { const q = j / 24, a = i * TAU / 5 + q * 2.4, r = 40 + q * (R - 40); j ? ctx.lineTo(s.x + Math.cos(a) * r, s.y + Math.sin(a) * r) : ctx.moveTo(s.x + Math.cos(a) * r, s.y + Math.sin(a) * r); }
+          ctx.strokeStyle = rgba('#ffe8c0', (0.3 + 0.35 * p) * k); ctx.lineWidth = 3; ctx.stroke();
+        }
+        ctx.restore();
+      },
+    },
     // Gut Blast: a gust of foul breath rolls out of him across the whole kitchen. The shadow behind every cask is cut out
     gut: {
       color: '#d8e89a', outline: false,
@@ -864,6 +921,13 @@ const BossTells = (() => {
         glow(ctx, s.x, bot, 10, '#ffffff', 0.6 * k);
       },
     },
+    // The Moth Queen's moves (Hard; skitterra-moth.js): dust drawn over the engine's own red / blue, only inside the danger area, never over safe floor
+    scalewave: { color: '#f0e0ff', ground(ctx, tg, s, p, k, t) { if (typeof SK_MOTH !== 'undefined') SK_MOTH.waveTell(ctx, tg, s, p, k, t); } },
+    scalewave2: { color: '#f0e0ff', ground(ctx, tg, s, p, k, t) { if (typeof SK_MOTH !== 'undefined') SK_MOTH.waveTell(ctx, tg, s, p, k, t); } },
+    flutter: { color: '#efe0ff', ground(ctx, tg, s, p, k, t) { if (typeof SK_MOTH !== 'undefined') SK_MOTH.laneTell(ctx, tg, s, p, k, t); } },
+    moonlight: { color: '#dfe8ff',
+      ground(ctx, tg, s, p, k, t) { if (typeof SK_MOTH !== 'undefined') SK_MOTH.moonTell(ctx, tg, s, p, k, t); },
+      air(ctx, tg, s, p, k, t) { if (typeof SK_MOTH !== 'undefined') SK_MOTH.moonAir(ctx, tg, s, p, k, t); } },
     // Strand Reel: a strand shot to a pillar; it goes taut and the floor along it is churned with webbing
     strand: {
       color: '#f4f0ff',

@@ -8,6 +8,20 @@ const BOSS_ART = {
     const props = st.props || {};
     const s = swing(actP(st, 'attack'));
     const w = st.moving ? Math.sin(st.t * 7) * 6 : 0;
+    // ---- the Gorged form (Hard, Dessert): props.gorged is raid.form === 'gorged' (main.js), props.gAge the seconds since the swell, st.gulp when
+    // a thing last went down his throat (grubnak-fx.js). The same cook, a third as big again: a bloated belly rising and falling, the apron
+    // stretched over it, food down his front, crumbs on the tusks, heavy breathing; the cast poses gInhale / gSpit / gBurp work on the mouth.
+    const G = !!props.gorged, gAge = G ? (props.gAge ?? 9) : 0, swellK = G ? clamp(gAge / 1.5, 0, 1) : 0;
+    const breath = G ? Math.sin(st.t * 2.4) : 0;
+    const gulp = st.gulp != null ? Math.max(0, 1 - (st.t - st.gulp) / 0.28) : 0;
+    const bl = G ? 1 + 0.028 * breath + 0.07 * gulp : 1;   // the belly rising and falling
+    if (G) {
+      const gs = 1 + 0.45 * (easeOut(swellK) + Math.sin(swellK * Math.PI) * 0.12);   // swells past his size and settles
+      if (swellK < 1) ctx.translate(Math.sin(st.t * 64) * 1.8 * (1 - swellK), Math.cos(st.t * 53) * 1.2 * (1 - swellK));
+      ctx.scale(gs, gs);
+    }
+    // how far his mouth is open: the inhale and the burp wide, the spit nearly shut (the cheeks are full), the swell as it lands
+    const mo = props.gInhale ? 0.85 + Math.sin(st.t * 9) * 0.1 : props.gBurp ? 0.9 : props.gSpit ? 0.15 : G ? (gAge < 0.45 ? 1 - gAge / 0.45 * 0.8 : 0.16 + 0.1 * Math.max(0, breath)) : 0;
     // Belly Flop (Hard): he crouches and swells, bouncing on his heels, before he drops
     if (props.flop) { const q = 1.08 + Math.sin(st.t * 14) * 0.04; ctx.scale(q, q); }
     // ...and then he's down: sprawled flat on his belly, arms and legs flung out, his hat knocked off, seeing stars
@@ -191,10 +205,27 @@ const BOSS_ART = {
       circle(ctx, 16, -35, 8, skin, OUT, 2.5);
     }
     // belly + apron
+    if (G) {
+      // gorged: a huge taut belly (it heaves as he breathes), a hem of skin all round the apron, the apron strained thin over it with
+      // creases pulled out from the strings, and the dinner down the front of it
+      const bw = 41 * bl, bh = 45 * bl, ab = 31 * bl;
+      ellipse(ctx, -3, 0, bw, bh, 0, skin, OUT, 3.2);
+      ellipse(ctx, -15, -15, 15, 17, 0, shade(skin, 0.16));
+      ellipse(ctx, 6, 20 * bl, 18, 11, 0, shade(skin, -0.1));   // the underhang, shaded
+      for (const sy of [-1, 1]) for (let i = 0; i < 3; i++) line(ctx, -6 + i * 6, sy * (bh - 9 - i * 2), -2 + i * 6, sy * (bh - 3 - i * 2), shade(skin, -0.2), 1.6);   // stretch lines
+      ellipse(ctx, 9, 0, 22, ab, 0, apron, OUT, 2);
+      for (const [cy, k] of [[-0.5, 1], [-0.25, 0.8], [0.25, 0.8], [0.5, 1]]) line(ctx, 2, ab * cy, 20, ab * cy * 1.12, 'rgba(120,110,90,0.35)', 1.2 * k);   // the creases
+      for (const sy of [-1, 1]) { line(ctx, 0, sy * ab * 0.8, -12, sy * (bh - 6), '#d8d2c0', 2.4); ellipse(ctx, -14, sy * (bh - 4), 5, 3, 0.5 * sy, '#f1ede2', OUT, 1.4); }   // the strings, taut
+      for (const [sx, sy, r, c] of [[16, -14, 4.2, '#a02a1a'], [5, 12, 3.4, '#d8a020'], [18, 11, 2.8, '#5a3a1a'], [10, -3, 2.4, '#7a3a6a'], [-2, -20, 3, '#c85a24'], [14, 22, 2.6, '#a02a1a']]) circle(ctx, sx, sy, r, c);   // sauce, gravy, mustard, beetroot
+      ellipse(ctx, 14, 3, 6, 2.2, 0.4, 'rgba(110,70,20,0.55)');
+      circle(ctx, 22, -5, 2.8, '#b33a2a'); circle(ctx, 22, 7, 2.4, '#b33a2a');   // the buttons of the apron, straining
+      if (props.gInhale) for (let i = 0; i < 5; i++) { const q = (st.t * 2.4 + i / 5) % 1; circle(ctx, 46 + (1 - q) * 28, (i - 2) * 9 * (1 - q * 0.6), 1.5 + 1.8 * (1 - q), `rgba(255,246,220,${0.7 * q})`); }   // the air going in
+    } else {
     ellipse(ctx, -4, 0, 30, 34, 0, skin, OUT, 3);
     ellipse(ctx, -10, -10, 12, 14, 0, shade(skin, 0.15));
     ellipse(ctx, 7, 0, 18, 24, 0, apron, OUT, 2);
     circle(ctx, 10, -8, 2.5, '#b33a2a'); circle(ctx, 4, 9, 1.8, '#b33a2a'); circle(ctx, 13, 6, 1.4, '#8a5a2a');
+    }
     // right arm with the giant cleaver
     // (Cleaver Toss, Hard: the cleaver drawn back over his shoulder, glinting)
     // ([boss presentation] Tenderize: the cleaver hauled up behind his shoulder, its edge brightening as the blow nears)
@@ -205,12 +236,32 @@ const BOSS_ART = {
     circle(ctx, 20, 0, 8.5, skin, OUT, 2.5);
     ctx.restore();
     // head, tusks, chef hat ([boss presentation] Butcher's Charge: head down, tusks first, the hat pushed forward)
-    const hd = props.headdown ? 7 + Math.sin(st.t * 16) * 1.2 : 0;
+    const hd = props.headdown ? 7 + Math.sin(st.t * 16) * 1.2 : props.gInhale ? -4 : props.gSpit ? 4 : 0;
     ctx.save(); ctx.translate(hd, 0);
+    if (G) { ctx.translate(23, 0); ctx.scale(1.15, 1.15); ctx.translate(-23, 0); }   // (the face has to read on a body this size)
     circle(ctx, 23, 0, 13, skin, OUT, 2.5);
+    if (G) { circle(ctx, 24, 0, 14.5, skin, OUT, 2.5); for (const sy of [-1, 1]) ellipse(ctx, 21, 9.5 * sy, 6, 4, 0.3 * sy, shade(skin, 0.1)); }   // a rounder, fatter face with jowls
     for (const sy of [-1, 1]) poly(ctx, [32, 5 * sy, 41 + hd * 0.6, 8 * sy, 34, 1.5 * sy], '#f3ecd8', OUT, 1.5);
     circle(ctx, 31, -4.5, 1.8, props.headdown ? '#c8301a' : OUT); circle(ctx, 31, 4.5, 1.8, props.headdown ? '#c8301a' : OUT);
-    if (hd) { ctx.translate(hd * 0.5, 0); ctx.scale(0.86, 0.86); }
+    if (G) {
+      // crumbs and gravy on the tusks, a string of drool
+      for (const [cx, cy, c] of [[37, -7, '#e8c070'], [35, 7, '#a02a1a'], [29, 10, '#d8a020'], [40, 6, '#e8c070']]) circle(ctx, cx, cy, 1.5, c);
+      if (mo < 0.4) line(ctx, 36, 3, 35, 11 + Math.sin(st.t * 3) * 1.5, 'rgba(255,255,255,0.55)', 1.3);
+    }
+    if (mo > 0) {
+      // the mouth: a dark O between the tusks, the tongue in it
+      ellipse(ctx, 34, 0, 2.5 + 5.5 * mo, 1.8 + 5.2 * mo, 0, '#2a0808', OUT, 1.8);
+      ellipse(ctx, 35.5, 0, 1.5 + 3 * mo, 1 + 2.4 * mo, 0, '#c8505a');
+    }
+    if (props.gSpit) {   // cheeks stuffed full: a lump bulging in each
+      for (const sy of [-1, 1]) { circle(ctx, 25, 10.5 * sy, 6.5, shade(skin, 0.06), OUT, 2); ellipse(ctx, 27, 10.5 * sy, 3.6, 2.8, 0.4 * sy, '#8a5a2e'); }
+    }
+    if (props.gBurp) {   // a sick-green fog rolling out of the open mouth
+      glow(ctx, 40, 0, 24, '#c8e040', 0.5 + Math.sin(st.t * 12) * 0.12);
+      for (let i = 0; i < 5; i++) { const q = (st.t * 1.5 + i / 5) % 1; circle(ctx, 40 + q * 38, Math.sin(i * 2.3 + st.t * 2) * q * 12, 4 + q * 10, `rgba(190,215,60,${0.6 * (1 - q)})`); }
+    }
+    if (props.headdown) { ctx.translate(hd * 0.5, 0); ctx.scale(0.86, 0.86); }
+    if (G) { ctx.translate(14, 0); ctx.rotate(0.2 + (props.gInhale ? 0.12 : 0)); ctx.translate(-14, 0); }   // the hat sits askew on the bigger head
     for (const [hx, hy] of [[14, -7], [14, 7], [20, 0], [8, 0]]) circle(ctx, hx, hy, 7.5, '#ffffff', OUT, 2);
     circle(ctx, 14, 0, 7, '#ffffff');
     rrect(ctx, 21, -9, 4, 18, 1.5, '#e6e2d8', OUT, 1.5);
@@ -246,6 +297,7 @@ const BOSS_ART = {
 
   skitterra(ctx, st) {
     const props = st.props || {};
+    if (props.moth && !props.husk && typeof SK_MOTH !== 'undefined') return SK_MOTH.body(ctx, st);   // (Hard, after the Chrysalis: the Moth Queen, skitterra-moth.js)
     // a shed husk is the same shape, pale and hollow
     const husk = !!props.husk;
     const body = husk ? '#b8a99a' : '#3a2448', dark = husk ? '#8a7c70' : '#24152e', mark = husk ? '#c8b8a8' : '#d6304a', gold = husk ? '#d8ccb8' : '#e8c15a';
@@ -309,13 +361,17 @@ const BOSS_ART = {
     }
   },
 
-  volkar(ctx, st) {
+  volkar(ctx, st, angle) {
     const stone = '#5b6a80', dark = '#3a4455', bolt = '#7fe8ff';
     const props = st.props || {};
+    // Hard's second form: from Heavens Fall the body is gone and what stands in the middle is the Storm Heart (volkar-storm.js)
+    if (props.storm && typeof VK_STORM !== 'undefined') { if (st.raid) ctx.scale(1.35, 1.35); return VK_STORM.heart(ctx, st, angle || 0, props); }
+    const pk = props.stormBreak || 0;   // the body cracking before it breaks apart
     const pa = actP(st, 'attack');
     let f = 0; // fist punch: pull back, slam forward, recover
     if (pa >= 0) f = pa < 0.4 ? -easeOut(pa / 0.4) * 0.6 : pa < 0.55 ? -0.6 + 1.6 * ((pa - 0.4) / 0.15) : 1 - (pa - 0.55) / 0.45;
     if (st.raid) ctx.scale(1.35, 1.35);   // in his own arena he is a giant
+    if (pk > 0 && typeof VK_STORM !== 'undefined') { const [tx, ty] = VK_STORM.tremble(pk, st.t); ctx.translate(tx, ty); }
     glow(ctx, 0, 0, 80, bolt, props.charge ? 0.3 : 0.12);
     // Thunderclap / Eye of the Storm: the sky churns overhead
     if (props.sky) for (let i = 0; i < 7; i++) {
@@ -371,6 +427,7 @@ const BOSS_ART = {
     glow(ctx, 23, 0, 12, bolt, 0.5);
     circle(ctx, 23, -4, 2.2, '#dffbff'); circle(ctx, 23, 4, 2.2, '#dffbff');
     if (Math.floor(st.t * 10) % 3 === 0) jagged(ctx, -12, -30, 2, -18, Math.floor(st.t * 20), bolt, 1);
+    if (pk > 0 && typeof VK_STORM !== 'undefined') VK_STORM.crumble(ctx, st, pk, angle || 0);
   },
 
   hollowking(ctx, st) {

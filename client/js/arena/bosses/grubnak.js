@@ -17,7 +17,11 @@
 //   Second Sitting (50% → 18%): the smaller, burning kitchen. Whisk, Spice Rack, Boil Over arrive and pair at once.
 //     Butcher's Charge into the pot is the short way (he's scalded and stuck, but the pot boils over).
 //   Dessert (18% → 0%): the Dessert Trolley, a gauntlet of everything; silence; Last Orders; then he eats (Gorge)
-//     until he drops or calls Last Call.
+//     until he drops or calls Last Call. Hard: the trolley's first half, then Clean Plate: he inhales the room (casks, the pot, grease
+//     and puddles go into his mouth for good, everyone is hauled in a little) and swells into the Gorged form (a bigger body and hit
+//     radius, def.forms.gorged). His new moves, in a fixed order: Spit Up (he coughs up the casks again where two heroes stood: cover
+//     and anchors), Sour Burp (a wide cone at a random hero, acid left behind), Second Helping (he inhales again and a blast lands at
+//     his feet: a solid cask stops the haul short of it). Last Orders and the Gorges follow, with the same moves in the passes.
 // The tank's own small move, all the way through: Skewer. He hurls a skewer along a line from himself through his tank (the
 // line follows them until just before it flies). A light hit on the tank; anyone else on the line takes it worse. The tank
 // takes it, or steps off the line once it locks. It's the answer to "where do I stand?" for the one who holds him: the line
@@ -46,6 +50,8 @@ const GRUBNAK = {
   vuln: 0.5,   // every avoidable hit leaves you taking half again as much for a while
   arena: { theme: 'kitchen' },
   gates: [0.8, 0.5, 0.18],   // where the courses change (ticks on the boss bar; fight.js course)
+  // Hard's second form (fight.js setForm 'gorged'): the same kitchen (sameRoom), a swollen body (bossR is his hit radius from then on)
+  forms: { gorged: { name: 'Grubnak, Gorged', title: 'The Ogre Chef', sameRoom: true, bossR: 105 } },
 
   script(f) {
     const H = f.hard;
@@ -55,6 +61,8 @@ const GRUBNAK = {
       puddle: H ? 2850 : 3000, tower: H ? 5750 : 5750, towerFail: H ? 16100 : 16100, stuffed: H ? 16100 : 16100, simmer: H ? 14950 : 14950, whisk: H ? 14950 : 14950, spice: H ? 14950 : 14950, boil: H ? 50150 : 46000,
       gorge: H ? 7450 : 7450, heat: H ? 7450 : 7450, orders: H ? 12650 : 12650, meatball: H ? 14950 : 14950, flop: H ? 14950 : 14950, cleaver: H ? 14950 : 14950, flambe: H ? 15250 : 16100,
       skewer: H ? 6100 : 5500, charge: H ? 15250 : 16100, cask: H ? 9800 : 10350, gut: H ? 17450 : 17250, stove: H ? 4900 : 5200, burn: H ? 4350 : 4600, slam: H ? 5450 : 5750, hook: H ? 7650 : 8050,
+      // (the Gorged form's moves, Hard only: Spit Up's lump, Sour Burp's cone and its acid, Second Helping's blast at his feet)
+      spit: 9800, burp: 13200, sour: 3200, helping: 15600,
     });
     // The challenge is in how hard a missed answer hits, not in how little room there is between moves. Normal's numbers are scaled by
     // NORMAL_UP; Hard's by HARD_UP and never under HARD_MIN x Normal's on a shared move. Skewer (the light tank move) is left alone.
@@ -421,6 +429,22 @@ const GRUBNAK = {
     };
     // Larder Toss: he rips casks off the side shelves and throws them at the two farthest players (each circle follows
     // its player until 1.6 s before). A cask stays where it lands: solid, and the only shelter from Gut Blast.
+    // a cask that has landed where a circle was: it rolls to a stop (fx: a client event for the way it came down, Spit Up's 'spat')
+    const landCask = (m, fx) => {
+      // it rolls to a stop well off the wall, so there's room to stand behind it
+      const at = ARENA.clamp({ x: m.shape.x, y: m.shape.y }, 120);
+      if (hot) at.y = Math.max(at.y, -60);   // not into the fire
+      for (let i = 0; i < 3; i++) for (const o of f.props) {   // not on top of another cask
+        const dd = Math.hypot(o.x - at.x, o.y - at.y), min = (o.r || 40) + 30 + 32;
+        if (dd >= min) continue;
+        if (dd < 1) at.x += min; else { const k = (min - dd) / dd; at.x += (at.x - o.x) * k; at.y += (at.y - o.y) * k; }
+        ARENA.clamp(at, 120);
+      }
+      if (Math.hypot(at.x - B.x, at.y - B.y) < FIGHT.BOSS_R + 40) return;   // he caught it himself
+      while (casks().length >= 4) f.breakProp(casks()[0], 'room');
+      f.addProp({ kind: 'cask', x: at.x, y: at.y, r: 30, hp: 2, solid: true, cover: true });
+      if (fx) f.emit({ t: 'propfx', k: fx, kind: 'cask', x: Math.round(at.x), y: Math.round(at.y), r: 30 });
+    };
     const larderToss = () => {
       const d = ct(4.5);
       const pool = f.alive().length > 2 ? f.nonTanks() : f.alive();
@@ -429,20 +453,7 @@ const GRUBNAK = {
       f.cast('Larder Toss', d, 'larder');
       for (const p of far) {
         const m = f.mech({ type: 'aoe', shape: { kind: 'circle', x: p.x, y: p.y, r: 85 }, delay: d, dmg: dmg.cask, tag: 'cask', follow: p.id, lockAt: 1.6,
-          onResolve: () => {
-            // it rolls to a stop well off the wall, so there's room to stand behind it
-            const at = ARENA.clamp({ x: m.shape.x, y: m.shape.y }, 120);
-            if (hot) at.y = Math.max(at.y, -60);   // not into the fire
-            for (let i = 0; i < 3; i++) for (const o of f.props) {   // not on top of another cask
-              const dd = Math.hypot(o.x - at.x, o.y - at.y), min = (o.r || 40) + 30 + 32;
-              if (dd >= min) continue;
-              if (dd < 1) at.x += min; else { const k = (min - dd) / dd; at.x += (at.x - o.x) * k; at.y += (at.y - o.y) * k; }
-              ARENA.clamp(at, 120);
-            }
-            if (Math.hypot(at.x - B.x, at.y - B.y) < FIGHT.BOSS_R + 40) return;   // he caught it himself
-            while (casks().length >= 4) f.breakProp(casks()[0], 'room');
-            f.addProp({ kind: 'cask', x: at.x, y: at.y, r: 30, hp: 2, solid: true, cover: true });
-          } });
+          onResolve: () => landCask(m) });
       }
     };
     // Gut Blast: a roar across the whole kitchen. Hide behind a cask or the pot (Hard: two to each). Every cask takes a hit.
@@ -623,6 +634,84 @@ const GRUBNAK = {
       B.dmgUp += 0.1;
     };
 
+    // --- the Gorged form (Hard only) -------------------------------------------------------------
+    // Clean Plate: he breathes the room in. The casks, the stockpot, every grease stain and puddle go into his mouth for good, everyone
+    // is hauled a little way toward him (stopping well short: PLATE_STOP is outside the body he is about to have), and he swells into the
+    // Gorged form: a raidwide, +10% damage from here on, a bigger body and hit radius (def.forms.gorged), the same kitchen.
+    // Client events (the art for them is a later job): roomev 'inhale' at the start (dur, mouth x/y, things: [[kind, x, y, r], ...] that
+    // fly in; kinds cask, pot, grease, rubble, puddle), propfx 'eaten' for each prop as it goes (just before the cast ends), roomev
+    // 'form' (form 'gorged', r: his hit radius) with the swell, and banim 'swell'.
+    const PLATE_PULL = 170, PLATE_STOP = 175;
+    const haul = (dist, stop) => {   // everyone is dragged toward him by dist, to no nearer than stop (a solid prop stops a drag short: f.knock)
+      for (const p of f.alive()) {
+        const dx = B.x - p.x, dy = B.y - p.y, D = Math.hypot(dx, dy);
+        if (D <= stop + 20) continue;
+        f.knock(p, p.x - dx / D, p.y - dy / D, Math.min(dist, D - stop));
+      }
+    };
+    const cleanPlate = () => {
+      const d = ct(6), round = Math.round;
+      f.cast('Clean Plate', d, 'inhale');
+      hold(d + 1.8);
+      const eats = fl => fl.kind === 'grease' || fl.kind === 'rubble';
+      f.emit({ t: 'roomev', k: 'inhale', dur: d, x: round(B.x), y: round(B.y), pull: PLATE_PULL,
+        things: [...f.props.map(pr => [pr.kind, round(pr.x), round(pr.y), pr.r || 40]), ...f.floor.filter(eats).map(fl => [fl.kind, round(fl.x), round(fl.y), fl.r]),
+          ...f.puddles.map(pd => ['puddle', round(pd.x), round(pd.y), pd.r])] });
+      // the room goes in just before the cast ends (the stove line stays: it is the wall's fire, not a thing on the floor)
+      f.afterKeep(d - 0.6, () => {
+        for (const pr of [...f.props]) { f.emit({ t: 'propfx', k: 'eaten', id: pr.id, kind: pr.kind, x: round(pr.x), y: round(pr.y), r: pr.r || 40 }); f.removeProp(pr); }
+        for (const fl of f.floor.filter(eats)) f.removeFloor(fl);
+        f.clearPuddles();
+        pot = null;
+      });
+      f.mech({ type: 'drop', shape: { kind: 'circle', x: B.x, y: B.y, r: 0 }, delay: d, dmg: 0, avoidable: false, tag: 'cpInhale', pullDist: PLATE_PULL,
+        onResolve: () => haul(PLATE_PULL, PLATE_STOP) });
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: B.x, y: B.y, r: 0 }, delay: d, dmg: dmg.gorge, hidden: true, tag: 'cpSwell',
+        onResolve: () => { f.setForm('gorged'); B.dmgUp += 0.1; f.anim('swell', 2); } });
+    };
+    // Spit Up: he coughs the casks back up, a lump on each of two random non-tanks (a red circle that follows them until 1.6 s before it
+    // lands). Where a lump lands it settles as a cask again: cover, and a post for Second Helping's haul to stop on.
+    const spitUp = () => {
+      const d = ct(5), pool = f.nonTanks().length ? f.nonTanks() : f.alive(), who = f.shuffle(pool).slice(0, 2);
+      if (!who.length) return;
+      f.cast('Spit Up', d, 'spitup');
+      hold(d);
+      for (const p of who) {
+        const m = f.mech({ type: 'aoe', shape: { kind: 'circle', x: p.x, y: p.y, r: 95 }, delay: d, dmg: dmg.spit, tag: 'spit', follow: p.id, lockAt: 1.6,
+          onResolve: () => landCask(m, 'spat') });
+      }
+    };
+    // Sour Burp: a wide cone out of his mouth at a random non-tank (it follows them until 1 s before the burp), and where it went the
+    // acid stays for 10 s: three pools along the cone's axis.
+    const sourBurp = () => {
+      const d = ct(4.5), pool = f.nonTanks().length ? f.nonTanks() : f.alive(), p = f.pick(pool);
+      if (!p) return;
+      f.cast('Sour Burp', d, 'burp');
+      hold(d);
+      const m = f.mech({ type: 'aoe', shape: { kind: 'cone', x: B.x, y: B.y, r: 1100, angle: Math.atan2(p.y - B.y, p.x - B.x), arc: 0.95 }, delay: d, dmg: dmg.burp,
+        tag: 'burp', aimFromBoss: p.id, lockAt: 1.0,
+        onResolve: () => {
+          const a = m.shape.angle;
+          for (const r of [300, 520, 740]) {
+            const at = ARENA.clamp({ x: m.shape.x + Math.cos(a) * r, y: m.shape.y + Math.sin(a) * r }, 90);
+            f.puddle(Math.round(at.x), Math.round(at.y), 85, 10, dmg.sour, 1, 'sour', { ddown: true });
+          }
+        } });
+    };
+    // Second Helping: he breathes in again. Everyone is hauled toward him (HELP.pull, to no nearer than HELP.stop; a solid cask stops a
+    // haul short) and a blast lands at his feet, painted from the start. Behind a cask well out (past about 240 from him) the haul
+    // ends outside the circle, or in a far corner. The haul comes half a second before the blast.
+    const HELP = { blast: 270, pull: 300, stop: 130 };
+    const secondHelping = () => {
+      const d = ct(5);
+      f.cast('Second Helping', d, 'inhale');
+      hold(d + 0.8);
+      f.emit({ t: 'roomev', k: 'inhale', again: 1, dur: d, x: Math.round(B.x), y: Math.round(B.y), pull: HELP.pull, things: [] });
+      f.mech({ type: 'drop', shape: { kind: 'circle', x: B.x, y: B.y, r: 0 }, delay: d - 0.5, dmg: 0, avoidable: false, tag: 'shPull', pullDist: HELP.pull,
+        onResolve: () => haul(HELP.pull, HELP.stop) });
+      f.mech({ type: 'aoe', shape: { kind: 'circle', x: B.x, y: B.y, r: HELP.blast }, delay: d, dmg: dmg.helping, tag: 'helping', pull: { dist: HELP.pull, stop: HELP.stop } });
+    };
+
     // --- the service ----------------------------------------------------------------------------
     const appetiser = from => {
       const tossMeal = S([12, () => meatToss(), 'Meat Toss'], [H ? 6.2 : 7, skewer, 'Skewer'], [H ? 5.8 : 8, () => familyMeal(), 'Family Meal']);
@@ -737,13 +826,23 @@ const GRUBNAK = {
             !H && [2.5 * k, () => meatballs(LANES.c), 'Rolling Meatballs'],
             H && [5, cleaverToss, 'Cleaver Toss'],
             H && [6, A[0], A[1]],
-            [H ? 7 : 11, B[0], B[1]],
-            [H ? 6.5 : 7.5, skewer, 'Skewer'],
-            [H ? 6 : 8, () => familyMeal(), 'Family Meal'],
-            H && [7, () => whisk(-1, 0), 'Whisk'],
-            [H ? 11.5 : 10, lastOrders, 'Last Orders']),
+            !H && [11, B[0], B[1]],
+            !H && [7.5, skewer, 'Skewer'],
+            !H && [8, () => familyMeal(), 'Family Meal'],
+            !H && [10, lastOrders, 'Last Orders'],
+            // Hard: the trolley's second half is the Gorged form. Clean Plate swells him (about 40 s in, so a party that is going to win
+            // meets it), then Spit Up / a Skewer / Sour Burp / a Tenderize / Second Helping in that order, then Last Orders as before
+            H && [7.5, cleanPlate, 'Clean Plate'],
+            H && [9.5, spitUp, 'Spit Up'],
+            H && [7, skewer, 'Skewer'],
+            H && [5, sourBurp, 'Sour Burp'],
+            H && [7.5, tenderize, 'Tenderize'],
+            H && [4.5, secondHelping, 'Second Helping'],
+            H && [10, lastOrders, 'Last Orders']),
         ],
-        closing: H ? [[6.5, skewer, 'Skewer'], [5.5, gorge, 'Gorge']] : [[5.5, skewer, 'Skewer'], [9.5, gorge, 'Gorge']],
+        // (Hard: the Gorge is no longer the transition, only the ramp; the passes carry the Gorged form's moves round again)
+        closing: H ? [[6.5, skewer, 'Skewer'], [5.5, gorge, 'Gorge'], [9, spitUp, 'Spit Up'], [7, skewer, 'Skewer'], [5, sourBurp, 'Sour Burp'], [7.5, tenderize, 'Tenderize'], [4.5, secondHelping, 'Second Helping']]
+          : [[5.5, skewer, 'Skewer'], [9.5, gorge, 'Gorge']],
         ramp: 0,   // Gorge brings its own
       }, from);
     };
@@ -753,7 +852,7 @@ const GRUBNAK = {
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.gutBlast())
     f.moves = { grease, tenderize, mince, ladleOrLid, chopChop, meatToss, tossThenMeal, familyMeal, orderUp, spiceRack, whisk, boilOver,
       meatballs, bellyFlop, cleaverToss, flambe, butcherCharge, larderToss, gutBlast, drains, meatHook, charge, flareUp, potToMiddle,
-      mise, service, dinnerRush, lastOrders, gorge, simmerCast, skewer };
+      mise, service, dinnerRush, lastOrders, gorge, simmerCast, skewer, cleanPlate, spitUp, sourBurp, secondHelping };
   },
 };
 

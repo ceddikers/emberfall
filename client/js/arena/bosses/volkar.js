@@ -17,6 +17,13 @@
 //     party holds each one up together, both charges in it, until the Twin Fall splits the sky in two: a gold and a blue
 //     hold each column. Each is a little harder after the fifth, until he falls or calls Skybreak. (Hard: each Heavens Fall breaks
 //     over the summit as it lands and marks everyone: hold it up together, then scatter apart.)
+//     Hard: the Storm Unbound. His body breaks apart into the storm (a raidwide as it bursts, a few seconds out of reach) and he
+//     rises over the summit as a huge face in the clouds with lightning arms (the second form, f.setForm 'storm'). What the party hits
+//     from then on is the STORM HEART, the crackling core where his body stood: the same boss entity at the same spot (health, threat,
+//     melee and ranged reach, the boss bar), only the face above is show and the source of every attack. Heavens Fall and Twin Fall go
+//     on, now falling from the face, with three new moves in a fixed order: Storm Arm (an arm slams down on the tank), Crossing Arms
+//     (arms rake the summit along lines through where players stand, a second line shown as the first lands) and Reaching Arms (an
+//     arm of each charge comes down; one person of that charge must stand in each).
 //   Gathering Storm (in the back half): a heal check. Static ticks on everyone every 1.5 s for 12 s, then one
 //     Thunderhead: more than a whole health bar each in all, so it has to be healed through as it lands.
 // The storm's Pulse hits everyone every 4 s, a twentieth harder each minute. A slow party runs each part's last set again,
@@ -49,6 +56,9 @@ const VOLKAR = {
   spawn: { x: 0, y: 0 }, anchor: true,
   arena: { theme: 'peak' },
   gates: [0.55, 0.15],   // where the movements change (ticks on the boss bar; fight.js course)
+  // Hard's second form (fight.js setForm 'storm', room 'volkar:storm' in shapes.js): from Heavens Fall he is a face in the clouds and the
+  // party hits his Storm Heart (the same boss entity, in the middle). The bar shows the form's name and title (raid-ui.js reads forms).
+  forms: { storm: { name: 'The Storm Heart', title: 'Volkar, Unbound' } },
 
   // four standing stones on the summit, at the cardinal points (clear of where the party stands round him)
   room(f) {
@@ -70,6 +80,8 @@ const VOLKAR = {
       chain: H ? 8900 : 8050, orb: H ? 15300 : 13800, skyfall: H ? 45800 : 41400,
       strike: H ? 11400 : 9200, strikeOpen: H ? 22900 : 17250, discharge: H ? 15300 : 13800, grounded: H ? 11400 : 10350, boulder: H ? 15300 : 12650, fall: H ? 19100 : 17250,
       squall: H ? 7600 : 6900, still: H ? 11400 : 10350, stillWrong: H ? 15300 : 13800, heavens: H ? 37000 : 32200, front: H ? 9500 : 8650,
+      // the Storm Unbound's moves (Hard only; tuned 2026-10-28 so a human-like party clears Hard about a third of its pulls: 144 runs over three seed sets)
+      burst: 15000, armSlam: 36000, cross: 27000, armFail: 24000, armWrong: 28000, armSoak: 6000,
     };
     const S = (...steps) => steps.filter(Boolean);
     const room = f.room = { squall: null, eye: false };
@@ -577,6 +589,85 @@ const VOLKAR = {
       else twinCols(a0 + Math.PI / 2, d + 4.4, 3, 0.45);   // (Normal: a lighter second pair too, a little later)
     };
 
+
+    // --- the Storm Unbound (Hard, from Heavens Fall): a face in the clouds, a heart in the middle ------------------------
+    // The body breaks apart into the storm and he rises over the summit. The boss entity stays where it was, in the middle: it is now the
+    // STORM HEART (a crackling core hanging low over where he stood), so targeting, threat, reach and the boss bar are unchanged; the face
+    // overhead is only show, the source of the arms. Client events (the later art): roomev 'volbreak' {dur} (the body cracks and sheds
+    // into the storm), roomev 'volrise' {dur} (it bursts apart, the face rises), the room's form 'storm' (fight.js setForm: raid.form),
+    // banim 'risen' (the heart is whole again, reachable), and for each arm roomev 'volarm' (below).
+    let storm = false;
+    const unbound = () => {
+      if (storm) return;
+      storm = true;
+      const d = f.ct(8), OUT = 1.5;   // (cast d; out of reach from OUT s before the burst to OUT s after it)
+      f.cast('Storm Unbound', d, 'unbound');
+      f.emit({ t: 'roomev', k: 'volbreak', dur: +d.toFixed(2) });
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.burst, hidden: true, tag: 'volBurst' });
+      f.afterKeep(d - OUT, () => { B.untargetable = true; B.lockFacing = true; });
+      f.afterKeep(d - 0.6, () => {
+        // the form changes as the body bursts (the summit is the same: its broken wedges stay, and the clients are told the floor again)
+        const cuts = ARENA.cuts.map(c => ({ a0: c.a0, a1: c.a1, r: c.r }));
+        f.setForm('storm');
+        for (const c of cuts) ARENA.cuts.push(c);
+        f.floorVer++; f.propsDirty = true;
+        f.emit({ t: 'roomev', k: 'volrise', dur: 4 });
+      });
+      f.afterKeep(d + OUT, () => { B.untargetable = false; B.facing = Math.PI / 2; f.anim('risen', 2); });
+    };
+    // an arm reaching down, for the art: what 'slam' (on the tank), 'cross' (a raking line, a: its angle) or 'reach' (a tower, sign: its charge);
+    // x, y where it comes down (a slam follows the tank: the mech's own follow says so), dur how long until it lands
+    const armEv = (what, o) => f.emit(Object.assign({ t: 'roomev', k: 'volarm', what }, o));
+
+    // Storm Arm (the tank's beat in the storm form, in place of Titan Fist): an arm of lightning slams down on the tank. It follows them and
+    // fixes a moment before it lands, so the tank can bait it out of the party's way; anyone else in the circle takes a cleave. Conductive, as the Fist.
+    const stormArm = () => {
+      const tank = f.tank(); if (!tank) return;
+      const d = f.ct(4);
+      f.cast('Storm Arm', d, 'arm');
+      armEv('slam', { x: Math.round(tank.x), y: Math.round(tank.y), pid: tank.id, dur: +d.toFixed(2) });
+      f.mech({ type: 'buster', shape: { kind: 'circle', x: tank.x, y: tank.y, r: 115 }, delay: d, dmg: dmg.armSlam, target: tank.id, follow: tank.id, lockAt: 1.0, tag: 'armslam',
+        onResolve: () => { f.debuff(tank.id, 'conductive', 20); } });
+    };
+
+    // Crossing Arms: two arms rake the whole summit, each along a line through where a player stands (a line through the middle, the heart's
+    // feet, so nobody stays at the heart). The first is shown from the cast; the second, through another player, is shown as the first lands.
+    const CROSS_W = 130;
+    const crossingArms = () => {
+      const d = f.ct(4.5), gap = f.ct(3), R = Math.min(ARENA.R, 360);
+      const pool = () => (f.nonTanks().length ? f.nonTanks() : f.alive());
+      const p1 = f.pick(pool()); if (!p1) return;
+      f.cast('Crossing Arms', d, 'arm');
+      const strip = (p, delay) => {
+        const a = Math.atan2(p.y - B.y, p.x - B.x), c = Math.cos(a), sn = Math.sin(a);
+        armEv('cross', { a: +a.toFixed(3), x: Math.round(B.x), y: Math.round(B.y), dur: +delay.toFixed(2) });
+        f.mech({ type: 'aoe', shape: { kind: 'rect', x: Math.round(B.x - c * R), y: Math.round(B.y - sn * R), angle: +a.toFixed(3), len: R * 2, w: CROSS_W }, delay, dmg: dmg.cross, tag: 'armcross' });
+      };
+      strip(p1, d);
+      f.afterKeep(d, () => {
+        const rest = pool().filter(p => p.id !== p1.id), p2 = f.pick(rest.length ? rest : pool());
+        if (p2) strip(p2, gap);
+      });
+    };
+
+    // Reaching Arms (polarity): an arm of each charge comes down on opposite sides of the summit, gold and blue. One person of that charge
+    // has to stand in each (wrong charge in one is struck; an arm nobody answers discharges across the whole party). Only the charges still alive.
+    const ARM_R = 85, ARM_AT = 205;
+    const reachingArms = () => {
+      const d = f.ct(6), al = f.alive();
+      const signs = [1, -1].filter(sg => al.some(p => charge(p.id) === sg));
+      if (!signs.length) return;
+      const a0 = Math.PI / 4 + Math.floor(f.rng() * 4) * Math.PI / 2 + (f.rng() - 0.5) * 0.4;   // (on the diagonals, clear of the four standing stones)
+      if (f.rng() < 0.5) signs.reverse();
+      f.cast('Reaching Arms', d, 'arm');
+      signs.forEach((sign, i) => {
+        const a = a0 + (signs.length > 1 ? i * Math.PI : 0), x = Math.round(Math.cos(a) * ARM_AT), y = Math.round(Math.sin(a) * ARM_AT);
+        armEv('reach', { x, y, sign, dur: +d.toFixed(2) });
+        f.mech({ type: 'tower', shape: { kind: 'circle', x, y, r: ARM_R }, delay: d, dmg: dmg.armSoak, failDmg: dmg.armFail, need: 1, tag: 'arm', charge: sign, color: sign > 0 ? '#ffd84a' : '#6ab8ff',
+          onResolve: inside => { for (const p of inside) if (charge(p.id) !== sign) f.damagePlayer(p, dmg.armWrong, { kind: 'discharge', avoidable: true }); } });
+      });
+    };
+
     // --- the storm -----------------------------------------------------------------------------------
     assignPolarity();
     f.afterKeep(6, pulse);
@@ -611,6 +702,11 @@ const VOLKAR = {
     const stepAv = (off, th) => [off, () => avalanche(th), 'Avalanche'];
     const stepStrike = off => [off, rodStrike, 'Rod Strike'];
     const stepSquall = off => [off, () => squall(1, Math.PI / 2, 360, 150, 30, H ? 260 : 300), 'Squall Line'];
+    const stepArm = off => [off, stormArm, 'Storm Arm'];
+    const stepCross = off => [off, crossingArms, 'Crossing Arms'];
+    const stepReach = off => [off, reachingArms, 'Reaching Arms'];
+    const stepHF = off => [off, heavensFall, 'Heavens Fall'];
+    const stepTwin = off => [off, twinFall, 'Twin Fall'];
 
     const front = at => f.course({
       until: 0.55,
@@ -760,14 +856,14 @@ const VOLKAR = {
     const finale = at => f.course({
       onStart: () => { if (!H) edgeStep(330, 5); },
       sets: lay(H ? [
-        U(14.5, stepLash(0), [6, heavensFall, 'Heavens Fall']),   // (a lash first, so the tank has a beat as the sky starts to fall)
-        // (Hard: the three between come in a fresh order each pull; the last is always a Twin Fall)
-        ...f.shuffle([
-          U(14.5, [0, heavensFall, 'Heavens Fall'], stepFist(9.5)),   // (after the scatter has gone off)
-          U(14.5, [0, twinFall, 'Twin Fall'], stepLash(10.3)),
-          U(14.5, [0, heavensFall, 'Heavens Fall']),
-        ]),
-        U(13, [0, twinFall, 'Twin Fall']),
+        // Hard: a lash, then the Storm Unbound (his body breaks apart and he rises as a face over the summit; the party now hits the Storm Heart),
+        // then the sky comes down from the face in a fixed order, each Heavens Fall and Twin Fall as it was, with Reaching Arms and Crossing Arms
+        // coming in behind a Heavens Fall (after the scatter has gone off) and a tank beat (a lash, or the Storm Arm) in the units between.
+        U(17.8, stepLash(0), [4.5, unbound, 'Storm Unbound'], stepArm(13.5)),
+        U(14.5, stepHF(0), stepReach(9.5)),
+        U(14.5, stepTwin(0), stepLash(10.3)),
+        U(14.5, stepHF(0), stepCross(9.5)),
+        U(13, stepTwin(0)),
       ] : [
         U(13.5, stepLash(0), [6.5, heavensFall, 'Heavens Fall']),
         U(14, [0, heavensFall, 'Heavens Fall'], stepFist(7.5)),
@@ -775,7 +871,7 @@ const VOLKAR = {
         U(15, [0, heavensFall, 'Heavens Fall'], stepLash(8)),
         U(14, [0, twinFall, 'Twin Fall']),
       ], 3),
-      closing: H ? [[13, heavensFall, 'Heavens Fall'], [8, lash, 'Static Lash'], [5, twinFall, 'Twin Fall']]
+      closing: H ? [[13, heavensFall, 'Heavens Fall'], [8.5, lash, 'Static Lash'], [5.5, crossingArms, 'Crossing Arms'], [10, twinFall, 'Twin Fall'], [10.3, reachingArms, 'Reaching Arms'], [9.5, stormArm, 'Storm Arm']]
         : [[15, heavensFall, 'Heavens Fall'], [5.2, lash, 'Static Lash'], [4.3, titanFist, 'Titan Fist'], [5.5, twinFall, 'Twin Fall']],
       ramp: H ? 0.07 : 0.1,   // (Hard: the ramp is gentler; the scatter after each Heavens Fall is what bites)
     }, at);
@@ -784,7 +880,7 @@ const VOLKAR = {
     front(0);
 
     f.moves = { thunderclap, titanFist, lash, surge, surgeField, crash, field, rods, galeSlam, rodsGale, stormWalls, chainLightning, ballLightning, skyfall, rodStrike, avalanche, crumble,
-      edgeStep, squall, eyeOpen, stillAir, eyeCloses, heavensFall, twinFall, groundingRods, supercell };
+      edgeStep, squall, eyeOpen, stillAir, eyeCloses, heavensFall, twinFall, groundingRods, supercell, unbound, stormArm, crossingArms, reachingArms };
   },
 };
 

@@ -11,7 +11,8 @@ const VALUE_KEYS = ['shieldGiven', 'shieldSelf', 'mitGiven', 'mitSelf', 'healGiv
 const RAID_PRESSURE = (typeof process !== 'undefined' && process.env && +process.env.SIM_RAID_PRESSURE > 0) ? +process.env.SIM_RAID_PRESSURE : 1;
 
 const FIGHT = {
-  BOSS_R: 70,            // boss hitbox radius
+  BOSS_R: 70,            // boss hitbox radius (a second form can swell it: def.forms[form].bossR, see setForm; BOSS_R0 is the plain one)
+  BOSS_R0: 70,
   MELEE: 150,            // distance at which the boss autos / walks to the tank
   AUTO_EVERY: 2.8,
   DMG_DOWN: 0.10,        // damage dealt penalty, from an avoidable hit of a move that opts in (ddown: true on the mech, puddle, tether, zone...)
@@ -71,6 +72,7 @@ class FightSim {
     this.def = def; this.mode = mode; this.hard = mode === 'hard';
     this.hpPct = Math.max(0, Math.min(0.1, opts.hpPct || 0));
     ARENA.use(def.id);
+    FIGHT.BOSS_R = FIGHT.BOSS_R0;   // (a form that swelled the boss last fight has gone)
     this.getPlayers = getPlayers; this.emit = emit;
     this.rngState = (seed >>> 0) || 1;
     // opts.waitPull: no countdown; the party has the room to itself until someone hits the boss ('prepull', see pull())
@@ -1169,10 +1171,14 @@ class FightSim {
   cancel(m) { if (!m || !this.mechs.has(m.id)) return; this.mechs.delete(m.id); this.emit({ t: 'tgx', id: m.id, hits: [], x: 1 }); }
   // the room changes shape mid-fight (set 3: a colosseum floods into a ring of stone, a crater falls away to cloud). form names an
   // ARENA_DEFS entry '<boss id>:<form>' (null: the boss's own room again); the clients rebuild their floor from the roomev
+  // def.forms[form].sameRoom: the boss changes but the room does not (Grubnak's gorged form: no ARENA_DEFS entry, the clients keep the
+  // kitchen); def.forms[form].bossR: the boss's hit radius while he is that form (FIGHT.BOSS_R; the clients set it from the same event)
   setForm(form) {
     this.form = form || null;
-    ARENA.use(this.def.id + (this.form ? ':' + this.form : ''));
-    this.emit({ t: 'roomev', k: 'form', form: this.form, dur: 9999 });
+    const fd = this.form && this.def.forms && this.def.forms[this.form];
+    if (!(fd && fd.sameRoom)) ARENA.use(this.def.id + (this.form ? ':' + this.form : ''));
+    FIGHT.BOSS_R = (fd && fd.bossR) || FIGHT.BOSS_R0;
+    this.emit({ t: 'roomev', k: 'form', form: this.form, dur: 9999, r: FIGHT.BOSS_R });
   }
 
   // Lingering ground hazard: damages anyone inside every `every` seconds.

@@ -977,9 +977,9 @@ const BOSS_VFX = (() => {
   // ---------------------------------------------------------------- casts, autos, adds, moments
   const CAST_COLOR = {
     grubnak: { def: '#ffb050', boil: '#ff6a2a', bell: '#9ffff4', whisk: '#fff0c8', raise: '#ff7a1a', flop: '#f0e0c8', throw: '#ffe6d0', flambe: '#ffd870',
-      charge: '#ff8a4a', larder: '#ffd8a0', gut: '#c8d87a', hook: '#e8eef4', drains: '#b89a5a' },
+      charge: '#ff8a4a', larder: '#ffd8a0', gut: '#c8d87a', hook: '#e8eef4', drains: '#b89a5a', inhale: '#ead8b0', spitup: '#c8b878', burp: '#c8e040' },
     skitterra: { def: '#d08aff', mist: '#9adf3a', spit: '#9adf3a', wrap: '#f4f0ff', silk: '#f4f0ff', web: '#f4f0ff', lunge: '#ff7ac0', eggs: '#e8ff9a', fang: '#ff7ac0', volley: '#f4f0ff',
-      deluge: '#9adf3a', strand: '#f4f0ff', ambush: '#b090ff', cocoon: '#f4f0ff' },
+      deluge: '#9adf3a', strand: '#f4f0ff', ambush: '#b090ff', cocoon: '#f4f0ff', wingbeat: '#e0c0ff', flight: '#d8c8ff', moonlight: '#dfe8ff' },
     volkar: { def: '#7fe8ff', surge: '#ffe08a', crash: '#ffe27a', field: '#d79bff', gale: '#e8f4ff', walls: '#e8f4ff', fist: '#9ff4ff', skyfall: '#dff4ff', avalanche: '#d8c8a8' },
     hollowking: { def: '#6dff9a', gaze: '#f0fff4', doom: '#b46aff', bells: '#ffd88a', cleave: '#ff8a7a', night: '#8aa0ff', audience: '#ffe6a0',
       lightsout: '#f0fff4', lids: '#c8ffd8', decree: '#7affa8' },
@@ -1025,13 +1025,24 @@ const BOSS_VFX = (() => {
   }
   // the Chrysalis: silk winds up round her from the floor as the cast runs, thickening into a cocoon. If the party tears
   // enough off her first it bursts open (cocoonEnd); if not, it closes and the enrage follows.
-  let cocoon = null;
+  // Hard (skitterra.js, the Metamorphosis): the cocoon strains harder as the cast runs, cracks creep over it and glow from inside (skitterra-moth.js
+  // cocoonCracks), and it does not end with the cast: it stays, cracking open (cocoonCracking: pale gold if she was torn out, red if it closed on her), until
+  // the form moment bursts it (cocoonEnd with { moth: true }).
+  let cocoon = null, cocoonCrack = null;
+  const cocoonCracking = ok => { cocoonCrack = { ok, start: null }; };
   function chrysalis(b, dur) {
+    const hard = typeof SK_FX !== 'undefined' && !!SK_FX.hard && typeof SK_MOTH !== 'undefined';
     const bands = Array.from({ length: 16 }, (_, i) => ({ ph: rand(0, 6), tilt: rand(-0.25, 0.25), w: 1.5 + (i % 3) }));
-    cocoon = VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+    cocoonCrack = null;
+    cocoon = VFX.fx({ dur: hard ? dur + 6 : dur, layer: 'air', draw: (c, p0, t, e) => {
       if (e.gone) return;
-      const k = e.a * Math.min(1, p / 0.05), R = 92, cy = b.y - 34, H = R * 1.2;
+      const p = hard ? Math.min(1, t / dur) : p0;
+      if (cocoonCrack && cocoonCrack.start == null) cocoonCrack.start = t;
+      const cr = cocoonCrack ? Math.min(1, (t - cocoonCrack.start) / 1.3) : 0;
+      const k = e.a * Math.min(1, p / 0.05), R = 92 * (1 + 0.06 * cr), cy = b.y - 34, H = R * 1.2;
       c.save();
+      const strain = hard ? Math.max(0, p - 0.4) * 2.4 + cr * 3.2 : 0;
+      if (strain > 0) c.translate(Math.sin(t * 53) * strain * 1.5, Math.cos(t * 41) * strain);
       c.fillStyle = `rgba(236,230,250,${(0.06 + 0.3 * p) * k})`;
       c.beginPath(); c.ellipse(b.x, cy, R * (1 - 0.18 * p), H, 0, 0, TAU); c.fill();
       c.lineCap = 'round';
@@ -1043,12 +1054,18 @@ const BOSS_VFX = (() => {
       }
       // the last few seconds: it pulses, nearly shut
       if (p > 0.8) VFX.neonRing(c, b.x, cy, R * 0.9, '#f4f0ff', 2, k * (p - 0.8) * 3 * (0.6 + 0.4 * Math.sin(t * 14)), 0.5);
+      if (hard) SK_MOTH.cocoonCracks(c, b.x, cy, R, H, p, cr, t, cocoonCrack ? cocoonCrack.ok : null);
       c.restore();
     } });
   }
-  function cocoonEnd(b, torn) {
+  function cocoonEnd(b, torn, o) {
     if (cocoon) { cocoon.gone = true; cocoon = null; }
+    cocoonCrack = null;
     if (!torn) return;
+    if (o && o.moth && typeof SK_MOTH !== 'undefined') {   // (Hard: she comes out as the Moth Queen, skitterra-moth.js burst)
+      SK_MOTH.burst(b, o.ok !== false, { shockAt, shake, roomTint, cam: (stop, punch, dur) => { cam('stop', stop); cam('punch', punch, dur); } });
+      return;
+    }
     VFX.burst(b.x, b.y - 34, { color: '#f4f0ff', n: 26, speed: 300, size: 12 });
     for (let i = 0; i < 16; i++) VFX.spawn({ x: b.x + rand(-60, 60), y: b.y - 34 + rand(-70, 50), z: 30, vx: rand(-260, 260), vy: rand(-160, 160), vz: rand(60, 220), g: 320,
       life: 0.9, size: 14, color: '#ffffff', stretch: 4, vr: rand(-8, 8) });
@@ -1069,11 +1086,12 @@ const BOSS_VFX = (() => {
     else { const fx = CAST_FX[bossKind] && CAST_FX[bossKind][(CAST_USE[bossKind] && CAST_USE[bossKind][key]) || key]; if (fx) fx(sh, bossDraw, dur); }
     const pal = CAST_COLOR[bossKind] || {}, color = anim === 'enrage' ? (ENR[bossKind] || '#ff3a2a') : pal[anim] || pal.def || '#ffffff';
     own(sh, VFX.fx({ dur, layer: 'ground', tick: (p) => {
-      if (Math.random() < 0.12 + p * 0.3) VFX.charge(bossDraw.x, bossDraw.y - 30, { color, n: 1, r: 120 - p * 40, dur: 0.5, z: 30 });
+      if (bva(bossDraw) > 0.3 && Math.random() < 0.12 + p * 0.3) VFX.charge(bx(bossDraw), by(bossDraw) - 30, { color, n: 1, r: 120 - p * 40, dur: 0.5, z: 30 });
     }, draw: (c, p, t, e) => {
-      const k = e.a * Math.min(1, p / 0.15) * 0.7;
-      VFX.neonRing(c, bossDraw.x, bossDraw.y, 150 - 70 * easeOut(p), color, 2 + p * 3, k * (0.25 + 0.6 * p), 0.6);
-      VFX.glowAt(c, bossDraw.x, bossDraw.y - 30, 60 + 60 * p, color, k * (0.12 + 0.3 * p) * (0.85 + 0.15 * Math.sin(t * (6 + p * 12))));
+      const k = e.a * Math.min(1, p / 0.15) * 0.7 * bva(bossDraw);
+      if (k < 0.004) return;
+      VFX.neonRing(c, bx(bossDraw), by(bossDraw), 150 - 70 * easeOut(p), color, 2 + p * 3, k * (0.25 + 0.6 * p), 0.6);
+      VFX.glowAt(c, bx(bossDraw), by(bossDraw) - 30, 60 + 60 * p, color, k * (0.12 + 0.3 * p) * (0.85 + 0.15 * Math.sin(t * (6 + p * 12))));
     } }));
     return (CAST_POSE[bossKind] && CAST_POSE[bossKind][key]) || null;
   }
@@ -1758,8 +1776,13 @@ const BOSS_VFX = (() => {
   const clk = () => clockFn();
   const SH = bd => bd.show || (bd.show = { hitAt: -9, hitK: 0, enrAt: -9, enrDur: 8, behind: 0, death: null, intro: null, wipeAt: -9, hp: null, fx: [], alpha: 1, landed: false });
   const BODY_S = { grubnak: 1.3, skitterra: 1.3, volkar: 1.3 * 1.35, hollowking: 1.3 * 1.2 };
-  // a point on his body (the art's own frame, facing +x) in the world
-  const onBody = (b, kind, x, y) => { const S = BODY_S[kind] || 1.3, c = Math.cos(b.f || 0), s = Math.sin(b.f || 0); return { x: b.x + (x * c - y * s) * S, y: b.y + (x * s + y * c) * S }; };
+  // a point on his body (the art's own frame, facing +x) in the world (Grubnak gorged is drawn 1.45 times bigger: bosses.js gs)
+  const bx = b => (b.vx != null ? b.vx : b.x), by = b => (b.vy != null ? b.vy : b.y), bva = b => (b.va == null ? 1 : b.va);   // (Skitterra in the Dark Between: where she is drawn, and how much of her)
+  const onBody = (b, kind, x, y) => { const S = (BODY_S[kind] || 1.3) * (kind === 'grubnak' && b.st && b.st.props && b.st.props.gorged ? 1.45 : 1), c = Math.cos(b.f || 0), s = Math.sin(b.f || 0); return { x: bx(b) + (x * c - y * s) * S, y: by(b) + (x * s + y * c) * S }; };
+  // roomev from the host: Grubnak's Gorged form (the inhale, the swell; grubnak-fx.js)
+  function roomFx(msg, bd, kind) {
+    if (kind === 'grubnak' && typeof GR_FX !== 'undefined' && bd) GR_FX.room(msg, bd, { onBody, shockAt, shake, flash: (col, a, dur) => softFlash(SH(bd), col, a, dur) });
+  }
   // effects owned by his state: his death (or a wipe) cuts them off
   const own = (sh, e) => { sh.fx.push(e); if (sh.fx.length > 60) sh.fx.shift(); return e; };
   const cut = sh => { for (const e of sh.fx) { e.gone = true; e.dur = 0; e.done = null; e.tick = null; } sh.fx.length = 0; };
@@ -1804,7 +1827,8 @@ const BOSS_VFX = (() => {
   // pose: [prop, held for s after the cast ends]; keyed by boss, then by the cast's anim (castKey remaps a few shared ones)
   const CAST_POSE = {
     grubnak: { raise: [['raise', 0.3]], cleaver: [['windup', 0.1]], hunk: [['hunk', 0.2]], spice: [['spice', 0.2]], serve: [['cloche', 0.3]], bell: [['bell', 0.3]],
-      whisk: [['whisk', 0.3]], charge: [['headdown', 0.6]], drains: [['bucket', 0.3]], heave: [['heave', 0.05]], enrage: [['raise', 0.5], ['steam', 0.5]] },
+      whisk: [['whisk', 0.3]], charge: [['headdown', 0.6]], drains: [['bucket', 0.3]], heave: [['heave', 0.05]], enrage: [['raise', 0.5], ['steam', 0.5]],
+      inhale: [['gInhale', 0.4]], spitup: [['gSpit', 0.4]], burp: [['gBurp', 0.4]] },   // (the Gorged form's casts: bosses.js)
     skitterra: { enrage: [['rear', 0.5], ['venom', 0.5], ['brood', 0.5]] },
     volkar: { enrage: [['sky', 0.5], ['charge', 0.5]] },
     hollowking: { cleave: [['windup', 0.1]], marks: [['marks', 0.3]], judgement: [['gavel', 0.3]], charges: [['scroll', 0.4]], enrage: [['rise', 0.5], ['gaze', 0.5]] },
@@ -1912,7 +1936,25 @@ const BOSS_VFX = (() => {
       // the brood: the sacs in her glowing, green motes rising off her abdomen
       brood(sh, b, dur) { const pt = P(b, 'skitterra', -28, 0); drawIn(sh, dur, pt, { color: '#c8ff6a', r: 40, rate: 0.15, gr: 40 }); emit(sh, dur, 0.25, () => { const q = pt(); VFX.spawn({ x: q.x + rand(-20, 20), y: q.y + rand(-14, 14), z: 6, vz: rand(30, 60), life: rand(0.6, 0.9), size: rand(3, 5), size1: 0, color: '#e8ff9a' }); }); },
       // up into the dark: grit and silk dust sifting down round her
-      ambush(sh, b, dur) { emit(sh, dur, 0.35, () => { const a = rand(0, TAU), d = rand(20, 120); VFX.spawn({ x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d * 0.7, z: rand(160, 260), g: 380, life: 0.8, size: rand(3, 5), color: '#8a8098', kind: 'shard', add: false, vr: rand(-6, 6) }); }); },
+      ambush(sh, b, dur) { emit(sh, dur, 0.35, () => { const a = rand(0, TAU), d = rand(20, 120); if (bva(b) < 0.3) return; VFX.spawn({ x: bx(b) + Math.cos(a) * d, y: by(b) + Math.sin(a) * d * 0.7, z: rand(160, 260), g: 380, life: 0.8, size: rand(3, 5), color: '#8a8098', kind: 'shard', add: false, vr: rand(-6, 6) }); }); },
+      // ---- the Moth Queen (Hard, skitterra-moth.js)
+      // Scale Wave: the wings beat, dust flung off both tips with each stroke and gathering over her
+      wingbeat(sh, b, dur) {
+        if (typeof SK_MOTH === 'undefined') return;
+        drawIn(sh, dur, P(b, 'skitterra', 0, 0), { color: '#e0c0ff', color2: '#fff0d8', r: 150, gr: 70, rate: 0.5 });
+        beat(sh, dur, 0.55, () => { for (const s of [-1, 1]) { const q = onBody(b, 'skitterra', -8, s * 135); SK_MOTH.dustSpray(q.x, q.y, 9, { a0: (b.f || 0) + s * Math.PI / 2, spread: 1.2, speed: 160, vz: 120, life: 1.0, size: 8, r: 20 }); shockAt(q.x, q.y, { r: 60, color: '#f0e0ff', w: 3, dur: 0.4, flat: 0.7 }); } });
+      },
+      // Flutter: the wings go to a blur, wind and dust streaming back off her
+      flight(sh, b, dur) {
+        if (typeof SK_MOTH === 'undefined') return;
+        drawIn(sh, dur, P(b, 'skitterra', -20, 0), { color: '#d8c8ff', color2: '#ffffff', r: 100, gr: 50, rate: 0.4 });
+        emit(sh, dur, 0.5, () => { const q = onBody(b, 'skitterra', -40, rand(-80, 80)); SK_MOTH.dustSpray(q.x, q.y, 2, { a0: (b.f || 0) + Math.PI, spread: 0.6, speed: 130, vz: 40, life: 0.8, size: 7 }); });
+      },
+      // Moonlight: a pale glow gathering over her, motes lifting off the wings
+      moonlight(sh, b, dur) {
+        drawIn(sh, dur, P(b, 'skitterra', 8, 0), { color: '#dfe8ff', color2: '#ffffff', r: 120, gr: 80, rate: 0.5 });
+        emit(sh, dur, 0.4, () => { const q = onBody(b, 'skitterra', rand(-30, 30), rand(-90, 90)); VFX.spawn({ x: q.x, y: q.y, z: 10, vz: rand(40, 100), life: rand(0.8, 1.3), size: rand(4, 8), size1: 0, kind: 'star', color: '#f4f8ff' }); });
+      },
     },
     volkar: {
       // the storm gathering over him: dark cloud wheeling overhead, short bolts dropping from it onto him
@@ -2493,7 +2535,7 @@ const BOSS_VFX = (() => {
   function setClock(fn) { clockFn = fn; }
   // ================================================================ [/boss presentation]
 
-  return { timeStop, failed,propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballWall, meatballHit, scorchPool, silkSnap, silkFree, reelBite, snuff, hatch, threadShoot, threadSnap, floorFalls, impact, castStart, cocoonEnd, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe,
+  return { timeStop, failed,propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballWall, meatballHit, scorchPool, silkSnap, silkFree, reelBite, snuff, hatch, threadShoot, threadSnap, floorFalls, impact, castStart, cocoonEnd, cocoonCracking, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe,
     // [boss presentation]
-    drawBody, presence, bossHit, bossHp, enrageLand, behind, intro, bossDeath, setClock };
+    drawBody, presence, bossHit, bossHp, enrageLand, behind, intro, bossDeath, setClock, roomFx };
 })();

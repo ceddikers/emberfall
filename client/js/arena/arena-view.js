@@ -13,14 +13,15 @@ const ArenaView = {
     // a round room is drawn at its full size (Volkar's closes in later; the dead ground is drawn over it)
     const ex = ARENA.kind === 'poly' ? ARENA.R : ARENA.kind === 'circle' ? ARENA.full : ARENA.hw;
     const ey = ARENA.kind === 'poly' ? ARENA.R : ARENA.kind === 'circle' ? ARENA.full : ARENA.hh;
-    const M = bossId === 'volkar' ? 260 : bossId === 'hollowking' ? 160 : bossId === 'brannoc' ? 260 : bossId === 'brannoc:sea' ? 340 : bossId === 'morrowoak' ? 220 : bossId === 'morrowoak:remade' ? 300 : bossId === 'caelum' ? 300 : bossId === 'caelum:sky' ? 320 : (bossId === 'wyrm' || bossId === 'corvane') ? 200 : 120, bx = Math.ceil(ex + M), by = Math.ceil(ey + M);
+    const M = bossId === 'volkar' || bossId === 'volkar:storm' ? 260 : bossId === 'hollowking' ? 160 : bossId === 'brannoc' ? 260 : bossId === 'brannoc:sea' ? 340 : bossId === 'morrowoak' ? 220 : bossId === 'morrowoak:remade' ? 300 : bossId === 'caelum' ? 300 : bossId === 'caelum:sky' ? 320 : (bossId === 'wyrm' || bossId === 'corvane') ? 200 : 120, bx = Math.ceil(ex + M), by = Math.ceil(ey + M);
     const cv = document.createElement('canvas');
     cv.width = Math.ceil(bx * 2 * scale); cv.height = Math.ceil(by * 2 * scale);
     const c = cv.getContext('2d');
     c.scale(scale, scale);
     c.translate(bx, by);
-    if (bossId === 'skitterra') this.buildWebCave(c, bx, by);
+    if (bossId === 'skitterra' || bossId === 'skitterra:moth') this.buildWebCave(c, bx, by);   // (the Moth Queen's form: the same cave for now)
     else if (bossId === 'volkar') this.buildPeak(c, bx, by);
+    else if (bossId === 'volkar:storm') this.buildStormPeak(c, bx, by);   // (volkar-storm.js: the summit under the Storm Heart's sky, Hard's second form)
     else if (bossId === 'hollowking') this.buildBarrow(c, bx, by);
     else if (bossId === 'hydra') this.buildTemple(c, bx, by);
     else if (bossId === 'wyrm') this.buildCrater(c, bx, by);
@@ -1244,8 +1245,10 @@ const ArenaView = {
       if (k <= 0) continue;
       const r = p.r * (0.7 + 0.3 * life);
       if (p.tag === 'venom') { this.venomPool(ctx, p, r, k, t); continue; }
+      if (p.tag === 'scales') { if (typeof SK_MOTH !== 'undefined') SK_MOTH.puddle(ctx, p, r, k, t); continue; }   // (the Moth Queen's dust, Moonlight: skitterra-moth.js)
       if (p.tag === 'bloom' || p.tag === 'mire') { this.hydraPool(ctx, p, r, k, t); continue; }
       if (p.tag === 'ember') { if (this.floorFor && this.floorFor.startsWith('hydra@')) this.hydraEmber(ctx, p, r, k, t); else this.emberPool(ctx, p, r, k, t); continue; }
+      if (p.tag === 'sour') { if (typeof GR_FX !== 'undefined') GR_FX.puddle(ctx, p, r, k, t); continue; }   // (Grubnak's Sour Burp acid: grubnak-fx.js)
       if (p.tag === 'mgRimeIce') { if (typeof MG_FX !== 'undefined') MG_FX.puddle(ctx, p, r, k, t); continue; }   // (Morrow-Oak's Frost Fist ice: morrowoak-fx.js)
       if (p.tag === 'clEmberBurn') { if (typeof CL_FX !== 'undefined') CL_FX.puddle(ctx, p, r, k, t); continue; }   // (Caelum's Dark Ember burning where it fell: caelum-fx.js)
       // hot grease: a glossy brown pool, bubbling; it only burns (flames, an orange glow) once fire has reached it
@@ -1978,6 +1981,7 @@ const ArenaView = {
   // under everything that stands: the floor layer, burning grease, and the darkness of Lights Out
   drawRoomUnder(ctx, room, t, v) {
     this.drawRoomFloor(ctx, room);
+    if (typeof VK_STORM !== 'undefined') VK_STORM.under(ctx, room, t);   // Volkar's storm form: the canopy, the face, the cracks lit from below (volkar-storm.js)
     if (typeof MG_ART !== 'undefined') MG_ART.holes(ctx, room, t);   // Morrow-Oak's holes: always drawn, at their current size (morrowoak-art.js)
     if (this.amb && this.amb.kind === 'barrow') this.chargeBanners(ctx, room, t);
     for (const fl of room.floor) {
@@ -2102,6 +2106,7 @@ const ArenaView = {
   },
   // over the units: marks that belong over heads (Volkar's rod strike) and the like
   drawRoomOver(ctx, room, t, env) {
+    if (typeof VK_STORM !== 'undefined' && env && env.bossId === 'volkar') VK_STORM.over(ctx, room, t, env);   // Volkar's arms, from the telegraphs (volkar-storm.js)
     if (typeof CV_FX !== 'undefined' && env && env.bossId === 'corvane') CV_FX.roomOver(ctx, room, t, env);   // the Hundredfold Parting's numbered afterimages (corvane-fx.js)
     if (typeof BR_FX !== 'undefined' && env && env.bossId === 'brannoc') BR_FX.roomOver(ctx, room, t, env);   // the Sunwheel and Breaker's wave on their painted paths, and the Tide Rises (brannoc-fx.js)
     if (typeof MG_FX !== 'undefined' && env && env.bossId === 'morrowoak') MG_FX.roomOver(ctx, room, t, env);   // the Swallowing's falling slabs and the limbs growing (morrowoak-fx.js)
@@ -2176,6 +2181,9 @@ const ArenaView = {
   drawProp(ctx, pr, t, room) {
     const k = Math.min(1, (t - (pr.born ?? t - 1)) / 0.25), last = pr.maxHp > 1 && pr.hp <= 1, worn = pr.maxHp > 2 && pr.hp === pr.maxHp - 1;
     ctx.save(); ctx.globalAlpha = k;
+    // (Clean Plate: while he breathes in, what is about to go leans toward his mouth and rattles: grubnak-fx.js lean)
+    const ih = room && room.ev && room.ev.inhale;
+    if (ih && !ih.again && t >= ih.start && t < ih.end && typeof GR_FX !== 'undefined') { const o = GR_FX.lean(pr, ih, t); ctx.translate(pr.x + o.dx, pr.y + o.dy); ctx.rotate(o.rot); ctx.translate(-pr.x, -pr.y); }
     switch (pr.kind) {
       case 'cask': this.cask(ctx, pr, last, t); break;
       case 'pillar': this.rockPillar(ctx, pr, last, worn, t); break;

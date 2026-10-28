@@ -119,6 +119,7 @@ const ARENA_DEFS = {
   grubnak: { kind: 'rect', hw: 520, hh: 360, corner: 40 },   // a cramped kitchen: the stove line along the top wall
   skitterra: { kind: 'poly', n: 8, r: 560 },
   volkar: { kind: 'circle', r: 540 },   // a storm-swept peak; in phase 2 its electrified edge closes in (resize)
+  'volkar:storm': { kind: 'circle', r: 540 },   // ...Hard's second form: the same summit (its broken wedges kept by the script), a face in the clouds over the Storm Heart
   hollowking: { kind: 'rect', hw: 600, hh: 440, corner: 40 },   // a long burial hall, the throne against the top wall
   wyrm: { kind: 'circle', r: 560 },   // a volcanic crater; three scorched spots where he lands, the rim turns molten mid-fight
   archmage: { kind: 'circle', r: 540 },   // a drowned tower: seven circles of spellwork on the floor, four elemental sigils (archmage.js)
@@ -129,6 +130,7 @@ const ARENA_DEFS = {
   'brannoc:sea': { kind: 'circle', r: 480 },   // ...then a broken ring of stone in an open sea, the Tidewrought standing in the water at its north edge
   morrowoak: { kind: 'circle', r: 560 },   // a dead grove on the crater's rim, roots everywhere; the Hunger's holes are kept as f.floor (morrowoak.js)
   'morrowoak:remade': { kind: 'circle', r: 520 },
+  'skitterra:moth': { kind: 'poly', n: 8, r: 560 },   // (Hard, after the Chrysalis: the same web cave, the Moth Queen's form; arena-view.js draws it as the cave until the art is painted)
   caelum: { kind: 'circle', r: 560 },   // the crater floor round the half-buried star, under the meteor's shadow (caelum.js)
   'caelum:sky': { kind: 'circle', r: 520 },   // ...then a circle of cloud above the falling meteor   // ...then the floating pieces of the grove over the dark, the holes still in them
 };

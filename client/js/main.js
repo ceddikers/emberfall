@@ -1076,6 +1076,7 @@
 
   // ---------------------------------------------------------------- the raid (client side; every player)
   let raid = null;
+  const sameRoomForm = r => !!(r.form && r.def.forms && r.def.forms[r.form] && r.def.forms[r.form].sameRoom);   // (a boss form that keeps the room: fight.js setForm)
   // host only
   let raidHost = null, hostRoster = [], stopHostTick = null, lastRaidOpts = { mode: 'normal', fill: true, boss: 'grubnak' };
   let raidEnter = null, raidRid = 0;   // the running raid's start message and its id (a snapshot puts a late player in it)
@@ -1615,6 +1616,7 @@
     else if (SH) { SH.castEnd(); SH.play('portal-enter', { vol: 0.8 }); SH.music('mus-pull', { fade: 2 }); later(0.6, () => { SH.play(def.id + '-intro', { vol: 0.9 }); SH.vo('boss-intro', { bossId: def.id }); }); }
     sceneFade();
     const sp = def.spawn || { x: 0, y: -40 };
+    FIGHT.BOSS_R = FIGHT.BOSS_R0;   // (a form that swelled the boss last fight has gone)
     raid = {
       def, mode: msg.mode, roster: msg.roster, rosterIds: new Set(msg.roster.map(r => r.id)), rid: msg.rid || 0, away: new Set(),
       // pull: no countdown, the fight starts on the first blow on the boss ('prepull' till then)
@@ -2182,6 +2184,10 @@
       case 'volley': prop('silk', true, end + 4.5); prop('rear', true, end + 0.5); break;
       case 'deluge': prop('venom', true, end + 0.3); prop('rear', true, end + 0.3); break;
       case 'strand': case 'cocoon': case 'ambush': prop('silk', true, end + 0.4); prop('rear', true, end + 0.3); break;
+      // the Moth Queen's moves (Hard): the wings' pose for each (skitterra-moth.js); Flutter's three passes run on after its cast
+      case 'wingbeat': prop('wingbeat', true, end + 0.5); break;
+      case 'flight': prop('flight', true, end + 5.4); break;
+      case 'moonlight': prop('moonlight', true, end + 0.6); break;
       case 'chain': case 'orbs': prop('charge', true, end + 0.4); break;
       case 'skyfall': prop('sky', true, end + 0.4); break;
       case 'audience': prop('audience', true, end + 0.3); break;
@@ -2223,6 +2229,7 @@
       if (raid.def.id === 'grubnak' && !raid.room.props.some(p => p.kind === 'pot')) { raid.props.carry = true; raid.propsUntil.carry = now + 0.9; }
       later(msg.dur || 0.6, () => raid && BOSS_VFX.leap(raid.boss.x, raid.boss.y));
     }
+    else if (msg.name === 'swell') { st.action = { type: 'attack', t0: now, dur: 1.4 }; }   // (the Gorged form's swell: the body itself is bosses.js's gAge)
     else if (msg.name === 'gorge' || msg.name === 'roar') { st.action = { type: 'attack', t0: now, dur: 1.4 }; BOSS_VFX.roar(raid.boss.x, raid.boss.y, raid.def.id); }
     else if (msg.name === 'wrap') { raid.props.silk = true; raid.propsUntil.silk = now + msg.dur + 0.3; }
     else if (msg.name === 'field') { raid.props.charge = true; raid.propsUntil.charge = now + msg.dur + 0.3; }
@@ -2377,7 +2384,7 @@
   Net.on('bcastend', msg => {
     if (!raid) return;
     if (raid.cast && raid.cast.name === msg.name && now < raid.cast.start + raid.cast.dur) { raid.cast.dur = Math.max(0.01, now - raid.cast.start); raid.cast.goal = null; }
-    BOSS_VFX.cocoonEnd(raid.bossDraw, !!msg.ok);
+    if (!(raid.def.id === 'skitterra' && raid.mode === 'hard')) BOSS_VFX.cocoonEnd(raid.bossDraw, !!msg.ok);   // (Hard's Metamorphosis bursts the cocoon on its own beat: roomev 'metamorph' below)
   });
   // the room: props and floor state (the whole list), a prop chipped / broken / slammed into, and room moments
   Net.on('props', msg => { if (raid) ArenaView.roomProps(raid.room, msg, now); });
@@ -2385,8 +2392,25 @@
   Net.on('roomev', msg => {
     if (!raid) return;
     // the room changes shape mid-fight (fight.js setForm): the walls move here at once, and the floor is rebuilt for the new form
-    if (msg.k === 'form') { raid.form = msg.form || null; ARENA.use(raid.def.id + (raid.form ? ':' + raid.form : '')); }
+    // (a form with sameRoom keeps the room and only swells the boss: Grubnak gorged; msg.r is his hit radius from then on)
+    if (msg.k === 'form') { raid.form = msg.form || null; raid.formAt = now; if (!sameRoomForm(raid)) ARENA.use(raid.def.id + (raid.form ? ':' + raid.form : '')); FIGHT.BOSS_R = msg.r || FIGHT.BOSS_R0;
+      // Skitterra, Hard: the cocoon bursts as the form changes, and the wings unfurl from there (raid.mothAt: props.mothU, updateArena)
+      if (raid.def.id === 'skitterra' && msg.form === 'moth') {
+        raid.mothAt = now;
+        BOSS_VFX.cocoonEnd(raid.bossDraw, true, { moth: true, ok: raid.mothMeta ? raid.mothMeta.ok : true });
+        if (SH) SH.play('bm-skitterra-moth-queen', { vol: 0.9 });
+      }
+    }
     ArenaView.roomEvent(raid.room, msg, now, entById);
+    if (raid.def.id === 'grubnak' && (msg.k === 'inhale' || msg.k === 'form') && typeof BOSS_VFX !== 'undefined') BOSS_VFX.roomFx(msg, raid.bossDraw, raid.def.id);   // (Clean Plate's inhale, the swell: grubnak-fx.js)
+    if (typeof VK_STORM !== 'undefined' && raid.def.id === 'volkar') VK_STORM.event(msg, { later });   // (the body breaking and the burst: shake, flash, sparks)
+    // Skitterra, Hard: the Metamorphosis (skitterra.js). The check has been decided (msg.ok: torn open or closed on her): the cocoon cracks for msg.burst s
+    // (boss-vfx.js cocoonCracking: pale gold if torn, red if closed), then the form moment above bursts it. The art reads room.ev.metamorph.
+    if (msg.k === 'metamorph' && raid.def.id === 'skitterra') {
+      raid.mothMeta = { ok: !!msg.ok };
+      BOSS_VFX.cocoonCracking(!!msg.ok);
+      if (SH) later(msg.burst, () => raid && SH.play('bm-skitterra-eclosion', { vol: 0.95 }));
+    }
     if (msg.k === 'grounded' && SH) later(msg.dur, () => raid && SH.play('bm-skitterra-tightening-web', { vol: 0.5, key: 'skclimb', minGap: 0.5 }));   // (Skitterra hauls herself back up her silk: the web's creak, reused)
   });
 
@@ -3102,6 +3126,11 @@
     }
     for (const key of Object.keys(raid.propsUntil)) if (now > raid.propsUntil[key]) { delete raid.props[key]; delete raid.propsUntil[key]; }
     bd.st.props = raid.props;
+    if (raid.def.id === 'skitterra') {   // (Hard, after the Chrysalis: the Moth Queen's body, skitterra-moth.js: how far her wings have unfurled, and the +100% pull's red)
+      raid.props.moth = raid.form === 'moth';
+      raid.props.mothU = raid.mothAt != null ? clamp((now - raid.mothAt) / 1.7, 0, 1) : 1;
+      raid.props.mothFury = !!(raid.mothMeta && !raid.mothMeta.ok);
+    }
     if (raid.def.id === 'skitterra' && typeof SK_FX !== 'undefined') SK_FX.pose(raid, now);   // (the Dark Between: her body comes down with a drop and climbs back, skitterra-fx.js)
     if (raid.def.id === 'hydra') { raid.props.dive = !!b.u; raid.props.heart = !!raid.wallLabel; }   // (the Mother sinks while she is out of reach; the Heart shows in her chest while she is sealed)
     // (Corvane: his stance, the notches on his blade and the Vigil's kneel, from the room's whet / vigil moments: corvane-art.js draws them)
@@ -3119,6 +3148,13 @@
     if (raid.def.id === 'caelum') {   // (the Ascendant form and his blade, longer each act: caelum-art.js; the blade grows with the meteor's shadow)
       raid.props.sky = raid.form === 'sky';
       const cs = raid.room.ev.clshadow; raid.props.clBlade = cs ? cs.r : 150;
+    }
+    if (raid.def.id === 'grubnak') { raid.props.gorged = raid.form === 'gorged'; raid.props.gAge = raid.props.gorged ? now - (raid.formAt ?? now - 9) : 0; }   // (Hard: the swollen second form after Clean Plate; bosses.js draws it, gAge is the seconds since the swell)
+    if (raid.def.id === 'volkar') {   // (Hard's second form, volkar-storm.js: the body cracking, then the Storm Heart under a face in the clouds)
+      const ev = raid.room.ev, vb = ev.volbreak, vr = ev.volrise;
+      raid.props.storm = raid.form === 'storm';
+      raid.props.stormBreak = vb && !raid.props.storm ? clamp((now - vb.start) / Math.max(0.1, vb.dur), 0, 1) : 0;
+      raid.props.stormAge = vr ? now - vr.start : -1;
     }
     if (raid.def.id === 'wyrm') { raid.props.air = !!b.u && !raid.props.perch; if (raid.wallLabel) raid.props.heart = true; }   // (Vhalgrath: lifted while he is out of reach; the Ember Heart shows in his chest while he is sealed)
     // telegraphs that follow players or track the tank
@@ -3634,7 +3670,7 @@
     ctx.translate(Math.round((-cam.x + sx) * px) / px, Math.round((-cam.y + sy) * px) / px);
     if (raid.pvp) { if (raid.pvp.ctf) PvpView.drawField(ctx, now); else PvpView.drawRing(ctx, now); }
     else {
-      ArenaView.drawFloor(ctx, raid.def.id + (raid.form ? ':' + raid.form : ''), Math.min(1.5, DPR * zoom));
+      ArenaView.drawFloor(ctx, raid.def.id + (raid.form && !sameRoomForm(raid) ? ':' + raid.form : ''), Math.min(1.5, DPR * zoom));
       ArenaView.drawAmbient(ctx, now);
       ArenaView.drawEdge(ctx, now, raid.edgeWarn);
     }
@@ -3708,7 +3744,7 @@
         const sk = raid.def.id === 'skitterra' ? raid.skPose : null;   // (in the Dark Between: gone up, falling, crouched or climbing)
         const ghost = sk ? 0 : clamp((1 - bd.fade) / 0.45, 0, 1);
         if (!sk || sk.alpha > 0.01) {
-          if (sk) { ctx.save(); ctx.translate(bd.x, bd.y + sk.oy); ctx.scale(sk.sx, sk.sy); ctx.translate(-bd.x, -bd.y); }
+          if (sk) { ctx.save(); ctx.translate(sk.x != null ? sk.x : bd.x, (sk.y != null ? sk.y : bd.y) + sk.oy); ctx.scale(sk.sx, sk.sy); ctx.translate(-bd.x, -bd.y); }   // (sk.x, sk.y: the landing she is on, skitterra-fx.js)
           BOSS_VFX.drawBody(ctx, bossDef, bd, { scale: RAID_BOSS_SCALE, ghost, dark: raid.nightK > 0.05 ? 0.55 * raid.nightK : 0,
             alpha: sk ? sk.alpha : raid.def.trial ? 0.72 + 0.06 * Math.sin(now * 2.3) : Math.max(bd.fade, 0.8),
             tint: raid.def.trial ? 'memory' : raid.bossPause && now < raid.bossPause.end ? 'frost' : null, pending: !!raid.introAt && !raid.def.trial });

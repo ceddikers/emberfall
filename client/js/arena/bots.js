@@ -160,7 +160,7 @@ const BotAI = {
     return mine === null ? null : (mine[me] ?? null);
   },
   towerPlan(view) {
-    const towers = view.mechs.filter(m => m.type === 'tower' && m.tag !== 'rod' && m.tag !== 'bell' && m.tag !== 'still').sort((a, b) => a.resolveAt - b.resolveAt || a.id - b.id);
+    const towers = view.mechs.filter(m => m.type === 'tower' && m.tag !== 'rod' && m.tag !== 'bell' && m.tag !== 'still' && m.tag !== 'arm').sort((a, b) => a.resolveAt - b.resolveAt || a.id - b.id);
     if (!towers.length) return null;
     const SPEED = 230;
     const al = view.players.filter(p => p.alive);
@@ -225,7 +225,7 @@ const BotAI = {
     return mine === null ? null : (mine[me] ?? null);
   },
   stillPlan(view) {
-    const pol = view.polarity, stones = view.mechs.filter(m => m.tag === 'still');
+    const pol = view.polarity, stones = view.mechs.filter(m => m.tag === 'still' || m.tag === 'arm');   // (Still Air's stones, and Reaching Arms' arms: one person of each one's charge)
     if (!pol || !stones.length) return null;
     const mine = {}, taken = new Set(), al = view.players.filter(p => p.alive);
     const order = [...al.filter(p => p.id < 1000), ...al.filter(p => p.id >= 1000).sort((a, b) => a.id - b.id)];
@@ -614,6 +614,19 @@ const BotAI = {
         else if (d < s.r + 30 && dt < 3.5) pen += 5000;
         continue;
       }
+      // Second Helping (Grubnak, Hard): the haul comes first (everyone dragged toward him by m.pull.dist, stopped by a solid cask) and the circle
+      // at his feet lands where it leaves you: judge the spot you would be left at, not the one you stand on (m.pull is only on that blast)
+      if (m.pull && m.tag === 'helping') {
+        const bx = s.x, by = s.y, D = hypot2(bx - px, by - py);
+        let qx = px, qy = py;
+        if (D > m.pull.stop + 20) {
+          const go = Math.min(m.pull.dist, D - m.pull.stop), to = { x: px + (bx - px) / D * go, y: py + (by - py) / D * go };
+          PROPS.clipMove({ x: px, y: py }, to, view.props || [], 14);
+          qx = to.x; qy = to.y;
+        }
+        if (SHAPES.contains(s, qx, qy, 22)) pen += 6000 * urgency + (dt < 2.5 ? 5000 : 0);
+        continue;
+      }
       // a pull toward him coming (m.pullDist, Morrow-Oak's Inhale): stand where the drag crosses no hole
       if (m.pullDist) {
         if (dt < 5 && view.room && view.room.safe) {
@@ -683,7 +696,7 @@ const BotAI = {
             for (const o of alive) if (o.id !== me && hypot2(o.x - px, o.y - py) < s.r + 45) pen += 1500 * Math.max(urgency, 0.4);
             // (a circle that locks where you stand when it does: be on the move by then, so you are leaving it at full speed, not starting to)
             if (m.tag === 'glob') pen += Math.max(0, 150 - hypot2(px - bot.x, py - bot.y)) * 6 * Math.min(1, (dt - (m.lockAt || 0)) + 0.5);
-            if (m.tag === 'cask') { const db = hypot2(px - view.boss.x, py - view.boss.y); if (db < 240) pen += (240 - db) * 15; }
+            if (m.tag === 'cask' || m.tag === 'spit') { const db = hypot2(px - view.boss.x, py - view.boss.y); if (db < 240) pen += (240 - db) * 15; }
             break;
           }
           // Funeral March: the open lane (m.safe, a row of spots) is the place to be until the last rank has passed
@@ -752,7 +765,7 @@ const BotAI = {
         }
         case 'tower': {
           const mine = m.tag === 'rod' ? this.rodFor(me, view) === m.id : m.tag === 'bell' ? this.bellFor(me, view) === m.id
-            : m.tag === 'still' ? this.stillFor(me, view) === m.id : this.towerFor(me, view) === m.id;
+            : m.tag === 'still' || m.tag === 'arm' ? this.stillFor(me, view) === m.id : this.towerFor(me, view) === m.id;
           const inside = hypot2(s.x - px, s.y - py) < s.r - 18;
           // head for your own tower early: it may be across the room
           if (mine && !inside) pen += (hypot2(s.x - px, s.y - py)) * 12 * Math.max(urgency, 0.3) + (dt < hypot2(s.x - bot.x, s.y - bot.y) / 230 + 3 ? (view.room && view.room.threads ? 16000 : 4500) : 1200);   // (a failed tower hits the whole party: a sting or three from Skitterra's threads on the way beats it)

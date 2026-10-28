@@ -31,6 +31,10 @@
 //     thinning silk, and she hunts whoever stands farthest out along it (From the Dark, from the web overhead).
 //   The Chrysalis (at 28%): a hard damage check. She cocoons at the hub for 25 s; take 5% of her health off in that
 //     time and she tears free, staggered (+25% damage taken, 8 s). Fail and she devours the party.
+//     Hard (24 s): the Metamorphosis. She comes out as the Moth Queen either way (fight.js setForm 'moth': the bar, the room's look and
+//     the art change); pass it and she is staggered as she emerges, fail it and nobody dies for it, but she has +100% damage for the rest of
+//     the fight (the boss bar's Fury). The moth has no legs to spare: where Hard's Collapse had an Eightfold Lunge it has one of three wing
+//     moves instead (Scale Wave, Flutter, Moonlight); the finale (From the Dark) is the same.
 // The tank's own beat: Fang Strike (both difficulties). She rears and drives a fang down a lane from her through the tank, drawn
 // from the cast and set where he stood when it began: he steps out of it, and the party keeps out of the strip behind him (whoever
 // stands in it takes it too). About a quarter of the tank's health, so it fills the quiet stretches between the Wraps (never
@@ -41,7 +45,8 @@
 // the one after it as a thin outline, boss-tells.js lungeOrder; her legs and a turn arrow show the whole order). Hard: casts 15% faster, 25% more damage, six-step Lunges, green and red Silk Lines, a burning
 // beam on the brood pair, three spiderlings to a clutch, two drops per uncut thread in the dark (3.6 s apart), Molt (the
 // husk replays her last Lunge), Silk Wrap on the tank as Silk Reel takes the healer, Ceiling Ambush, sticky acid; and her
-// three moves: Egg Sacs, Fang Rush, Spinneret Volley (with Molt, Ceiling Ambush and Snare Weave, six that Normal never uses).
+// three moves: Egg Sacs, Fang Rush, Spinneret Volley (with Molt, Ceiling Ambush and Snare Weave, six that Normal never uses), and the Moth
+// Queen's three wing moves in Act III (Scale Wave, Flutter, Moonlight; exempt from that count, they belong to the second form).
 
 const SKITTERRA = {
   id: 'skitterra', name: 'Queen Skitterra', title: 'Spider Broodmother',
@@ -53,6 +58,8 @@ const SKITTERRA = {
   vuln: 0.5,
   arena: { theme: 'webcave' },
   gates: [0.7, 0.28],   // where the acts change (ticks on the boss bar; fight.js course)
+  // the second form, Hard only (fight.js setForm 'moth', at the end of the Chrysalis): the bar shows this name and title (raid-ui.js reads forms)
+  forms: { moth: { name: 'Skitterra, the Moth Queen', title: 'Wings over the Web' } },
   // the eight pillars the web hangs from, one toward each corner of the cave
   room(f) {
     for (let i = 0; i < 8; i++) {
@@ -73,6 +80,9 @@ const SKITTERRA = {
       clutchHp: 24000, knotHp: 24000, broodHp: H ? 30000 : 20000, swarmHp: H ? 16000 : 18000,
       fangStrike: H ? 7200 : 8000,
       sting: H ? 4100 : 4600, drop: H ? 14900 : 16900, drip: H ? 8100 : 9100, fall: H ? 15400 : 15600, cocoon: H ? 18700 : 14300,
+      // the Moth Queen (Hard only): the burst of the cocoon (a pass: wings still wet; a fail: the whole cocoon's worth), the two ripples of Scale Wave,
+      // a pass of Flutter, Moonlight's shared hit and the dust it leaves (a tick)
+      ecloPass: 6400, ecloFail: 15500, wave: 13200, wave2: 14800, flutter: 13200, moon: 22500, scales: 3100,
     };
     const LONG = 420, SHORT = 150;
     const S = (...steps) => steps.filter(Boolean);
@@ -565,6 +575,10 @@ const SKITTERRA = {
     const STAY = H ? [2.7, 3] : [4, 4], STAY_HUNT = H ? 2 : 2.5;
     let groundEnd = 0;   // when the last window laid out so far closes (a drop lays its windows out as it is called)
     f.noPause = () => !!room.grounded;
+    // Where her body is. The host's body (B) is on the landing spot for the whole window and moves to the next one as the shadow sets out, when
+    // she has been hauled up (it is what the bots follow, so it goes early). The clients do not draw her from it while she is down or climbing:
+    // they draw her on the landing the 'grounded' moment names (skitterra-fx.js pose), so the body can never be seen sliding or jumping, whenever
+    // its updates arrive; and while she is up in the dark nothing of her is drawn on the floor but the shadow (roomev 'ambush').
     const land = (at, stay) => {
       room.grounded = true;
       B.x = at.x; B.y = at.y; B.facing = Math.atan2(-at.y, -at.x);
@@ -706,11 +720,94 @@ const SKITTERRA = {
       }
     });
 
+    // --- the Moth Queen (Hard only) ---------------------------------------------------------------------
+    // After the Metamorphosis (the Chrysalis below) she is a winged moth over the collapsing web. Her legs are tucked away: where Hard's
+    // Collapse had an Eightfold Lunge, it has one of her three wing moves. Everything is on the floor the whole time (red damage, blue stack);
+    // no safe floor is ever painted. Cast names / anims / mech tags are the art's hooks (docs/DESIGN.md, the Skitterra section).
+    //   Scale Wave ('wingbeat', tags scalewave, scalewave2): she beats her wings over the hub and the dust rolls out in two ripples: first
+    //     everything beyond the hub (stay near her), then, as that lands, the hub itself (get out of it): in, then out.
+    //   Flutter ('flight', tag flutter): three passes across the cave, each down a lane from where she is through a player (two random
+    //     non-tanks, then whoever holds her); a lane follows its player until just before it fires, she flies it to just past where they
+    //     stood, and the next lane is drawn from there only once she has gone, so the chain is read one lane at a time.
+    //   Moonlight ('moonlight', tag moonlight; the dust it leaves is the puddle tag scales): a pillar of pale light falls on a random non-tank
+    //     (shared: blue, the whole party in it), and the dust it throws up lies on the floor for a while afterwards.
+    let moth = false;
+    const WAVE_R = 235;   // (the hub disc the last ring leaves is about 215 across: the whole of it is the second ripple)
+    const scaleWave = () => {
+      const d = f.ct(3.4), gap = 1.6;
+      f.moveBoss(0, 0, 600);
+      f.cast('Scale Wave', d, 'wingbeat');
+      f.mech({ type: 'aoe', shape: { kind: 'donut', x: 0, y: 0, r: 1500, r2: WAVE_R }, delay: d, dmg: dmg.wave, tag: 'scalewave' });
+      f.afterKeep(d - 0.1, () => f.mech({ type: 'aoe', shape: { kind: 'circle', x: 0, y: 0, r: WAVE_R }, delay: gap + 0.1, dmg: dmg.wave2, tag: 'scalewave2' }));
+    };
+    const flutter = () => {
+      const d = f.ct(3.2), gap = 1.5, away = 0.7, used = [];
+      const aimAt = k => {
+        const al = f.alive(), tank = f.tank();
+        if (k === 2 && tank) return tank;
+        const pool = al.filter(p => (!tank || p.id !== tank.id) && !used.includes(p.id));
+        return f.pick(pool.length ? pool : al);
+      };
+      const pass = (k, delay) => {
+        const who = aimAt(k);
+        if (!who) { B.lockFacing = false; return; }
+        used.push(who.id);
+        const m = f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: Math.atan2(who.y - B.y, who.x - B.x), len: 1500, w: 190 }, delay, dmg: dmg.flutter,
+          tag: 'flutter', aimFromBoss: who.id, lockAt: 0.6 });
+        f.afterKeep(delay, () => {
+          const a = m.shape.angle, c = Math.cos(a), s = Math.sin(a);
+          let len = 120;
+          const reach = Math.hypot(who.x - B.x, who.y - B.y) + 170;   // (past the one she flew at, no further: the melee need not chase her across the cave)
+          while (len < reach && len < 1400 && ARENA.sd(B.x + c * (len + 25), B.y + s * (len + 25)) < -150) len += 25;
+          B.facing = a;
+          f.moveBoss(B.x + c * len, B.y + s * len, 1500);
+          f.anim('leap', 0.4);
+          if (k < 2) f.afterKeep(away, () => pass(k + 1, gap));
+          else f.afterKeep(0.9, () => { B.lockFacing = false; f.moveBoss(0, 0, 900); });
+        });
+      };
+      B.lockFacing = true;
+      f.cast('Flutter', d, 'flight');
+      pass(0, d);
+    };
+    const moonlight = (d = f.ct(3.4)) => {
+      const al = f.alive();
+      if (!al.length) return;
+      const p = f.pick(f.nonTanks().length ? f.nonTanks() : al);
+      f.cast('Moonlight', d, 'moonlight');
+      const m = f.mech({ type: 'stack', shape: { kind: 'circle', x: p.x, y: p.y, r: 115 }, delay: d, dmg: dmg.moon * Math.min(al.length, 4) / 4, follow: p.id, lockAt: 1.0,
+        need: al.length, tag: 'moonlight',
+        onResolve: () => f.puddle(m.shape.x, m.shape.y, 115, 9, dmg.scales, 1, 'scales') });
+    };
+    // the Silk Wrap lands first, on the tank (rooted where it lands), and the light falls after it: the Wrap-Lunge's slot, as the moth
+    const wrapMoon = () => { const d = f.ct(5.5); moonlight(d); silkWrap(d - 1.8, true); };
+
     // --- the hunt ---------------------------------------------------------------------------------
     // The Chrysalis (a hard damage check): as the Collapse begins she wraps herself in silk at the hub. Tear 5% of her
     // health off before it closes and she falls out of it, staggered and open for 8 s; let it close and she devours.
+    // Hard: THE METAMORPHOSIS. The check is the same (24 s, 5%), but she comes out as the Moth Queen either way, and nobody is devoured:
+    //   roomev 'metamorph' { ok, burst, dur }  the moment the check is decided (ok 1: torn open; ok 0: it closed on her): the cocoon cracks for
+    //     `burst` s (the boss bar's cast has already ended: 'bcastend'), the burst is at start + burst, the set piece lasts dur s;
+    //   at the burst: f.setForm('moth') (roomev 'form', raid.form 'moth', def.forms), a raidwide (tag 'eclosion', hidden: the whole room) and
+    //     the pass's stagger or the fail's +100% damage (boss.dmgUp: the boss bar's Fury) start;
+    //   a pass leaves her staggered (+25% damage taken) from the decision until 8 s after the burst.
+    const CRACK = 1.6;
+    const metamorph = ok => {
+      f.emit({ t: 'roomev', k: 'metamorph', ok: ok ? 1 : 0, burst: CRACK, dur: CRACK + 3.4 });
+      B.lockFacing = true; B.noAutoUntil = f.t + CRACK + 1.5; B.autoAt = Math.max(B.autoAt, f.t + CRACK + 1.5);
+      if (ok) { B.stunUntil = f.t + CRACK + 8; B.exposedUntil = f.t + CRACK + 8; B.exposed = 0.25; f.emit({ t: 'roomev', k: 'torn', dur: CRACK + 8 }); }
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: CRACK + 0.25, dmg: ok ? dmg.ecloPass : dmg.ecloFail, hidden: true, tag: 'eclosion' });
+      f.afterKeep(CRACK, () => {
+        moth = true;
+        B.x = 0; B.y = 0; B.moveTo = null; B.lockFacing = false;
+        f.setForm('moth');
+        f.anim('leap', 0.6);
+      }, 'The Moth Emerges');
+      if (!ok) f.afterKeep(CRACK + 0.6, () => { B.dmgUp += 1; });   // (after the burst has landed: the whole of the rest of the fight at double damage)
+    };
     const chrysalis = () => {
-      f.dpsCheck('Chrysalis', H ? 24 : 25, 0.05, { anim: 'chrysalis',
+      if (H) return f.dpsCheck('Chrysalis', 24, 0.05, { anim: 'chrysalis', onPass: () => metamorph(true), onFail: () => metamorph(false) });
+      f.dpsCheck('Chrysalis', 25, 0.05, { anim: 'chrysalis',
         onPass: () => { B.stunUntil = f.t + 8; B.exposedUntil = f.t + 8; B.exposed = 0.25; f.emit({ t: 'roomev', k: 'torn', dur: 8 }); },
         onFail: () => f.enrage(),
       });
@@ -773,7 +870,7 @@ const SKITTERRA = {
     ];
     const closeThree = () => [
       [12, () => silkReel(H ? 'healer' : null), 'Silk Reel'], FS(11, true), [12, () => silkLines(), 'Silk Lines'], [12, cocoonDrop, 'Cocoon Drop'], FS(12, true),
-      [12, wrapLunge, 'Eightfold Lunge'], [12, lastHunt, 'From the Dark'], [12, venomMist, 'Venom Mist'], FS(11, true), [12, () => venomDrip(), 'Venom Drip'],
+      H ? [12, wrapMoon, 'Moonlight'] : [12, wrapLunge, 'Eightfold Lunge'], [12, lastHunt, 'From the Dark'], [12, venomMist, 'Venom Mist'], FS(11, true), [12, () => venomDrip(), 'Venom Drip'],
     ];
 
     const actOne = at => f.course({
@@ -876,10 +973,11 @@ const SKITTERRA = {
       // fill the other two rings, so the tank's two blows are always a long way apart and the order is read each pull
       const wrapFirst = !H || f.rng() < 0.5;
       if (H) { const ends = f.shuffle([mistStep, reelStep]); R = wrapFirst ? [wrapStep, ends[0], ends[1]] : [ends[0], ends[1], wrapStep]; }
-      const linesLunge = S([H ? 10 : 6.5, () => silkLines(), 'Silk Lines'], [4, () => lunge(), 'Eightfold Lunge']);
-      const wrapLungeSet = S([H ? 9 : 7, wrapLunge, 'Eightfold Lunge'], H && [9, volley, 'Spinneret Volley']);
+      // (Hard: the Moth Queen has no Lunge: Lines run into Flutter, and the Wrap into Moonlight)
+      const linesLunge = S([H ? 10 : 6.5, () => silkLines(), 'Silk Lines'], H ? [4, flutter, 'Flutter'] : [4, () => lunge(), 'Eightfold Lunge']);
+      const wrapLungeSet = H ? S([9, wrapMoon, 'Moonlight'], [9, volley, 'Spinneret Volley']) : S([7, wrapLunge, 'Eightfold Lunge']);
       const [early, mid] = wrapFirst ? [linesLunge, wrapLungeSet] : [wrapLungeSet, linesLunge];
-      const ring0 = S([H ? 10 : 11, () => giveWay(0), 'The Web Gives Way'], R[0]);
+      const ring0 = S([H ? 14 : 11, () => giveWay(0), 'The Web Gives Way'], R[0]);   // (Hard: the first ring starts to shudder just as the moth emerges)
       const ring1 = S([H ? 7 : 6, () => giveWay(1), 'The Web Gives Way'], H ? R[1] : [6, venomMist, 'Venom Mist']);
       const ring2 = S([H ? 7 : 5, () => giveWay(2), 'The Web Gives Way'], [6, () => venomDrip(), 'Venom Drip']);
       const ring3 = S([H ? 7 : 4, () => giveWay(3), 'The Web Gives Way'], R[2]);
@@ -911,7 +1009,7 @@ const SKITTERRA = {
           mid,
           ring2,
           ring3,
-          H ? S([11, () => lunge(), 'Eightfold Lunge'], [9, () => silkReel('healer'), 'Silk Reel']) : S([10, () => silkWrap(), 'Silk Wrap']),
+          H ? S([11, scaleWave, 'Scale Wave'], [9, () => silkReel('healer'), 'Silk Reel']) : S([10, () => silkWrap(), 'Silk Wrap']),
           S([H ? 8 : 6.5, () => silkLines(), 'Silk Lines'], [5, lastHunt, 'From the Dark']),
         ].filter(Boolean)),
         closing: closeThree(),
@@ -923,7 +1021,7 @@ const SKITTERRA = {
     { const br = f.events.find(e => e.step && e.name === 'Brood'); broodClock(br ? br.t - f.t + f.ct(3) : 0, 0); }   // (the Brood step's time, plus its cast)
 
     f.moves = { venomMist, lunge, silkWrap, wrapLunge, silkLines, venomSpit, brood, swarm, molt, silkReel, eggSacs, fangRush, volley, deluge,
-      strandReel, ambush, snareWeave, fangStrike, spin, intoDark, dropFrom, venomDrip, comeBack, giveWay, lastHunt };
+      strandReel, ambush, snareWeave, fangStrike, spin, intoDark, dropFrom, venomDrip, comeBack, giveWay, lastHunt, scaleWave, flutter, moonlight, wrapMoon, chrysalis };
   },
 };
 

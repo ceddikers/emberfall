@@ -298,7 +298,27 @@ Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid
 
 ---
 
-## Checklist (269 files)
+## Set 1 Hard second-form icons
+**This section shows the new Hard moves.** Save each sheet, then slice it (256 × 256) into the folder named, in reading order. The folders are already in `PAINTED`, so the icons show as soon as the files are in place.
+
+**Grubnak, gorged (4 icons)** → slice into `client/icons/boss/grubnak/<name>.png`: `clean-plate`, `spit-up`, `sour-burp`, `second-helping`
+```text
+Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid with thin plain gaps, read left to right, top to bottom; use the first four cells, leave the rest empty. Each icon is one bold object with a thick dark outline, flat colours, one hard shadow, light from the upper left, the corners empty, no glow. Palette: deep kitchen red-brown background, grease brown, iron grey and butcher's white objects, cooking-fire orange and yellow accent for danger only, sickly yellow-green only on the burp. The four icons: (1) Clean Plate: a huge empty white plate licked clean, a spiral of wind streaks, crumbs, a small cask and a pot lid all being sucked into its middle. (2) Spit Up: an oak cask slick with gravy flying in a high arc, a string of drool trailing behind it, a red landing circle on the ground below. (3) Sour Burp: a wide wedge of sickly yellow-green fog billowing out, bubbles rising in it, two small acid puddles on the ground at its edge. (4) Second Helping: a dark round plate seen from above with dust streaks rushing inward to its middle, a fork and knife crossed on its rim. No people, no faces, no text.
+```
+
+**Skitterra, the Moth Queen (3 icons)** → slice into `client/icons/boss/skitterra/<name>.png`: `scale-wave`, `flutter`, `moonlight`
+```text
+Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid with thin plain gaps, read left to right, top to bottom; use the first three cells, leave the rest empty. Each icon is one bold object with a thick dark outline, flat colours, one hard shadow, light from the upper left, the corners empty, no glow. Palette: dark cave blue-violet background, plum purple, silk off-white and dusty moth-wing cream objects, venom acid green and pink-purple accent for danger only, pale blue only for the stack. The three icons: (1) Scale Wave: a pair of patterned moth wings mid-beat at the centre, two rings of glittering scale dust round them, one rolling outward and one closing inward. (2) Flutter: a straight lane of wing-dust streaks across the square from lower left to upper right, a moth wing silhouette at its far end. (3) Moonlight: a pale crescent moon above a blue soak ring on the ground, a column of soft scale dust falling from the moon into the ring. No people, no faces, no text.
+```
+
+**Volkar, the storm (4 icons)** → slice into `client/icons/boss/volkar/<name>.png`: `storm-unbound`, `storm-arm`, `crossing-arms`, `reaching-arms`
+```text
+Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid with thin plain gaps, read left to right, top to bottom; use the first four cells, leave the rest empty. Each icon is one bold object with a thick dark outline, flat colours, one hard shadow, light from the upper left, the corners empty, no glow. Palette: storm-cloud slate blue background, slate stone and cloud grey objects, electric cyan and white accent for danger only, gold for the + charge and deep blue for the − charge. The four icons: (1) Storm Unbound: a slate stone body bursting apart into flying shards, a white-hot round core at its middle with zigzag bolts leaping up out of it into a dark cloud. (2) Storm Arm: a huge fist made of cloud and lightning slamming down onto a red circle on the ground, cracks and a ring of sparks round the impact. (3) Crossing Arms: two long bolts of lightning crossing in an X over the ground, the square cut into four quarters by them. (4) Reaching Arms: two columns of light coming down into two round towers on the ground, the left one gold with a + sign shape, the right one deep blue with a − sign shape. No people, no faces, no text.
+```
+
+---
+
+## Checklist (280 files)
 
 ### Gloomsworn (25)
 - [x] `client/portraits/gloomsworn.png`
@@ -592,4 +612,17 @@ Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid
 - [ ] `client/icons/boss/caelum/chorus-of-the-fallen.png`
 - [ ] `client/icons/boss/caelum/dark-ember.png`
 
-Total: 269 files (Gloomsworn 25, Reaper 23, Tidecaller 23, Lanternkeeper 24, Marionettist and Threadweaver 3, Set 2 general items 32, Set 2 boss icons 69, Corvane boss icons 17, Brannoc 15, Morrow-Oak 20, Caelum 18).
+### Set 1 Hard second-form icons (11)
+- [x] `client/icons/boss/grubnak/clean-plate.png`
+- [x] `client/icons/boss/grubnak/spit-up.png`
+- [x] `client/icons/boss/grubnak/sour-burp.png`
+- [x] `client/icons/boss/grubnak/second-helping.png`
+- [x] `client/icons/boss/skitterra/scale-wave.png`
+- [x] `client/icons/boss/skitterra/flutter.png`
+- [x] `client/icons/boss/skitterra/moonlight.png`
+- [x] `client/icons/boss/volkar/storm-unbound.png`
+- [x] `client/icons/boss/volkar/storm-arm.png`
+- [x] `client/icons/boss/volkar/crossing-arms.png`
+- [x] `client/icons/boss/volkar/reaching-arms.png`
+
+Total: 280 files (Gloomsworn 25, Reaper 23, Tidecaller 23, Lanternkeeper 24, Marionettist and Threadweaver 3, Set 2 general items 32, Set 2 boss icons 69, Corvane boss icons 17, Brannoc 15, Morrow-Oak 20, Caelum 18, set 1 second forms 11).
