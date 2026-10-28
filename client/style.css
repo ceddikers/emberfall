@@ -1220,6 +1220,25 @@ body.in-raid #meter-btn { display: inline-grid; }
 .res-deaths i { width: 8px; height: 8px; border-radius: 50%; }
 .res-deaths b { font-weight: 600; }
 .res-deaths span { color: #ffb4a8; }
+/* the results screen: what got us (a wipe) */
+.res-why { margin: 0 0 12px; padding: 8px 12px 10px; background: #0a09088c; border: 1px solid var(--line-soft); border-left: 2px solid #c9695a; border-radius: 2px; }
+.res-why h6 { margin: 0 0 6px; font-family: var(--fantasy); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.rw-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.res-why .rw { display: inline-flex; align-items: center; gap: 9px; margin: 0; padding: 4px 10px; font: inherit; font-size: 12.5px; color: #d8cdb8; background: #ffffff08; border: 1px solid var(--line-soft); border-radius: 2px; text-align: left; }
+.res-why button.rw { cursor: pointer; }
+.res-why button.rw:hover { border-color: var(--gold-dim); background: #c9a45c14; }
+.res-why .rw b { font-weight: 600; color: #ffb4a8; }
+.rw-pips { display: inline-flex; align-items: center; gap: 4px; }
+.rw-pips i { width: 9px; height: 9px; border-radius: 50%; background: var(--rc, #888); box-shadow: 0 0 0 1px #0008; cursor: help; }
+.rw-pips small { font-size: 10px; color: var(--muted); }
+.res-why .rw small.av { font-size: 11px; color: var(--muted); }
+.rw-none { margin: 0; font-size: 12.5px; color: #d8cdb8; }
+.rw-prog { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin-top: 8px; cursor: help; }
+.rw-prog span { font: 600 9px/1 var(--fantasy); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.rw-prog em { font-style: normal; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--gold); }
+.rw-bar { position: relative; height: 4px; background: #00000099; border-radius: 2px; }
+.rw-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: linear-gradient(90deg, #8a4a3a, #d06a4a); }
+.rw-bar u { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--gold); text-decoration: none; }
 /* sealed bosses */
 #boss-list .item.sealed b { color: var(--muted); letter-spacing: .14em; }
 #boss-list .item.sealed small { color: #8a7f96; }

@@ -838,6 +838,7 @@ const RaidUI = (() => {
       <div class="res-card">
         <h2 class="${clear ? 'win' : 'lose'}">${clear ? 'Cleared' : 'Wiped'}</h2>
         <p class="res-sub">${esc(raid.def.name)} · ${msg.mode === 'hard' ? 'Hard' : 'Normal'} · ${mmss(dur)}${clear ? '' : ` · boss at ${(msg.hp / msg.maxHp * 100).toFixed(1)}%`}</p>
+        ${clear ? '' : wipeSummary(msg, raid, deaths, deathName, dur)}
         ${honors}
         <table class="res-table">
           <thead><tr><th>Player</th><th>Class</th><th>DPS</th><th>HPS</th><th>Taken</th><th data-tip="Hits from attacks that could have been avoided">Avoidable</th><th>Deaths</th></tr></thead>
@@ -853,7 +854,9 @@ const RaidUI = (() => {
       </div>`;
     el.classList.remove('hidden');
     el.querySelectorAll('button[data-a]').forEach(b => b.addEventListener('click', () => actions[b.dataset.a] && actions[b.dataset.a]()));
-    el.querySelectorAll('.res-tl [data-t]').forEach(m => Tip.set(m, m.dataset.t));
+    el.querySelectorAll('.res-tl [data-t], .res-why [data-t]').forEach(m => Tip.set(m, m.dataset.t));
+    const whyEl = el.querySelector('.res-why');
+    if (whyEl) whyEl.addEventListener('click', e => whyClick(e, el));
     el.querySelectorAll('.res-awards [data-th]').forEach(m => Tip.set(m, m.dataset.th));   // (award tips carry markup)
     const tlEl = el.querySelector('.res-tl.pr');
     if (tlEl) tlEl.addEventListener('click', e => prClick(e, tlEl));
@@ -975,6 +978,60 @@ const RaidUI = (() => {
       html = head('Limit Break', mmss(e2[0] / 10)) + `<p>${person(e2[2])}<span>spent ${e2[3]} bar${e2[3] > 1 ? 's' : ''}</span></p>`;
     }
     tlEl.querySelector('.pr-detail').innerHTML = html;
+  }
+  // What got us (a wipe only): the few things that ended the pull, most deadly first, each with a pip per player who fell to it
+  // (role colour; hover for who and when), and how this pull sat against the best one. Read from the host's pull record when
+  // it came, else from the death log. Clicking a cause opens the pull review on its first mark.
+  function wipeSummary(msg, raid, deaths, deathName, dur) {
+    const pr = msg.pr && Array.isArray(msg.pr.h) && Array.isArray(msg.pr.d) && Array.isArray(msg.pr.nm) ? msg.pr : null;
+    const stats = msg.stats || {}, causes = new Map();
+    const cause = n => { let c = causes.get(n); if (!c) causes.set(n, c = { n, falls: [], av: 0, go: '', at: 1e9 }); return c; };
+    if (pr) {
+      pr.d.forEach((d, i) => {
+        if (!stats[d[1]]) return;
+        const c = cause(d[2] < 0 && d[3] < 0 ? 'An unseen blow' : prName(pr, d[2], d[3], raid));
+        c.falls.push({ id: d[1], t: d[0] / 10 });
+        if (!c.go) c.go = 'd' + i;
+        c.at = Math.min(c.at, d[0] / 10);
+      });
+      pr.h.forEach((h, i) => {
+        if (!h[5]) return;
+        const c = cause(prName(pr, h[2], h[3], raid));
+        c.av++;
+        if (!c.go) c.go = 'h' + i;
+        c.at = Math.min(c.at, h[0] / 10);
+      });
+    } else {
+      for (const { d, s } of deaths) { const c = cause(deathName(d)); c.falls.push({ id: d.id, t: d.t }); c.at = Math.min(c.at, d.t); }
+    }
+    const list = [...causes.values()].sort((a, b) => b.falls.length - a.falls.length || b.av - a.av || a.at - b.at).slice(0, 3);
+    const fell = list.reduce((n, c) => n + c.falls.length, 0);
+    let body = '';
+    if (fell) {
+      body = `<div class="rw-list">${list.map(c => {
+        const pips = c.falls.slice(0, 6).map(f => `<i style="--rc:${ROLES[stats[f.id].role].color}" data-t="${esc(`<b>${esc(stats[f.id].name)}</b><em>fell at ${mmss(f.t)}</em>`)}"></i>`).join('') + (c.falls.length > 6 ? `<small>+${c.falls.length - 6}</small>` : '');
+        const note = c.av ? `<small class="av">${c.av === 1 ? 'one avoidable hit' : c.av + ' avoidable hits'}</small>` : '';
+        return `<${c.go && pr ? 'button type="button" data-go="' + c.go + '"' : 'div'} class="rw"><b>${esc(c.n)}</b><span class="rw-pips">${pips}</span>${note}</${c.go && pr ? 'button' : 'div'}>`;
+      }).join('')}</div>`;
+    } else {
+      const enr = raid.def.enrage && raid.def.enrage[msg.mode || raid.mode];
+      body = `<p class="rw-none">${enr && dur >= enr ? `Nobody fell. ${esc(raid.def.enrageName || 'The enrage')} ended the pull.` : 'Nobody fell. The pull ended before the fight did.'}</p>`;
+    }
+    // this pull against the best (the "New best" line covers beating it, so the bar only shows when a better pull exists)
+    const pct = msg.maxHp > 0 ? Math.max(0, Math.min(100, Math.round(msg.hp / msg.maxHp * 1000) / 10)) : null;
+    const best = raid.prog && raid.prog.best && Number.isFinite(raid.prog.best.pct) ? raid.prog.best.pct : null;
+    const bar = pct != null && best != null && best < pct
+      ? `<div class="rw-prog" data-t="${esc(`<b>Against your best pull</b><em>The boss was at ${pct.toFixed(1)}% this time; your best left him at ${best.toFixed(1)}%.</em>`)}"><span>Your best</span><div class="rw-bar"><i style="width:${(100 - pct).toFixed(1)}%"></i><u style="left:${(100 - best).toFixed(1)}%"></u></div><em>${best.toFixed(1)}%</em></div>` : '';
+    return body || bar ? `<div class="res-why"><h6>What got us</h6>${body}${bar}</div>` : '';
+  }
+  // a click on a cause: open the pull review and select its first mark
+  function whyClick(e, el) {
+    const b = e.target.closest('.res-why [data-go]'), tlEl = el.querySelector('.res-tl.pr');
+    if (!b || !tlEl) return;
+    const mark = tlEl.querySelector(`[data-k="${b.dataset.go}"]`);
+    tlEl.classList.add('open'); Tip.hide();
+    if (mark) prClick({ target: mark }, tlEl);
+    tlEl.scrollIntoView({ block: 'nearest' });
   }
   // a specialization trial ends on its memory, not a damage table
   function trialResults(el, def, clear, actions) {
