@@ -905,11 +905,9 @@ const RaidUI = (() => {
     const who = id => msg.stats[id];
     const order = { tank: 0, healer: 1 };
     const people = Object.entries(msg.stats).map(([id, st]) => ({ id: Number(id), st })).sort((a, b) => (order[a.st.role] ?? 2) - (order[b.st.role] ?? 2) || a.id - b.id);
-    // the boss's health (and the HP gates it passed), with the phase changes marked
+    // the boss's health, with the phase changes marked in time (no HP lines: players learn where the acts turn)
     const hpPts = pr.hp.map((v, i) => [i * 20, v]).concat([pr.he]).map(([t, v]) => `${X(t)},${((1 - v / 1000) * 100).toFixed(1)}`);
-    const gates = (raid.gates && raid.gates.length ? raid.gates.map(g => g[0]) : (raid.def.gates || []).map(g => typeof g === 'number' ? g : g.f)).filter(f => f > 0 && f < 1);
-    const gy = f => ((1 - f) * 100).toFixed(1);
-    const hpLane = `<svg viewBox="0 0 100 100" preserveAspectRatio="none">${gates.map(f => `<line class="pr-gate" x1="0" x2="100" y1="${gy(f)}" y2="${gy(f)}"/>`).join('')}<polygon class="pr-area" points="0,100 ${hpPts.join(' ')} ${X(pr.he[0])},100"/><polyline class="pr-line" points="${hpPts.join(' ')}"/></svg>${pr.ph.map(([t, n]) => `<span class="pr-ph" style="left:${X(t)}%"><i>${n}</i></span>`).join('')}`;
+    const hpLane = `<svg viewBox="0 0 100 100" preserveAspectRatio="none"><polygon class="pr-area" points="0,100 ${hpPts.join(' ')} ${X(pr.he[0])},100"/><polyline class="pr-line" points="${hpPts.join(' ')}"/></svg>${pr.ph.map(([t, n]) => `<span class="pr-ph" style="left:${X(t)}%"><i>${n}</i></span>`).join('')}`;
     const tip = (a, b) => esc(`<b>${esc(a)}</b><em>${esc(b)}</em>`);
     const casts = pr.c.map(([t, mi, g], i) => `<span class="pr-c k-${castKind(raid, pr.nm[mi], g)}" style="left:${X(t)}%" data-k="c${i}" data-t="${tip(pr.nm[mi], mmss(t / 10))}"></span>`).join('');
     const rowFor = ({ id, st }) => {
