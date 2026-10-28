@@ -3773,7 +3773,10 @@
   //  screenDim(alpha, dur): the world darkens under the effects for a beat (drawn before the air layer, so they pop)
   //  zoomPunch(amount, dur): the camera pushes in toward you (zoom x (1 + amount)) and eases back
   //  hitStop(dur): the effects' clock (VFX) nearly stops for dur s (at most 0.2) at the moment of impact
-  function screenFlash(color = '#ffffff', alpha = 0.35, dur = 0.3) { screenFx.flash = { color, alpha, dur, t0: now }; }
+  // (a soft cap, FLASH_CAP: a faint flash stays nearly as asked, a big one tops out near 0.1, so an impact brightens the
+  // screen without washing it white; the VFX gallery's harness.js uses the same curve)
+  const FLASH_CAP = 0.1, flashA = a => FLASH_CAP * (1 - Math.exp(-Math.max(0, a) / FLASH_CAP));
+  function screenFlash(color = '#ffffff', alpha = 0.35, dur = 0.3) { screenFx.flash = { color, alpha: flashA(alpha), dur, t0: now }; }
   function screenDim(alpha = 0.35, dur = 0.8) { screenFx.dim = { color: '#05030a', alpha: Math.min(0.26, alpha * 0.6), dur: Math.min(0.8, dur * 0.55), t0: now }; }   // (a beat of contrast, not a blackout)
   function zoomPunch(amount = 0.06, dur = 0.5) { punch = { a: Math.min(0.15, amount), dur, t0: now }; }
   function punchNow() {

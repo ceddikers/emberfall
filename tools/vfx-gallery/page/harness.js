@@ -40,7 +40,7 @@
     };
     // the camera's screen moments (main.js screenFlash / screenDim / zoomPunch / hitStop)
     S.cam = {
-      flash(color = '#ffffff', alpha = 0.35, dur = 0.3) { S.screen.flash = { color, alpha, dur, t0: S.now }; },
+      flash(color = '#ffffff', alpha = 0.35, dur = 0.3) { S.screen.flash = { color, alpha: 0.1 * (1 - Math.exp(-Math.max(0, alpha) / 0.1)), dur, t0: S.now }; },   // (main.js screenFlash's soft cap)
       dim(alpha = 0.35, dur = 0.8) { S.screen.dim = { color: '#05030a', alpha: Math.min(0.26, alpha * 0.6), dur: Math.min(0.8, dur * 0.55), t0: S.now }; },
       punch(amount = 0.06, dur = 0.5) { S.punch = { a: Math.min(0.15, amount), dur, t0: S.now }; },
       stop(dur = 0.1) { S.hitStopUntil = Math.max(S.hitStopUntil, S.now + Math.min(0.2, dur)); },

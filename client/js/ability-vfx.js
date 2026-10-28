@@ -5291,8 +5291,9 @@ function windLaneBoost(x, y, vx, vy, now) {
     // wind-up: the jaw unhinges round the Gorgemaw, open on the enemy, the throat glowing, the air torn into it
     V.fx({ dur: LAND + 0.06, layer: 'ground', draw: (ctx, p, t, fx) => {
       const open = 1 - Math.pow(1 - Math.min(1, p / 0.5), 2), shut = p > 0.84 ? (p - 0.84) / 0.16 : 0, k = fx.a * Math.min(1, p / 0.1) * (1 - shut * 0.6);
-      const x = e.x - Math.cos(a) * 14 * S, y = e.y - Math.sin(a) * 9 * S, Rj = (44 + 20 * open) * S;
-      V.glowAt(ctx, x + Math.cos(a) * 30 * S, y + Math.sin(a) * 20 * S, 60 * S, '#ff3a6a', 0.32 * k);
+      // (kept a size under the bite itself, and the pink glow low: a big pink shape on the floor reads as boss danger)
+      const x = e.x - Math.cos(a) * 14 * S, y = e.y - Math.sin(a) * 9 * S, Rj = (30 + 14 * open) * S;
+      V.glowAt(ctx, x + Math.cos(a) * 30 * S, y + Math.sin(a) * 20 * S, 46 * S, '#ff3a6a', 0.16 * k);
       V.glowAt(ctx, x, y, Rj * 0.6, '#3a0420', 0.5 * k);   // the dark throat
       // the wind: streaks curving in from in front of it, into the jaw
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.strokeStyle = '#f0dce8'; ctx.lineWidth = 2;
@@ -5300,7 +5301,7 @@ function windLaneBoost(x, y, vx, vy, now) {
         for (let i = 0; i <= 5; i++) { const u = Math.min(1, u0 + i * 0.05), r = (140 * (1 - u) + 30) * S * 0.8, aa = a + off * Math.pow(1 - u, 0.6) * 2.4; const px = x + Math.cos(aa) * r, py = y + Math.sin(aa) * r * 0.7; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
         ctx.stroke(); }
       ctx.restore();
-      gorgemawMaw(ctx, x, y, Rj, a, (0.5 + 1.4 * open) * (1 - shut), k, { teeth: 20, thick: 0.38 });
+      gorgemawMaw(ctx, x, y, Rj, a, (0.5 + 1.4 * open) * (1 - shut), k, { teeth: 20, thick: 0.3 });
     } });
     // everything in front of it streams in: rock and torn air
     for (let i = 0; i < 18; i++) { const s = rand(0.3, 1), aa = a + rand(-0.7, 0.7), d = 40 * S + Math.hypot(c.tx - c.x, c.ty - c.y) * s + rand(0, 60 * S), x = c.x + Math.cos(aa) * d, y = c.y + Math.sin(aa) * d * 0.8, rock = i % 3 === 0;
@@ -5310,7 +5311,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       shake(12);
       // (ult impact pass) the bite's blast: a ring of dark fangs bursts up off the floor round the enemy, a white-hot
       // core over it, and a wave of rock, smoke and embers rolls out; the scorch of teeth stays (below)
-      V.spikeburst(c.tx, c.ty, { r: 82 * S, n: 24, hole: 0.5, color: '#d0306a', core: '#ffd0a0', ink: GINK, dur: 0.6, layer: 'ground', z: 0, flat: 0.6 });
+      V.spikeburst(c.tx, c.ty, { r: 70 * S, n: 24, hole: 0.72, color: '#2a0a22', core: TGLOW, ink: GINK, dur: 0.6, layer: 'ground', z: 0, flat: 0.6 });   // (dark fangs with a hot edge, a hole in the middle: no pink floor fill)
       for (let i = 0; i < 10; i++) { const q = i / 10 * Math.PI * 2 + rand(-0.2, 0.2), d = R * rand(0.5, 0.9);
         V.spawn({ x: c.tx + Math.cos(q) * d, y: c.ty + Math.sin(q) * d * 0.6, z: rand(0, 14), vx: Math.cos(q) * rand(20, 50), vy: Math.sin(q) * rand(12, 30), vz: rand(8, 26), drag: 0.04, life: rand(1.4, 2.2), size: rand(22, 34), size1: rand(48, 64), color: '#2a1824', kind: 'smoke', add: false, a: 0.45, fadeIn: 0.1, fadePow: 2 }); }
       for (let i = 0; i < 10; i++) { const q = Math.random() * Math.PI * 2, d = R * 0.8 * Math.sqrt(Math.random());
@@ -5319,7 +5320,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.fx({ dur: 0.5, layer: 'ground', draw: (ctx, p, t, fx) => {
         const q = Math.min(1, p / 0.22), k = fx.a * Math.min(1, (1 - p) / 0.35);
         V.glowAt(ctx, c.tx, c.ty, R * 1.1, '#ff5a3a', 0.35 * k * (1 - p));
-        gorgemawMaw(ctx, c.tx, c.ty, R * (1.35 - 0.35 * q), a + Math.PI, 1.6 * (1 - q), k, { teeth: 24, thick: 0.32, bite: 0.8 + 0.4 * q });
+        gorgemawMaw(ctx, c.tx, c.ty, R * (1.05 - 0.25 * q), a + Math.PI, 1.6 * (1 - q), k, { teeth: 24, thick: 0.24, bite: 0.8 + 0.4 * q });
       } });
       V.flash(c.tx, c.ty - 20, 60 * S, '#ffe0b0', 0.2);   // the bright core of the bite, brief
       if (g) g.crumbs(c.tx, c.ty, 20 * S, '#c8a070', 14);
@@ -7000,15 +7001,16 @@ function windLaneBoost(x, y, vx, vy, now) {
   function weaveLoomSpears(F, dur) {
     const WS = WEAVE_ULT_SCALE;
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
-      // each spear stabs down out of the air into its anchor point (staggered), then stands glowing
+      // each spear stabs down out of the air into its anchor point (staggered), then stands glowing (gold: a red pin
+      // planted on the floor reads as a boss's marker)
       const k = e.a * Math.min(1, (dur - t) / 0.25), hot = t > LAND - 0.05, H = 46 * WS, TL = 24 * WS, TW = 7 * WS;
       F.anchors.forEach((a, i) => {
         const q = easeOut(Math.max(0, Math.min(1, (t - i * 0.03) / 0.14))); if (q <= 0) return;
         const drop = (1 - q) * 60 * WS, top = a.y - H - drop, base = a.y - drop * 0.3;
-        V.neonRing(c, a.x, a.y, 15 * WS * q, CRIM, 1.6, k * 0.8, 0.5); V.neonRing(c, a.x, a.y, 9 * WS * q, SEAM, 1, k * 0.6, 0.5);
-        V.glowAt(c, a.x, top - TL * 0.4, 28 * WS, CRIM, 0.8 * k); V.glowAt(c, a.x, a.y, 20 * WS, ROSE, 0.5 * k * q);
-        V.neonPath(c, CRIM, 2.4 * WS, k, () => { c.moveTo(a.x, base); c.lineTo(a.x, top); });
-        c.save(); c.globalAlpha = k; c.fillStyle = hot ? HOT : ROSE; c.strokeStyle = '#3a0610'; c.lineWidth = 1.4;
+        V.neonRing(c, a.x, a.y, 15 * WS * q, SEAM, 1.6, k * 0.8, 0.5); V.neonRing(c, a.x, a.y, 9 * WS * q, HOT, 1, k * 0.6, 0.5);
+        V.glowAt(c, a.x, top - TL * 0.4, 28 * WS, SEAM, 0.7 * k); V.glowAt(c, a.x, a.y, 20 * WS, SEAM, 0.4 * k * q);
+        V.neonPath(c, SEAM, 2.4 * WS, k, () => { c.moveTo(a.x, base); c.lineTo(a.x, top); });
+        c.save(); c.globalAlpha = k; c.fillStyle = hot ? HOT : SEAM; c.strokeStyle = '#4a2a08'; c.lineWidth = 1.4;
         c.beginPath(); c.moveTo(a.x, top - TL); c.lineTo(a.x + TW, top - TL * 0.2); c.lineTo(a.x + TW * 0.35, top - TL * 0.1); c.lineTo(a.x, top + 4); c.lineTo(a.x - TW * 0.35, top - TL * 0.1); c.lineTo(a.x - TW, top - TL * 0.2); c.closePath(); c.fill(); c.stroke();
         c.strokeStyle = SEAM; c.lineWidth = 1.2; c.beginPath(); c.moveTo(a.x, top - TL + 3); c.lineTo(a.x, top); c.stroke(); c.restore();
         V.glowAt(c, a.x, top - TL * 0.5, 12 * WS, hot ? '#ffffff' : HOT, 0.8 * k);
@@ -7074,7 +7076,6 @@ function windLaneBoost(x, y, vx, vy, now) {
   }
   ABILITY_VFX.threadweaver.grandloom = c => {
     const F = weaveLoomFrame(c.ent), W = globalThis.THREADWEAVER_VFX;
-    if (c.cam) c.cam.dim(0.3, 1.3);
     const WS = WEAVE_ULT_SCALE;
     V.charge(c.x, c.y, { color: ROSE, r: 60 * WS, n: 10, dur: LAND, follow: c.ent });
     weaveLoomWeb(F, LAND + 0.55);
@@ -7089,7 +7090,7 @@ function windLaneBoost(x, y, vx, vy, now) {
         for (const w of [A, B]) V.burst(w.x, w.y - 16, { color: ROSE, color2: SEAM, n: 6, speed: 200, kind: 'star', flash: false });
       }
       F.anchors.forEach((a, i) => { V.sparks(a.x, a.y, { color: i % 2 ? SEAM : ROSE, n: 7, speed: 300, z: 30 });
-        V.spikeburst(a.x, a.y - 30 * WS, { r: 30 * WS, n: 8, color: CRIM, core: HOT, ink: '#2a0410', dur: 0.3 }); });
+        V.spikeburst(a.x, a.y - 30 * WS, { r: 30 * WS, n: 8, color: SEAM, core: HOT, ink: '#4a2a08', dur: 0.3 }); });
       // (Ult pass) the heal lands on every ally: a rose-gold pillar of light with silk petals drifting down, and a
       // small woven knot at the feet that lingers while the Tapestry forms
       c.later(0.12, () => weaveHealParty(c.ent, F));   // (a beat after the flare, as the web cools, so it reads on its own)
