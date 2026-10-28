@@ -888,8 +888,10 @@ const RaidUI = (() => {
     const dur = Math.max(1, msg.time || 1);
     const rows = Object.entries(msg.stats).map(([id, s]) => ({ id: Number(id), ...s }))
       .sort((a, b) => (b.damage / dur + b.healing / dur) - (a.damage / dur + a.healing / dur));
+    const mv = msg.mv && typeof msg.mv === 'object' ? msg.mv : null;   // (the host's per-move tally: fight.js moveReport; a click on a row opens it)
+    const pick0 = mv ? (rows.find(s => s.id === myId) || rows[0] || {}).id : null;
     const table = rows.map(s => `
-      <tr class="${s.id === myId ? 'me' : ''}">
+      <tr class="${s.id === myId ? 'me' : ''}"${mv ? ` data-id="${s.id}" tabindex="0" role="button" aria-pressed="${s.id === pick0}"` : ''}>
         <td><i style="background:${ROLES[s.role].color}"></i>${esc(s.name)}${s.bot ? ' <em>bot</em>' : ''}</td>
         <td>${esc(CLASSES.find(c => c.id === s.cls)?.name || '')}</td>
         <td>${fmt(s.damage / dur)}</td><td>${fmt(s.healing / dur)}</td>
@@ -915,6 +917,7 @@ const RaidUI = (() => {
           <thead><tr><th>Player</th><th>Class</th><th>DPS</th><th>HPS</th><th>Taken</th><th data-tip="Hits from attacks that could have been avoided">Avoidable</th><th>Deaths</th></tr></thead>
           <tbody>${table}</tbody>
         </table>
+        ${mv ? '<div class="res-moves"></div>' : ''}
         ${best}${pullTimeline(raid, dur, deaths, deathName, msg)}${deathLog}
         ${raid.newPages && raid.newPages.length ? `<p class="res-pages">New in your journal: ${raid.newPages.map(n => `<b>${esc(n)}</b>`).join(', ')}<kbd>${typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('journal')) : 'J'}</kbd></p>` : ''}
         ${report}
@@ -925,12 +928,75 @@ const RaidUI = (() => {
       </div>`;
     el.classList.remove('hidden');
     el.querySelectorAll('button[data-a]').forEach(b => b.addEventListener('click', () => actions[b.dataset.a] && actions[b.dataset.a]()));
+    if (mv) moveSetup(el, msg, dur, pick0);
     el.querySelectorAll('.res-tl [data-t], .res-why [data-t]').forEach(m => Tip.set(m, m.dataset.t));
     const whyEl = el.querySelector('.res-why');
     if (whyEl) whyEl.addEventListener('click', e => whyClick(e, el));
     el.querySelectorAll('.res-awards [data-th]').forEach(m => Tip.set(m, m.dataset.th));   // (award tips carry markup)
     const tlEl = el.querySelector('.res-tl.pr');
     if (tlEl) tlEl.addEventListener('click', e => prClick(e, tlEl));
+  }
+  // ---------------------------------------------------------------- the move breakdown
+  // Under the table: click (or press Enter on) a player's row to see which of their moves did the work, one bar per move with its
+  // share, total and hits. The host tallies it as the fight goes (fight.js moveReport): msg.mv[id] = { s: spec, m: [[key, damage,
+  // healing, hits, heals], ...] }; a key is the move's id, with ~dot for its damage over time, ^ for an Ultimate's window.
+  const MV_PLAIN = {
+    auto: ['Auto-attack', 'Plain attacks between moves.'], item: ['Item effects', 'The extra strikes from worn items.'], lb: ['Limit Break', 'The party gauge, spent.'],
+    brand: ['Judgment', 'Allies\' hits bursting the brand.'], ledger: ['Ledger', 'Debts collected from the boss.'], shield: ['Shields', 'Damage a shield took for an ally.'],
+    other: ['Other', 'Effects the chart could not trace to one move: ground, threads and the like.'],
+  };
+  let mvCtx = null;
+  function moveInfo(cls, spec, key) {
+    const plain = MV_PLAIN[key];
+    if (plain) return { name: plain[0], note: plain[1], bg: '' };
+    const dot = key.includes('~dot'), win = key.includes('^'), id = key.replace(/[~^].*$/, '');
+    let ab = null;
+    const find = sp => { try { return abilityById(cls, sp, id); } catch (e) { return null; } };
+    if (typeof abilityById === 'function') {
+      ab = find(spec || null) || find(null);
+      if (!ab && typeof SPECS !== 'undefined') for (const sp of SPECS[cls] || []) if ((ab = find(sp.id))) break;
+    }
+    const name = ab && ab.name ? String(ab.name) : id.replace(/[_-]+/g, ' ').replace(/^./, c => c.toUpperCase());
+    let bg = '';
+    try { bg = ab ? (ab.ult && typeof ultIconBg === 'function' ? ultIconBg(cls) : `url(${abilityIcon(cls, abilityIconId(ab))})`) : ''; } catch (e) { bg = ''; }
+    return { name, sub: dot ? 'over time' : win ? 'in Ultimate' : '', note: '', bg };
+  }
+  function moveSetup(el, msg, dur, pick) {
+    mvCtx = { el, msg, dur, id: pick, pref: null };
+    const body = el.querySelector('.res-table tbody'), pane = el.querySelector('.res-moves');
+    const choose = tr => { const t = tr && tr.closest('tr[data-id]'); if (t) moveShow(Number(t.dataset.id)); };
+    body.addEventListener('click', e => choose(e.target));
+    body.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('tr[data-id]')) { e.preventDefault(); choose(e.target); } });
+    pane.addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) moveShow(mvCtx.id, b.dataset.tab); });
+    moveShow(pick);
+  }
+  function moveShow(id, tab) {
+    const c = mvCtx; if (!c) return;
+    const { el, msg, dur } = c, st = msg.stats[id], mv = msg.mv[id];
+    if (!st) return;
+    const rowsOf = k => ((mv && Array.isArray(mv.m) ? mv.m : []).map(r => ({ key: String(r[0]), amt: Number(r[k ? 2 : 1]) || 0, n: Number(r[k ? 4 : 3]) || 0 })).filter(r => r.amt > 0).sort((a, b) => b.amt - a.amt));
+    const lists = { dmg: rowsOf(0), heal: rowsOf(1) };
+    const first = st.role === 'healer' && lists.heal.length ? 'heal' : lists.dmg.length ? 'dmg' : 'heal';
+    if (tab) c.pref = tab;   // (a tab you chose stays while the player has it; otherwise each player opens on their own main job)
+    const want = tab || (c.pref && lists[c.pref].length ? c.pref : first);
+    c.id = id;
+    el.querySelectorAll('.res-table tbody tr[data-id]').forEach(tr => { const on = Number(tr.dataset.id) === id; tr.classList.toggle('sel', on); tr.setAttribute('aria-pressed', on); });
+    const list = lists[want], total = list.reduce((n, r) => n + r.amt, 0), top = list.length ? list[0].amt : 1, heal = want === 'heal';
+    const tabs = lists.dmg.length && lists.heal.length
+      ? `<div class="mv-tabs" role="tablist">${[['dmg', 'Damage'], ['heal', 'Healing']].map(([k, n]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${k === want}" class="${k === want ? 'on' : ''}">${n}</button>`).join('')}</div>`
+      : '';
+    const cls = st.cls, cname = (CLASSES.find(x => x.id === cls) || {}).name || '';
+    const rowsHtml = list.map(r => {
+      const info = moveInfo(cls, mv && mv.s, r.key), per = r.n > 0 ? r.amt / r.n : 0;
+      const tip = esc(`<b>${esc(info.name)}${info.sub ? ' (' + info.sub + ')' : ''}</b><em>${fmt(r.amt)} ${heal ? 'healed' : 'damage'} · ${(r.amt / Math.max(1, total) * 100).toFixed(1)}% of ${esc(st.name)}'s ${heal ? 'healing' : 'damage'}</em>${r.n ? `${fmt(per)} per ${heal ? 'heal' : 'hit'}, ${r.n.toLocaleString('en-US')} ${heal ? 'heals' : 'hits'}<br>` : ''}${fmt(r.amt / Math.max(1, dur))} per second over the whole fight${info.note ? '<br>' + esc(info.note) : ''}`);
+      return `<div class="mv-row" data-t="${tip}"><i class="mv-ic${info.bg ? '' : ' none'}" style="${info.bg ? 'background-image:' + info.bg : ''}"></i><span class="mv-nm">${esc(info.name)}${info.sub ? `<small>${info.sub}</small>` : ''}</span><span class="mv-bar"><u style="width:${Math.max(1.5, r.amt / top * 100).toFixed(1)}%"></u></span><b>${fmt(r.amt)}</b><em>${total > 0 ? Math.round(r.amt / total * 100) : 0}%</em><span class="mv-n">${r.n ? r.n.toLocaleString('en-US') : ''}</span></div>`;
+    }).join('');
+    const pane = el.querySelector('.res-moves');
+    pane.className = 'res-moves' + (heal ? ' heal' : '');
+    pane.innerHTML = `<div class="mv-head"><h6>Moves</h6><b style="color:${(ROLES[st.role] || ROLES.dps).color}">${esc(st.name)}</b><span>${esc(cname)}${tabs ? '' : ` · ${heal ? 'healing' : 'damage'}`}</span>${tabs}</div>${list.length
+      ? `<div class="mv-row mv-cols"><span></span><span>Move</span><span></span><span>Total</span><span>Share</span><span>${heal ? 'Heals' : 'Hits'}</span></div>${rowsHtml}`
+      : `<p class="mv-none">Nothing recorded for ${esc(st.name)} this pull.</p>`}`;
+    pane.querySelectorAll('.mv-row[data-t]').forEach(m => Tip.set(m, m.dataset.t));
   }
   // The MVP (a clear only) and the category awards, from the contribution points (scoring.js). Only what went well: a wipe
   // shows the awards that were earned, or nothing. The full breakdown lives in the Logbook.

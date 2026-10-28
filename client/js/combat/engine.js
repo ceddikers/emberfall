@@ -642,7 +642,10 @@ class Kit {
     if (party.dmg || tgt.vuln || self.dmg) this.stats.burstDamage += amount;
     this.stats.last = this.now;
     // (opts.tgt: an enemy id when a hit lands on something other than what you last aimed at: a Passing Strike)
-    const ev = { type: 'damage', amount, crit, potency: pot, positional: posHit, ab: opts.ab, dot: !!opts.dot, auto: !!opts.auto, threat: opts.threat || (this.now < (this._ultThrUntil || 0) && this.def.role !== 'tank' ? ENGINE.ULT_THREAT : 1), tgt: opts.tgt };
+    // (ai: which move this blow is, for the results card's per-move chart: fight.js moveKey; a blow with no move named is the move being resolved)
+    const mab = opts.ab || (opts.dot || opts.auto || opts.item ? null : this._resolving);
+    const ai = opts.auto ? 'auto' : opts.item ? 'item' : mab && mab.id != null ? String(mab.id) + (mab.ultOf ? '^' : '') + (opts.dot ? '~dot' : '') : undefined;
+    const ev = { type: 'damage', amount, crit, potency: pot, positional: posHit, ab: opts.ab, dot: !!opts.dot, auto: !!opts.auto, ai, threat: opts.threat || (this.now < (this._ultThrUntil || 0) && this.def.role !== 'tank' ? ENGINE.ULT_THREAT : 1), tgt: opts.tgt };
     const delay = opts.dot || opts.auto || opts.item ? 0 : this.travelDelay(this._resolving);
     if (delay > 0) this.after(delay, () => this.env.emit(ev)); else this.env.emit(ev);
     if (opts.item) return { amount, crit, posHit };   // an item's extra hit doesn't feed the kit or other items

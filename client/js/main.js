@@ -411,7 +411,7 @@
     'up', 'sh', 'cl', 'pa', 'ps', 'pr', 'fol',   // (a thrown vial's splash: fight.js splash())
     'all', 'op', 'older', 'mark', 'freeze', 'drop', 'merge', 'hit', 'push', 'due', 'col', 'small', 'tithe', 'mult',   // (jaw and Ledger orders)
     'pair', 'mx', 'st', 'dp', 'hm', 'seam', 'both', 'mit', 'keep', 'ub',
-    'lid', 'full', 'last',
+    'lid', 'full', 'last', 'ai',
     'sk',   // (which shield a shield event is: fight.js giveShield stacks different ones, a recast replaces its own)
     'tg',   // (a splash ward that never replaces the caster's own tagged shield: Purify)
     'x', 'y', 'dist',   // (a Reaper's gather and field: fight.js reaperEvent reads the spot)
@@ -421,6 +421,8 @@
     const o = {};
     for (const k of EV_FIELDS) if (ev[k] !== undefined) o[k] = ev[k];
     if (o.target && typeof o.target === 'object') delete o.target;
+    // (ai: the move it came from, a short id the host tallies for the results card's per-move chart: fight.js moveKey)
+    if (typeof o.ai !== 'string') { const a = ev.ab; delete o.ai; if (a && typeof a === 'object' && a.id != null) o.ai = String(a.id) + (a.ultOf ? '^' : ''); else if (typeof a === 'string') o.ai = a; }
     return o;
   }
   let failAt = 0;
@@ -1552,6 +1554,7 @@
     if (!ev || !EV_TYPES.has(ev.type)) return;
     for (const k of ['amount', 'pct', 'value', 'dur', 'secs', 'ticks', 'interval', 'threat', 'r', 'not', 'pair', 'mx', 'st', 'dp', 'hm', 'seam', 'both', 'mit', 'keep', 'x', 'y', 'dist']) if (ev[k] !== undefined && !Number.isFinite(ev[k])) return;
     if (ev.tgt !== undefined && typeof ev.tgt !== 'string' && !(pvpHost && Number.isInteger(ev.tgt))) return;   // (PvP: the opponent's player id)
+    if (ev.ai !== undefined && !(typeof ev.ai === 'string' && /^[\w.~^:-]{1,40}$/.test(ev.ai))) delete ev.ai;   // (a move's short id, or nothing: fight.js moveKey)
     // a bad heal over time (thousands of ticks, no interval) could freeze the host; a party buff is one of the known
     // kinds, in sane bounds
     if (ev.type === 'hot' && (!(ev.ticks >= 1 && ev.ticks <= 20) || !(ev.interval >= 0.5 && ev.interval <= 10))) return;

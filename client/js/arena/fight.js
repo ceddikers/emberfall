@@ -106,6 +106,7 @@ class FightSim {
       hp, maxHp: hp, x: sp.x, y: sp.y, facing: Math.PI / 2, target: null, cast: null, anim: null, untargetable: false,
       vuln: 0, vulnEnd: 0, autoAt: 4, moveTo: null, speed: 140, dmgUp: 0, anchor: !!def.anchor,
     };
+    this.mvTally = {}; this.curMove = null;   // (the results card's per-move tally: moveReport(), bookkeeping only, nothing in a fight reads it)
     this.stats = {}; this.lastHit = {}; this.saveAt = {};   // (lastHit: when each player last hurt the boss or an add; saveAt: when an ally was last pulled back from the brink)
     for (const p of getPlayers()) this.addPlayer(p);
     this.lastBroadcast = -1; this.lastPartyBroadcast = -1;
@@ -136,6 +137,7 @@ class FightSim {
       // damage dealt while the boss was in its last 20%
       aggro: 0, up: 0, soaked: 0, raises: 0, saves: 0, perfects: 0, busters: 0, ults: 0, burst: 0, wards: 0, closer: 0,
       name: p.name, role: p.role, cls: p.cls, bot: !!p.bot };
+    this.mvTally[p.id] = { spec: p.spec || null, m: new Map() };
   }
   removePlayer(id) { const s = this.ps.get(id); if (s) { s.alive = false; s.left = true; } }
 
@@ -442,7 +444,7 @@ class FightSim {
     this.broadcastAdds();
     this.broadcastParty();
     for (const st of Object.values(this.stats)) { st.aggro = Math.round(st.aggro * 10) / 10; st.up = Math.round(st.up * 10) / 10; for (const k of VALUE_KEYS) if (st[k]) st[k] = Math.round(st[k] * 10) / 10; }
-    this.emit({ t: 'fight', s: result, time: Math.round(this.t * 10) / 10, stats: this.stats, hp: this.boss.hp, maxHp: this.boss.maxHp, mode: this.mode, ph: this.phase || 1 });
+    this.emit({ t: 'fight', s: result, time: Math.round(this.t * 10) / 10, stats: this.stats, mv: this.moveReport(), hp: this.boss.hp, maxHp: this.boss.maxHp, mode: this.mode, ph: this.phase || 1 });
   }
 
   updateBoss(dt) {
@@ -499,15 +501,15 @@ class FightSim {
       if (s.vulnEnd <= this.t) s.vuln = 0;
       for (const k in s.debuffs) if (s.debuffs[k] <= this.t) delete s.debuffs[k];
       for (const h of s.hots) {
-        while (h.ticks > 0 && this.t >= h.next) { h.ticks--; h.next += h.interval; if (s.alive) this.applyHeal(h.from, p.id, h.amount); }
+        while (h.ticks > 0 && this.t >= h.next) { h.ticks--; h.next += h.interval; if (s.alive) this.applyHeal(h.from, p.id, h.amount, false, h.ab); }
       }
       s.hots = s.hots.filter(h => h.ticks > 0);
       if (s.alive) for (const pl of this.healPools) {
         if (Math.hypot(p.x - pl.x, p.y - pl.y) > pl.r) continue;
         if (pl.pct) { const m = s.mits.find(x => x.pool === pl); if (m) m.end = this.t + 0.25; else s.mits.push({ pct: pl.pct, start: this.t, end: this.t + 0.25, pool: pl, from: pl.from }); }   // a ward circle (Alembist)
         if (this.t < pl.next) continue;
-        if (pl.amount) this.applyHeal(pl.from, p.id, pl.amount);
-        if (pl.sh) this.giveShield(pl.from, p.id, s, pl.sh, pl.interval + 0.6, 'pool');
+        if (pl.amount) this.applyHeal(pl.from, p.id, pl.amount, false, pl.ab);
+        if (pl.sh) { const pv = this.curMove; this.curMove = pl.ab || null; this.giveShield(pl.from, p.id, s, pl.sh, pl.interval + 0.6, 'pool'); this.curMove = pv; }
       }
       if (s.alive) {
         s.hist.push([this.t, s.hp]);
@@ -524,6 +526,11 @@ class FightSim {
 
   // ---------------------------------------------------------------- incoming combat events from players
   onEvent(pid, ev) {
+    const pv = this.curMove;
+    this.curMove = this.moveKey(ev);   // (which move this blow or heal came from, for the results card: tally)
+    try { this.onEventIn(pid, ev); } finally { this.curMove = pv; }
+  }
+  onEventIn(pid, ev) {
     const s = this.ps.get(pid), st = this.stats[pid];
     // before the pull, the first blow on the boss starts the fight (and lands)
     if (s && s.alive && this.state === 'prepull' && ev.type === 'damage' && (ev.tgt == null || ev.tgt === 'boss')) this.pull();
@@ -551,7 +558,7 @@ class FightSim {
         if (this.wallHp != null) amt = Math.min(amt, Math.max(0, this.boss.hp - this.wallHp));   // sealed at a gate (a wall)
         this.boss.hp = Math.max(0, this.boss.hp - amt);
         this.burstBrand(pid);
-        st.damage += amt;
+        st.damage += amt; this.tally(pid, 0, amt);
         this.lastHit[pid] = this.t;
         if (ev.ub) st.burst++;   // (a hit of an Ultimate or its window)
         if (this.boss.hp <= this.boss.maxHp * 0.2) st.closer += amt;
@@ -572,7 +579,7 @@ class FightSim {
         for (const tid of targetsOf(ev.target)) {
           const ts = this.ps.get(tid); if (!ts || !ts.alive) continue;
           ts.hots = ts.hots.filter(h => !(h.from === pid && h.id === ev.id));
-          ts.hots.push({ from: pid, id: ev.id, amount: s.weakEnd > this.t ? Math.round(ev.amount * (1 - (s.weakPct || 0))) : ev.amount, ticks: ev.ticks, interval: ev.interval, next: this.t + ev.interval });
+          ts.hots.push({ from: pid, id: ev.id, amount: s.weakEnd > this.t ? Math.round(ev.amount * (1 - (s.weakPct || 0))) : ev.amount, ticks: ev.ticks, interval: ev.interval, next: this.t + ev.interval, ab: this.curMove });
         }
         break;
       case 'shield':
@@ -646,14 +653,14 @@ class FightSim {
         const tp = this.players().find(q => q.id === this.resolveTarget(pid, ev.target)) || this.players().find(q => q.id === pid);
         if (!tp) break;
         this.healPools = this.healPools.filter(pl => pl.from !== pid || pl.vial);   // (a new pool replaces the caster's old pool, not the splash patches: Spillover, Afterglow, Dawn Sanctum)
-        this.healPools.push({ from: pid, x: tp.x, y: tp.y, r: Math.min(200, ev.r || 140), amount: Math.max(0, Math.min(3000, ev.amount | 0)), ticks: Math.min(12, ev.ticks || 6), interval: Math.max(0.5, ev.interval || 1.5), next: this.t + Math.max(0.5, ev.interval || 1.5) });
+        this.healPools.push({ from: pid, x: tp.x, y: tp.y, r: Math.min(200, ev.r || 140), amount: Math.max(0, Math.min(3000, ev.amount | 0)), ticks: Math.min(12, ev.ticks || 6), interval: Math.max(0.5, ev.interval || 1.5), next: this.t + Math.max(0.5, ev.interval || 1.5), ab: this.curMove });
         break;
       }
       case 'splash': this.splash(pid, ev); break;   // a thrown vial (Alembist)
       case 'lamp': this.lampEvent(pid, ev); break;   // a Lanternkeeper's lanterns burst (LANTERNS, the end of this file)
       case 'brand': {  // Judgment on the boss: allies' next hits burst for the Inquisitor's damage
         const b = this.boss, old = b.brand && b.brand.from === pid && b.brand.end > this.t ? b.brand.charges : 0;
-        b.brand = { from: pid, charges: Math.min(8, old + Math.min(8, ev.ticks | 0)), amount: Math.max(0, Math.min(3000, ev.amount | 0)), end: this.t + 15 };
+        b.brand = { from: pid, charges: Math.min(8, old + Math.min(8, ev.ticks | 0)), amount: Math.max(0, Math.min(3000, ev.amount | 0)), end: this.t + 15, ab: this.curMove };
         break;
       }
       case 'snap': this.snapReel(pid); break;   // a dash snapped the silk reeling this player in
@@ -690,7 +697,7 @@ class FightSim {
       const iv = Math.max(0.5, Math.min(3, Number(ev.interval) || 1.5));
       const hx = ev.target === 'self' && Number.isFinite(ev.x) && Number.isFinite(ev.y) ? ARENA.clamp({ x: ev.x, y: ev.y }, 20) : at;   // (a cloud laid where the caster stands now, after a Shadowstep: the kit stamps the spot, main.js)
       this.healPools.push({ from: pid, vial: true, x: hx.x, y: hx.y, fol: ev.fol ? at.id : null, r: Math.max(0, Math.min(200, ev.pr || r || 100)), amount: num(ev.pa), sh: num(ev.ps),
-        pct: Math.max(0, Math.min(0.3, Number(ev.pct) || 0)), ticks: Math.max(1, Math.min(12, ev.ticks | 0)), interval: iv, next: this.t + iv });
+        pct: Math.max(0, Math.min(0.3, Number(ev.pct) || 0)), ticks: Math.max(1, Math.min(12, ev.ticks | 0)), interval: iv, next: this.t + iv, ab: this.curMove });
     }
   }
   // Shields stack: every caster's shield is its own entry with its own size and time (ts.shields), and a hit is taken by the one
@@ -703,7 +710,7 @@ class FightSim {
     const k = key || 'shield', old = ts.shields.find(e => e.from === from && e.key === k);
     if (old) this.endShieldEntry(tid, ts, old);   // (the same shield again: it replaces the old one, whose end goes out first)
     const room = Math.max(0, ts.maxHp - ts.shields.reduce((a, e) => a + e.amt, 0)), amt = Math.min(Math.max(0, amount | 0), room);
-    if (amt > 0) ts.shields.push({ from, key: k, tag: tag || null, amt, max: amt, end: this.t + Math.min(30, dur || 15) });
+    if (amt > 0) ts.shields.push({ from, key: k, tag: tag || null, amt, max: amt, end: this.t + Math.min(30, dur || 15), ab: this.curMove });
     this.shieldSync(ts);
   }
   shieldSync(s) {
@@ -737,7 +744,7 @@ class FightSim {
     if (!br || br.from === pid || br.end <= this.t || br.charges <= 0) return;
     br.charges--;
     b.hp = Math.max(this.wallHp ?? 0, b.hp - br.amount);
-    const st = this.stats[br.from]; if (st) st.damage += br.amount;
+    const st = this.stats[br.from]; if (st) { st.damage += br.amount; this.tally(br.from, 0, br.amount, br.ab || 'brand'); }
     this.emit({ t: 'fev', k: 'brandHit', id: br.from, left: br.charges });
     if (br.charges <= 0) b.brand = null;
   }
@@ -763,6 +770,40 @@ class FightSim {
   // to mitGiven; an untouchable (invuln) moment on oneself is 'avoided', on an ally mitGiven; a raise's moment to find their feet is no one's.
   // Not counted: Kenseier deflects and the class hooks (Gorgemaw jaw, Ledger), a blink out of a telegraph (the host cannot tell).
   credit(id, key, v) { const st = this.stats[id]; if (st && v > 0) st[key] = (st[key] || 0) + v; }
+  // Per-move tally for the results card (bookkeeping only: no rng, nothing in a fight reads it). A move's key is its ability id, with
+  // ~dot for its damage over time, ^ for an Ultimate's window, 'auto' for auto-attacks, 'item' for an item's strike, 'lb' for the Limit
+  // Break; anything unnamed lands in 'other'. kind 0 = damage, 1 = healing (effective heals and shield absorbs, so the rows add up to the totals).
+  moveKey(ev) {
+    let k = ev.ai;
+    if (typeof k !== 'string' && ev.ab) k = typeof ev.ab === 'object' ? (ev.ab.id != null ? String(ev.ab.id) + (ev.ab.ultOf ? '^' : '') : null) : String(ev.ab);
+    if (typeof k !== 'string' && ev.type === 'lb') k = 'lb';
+    return typeof k === 'string' && /^[\w.~^:-]{1,40}$/.test(k) ? k : null;
+  }
+  tally(pid, kind, amt, key) {
+    const mv = this.mvTally[pid]; if (!mv || !(amt > 0)) return;
+    let k = key || this.curMove || 'other', e = mv.m.get(k);
+    if (!e) { if (mv.m.size >= 48) { k = 'other'; e = mv.m.get(k); } if (!e) mv.m.set(k, e = [0, 0, 0, 0]); }
+    e[kind] += amt; e[2 + kind]++;
+  }
+  // the 'mv' of the result: per player { s: spec, m: [[key, damage, healing, hits, heals], ...] }, the biggest 16 moves (the rest folded into 'other')
+  moveReport() {
+    const out = {};
+    for (const id in this.mvTally) {
+      const { spec, m } = this.mvTally[id], rows = [...m].map(([k, e]) => [k, e[0], e[1], e[2], e[3]]);
+      if (!rows.length) continue;
+      rows.sort((a, b) => (b[1] + b[2]) - (a[1] + a[2]));
+      let keep = rows.slice(0, 16);
+      if (rows.length > 16) {
+        const rest = rows.slice(15), oth = ['other', 0, 0, 0, 0];
+        keep = rows.slice(0, 15);
+        for (const r of rest) for (let i = 1; i < 5; i++) oth[i] += r[i];
+        const had = keep.find(r => r[0] === 'other');
+        if (had) for (let i = 1; i < 5; i++) had[i] += oth[i]; else keep.push(oth);
+      }
+      out[id] = { s: spec, m: keep.map(r => [r[0], Math.round(r[1]), Math.round(r[2]), r[3], r[4]]) };
+    }
+    return out;
+  }
   mitCredit(p, ap) {
     for (const [m, v] of ap) {
       if (m.from == null || m.rev) continue;
@@ -783,7 +824,7 @@ class FightSim {
     }
     if (best != null) this.credit(best, best === p.id ? 'savedSelf' : 'saved', 1);
   }
-  applyHeal(fromId, tid, amount, partyWide) {
+  applyHeal(fromId, tid, amount, partyWide, mkey) {
     const targets = partyWide ? this.alive() : this.alive().filter(p => p.id === tid);
     for (const p of targets) {
       const s = p.s;
@@ -792,7 +833,7 @@ class FightSim {
       if (real >= s.maxHp * 0.05) this.ward(fromId, p.id, s, false);
       if (s.hollow) s.hollow.heal += real; else s.hp += real;
       const st = this.stats[fromId];
-      if (st) { st.healing += real; st.overheal += amt - real; }
+      if (st) { st.healing += real; st.overheal += amt - real; this.tally(fromId, 1, real, mkey); }
       if (fromId !== p.id) this.credit(fromId, 'healGiven', real);   // (effective healing on others only)
       // a heal from someone else on a player: their client shows the number over themselves (bots have no screen)
       if (fromId !== p.id && p.id < 1000 && amt >= 1) this.emit({ t: 'pheal', id: p.id, a: amt });
@@ -891,7 +932,7 @@ class FightSim {
         if (amt <= 0) break;
         const used = Math.min(e.amt, amt); if (used <= 0) continue;
         e.amt -= used; amt -= used; absorbed += used;
-        const shSt = this.stats[e.from]; if (shSt) shSt.healing += Math.round(used);
+        const shSt = this.stats[e.from]; if (shSt) { shSt.healing += Math.round(used); this.tally(e.from, 1, Math.round(used), e.ab || 'shield'); }
         this.credit(e.from, e.from === p.id ? 'shieldSelf' : 'shieldGiven', used);
         if (e.amt <= 0.5) this.endShieldEntry(p.id, s, e);
       }
@@ -971,7 +1012,7 @@ class FightSim {
     } else if (s.role === 'healer') {
       for (const p of this.alive()) { const ts = this.ps.get(p.id); this.applyHeal(pid, p.id, ts.maxHp * L.HEAL[lv], true); }
     } else if (!this.boss.untargetable) {
-      this.onEvent(pid, { type: 'damage', amount: Math.round(this.boss.maxHp * L.DPS[lv]), tgt: 'boss' });
+      this.onEvent(pid, { type: 'damage', amount: Math.round(this.boss.maxHp * L.DPS[lv]), tgt: 'boss', ai: 'lb' });
     }
     this.broadcastParty();
   }
@@ -1245,7 +1286,7 @@ class FightSim {
   }
   damageAdd(pid, a, amt, threatMult = 1) {
     a.hp = Math.max(0, a.hp - amt);
-    this.stats[pid].damage += amt;
+    this.stats[pid].damage += amt; this.tally(pid, 0, amt);
     a.threat[pid] = (a.threat[pid] || 0) + amt * threatMult;
     this.addsDirty = true;
     if (a.hp <= 0) this.killAdd(a);
@@ -1693,7 +1734,7 @@ Object.assign(FightSim.prototype, {
     if (!s || b.untargetable || this.state !== 'live' || !(amt > 0)) return;
     amt = Math.round(Math.min(amt, 15000));
     b.hp = Math.max(this.wallHp ?? 0, b.hp - amt);
-    this.stats[pid].damage += amt;
+    this.stats[pid].damage += amt; this.tally(pid, 0, amt, this.curMove || 'ledger');
     if (b.hp <= 0) this.end('clear');
   },
   // the owner's copy of a Ledger (and every client's, for the stamps): on every change, and each second while it holds
@@ -1757,7 +1798,7 @@ Object.assign(FightSim.prototype, {
   hollowShield(from, ts, amount) {
     const amt = Math.max(0, Math.min(8000, (Number(amount) || 0) | 0)) * HOLLOW_HOST.SHIELD;
     ts.hollow.heal += amt;
-    const st = this.stats[from]; if (st) st.healing += Math.round(amt);
+    const st = this.stats[from]; if (st) { st.healing += Math.round(amt); this.tally(from, 1, Math.round(amt)); }
   },
   // every tick: a Hollow whose grace has run out is settled
   hollowTick() {
