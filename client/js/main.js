@@ -2398,18 +2398,33 @@
       if (raid.def.id === 'skitterra' && msg.form === 'moth') {
         raid.mothAt = now;
         BOSS_VFX.cocoonEnd(raid.bossDraw, true, { moth: true, ok: raid.mothMeta ? raid.mothMeta.ok : true });
-        if (SH) SH.play('bm-skitterra-moth-queen', { vol: 0.9 });
+        // the tear: the shell goes and she shrieks (the form moment is the burst itself), and a beat later her name chord sounds over the refilling bars
+        if (SH) { SH.play('bm-skitterra-eclosion', { vol: 0.95 }); SH.play('bm-skitterra-moth-shriek', { vol: 0.9 }); }
+        later(1.2, () => raid && SH && SH.play('bm-skitterra-moth-queen', { vol: 0.8 }));
       }
     }
     ArenaView.roomEvent(raid.room, msg, now, entById);
-    if (raid.def.id === 'grubnak' && (msg.k === 'inhale' || msg.k === 'form') && typeof BOSS_VFX !== 'undefined') BOSS_VFX.roomFx(msg, raid.bossDraw, raid.def.id);   // (Clean Plate's inhale, the swell: grubnak-fx.js)
-    if (typeof VK_STORM !== 'undefined' && raid.def.id === 'volkar') VK_STORM.event(msg, { later });   // (the body breaking and the burst: shake, flash, sparks)
+    if (raid.def.id === 'grubnak' && (msg.k === 'inhale' || msg.k === 'form' || msg.k === 'mend') && typeof BOSS_VFX !== 'undefined') BOSS_VFX.roomFx(msg, raid.bossDraw, raid.def.id);   // (Clean Plate's inhale, the swell, the three healed bars: grubnak-fx.js)
+    if (raid.def.id === 'grubnak' && SH) {
+      // Hard, Clean Plate: the music sinks as the room darkens, all but goes for the held breath (the cast's 70% to 87%, as grubnak-fx.js and the sound recipe lay it),
+      // the swell is a roar, and each healed bar is a gulp
+      const duck = (amount, secs) => { try { if (typeof Sound !== 'undefined' && Sound.music && Sound.music.duck) Sound.music.duck(amount, secs); } catch (e) { /* sound is optional */ } };
+      if (msg.k === 'inhale' && !msg.again) { duck(0.5, msg.dur * 0.7); later(msg.dur * 0.7, () => { if (raid) duck(0.93, msg.dur * 0.17 + 0.3); }); }
+      else if (msg.k === 'form' && msg.form === 'gorged') { duck(0.55, 2.2); SH.play('bm-grubnak-gorged', { vol: 0.95, key: 'bm-grubnak-gorged', minGap: 1 }); }
+      else if (msg.k === 'mend') SH.play('bm-grubnak-gorged-mend', { vol: 0.85, key: 'bm-grubnak-gorged-mend', minGap: 1 });
+    }
+    if (typeof VK_STORM !== 'undefined' && raid.def.id === 'volkar') VK_STORM.event(msg, { later, play: (n, o) => { if (SH) SH.play(n, o); }, duck: (a, s) => { try { if (SH && typeof Sound !== 'undefined' && Sound.music) Sound.music.duck(a, s); } catch (e) { /* (the music is only a mood) */ } } });   // (the dread, the calm, the burst and the charge: shake, flash, sparks, thunder and the hush)
     // Skitterra, Hard: the Metamorphosis (skitterra.js). The check has been decided (msg.ok: torn open or closed on her): the cocoon cracks for msg.burst s
     // (boss-vfx.js cocoonCracking: pale gold if torn, red if closed), then the form moment above bursts it. The art reads room.ev.metamorph.
     if (msg.k === 'metamorph' && raid.def.id === 'skitterra') {
       raid.mothMeta = { ok: !!msg.ok };
-      BOSS_VFX.cocoonCracking(!!msg.ok);
-      if (SH) later(msg.burst, () => raid && SH.play('bm-skitterra-eclosion', { vol: 0.95 }));
+      BOSS_VFX.cocoonCracking(!!msg.ok, msg.burst);
+      if (SH) SH.play('bm-skitterra-cocoon-split', { vol: 0.9 });   // (the silk going thread by thread; then the held breath, then the tear on the form moment)
+    }
+    // Skitterra, Hard: she is mended as she comes out, a bar at a time (skitterra.js mend)
+    if (msg.k === 'mend' && raid.def.id === 'skitterra') {
+      BOSS_VFX.mothMend(raid.bossDraw, msg.n, msg.gap);
+      if (SH) SH.play('bm-skitterra-rebirth', { vol: 0.9 });
     }
     if (msg.k === 'grounded' && SH) later(msg.dur, () => raid && SH.play('bm-skitterra-tightening-web', { vol: 0.5, key: 'skclimb', minGap: 0.5 }));   // (Skitterra hauls herself back up her silk: the web's creak, reused)
   });
@@ -3151,10 +3166,7 @@
     }
     if (raid.def.id === 'grubnak') { raid.props.gorged = raid.form === 'gorged'; raid.props.gAge = raid.props.gorged ? now - (raid.formAt ?? now - 9) : 0; }   // (Hard: the swollen second form after Clean Plate; bosses.js draws it, gAge is the seconds since the swell)
     if (raid.def.id === 'volkar') {   // (Hard's second form, volkar-storm.js: the body cracking, then the Storm Heart under a face in the clouds)
-      const ev = raid.room.ev, vb = ev.volbreak, vr = ev.volrise;
-      raid.props.storm = raid.form === 'storm';
-      raid.props.stormBreak = vb && !raid.props.storm ? clamp((now - vb.start) / Math.max(0.1, vb.dur), 0, 1) : 0;
-      raid.props.stormAge = vr ? now - vr.start : -1;
+      if (typeof VK_STORM !== 'undefined') Object.assign(raid.props, VK_STORM.props(raid.room, raid.form, now));   // (storm, stormBreak, stormHush, stormBeat, stormAge, stormHits, stormHitAge)
     }
     if (raid.def.id === 'wyrm') { raid.props.air = !!b.u && !raid.props.perch; if (raid.wallLabel) raid.props.heart = true; }   // (Vhalgrath: lifted while he is out of reach; the Ember Heart shows in his chest while he is sealed)
     // telegraphs that follow players or track the tank

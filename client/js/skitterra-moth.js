@@ -206,7 +206,7 @@ const SK_MOTH = (() => {
   // The cocoon's cracks: p 0..1 over the Chrysalis cast (they creep out one after another), cr 0..1 once the check has been decided (they split open
   // and light pours out: pale gold if she was torn out, red if the cocoon closed on her). (x, cy): the cocoon's middle, R its radius, H its height.
   const CRACKS = Array.from({ length: 9 }, (_, i) => ({ a: -PI / 2 + (i - 4) * 0.55 + (rnd(i + 400) - 0.5) * 0.3, off: rnd(i + 410), j: rnd(i + 420) }));
-  function cocoonCracks(c, x, cy, R, H, p, cr, t, ok) {
+  function cocoonCracks(c, x, cy, R, H, p, cr, t, ok, dim = 1) {   // (dim 0..1: how much of the light shows; the held breath draws it down to a thread)
     const warm = ok === false ? '#ff6a3a' : '#fff0c8', hot = ok === false ? '#ff2a1a' : '#ffffff';
     c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
     CRACKS.forEach((k, i) => {
@@ -220,14 +220,14 @@ const SK_MOTH = (() => {
       const path = () => { c.beginPath(); pts.forEach(([px, py], s) => (s ? c.lineTo(px, py) : c.moveTo(px, py))); };
       path(); c.strokeStyle = 'rgba(24,12,32,0.9)'; c.lineWidth = 3 + 4 * cr; c.stroke();
       const pul = 0.55 + 0.45 * Math.sin(t * (4 + 10 * p) + i * 1.7);
-      path(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = warm; c.globalAlpha = Math.min(1, (0.25 + 0.55 * p) * pul + cr); c.lineWidth = 1.4 + 3.4 * cr; c.stroke();
-      c.strokeStyle = hot; c.globalAlpha = Math.min(1, cr * 0.9); c.lineWidth = 1 + 1.4 * cr; c.stroke();
+      path(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = warm; c.globalAlpha = Math.min(1, (0.25 + 0.55 * p) * pul + cr) * dim; c.lineWidth = 1.4 + 3.4 * cr; c.stroke();
+      c.strokeStyle = hot; c.globalAlpha = Math.min(1, cr * 0.9) * dim; c.lineWidth = 1 + 1.4 * cr; c.stroke();
       c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
-      if (cr > 0.15) { const [px, py] = pts[pts.length - 1]; VFX.glowAt(c, px, py, 30 + 50 * cr, warm, 0.6 * cr); }
+      if (cr > 0.15) { const [px, py] = pts[pts.length - 1]; VFX.glowAt(c, px, py, 30 + 50 * cr, warm, 0.6 * cr * dim); }
     });
     c.restore();
     // what is inside is pressing out: light through the silk
-    VFX.glowAt(c, x, cy, R * (0.9 + 0.9 * cr), warm, Math.min(1, 0.12 + 0.2 * p + 0.7 * cr) * (0.8 + 0.2 * Math.sin(t * 9)));
+    VFX.glowAt(c, x, cy, R * (0.9 + 0.9 * cr), warm, Math.min(1, 0.12 + 0.2 * p + 0.7 * cr) * (0.8 + 0.2 * Math.sin(t * 9)) * dim);
   }
   // motes of scale-dust: n flung from (x, y), the way they fly set by o { cols, speed, z, life, size }
   function dustSpray(x, y, n, o = {}) {
@@ -259,9 +259,11 @@ const SK_MOTH = (() => {
     dustSpray(x, y, fury ? 110 : 80, { cols, speed: fury ? 420 : 340, vz: 160, life: 1.7, size: 11, r: 60 });
     dustSpray(x, y - 20, 24, { cols, speed: 140, vz: 260, life: 2.2, size: 8, g: 60 });
     for (let i = 0; i < 18; i++) VFX.spawn({ x: x + (Math.random() - 0.5) * 120, y: y + (Math.random() - 0.5) * 90, z: 40, vx: (Math.random() - 0.5) * 360, vy: (Math.random() - 0.5) * 220, vz: 40 + Math.random() * 200, g: 320, life: 1, size: 14, color: '#ffffff', kind: 'feather', stretch: 1, vr: (Math.random() - 0.5) * 8 });
-    H.shake(fury ? 17 : 11);
-    H.roomTint(fury ? '#ff5a3a' : '#fff4e0', fury ? 0.34 : 0.26, 0.9);
-    H.cam(0.09, 0.05, 0.6);
+    // the shriek: thin rings of sound thrown out one after another, fast, over the first beats of her wings
+    for (let i = 0; i < 4; i++) H.shockAt(b.x, b.y, { r: 700 + i * 120, color: i % 2 ? (fury ? '#ffb08a' : '#e8d8ff') : '#ffffff', w: 2.5, dur: 0.55 + i * 0.08, flat: 1, delay: 0.12 + i * 0.13 });
+    H.shake(fury ? 20 : 14);
+    H.roomTint(fury ? '#ff5a3a' : '#fff4e0', fury ? 0.38 : 0.32, 1.1);
+    H.cam(0.12, 0.06, 0.7);
   }
 
   // ---------------------------------------------------------------- the moves' floor (called from boss-tells.js, over the engine's own red / blue)
@@ -383,7 +385,188 @@ const SK_MOTH = (() => {
     H.shake(4);
   }
 
-  return { body, wing, COL, cocoonCracks, burst, dustSpray, waveTell, laneTell, moonTell, moonAir, puddle, waveFx, flutterFx, moonFx };
+  // ---------------------------------------------------------------- the dread: the Chrysalis on Hard, from the cast to the tear (called from boss-vfx.js chrysalis)
+  // Something is being born in the cocoon and the whole cave knows it. Over the 24 s cast:
+  //   - the cave darkens from the walls in (the floor only: a vignette under the telegraphs, never over them), and breathes with each beat;
+  //   - the cocoon beats like a heart, slowly and then faster (sound: bm-skitterra-heartbeat on every beat), and each beat sends a ripple out and shakes the screen a little;
+  //   - the web trembles: every spoke hums, harder as it goes, and kicked by each beat, shaking motes loose;
+  //   - it is lit from inside, and what is in there shows against the light: a folded shape that shifts, and now and then something presses out against the silk;
+  //   - the cracks creep over it (cocoonCracks). When the check is decided (crack(): pale gold if she was torn out, red if the cocoon closed on her) the cracks open and the
+  //     beat runs wild, and for the last HOLD s before the tear everything stops: no beat, no shaking, the light drawn down to a thread, the dark at its deepest, the
+  //     music ducked (H.hold): the held breath. Then the tear is the form moment (burst(), the shriek and the wings) and the dark lifts (release()).
+  // H: { shake, play(name, opts), hold() } from boss-vfx.js. Returns a controller { crack(ok, burst), release(), gone }.
+  const HOLD = 0.8;
+  const hbump = f => Math.exp(-Math.pow(f / 0.07, 2)) + 0.55 * Math.exp(-Math.pow((f - 0.3) / 0.08, 2));   // the lub-dub across one beat (f 0..1)
+  function cocoon(b, dur, H) {
+    const st = { last: null, ph: 0, n: 0, crack: null, pend: null, rel: null, holdOn: false, ripples: [], dark: 0 };
+    const total = dur + 14;
+    // the things that press out against the silk: sooner and bigger as it goes
+    const pushes = Array.from({ length: 15 }, (_, i) => ({ at: dur * (0.1 + 0.88 * Math.pow(i / 14, 1.4)) + (rnd(i + 500) - 0.5) * 0.8, a: -PI * 0.95 + rnd(i + 510) * PI * 1.9, big: 0.5 + 0.5 * rnd(i + 520) }));
+    const spokes = (() => { const cs = ARENA.corners ? ARENA.corners() : [], out = []; for (let i = 0; i < cs.length; i++) { const [x0, y0] = cs[i], [x1, y1] = cs[(i + 1) % cs.length]; out.push([x0, y0], [(x0 + x1) / 2, (y0 + y1) / 2]); } return out; })();
+    const motes = Array.from({ length: 26 }, (_, i) => ({ s: rnd(i + 600), x: rnd(i + 610), q: rnd(i + 620) }));
+    // one step of the heart (shared by both layers, run once a frame from the ground layer, which is drawn first)
+    const step = t => {
+      if (st.pend) { st.crack = { ok: st.pend.ok, start: t, burst: st.pend.burst }; st.pend = null; }
+      const dt = st.last == null ? 0 : Math.min(0.1, t - st.last); st.last = t;
+      const p = cl(t / dur, 0, 1), u = st.crack ? t - st.crack.start : -1, bs = st.crack ? st.crack.burst : 0;
+      const holdK = st.crack ? cl((u - (bs - HOLD)) / 0.18, 0, 1) : 0;       // 0..1: the held breath
+      const cr = st.crack ? easeOut(cl(u / Math.max(0.5, bs - HOLD), 0, 1)) : 0;   // the cracks opening
+      const relK = st.rel != null ? cl((t - st.rel) / 2.4, 0, 1) : 0;       // the dark lifting after the tear
+      if (holdK > 0 && !st.holdOn) { st.holdOn = true; if (H.hold) H.hold(); }
+      if (holdK === 0 && st.rel == null) {
+        const rate = 0.55 + 1.15 * p + 1.5 * cr;
+        st.ph += rate * dt;
+        if (Math.floor(st.ph) > st.n) {
+          st.n = Math.floor(st.ph);
+          const sx = 0.25 + 0.75 * Math.max(p, cr);
+          if (H.play) H.play('bm-skitterra-heartbeat', { vol: 0.3 + 0.7 * sx, key: 'skheart', minGap: 0.2 });
+          H.shake(0.5 + 3.2 * sx * sx);
+          st.ripples.push({ t0: t, k: sx });
+          if (st.ripples.length > 5) st.ripples.shift();
+          for (let i = 0; i < 2 + Math.round(5 * sx); i++) VFX.spawn({ x: b.x + (Math.random() - 0.5) * 520, y: b.y + (Math.random() - 0.5) * 360, z: 150 + Math.random() * 90, vx: (Math.random() - 0.5) * 20, vy: 0,
+            vz: -20 - Math.random() * 30, g: 0, life: 1.6 + Math.random(), size: 4 + Math.random() * 5, size1: 2, color: '#f2ecff', kind: 'soft', a: 0.55 });
+        }
+      }
+      const frac = holdK > 0 ? 0.5 : st.ph - Math.floor(st.ph);
+      const beat = holdK > 0 ? 0 : hbump(frac);
+      return { t, p, u, holdK, cr, relK, beat, ok: st.crack ? st.crack.ok : null };
+    };
+    let S = null;   // this frame's state
+    // the floor: the dark, and the humming web
+    const ground = VFX.fx({ dur: total, layer: 'ground', draw: (c, p0, t, e) => {
+      if (st.gone) return;
+      S = step(t);
+      const { p, holdK, relK, beat } = S;
+      const dk = (Math.pow(p, 1.5) * 0.95 + 0.1 * (S.cr > 0 ? 1 : 0) + 0.2 * holdK) * (1 - relK) * (1 - 0.18 * beat);
+      const x = b.x, y = b.y;
+      c.save(); ARENA.trace(c, 2); c.clip();
+      // the web: every spoke hums (a standing wave that grows, kicked by each beat)
+      const amp = (1.2 + 15 * p * p) * (0.35 + 0.65 * beat) * (1 - holdK) * (1 - relK), alpha = (0.1 + 0.3 * p) * (1 - 0.7 * holdK) * (1 - relK);
+      if (alpha > 0.01) {
+        c.lineCap = 'round';
+        spokes.forEach(([sx, sy], i) => {
+          const L = Math.hypot(sx - x, sy - y) || 1, ux = (sx - x) / L, uy = (sy - y) / L, nx = -uy, ny = ux, w = t * (7 + 5 * p) + i * 1.7;
+          c.beginPath();
+          for (let s = 0; s <= 20; s++) { const q = s / 20, off = Math.sin(q * PI) * amp * (Math.sin(w) * 0.8 + Math.sin(w * 2.1 + i) * 0.35); const px = x + ux * L * q + nx * off, py = y + uy * L * q + ny * off; s ? c.lineTo(px, py) : c.moveTo(px, py); }
+          c.strokeStyle = `rgba(244,240,255,${alpha})`; c.lineWidth = 1.6 + 1.8 * p; c.stroke();
+        });
+      }
+      // the dark, from the walls in (a floor-level vignette: it lies under the telegraphs and the players)
+      if (dk > 0.005) {
+        const R = ARENA.R || 760, g = c.createRadialGradient(x, y, 180, x, y, R * 1.05);
+        g.addColorStop(0, 'rgba(8,2,18,0)'); g.addColorStop(0.4, `rgba(8,2,18,${dk * 0.26})`); g.addColorStop(1, `rgba(6,1,14,${Math.min(0.78, dk * 0.85)})`);
+        c.fillStyle = g; c.fillRect(-R - 20, -R - 20, R * 2 + 40, R * 2 + 40);
+      }
+      // motes shaken loose from the web, drifting down through the dark
+      if (p > 0.15 && relK < 1) {
+        c.globalCompositeOperation = 'lighter';
+        for (const m of motes) { const q = (t * (0.12 + 0.2 * m.s) + m.q) % 1, a = m.x * TAU; c.globalAlpha = Math.sin(q * PI) * 0.35 * p * (1 - relK); c.fillStyle = '#efe8ff'; c.beginPath(); c.arc(x + Math.cos(a) * (60 + 520 * m.s), y + Math.sin(a) * (40 + 330 * m.s) + q * 40, 1.1 + m.s * 1.6, 0, TAU); c.fill(); }
+      }
+      c.restore();
+      if (S.relK >= 1) st.gone = true;
+    } });
+    // the cocoon
+    const air = VFX.fx({ dur: total, layer: 'air', draw: (c, p0, t, e) => {
+      if (st.gone || !S) return;
+      const { p, holdK, cr, relK, beat } = S;
+      if (st.rel != null && t - st.rel > 0.14) return;   // (the shell is gone the moment it tears)
+      const ke = e.a * Math.min(1, p / 0.05), calm = 1 - holdK;
+      const R0 = 92, cy = b.y - 34, strain = (Math.max(0, p - 0.3) * 3.2 + cr * 3.6) * calm;
+      const sw = 1 + (0.012 + 0.07 * p) * beat * calm, R = R0 * (1 - 0.1 * p) * sw * (1 + 0.06 * cr), Hh = R0 * 1.2 * (1 - 0.04 * p) * sw;
+      c.save();
+      if (strain > 0) c.translate(Math.sin(t * 53) * strain * 1.4, Math.cos(t * 41) * strain);
+      // a ripple of the beat goes out through the air
+      for (const rp of st.ripples) { const q = (t - rp.t0) / 0.9; if (q > 0 && q < 1) VFX.neonRing(c, b.x, cy + 30, R * (1.1 + 2.6 * easeOut(q)), '#cdb4ff', 2 + 3 * rp.k, ke * rp.k * 0.5 * (1 - q), 0.7); }
+      // the silk body, lit from inside
+      c.fillStyle = `rgba(236,230,250,${(0.08 + 0.3 * p) * ke})`;
+      c.beginPath(); c.ellipse(b.x, cy, R, Hh, 0, 0, TAU); c.fill();
+      c.save(); c.beginPath(); c.ellipse(b.x, cy, R * 0.97, Hh * 0.97, 0, 0, TAU); c.clip();
+      const warm = S.ok === false ? '255,96,60' : '255,226,160', lit = Math.min(1, (0.1 + 0.55 * p + 0.35 * cr) * (1 - 0.8 * holdK)) * ke;
+      const ig = c.createRadialGradient(b.x, cy + Hh * 0.1, R * 0.1, b.x, cy, Hh * 1.05); ig.addColorStop(0, `rgba(${warm},${0.75 * lit})`); ig.addColorStop(0.6, `rgba(150,90,220,${0.5 * lit})`); ig.addColorStop(1, `rgba(60,20,110,${0.3 * lit})`);
+      c.fillStyle = ig; c.fillRect(b.x - R, cy - Hh, R * 2, Hh * 2);
+      // what is in there: the folded moth, a dark shape against the light. It sways, and twitches when something presses out.
+      const vis = cl((p - 0.18) / 0.45, 0, 1) * ke, sway = calm * (Math.sin(t * 1.3) * 0.05 + Math.sin(t * 3.1) * 0.02 * p);
+      if (vis > 0.01) {
+        c.save(); c.translate(b.x, cy + Hh * 0.02); c.rotate(sway); c.scale(1 + 0.03 * beat * calm, 1 + 0.03 * beat * calm);
+        let tw = 0; for (const ps of pushes) { const q = (t - ps.at) / 0.5; if (q > 0 && q < 1) tw = Math.max(tw, Math.sin(q * PI) * ps.big); }
+        c.translate(Math.cos(t * 17) * tw * 3, 0);
+        c.fillStyle = `rgba(18,6,30,${0.62 * vis})`; c.strokeStyle = `rgba(18,6,30,${0.62 * vis})`; c.lineCap = 'round';
+        c.beginPath(); c.ellipse(0, Hh * 0.08, R * 0.17, Hh * 0.52, 0, 0, TAU); c.fill();                // the body
+        c.beginPath(); c.arc(0, -Hh * 0.52, R * 0.17, 0, TAU); c.fill();                                // the head
+        for (const s of [-1, 1]) {
+          c.beginPath(); c.moveTo(s * R * 0.08, -Hh * 0.34); c.bezierCurveTo(s * R * 0.6, -Hh * 0.2, s * R * 0.74, Hh * 0.3, s * R * (0.4 + 0.1 * tw), Hh * 0.72); c.bezierCurveTo(s * R * 0.3, Hh * 0.3, s * R * 0.2, 0, s * R * 0.08, -Hh * 0.1); c.fill();   // a folded wing
+          c.lineWidth = 2; c.beginPath(); c.moveTo(s * R * 0.1, -Hh * 0.64); c.quadraticCurveTo(s * R * 0.3, -Hh * 0.95, s * R * (0.55 + 0.15 * tw), -Hh * 0.88); c.stroke();                                              // an antenna
+        }
+        c.restore();
+        // the rim of light round it
+        c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.18 * vis * lit; c.strokeStyle = `rgb(${warm})`; c.lineWidth = 2.5; c.beginPath(); c.ellipse(b.x + sway * 20, cy + Hh * 0.08, R * 0.2, Hh * 0.52, sway, 0, TAU); c.stroke(); c.restore();
+      }
+      c.restore();
+      // the silk bands wound round it, thickening as the cast runs
+      c.lineCap = 'round';
+      const n = Math.min(16, 2 + Math.floor(p * 15));
+      for (let i = 0; i < n; i++) {
+        const y = cy + Hh * 0.85 - i * (Hh * 1.7 / 16), u = (y - cy) / Hh, w = R * Math.sqrt(Math.max(0, 1 - u * u)), tilt = (rnd(i + 700) - 0.5) * 0.5;
+        c.strokeStyle = `rgba(250,246,255,${(0.3 + 0.5 * p) * ke})`; c.lineWidth = 1.5 + (i % 3);
+        c.beginPath(); c.moveTo(b.x - w, y + w * tilt); c.quadraticCurveTo(b.x, y + 9 + 3 * Math.sin(t * 2 + i), b.x + w, y - w * tilt); c.stroke();
+      }
+      // pressing out: a bulge in the silk where a hand, a wing-tip, pushes at it
+      for (const ps of pushes) {
+        const q = (t - ps.at) / 0.55; if (q <= 0 || q >= 1) continue;
+        const k = Math.sin(q * PI), ex = b.x + Math.cos(ps.a) * R, ey = cy + Math.sin(ps.a) * Hh, len = (7 + 15 * p) * ps.big * k;
+        c.save(); c.translate(ex, ey); c.rotate(Math.atan2(Math.sin(ps.a) * R, Math.cos(ps.a) * Hh) + (ps.a > 0 ? 0 : 0));
+        c.fillStyle = `rgba(246,242,255,${0.75 * ke * k})`; c.strokeStyle = `rgba(30,14,44,${0.6 * ke * k})`; c.lineWidth = 2;
+        c.beginPath(); c.ellipse(len * 0.35, 0, len * 0.9, 5 + 7 * ps.big, 0, 0, TAU); c.fill(); c.stroke();
+        c.restore();
+      }
+      // the last stretch: it pulses, nearly shut
+      if (p > 0.8 && calm > 0.01) VFX.neonRing(c, b.x, cy, R * 0.92, '#f4f0ff', 2, ke * (p - 0.8) * 3 * calm * (0.6 + 0.4 * beat), 0.5);
+      cocoonCracks(c, b.x, cy, R, Hh, p, cr, t, S.ok, 1 - 0.92 * holdK);
+      c.restore();
+    } });
+    return {
+      get gone() { return st.gone; },
+      crack(ok, burst) { st.pend = { ok, burst }; },
+      release() { st.rel = st.last == null ? 0 : st.last; if (st.last == null) st.gone = true; },
+      stop() { st.gone = true; ground.dur = 0; air.dur = 0; },
+    };
+  }
+
+  // The heal: she is mended as she comes out, one bar of the boss bar at a time (skitterra.js mend(): roomev 'mend', n bars, gap s apart). Light pours into
+  // her out of the dark: motes streaming in from all round, a ring of light folding in at each bar, and her glow swelling and then settling.
+  function mend(b, n, gap, H) {
+    const total = n * gap + 1.1;
+    VFX.fx({ dur: total, layer: 'air', draw: (c, p, t, e) => {
+      const x = b.x, y = b.y - 10, k = e.a * Math.min(1, t / 0.15) * Math.min(1, (total - t) / 0.6);
+      // shafts of light drawn in from the dark all round, narrowing as they reach her, swelling with each bar
+      const bar = Math.min(n, Math.floor(t / gap) + 1), pulse = Math.pow(Math.max(0, 1 - ((t % gap) / gap)), 2);
+      c.save(); c.globalCompositeOperation = 'lighter'; c.translate(x, y + 18); c.scale(1, 0.78);
+      const rays = 12;
+      for (let i = 0; i < rays; i++) {
+        const a = i * TAU / rays + t * 0.35, L = 620 - 260 * easeOut(Math.min(1, t / (n * gap))), w0 = 46 + 16 * Math.sin(t * 4 + i * 2), al = k * (0.16 + 0.1 * bar + 0.22 * pulse);
+        const g = c.createLinearGradient(Math.cos(a) * L, Math.sin(a) * L, 0, 0); g.addColorStop(0, 'rgba(255,230,168,0)'); g.addColorStop(0.7, `rgba(255,232,170,${al})`); g.addColorStop(1, `rgba(255,255,240,${Math.min(1, al * 1.6)})`);
+        c.fillStyle = g; c.beginPath(); c.moveTo(Math.cos(a) * L - Math.sin(a) * w0, Math.sin(a) * L + Math.cos(a) * w0); c.lineTo(0, 0); c.lineTo(Math.cos(a) * L + Math.sin(a) * w0, Math.sin(a) * L - Math.cos(a) * w0); c.closePath(); c.fill();
+      }
+      c.restore();
+      VFX.glowAt(c, x, y, 230 + 50 * pulse, '#ffe6a8', 0.5 * k);
+      VFX.glowAt(c, x, y, 110 + 30 * pulse, '#ffffff', 0.55 * k);
+      for (let i = 0; i < n; i++) {
+        const q = (t - i * gap) / 0.75; if (q <= 0 || q >= 1) continue;
+        VFX.neonRing(c, x, y + 20, 560 * (1 - easeOut(q)) + 40, '#ffe3a0', 6 * (1 - q * 0.5), k * Math.sin(q * PI), 0.7);
+        VFX.neonRing(c, x, y + 20, 380 * (1 - easeOut(q)) + 30, '#f0dcff', 3.5, k * Math.sin(q * PI) * 0.7, 0.7);
+      }
+    }, tick: p => {
+      for (let i = 0; i < 4; i++) {
+        const a = Math.random() * TAU, d = 400 + Math.random() * 400, sx = b.x + Math.cos(a) * d, sy = b.y + Math.sin(a) * d * 0.72, tx = b.x, ty = b.y - 10;
+        const life = 0.5 + Math.random() * 0.4, big = Math.random() < 0.3;
+        VFX.spawn({ x: sx, y: sy, z: 8 + Math.random() * 90, vx: (tx - sx) / life, vy: (ty - sy) / life, vz: 20, drag: 0, life, size: big ? 30 : 12 + Math.random() * 10, size1: 3, stretch: big ? 5 : 0, kind: big ? 'drop' : (Math.random() < 0.5 ? 'star' : 'soft'),
+          color: ['#ffe6a8', '#fff6e0', '#e8d8ff', '#ffd890'][(Math.random() * 4) | 0] });
+      }
+    } });
+    for (let i = 0; i < n; i++) H.after(i * gap, () => { H.shake(3 + i); VFX.glint(b.x, b.y - 10, { z: 30, size: 120 + 20 * i, color: '#fff6e0' }); });
+  }
+
+  return { body, wing, COL, cocoonCracks, cocoon, mend, hbump, burst, dustSpray, waveTell, laneTell, moonTell, moonAir, puddle, waveFx, flutterFx, moonFx };
 })();
 
 if (typeof module !== 'undefined') module.exports = { SK_MOTH };

@@ -341,7 +341,7 @@ const TUTORIAL = {
 
   bosses: {
     grubnak: {
-      intro: 'Five courses in a kitchen that shrinks: the Appetiser and Mains teach his tools, the Flare-Up at 50% sets the top third burning for good, the Second Sitting works round the stockpot, and Dessert is a gauntlet that ends in Gorge until he drops or casts Last Call at about 10:00 (10:15 on Hard). Groups die to where they put things: grease that later burns, casks they need for Gut Blast, and his charge into the wrong wall.',
+      intro: 'Five courses in a kitchen that shrinks: the Appetiser and Mains teach his tools, the Flare-Up at 50% sets the top third burning for good, the Second Sitting works round the stockpot, and Dessert is a gauntlet that ends in Gorge until he drops or casts Last Call at about 10:00 (10:30 on Hard). Groups die to where they put things: grease that later burns, casks they need for Gut Blast, and his charge into the wrong wall.',
       phases: [
         { name: 'Appetiser', body: '100% to 80%. One tool at a time, with room between: Grease Fire, Mince, Ladle Spin, Lid Slam, Tenderize, Meat Toss with Family Meal, Larder Toss into Gut Blast, with a Skewer for the tank now and then. Hard opens with Clogged Drains.' },
         { name: 'Mains', body: '80% to 50%. The tools come back, a few of them in pairs: Butcher\'s Charge, Chop Chop, Order Up!, Meat Toss into Family Meal, casks then the charge (then Gut Blast, on Hard) and Grease Fire, with Tenderize and Skewer for the tank between. On Hard Order Up! comes under Rolling Meatballs, and the middle is drawn fresh each pull.' },

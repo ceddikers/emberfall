@@ -5,9 +5,16 @@
 // telegraphs, so each shows exactly where its blow lands: 'armslam' (an arm coming down on the tank), 'armcross' (an arm raking a line) and
 // 'arm' (an arm reaching down to a gold or blue tower). Loaded after arena-view.js; it adds buildStormPeak to ArenaView itself.
 //
-// Timing (volkar.js unbound): roomev volbreak {dur} at the start of the cast; the form flips to 'storm' and roomev volrise {dur: 4} arrives 0.6 s
-// before the burst, so the burst is BURST (0.6 s) into volrise. st.props (main.js): storm (the form), stormBreak 0..1 (the body cracking),
-// stormAge (seconds since volrise began, -1 before it).
+// Timing (volkar.js unbound): the change is a slow dread and then a payoff.
+//   roomev volbreak {dur}   the cast begins: the sky blackens, the body groans and cracks, far thunder rolls in (FLASHES: a flash, then its
+//                           thunder LAG s later, each nearer)
+//   roomev volhush {dur}    HUSH s before the burst: the wind dies, the rain stops, the clouds hold still, the music drops out, a heartbeat of
+//                           light in the cracks and a ring of air drawing in; no thunder, a beat of near-silence
+//   roomev volrise {dur}    0.6 s before the burst the form flips; the burst is BURST (0.6 s) into volrise. The face rises with its eyes shut
+//                           (age 0.8 to 3.2), opens them and roars (age 3.0 to 3.6)
+//   roomev volcharge {at, every, n}  three bolts pour from the face into the Storm Heart, each filling a bar of its health (volkar.js heals as each lands)
+// st.props (main.js, VK_STORM.props): storm (the burst has happened), stormBreak 0..1 (the body cracking), stormHush 0..1, stormAge (seconds since
+// volrise began, -1 before it), stormHits / stormHitAge (the bolts that have landed, seconds since the last).
 //   VK_STORM.under(ctx, room, t)       summit light, the canopy, the face (under the telegraphs and the units: ArenaView.drawRoomUnder)
 //   VK_STORM.over(ctx, room, t, env)   the arms (over the units: ArenaView.drawRoomOver), reading env.tgs
 //   VK_STORM.heart(ctx, st, angle) / crumble(ctx, st, pk, angle) / tremble(pk, t)   the boss's body (bosses.js volkar)
@@ -21,22 +28,50 @@ const VK_STORM = (() => {
   const lerp = (a, b, q) => a + (b - a) * q;
   const K = { cy: '#7fe8ff', wh: '#eaffff', deep: '#08101c', cl: '#18222f', cl2: '#2a384c', gold: '#ffc24a', blue: '#4ad8ff', stone: '#5b6a80', stoneD: '#3a4455' };
   const BURST = 0.6;                    // seconds into 'volrise' at which the body bursts
+  const HUSH = 3.8;                     // the calm before the burst (volkar.js UNB_HUSH)
+  // the far thunder before the calm: [seconds into the cast, how long the thunder lags the flash, size, distance of the bolt from the middle]
+  // (the thunder arrives at 2.8, 3.7, 4.5 and 5.1 s, each nearer, a second or so apart; the calm begins at 5.55)
+  const FLASHES = [[0.5, 2.3, 0.35, 780], [2.0, 1.7, 0.5, 720], [3.5, 1.0, 0.7, 660], [4.7, 0.4, 0.95, 610]];
+  const GROANS = [[1.2, 0.55], [3.2, 0.7], [4.3, 0.85]];   // the stone groaning before the calm: [seconds into the cast, volume]
+  const BEATS = [[0.9, 0.8], [1.9, 1.0], [2.7, 1.4], [3.15, 1.8]];   // the heartbeat in the calm: [seconds into it, weight]
   const FACE = { x: 0, y: -520 };       // the face's centre: over the north rim of the summit
   const SHOULDER = [{ x: -370, y: -440, s: -1 }, { x: 370, y: -440, s: 1 }];
   const ARM_TAGS = { armslam: 1, armcross: 1, arm: 1 };
 
-  // where the sequence is: storm (the form), brk (the body cracking, 0..1), age (since volrise), c (how much storm is in the sky, 0..1), face (the face risen, 0..1)
+  // where the sequence is: storm (the burst has happened and the form is the storm's), brk (the body cracking, 0..1), age (since volrise), c (how much
+  // storm is in the sky, 0..1), face (the face risen, 0..1), eyes (open, 0..1), roar (the mouth wide), hush (the calm, 0..1), hushAge, tw (the clouds' clock: it slows in the calm)
   function seq(room, t) {
-    const ev = (room && room.ev) || {}, fm = ev.form, vb = ev.volbreak, vr = ev.volrise;
-    const storm = !!(fm && fm.form === 'storm');
-    const brk = vb && !storm ? c01((t - vb.start) / Math.max(0.1, vb.dur)) : 0;
+    const ev = (room && room.ev) || {}, fm = ev.form, vb = ev.volbreak;
+    // (only this pull's events: one older than the cast belongs to an earlier pull)
+    const vh = ev.volhush && vb && ev.volhush.start >= vb.start ? ev.volhush : null, vr = ev.volrise && (!vb || ev.volrise.start >= vb.start) ? ev.volrise : null;
     const age = vr ? t - vr.start : -1;
-    let c = brk * 0.55, face = 0;
+    // (the form flips BURST s before the body bursts: until then he is still the cracking stone body, and the sky is still dread)
+    const storm = !!(fm && fm.form === 'storm') && !(vr && age < BURST);
+    const brk = vb && !storm ? c01((t - vb.start) / Math.max(0.1, vb.dur)) : 0;
+    const burstAt = vr ? vr.start + BURST : vb ? vb.start + vb.dur : 0;
+    const hush = vh && t >= vh.start && t < burstAt ? ease(c01((t - vh.start) / 0.8)) : 0;
+    const tw = vh ? t - 0.85 * Math.max(0, Math.min(t, burstAt) - vh.start) : t;
+    let c = 0.8 * Math.pow(brk, 0.85), face = 0, eyes = 0, roar = 0;
     if (storm) {
-      if (vr && age < 4.4) { c = 0.55 + 0.45 * c01((age - BURST) / 3); face = ease(c01((age - BURST - 0.2) / 3.4)); }
-      else { c = 1; face = 1; }
+      if (vr && age < 6.4) {
+        c = 0.8 + 0.2 * c01((age - BURST) / 3); face = ease(c01((age - BURST - 0.2) / 2.4));
+        eyes = ease(c01((age - 3.1) / 0.5)); roar = c01((age - 3.0) / 0.25) * (1 - c01((age - 4.4) / 0.7));
+      } else { c = 1; face = 1; eyes = 1; }
     }
-    return { storm, brk, age, burstAge: age - BURST, c, face };
+    return { storm, brk, age, burstAge: age - BURST, c, face, eyes, roar, hush, hushAge: vh ? t - vh.start : -1, tw };
+  }
+  // the three bolts of the charge: { n, t0 (the first lands), every } or null; hits so far and seconds since the last
+  function charge(room, t) {
+    const ev = (room && room.ev) || {}, vc = ev.volcharge, vr = ev.volrise;
+    if (!vc || (vr && vc.start < vr.start)) return null;
+    const t0 = vc.start + (vc.at || 3), every = vc.every || 0.8, n = vc.n || 3, c = t - t0;
+    const hits = c < 0 ? 0 : Math.min(n, Math.floor(c / every) + 1);
+    return { n, t0, every, hits, age: hits ? c - (hits - 1) * every : -1 };
+  }
+  // what the boss's body reads from the room (main.js puts it on raid.props)
+  function props(room, form, now) {
+    const s = seq(room, now), ch = charge(room, now);
+    return { storm: form === 'storm' && s.storm, stormBreak: s.storm ? 0 : s.brk, stormHush: s.hush, stormBeat: s.hush > 0.05 ? beat(s.hushAge) : 0, stormAge: s.age, stormHits: ch ? ch.hits : 0, stormHitAge: ch ? ch.age : -1 };
   }
 
   // ---------------------------------------------------------------------------------------------------------- parts
@@ -56,8 +91,9 @@ const VK_STORM = (() => {
   }
 
   // the canopy: the sky round the summit goes dark and the cloud turns slowly, with lightning in it
-  function canopy(ctx, t, c) {
+  function canopy(ctx, t, c, bk = 1, t0 = t) {   // (t0: the clouds' own clock, which slows in the calm; bk: how much lightning moves in them)
     if (c <= 0.01) return;
+    t = t0;
     ctx.save();
     const g = ctx.createRadialGradient(0, 0, 280, 0, 0, 820);
     g.addColorStop(0, 'rgba(4,8,18,0)'); g.addColorStop(0.45, `rgba(4,8,18,${0.5 * c})`); g.addColorStop(1, `rgba(3,6,14,${0.92 * c})`);
@@ -70,10 +106,10 @@ const VK_STORM = (() => {
     }
     // lightning moving inside the cloud, outside the summit
     ctx.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 3 && bk > 0.02; i++) {
       const per = 1.1 + i * 0.37, q = ((t + i * 0.7) % per) / per, n = Math.floor((t + i * 0.7) / per);
       if (q > 0.16) continue;
-      const k = 1 - q / 0.16, a = hs(n, i + 5) * TAU2, d = 420 + hs(n, i + 9) * 150, a2 = a + (hs(n, i + 11) - 0.5) * 0.9;
+      const k = (1 - q / 0.16) * bk, a = hs(n, i + 5) * TAU2, d = 420 + hs(n, i + 9) * 150, a2 = a + (hs(n, i + 11) - 0.5) * 0.9;
       crack(ctx, Math.cos(a) * d, Math.sin(a) * d * 0.86, Math.cos(a2) * (d + 120), Math.sin(a2) * (d + 120) * 0.86, n * 7 + i, n + i, K.cy, 2.2, 0.8 * k * c, 60, 8, 0.3);
       glow(ctx, Math.cos(a2) * (d + 60), Math.sin(a2) * (d + 60) * 0.86, 150, '#7fc8ff', 0.22 * k * c);
     }
@@ -82,7 +118,7 @@ const VK_STORM = (() => {
 
   // the face: light and cloud, a dark brow and eyes (one gold, one blue: both charges), a mouth full of lightning, a beard of cloud and a crown of bolts.
   // k is how far it has risen (0..1): it comes up out of the middle (small, pale) to its place over the north rim.
-  function face(ctx, t, k, c) {
+  function face(ctx, t, k, c, eyes = 1, roar = 0) {   // eyes: how far open (0 shut, a thin seam of light); roar: the jaw dropped and the throat alight
     if (k <= 0.01) return;
     const x = lerp(0, FACE.x, k), y = lerp(-30, FACE.y, k), S = lerp(0.3, 1, k);
     ctx.save(); ctx.translate(x, y); ctx.scale(S, S);
@@ -128,19 +164,22 @@ const VK_STORM = (() => {
     // brows and eyes
     for (const s of [-1, 1]) {
       poly(ctx, [s * 112, -62, s * 22, -44, s * 14, -18, s * 108, -38], rgba(K.deep, 0.96 * A), rgba('#9fdcff', 0.55 * A), 2);
-      const col = s < 0 ? '#ffd36a' : '#6ad8ff', ex = s * 56, ey = -20;
+      const col = s < 0 ? '#ffd36a' : '#6ad8ff', ex = s * 56, ey = -20, ew = 0.1 + 0.9 * eyes;
       poly(ctx, [ex - s * 34, ey - 6, ex, ey - 17, ex + s * 34, ey + 2, ex, ey + 10], rgba(K.deep, 0.98 * A));
-      glow(ctx, ex, ey - 2, 70, col, 0.55 * A * (0.8 + 0.2 * pulse), 0.8);
-      ellipse(ctx, ex, ey - 3, 21, 5.5, s * -0.1, rgba('#ffffff', A));
+      // (shut: only a seam of light through the lid; opening: a flare of its colour)
+      glow(ctx, ex, ey - 2, 70, col, (0.12 + 0.43 * eyes) * A * (0.8 + 0.2 * pulse), 0.8);
+      if (eyes > 0.02 && eyes < 0.98) glow(ctx, ex, ey - 2, 150, col, 0.6 * Math.sin(eyes * Math.PI) * A, 0.8);
+      ellipse(ctx, ex, ey - 3, 21 * (0.55 + 0.45 * eyes), 5.5 * ew, s * -0.1, rgba('#ffffff', A * (0.35 + 0.65 * eyes)));
     }
     // the nose, and the mouth: a dark fissure with lightning in it
     limb(ctx, [0, -14, -3, 34, -14, 62], rgba(K.deep, 0.6 * A), 8);
     poly(ctx, [-18, 66, -2, 74, 18, 66, 8, 80, -8, 80], rgba(K.deep, 0.7 * A));
-    poly(ctx, [-70, 104, -34, 94, 0, 99, 34, 94, 70, 104, 40, 128, 0, 134, -40, 128], rgba(K.deep, 0.97 * A), rgba('#9fdcff', 0.5 * A), 2);
+    const jaw = roar * 22;   // (the jaw drops for the roar)
+    poly(ctx, [-70, 104, -34, 94, 0, 99, 34, 94, 70, 104, 40 + roar * 6, 128 + jaw, 0, 134 + jaw * 1.2, -40 - roar * 6, 128 + jaw], rgba(K.deep, 0.97 * A), rgba('#9fdcff', 0.5 * A), 2);
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    const tp = [-56, 112]; for (let i = 1; i <= 9; i++) tp.push(-56 + i * 12.4, 112 + (i % 2 ? -9 : 7) + Math.sin(t * 9 + i) * 2);
-    bolt(ctx, tp, K.cy, 2, A * (0.7 + 0.3 * pulse));
-    glow(ctx, 0, 112, 90, K.cy, 0.22 * A * (0.6 + 0.4 * pulse));
+    const tp = [-56, 112]; for (let i = 1; i <= 9; i++) tp.push(-56 + i * 12.4, 112 + (i % 2 ? -9 : 7) * (1 + roar * 1.8) + Math.sin(t * 9 + i) * 2 + (i % 2 ? 0 : jaw * 0.5));
+    bolt(ctx, tp, K.cy, 2 + roar * 2.5, A * (0.7 + 0.3 * pulse));
+    glow(ctx, 0, 112 + jaw * 0.5, 90 + roar * 120, roar > 0.05 ? '#dff8ff' : K.cy, (0.22 + 0.5 * roar) * A * (0.6 + 0.4 * pulse));
     ctx.restore();
     // the beard: cloud pouring down off the chin, with lightning hung in it
     for (let i = 0; i < 12; i++) {
@@ -313,12 +352,47 @@ const VK_STORM = (() => {
   }
 
   // under the telegraphs and the units: the wind, the canopy, the face, the cracks lit from below and the burst's ring
+  // the heart's beat in the calm: 0 between, a spike on each of BEATS
+  function beat(a) {
+    let v = 0;
+    for (const [tb, w] of BEATS) { const d = a - tb; if (d > -0.06 && d < 0.55) v += w * Math.exp(-d * d / 0.025) * (d < 0 ? 0.25 : 1); }
+    return Math.min(2, v);
+  }
+  // the dread before the change: dusk over the summit, thunder far off and coming nearer, then the calm (the cloud is under this, in canopy)
+  function dread(ctx, t, s, room) {
+    const vb = room.ev.volbreak, el = t - vb.start;
+    ctx.save();
+    ctx.fillStyle = `rgba(2,5,14,${0.36 * Math.pow(s.brk, 1.1)})`; ctx.fillRect(-1100, -1100, 2200, 2200);   // the light going out of the sky
+    ctx.globalCompositeOperation = 'lighter';
+    // far lightning in the cloud sea: each flash nearer, brighter and bigger than the last (their thunder is heard LAG s behind: event())
+    for (let i = 0; i < FLASHES.length; i++) {
+      const [at, , size, dist] = FLASHES[i], a = el - at;
+      if (at > vb.dur - HUSH - 0.6 || a < 0 || a > 0.6) continue;
+      const k = Math.pow(1 - a / 0.6, 1.7) * (a < 0.05 ? a / 0.05 : 1), ang = hs(i, 41) * TAU2, x = Math.cos(ang) * dist, y = Math.sin(ang) * dist * 0.86;
+      ctx.fillStyle = rgba('#b8d4ff', 0.13 * size * k); ctx.fillRect(-1100, -1100, 2200, 2200);
+      glow(ctx, x, y, 240 + 140 * size, '#9ccfff', 0.55 * size * k);
+      crack(ctx, x + 50, y - 320, x, y, el, i * 9 + 1, '#d6e8ff', 1.8 + 2 * size, Math.min(1, 0.25 + size) * k, 40, 11, 0.2);
+      crack(ctx, x + 18, y - 180, x + 90, y - 90, el, i * 9 + 4, '#d6e8ff', 1.2, 0.6 * size * k, 40, 6, 0.3);
+    }
+    // the calm: a ring of air drawing in on the middle, over and over, and the middle beating
+    if (s.hush > 0.01) {
+      for (let k = 0; k < 3; k++) {
+        const q = (s.hushAge / 1.4 + k / 3) % 1, rr = 70 + (1 - q) * 560;
+        ellipse(ctx, 0, 0, rr, rr * 0.86, 0, null, rgba('#a8d0ff', 0.17 * s.hush * Math.sin(q * Math.PI)), 2);
+      }
+      glow(ctx, 0, -10, 140, '#cfe8ff', 0.3 * s.hush * Math.min(1, beat(s.hushAge)));
+    }
+    ctx.restore();
+  }
+
   function under(ctx, room, t) {
     const s = seq(room, t);
+    if (typeof ArenaView !== 'undefined' && ArenaView.amb) ArenaView.amb.calm = s.hush;   // (the wind dies: the summit's own rain, grass and grit read this, arena-view.js peakLife)
     if (!s.storm && s.brk <= 0) return;
-    canopy(ctx, t, s.c);
-    // the summit cracking open as the body breaks: light along the fissures, growing with it
-    const R = ARENA.full, lit = s.storm ? 0.3 + 0.1 * Math.sin(t * 3) : s.brk * s.brk;
+    canopy(ctx, t, s.c, s.storm ? 1 : c01((s.brk - 0.3) / 0.4) * (1 - s.hush), s.tw);
+    if (!s.storm) dread(ctx, t, s, room);
+    // the summit cracking open as the body breaks: light along the fissures, growing with it (and beating in the calm)
+    const R = ARENA.full, lit = (s.storm ? 0.3 + 0.1 * Math.sin(t * 3) : s.brk * s.brk) * (1 + 0.8 * s.hush * Math.min(1, beat(s.hushAge)));
     if (lit > 0.02) {
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       glow(ctx, 0, 0, 150 + 130 * (s.storm ? 0.4 : s.brk), K.cy, 0.35 * lit);
@@ -330,12 +404,16 @@ const VK_STORM = (() => {
       ctx.restore();
     }
     // the burst: a ring running out over the summit
-    if (s.storm && s.burstAge > 0 && s.burstAge < 1.2) {
-      const q = s.burstAge / 1.2, rr = 40 + easeOut(q) * 620;
+    if (s.storm && s.burstAge > 0 && s.burstAge < 1.8) {
+      const q = c01(s.burstAge / 1.2), rr = 40 + easeOut(q) * 620;
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       ellipse(ctx, 0, 0, rr, rr, 0, null, rgba('#dff8ff', 0.7 * (1 - q)), 6 * (1 - q) + 1.5);
       ellipse(ctx, 0, 0, rr * 0.72, rr * 0.72, 0, null, rgba(K.cy, 0.5 * (1 - q)), 6 * (1 - q) + 1);
       glow(ctx, 0, 0, 300 * (1 - q) + 60, '#ffffff', 0.4 * (1 - q), 0.6);
+      // a second, slower ring, and a white-hot column thrown up from the middle toward the sky
+      const q2 = c01(s.burstAge / 1.8), r2 = 30 + easeOut(q2) * 760, pq = c01(s.burstAge / 1.5), pw = 90 * (1 - pq * 0.6);
+      ellipse(ctx, 0, 0, r2, r2 * 0.86, 0, null, rgba(K.cy, 0.35 * (1 - q2)), 4 * (1 - q2) + 1);
+      column(ctx, 0, -20, -780, pw, '#ffffff', 0.75 * (1 - pq), 0);
       ctx.restore();
     }
     if (s.storm) {
@@ -346,7 +424,16 @@ const VK_STORM = (() => {
         ctx.moveTo(x, y); ctx.lineTo(x + len, y + len * 0.12);
       }
       ctx.stroke(); ctx.restore();
-      face(ctx, t, s.face, s.c);
+      face(ctx, t, s.face, s.c, s.eyes, s.roar);
+      // the roar: rings of thunder running out from the face
+      if (s.age > 3.0 && s.age < 4.6) {
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        for (let k = 0; k < 3; k++) {
+          const q = c01((s.age - 3.0 - k * 0.22) / 1.0); if (q <= 0 || q >= 1) continue;
+          ellipse(ctx, FACE.x, FACE.y + 110, 60 + easeOut(q) * 520, (60 + easeOut(q) * 520) * 0.7, 0, null, rgba('#cfeaff', 0.4 * (1 - q)), 5 * (1 - q) + 1);
+        }
+        ctx.restore();
+      }
       // the body lifting: bolts from the heart up to the rising face
       if (s.face > 0.02 && s.face < 0.98) {
         const fx = lerp(0, FACE.x, s.face), fy = lerp(-30, FACE.y, s.face);
@@ -359,34 +446,78 @@ const VK_STORM = (() => {
   function easeOut(q) { return 1 - (1 - q) * (1 - q); }
 
   // over the units: the arms
+  // a soft-edged column of light from (x, yNear) out to (x, yFar), w wide: a run of glows, brightest at the near end and thinning to `far` of that at the far end
+  function column(ctx, x, yNear, yFar, w, col, a, far = 0) {
+    const n = 16;
+    for (let i = 0; i <= n; i++) { const q = i / n; glow(ctx, x, lerp(yNear, yFar, q), w * (1.15 - 0.35 * q), col, a * lerp(1, far, q) * 0.34); }
+  }
+  // the three bolts pouring from the face into the Storm Heart, one for each bar it takes back (volkar.js heals as each lands): a thread of light
+  // gathers from the mouth, the bolt falls with the sky converging on it, and between them a stream of light keeps pouring down the line
+  const POUR = ['#ffc24a', '#4ad8ff', '#eaffff'];
+  function pour(ctx, t, room) {
+    const ch = charge(room, t);
+    if (!ch) return;
+    const lastEnd = ch.t0 + (ch.n - 1) * ch.every + 0.9;
+    if (t < ch.t0 - 0.6 || t > lastEnd + 0.8) return;
+    const x0 = FACE.x, y0 = FACE.y + 118, x1 = 0, y1 = -26;
+    const flow = c01((t - (ch.t0 - 0.5)) / 0.4) * (1 - c01((t - lastEnd) / 0.7));
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    // the stream: bright dashes falling down the line to the heart
+    for (let i = 0; i < 14 && flow > 0.02; i++) {
+      const q = (t * 2.3 + i / 14) % 1, yy = lerp(y0, y1, q), xx = Math.sin(i * 5.3 + t * 7) * (18 * (1 - q) + 5);
+      line(ctx, xx, yy, xx * 0.92, yy + 36, rgba('#eaffff', 0.75 * flow * (0.35 + 0.65 * q)), 2.2);
+    }
+    for (let k = 0; k < ch.n; k++) {
+      const a = t - (ch.t0 + k * ch.every), col = POUR[k % 3];
+      if (a < -0.6 || a > 0.8) continue;
+      const fl = a < 0 ? 0.3 * (1 + a / 0.6) : Math.pow(Math.max(0, 1 - a / 0.8), 1.2);
+      // the column of light down the whole line
+      column(ctx, 0, y1, y0, 60, col, 0.5 * fl, 0.15);
+      crack(ctx, x0, y0, x1 + (k - 1) * 8, y1, t, k * 17 + 3, col, 6.5, fl, 30, 15, 0.1);
+      crack(ctx, x0 + 14, y0 + 20, x1 - 10, y1 - 6, t, k * 17 + 9, col, 3.2, 0.7 * fl, 30, 12, 0.16);
+      if (a >= 0) {
+        // the sky comes in behind it: bolts running in from the whole ring of cloud, and the heart where it lands
+        for (let i = 0; i < 7; i++) {
+          const an = hs(k * 11 + i, 5) * TAU2, sx = Math.cos(an) * 620, sy = Math.sin(an) * 540 - 60;
+          crack(ctx, sx, sy, x1, y1, t, k * 29 + i * 5, col, 1.9, 0.65 * fl, 24, 9, 0.18);
+        }
+        glow(ctx, 0, -20, 190, col, 0.75 * fl); glow(ctx, 0, -20, 90, '#ffffff', 0.7 * fl);
+      }
+    }
+    ctx.restore();
+  }
+
   function over(ctx, room, t, env) {
     const s = seq(room, t);
-    if (!s.storm || s.face < 0.3) return;
+    if (!s.storm) return;
+    pour(ctx, t, room);
+    if (s.face < 0.3) return;
     armsFor(ctx, t, env || { tgs: new Map() }, c01((s.face - 0.3) / 0.5));
   }
 
   // ---------------------------------------------------------------------------------------------------------- the body
   // the body trembling as it cracks (art units, before the giant's scale)
-  function tremble(pk, t) {
+  // (in the calm it goes still, and only jolts with each beat of the heart)
+  function tremble(pk, t, pr) {
     if (pk <= 0) return [0, 0];
-    const a = 0.3 + pk * pk * 3.2;
+    const h = (pr && pr.stormHush) || 0, a = (0.3 + pk * pk * 3.2) * (1 - 0.94 * h) + 2.4 * ((pr && pr.stormBeat) || 0);
     return [Math.sin(t * 61) * a, Math.sin(t * 47 + 1) * a];
   }
   const CRACKS = [[-6, -36, -14, -22, -6, -12, -12, -2, -4, 10], [-8, 38, -16, 24, -8, 14, -14, 4], [-26, -4, -16, -8, -6, -2, 6, -8, 16, -4], [-24, 14, -14, 8, -4, 12, 8, 8],
     [-10, -30, 2, -22, 10, -26], [-18, 28, -6, 30, 4, 24, 12, 28], [-26, -16, -18, -12, -22, 2], [-4, -6, 6, 2, 4, 16, 12, 22], [-14, 18, -22, 24, -18, 34]];
   // cracks of light opening in him, chunks of stone breaking off, the light rising in him (pk 0..1 over the cast); drawn in his own frame
-  function crumble(ctx, st, pk, angle) {
+  function crumble(ctx, st, pk, angle, pr) {
     if (pk <= 0) return;
-    const t = st.t;
+    const t = st.t, bt = Math.min(1, (pr && pr.stormBeat) || 0), hu = (pr && pr.stormHush) || 0;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    glow(ctx, -6, 0, 40 + pk * 70, '#dff8ff', 0.1 + 0.7 * pk * pk, pk > 0.7 ? (pk - 0.7) * 3 : 0);
+    glow(ctx, -6, 0, (40 + pk * 70) * (1 + 0.5 * bt), '#dff8ff', Math.min(1, (0.1 + 0.7 * pk * pk) * (1 + 0.7 * bt)), pk > 0.7 ? (pk - 0.7) * 3 : 0);
     for (let i = 0; i < CRACKS.length; i++) {
       const g = c01((pk - i * 0.075) / 0.14); if (g <= 0) continue;
       const pts = CRACKS[i], n = Math.max(2, Math.ceil(pts.length / 2 * g)), use = [];
       for (let k = 0; k < n; k++) use.push(pts[k * 2], pts[k * 2 + 1]);
       tracePath(ctx, use); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.lineWidth = 3 + pk * 4; ctx.strokeStyle = rgba(K.cy, 0.28 * (0.4 + pk)); ctx.stroke();
+      ctx.lineWidth = 3 + pk * 4 + bt * 3 * hu; ctx.strokeStyle = rgba(K.cy, 0.28 * (0.4 + pk) * (1 + 0.8 * bt)); ctx.stroke();
       ctx.lineWidth = 1.4; ctx.strokeStyle = rgba('#ffffff', 0.5 + 0.5 * pk); ctx.stroke();
       glow(ctx, use[0], use[1], 16, K.cy, 0.35 * g * pk);
     }
@@ -412,9 +543,16 @@ const VK_STORM = (() => {
     ctx.translate(0, -18 + Math.sin(t * 1.9) * 3);
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     const pulse = 0.5 + 0.5 * Math.sin(t * 5.3), flash = age > 0 && age < 0.7 ? 1 - age / 0.7 : 0;
-    glow(ctx, 0, 0, 120 + 12 * pulse, '#5ab8ff', 0.3 + 0.1 * pulse);
-    glow(ctx, 0, 0, 60, K.cy, 0.5, 0.6);
+    // the charge: a bolt for each bar it takes back; it blazes brighter with each (and settles once the third has landed)
+    const hits = (props && props.stormHits) || 0, ha = props && props.stormHitAge != null ? props.stormHitAge : -1;
+    const boost = hits * 0.3 * (hits >= 3 ? 1 - c01((ha - 0.9) / 1.6) : 1), hitK = ha >= 0 && ha < 0.6 ? 1 - ha / 0.6 : 0;
+    glow(ctx, 0, 0, (120 + 12 * pulse) * (1 + boost * 0.7), '#5ab8ff', Math.min(1, 0.3 + 0.1 * pulse + boost * 0.25));
+    glow(ctx, 0, 0, 60 * (1 + boost * 0.5), K.cy, 0.5, 0.6);
     if (flash) glow(ctx, 0, 0, 220, '#ffffff', 0.8 * flash);
+    if (hitK) {
+      glow(ctx, 0, 0, 280, '#ffffff', 0.85 * hitK);
+      ellipse(ctx, 0, 0, 34 + ha * 330, (34 + ha * 330) * 0.8, 0, null, rgba(POUR[(hits - 1) % 3], 0.85 * hitK), 5 * hitK + 1);
+    }
     // the two charges, running round it the opposite ways
     for (let k = 0; k < 2; k++) {
       const col = k ? '#2a9cff' : '#ffb81f', sp = (k ? -1.9 : 1.5);
@@ -461,23 +599,53 @@ const VK_STORM = (() => {
   }
 
   // the screen's moments (main.js roomev): a rumble as the body cracks, and the burst
+  // h: { later(delay, fn), play(name, opts) (the sound, if it is on), duck(amount, secs) (the music) }. Every sound is here and not in the cast's own cue, which
+  // only opens the dread (bm-volkar-storm-unbound); the rest follows the clock above, so the thunder meets its flash and the calm is silent.
   function event(msg, h) {
     if (typeof FX === 'undefined') return;
+    const shake = v => { FX.shake = Math.max(FX.shake, v); };
+    const flash = (col, a, s) => { if (FX.cam && FX.cam.flash) FX.cam.flash(col, a, s); };
+    const play = (n, o) => { if (h.play) h.play(n, o); };
     if (msg.k === 'volbreak') {
-      const d = Math.max(2, msg.dur || 6.8);
-      for (let i = 0; i < 8; i++) h.later(d * i / 8.5, () => { FX.shake = Math.max(FX.shake, 1.5 + i * 0.9); });
+      const d = Math.max(2, msg.dur || 9.35), calm = d - HUSH;
+      // the thunder: each flash was nearer, so its thunder comes sooner behind it and louder (the last two are close claps)
+      FLASHES.forEach(([at, lag, size], i) => {
+        if (at > calm - 0.6) return;
+        h.later(at + lag, () => { play(i < 2 ? 'bm-volkar-storm-roll' : 'bm-volkar-storm-clap', { vol: 0.42 + 0.58 * size, rate: 0.82 + 0.18 * size }); shake(1.4 + 2.2 * size); });
+      });
+      // the stone groaning, louder each time, with a shudder
+      GROANS.forEach(([at, vol]) => { if (at < calm - 0.3) h.later(at, () => { play('bm-volkar-storm-groan', { vol }); shake(1.2 + 1.6 * vol); }); });
+    } else if (msg.k === 'volhush') {
+      // the calm: the music drops out, one long held sound under it, and a heartbeat of the stone
+      if (h.duck) h.duck(0.9, HUSH);
+      play('bm-volkar-storm-hush', { vol: 0.9 });
+      BEATS.forEach(([at, w]) => h.later(at, () => shake(0.5 + 0.7 * w)));
     } else if (msg.k === 'volrise') {
       h.later(BURST, () => {
-        FX.shake = Math.max(FX.shake, 16);
-        if (FX.cam && FX.cam.flash) FX.cam.flash('#dff8ff', 0.6, 0.5);
-        if (FX.cam && FX.cam.punch) FX.cam.punch(0.05, 0.6);
-        if (typeof VFX !== 'undefined') { try { VFX.sparks(0, 0, { color: '#bff4ff', n: 40, speed: 520 }); } catch (e) { /* (a missing effect never stops the form) */ } }
+        shake(24);
+        flash('#f4fcff', 0.85, 0.7);
+        if (FX.cam && FX.cam.punch) FX.cam.punch(0.07, 0.7);
+        play('bm-volkar-storm-burst', { vol: 1 });
+        if (typeof VFX !== 'undefined') { try { VFX.sparks(0, 0, { color: '#bff4ff', n: 60, speed: 620 }); } catch (e) { /* (a missing effect never stops the form) */ } }
       });
-      for (let i = 1; i <= 4; i++) h.later(BURST + i * 0.5, () => { FX.shake = Math.max(FX.shake, 9 - i * 2); });
+      for (let i = 1; i <= 4; i++) h.later(BURST + i * 0.5, () => shake(10 - i * 2));
+      // the eyes open and it roars
+      h.later(3.0, () => { play('bm-volkar-storm-roar', { vol: 1 }); shake(15); flash('#dff0ff', 0.45, 0.6); });
+      for (let i = 1; i <= 5; i++) h.later(3.0 + i * 0.28, () => shake(13 - i * 2));
+    } else if (msg.k === 'volcharge') {
+      // three bolts pour into the heart, one for each bar it takes back
+      const at = msg.at || 3, every = msg.every || 0.8, n = msg.n || 3;
+      h.later(Math.max(0, at - 0.4), () => play('bm-volkar-storm-charge', { vol: 1 }));
+      for (let i = 0; i < n; i++) h.later(at + i * every, () => {
+        shake(9 + 2 * i);
+        flash(POUR[i % 3], 0.22 + 0.06 * i, 0.4);
+        if (typeof VFX !== 'undefined') { try { VFX.sparks(0, 0, { color: POUR[i % 3], n: 26 + 8 * i, speed: 380 }); } catch (e) { /* (cosmetic) */ } }
+      });
+      h.later(at + (n - 1) * every + 1.0, () => play('bm-volkar-storm-heart', { vol: 0.85 }));
     }
   }
 
-  return { under, over, heart, crumble, tremble, event, buildStormPeak, seq, FACE, SHOULDER, BURST };
+  return { under, over, heart, crumble, tremble, event, buildStormPeak, seq, props, charge, FACE, SHOULDER, BURST, HUSH };
 })();
 
 if (typeof ArenaView !== 'undefined') ArenaView.buildStormPeak = VK_STORM.buildStormPeak;

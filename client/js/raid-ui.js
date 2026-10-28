@@ -715,16 +715,24 @@ const RaidUI = (() => {
   const BAR_COLS = ['#c2412c', '#c7772a', '#b39a2e', '#5f9a3c', '#2f8f88', '#3f6fb3', '#7d52b0', '#b04a86'];
   const FORM_COLS = ['#37a7a4', '#3f86b8', '#4aa67e', '#6e86c4', '#2f9890', '#5a9ab0'];   // (a second form: sea tones)
   const GORGED_COLS = ['#c9852a', '#a8521e', '#d8a63a', '#8a5a1e', '#b8742a'];   // (Grubnak gorged: gravy, crust and fat)
-  let ghostDmg = 0, ghostHold = 0, lastDmg = 0;
+  let ghostHp = 0, ghostHold = 0, lastHp = 0, shownHp = 0;
   function layeredHp(raid, now, dt, fm) {
-    const b = raid.boss, mx = b.mx || 0, hp = Math.max(0, Math.min(mx, b.hp || 0)), dmg = mx - hp;
-    const layers = mx ? Math.max(1, Math.ceil(mx / BAR_HP)) : 1, idx = Math.min(layers - 1, Math.floor(dmg / BAR_HP));
-    const cur = hp > 0 ? layers - idx : 0, within = hp > 0 ? Math.min(1, (hp - (layers - idx - 1) * BAR_HP) / BAR_HP) : 0;
-    if (dmg - lastDmg > BAR_HP * 0.25) ghostHold = now + 0.35;
-    lastDmg = dmg;
-    if (dmg < ghostDmg || !mx || dmg - ghostDmg > mx * 0.1) ghostDmg = dmg;   // (healed, a new pull, or joined mid-fight)
-    else if (now >= ghostHold) ghostDmg = Math.min(dmg, ghostDmg + dt * (BAR_HP * 0.6 + (dmg - ghostDmg) * 3));
-    const ghost = Math.floor(ghostDmg / BAR_HP) < idx ? 1 : Math.min(1, (hp + dmg - ghostDmg - (layers - idx - 1) * BAR_HP) / BAR_HP);
+    const b = raid.boss, mx = b.mx || 0, real = Math.max(0, Math.min(mx, b.hp || 0));
+    // a big heal (a second form healing back) refills the bars one after another over a moment instead of all at once
+    if (!mx || real <= shownHp || real - shownHp < BAR_HP * 0.5 && real - shownHp < mx * 0.02) shownHp = real;
+    else shownHp = Math.min(real, shownHp + dt * Math.max(BAR_HP * 2.5, (real - shownHp) * 1.6));
+    const hp = shownHp;
+    // the bars are counted up from the bottom: every bar below the top one is a whole BAR_HP, and only the top bar is short
+    // when the boss's health is not a whole number of bars (counting from the top left a bar empty until a whole BAR_HP was gone)
+    const cur = hp > 0 ? Math.ceil(hp / BAR_HP) : 0, base = Math.max(0, cur - 1) * BAR_HP;
+    const within = hp > 0 ? Math.min(1, (hp - base) / BAR_HP) : 0;
+    if (lastHp - hp > BAR_HP * 0.25) ghostHold = now + 0.35;
+    lastHp = hp;
+    if (hp > ghostHp || !mx || ghostHp - hp > mx * 0.1) ghostHp = hp;   // (healed, a new pull, or joined mid-fight)
+    // the ghost belongs to the bar on top: once a bar breaks it starts again at the new bar's top
+    if (ghostHp > cur * BAR_HP) ghostHp = cur * BAR_HP;
+    else if (now >= ghostHold) ghostHp = Math.max(hp, ghostHp - dt * (BAR_HP * 0.6 + (ghostHp - hp) * 3));
+    const ghost = Math.min(1, (ghostHp - base) / BAR_HP);
     const cols = fm ? (raid.form === 'gorged' ? GORGED_COLS : FORM_COLS) : BAR_COLS, col = n => cols[(n - 1) % cols.length];
     const fill = q('.bb-hp .fill'), under = q('.bb-hp .under'), ckey = cur + '|' + (fm ? raid.form : '');   // (the colour is kept per bar AND per form: the form arrives mid-bar)
     if (fill._c !== ckey) { fill._c = ckey; fill.style.setProperty('--lc', col(Math.max(1, cur))); under.style.setProperty('--lc', cur > 1 ? col(cur - 1) : 'transparent'); }
@@ -735,9 +743,9 @@ const RaidUI = (() => {
     const goal = raid.cast && raid.cast.goal != null && now < raid.cast.start + raid.cast.dur ? raid.cast.goal : null, gEl = q('.bb-hp .goal');
     let goalCur = 0;
     if (goal != null) {
-      const gd = mx * (1 - goal), gi = Math.min(layers - 1, Math.floor(gd / BAR_HP));
-      goalCur = layers - gi;
-      if (gi === idx) { const v = ((mx - gd - (layers - gi - 1) * BAR_HP) / BAR_HP * 100).toFixed(2) + '%'; if (gEl._l !== v) { gEl._l = v; gEl.style.left = v; } }
+      const gh = mx * goal;
+      goalCur = Math.max(1, Math.ceil(gh / BAR_HP));
+      if (goalCur === cur) { const v = ((gh - (goalCur - 1) * BAR_HP) / BAR_HP * 100).toFixed(2) + '%'; if (gEl._l !== v) { gEl._l = v; gEl.style.left = v; } }
     }
     gEl.classList.toggle('hidden', goal == null || goalCur !== cur);
     setText(q('.bb-hp span'), mx ? `${fmt(hp)} / ${fmt(mx)}` : '');

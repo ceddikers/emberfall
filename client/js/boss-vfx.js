@@ -1025,24 +1025,24 @@ const BOSS_VFX = (() => {
   }
   // the Chrysalis: silk winds up round her from the floor as the cast runs, thickening into a cocoon. If the party tears
   // enough off her first it bursts open (cocoonEnd); if not, it closes and the enrage follows.
-  // Hard (skitterra.js, the Metamorphosis): the cocoon strains harder as the cast runs, cracks creep over it and glow from inside (skitterra-moth.js
-  // cocoonCracks), and it does not end with the cast: it stays, cracking open (cocoonCracking: pale gold if she was torn out, red if it closed on her), until
-  // the form moment bursts it (cocoonEnd with { moth: true }).
-  let cocoon = null, cocoonCrack = null;
-  const cocoonCracking = ok => { cocoonCrack = { ok, start: null }; };
+  // Hard (skitterra.js, the Metamorphosis): the whole build-up is skitterra-moth.js cocoon() (the dark, the heartbeat, the humming web, what moves inside, the held
+  // breath): it does not end with the cast but stays, cracking open (cocoonCracking: pale gold if she was torn out, red if it closed on her), until
+  // the form moment tears it (cocoonEnd with { moth: true }).
+  let cocoon = null, cocoonCrack = null, mothCocoon = null;
+  const sfx = (name, o) => { try { if (typeof Sound !== 'undefined') Sound.play(name, o); } catch (e) { /* cosmetic */ } };
+  const hush = () => { try { if (typeof Sound !== 'undefined' && Sound.music) Sound.music.duck(0.93, 1.1); } catch (e) { /* cosmetic */ } };   // (the held breath before the tear)
+  const cocoonCracking = (ok, burst) => { cocoonCrack = { ok, start: null }; if (mothCocoon) mothCocoon.crack(ok, burst || 2.4); };
   function chrysalis(b, dur) {
     const hard = typeof SK_FX !== 'undefined' && !!SK_FX.hard && typeof SK_MOTH !== 'undefined';
-    const bands = Array.from({ length: 16 }, (_, i) => ({ ph: rand(0, 6), tilt: rand(-0.25, 0.25), w: 1.5 + (i % 3) }));
     cocoonCrack = null;
-    cocoon = VFX.fx({ dur: hard ? dur + 6 : dur, layer: 'air', draw: (c, p0, t, e) => {
+    if (mothCocoon) { mothCocoon.stop(); mothCocoon = null; }
+    if (hard) { mothCocoon = SK_MOTH.cocoon(b, dur, { shake, play: sfx, hold: hush }); return; }
+    const bands = Array.from({ length: 16 }, (_, i) => ({ ph: rand(0, 6), tilt: rand(-0.25, 0.25), w: 1.5 + (i % 3) }));
+    cocoon = VFX.fx({ dur, layer: 'air', draw: (c, p0, t, e) => {
       if (e.gone) return;
-      const p = hard ? Math.min(1, t / dur) : p0;
-      if (cocoonCrack && cocoonCrack.start == null) cocoonCrack.start = t;
-      const cr = cocoonCrack ? Math.min(1, (t - cocoonCrack.start) / 1.3) : 0;
-      const k = e.a * Math.min(1, p / 0.05), R = 92 * (1 + 0.06 * cr), cy = b.y - 34, H = R * 1.2;
+      const p = p0;
+      const k = e.a * Math.min(1, p / 0.05), R = 92, cy = b.y - 34, H = R * 1.2;
       c.save();
-      const strain = hard ? Math.max(0, p - 0.4) * 2.4 + cr * 3.2 : 0;
-      if (strain > 0) c.translate(Math.sin(t * 53) * strain * 1.5, Math.cos(t * 41) * strain);
       c.fillStyle = `rgba(236,230,250,${(0.06 + 0.3 * p) * k})`;
       c.beginPath(); c.ellipse(b.x, cy, R * (1 - 0.18 * p), H, 0, 0, TAU); c.fill();
       c.lineCap = 'round';
@@ -1054,13 +1054,13 @@ const BOSS_VFX = (() => {
       }
       // the last few seconds: it pulses, nearly shut
       if (p > 0.8) VFX.neonRing(c, b.x, cy, R * 0.9, '#f4f0ff', 2, k * (p - 0.8) * 3 * (0.6 + 0.4 * Math.sin(t * 14)), 0.5);
-      if (hard) SK_MOTH.cocoonCracks(c, b.x, cy, R, H, p, cr, t, cocoonCrack ? cocoonCrack.ok : null);
       c.restore();
     } });
   }
   function cocoonEnd(b, torn, o) {
     if (cocoon) { cocoon.gone = true; cocoon = null; }
     cocoonCrack = null;
+    if (mothCocoon) { mothCocoon.release(); mothCocoon = null; }   // (the dark lifts over the next couple of seconds)
     if (!torn) return;
     if (o && o.moth && typeof SK_MOTH !== 'undefined') {   // (Hard: she comes out as the Moth Queen, skitterra-moth.js burst)
       SK_MOTH.burst(b, o.ok !== false, { shockAt, shake, roomTint, cam: (stop, punch, dur) => { cam('stop', stop); cam('punch', punch, dur); } });
@@ -1071,6 +1071,10 @@ const BOSS_VFX = (() => {
       life: 0.9, size: 14, color: '#ffffff', stretch: 4, vr: rand(-8, 8) });
     shockAt(b.x, b.y, { r: 200, color: '#f4f0ff', w: 5, dur: 0.5, flat: 1 });
     shake(6);
+  }
+  // the Moth Queen is mended as she comes out (skitterra.js mend, roomev 'mend'): light pours into her, one bar at a time (skitterra-moth.js mend)
+  function mothMend(b, n, gap) {
+    if (typeof SK_MOTH !== 'undefined') SK_MOTH.mend(b, n || 3, gap || 0.55, { shake, after });
   }
   // [boss presentation] each move gathers in its own way, in the right place on him (CAST_FX), and his body takes a
   // pose for it (CAST_POSE: returned as [[prop, held for s after the cast]] for main.js to hold on raid.props). Under it
@@ -1781,7 +1785,10 @@ const BOSS_VFX = (() => {
   const onBody = (b, kind, x, y) => { const S = (BODY_S[kind] || 1.3) * (kind === 'grubnak' && b.st && b.st.props && b.st.props.gorged ? 1.45 : 1), c = Math.cos(b.f || 0), s = Math.sin(b.f || 0); return { x: bx(b) + (x * c - y * s) * S, y: by(b) + (x * s + y * c) * S }; };
   // roomev from the host: Grubnak's Gorged form (the inhale, the swell; grubnak-fx.js)
   function roomFx(msg, bd, kind) {
-    if (kind === 'grubnak' && typeof GR_FX !== 'undefined' && bd) GR_FX.room(msg, bd, { onBody, shockAt, shake, flash: (col, a, dur) => softFlash(SH(bd), col, a, dur) });
+    if (kind === 'grubnak' && typeof GR_FX !== 'undefined' && bd) {
+      const sh = SH(bd);   // (everything is owned by his state, so his death or a wipe cuts the dread and the heal off)
+      GR_FX.room(msg, bd, { onBody, shockAt, shake, flash: (col, a, dur) => softFlash(sh, col, a, dur), vignette, wash, own: e => own(sh, e), soon: (sec, fn) => soon(sh, sec, fn) });
+    }
   }
   // effects owned by his state: his death (or a wipe) cuts them off
   const own = (sh, e) => { sh.fx.push(e); if (sh.fx.length > 60) sh.fx.shift(); return e; };
@@ -2535,7 +2542,7 @@ const BOSS_VFX = (() => {
   function setClock(fn) { clockFn = fn; }
   // ================================================================ [/boss presentation]
 
-  return { timeStop, failed,propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballWall, meatballHit, scorchPool, silkSnap, silkFree, reelBite, snuff, hatch, threadShoot, threadSnap, floorFalls, impact, castStart, cocoonEnd, cocoonCracking, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe,
+  return { timeStop, failed,propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballWall, meatballHit, scorchPool, silkSnap, silkFree, reelBite, snuff, hatch, threadShoot, threadSnap, floorFalls, impact, castStart, cocoonEnd, cocoonCracking, mothMend, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe,
     // [boss presentation]
     drawBody, presence, bossHit, bossHp, enrageLand, behind, intro, bossDeath, setClock, roomFx };
 })();

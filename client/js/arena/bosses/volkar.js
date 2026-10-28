@@ -17,7 +17,8 @@
 //     party holds each one up together, both charges in it, until the Twin Fall splits the sky in two: a gold and a blue
 //     hold each column. Each is a little harder after the fifth, until he falls or calls Skybreak. (Hard: each Heavens Fall breaks
 //     over the summit as it lands and marks everyone: hold it up together, then scatter apart.)
-//     Hard: the Storm Unbound. His body breaks apart into the storm (a raidwide as it bursts, a few seconds out of reach) and he
+//     Hard: the Storm Unbound. A slow dread (the sky blackens, the stone groans, thunder comes nearer, then a dead calm), then his body
+//     breaks apart into the storm (a raidwide as it bursts) and three bolts pour into the heart, each healing a bar (he heals three bars; out of reach until then), and he
 //     rises over the summit as a huge face in the clouds with lightning arms (the second form, f.setForm 'storm'). What the party hits
 //     from then on is the STORM HEART, the crackling core where his body stood: the same boss entity at the same spot (health, threat,
 //     melee and ranged reach, the boss bar), only the face above is show and the source of every attack. Heavens Fall and Twin Fall go
@@ -47,8 +48,8 @@
 
 const VOLKAR = {
   id: 'volkar', name: 'Volkar', title: 'The Storm Titan',
-  hp: { normal: 3800000, hard: 4400000 },   // (Hard 4.6M before 2026-10-27)
-  hardDmg: 1.02,   // (Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
+  hp: { normal: 3800000, hard: 3400000 },   // (Hard 4.6M before 2026-10-27; 4.4M until the Storm Unbound healed three bars, 2026-10-28)
+  hardDmg: 1.06,   // (1.02 until the heal: 96 runs HUMAN=dps GEAR=mid about 30% a pull, mean clear 556 s of 607; perfect bots 69%; Hard's damage multiplier, fight.js default 1.25, tuned for a human party rather than perfect bots, CLAUDE.md)
   autoDmg: { normal: 1450, hard: 1550 },
   enrage: { normal: 592, hard: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
   enrageName: 'Skybreak',
@@ -354,7 +355,7 @@ const VOLKAR = {
     const pulse = () => {
       if (f.state !== 'live') return;
       const k = 1 + 0.05 * Math.floor(f.t / 60);
-      if (!room.eye) {
+      if (!room.eye && !room.hush) {   // (it stops in the Eye, and in the dead calm before the Storm Unbound bursts)
         f.emit({ t: 'pulse', k: +k.toFixed(2) });
         for (const p of f.alive()) f.damagePlayer(p, dmg.pulse * k, { kind: 'pulse' });
       }
@@ -596,24 +597,41 @@ const VOLKAR = {
     // overhead is only show, the source of the arms. Client events (the later art): roomev 'volbreak' {dur} (the body cracks and sheds
     // into the storm), roomev 'volrise' {dur} (it bursts apart, the face rises), the room's form 'storm' (fight.js setForm: raid.form),
     // banim 'risen' (the heart is whole again, reachable), and for each arm roomev 'volarm' (below).
+    // The change is a slow dread, then a payoff (volkar-storm.js draws it, main.js and sfx-synth.js bm-volkar-storm-* sound it). From the cast
+    // (UNB s): the sky blackens over the summit, the stone starts to groan and crack and thunder comes closer, a sound and a flash at a time. HUSH s
+    // before the burst the wind dies (roomev 'volhush': the Pulse stops too, an unnatural calm and a beat of near-silence while the stone groans).
+    // The body is out of reach from OUT s before the burst. Then it bursts (the raidwide), the form changes and the face rises with its eyes
+    // shut. As the eyes open it roars, and three bolts of lightning pour down out of it into the Storm Heart: each fills a bar of its health
+    // (STORM_BARS of them, roomev 'volcharge'). Out of reach until the third has landed (the heart is charged and whole: 'risen').
+    // The heal is the form's own: the party that got him this low (the bar is stacked bars of raid-ui.js BAR_HP, in these units too) has to do
+    // those bars again, and the fight is tuned for it (hp.hard above).
+    const UNB = f.ct(11), UNB_HUSH = 3.8, UNB_OUT = 2.0, UNB_FILL = 3.0, UNB_STEP = 0.8, UNB_DONE = 5.4;
+    const STORM_BARS = 3, BAR = 10000;
     let storm = false;
     const unbound = () => {
       if (storm) return;
       storm = true;
-      const d = f.ct(8), OUT = 1.5;   // (cast d; out of reach from OUT s before the burst to OUT s after it)
+      const d = UNB;   // (cast d; the burst lands as it ends)
       f.cast('Storm Unbound', d, 'unbound');
       f.emit({ t: 'roomev', k: 'volbreak', dur: +d.toFixed(2) });
       f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.burst, hidden: true, tag: 'volBurst' });
-      f.afterKeep(d - OUT, () => { B.untargetable = true; B.lockFacing = true; });
+      f.afterKeep(d - UNB_HUSH, () => { room.hush = true; f.emit({ t: 'roomev', k: 'volhush', dur: +(UNB_HUSH - 0.6).toFixed(2) }); });
+      f.afterKeep(d - UNB_OUT, () => { B.untargetable = true; B.lockFacing = true; });
       f.afterKeep(d - 0.6, () => {
         // the form changes as the body bursts (the summit is the same: its broken wedges stay, and the clients are told the floor again)
         const cuts = ARENA.cuts.map(c => ({ a0: c.a0, a1: c.a1, r: c.r }));
         f.setForm('storm');
         for (const c of cuts) ARENA.cuts.push(c);
         f.floorVer++; f.propsDirty = true;
-        f.emit({ t: 'roomev', k: 'volrise', dur: 4 });
+        f.emit({ t: 'roomev', k: 'volrise', dur: 7 });
       });
-      f.afterKeep(d + OUT, () => { B.untargetable = false; B.facing = Math.PI / 2; f.anim('risen', 2); });
+      f.afterKeep(d, () => {
+        room.hush = false;
+        f.emit({ t: 'roomev', k: 'volcharge', at: UNB_FILL, every: UNB_STEP, n: STORM_BARS });
+      });
+      // a bar for each bolt, as it lands (the host's own hp: B.hp is def.hp * NUM_SCALE, capped at the full health)
+      for (let i = 0; i < STORM_BARS; i++) f.afterKeep(d + UNB_FILL + i * UNB_STEP, () => { B.hp = Math.min(B.maxHp, B.hp + BAR); });
+      f.afterKeep(d + UNB_DONE, () => { B.untargetable = false; B.facing = Math.PI / 2; f.anim('risen', 2); });
     };
     // an arm reaching down, for the art: what 'slam' (on the tank), 'cross' (a raking line, a: its angle) or 'reach' (a tower, sign: its charge);
     // x, y where it comes down (a slam follows the tank: the mech's own follow says so), dur how long until it lands
@@ -859,7 +877,8 @@ const VOLKAR = {
         // Hard: a lash, then the Storm Unbound (his body breaks apart and he rises as a face over the summit; the party now hits the Storm Heart),
         // then the sky comes down from the face in a fixed order, each Heavens Fall and Twin Fall as it was, with Reaching Arms and Crossing Arms
         // coming in behind a Heavens Fall (after the scatter has gone off) and a tank beat (a lash, or the Storm Arm) in the units between.
-        U(17.8, stepLash(0), [4.5, unbound, 'Storm Unbound'], stepArm(13.5)),
+        // (the change takes its time: the build-up, the calm, the burst and the three bolts; the Arm falls once the heart is charged)
+        U(3 + UNB + 4.2 + 4.3, stepLash(0), [3, unbound, 'Storm Unbound'], stepArm(3 + UNB + 4.2)),
         U(14.5, stepHF(0), stepReach(9.5)),
         U(14.5, stepTwin(0), stepLash(10.3)),
         U(14.5, stepHF(0), stepCross(9.5)),

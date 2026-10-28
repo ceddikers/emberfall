@@ -14,9 +14,18 @@ const BOSS_ART = {
     const G = !!props.gorged, gAge = G ? (props.gAge ?? 9) : 0, swellK = G ? clamp(gAge / 1.5, 0, 1) : 0;
     const breath = G ? Math.sin(st.t * 2.4) : 0;
     const gulp = st.gulp != null ? Math.max(0, 1 - (st.t - st.gulp) / 0.28) : 0;
-    const bl = G ? 1 + 0.028 * breath + 0.07 * gulp : 1;   // the belly rising and falling
+    // the healed bars (grubnak-fx.js mend): one great swallow for each, the belly heaving and glowing from inside
+    const mend = G && st.mend != null ? Math.max(0, 1 - (st.t - st.mend) / 0.55) : 0;
+    const bl = G ? 1 + 0.028 * breath + 0.07 * gulp + 0.06 * mend : 1;   // the belly rising and falling
+    // Clean Plate's build-up (grubnak-fx.js dread): he strains, a shiver and a little more air in him as the cast goes on, dead still for the held breath, a hard shudder for the rush
+    const sq = !G && st.strain ? clamp((st.t - st.strain.start) / st.strain.dur, 0, 1) : 0;
+    if (sq > 0 && sq < 1) {
+      const qa = sq < 0.7 ? 0.25 + 0.9 * sq : sq < 0.87 ? 0.08 : 1.9;
+      ctx.translate(Math.sin(st.t * 58) * qa * 1.1, Math.cos(st.t * 47) * qa * 0.8);
+      const fill = 1 + 0.07 * sq * sq; ctx.scale(fill, fill);
+    }
     if (G) {
-      const gs = 1 + 0.45 * (easeOut(swellK) + Math.sin(swellK * Math.PI) * 0.12);   // swells past his size and settles
+      const gs = 1 + 0.45 * (easeOut(swellK) + Math.sin(swellK * Math.PI) * 0.2);   // swells past his size and settles
       if (swellK < 1) ctx.translate(Math.sin(st.t * 64) * 1.8 * (1 - swellK), Math.cos(st.t * 53) * 1.2 * (1 - swellK));
       ctx.scale(gs, gs);
     }
@@ -219,6 +228,7 @@ const BOSS_ART = {
       for (const [sx, sy, r, c] of [[16, -14, 4.2, '#a02a1a'], [5, 12, 3.4, '#d8a020'], [18, 11, 2.8, '#5a3a1a'], [10, -3, 2.4, '#7a3a6a'], [-2, -20, 3, '#c85a24'], [14, 22, 2.6, '#a02a1a']]) circle(ctx, sx, sy, r, c);   // sauce, gravy, mustard, beetroot
       ellipse(ctx, 14, 3, 6, 2.2, 0.4, 'rgba(110,70,20,0.55)');
       circle(ctx, 22, -5, 2.8, '#b33a2a'); circle(ctx, 22, 7, 2.4, '#b33a2a');   // the buttons of the apron, straining
+      if (mend > 0) glow(ctx, 8, 0, 58, '#ffd978', 0.55 * mend);   // (a swallow going down: the belly lit from inside)
       if (props.gInhale) for (let i = 0; i < 5; i++) { const q = (st.t * 2.4 + i / 5) % 1; circle(ctx, 46 + (1 - q) * 28, (i - 2) * 9 * (1 - q * 0.6), 1.5 + 1.8 * (1 - q), `rgba(255,246,220,${0.7 * q})`); }   // the air going in
     } else {
     ellipse(ctx, -4, 0, 30, 34, 0, skin, OUT, 3);
@@ -371,7 +381,7 @@ const BOSS_ART = {
     let f = 0; // fist punch: pull back, slam forward, recover
     if (pa >= 0) f = pa < 0.4 ? -easeOut(pa / 0.4) * 0.6 : pa < 0.55 ? -0.6 + 1.6 * ((pa - 0.4) / 0.15) : 1 - (pa - 0.55) / 0.45;
     if (st.raid) ctx.scale(1.35, 1.35);   // in his own arena he is a giant
-    if (pk > 0 && typeof VK_STORM !== 'undefined') { const [tx, ty] = VK_STORM.tremble(pk, st.t); ctx.translate(tx, ty); }
+    if (pk > 0 && typeof VK_STORM !== 'undefined') { const [tx, ty] = VK_STORM.tremble(pk, st.t, props); ctx.translate(tx, ty); }
     glow(ctx, 0, 0, 80, bolt, props.charge ? 0.3 : 0.12);
     // Thunderclap / Eye of the Storm: the sky churns overhead
     if (props.sky) for (let i = 0; i < 7; i++) {
@@ -427,7 +437,7 @@ const BOSS_ART = {
     glow(ctx, 23, 0, 12, bolt, 0.5);
     circle(ctx, 23, -4, 2.2, '#dffbff'); circle(ctx, 23, 4, 2.2, '#dffbff');
     if (Math.floor(st.t * 10) % 3 === 0) jagged(ctx, -12, -30, 2, -18, Math.floor(st.t * 20), bolt, 1);
-    if (pk > 0 && typeof VK_STORM !== 'undefined') VK_STORM.crumble(ctx, st, pk, angle || 0);
+    if (pk > 0 && typeof VK_STORM !== 'undefined') VK_STORM.crumble(ctx, st, pk, angle || 0, props);
   },
 
   hollowking(ctx, st) {

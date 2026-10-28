@@ -19,7 +19,7 @@
 //   Dessert (18% → 0%): the Dessert Trolley, a gauntlet of everything; silence; Last Orders; then he eats (Gorge)
 //     until he drops or calls Last Call. Hard: the trolley's first half, then Clean Plate: he inhales the room (casks, the pot, grease
 //     and puddles go into his mouth for good, everyone is hauled in a little) and swells into the Gorged form (a bigger body and hit
-//     radius, def.forms.gorged). His new moves, in a fixed order: Spit Up (he coughs up the casks again where two heroes stood: cover
+//     radius, def.forms.gorged) and heals three bars as he swells. His new moves, in a fixed order: Spit Up (he coughs up the casks again where two heroes stood: cover
 //     and anchors), Sour Burp (a wide cone at a random hero, acid left behind), Second Helping (he inhales again and a blast lands at
 //     his feet: a solid cask stops the haul short of it). Last Orders and the Gorges follow, with the same moves in the passes.
 // The tank's own small move, all the way through: Skewer. He hurls a skewer along a line from himself through his tank (the
@@ -42,10 +42,10 @@
 
 const GRUBNAK = {
   id: 'grubnak', name: 'Grubnak', title: 'The Ogre Chef',
-  hp: { normal: 3900000, hard: 4350000 },
-  hardDmg: 1.04,   // (Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
+  hp: { normal: 3900000, hard: 4000000 },   // (Hard: 4.35M before the Gorged form healed three bars (600k), so the same fight is as long as it was)
+  hardDmg: 1.15,   // (Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
   autoDmg: { normal: 1750, hard: 1750 },
-  enrage: { normal: 592, hard: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
+  enrage: { normal: 592, hard: 622 },   // the cast starts here and lands 8 s later (10:00 / 10:30; Hard's is later since the Gorged form's three healed bars lengthen the fight)
   enrageName: 'Last Call',
   vuln: 0.5,   // every avoidable hit leaves you taking half again as much for a while
   arena: { theme: 'kitchen' },
@@ -638,10 +638,15 @@ const GRUBNAK = {
     // Clean Plate: he breathes the room in. The casks, the stockpot, every grease stain and puddle go into his mouth for good, everyone
     // is hauled a little way toward him (stopping well short: PLATE_STOP is outside the body he is about to have), and he swells into the
     // Gorged form: a raidwide, +10% damage from here on, a bigger body and hit radius (def.forms.gorged), the same kitchen.
-    // Client events (the art for them is a later job): roomev 'inhale' at the start (dur, mouth x/y, things: [[kind, x, y, r], ...] that
+    // He keeps what he ate: the swell gives him back three bars of the boss bar (HEAL_BARS x BAR_HP, capped at maxHp), so the party cannot burst him
+    // down the moment he changes. The cast is long on purpose (PLATE_CAST): the client builds dread over it (grubnak-fx.js dread: the room
+    // darkening, the props shivering, a held breath from 70% to 87% of the cast, then the rush) and the swell is the payoff.
+    // Client events (grubnak-fx.js, main.js): roomev 'inhale' at the start (dur, mouth x/y, things: [[kind, x, y, r], ...] that
     // fly in; kinds cask, pot, grease, rubble, puddle), propfx 'eaten' for each prop as it goes (just before the cast ends), roomev
-    // 'form' (form 'gorged', r: his hit radius) with the swell, and banim 'swell'.
+    // 'form' (form 'gorged', r: his hit radius) with the swell, banim 'swell', and roomev 'mend' (bars, amt) with the heal.
     const PLATE_PULL = 170, PLATE_STOP = 175;
+    const HEAL_BARS = 3, BAR_HP = 10000;   // (the swell heals three bars of the client's boss bar: 3 x 10000 of boss.hp, capped at maxHp)
+    const PLATE_CAST = 8;   // (the build-up: the room darkens, the props shake, a held breath, then the swell; the client keys it off the cast's length)
     const haul = (dist, stop) => {   // everyone is dragged toward him by dist, to no nearer than stop (a solid prop stops a drag short: f.knock)
       for (const p of f.alive()) {
         const dx = B.x - p.x, dy = B.y - p.y, D = Math.hypot(dx, dy);
@@ -650,7 +655,7 @@ const GRUBNAK = {
       }
     };
     const cleanPlate = () => {
-      const d = ct(6), round = Math.round;
+      const d = ct(PLATE_CAST), round = Math.round;
       f.cast('Clean Plate', d, 'inhale');
       hold(d + 1.8);
       const eats = fl => fl.kind === 'grease' || fl.kind === 'rubble';
@@ -667,7 +672,16 @@ const GRUBNAK = {
       f.mech({ type: 'drop', shape: { kind: 'circle', x: B.x, y: B.y, r: 0 }, delay: d, dmg: 0, avoidable: false, tag: 'cpInhale', pullDist: PLATE_PULL,
         onResolve: () => haul(PLATE_PULL, PLATE_STOP) });
       f.mech({ type: 'raidwide', shape: { kind: 'circle', x: B.x, y: B.y, r: 0 }, delay: d, dmg: dmg.gorge, hidden: true, tag: 'cpSwell',
-        onResolve: () => { f.setForm('gorged'); B.dmgUp += 0.1; f.anim('swell', 2); } });
+        onResolve: () => {
+          f.setForm('gorged'); B.dmgUp += 0.1; f.anim('swell', 2);
+          // he keeps what he ate: three bars of the boss bar (BAR_HP 10000 each, client raid-ui.js) come back as he swells. The bar's own
+          // animation refills it bar by bar from the next fb; 'mend' is for his body (gold surges into the belly, one heave per bar).
+          // The course gates are untouched: Dessert has no HP gate, and the 18% one that began it has already fired (hpTriggers shifts a gate off
+          // when it is reached), so the heal can neither fire an act twice nor skip one.
+          const before = B.hp;
+          B.hp = Math.min(B.maxHp, B.hp + HEAL_BARS * BAR_HP);
+          f.emit({ t: 'roomev', k: 'mend', bars: HEAL_BARS, amt: Math.round(B.hp - before) });
+        } });
     };
     // Spit Up: he coughs the casks back up, a lump on each of two random non-tanks (a red circle that follows them until 1.6 s before it
     // lands). Where a lump lands it settles as a cask again: cover, and a post for Second Helping's haul to stop on.
@@ -833,7 +847,7 @@ const GRUBNAK = {
             // Hard: the trolley's second half is the Gorged form. Clean Plate swells him (about 40 s in, so a party that is going to win
             // meets it), then Spit Up / a Skewer / Sour Burp / a Tenderize / Second Helping in that order, then Last Orders as before
             H && [7.5, cleanPlate, 'Clean Plate'],
-            H && [9.5, spitUp, 'Spit Up'],
+            H && [11.2, spitUp, 'Spit Up'],
             H && [7, skewer, 'Skewer'],
             H && [5, sourBurp, 'Sour Burp'],
             H && [7.5, tenderize, 'Tenderize'],

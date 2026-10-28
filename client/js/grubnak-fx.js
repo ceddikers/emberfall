@@ -5,6 +5,8 @@
 //   - a hit-stop and a push of the camera when one of his big blows lands (never more than once in a few seconds);
 //   - kitchen-flavoured landings on top: the cut line of a Mince throwing carrot, onion and tomato, the Ladle Spin flinging broth,
 //     the Lid Slam ringing and rattling, the Belly Flop's second bounce, casks bursting into staves and a hoop, the charge's wind;
+//   - Hard's Gorged form: Clean Plate's slow dread (the room darkening, the props shivering, a held breath, the rush: dread(), vortex(), lean()), the
+//     swell (a white flash, rings and rays, the kitchen jolting: swell()) and the three healed bars as gulps (mend()); bosses.js draws the strain and the belly;
 //   - the windups of the moves that had none (Mince, Ladle Spin, Lid Slam, Belly Flop, Larder Toss, Flambé): the ladle's broth
 //     spinning outwards, the lid's tin glints drawn in, the brandy dripping.
 // Nothing here changes who is hit.
@@ -108,9 +110,17 @@ const GR_FX = (() => {
   const lerp = (a, b, q) => a + (b - a) * q;
   const mouthOf = (bd, h) => h.onBody(bd, 'grubnak', 40, 0);
   // props near him lean toward his mouth and tremble as the breath builds (arena-view.js drawProp calls this)
+  // The first inhale (Clean Plate) is a slow dread: the kitchen shivers from the start and more as it goes, then stills for a held breath (HUSH0 to
+  // HUSH1 of the cast), then the rush. HUSH0 / HUSH1 are fractions of the cast; the sound recipe (sfx-synth.js bm-grubnak-clean-plate) is laid on the same marks.
+  const HUSH0 = 0.70, HUSH1 = 0.87;
+  const smooth = (a, b, x) => { const q = clamp((x - a) / (b - a), 0, 1); return q * q * (3 - 2 * q); };
   function lean(pr, ev, t) {
-    const q = clamp((t - ev.start) / Math.max(0.1, ev.dur), 0, 1), amp = q * q, D = Math.hypot(ev.x - pr.x, ev.y - pr.y) || 1, pull = Math.min(34, D * 0.07) * amp, id = pr.id || 1;
-    return { dx: (ev.x - pr.x) / D * pull + Math.sin(t * 41 + id) * 2.4 * amp, dy: (ev.y - pr.y) / D * pull + Math.cos(t * 37 + id) * 1.6 * amp, rot: Math.sin(t * 23 + id * 2) * 0.14 * amp };
+    const q = clamp((t - ev.start) / Math.max(0.1, ev.dur), 0, 1), D = Math.hypot(ev.x - pr.x, ev.y - pr.y) || 1, id = pr.id || 1;
+    // how far it has been drawn (held through the hush, then on to the full pull) and how hard it shivers
+    const qq = q < HUSH0 ? q : q < HUSH1 ? HUSH0 : HUSH0 + (1 - HUSH0) * smooth(HUSH1, 1, q);
+    const amp = qq * qq, pull = Math.min(34, D * 0.07) * amp;
+    const trem = q < HUSH0 ? 0.22 + 0.7 * smooth(0, HUSH0, q) : q < HUSH1 ? 0.04 : 1.35;
+    return { dx: (ev.x - pr.x) / D * pull + Math.sin(t * 41 + id) * 2.4 * trem, dy: (ev.y - pr.y) / D * pull + Math.cos(t * 37 + id) * 1.6 * trem, rot: Math.sin(t * 23 + id * 2) * 0.14 * trem };
   }
   // a thing flying into his mouth: it arcs up, spins, shrinks and is gulped (kind: cask, pot, grease, puddle, rubble)
   function fly(h, bd, o) {
@@ -138,10 +148,13 @@ const GR_FX = (() => {
     if (kind === 'cask' || kind === 'pot') h.shake(2);
   }
   // the vortex: pale arms of dust winding in over the floor, crumbs and wind-streaks racing for his mouth, thickening to the end
-  function vortex(bd, dur, h) {
+  // dread (Clean Plate only): the vortex starts later and thinner, all but dies in the hush, and comes back savage for the rush
+  function vortex(bd, dur, h, dread) {
     const arms = 5, ph = rand(0, TAU), R0 = 540;
+    const calm = p => (dread ? 1 - 0.82 * smooth(HUSH0 - 0.02, HUSH0 + 0.012, p) * (1 - smooth(HUSH1 - 0.004, HUSH1 + 0.012, p)) : 1);
+    const lull = p => (dread ? 0.35 + 0.65 * smooth(0, HUSH0, p) : 1);   // (the build: thin at first)
     VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
-      const k = e.a * Math.min(1, p / 0.16) * Math.min(1, (1 - p) / 0.08), m = mouthOf(bd, h), spin = ph - t * (2.4 + p * 5), R = R0 - 300 * easeOut(p);
+      const k = e.a * Math.min(1, p / 0.16) * Math.min(1, (1 - p) / 0.08) * calm(p) * lull(p) * (dread && p > HUSH1 ? 1.35 : 1), m = mouthOf(bd, h), spin = ph - t * (2.4 + p * 5), R = R0 - 300 * easeOut(p);
       c.save(); c.translate(m.x, m.y + 22); c.scale(1, 0.6); c.lineCap = 'round'; c.lineJoin = 'round';
       const g = c.createRadialGradient(0, 0, 8, 0, 0, R * 0.7); g.addColorStop(0, rgba('#1a0c06', 0.55 * k * p)); g.addColorStop(1, rgba('#1a0c06', 0));
       c.fillStyle = g; c.beginPath(); c.arc(0, 0, R * 0.7, 0, TAU); c.fill();
@@ -153,35 +166,111 @@ const GR_FX = (() => {
       c.restore();
       VFX.glowAt(c, m.x, m.y - 20, 70 + 70 * p, '#ffe8b8', k * (0.16 + 0.3 * p));
     }, tick: (p) => {
-      const m = mouthOf(bd, h);
-      for (let n = 0; n < 1 + Math.floor(p * 2); n++) {
+      const m = mouthOf(bd, h), cl = calm(p), rush = dread && p > HUSH1 ? 2 : 1;
+      if (cl < 0.5 && Math.random() > cl) return;   // (the held breath: hardly a crumb moves)
+      for (let n = 0; n < (1 + Math.floor(p * 2)) * rush; n++) {
         const a = rand(0, TAU), r = rand(240, 520), x = m.x + Math.cos(a) * r, y = m.y + Math.sin(a) * r * 0.6, life = rand(0.5, 0.8) * (1.1 - p * 0.3), tang = 0.9;
         VFX.spawn({ x, y, z: rand(6, 34), vx: ((m.x - x) - Math.sin(a) * r * tang * 0.5) / life, vy: ((m.y - y) + Math.cos(a) * r * 0.6 * tang * 0.5) / life, vz: rand(-10, 30), life, size: rand(4, 8), size1: 2,
           color: ['#d8b070', '#fff0c8', '#b07a28', '#8aa83a', '#b83a2a', '#f4ead0'][Math.floor(Math.random() * 6)], kind: Math.random() < 0.5 ? 'shard' : 'drop', add: false, rot: a, vr: rand(-9, 9), drag: 0.01 });
       }
       if (Math.random() < 0.55) { const a = rand(0, TAU), r = rand(260, 560), x = m.x + Math.cos(a) * r, y = m.y + Math.sin(a) * r * 0.6; VFX.spawn({ x, y, z: 12, vx: (m.x - x) * 2.6, vy: (m.y - y) * 2.6, vz: 0, life: 0.38, size: 22, color: '#fff6e0', stretch: 5, add: false, a: 0.5 }); }
     } });
-    let n = 0;
-    const beat = VFX.fx({ dur, layer: 'ground', draw() {}, tick: (p) => { const k = Math.floor(p * dur / 0.45); if (k > n) { n = k; h.shake(1 + 3.5 * p); } } });
+    let n = 0, last = -9;
+    const beat = VFX.fx({ dur, layer: 'ground', draw() {}, tick: (p) => {
+      if (!dread) { const k = Math.floor(p * dur / 0.45); if (k > n) { n = k; h.shake(1 + 3.5 * p); } return; }
+      // the kitchen shudders more and more often, goes dead still for the hush (the heartbeats are dread()'s), then shakes in earnest
+      const secs = p * dur, gap = p < HUSH0 ? 0.55 - 0.3 * p / HUSH0 : p < HUSH1 ? 99 : 0.12;
+      if (secs - last >= gap) { last = secs; h.shake(p < HUSH0 ? 0.6 + 3 * p / HUSH0 : 5 + 4 * (p - HUSH1) / (1 - HUSH1)); }
+    } });
     void beat;
+  }
+  // The dread before the swell (Clean Plate's first inhale): the room darkens toward the edges and stays dark until the swell lets it go, a pulse of
+  // strain on his own body (bosses.js reads st.strain), then in the hush two slow heartbeats and a gasp as the breath turns to a rush.
+  function dread(msg, bd, h) {
+    const dur = msg.dur;
+    S.darkLvl = 0;
+    if (bd.st) bd.st.strain = { start: bd.st.t, dur };
+    // (held dark a little past the cast, until the swell lets it go: a late event must not flick the lights back on)
+    S.darkFx = h.own(VFX.fx({ dur: dur + 1.5, layer: 'air', draw: (c, p, t, e) => {
+      const q = Math.min(1, t / dur);
+      const flick = q > 0.15 && q < HUSH0 ? 0.05 * Math.max(0, Math.sin(t * 9) * Math.sin(t * 3.7 + 1)) : 0;   // (the lamps guttering; slow, never a strobe)
+      const lvl = (0.9 * smooth(0, HUSH0 * 0.92, q) + 0.1 * smooth(HUSH0, HUSH0 + 0.04, q)) * (1 - flick) * e.a;
+      S.darkLvl = lvl;
+      h.vignette(c, '#05020a', 1.0 * lvl, 0.12); h.wash(c, '#0c0508', 0.42 * lvl);
+    }, done: () => { S.darkFx = null; S.darkLvl = 0; } }));
+    const beat = (sec, big) => h.soon(sec, () => {
+      const m = h.onBody(bd, 'grubnak', 0, 0);
+      h.shake(big ? 3 : 2.2);
+      h.own(VFX.fx({ dur: 0.55, layer: 'air', draw: (c, p, t, e) => VFX.glowAt(c, m.x, m.y - 20, 80 + 90 * easeOut(p), '#8a1410', e.a * 0.55 * (1 - p) * (1 - p)) }));
+      h.shockAt(m.x, m.y, { r: 90, color: '#7a1812', w: 3, dur: 0.5, flat: 0.7 });
+    });
+    const t0 = HUSH0 * dur;
+    beat(t0 + 0.16, true); beat(t0 + 0.50, false); beat(t0 + 0.88, true);
+    h.soon(HUSH1 * dur, () => {   // the gasp: the breath goes in all at once
+      const m = mouthOf(bd, h);
+      VFX.spawn({ x: m.x, y: m.y, z: 24, size: 120, size1: 20, life: 0.4, color: '#fff2d0', kind: 'glow' });
+      h.shockAt(m.x, m.y, { r: 150, color: '#ffe8c0', w: 3, dur: 0.45, flat: 0.7 });
+    });
   }
   function inhale(msg, bd, h) {
     S.bd = bd; S.h = h; S.inh = { x: msg.x, y: msg.y, start: nowS(), dur: msg.dur };
-    vortex(bd, msg.dur, h);
+    if (!msg.again) dread(msg, bd, h);
+    vortex(bd, msg.dur, h, !msg.again);
     let i = 0;   // (grease, puddles and rubble have no event of their own: they go in as the props do, 0.6 s before the cast ends)
     for (const [kind, x, y, r] of msg.things || []) if (kind === 'grease' || kind === 'puddle' || kind === 'rubble') fly(h, bd, { kind, x, y, r, delay: Math.max(0, msg.dur - 0.6) + (i++ % 6) * 0.04 });
   }
   // the swell: past the size he'll be, then settled; the room shakes, a ring of dust goes out, buttons fly, crumbs drop off him
+  // the payoff: the dark is torn off the room in a white flash, a roar's rings and rays go out from him, the kitchen jolts three times, the apron
+  // buttons fly. The heal that goes with it is mend() (roomev 'mend', the same host tick).
   function swell(bd, h) {
     S.bd = bd;
-    cam(0.09, 0.05, 0.6, 0);
-    h.shake(15);
-    for (let i = 0; i < 3; i++) h.shockAt(bd.x, bd.y, { r: 300 + i * 170, color: i ? '#ffe8c0' : '#ffffff', w: 8 - i * 2, dur: 0.75, flat: 1, delay: i * 0.1 });
-    VFX.burst(bd.x, bd.y - 44, { color: '#ffe0a0', color2: '#ffffff', n: 30, speed: 420, size: 13 });
-    VFX.debris(bd.x, bd.y, { color: '#e0b070', n: 18, speed: 2.2, up: 1.9, size: 1.5 });
-    VFX.smoke(bd.x, bd.y, { color: '#e8dcc0', n: 8, size: 46, a: 0.6, speed: 110 });
-    for (let i = 0; i < 6; i++) { const a = rand(0, TAU), sp = rand(150, 300); VFX.spawn({ x: bd.x, y: bd.y, z: 50, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.7, vz: rand(180, 340), g: 640, life: 1, size: 9, color: '#b33a2a', kind: 'shard', add: false, vr: rand(-14, 14), rot: a }); }
-    if (h.flash) h.flash('#fff2d8', 0.3, 0.5);
+    if (S.darkFx) { S.darkFx.dur = 0; S.darkFx = null; }
+    cam(0.12, 0.065, 0.75, 0);
+    h.shake(24); h.soon(0.16, () => h.shake(15)); h.soon(0.42, () => h.shake(9));
+    const dark = S.darkLvl || 0; S.darkLvl = 0;   // (how dark it was when it let go: nothing, if this client never saw the build)
+    if (dark > 0.02) h.own(VFX.fx({ dur: 1.1, layer: 'air', draw: (c, p, t, e) => {   // the dark lets go
+      const k = e.a * (1 - smooth(0, 1, p)) * dark;
+      h.vignette(c, '#05020a', 1.0 * k, 0.12); h.wash(c, '#0c0508', 0.42 * k);
+    } }));
+    h.own(VFX.fx({ dur: 0.9, layer: 'air', draw: (c, p, t, e) => h.vignette(c, '#c01808', 0.6 * e.a * (1 - p) * (1 - p), 0.34) }));   // (a red punch at the edges)
+    for (let i = 0; i < 4; i++) h.shockAt(bd.x, bd.y, { r: 320 + i * 190, color: i ? '#ffe8c0' : '#ffffff', w: 11 - i * 2.4, dur: 0.85, flat: 1, delay: i * 0.1 });
+    const rays = 24, a0 = rand(0, TAU);
+    h.own(VFX.fx({ dur: 0.6, layer: 'air', draw: (c, p, t, e) => {   // the roar, lines flung out of the belly
+      const k = e.a * (1 - p) * (1 - p), r0 = 110 + 160 * easeOut(p), r1 = r0 + 260 * easeOut(Math.min(1, p * 1.3));
+      c.save(); ARENA.trace(c, 4); c.clip();
+      for (let i = 0; i < rays; i++) {
+        const a = a0 + i * TAU / rays + Math.sin(i * 7.3) * 0.05, x0 = bd.x + Math.cos(a) * r0, y0 = bd.y + Math.sin(a) * r0 * 0.72, x1 = bd.x + Math.cos(a) * r1, y1 = bd.y + Math.sin(a) * r1 * 0.72;
+        VFX.neonPath(c, i % 3 ? '#ffe8b8' : '#ffffff', 3.5 * (1 - p * 0.6), k * 0.85, () => { c.moveTo(x0, y0 - 20); c.lineTo(x1, y1 - 20); });
+      }
+      c.restore();
+    } }));
+    VFX.burst(bd.x, bd.y - 44, { color: '#ffe0a0', color2: '#ffffff', n: 40, speed: 460, size: 14 });
+    VFX.debris(bd.x, bd.y, { color: '#e0b070', n: 24, speed: 2.4, up: 2, size: 1.6 });
+    VFX.smoke(bd.x, bd.y, { color: '#e8dcc0', n: 10, size: 52, a: 0.65, speed: 120 });
+    for (let i = 0; i < 10; i++) { const a = rand(0, TAU), sp = rand(150, 330); VFX.spawn({ x: bd.x, y: bd.y, z: 50, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.7, vz: rand(180, 360), g: 640, life: 1.1, size: 9, color: i % 3 ? '#b33a2a' : '#d8a020', kind: 'shard', add: false, vr: rand(-14, 14), rot: a }); }
+    h.flash('#fff2d8', 0.5, 0.6);
+  }
+  // the heal (roomev 'mend', Hard's Clean Plate gives him back three bars): he swallows once for each bar. A ring of gold shrinks into his belly, motes
+  // stream in from round the room, the belly heaves (bd.st.mend / bd.st.gulp, read by bosses.js) and glows from inside.
+  function mend(msg, bd, h) {
+    S.bd = bd;
+    const n = Math.max(1, Math.min(5, msg.bars || 3));
+    for (let i = 0; i < n; i++) h.soon(0.5 + i * 0.6, () => {
+      const m = h.onBody(bd, 'grubnak', 0, 0);
+      if (bd.st) { bd.st.mend = bd.st.t; bd.st.gulp = bd.st.t; }
+      h.shake(3 + i * 1.5);
+      h.own(VFX.fx({ dur: 0.55, layer: 'air', draw: (c, p, t, e) => {
+        const k = e.a * (1 - p * 0.5);
+        VFX.neonRing(c, m.x, m.y - 14, 40 + 280 * (1 - easeOut(p)), i % 2 ? '#ffe27a' : '#b8ff8a', 2 + 5 * p, k * (0.25 + 0.7 * p), 0.7);
+        VFX.glowAt(c, m.x, m.y - 14, 70 + 40 * p, '#ffd978', e.a * 0.5 * p * (1 - p));
+      } }));
+      for (let j = 0; j < 14; j++) {
+        const a = rand(0, TAU), r = rand(180, 340), life = rand(0.35, 0.55), x = m.x + Math.cos(a) * r, y = m.y + Math.sin(a) * r * 0.7;
+        VFX.spawn({ x, y, z: rand(8, 40), vx: (m.x - x) / life, vy: (m.y - y) / life, vz: 0, life, size: rand(5, 9), size1: 2, color: j % 2 ? '#ffe27a' : '#b8ff8a', drag: 0 });
+      }
+      VFX.spawn({ x: m.x, y: m.y, z: 30, size: 150, size1: 40, life: 0.35, color: '#ffe8a0', kind: 'glow' });
+      h.shockAt(m.x, m.y, { r: 120 + i * 30, color: i % 2 ? '#ffe27a' : '#b8ff8a', w: 3, dur: 0.4, flat: 0.7 });
+    });
   }
   // acid on the floor (Sour Burp's pools, pud tag 'sour'): a yellow-green slick, bubbling, a red rim, a fume rising off it
   function puddle(ctx, p, r, k, t) {
@@ -323,7 +412,7 @@ const GR_FX = (() => {
   }
 
   // roomev from the host (main.js): the Gorged form's inhale and swell; h is boss-vfx.js's onBody, shockAt, shake and flash
-  function room(msg, bd, h) { try { if (msg.k === 'inhale') inhale(msg, bd, h); else if (msg.k === 'form' && msg.form === 'gorged') swell(bd, h); } catch (e) { /* cosmetic */ } }
+  function room(msg, bd, h) { try { if (msg.k === 'inhale') inhale(msg, bd, h); else if (msg.k === 'form' && msg.form === 'gorged') swell(bd, h); else if (msg.k === 'mend') mend(msg, bd, h); } catch (e) { /* cosmetic */ } }
 
   return { impact, prop, cast, room, lean, puddle };
 })();

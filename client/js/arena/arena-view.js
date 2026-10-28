@@ -1007,9 +1007,10 @@ const ArenaView = {
       ctx.restore();
     }
     // grass at the rim bends with the gusts
-    const gust = 0.5 + 0.5 * Math.sin(t * 0.7) * Math.sin(t * 1.9);
+    const calm = a.calm || 0;   // (Volkar's dead calm before the Storm Unbound, volkar-storm.js: the wind, rain and grit fall away)
+    const gust = (0.5 + 0.5 * Math.sin(t * 0.7) * Math.sin(t * 1.9)) * (1 - 0.9 * calm);
     for (const g of a.tufts) {
-      const bend = 0.4 + 0.5 * gust + Math.sin(t * 5 + g.ph) * 0.15;
+      const bend = (0.4 + 0.5 * gust + Math.sin(t * 5 + g.ph) * 0.15) * (1 - 0.7 * calm);
       for (let k = -1; k <= 1; k++) {
         const bx = g.x + k * 3, tipX = bx + bend * g.s * 1.1, tipY = g.y - g.s * (1.1 - bend * 0.4);
         ctx.beginPath(); ctx.moveTo(bx, g.y); ctx.quadraticCurveTo(bx + bend * g.s * 0.3, g.y - g.s * 0.7, tipX, tipY);
@@ -1031,12 +1032,12 @@ const ArenaView = {
     for (const l of a.leaves) {
       const span = R * 2 + 200, x = ((t * l.sp + l.ph * 100) % span) - span / 2, y = l.y + Math.sin(t * 2 + l.ph) * 14;
       if (ARENA.sd(x, y) > -6) continue;
-      ctx.save(); ctx.translate(x, y); ctx.rotate(t * 6 + l.w);
+      ctx.save(); ctx.globalAlpha = 1 - calm; ctx.translate(x, y); ctx.rotate(t * 6 + l.w);
       ellipse(ctx, 0, 0, 4, 2, 0, 'rgba(120,130,90,0.75)');
       ctx.restore();
     }
     // slanting rain over everything
-    ctx.strokeStyle = 'rgba(190,210,240,0.16)'; ctx.lineWidth = 1;
+    ctx.strokeStyle = `rgba(190,210,240,${0.16 * (1 - calm)})`; ctx.lineWidth = 1;
     ctx.beginPath();
     const span = (R + 160) * 2;
     for (let i = 0; i < 140; i++) {
