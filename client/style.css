@@ -172,6 +172,11 @@ ul.abilities em.meta { display: block; font-style: normal; font-size: 11px; colo
 .raid-roster span.bot { border-style: dashed; color: var(--muted); }
 .raid-roster small { margin-left: 6px; color: var(--muted); }
 .raid-note { margin: 0; font-size: 12px; color: var(--muted); }
+.raid-rec { display: grid; gap: 2px; padding: 5px 10px; border: 1px solid var(--line-soft); border-radius: 3px; background: #0f0d0b80; }
+.raid-rec p { display: grid; grid-template-columns: 56px 1fr auto; align-items: baseline; margin: 0; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.raid-rec b { font-family: var(--fantasy); font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+.raid-rec span { color: #e6dcc8; }
+.raid-rec em { font-style: normal; font-size: 11px; }
 
 /* Raid: boss bar, party frames */
 #boss-bar { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); width: min(560px, calc(100vw - 460px)); min-width: 300px; z-index: 4; pointer-events: none; }
@@ -1176,6 +1181,21 @@ body.link-lost #combat-hud { opacity: .55; }
 #boss-intro i::after { background: linear-gradient(90deg, #c89a5a, transparent); }
 #boss-intro q { display: none; margin-top: 14px; max-width: 520px; font-size: 15px; font-style: italic; color: #e6dcc8; text-shadow: 0 2px 8px #000, 0 0 2px #000; quotes: '\201C' '\201D'; }
 #boss-intro.line q { display: block; }
+/* the kill banner as he falls (RaidUI.victory): his name, Defeated, the time */
+#kill-banner { position: fixed; left: 50%; top: 30%; transform: translate(-50%, -50%); z-index: 6; display: grid; justify-items: center; gap: 4px; pointer-events: none; text-align: center; opacity: 0; }
+#kill-banner.hidden { display: none; }
+#kill-banner.in { animation: kill-in 1s cubic-bezier(.2,.8,.2,1) .55s forwards; }
+#kill-banner.out { animation: intro-out .9s ease-in forwards; }
+#kill-banner small { font-size: 10.5px; letter-spacing: .3em; text-transform: uppercase; color: #ff9a7a; min-height: 12px; }
+#kill-banner b { white-space: nowrap; font-family: var(--fantasy); font-size: clamp(26px, 3.8vw, 42px); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #f6ecd8; text-shadow: 0 3px 0 #000, 0 8px 28px #000c; }
+#kill-banner i { font-style: normal; font-family: var(--fantasy); font-size: 13px; letter-spacing: .38em; text-transform: uppercase; color: var(--gold); text-shadow: 0 2px 8px #000; }
+#kill-banner i::before, #kill-banner i::after { content: ''; display: inline-block; width: 46px; height: 1px; margin: 0 14px; vertical-align: middle; background: linear-gradient(90deg, transparent, #c89a5a); }
+#kill-banner i::after { background: linear-gradient(90deg, #c89a5a, transparent); }
+#kill-banner p { margin: 10px 0 0; display: grid; justify-items: center; gap: 2px; font-variant-numeric: tabular-nums; text-shadow: 0 2px 8px #000, 0 0 2px #000; }
+#kill-banner p span { font-family: var(--fantasy); font-size: 19px; letter-spacing: .16em; color: #e6dcc8; }
+#kill-banner p em { font-style: normal; min-height: 14px; font-size: 12px; letter-spacing: .1em; color: var(--muted); }
+#kill-banner.rec p em { color: var(--gold-hi, var(--gold)); }
+@keyframes kill-in { from { opacity: 0; transform: translate(-50%, -46%) scale(1.12); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 @keyframes intro-in { from { opacity: 0; transform: translate(-50%, -46%); letter-spacing: .3em; } to { opacity: 1; transform: translate(-50%, -50%); } }
 @keyframes intro-out { from { opacity: 1; } to { opacity: 0; transform: translate(-50%, -54%); } }
 #waymarks .wm-pull { grid-column: 7; grid-row: 1 / span 2; width: 20px; height: auto; color: var(--muted); border-radius: 2px; }
@@ -1213,6 +1233,7 @@ body.in-raid #meter-btn { display: inline-grid; }
 /* the results screen: a new best and the death log */
 .res-best { margin: 8px 0 0; font-family: var(--fantasy); font-size: 13px; letter-spacing: .08em; color: var(--gold); }
 .res-best span { margin-left: 10px; font-family: inherit; font-size: 11px; letter-spacing: 0; color: var(--muted); }
+.res-best.rec { margin: -8px 0 12px; }
 .res-deaths { margin-top: 10px; }
 .res-deaths h6 { margin: 0 0 4px; font-family: var(--fantasy); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 .res-deaths p { display: grid; grid-template-columns: 40px 8px auto 1fr; align-items: center; gap: 8px; margin: 2px 0; font-size: 12px; color: #d8cdb8; }

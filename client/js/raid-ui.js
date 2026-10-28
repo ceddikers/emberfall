@@ -39,6 +39,7 @@ const RaidUI = (() => {
       <div id="party-strip"></div>
       <div id="countdown" class="hidden"></div>
       <div id="boss-intro" class="hidden"><small></small><b></b><i></i><q></q></div>
+      <div id="kill-banner" class="hidden"><small></small><b></b><i>Defeated</i><p><span></span><em></em></p></div>
       <div id="trial-lore" class="hidden"><b></b><p></p><p></p></div>
       <div id="down-veil" class="hidden"><span>Down</span><button id="rez-ask" class="rez-ask hidden" type="button"></button><div class="recap"></div></div>
       <div id="waymarks" class="hidden">${['A', 'B', 'C', 'D', '1', '2', '3', '4'].map(k => `<button type="button" class="wm wm-${/\d/.test(k) ? 'sq' : 'ci'}" data-k="${k}">${k}</button>`).join('')}<button type="button" class="wm wm-clear" data-k="*">${svg('<path d="M3 3l6 6M9 3 3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>')}</button><button type="button" class="wm wm-pull" data-k="#">${svg('<circle cx="6" cy="6.6" r="4.2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M6 4.2v2.6l1.6 1M4.6 1.2h2.8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>')}</button><button type="button" class="wm wm-callouts" data-k="@">${svg('<path d="M2 2.5h8v5H5.5L3 9.5v-2H2Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>')}</button></div>
@@ -323,13 +324,13 @@ const RaidUI = (() => {
   // (taller = further; a clear is full and gold). prog null: hidden (a trial, a practice run)
   let progKey = '';
   function prog(r) {
-    const el = $('prog'), key = r ? r.n + ':' + (r.best ? r.best.pct : '-') : '-';
+    const el = $('prog'), key = r ? r.n + ':' + (r.best ? r.best.pct : '-') + ':' + (r.fast ? r.fast.time : '-') : '-';
     if (key === progKey) return;
     progKey = key;
     el.classList.toggle('hidden', !r);
     if (!r) return;
     const b = r.best, last = r.pulls.slice(-24);
-    const head = !r.n ? 'First pull' : b && b.clear ? `Cleared · pull ${b.n}` : `Best ${b.pct.toFixed(1)}% · phase ${b.ph}`;
+    const head = !r.n ? 'First pull' : b && b.clear ? (r.fast ? `Cleared · best ${mmss(r.fast.time)}` : `Cleared · pull ${b.n}`) : `Best ${b.pct.toFixed(1)}% · phase ${b.ph}`;
     el.innerHTML = `<h6>Progress<span>Pull ${r.n + 1}</span></h6><b>${head}</b>` +
       (last.length ? `<div class="pg-bars">${last.map(p => `<i class="${p.clear ? 'clear' : ''}${b && p.n === b.n ? ' best' : ''}" style="height:${Math.max(6, 100 - p.pct).toFixed(0)}%"></i>`).join('')}</div>` : '');
     [...el.querySelectorAll('.pg-bars i')].forEach((bar, i) => {
@@ -369,6 +370,23 @@ const RaidUI = (() => {
       titleEl.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 380, delay: beat * 1000 + 180, easing: 'ease-out', fill: 'backwards' });
     }
     introTimer = setTimeout(() => { el.classList.add('out'); introTimer = setTimeout(() => el.classList.add('hidden'), 900); }, (line ? 4200 : 2600) + beat * 1000);
+  }
+  // the kill banner over the arena as he falls: his name, "Defeated", the difficulty and the clear time (a new fastest
+  // time shows the one it beat). rec: { prev } or null. Gone before the results card (it hides itself after ~3.6 s)
+  let killTimer = null;
+  function victory(def, mode, secs, rec) {
+    const el = $('kill-banner');
+    clearTimeout(killTimer);
+    el.querySelector('small').textContent = mode === 'hard' ? 'Hard' : '';
+    el.querySelector('b').textContent = def.name;
+    el.querySelector('p span').textContent = mmss(secs);
+    el.querySelector('p em').textContent = rec ? `New record · was ${mmss(rec.prev)}` : '';
+    el.classList.toggle('rec', !!rec);
+    el.classList.remove('hidden', 'out');
+    el.classList.remove('in');
+    void el.offsetWidth;   // restart the fade-in
+    el.classList.add('in');
+    killTimer = setTimeout(() => { el.classList.add('out'); killTimer = setTimeout(() => el.classList.add('hidden'), 900); }, 3300);
   }
   const INTRO_BEAT = { grubnak: 0.7, skitterra: 0.9, volkar: 0.3, hollowking: 1.6 };   // [boss presentation] (boss-vfx.js intro)
 
@@ -838,6 +856,7 @@ const RaidUI = (() => {
       <div class="res-card">
         <h2 class="${clear ? 'win' : 'lose'}">${clear ? 'Cleared' : 'Wiped'}</h2>
         <p class="res-sub">${esc(raid.def.name)} · ${msg.mode === 'hard' ? 'Hard' : 'Normal'} · ${mmss(dur)}${clear ? '' : ` · boss at ${(msg.hp / msg.maxHp * 100).toFixed(1)}%`}</p>
+        ${clear && lastPull && lastPull.rec && lastPull.prevFast > 0 ? `<p class="res-best rec">New record: ${mmss(lastPull.time)}<span>was ${mmss(lastPull.prevFast)}</span></p>` : ''}
         ${honors}
         <table class="res-table">
           <thead><tr><th>Player</th><th>Class</th><th>DPS</th><th>HPS</th><th>Taken</th><th data-tip="Hits from attacks that could have been avoided">Avoidable</th><th>Deaths</th></tr></thead>
@@ -1025,5 +1044,5 @@ const RaidUI = (() => {
       `<div class="rr ${cls}"><b>${n}</b><span>${esc(v)}</span><small>${esc(tip)}</small></div>`).join('')}</div>`;
   }
 
-  return { waymarks, prog, intro, toggleMeter, cycleMeter, init, show, setRoster, update, ultFlash, meter, showResults, hideResults, townPosture, dock, resetRoster: () => { rosterKey = ''; } };
+  return { waymarks, prog, intro, victory, toggleMeter, cycleMeter, init, show, setRoster, update, ultFlash, meter, showResults, hideResults, townPosture, dock, resetRoster: () => { rosterKey = ''; } };
 })();

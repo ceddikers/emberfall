@@ -1396,12 +1396,26 @@
   // last 40 pulls; the best is the lowest health ever reached (a clear is 0).
   const PROG_KEY = 'emberfall.prog';
   const progAll = () => { try { const v = JSON.parse(localStorage.getItem(PROG_KEY) || '{}'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } };
-  const progOf = (bossId, mode) => { const r = progAll()[bossId + ':' + mode]; return r && Array.isArray(r.pulls) ? r : { n: 0, best: null, pulls: [] }; };
+  // the fastest clear: kept in `fast` ({ time, n, at }); a record saved before that was kept is rebuilt from its pulls
+  const clock = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+  function progFast(r) {
+    if (r.fast && r.fast.time > 0) return r.fast;
+    let f = null;
+    for (const p of r.best && r.best.clear ? [r.best, ...r.pulls] : r.pulls) if (p && p.clear && p.time > 0 && (!f || p.time < f.time)) f = { time: p.time, n: p.n, at: p.at };
+    return f;
+  }
+  const progOf = (bossId, mode) => { const r = progAll()[bossId + ':' + mode]; if (!r || !Array.isArray(r.pulls)) return { n: 0, best: null, pulls: [], fast: null }; r.fast = progFast(r); return r; };
   function progRecord(bossId, mode, pull) {
     const all = progAll(), k = bossId + ':' + mode, r = all[k] && Array.isArray(all[k].pulls) ? all[k] : { n: 0, best: null, pulls: [] };
+    const fast = progFast(r);
     r.n = (r.n || 0) + 1;
     pull.n = r.n;
     if (r.best) pull.prev = r.best.pct;   // (the results screen says so when this one beats it)
+    if (pull.clear && pull.time > 0) {
+      if (fast) pull.prevFast = fast.time;
+      if (fast && pull.time < fast.time) pull.rec = 1;   // (a new fastest clear, with the old one to beat on the results card)
+      r.fast = !fast || pull.rec ? { time: pull.time, n: pull.n, at: pull.at } : fast;
+    } else r.fast = fast;
     r.pulls.push(pull);
     if (r.pulls.length > 40) r.pulls.shift();
     if (!r.best || pull.pct < r.best.pct) r.best = pull;
@@ -2026,7 +2040,7 @@
     // a real pull (not a trial or a practice run) goes on the progression record
     if ((msg.s === 'clear' || msg.s === 'wipe') && !raid.def.trial && !raid.practice && msg.maxHp > 0) {
       const pct = msg.s === 'clear' ? 0 : Math.max(0, Math.min(100, Math.round(msg.hp / msg.maxHp * 1000) / 10));
-      raid.prog = progRecord(raid.def.id, raid.mode, { pct, ph: Number(msg.ph) || 1, time: Math.round(msg.time || 0), clear: msg.s === 'clear' ? 1 : 0, at: Date.now() });
+      raid.prog = progRecord(raid.def.id, raid.mode, { pct, ph: Number(msg.ph) || 1, time: Math.floor(msg.time || 0), clear: msg.s === 'clear' ? 1 : 0, at: Date.now() });
     }
     fadeTelegraphs(); raid.tethers.clear(); Stagecraft.endFight(); Lamps.reset(); Kennel.endFight(); raid.lunges = []; raid.eggs = null; raid.rollers.clear(); raid.reels.clear(); player.reel = null;
     raid.sweeps.clear(); raid.edgeWarn = null; for (const p of raid.posts.values()) p.end = Math.min(p.end, now + 1);
@@ -2064,6 +2078,7 @@
       }
     }
     // [boss presentation] his fall first, then the confetti (victory waits for it); a wipe gets its own scene
+    if (msg.s === 'clear' && !raid.pvp) killMoment(msg);
     if (msg.s === 'clear') { if (!raid.def.trial) BOSS_VFX.bossDeath(raid.def.id, raid.bossDraw); BOSS_VFX.victory([...raid.rosterIds].map(entById).filter(Boolean), raid.def.trial ? 0 : 2.2); }
     else BOSS_VFX.wipe(raid.bossDraw, raid.def.id);
   });
@@ -3258,6 +3273,13 @@
       cam.x = player.x - sx * zoom / z1; cam.y = player.y - (player.lift || 0) - sy * zoom / z1;
       zoom = z1;
     }
+    const kp = killPushNow();   // (the kill's push-in, toward the boss: laid on the same way and taken off the same way)
+    if (kp > 0.0005 && scene === 'arena' && raid && raid.boss) {
+      if (!punchCam) punchCam = { x: cam.x, y: cam.y };
+      const z1 = zoom * (1 + kp), bx = raid.boss.x, by = raid.boss.y, sx = bx - cam.x, sy = by - cam.y;
+      cam.x = bx - sx * zoom / z1; cam.y = by - sy * zoom / z1;
+      zoom = z1;
+    }
   }
   // how far down the screen the boss plate reaches (px), checked twice a second
   let plateAt = -1, plateH = 0;
@@ -3844,6 +3866,34 @@
   }
   function hitStop(dur = 0.1) { hitStopUntil = Math.max(hitStopUntil, now + Math.min(0.2, dur)); }
   FX.cam = { flash: screenFlash, dim: screenDim, punch: zoomPunch, stop: hitStop };
+  // ---- the boss's fall: the clock the screen shows crawls for a beat and eases back, and the camera leans in on him.
+  // Cosmetic only: it scales the dt this client's frame() feeds to `now` / update() (animation, effects, timers), by real
+  // time (rnow). The host's sim ticks off its own timer (raidHost.tick) and the network never reads `now`, so neither slows.
+  let killMo = null;
+  const KILL_SLOW_END = 1.15, KILL_PUSH_END = 2.7;
+  function killSlowK() {
+    if (!killMo) return 1;
+    const q = rnow - killMo.t0;
+    if (q < 0 || q >= KILL_SLOW_END || scene !== 'arena') return 1;
+    if (q < 0.16) return 0.05;   // the blow itself: nearly stopped
+    if (q < 0.5) return 0.22;
+    const u = (q - 0.5) / (KILL_SLOW_END - 0.5);
+    return 0.22 + 0.78 * (u * u * (3 - 2 * u));   // (eased back to full speed)
+  }
+  function killPushNow() {
+    if (!killMo) return 0;
+    const q = rnow - killMo.t0;
+    if (q >= KILL_PUSH_END || q < 0) { if (q >= KILL_PUSH_END) killMo = null; return 0; }
+    return killMo.a * (q < 0.5 ? easeOut(q / 0.5) : q < 1.3 ? 1 : 1 - easeOut((q - 1.3) / (KILL_PUSH_END - 1.3)));
+  }
+  function killMoment(msg) {
+    killMo = { t0: rnow, a: 0.09 };
+    if (raid.practice || raid.def.trial) return;
+    const last = raid.prog && raid.prog.pulls && raid.prog.pulls[raid.prog.pulls.length - 1];
+    const rec = last && last.rec && last.prevFast > 0 ? { prev: last.prevFast } : null;
+    RaidUI.victory(raid.def, raid.mode, Math.floor(msg.time || 0), rec);
+    if (rec && SH) later(1.3, () => { if (SH) SH.play('ui-feat', { vol: 0.8 }); });
+  }
   FX.me = player;
   // the party as this client sees it, living heroes only (KIT_VFX.partyWard flashes a party shield on each)
   FX.party = () => (inArena() ? allyList().filter(c => { const s = raid.party.get(c.id); return !s || s.alive; }) : allyList()).map(c => c.ent);
@@ -4544,11 +4594,16 @@
     if (!hardOk && raidMode === 'hard') raidMode = 'normal';
     const why = !Net.isHost ? 'Only the host can start the raid.' : !player.cls ? 'Pick a hero first.' : '';
     const extra = [...remotes.values()].filter(r => r.cls).length + (player.cls ? 1 : 0) > 4 ? '<p class="raid-note">Only the first four heroes go in.</p>' : '';
+    const recs = ['normal', 'hard'].map(m => {
+      const r = progOf(bossDef.id, m);
+      return r.n ? `<p><b>${m === 'hard' ? 'Hard' : 'Normal'}</b><span>${r.fast ? `Best clear ${clock(r.fast.time)}` : r.best ? `Best ${r.best.pct.toFixed(1)}%` : ''}</span><em>${r.n} ${r.n === 1 ? 'pull' : 'pulls'}</em></p>` : '';
+    }).join('');
     el.innerHTML = `
       <div class="mode-pick">
         <button data-mode="normal" class="${raidMode === 'normal' ? 'on' : ''}"><b>Normal</b><small>Every attack is telegraphed on the floor.</small></button>
         <button data-mode="hard" class="${raidMode === 'hard' ? 'on' : ''}"${hardOk ? '' : ' disabled'}><b>Hard</b><small>${hardOk ? 'Faster and deadlier, with attacks Normal never uses.' : hardWhy(bossDef)}</small></button>
       </div>
+      ${recs ? `<div class="raid-rec">${recs}</div>` : ''}
       <label class="fill"><input type="checkbox" ${raidFill ? 'checked' : ''} ${Net.isHost ? '' : 'disabled'}> Fill empty slots with bots</label>
       <div class="raid-roster">${humans.map(h => `<span style="--c:${ROLES[h.role].color}">${escapeHtml(h.name)}<small>${CLASSES.find(c => c.id === h.cls).name}</small></span>`).join('')}${
         bots.map(id => { const c = CLASSES.find(x => x.id === id); return `<span class="bot" style="--c:${ROLES[c.role].color}">Bot<small>${c.name}</small></span>`; }).join('')}</div>
@@ -4940,7 +4995,7 @@
     DebugOverlay.frame(raw);   // the real frame time
     // a slow frame is caught up in steps of at most 50 ms (up to a quarter second), so cast bars and timers keep
     // the host's real time
-    if (!paused) { let left = Math.min(0.25, raw); while (left > 1e-4) { const dt = Math.min(0.05, left); now += dt; update(dt); left -= dt; } }
+    if (!paused) { let left = Math.min(0.25, raw); const k = killSlowK(); while (left > 1e-4) { const dt = Math.min(0.05, left), vdt = dt * k; now += vdt; update(vdt); left -= dt; } }
     render();
     renderPanels();
     updateTargetFrame();
