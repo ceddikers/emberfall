@@ -1207,22 +1207,6 @@ const ArenaView = {
 
   // ------------------------------------------------------------------ boss hitbox ring
   // Front, flanks and rear are marked so positionals can be read at a glance.
-  // A wall (fight.js raiseWall): the boss is sealed at a gate, so a shell of light stands round it with a ring of facets turning slowly.
-  wallShield(ctx, x, y, t, scale = 1.3) {
-    const R = 74 * scale, pulse = 0.85 + 0.15 * Math.sin(t * 3);
-    ctx.save(); ctx.translate(x, y - 6);
-    const g = ctx.createRadialGradient(0, 0, R * 0.55, 0, 0, R * 1.05);
-    g.addColorStop(0, 'rgba(255,214,120,0)'); g.addColorStop(0.8, `rgba(255,214,120,${0.16 * pulse})`); g.addColorStop(1, `rgba(255,240,190,${0.4 * pulse})`);
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R * 1.05, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = `rgba(255,236,170,${0.85 * pulse})`; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,214,120,0.5)'; ctx.lineWidth = 1.5;
-    for (let i = 0; i < 6; i++) {
-      const a = t * 0.4 + i * Math.PI / 3;
-      ctx.beginPath(); ctx.moveTo(Math.cos(a) * R * 0.82, Math.sin(a) * R * 0.82); ctx.lineTo(Math.cos(a + 0.5) * R, Math.sin(a + 0.5) * R); ctx.lineTo(Math.cos(a + 1.0) * R * 0.82, Math.sin(a + 1.0) * R * 0.82); ctx.stroke();
-    }
-    ctx.restore();
-  },
-
   drawBossRing(ctx, boss) {
     const r = FIGHT.BOSS_R + 8, f = boss.f;
     circle(ctx, boss.x, boss.y, r, null, 'rgba(255,255,255,0.25)', 1.5);

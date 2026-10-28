@@ -768,7 +768,7 @@
     'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5, 'ult-kenseier': -1.5, 'ult-lanternkeeper': -2,
     'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1, 'ult-ranger': 3,
     'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4, 'ult-thermist': -1,
-    'ult-threadweaver': -1, 'ult-tidecaller': -2, 'waymark': 11.5, 'wipe': -2,
+    'ult-threadweaver': -1, 'ult-tidecaller': -2, 'wall-break': -1.5, 'wall-up': -3.5, 'waymark': 11.5, 'wipe': -2,
   };
   // @@TRIM-END
 
@@ -1125,6 +1125,33 @@
     S.crack({ at: 0.15, f: 2500, peak: 0.3 });
     S.pad({ at: 0.15, notes: [mf(45), mf(52), mf(57), mf(61)], a: 0.01, swell: false, dur: 1.2, lpEnv: [3500, 2500, 600, 0.1], peak: 0.2 });
     S.rumble({ at: 0.15, dur: 1.2, f: 140, peak: 0.2, a: 0.05 });
+  });
+  // a wall goes up: the boss is sealed (main.js wallEdge). A pull inward, the seal slammed home, chains running through it, and a low chord held under
+  def('wall-up', 'sting', S => {
+    S.space('hall', 0.55);
+    S.whoosh({ f: 3200, f1: 180, dur: 0.42, peakAt: 0.9, peak: 0.34, q: 1.1 });
+    S.thud({ at: 0.4, f: 66, f1: 24, dur: 1.8, drive: 3, peak: 0.62, sub: 0.22 });
+    S.crack({ at: 0.4, f: 1800, peak: 0.34 });
+    S.metal({ at: 0.4, set: 'plate', f: 300, dur: 1.5, peak: 0.26 });
+    S.metal({ at: 0.43, set: 'bar', f: 520, dur: 0.9, peak: 0.1 });
+    [0.5, 0.58, 0.64, 0.74, 0.8, 0.9].forEach((at, i) => S.metal({ at, set: 'coin', f: 1500 + (i % 3) * 420 + S.rr(-80, 80), dur: 0.16, peak: 0.13, pan: S.rr(-0.7, 0.7) }));
+    S.rumble({ at: 0.4, dur: 2.4, f: 110, peak: 0.18, a: 0.05 });
+    S.pad({ at: 0.4, notes: [mf(38), mf(45), mf(50), mf(57)], type: 'tri', a: 0.18, dur: 2.4, lpEnv: [2200, 1500, 500, 0.2], peak: 0.2 });
+    S.choir({ at: 0.55, notes: [mf(50), mf(57)], vowel: 'o', dur: 2.0, a: 0.5, peak: 0.07 });
+    [84, 88, 91].forEach((n, i) => S.glass({ at: 0.46 + i * 0.07, f: mf(n), dur: 1.3, peak: 0.12, pan: (i - 1) * 0.5 }));
+  });
+  // a wall breaks: the seal gives (a crack, glass shattering outward, a boom) and a clean chord rises where the weight was
+  def('wall-break', 'imp', S => {
+    S.space('hall', 0.5);
+    S.crack({ f: 2400, peak: 0.55 });
+    S.thud({ at: 0.03, f: 90, f1: 30, dur: 1.4, drive: 2.6, peak: 0.6, sub: 0.2 });
+    S.whoosh({ at: 0.05, f: 500, f1: 6000, dur: 0.5, peakAt: 0.2, peak: 0.3 });
+    for (let i = 0; i < 12; i++) S.glass({ at: 0.02 + i * 0.035 + S.rr(0, 0.03), f: S.rr(2400, 6200), dur: 0.5, peak: 0.09 + 0.04 * Math.random(), pan: S.rr(-0.8, 0.8) });
+    S.metal({ at: 0.04, set: 'plate', f: 520, dur: 0.8, peak: 0.2 });
+    S.noise({ at: 0.05, hp: 5000, dur: 0.9, grain: 0.8, pts: [[0.05, 1], [0.9, 0]], peak: 0.1 });
+    S.rumble({ at: 0.05, dur: 1.4, f: 150, peak: 0.24, a: 0.04 });
+    S.pad({ at: 0.3, notes: [mf(50), mf(57), mf(62), mf(66)], type: 'tri', a: 0.1, dur: 1.9, lp: 2600, peak: 0.14 });
+    [86, 90, 93].forEach((n, i) => S.glass({ at: 0.34 + i * 0.06, f: mf(n), dur: 1.2, peak: 0.05 }));
   });
   def('ult-window-end', 'hud', S => {
     [84, 79, 76, 72].forEach((n, i) => S.glass({ at: i * 0.09, f: mf(n), dur: 0.6, peak: 0.08 }));

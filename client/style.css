@@ -599,6 +599,39 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 .bb-hp .gates i.wall.up { background: #fff3c4; box-shadow: 0 0 6px 1px #ffd27a; }
 #boss-bar.walled .bb-hp { box-shadow: 0 0 0 1px #d8b45a, 0 0 8px #ffd27a88; }
 #boss-bar.walled .bb-hp .fill { filter: saturate(.5) brightness(1.1); }
+/* the seal, while it holds: a gold frame with a lattice of links over the health, a slow sheen across it, and the wall's name beside the boss's (wall-fx.js) */
+.bb-seal { display: none; text-decoration: none; font-size: 9.5px; letter-spacing: .18em; text-transform: uppercase; color: #ffe6a8; border: 1px solid #8a6f35; background: linear-gradient(#3a2c12cc, #21190bcc); padding: 1px 7px 0; border-radius: 2px; text-shadow: 0 0 8px #ffd27a77; }
+#boss-bar.walled .bb-seal { display: inline-block; }
+#boss-bar.walled { border-color: #8a6f35; border-top-color: #e8c668; box-shadow: 0 8px 24px #0009, inset 0 1px 0 #ffe9a026, 0 0 14px #ffd27a33; }
+#boss-bar.walled .bb-hp { box-shadow: 0 0 0 1px #e0bf68, 0 0 0 3px #3a2c12, 0 0 12px 2px #ffd27a77; }
+#boss-bar.walled .bb-hp::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: .5;
+  background: repeating-linear-gradient(45deg, transparent 0 7px, #ffe6a855 7px 8px), repeating-linear-gradient(-45deg, transparent 0 7px, #ffe6a855 7px 8px); }
+#boss-bar.walled .bb-hp::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(100deg, transparent 38%, #fff3c855 50%, transparent 62%); background-size: 260% 100%; animation: bb-seal-sheen 3.2s linear infinite; }
+#boss-bar.walled .bb-hp span, #boss-bar.walled .bb-hp .bb-x { z-index: 2; }
+@keyframes bb-seal-sheen { from { background-position: 130% 0; } to { background-position: -30% 0; } }
+#boss-bar.sealing .bb-hp { animation: bb-seal-in 1.2s ease-out; }
+@keyframes bb-seal-in { 0% { filter: brightness(2.4); box-shadow: 0 0 0 1px #fff3c4, 0 0 0 5px #ffd27a99, 0 0 30px 8px #ffd27acc; } 100% { filter: none; } }
+#boss-bar.unsealed .bb-hp { animation: bb-seal-out 1.2s ease-out; }
+@keyframes bb-seal-out { 0% { filter: brightness(3); box-shadow: 0 0 0 1px #ffffff, 0 0 0 6px #fff3c8cc, 0 0 36px 10px #ffe9b0; } 100% { filter: none; } }
+#boss-bar.unsealed .bb-seal { display: inline-block; opacity: 0; transform: scale(1.25); transition: opacity .6s ease-out, transform .6s ease-out; }
+/* the title when a wall goes up, and its broken beat when it falls: a name on a dim band, a light line drawn under it */
+#wall-banner { position: fixed; left: 0; right: 0; top: 17%; z-index: 6; display: grid; justify-items: center; gap: 4px; padding: 14px 0 12px; pointer-events: none; text-align: center; opacity: 0;
+  background: linear-gradient(90deg, transparent, #05030a66 22%, #05030a66 78%, transparent); }
+#wall-banner.hidden { display: none; }
+#wall-banner small { font-size: 10.5px; letter-spacing: .34em; text-transform: uppercase; color: #ffd27a; text-shadow: 0 0 10px #ffd27a88; }
+#wall-banner b { white-space: nowrap; font-family: var(--fantasy); font-size: clamp(24px, 3.4vw, 38px); font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #fff3d8; text-shadow: 0 3px 0 #000, 0 8px 26px #000c, 0 0 20px #ffd27a55; }
+#wall-banner i { display: block; width: min(420px, 60vw); height: 1px; background: linear-gradient(90deg, transparent, #ffe6a8, transparent); box-shadow: 0 0 8px #ffd27a; transform-origin: center; }
+#wall-banner.up { animation: wall-in .7s cubic-bezier(.2, .8, .2, 1) forwards; }
+#wall-banner.up i { animation: wall-line .8s .15s ease-out backwards; }
+#wall-banner.broke { animation: wall-broke 1.5s ease-out forwards; }
+#wall-banner.broke small { color: #fff3d8; }
+#wall-banner.broke b { color: #ffe9b8; }
+#wall-banner.broke i { animation: wall-line .35s ease-out backwards; }
+#wall-banner.out { animation: wall-out .8s ease-in forwards; }
+@keyframes wall-in { from { opacity: 0; transform: scale(1.08); letter-spacing: .1em; } to { opacity: 1; transform: none; } }
+@keyframes wall-line { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: 1; } }
+@keyframes wall-broke { 0% { opacity: 0; transform: scale(.94); filter: brightness(2); } 18% { opacity: 1; transform: scale(1); filter: none; } 100% { opacity: 1; } }
+@keyframes wall-out { from { opacity: 1; } to { opacity: 0; transform: translateY(-6px); } }
 .bst.wall { border-color: #d8b45a; color: #ffe6a0; }
 .bb-hp span { letter-spacing: .03em; font-variant-numeric: tabular-nums; }
 .bb-cast { width: 66%; height: 18px; margin-top: 8px; background: #0a0807f2; border: 1px solid #6e4426; border-radius: 2px; box-shadow: 0 0 0 1px #000; }
