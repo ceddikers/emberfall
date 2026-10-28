@@ -220,14 +220,15 @@ Object.assign(BUFF_TIPS, {
   banner: () => 'The banner stands: every Perfect Block gives 10 more Resolve.',
 });
 // the Bastion's and Bloodreaver's spec-row windows (Rebuke, Pyre, Phalanx, Aegis; Death Throes, Crimson Pact)
-Object.assign(BUFF_NAMES, { rebuke: 'Rebuke', pyre: 'Pyre', phalanx: 'Phalanx', aegis: 'Aegis', throes: 'Death Throes', pact: 'Crimson Pact' });
-Object.assign(BUFF_ICON, { rebuke: 'edge', pyre: 'bulwark', phalanx: 'brace', aegis: 'bulwark', throes: 'drain', pact: 'frenzy' });
+Object.assign(BUFF_NAMES, { rebuke: 'Rebuke', pyre: 'Pyre', phalanx: 'Phalanx', aegis: 'Aegis', throes: 'Death Throes', pact: 'Crimson Pact', lust: 'Bloodlust' });
+Object.assign(BUFF_ICON, { rebuke: 'edge', pyre: 'bulwark', phalanx: 'brace', aegis: 'bulwark', throes: 'drain', pact: 'frenzy', lust: 'drain' });
 Object.assign(BUFF_TIPS, {
   rebuke: n => `Your next ${n('edge')} costs no Resolve and strikes half again as hard.`,
   pyre: () => 'Every Perfect Block you make while the guard stands is stored. When it ends they come down on the boss as light.',
   phalanx: n => `Each Perfect Block locked one more shield into the line. ${n('edge')} sends them all out to the party.`,
   aegis: () => 'The dome stands: you take 25% less damage and the party 15% less, and every Perfect Block heals the party.',
   throes: n => `Your next ${n('drain')}s cost nothing and run warm.`,
+  lust: n => `Your next ${n('drain')} is free, banks all the damage you took during Frenzy, and gets the warm blood bonus.`,
   pact: n => `You deal 8% more damage, and the healing ${n('drain')} gives you flows to the whole party at three quarters of its strength.`,
 });
 // the spec rows (VI, VII) of the Driftblade and the Ironpalm: the windows a talent leaves open

@@ -1033,12 +1033,12 @@ const reaverBank = k => k.env.recentDamage(Math.max(0, Math.min(REAVER.BANK, k.n
 const reaverWound = k => k.env.recentDamage(Math.max(0, Math.min(REAVER.WOUND, k.now - (k.g.drainAt ?? -99)))) >= k.env.maxHp() * REAVER.WOUND_HIT || k.now < (k.g.fuelWarm || 0);   // (Pain Is Fuel: a heavy hit keeps your blood warm for 4s)
 // (a bank cashed after its wound has closed has gone cold: its bonus counts for COLD of its worth)
 const reaverWarm = k => (k.g.wound ? 1 : REAVER.COLD);
-function reaverCash(k) { const lust = k.g.lust, t = lust != null ? lust : reaverBank(k); k.g.wound = lust != null || reaverWound(k) || !!k.g.warmNext; k.g.warmNext = false; k.g.fuelWarm = 0; k.g.drainAt = k.now; k.g.cashed = t; k.g.bank = 0; return t; }
+function reaverCash(k) { const lust = k.g.lust, t = lust != null ? lust : reaverBank(k); k.g.lust = null; if (lust != null) k.fx('bloodlust'); k.g.wound = lust != null || reaverWound(k) || !!k.g.warmNext; k.g.warmNext = false; k.g.fuelWarm = 0; k.g.drainAt = k.now; k.g.cashed = t; k.g.bank = 0; return t; }
 // a Drain's price: a free one (Frenzy's Gorged: +bonus), Undying's, War Cry's, or 40 Blood
-const reaverDrainOk = k => k.g.blood >= 40 || k.stacks('gorge') > 0 || k.has('deathless') || k.has('throes') || k.has('roar');
-const reaverDrainGlow = k => k.stacks('gorge') > 0 || k.has('deathless') || k.has('throes') || k.has('roar') || k.g.blood >= 90 || (k.g.blood >= 40 && (reaverBank(k) >= k.env.maxHp() * REAVER.GLOW || reaverWound(k)));
+const reaverDrainOk = k => k.g.blood >= 40 || k.has('lust') || k.stacks('gorge') > 0 || k.has('deathless') || k.has('throes') || k.has('roar');
+const reaverDrainGlow = k => k.has('lust') || k.stacks('gorge') > 0 || k.has('deathless') || k.has('throes') || k.has('roar') || k.g.blood >= 90 || (k.g.blood >= 40 && (reaverBank(k) >= k.env.maxHp() * REAVER.GLOW || reaverWound(k)));
 function reaverDrainCost(k, bonus) {
-  if (k.g.lust != null) return 0;   // (Bloodlust's Drain is free and takes nothing from Frenzy's stock)
+  if (k.consume('lust')) { k.g.lust = k.g.lustBank || 0; return 0; }   // (Bloodlust's Drain: free, and reaverCash spends the Frenzy bank, warm)
   if (k.stacks('gorge') > 0) { k.consume('gorge'); return bonus; }
   if (k.has('deathless')) return 0;
   if (k.consume('throes')) { k.g.warmNext = true; return 0; }   // (Death Throes, spec row VII: two free Rampages, the blood warm for each)
@@ -1116,12 +1116,11 @@ function reaverLetting(k, ab) {
     }
   }
 }
-// a buff running out: Bloodlust's free Drain when Frenzy ends, Blood Moon setting
+// a buff running out: Bloodlust readies a free Drain when Frenzy ends, Blood Moon setting
 function reaverExpire(k, id, b) {
   if ((id === 'frenzy' || id === 'pact') && k.talent('bloodreaver_bloodlust')) {
-    const taken = k.env.recentDamage(Math.max(1, k.now - b.start)), ab = abBase(k, 'drain');
-    if (ab && typeof ab.effect === 'function') { k.g.lust = taken; try { ab.effect(k); } finally { k.g.lust = null; } }   // (a real Drain: free, its bank everything taken under Frenzy and its blood warm; every Drain talent rides on it)
-    k.fx('bloodlust');
+    k.g.lustBank = k.env.recentDamage(Math.max(1, k.now - b.start));   // (everything taken under Frenzy: the next Drain in 6s is free, cashes it all and runs warm; every Drain talent rides on it)
+    k.buff('lust', 6);
   }
   if (id === 'bloodmoon') {
     const taken = k.env.recentDamage(10.2), ab = abBase(k, 'undying');
