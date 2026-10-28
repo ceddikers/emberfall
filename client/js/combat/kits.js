@@ -2687,7 +2687,7 @@ function driftPass(k, tg, mult = 1) {
   const tgt = tg && tg.id !== 'dummy' ? tg.id : undefined;
   // (inside Eye of the Gale every pass is a long gale line: DRIFT_ULT)
   const eye = driftEye(k), gale = k.has('gale');
-  k.damage((eye ? (DRIFT_ULT.LINE + DRIFT_ULT.LINE_D * driftK(k)) * (gale ? 2 : 1) : 90 * (1 + driftK(k)) * (gale ? 3 : k.has('roost') ? 2 : 1)) * mult, { ab: DRIFT_PASS, tgt });
+  k.damage((eye ? (DRIFT_ULT.LINE + DRIFT_ULT.LINE_D * driftK(k)) * (gale ? 2 : 1) : 90 * (1 + driftK(k)) * (gale ? 3 : k.has('roost') ? 2 : 1)) * mult, { ab: DRIFT_PASS, tgt, ult: !!eye });   // (Eye of the Gale's gale line is the Ultimate's hit)
   k.stats.passes = (k.stats.passes || 0) + 1;
   const run = gale ? 'gale' : k.has('roost') ? 'roost' : k.has('starwind') ? 'starwind' : null;   // (Hurricane: Gale Run, or Roost, or the wind Starfall leaves, whichever is up)
   driftAdd(k, DRIFT.PASS + (run && k.talent('driftblade_hurricane') ? 10 : 0));
@@ -4341,12 +4341,12 @@ ULTIMATES.ironpalm = {
   effect(k) {
     const ab = this, g = k.g, moves = k.def.moves || IP_MOVES, mv = id => moves.find(m => m.id === id) || ab;
     g.str = ''; g.keys = []; g.plan = null; g.clean = true;   // (the flurry is its own string: nothing drops)
-    IP_GRAND.forEach((id, i) => k.after(IRONPALM.GRAND_GAP * (i + 1), () => k.damage(110, { ab: mv(id) })));
+    IP_GRAND.forEach((id, i) => k.after(IRONPALM.GRAND_GAP * (i + 1), () => k.damage(110, { ab: mv(id), ult: true })));
     k.mitigate('self', 0.25, 5, { ab: mv('wall') }); k.buff('wall', 5);
     ipBreath(k, k.poolMax()); g.winded = false;
     k.after(IRONPALM.GRAND_GAP * (IP_GRAND.length + 1.5), () => {
       k.damage(800, { ab, threat: 3 });
-      k.dot('bruise', 20, 15, 3, { ab: mv('breaker') });
+      k.dot('bruise', 20, 15, 3, { ab: mv('breaker'), ult: true });
       k.mitigate('party', 0.15, 8, { ab });
       k.fx('ip-hundred');
     });
@@ -5495,7 +5495,7 @@ ULTIMATES.shadowblade = {
 // by the Focus you had; under it every Quick Shot lights Keen Eye. Loosed while Hunter's Cloak is up, the volleys
 // mend the party too, so the Cloak's minute and a half and the Ultimate's line up.
 const RANGER_ULT = { GAIN_KEEN: 4.5, GAIN_FOCUS: 0.07, HIT: 800, HIT_F: 7, VOL: 190, VOL_F: 1.3, N: 6, GAP: 0.5, HEAL: 40 };
-const RANGER_STAR = { id: 'starvolley', name: 'Starfall' };
+const RANGER_STAR = { id: 'starvolley', name: 'Starfall', ultPart: true };   // (ultPart: the Ultimate's own hit, ULT_TUNE)
 ULTIMATES.ranger = {
   id: 'starfall', name: 'Starfall Volley', slot: 7, type: 'ogcd', ult: true, mode: 'instant', target: 'enemy', range: RANGED, anim: 'big', icon: 'barrage',
   lock: 0.6, dr: 0.3,
@@ -5526,7 +5526,7 @@ ULTIMATES.ranger = {
 const MARI_ULT = { GAIN_ENC: 0.4, GAIN_CUT: 3, GAIN_FINALE: 0.3, HIT: 1100, PER_STR: 450, BOW: 600, BOW_DUR: 10 };
 function mariBow(k, ab) {
   const n = k.g.dolls.length || 1, m = k.def.dollMult || 1, e = mariEnemy(k);
-  k.damage(MARI_ULT.BOW * n * m, { ab, tgt: e && e.id !== 'dummy' ? e.id : undefined });
+  k.damage(MARI_ULT.BOW * n * m, { ab, tgt: e && e.id !== 'dummy' ? e.id : undefined, ult: true });   // (the bow is Curtain Call's)
   k.fx('mari-bow');
 }
 ULTIMATES.marionettist = {
@@ -5558,7 +5558,7 @@ ULTIMATES.marionettist = {
 // a payoff: snap back to safety, cash the swing here. The dial itself stays where it is (the swing stays armed), and
 // for 6s both sides burn (Attuned, Inversion's state).
 const THERM_ULT = { GAIN_SWING: 1.3, GAIN_EDGE: 1.3, PEND: 0.65, FROST: 400, FROST_S: 75, FIRE: 750, FIRE_S: 260, ATTUNE: 6 };
-const THERM_NOVA = { id: 'novafrost', name: 'Supernova: Frost' };
+const THERM_NOVA = { id: 'novafrost', name: 'Supernova: Frost', ultPart: true };
 ULTIMATES.thermist = {
   id: 'supernova', name: 'Supernova', slot: 7, type: 'ogcd', ult: true, mode: 'instant', target: 'enemy', range: RANGED, anim: 'big', icon: 'invert',
   lock: 0.8, dr: 0.3,
@@ -7764,10 +7764,10 @@ function hdBite(k, h, e, o = {}) {
   const drive = hdQuarry(k) && hdHolding(k) && k.talent('houndmaster_drive') ? 2.5 : 1;   // (Drive: the Mark holds a pair in place, and held they bite harder)
   const m = (k.perk('houndmaster_w1') && k.has('rendbite') ? 1.1 : 1) * (k.def.houndMult || 1) * (o.mult || 1) * hdFang(k, h) * rise * scar * drive;
   const dmg = (h.spectral ? HOUND.WILD_BITE : HOUND.BITE) * m;
-  k.damage(dmg, { ab: o.ab || HD_BITE, tgt: e.id !== 'dummy' ? e.id : undefined, auto: true });
+  k.damage(dmg, { ab: o.ab || HD_BITE, tgt: e.id !== 'dummy' ? e.id : undefined, auto: true, ult: h.spectral });   // (a Wild Hunt hound's bite is the Ultimate's)
   if (hdQuarry(k) && k.talent('houndmaster_bloodscent')) {   // (Blood Scent: the Mark has spread to the nearest add, and every bite bites it too)
     const ad = hdAddNear(k, e);
-    if (ad) k.damage(dmg, { ab: o.ab || HD_BITE, tgt: ad.id, auto: true });
+    if (ad) k.damage(dmg, { ab: o.ab || HD_BITE, tgt: ad.id, auto: true, ult: h.spectral });
   }
   h.biteFxUntil = k.now + 0.3;
   if (!h.spectral) {
@@ -8157,6 +8157,7 @@ KITS.houndmaster = {
 // sides of the enemy: every pair counts as all three at once (the Pack Finisher is Bring Down's blow with Rend's bleed and
 // Hamstring's weakness as well), and the finisher costs no Bond. The spectral hounds bite too.
 ULTIMATES.houndmaster = {
+  tuneKeepText: true,   // (ULT_TUNE: the number in its text is Bring Down's, a normal move)
   id: 'wildhunt', name: 'Wild Hunt', slot: 7, type: 'ogcd', ult: true, mode: 'window', target: 'enemy', range: RANGED, anim: 'big', icon: 'wildhunt',
   lock: 0.8, dr: 0.3,
   burst: 'quarry',   // (bots open it with Mark the Quarry up)
@@ -8174,7 +8175,7 @@ ULTIMATES.houndmaster = {
       h.ring = (e ? hdFace(k, e) : 0) + HD_OFF[slot];
       g.hounds.push(h);
     });
-    if (k.perk('houndmaster_w7') && e) for (let i = 0; i < 4; i++) k.damage(HOUND.POUNCE, { ab: HD_BITE, tgt: e.id !== 'dummy' ? e.id : undefined });   // (the loot: the pack opens with a pounce)
+    if (k.perk('houndmaster_w7') && e) for (let i = 0; i < 4; i++) k.damage(HOUND.POUNCE, { ab: HD_BITE, tgt: e.id !== 'dummy' ? e.id : undefined, ult: true });   // (the loot: the pack opens with a pounce)
     k.fx('wildhunt');
   },
   window: {
@@ -8374,3 +8375,25 @@ if (typeof module !== 'undefined') Object.assign(module.exports, { HOUND, HD_OFF
 for (const [cls, id] of Object.entries(TAUNT_CARRY)) if (KITS[cls]) KITS[cls].tauntOn = id;
 // ... and its Ultimate (ULTIMATES, next to TAUNT), copied the same way
 for (const [cls, u] of Object.entries(ULTIMATES)) if (KITS[cls]) KITS[cls].ultimate = u;
+
+// Ultimate tuning by role (2026-10-28): a DPS Ultimate hits half again as hard and fills at three quarters the pace (a
+// bigger moment, a little less often); a tank's hits 15% harder at the same pace; a support's is unchanged. The engine
+// applies dmgScale to every hit the Ultimate makes (engine.js damage) and charge.scale to everything that fills it
+// (ultGain); the text is rescaled here so the tooltip's numbers stay exact.
+const ULT_TUNE = {
+  dps: { dmg: 1.5, charge: 0.75, classes: ['ranger', 'shadowblade', 'pyromancer', 'thermist', 'driftblade', 'marionettist', 'thresher', 'houndmaster'] },
+  tank: { dmg: 1.15, charge: 1, classes: ['bastion', 'bloodreaver', 'runeguard', 'gorgemaw', 'oathbroker', 'ironpalm', 'gloomsworn', 'kenseier'] },
+};
+for (const T of Object.values(ULT_TUNE)) for (const cls of T.classes) {
+  const u = ULTIMATES[cls];
+  if (!u || u.dmgScale) continue;
+  u.dmgScale = T.dmg;
+  const dmg = t => (typeof t === 'string' && !u.tuneKeepText ? t.replace(/\{d:(\d+(?:\.\d+)?)\}/g, (m, n) => `{d:${Math.round(n * T.dmg)}}`) : t);
+  u.desc = dmg(u.desc);
+  if (u.window && u.window.over) for (const o of Object.values(u.window.over)) if (o && typeof o.desc === 'string') o.desc = dmg(o.desc);
+  if (T.charge !== 1 && u.charge) {
+    u.charge.scale = (u.charge.scale || 1) * T.charge;
+    const k = u.charge.scale, pct = n => { const v = n * k; return String(v < 1 ? Math.round(v * 100) / 100 : Math.round(v * 10) / 10); };
+    u.desc = u.desc.replace(/(<u>Charge:<\/u>)([\s\S]*?)(<\/span>|$)/, (m, a, body, end) => a + body.replace(/(\d+(?:\.\d+)?)%/g, (x, n) => pct(+n) + '%') + end);
+  }
+}

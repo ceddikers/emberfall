@@ -1482,21 +1482,23 @@ const VFX = (() => {
     // embers. Drawn over the hero, starting off the shoulders so the hero stays readable.
     emberWings(ent, o = {}) {
       const dur = o.dur ?? 8, color = o.color || '#ff8a2a', core = o.core || '#ffe0a0', ink = o.ink || '#4a1406', s = o.s ?? 1.25;
-      fx({ dur, layer: 'air', draw: (c, p, t, e) => {
-        const k = env(p, 0.05, 0.12) * e.a, x = ent.x, y = ent.y - 40 - (ent.lift || 0), beat = 0.85 + 0.15 * Math.sin(t * 6);
+      // (on the hero's back: they turn with its facing and lie under its body, the tips swept back away from where it looks)
+      const hs = () => (typeof FX !== 'undefined' && FX.heroScale) || 1.5, back = () => { const a = ent.angle || 0, d = 7 * hs(); return { a, x: ent.x - Math.cos(a) * d, y: ent.y - Math.sin(a) * d - (ent.lift || 0) }; };
+      fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
+        const B = back(), k = env(p, 0.05, 0.12) * e.a, x = B.x, y = B.y, beat = 0.85 + 0.15 * Math.sin(t * 6);
         const shape = (side, sc) => {
           c.beginPath(); c.moveTo(side * 12 * s, 0);
           c.quadraticCurveTo(side * 30 * s * sc, -34 * s * beat * sc, side * (12 + 46 * sc) * s, -20 * s * beat * sc);
           c.quadraticCurveTo(side * (12 + 30 * sc) * s, -6 * s * sc, side * (12 + 38 * sc) * s, 12 * s * sc);
           c.quadraticCurveTo(side * (12 + 16 * sc) * s, 6 * s * sc, side * 12 * s, 6 * s); c.closePath();
         };
-        c.save(); c.translate(x, y);
+        c.save(); c.translate(x, y); c.rotate(B.a - Math.PI / 2);
         for (const side of [-1, 1]) { shape(side, 1); c.globalAlpha = 0.45 * k; c.lineWidth = 4 * s; c.strokeStyle = ink; c.stroke(); c.globalAlpha = 0.75 * k; c.fillStyle = color; c.fill(); }
         c.globalCompositeOperation = 'lighter';
         for (const side of [-1, 1]) { shape(side, 0.62); c.globalAlpha = 0.8 * k * (0.85 + 0.15 * Math.sin(t * 17 + side)); c.fillStyle = core; c.fill(); }
         c.restore(); c.globalAlpha = 1;
         glowAt(c, x, y, 44 * s, color, 0.3 * k);
-      }, tick: () => { if (Math.random() < 0.35) { const side = Math.random() < 0.5 ? -1 : 1; spawn({ x: ent.x + side * rand(10, 44) * s, y: ent.y, z: 34 + (ent.lift || 0) + rand(-10, 16), vx: side * rand(10, 30), vz: rand(20, 60), life: rand(0.4, 0.8), size: rand(6, 10) * s, size1: 0, color: Math.random() < 0.5 ? color : core }); } } });
+      }, tick: () => { if (Math.random() < 0.35) { const side = Math.random() < 0.5 ? -1 : 1, B = back(), px = -Math.sin(B.a) * side, py = Math.cos(B.a) * side, d = rand(10, 44) * s; spawn({ x: B.x + px * d, y: B.y + (ent.lift || 0) + py * d, z: 10 + (ent.lift || 0) + rand(-4, 12), vx: px * rand(10, 30), vy: py * rand(10, 30), vz: rand(20, 60), life: rand(0.4, 0.8), size: rand(6, 10) * s, size1: 0, color: Math.random() < 0.5 ? color : core }); } } });
     },
   };
 

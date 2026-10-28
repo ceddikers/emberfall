@@ -610,13 +610,16 @@ class Kit {
     // (an item's extra hit is the same "about 30 damage" for every class: it skips the class's balance knob, its own damage
     // and crit modifiers, so a 45%-crit class does not hit a Brand twice as hard as everyone else)
     const flat = !!opts.item;
+    // an Ultimate's hits (itself, its window's moves, the follow-ups it tags ultPart or passes ult: true) by the role's
+    // Ultimate tuning (kits.js ULT_TUNE: def.ultimate.dmgScale)
+    const ab = opts.ab, ultK = !flat && this.ult && this.ult.dmgScale && (opts.ult || (ab && (ab.ult || ab.ultOf || ab.ultPart))) ? this.ult.dmgScale : 1;
     const kitDmg = !flat && this.def.dmgMod ? this.def.dmgMod(this, opts) : 0;
     const gear = this.gear();
     const critChance = opts.autoCrit ? 1 : ENGINE.BASE_CRIT + (gear.crit || 0) + (flat ? 0 : (opts.crit || 0) + (party.crit || 0) + (this.def.critMod ? this.def.critMod(this, opts) : 0)) + this.fxMod('crit');
     const crit = this.rng() < critChance;
     const variance = 0.95 + this.rng() * 0.1;
     const amount = Math.round(pot * ENGINE.POT_SCALE * (flat ? 1 : this.def.potMult || 1) * (1 + kitDmg) * (1 + (gear.power || 0)) * (1 + (party.dmg || 0)) * (1 + (tgt.vuln || 0)) *
-      (1 - (self.dmgDown || 0)) * (1 + (self.dmg || 0)) * (opts.mult || 1) * (crit ? ENGINE.CRIT_MULT : 1) * variance * (1 + this.fxMod('dmg')));
+      (1 - (self.dmgDown || 0)) * (1 + (self.dmg || 0)) * (opts.mult || 1) * ultK * (crit ? ENGINE.CRIT_MULT : 1) * variance * (1 + this.fxMod('dmg')));
     this.stats.damage += amount;
     if (party.dmg || tgt.vuln || self.dmg) this.stats.burstDamage += amount;
     this.stats.last = this.now;
