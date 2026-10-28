@@ -1155,7 +1155,16 @@
     humans.forEach((h, i) => { const a = Math.PI / 2 + (i - (humans.length - 1) / 2) * 0.35; spawns[h.id] = [rnd(Math.cos(a) * sr), rnd(Math.sin(a) * sr)]; });
     hostRoster = humans.map(h => Object.assign({}, h, { spawn: spawns[h.id] }));
     const bond = bondCounts(humans);   // gear party bonuses, fixed for the fight (gear is locked inside a raid)
-    raidHost = new RaidHost({ def, mode, humans: hostHumans, bots: fill ? pickBots(humans) : [], seed: (Math.random() * 1e9) | 0, emit: m => Net.broadcastAll(m), bond: partyBonus(bond), waitPull: true, practiceFrom });
+    // fill-in bots wear the gear this fight is tuned for (bot-gear.js: a party that cleared everything before it), and their
+    // pieces count toward the party bonus like anyone's
+    const botCls = fill ? pickBots(humans) : [], taken = new Set();
+    let botGear = [];
+    try {
+      const lv = BotGear.levelFor(def.id, mode);
+      botGear = botCls.map(cid => { const s = BotGear.slotFor((CLASSES.find(c => c.id === cid) || {}).role, taken); taken.add(s); return lv ? BotGear.forHero(lv, cid, s) : null; });
+      for (const g of botGear) if (g) for (const t of g.src) bond[t] = (bond[t] || 0) + 1;
+    } catch (e) { console.warn('bot gear', e); botGear = []; }
+    raidHost = new RaidHost({ def, mode, humans: hostHumans, bots: botCls, botGear, seed: (Math.random() * 1e9) | 0, emit: m => Net.broadcastAll(m), bond: partyBonus(bond), waitPull: true, practiceFrom });
     const roster = [...humans, ...raidHost.bots.map(b => ({ id: b.id, name: b.name, cls: b.cls.id, spec: b.spec, role: b.role, bot: true }))];
     for (const b of raidHost.bots) spawns[b.id] = [rnd(b.x), rnd(b.y)];
     // (rid names this run; the start message is kept so a rejoining or resyncing player can be put in it: hostSendSnapshot)

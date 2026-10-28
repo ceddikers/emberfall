@@ -62,6 +62,7 @@ class RaidHost {
     this.rng = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
     ARENA.use(this.def.id);
     this.spawnR = Math.min(330, ARENA.inner - 70);   // bots start in a ring below the boss, clear of the walls
+    this.botGear = opts.botGear || [];   // (one per bot, BotGear.forHero: the gear the fight is tuned for; none: base)
     this.bots = (opts.bots || []).map((cid, i) => this.makeBot(cid, i));
     this.pull = new PullLog();   // (the pull review: PullLog above)
     this.seen = new Map();       // what the sim has told the clients that still stands (note() below), for a rejoining or resyncing player's snapshot
@@ -82,6 +83,8 @@ class RaidHost {
       x: Math.cos(spawnA) * this.spawnR, y: Math.sin(spawnA) * this.spawnR, a: -Math.PI / 2, moving: false, plan: null, nextThink: 0,
       taken: [], healTarget: null, nextAct: 0 };
     bot.actor = new CombatActor(cls, bot, this.botWorld(bot), this.rng);
+    const g = this.botGear[i];
+    if (g) { bot.gear = g.host; bot.actor.kit.env.gearMods = () => g.mods; }   // (health and defence on the host, power, crit and haste in the kit)
     return bot;
   }
 
@@ -216,7 +219,7 @@ class RaidHost {
   }
 
   allPlayers() {
-    return [...this.humans(), ...this.bots.map(b => ({ id: b.id, name: b.name, cls: b.cls.id, spec: b.spec, role: b.role, x: b.x, y: b.y, a: b.a, bot: true }))];
+    return [...this.humans(), ...this.bots.map(b => ({ id: b.id, name: b.name, cls: b.cls.id, spec: b.spec, role: b.role, x: b.x, y: b.y, a: b.a, bot: true, gear: b.gear || null }))];
   }
 
   emit(msg) { this.emitOut(msg); }
