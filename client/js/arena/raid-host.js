@@ -654,6 +654,7 @@ class RaidHost {
           }
           case 'heal': case 'hot': case 'shield': case 'mit': case 'raise': case 'rewind':
           case 'selfDamage': case 'targetDebuff': case 'partyBuff': case 'allyBuff': case 'pool': case 'brand': case 'splash': case 'maw': case 'ledger': case 'gloom': case 'lamp':
+          case 'reaper': case 'horn':   // (a Reaper's holds, gathers and fields on adds, a Houndmaster's Hunting Horn: the host did not hear them from a bot before)
           case 'tie': case 'snip': case 'tighten': case 'tapestry': case 'tug': case 'kensei':   // classes-c (and a Kenseier's deflect and Posture)
             host.onPlayerEvent(bot.id, ev);
             // a shield or damage cut on the whole party: its flash on every member (KIT_VFX.partyWard; once for a move that does both)

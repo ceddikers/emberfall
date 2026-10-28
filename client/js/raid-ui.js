@@ -248,6 +248,17 @@ const RaidUI = (() => {
       setX(f.hp, hpF);
       setX(f.trail, f.trailV);
       setW(f.sh, (shF * 100).toFixed(1) + '%');
+      // several shields: each its own run in its caster's class colour, the one that runs out first at the far end (style.css keeps the stripes)
+      const shKey = p.shs && p.shs.length ? p.shs.map(q => q.c + ':' + q.a).join(',') : '';
+      if (f.sh._k !== shKey) {
+        f.sh._k = shKey;
+        if (!shKey) f.sh.style.backgroundImage = '';
+        else {
+          const parts = p.shs.slice().reverse(), tot = parts.reduce((q, x) => q + x.a, 0) || 1; let at = 0;
+          const stops = parts.map(x => { const a0 = at; at += x.a / tot * 100; return `${x.c}e0 ${a0.toFixed(1)}% ${at.toFixed(1)}%`; }).join(', ');
+          f.sh.style.backgroundImage = `repeating-linear-gradient(-45deg, #ffffff40 0 3px, #ffffff00 3px 6px), linear-gradient(90deg, ${stops})`;
+        }
+      }
       const shL = Math.min(100 - shF * 100, hpF * 100).toFixed(1) + '%';
       if (f.sh._l !== shL) { f.sh._l = shL; f.sh.style.left = shL; }
       // a heal being cast on them: a lighter green run on from their health, its expected size (up to full)

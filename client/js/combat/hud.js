@@ -51,9 +51,9 @@ const GAUGE_TIPS = {
     desc: 'You get a Petal every 15s, up to 3; one that grows past 3 blooms by itself onto the most hurt ally. Dawn Petal spends one. Every third Petal spent turns your next Smite into Dawnstar, and a Mend counts as half a Petal (a whole one with none in hand).',
     state: k => (k.g.bloom >= 3 ? 'Dawnstar ready' : `Dawnstar ${k.g.bloom} / 3`) + (k.g.petals < 3 && k.g.petalAt != null ? ` · next Petal ${Math.max(0, Math.ceil(k.g.petalAt - k.now))}s` : ''),
   },
-  grovekeeper: { desc: 'Each Rejuvenate tick gives 5. Bloom spends 50.' },
+  grovekeeper: { desc: 'Each Rejuvenate tick gives 5, and each Thornlash tick 2. Bloom spends 50.' },
   chronomancer: {
-    desc: 'Fills by 3 a second in Slow stance and drains by 5 a second in Haste. Shifting into Haste needs 20. Run dry in Haste and you drop back to Slow with slower casts for 3s.',
+    desc: 'Fills by 3 a second in Slow stance and drains by 4 a second in Haste. Shifting into Haste needs 20. Run dry in Haste and you drop back to Slow with slower casts for 3s.',
     state: k => (k.g.stance === 'haste' ? 'Haste' : 'Slow') + ' stance',
   },
   thermist: {
@@ -123,7 +123,7 @@ const BUFF_TIPS = {
   overload: n => `You deal 10% more damage. ${n('strike')} gives 2 Runes, and ${n('glyph')} and Ward blasts hit harder.`,
   living: n => `You deal 10% more damage, ${n('strike')} gives 2 Runes, and ${n('glyph')} and Ward blasts hit harder. Every Rune you spend fires a bolt at the boss.`,
   answer: n => `Your next ${n('strike')} gives an extra Rune.`,
-  markself: n => `Keen Eye lights up more often, your critical chance is 10% higher, and ${n('rapid')} costs 25 Focus. A Keen Eye cashed while a second is banked readies ${n('barrage')} again.`,
+  markself: (n, k) => `Keen Eye lights up more often, your critical chance is 10% higher, and ${n('rapid')} costs ${(k && k.def && k.def.markRapid) || 25} Focus. A Keen Eye cashed while a second is banked readies ${n('barrage')} again.`,
   keen: n => `Your next ${n('pierce')} hits harder and gives its charge back. Banks up to two.`,
   smoulder: () => 'Your Heat can\'t boil over: it stops at 99.',
   oncue: n => `Your next ${n('cross')} cuts twice as hard and gives 1 more Encore.`,
@@ -137,7 +137,7 @@ const BUFF_TIPS = {
   aim: () => 'You deal 4% more damage for each stack. Moving loses them all.',
   truenorth: () => 'Every hit counts as a positional, wherever you stand.',
   dance: n => `Your attacks are faster, every positional lands, and ${n('evis')} hits 25% harder.`,
-  feint: n => `Your next ${n('evis')} hits 12% harder. After a Strike from the front it also lands as a hit from the side, wherever you stand.`,
+  feint: n => `Your next ${n('evis')} hits 12% harder. After a Strike from the front it also lands as a hit from ${n('evis') === 'Backstab' ? 'behind' : 'the side'}, wherever you stand.`,
   sprinted: () => 'Your next Strike hits 80% harder.',
   sharpen: n => `Every combo point you gain sharpens your next ${n('evis')} by 2.5% (up to 12.5%), and a point that spills sharpens it 12%. Each stack is 2.5%.`,
   combust: () => 'Everything you cast is a critical hit.',
@@ -147,7 +147,7 @@ const BUFF_TIPS = {
   haze: n => `Your next ${n('fireball')} is instant and 35% harder.`,
   firestep: n => `Your next ${n('fireball')} is instant and 30% harder.`,
   incircle: () => 'While you stand in your circle you cast 20% faster and deal 15% more damage.',
-  quickmend: n => `Your next ${n('mend')} is instant${n('mend') === 'Mend' ? ' and heals half again as much' : ''}.`,
+  quickmend: n => `Your next ${n('mend')} is instant${n('mend') === 'Mend' ? ' and heals half again as much, and counts as a whole Petal' : ''}.`,
   verdict: n => `Your next ${n('smite')} is instant.`,
   growth: n => `Your heals are 25% stronger, and ${n('bloom')} heals the whole party.`,
   moonlit: n => `Your heals are 25% stronger, and ${n('bloom')} heals the whole party.`,
@@ -179,7 +179,7 @@ const BUFF_TIPS = {
   opening: () => 'Your next Heavy is a free Thousand Palms, 30% stronger.',
   wind: () => 'Breath refills twice as fast, and you deal 10% more damage.',
   skin: () => 'You take 40% less damage, and your Breath refills at its resting pace.',
-  rush: () => 'You deal 2% more damage for each stack. Break or drop a string and it\'s gone.',
+  rush: () => 'You deal 2% more damage for each stack. A string you break costs you 2, and it all fades 4s after your last named move.',
   stagger: () => 'You lost your string: you can\'t act for a moment.',
   guard: () => 'Your presses hit 35% harder.',
   pond: () => 'You take 25% less damage, and Read comes back moments after you use it.',
@@ -219,12 +219,25 @@ Object.assign(BUFF_TIPS, {
   turned: n => `You turned a tankbuster aside: your next ${n('edge')} costs no Resolve.`,
   banner: () => 'The banner stands: every Perfect Block gives 10 more Resolve.',
 });
+// the Bastion's and Bloodreaver's spec-row windows (Rebuke, Pyre, Phalanx, Aegis; Death Throes, Crimson Pact)
+Object.assign(BUFF_NAMES, { rebuke: 'Rebuke', pyre: 'Pyre', phalanx: 'Phalanx', aegis: 'Aegis', throes: 'Death Throes', pact: 'Crimson Pact' });
+Object.assign(BUFF_ICON, { rebuke: 'edge', pyre: 'bulwark', phalanx: 'brace', aegis: 'bulwark', throes: 'drain', pact: 'frenzy' });
+Object.assign(BUFF_TIPS, {
+  rebuke: n => `Your next ${n('edge')} costs no Resolve and strikes half again as hard.`,
+  pyre: () => 'Every Perfect Block you make while the guard stands is stored. When it ends they come down on the boss as light.',
+  phalanx: n => `Each Perfect Block locked one more shield into the line. ${n('edge')} sends them all out to the party.`,
+  aegis: () => 'The dome stands: you take 25% less damage and the party 15% less, and every Perfect Block heals the party.',
+  throes: n => `Your next ${n('drain')}s cost nothing and run warm.`,
+  pact: n => `You deal 8% more damage, and the healing ${n('drain')} gives you flows to the whole party at three quarters of its strength.`,
+});
 // the spec rows (VI, VII) of the Driftblade and the Ironpalm: the windows a talent leaves open
-Object.assign(BUFF_NAMES, { ricochet: 'Ricochet', zenith: 'Zenith', roost: 'Roost', flood: 'Flood Tide', calm: 'Calm Before the Blow', heron: 'Heron\'s Stance' });
-Object.assign(BUFF_ICON, { ricochet: 'hook', zenith: 'cross', roost: 'gale', flood: 'palm', calm: 'read', heron: 'read' });
+Object.assign(BUFF_NAMES, { ricochet: 'Ricochet', zenith: 'Zenith', roost: 'Roost', starwind: 'Starwind', heldbreath: 'Held Breath', flood: 'Flood Tide', calm: 'Calm Before the Blow', heron: 'Heron\'s Stance' });
+Object.assign(BUFF_ICON, { ricochet: 'hook', zenith: 'cross', roost: 'gale', starwind: 'gale', heldbreath: 'cross', flood: 'palm', calm: 'read', heron: 'read' });
 Object.assign(BUFF_TIPS, {
   ricochet: n => `Impact lit the way back: your next ${n('hook')} also flings you back through the boss, a Passing Strike, and gives 20 more Drift.`,
   zenith: n => `Your charge hangs at its peak: Drift cannot drain, and ${n('cross')} needs only 60.`,
+  starwind: () => 'The star left a wind behind: your Drift cannot drain. With Hurricane every Passing Strike stretches it and feeds it Drift; with Galeforce a last blade of wind comes when it dies.',
+  heldbreath: n => `The strings are drawn tight: your next ${n('cross')} cuts half again as hard.`,
   roost: () => 'Settled on the wind: your Orbit stays full whether you circle or not, Carve cuts on its own every second, and your Drift holds.',
   flood: () => 'The tide is in: your next two named moves each wash out a second blow.',
   calm: () => 'Your presses cost no Breath.',
@@ -500,8 +513,9 @@ const Hud = {
     const pool = this._bPool || (this._bPool = []);
     let n = 0;
     for (const [id, b] of k.buffs) {
-      if (!(b.end > now && BUFF_NAMES[id]) || (BUFF_HIDDEN_BY[id] && k.has(BUFF_HIDDEN_BY[id]))) continue;
-      this._bput(pool, n++, id, BUFF_NAMES[id], BUFF_UNTIMED.has(id) ? undefined : b.end - now, b.stacks, BAD_BUFFS.has(id), false, '', '', '', true);
+      const own = buffOwn(a.cls.id, id);   // (an id two classes use for different things: this class's own name, icon and tip, BUFF_OWN)
+      if (!(b.end > now && (own || BUFF_NAMES[id])) || (BUFF_HIDDEN_BY[id] && k.has(BUFF_HIDDEN_BY[id]))) continue;
+      this._bput(pool, n++, id, own ? own.name : BUFF_NAMES[id], BUFF_UNTIMED.has(id) ? undefined : b.end - now, b.stacks, BAD_BUFFS.has(id), false, '', '', '', true);
     }
     for (const x of this.extra()) this._bput(pool, n++, x.id, x.name, x.left, x.stacks, !!x.bad, !!x.bond, x.label || '', x.img || '', x.tip || '', false);
     for (const x of k.itemBuffs()) this._bput(pool, n++, x.id, x.name, x.left, x.stacks, !!x.bad, !!x.bond, x.label || '', x.img || '', x.tip || '', false);   // buffs from item effects
@@ -513,7 +527,8 @@ const Hud = {
       this._bCls = a.cls.id;
       const icon = b => {
         if (b.img) return `<u class="bf-icon" style="background-image:url(${b.img})"></u>`;   // (another class's art: an ally's buff on you)
-        if (BUFF_ICON[b.id]) return `<u class="bf-icon" style="background-image:url(${abilityIcon(a.cls.id, BUFF_ICON[b.id])})"></u>`;
+        const ow = buffOwn(a.cls.id, b.id), ic = ow ? ow.icon : BUFF_ICON[b.id];
+        if (ic) return `<u class="bf-icon" style="background-image:url(${abilityIcon(a.cls.id, ic)})"></u>`;
         // the shared status icons (status-icons.js): painted once its file is in, a drawn glyph until then
         const sid = String(b.id), st = STATUS_GLYPH[sid] ? sid : sid.startsWith('d-') ? sid.slice(2) : b.bond ? 'bond' : sid.startsWith('fx-') ? 'fx' : '';
         return `<u class="bf-icon g">${st ? statusIcon(st) : `<em>${(b.name || '?')[0]}</em>`}</u>`;
@@ -551,9 +566,10 @@ const Hud = {
     let b = null;
     for (let i = 0; i < R.length; i++) if (pool[i] && pool[i].id === id) { b = pool[i]; break; }
     if (!b) return '';
-    if (b.own && BUFF_TIPS[id] && k) {
+    const ow = b.own && this.actor ? buffOwn(this.actor.cls.id, id) : null, tipFn = ow ? ow.tip : BUFF_TIPS[id];
+    if (b.own && tipFn && k) {
       const nm = base => { const ab = k.abilities.find(x => (x.replaces || x.id) === base); return ab ? ab.name : base; };
-      return `<b>${BUFF_NAMES[id]}${b.stacks > 1 ? ` ×${b.stacks}` : ''}</b>${b.left != null ? `<em>${Math.ceil(b.left)}s</em>` : ''}${BUFF_TIPS[id](nm)}`;
+      return `<b>${ow ? ow.name : BUFF_NAMES[id]}${b.stacks > 1 ? ` ×${b.stacks}` : ''}</b>${b.left != null ? `<em>${Math.ceil(b.left)}s</em>` : ''}${tipFn(nm, k)}`;
     }
     const head = `<b>${b.name}${b.stacks > 1 ? ` ×${b.stacks}` : ''}</b>${b.left != null ? `<em>${Math.ceil(b.left)}s</em>` : b.label ? `<em>${b.label}</em>` : ''}`;
     return head + (b.tip ? tipAttr(b.tip) : '');
@@ -668,6 +684,22 @@ Object.assign(BUFF_TIPS, {
   bottomless: () => 'Your jaw is open, raidwides too: they go into your Belly like any other edible hit.',
   stone: () => 'You take less damage, and everything you eat becomes a Spike.',
 });
+// the Gorgemaw talents whose proc shows in the tracker (Iron Jaw, Grinder, Gastric Reflex, Feeding Frenzy)
+Object.assign(BUFF_NAMES, { ironbite: 'Iron Jaw', grinding: 'Grinder', reflexgut: 'Gastric Reflex', twice: 'Feeding Frenzy' });
+Object.assign(BUFF_ICON, { ironbite: 'wide', grinding: 'digest', reflexgut: 'digest', twice: 'bottomless' });
+Object.assign(BUFF_TIPS, {
+  ironbite: () => 'Your jaw is open: every Morsel you eat comes as two, and a Spike you eat takes 30s off the recharge of your gut.',
+  grinding: () => 'Every Morsel you eat is digested at once, its protection counts twice, and the grind bites the boss.',
+  reflexgut: n => `${n('digest')} counts its Morsels twice and works in any moment.`,
+  twice: () => 'Every Morsel you eat comes as two: a copy of it joins the Belly.',
+});
+// the Runeguard talents whose proc shows in the tracker (Foreseen Ward, Counterstroke)
+Object.assign(BUFF_NAMES, { foreseen: 'Foreseen Ward', counter: 'Counterstroke' });
+Object.assign(BUFF_ICON, { foreseen: 'ward', counter: 'glyph' });
+Object.assign(BUFF_TIPS, {
+  foreseen: n => `The boss has begun a cast: your next ${n('ward')} costs no Rune.`,
+  counter: n => `Your next ${n('glyph')} costs two Runes instead of 3 and hits a quarter harder.`,
+});
 GAUGE_TIPS.gorgemaw = {
   desc: 'An edible hit that lands in your open jaw deals a quarter of its damage and goes in as a Morsel of its shape: circles are Rings, lines Lances, cones Fangs, a tankbuster a Spike. Gulp swallows a Ring into an empty Belly (once every 20s). Spit fires the oldest back at the boss; Digest takes all of them, and its acid makes the next Spit 50% harder for each (up to twice as hard). A full Belly wastes what you eat next.',
   state: k => (k.g.belly.length ? 'next Spit: ' + MAW.NAMES[k.g.belly[0].m] + (k.def.fuse && k.g.belly.length > 1 && k.g.belly[0].m === k.g.belly[1].m ? ' (' + MAW.FUSION[k.g.belly[0].m] + ')' : '') + (k.has('acid') ? ` +${Math.round(k.buffs.get('acid').data.x * 100)}% acid` : '') : 'empty'),
@@ -710,13 +742,15 @@ GAUGE_TIPS.oathbroker = {
 
 // ======================================================================= Gloomsworn (tank, class 18)
 // Placeholder drawn icons (art.icons === false in data.js) and the gauge's tooltip; the painted set replaces them later.
-Object.assign(BUFF_NAMES, { hollow: 'Hollow', shade: 'Shade', mantle: 'Black Mantle', omen: 'Ill Omen' });
-Object.assign(BUFF_ICON, { hollow: 'rite', shade: 'shade', mantle: 'mantle', omen: 'rend' });
+Object.assign(BUFF_NAMES, { hollow: 'Hollow', shade: 'Shade', mantle: 'Black Mantle', omen: 'Ill Omen', cover: 'Cover', wardmantle: "Warden's Mantle" });
+Object.assign(BUFF_ICON, { hollow: 'rite', shade: 'shade', mantle: 'mantle', omen: 'rend', cover: 'strike', wardmantle: 'wardmantle' });
 Object.assign(BUFF_TIPS, {
   hollow: n => `You cannot fall below 1 HP and you deal 30% more damage. Everything you take is written down as a debt: your healer must heal at least that much before the grace after it ends, or you fall. A Sentinel covers the party (15% less damage) while it lasts; a Reaver of Dusk's ${n('strike')} echoes and Dusk Reave costs nothing.`,
   shade: n => `Your next ${n('strike')}s echo, hitting again for 85%.`,
   mantle: () => 'You take 40% less damage.',
   omen: n => `Your next ${n('rend')} strike builds 20 extra Gloom.`,
+  cover: n => `Your next ${n('strike')} within the moment needs and spends no Gloom, and the barrier it lays on the most hurt ally is doubled.`,
+  wardmantle: () => 'You take 40% less damage, and every hit that gets through lays a barrier on the most hurt ally (one a second).',
 });
 GAUGE_TIPS.gloomsworn = {
   desc: 'Every hit of yours fills 8 Gloom, every hit you take 6. Gloom Strike spends 40, Black Pall 30, Last Rite all of it. Out of combat it drains slowly. When Gloom is full and a blow would kill you, you go Hollow instead: held at 1 HP for 8s, 30% more damage, every wound written down as a debt that your healer must heal back in the 4s after, or you fall. Once a minute.',
@@ -832,7 +866,7 @@ Object.assign(BUFF_TIPS, {
   frenzy: () => 'Insane Reaper: the party acts 10% faster (it stacks with other party haste), and your own swings come faster still.',
   deathmark: () => 'Your next hits strike 30% harder (each swing or finisher uses one).',
   gatebreaker: () => 'Gatebreaker: your finishers, Snaps and the release strike 25% harder until the Gate closes.',
-  blinked: () => 'Phantom: your next finisher teleports you to the far side of the target.',
+  blinked: (nm, k) => (k && k.def && k.def.phantom ? 'Phantom: your next finisher teleports you to the far side of the target.' : 'You have just blinked.'),
   stepthrough: () => 'Your next string starts at swing 3, and its finisher hits twice as hard.',
   tollstep: () => 'Your next string starts at swing 3, and its finisher hits 30% harder.',
   afterimage: () => 'An afterimage waits: your next finisher is repeated at 50%.',
@@ -1093,6 +1127,19 @@ GAUGE_TIPS.lanternkeeper = {
   },
   extra: () => '<div style="margin-top:6px;opacity:.85">The coals in the cage are your Embers; the ring on the next one closes as it comes back. The sparks are your Trims toward the next Ember. Each small lantern beside it is a light you have out, its flame its wick: red is nearly a stub.</div>',
 };
+
+// A buff id that two classes use for different things (the shared tables above hold the other class's): this class's own name, icon and tip.
+// Kenseier: 'guard' is Ironpalm's Guard Open and 'mantle' the Gloomsworn's Black Mantle in them; its Iai Stance, Ember Duel and Killing Edge had no tracker at all.
+const BUFF_OWN = {
+  kenseier: {
+    guard: { name: 'Guard Stance', icon: 'guard', tip: (n, k) => `Every deflect of yours also shields the nearest ${k.talent('kenseier_fireside') ? 'two allies' : 'ally'}.` },
+    mantle: { name: 'Ash Mantle', icon: 'mantle', tip: (n, k) => `You take 40% less damage, and any press near a blow counts as a Good deflect at least (a longer window).${k.talent('kenseier_unbroken') ? ' A deflect that catches nothing costs no Poise.' : ''}` },
+    iai: { name: 'Iai Stance', icon: 'iai', tip: () => 'Your next Perfect deflect is followed at once by a counter-cut.' },
+    duel: { name: 'Ember Duel', icon: 'duel', tip: () => 'The boss strikes to a steady beat, every 2s, each swing a quarter lighter, and every Perfect deflect adds double Posture.' },
+    killing: { name: 'Killing Edge', icon: 'deathblow', tip: () => 'The boss takes 5% more damage from you.' },
+  },
+};
+function buffOwn(cls, id) { const o = BUFF_OWN[cls]; return (o && o[id]) || null; }
 
 // ======================================================================= Kenseier (tank, class 22)
 // Drawn icons (art.icons === false in data.js) and the gauge's tooltip; the painted set replaces them later. Ash grey, charcoal, ember orange.

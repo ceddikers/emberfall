@@ -997,7 +997,7 @@ Object.assign(PRO, {
     if (ready(k, 'reneg') && weaveOk(k) && oathDueSoon(k, 1.2) > hp * 0.12) return I(k, 'reneg');
     // (the Ledger is left to grow for a Default that's nearly back)
     const hoard = def.id === 'default' && k.cdRemaining(def) < 10 && tot < hp * 0.5;
-    if (ready(k, 'settle') && weaveOk(k) && def.id !== 'foreclose' && !hoard && (abOf(k, 'settle').id === 'audit' ? oathAuditable(k).reduce((s, e) => s + e.a, 0) > hp * 0.12 : tot > hp * 0.22)) return I(k, 'settle');
+    if (ready(k, 'settle') && weaveOk(k) && (def.id !== 'foreclose' || (k.talent('oathbroker_stamp') && k.cdRemaining(def) > 14)) && !hoard && (abOf(k, 'settle').id === 'audit' ? oathAuditable(k).reduce((s, e) => s + e.a, 0) > hp * 0.12 : tot > hp * (def.id === 'foreclose' ? 0.12 : 0.22))) return I(k, 'settle');
     if (k.gcdRemaining() > 0.0001) return null;
     return I(k, 'collect');
   },

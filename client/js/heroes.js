@@ -1112,10 +1112,14 @@ function drawHeroStatus(ctx, x, y, scale, cls, s, buffs, t) {
   }
   if (s.shield > 0.5 || s.mit > 0) {
     // the shell: a faint dome round the body with a highlight turning on it (pale for a shield, the class colour for a defensive)
-    const col = s.shield > 0.5 ? '#dcecff' : (cls && cls.accent) || '#dcecff', a0 = t * 1.7;
-    ellipse(ctx, 0, -1, 21, 22, 0, rgba(col, 0.06), rgba(col, 0.3), 1.3);
-    ctx.strokeStyle = rgba(col, 0.75); ctx.lineWidth = 1.8; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.ellipse(0, -1, 21, 22, 0, a0, a0 + 0.9); ctx.stroke();
+    // (several shields: a shell each, in its caster's class colour, the outermost the one that runs out first)
+    const shells = s.shield > 0.5 ? (s.shs && s.shs.length ? s.shs.slice(0, 3).map(q => q.c) : ['#dcecff']) : [(cls && cls.accent) || '#dcecff'];
+    shells.forEach((col, i) => {
+      const r = 21 + (shells.length - 1 - i) * 3.5, a0 = t * 1.7 + i * 2.1;
+      ellipse(ctx, 0, -1, r, r + 1, 0, rgba(col, 0.06), rgba(col, 0.3), 1.3);
+      ctx.strokeStyle = rgba(col, 0.75); ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.ellipse(0, -1, r, r + 1, 0, a0, a0 + 0.9); ctx.stroke();
+    });
   }
   if (s.vuln) {
     const pz = 0.5 + 0.5 * Math.sin(t * 6), col = rgba('#ff3a2a', 0.3 + 0.35 * pz);

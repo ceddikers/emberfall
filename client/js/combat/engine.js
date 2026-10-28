@@ -250,7 +250,7 @@ class Kit {
   abById(id) { return this.abilities.find(a => a.id === id); }
   recast(ab) {
     let r = typeof ab.cd === 'function' ? ab.cd(this) : (ab.cd || 0);
-    if (r) { const m = this.talentMod('cd', ab); r = Math.max(1, ab.replaces && m < 0 ? Math.max(r * 0.75, r + m) : r + m); }   // talents: shorter cooldowns (talents.js `cd`); a spec's replacement move keeps at least three quarters of its own cooldown (a cut sized for the base move, e.g. Long Thread on Severance)
+    if (r) { const own = this.talentMod('cd', ab, true), m = this.talentMod('cd', ab) - own; r = Math.max(1, (ab.replaces && m < 0 ? Math.max(r * 0.75, r + m) : r + m) + own); }   // talents: shorter cooldowns (talents.js `cd`); a spec's replacement move keeps at least three quarters of its own cooldown against a cut sized for the base move (e.g. Long Thread on Severance), but not against a number the spec sized for its own move (specMods: Condemn's Benevolence)
     return r && ab.type === 'ogcd' ? r * (1 - Math.min(0.3, this.fxMod('recast'))) : r;   // item effects: shorter oGCD cooldowns
   }
   refreshCharges(ab) {
@@ -321,7 +321,7 @@ class Kit {
   // the base ability a move stands for (a spec's replacement names the one it took over)
   baseId(ab) { return ab.replaces || ab.id; }
   // the summed `cd` or `cast` change (seconds) the held talents make to this ability
-  talentMod(kind, ab) {
+  talentMod(kind, ab, ownOnly = false) {
     const t = this.env.talents && this.env.talents();
     if (!t || !t.size || typeof TALENT_BY_ID === 'undefined') return 0;
     let v = 0;
@@ -329,6 +329,7 @@ class Kit {
     for (const id of t) {
       const d = TALENT_BY_ID[id]; if (!d) continue;
       const over = d.t.specMods && d.t.specMods[spec] && d.t.specMods[spec][kind];   // a spec's own number (talents.js specMods)
+      if (ownOnly && !over) continue;   // (ownOnly: just the numbers a spec sized for its own move; recast below)
       const m = over || d.t[kind];
       if (m && m[base]) v += m[base];
     }
@@ -648,14 +649,14 @@ class Kit {
   }
   heal(target, potency, opts = {}) {
     const { amount, crit } = this.healAmount(potency, opts);
-    this.env.emit({ type: 'heal', target, amount, crit, ab: opts.ab });
+    this.env.emit({ type: 'heal', target, amount, crit, ab: opts.ab, not: opts.not });
     this.itemHook('heal');
     return amount;
   }
   // Heal a fixed number of HP (for heals based on damage taken / dealt rather than potency).
   healRaw(target, amount, opts = {}) {
     amount = Math.round(amount * (1 + (this.def.healMod ? this.def.healMod(this, opts) : 0)) * (1 + (this.gear().power || 0)) * (1 + this.fxMod('heal')));
-    this.env.emit({ type: 'heal', target, amount, crit: false, ab: opts.ab });
+    this.env.emit({ type: 'heal', target, amount, crit: false, ab: opts.ab, not: opts.not });
     this.itemHook('heal');
     return amount;
   }
@@ -674,14 +675,16 @@ class Kit {
     this.env.emit({ type: 'hot', target, amount, ticks, interval, ab: opts.ab, id: opts.id || (opts.ab && opts.ab.id) });
     this.itemHook('heal');
   }
+  // what a shield of this potency comes to (no crit, no spread): shield() and the wards a splash carries (opts.not on shield: an ally to leave out of 'lowest')
+  shieldAmount(potency, opts = {}) { return Math.round(potency * ENGINE.POT_SCALE * (1 + (this.def.healMod ? this.def.healMod(this, opts) : 0)) * (1 + (this.gear().power || 0)) * (1 + this.fxMod('heal'))); }
   shield(target, potency, dur, opts = {}) {
-    const amount = Math.round(potency * ENGINE.POT_SCALE * (1 + (this.def.healMod ? this.def.healMod(this, opts) : 0)) * (1 + (this.gear().power || 0)) * (1 + this.fxMod('heal')));
-    this.env.emit({ type: 'shield', target, amount, dur, ab: opts.ab, tag: opts.tag });
+    const amount = this.shieldAmount(potency, opts);
+    this.env.emit({ type: 'shield', target, amount, dur, ab: opts.ab, tag: opts.tag, not: opts.not, sk: opts.ab && typeof opts.ab === 'object' ? opts.ab.id : (typeof opts.ab === 'string' ? opts.ab : undefined) });   // (sk: which shield it is; a recast of the same one replaces it, others stack: fight.js giveShield)
     this.itemHook('heal');
     return amount;
   }
   // Damage reduction on a player (or 'party'). kind: undefined | 'brace' | 'reflect' | 'living' | 'invuln'
-  mitigate(target, pct, dur, opts = {}) { this.env.emit({ type: 'mit', target, pct, dur, ab: opts.ab, kind: opts.kind }); }
+  mitigate(target, pct, dur, opts = {}) { this.env.emit({ type: 'mit', target, pct, dur, ab: opts.ab, kind: opts.kind, tag: opts.tag }); }   // (opts.tag 'sus:x': a cut re-sent every second while a condition holds; the host keeps ONE of it per caster and tag and only pushes its end out, fight.js 'mit')
   partyBuff(kind, value, dur, opts = {}) { this.env.emit({ type: 'partyBuff', kind, value, dur, ab: opts.ab }); }
   // A buff on ONE chosen ally (ALLY_BUFFS names it): kind 'dmg' (damage dealt) or 'haste'. The host keeps it per player
   // (raid-host.js allyBuffs), tells everyone ('abuff'), and the ally's own kit reads it through env.selfMods().

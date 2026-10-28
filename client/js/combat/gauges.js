@@ -916,7 +916,7 @@ Object.assign(GAUGES, {
       const x = cx + (i - 1.5) * 26, y = cy + R + 16, up = tm.includes(id), col = COL[id];
       if (up) glow(c, x, y, 13, col, 0.5);
       circle(c, x, y, 7, up ? col : '#14111e', up ? '#fff' : '#4a4862', 1.6);
-      if (up && rec && rec[id]) { const fr = Math.max(0, Math.min(1, (rec[id].until - now) / 20)); rrect(c, x - 8, y + 11, 16, 3, 1.5, '#120e1c'); rrect(c, x - 8, y + 11, Math.max(1.5, 16 * fr), 3, 1.5, col); }
+      if (up && rec && rec[id]) { const fr = Math.max(0, Math.min(1, (rec[id].until - now) / Math.max(1, rec[id].until - (rec[id].at || rec[id].until - 20)))); rrect(c, x - 8, y + 11, 16, 3, 1.5, '#120e1c'); rrect(c, x - 8, y + 11, Math.max(1.5, 16 * fr), 3, 1.5, col); }
     });
   },
 });

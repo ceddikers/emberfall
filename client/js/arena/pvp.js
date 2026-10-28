@@ -151,7 +151,7 @@ class PvpSim extends FightSim {
     if (this.teamOf(tid) !== this.teamOf(fromId)) return;
     super.applyHeal(fromId, tid, this.sudden ? amount * 0.5 : amount, false);
   }
-  giveShield(from, tid, ts, amount, dur) { if (this.teamOf(tid) === this.teamOf(from)) super.giveShield(from, tid, ts, amount, dur); }
+  giveShield(from, tid, ts, amount, dur, key, tag) { if (this.teamOf(tid) === this.teamOf(from)) super.giveShield(from, tid, ts, amount, dur, key, tag); }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

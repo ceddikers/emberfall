@@ -1497,6 +1497,9 @@ const BOT_CLASS = {
       // Thermocline (a Zenith's, in Cinder Bolt's place): held at the edge it lights a Corona by itself, once every 4s
       const tcI = idx('cinder'), tcA = tcI >= 0 ? k.abilities[tcI] : null;
       if (tcA && tcA.hold && Math.abs(t) === 5 && k.stacks('corona') < 1 && ok(tcI) && k.glows(tcA)) return tcI;
+      // Absolute Zero (in Rime Shard's place): not a step on the way, a plunge. From 4 or more on the hot side (a Zenith with its Corona built) it is the Shock; otherwise it waits
+      const azI = idx('rime'), azA = azI >= 0 ? k.abilities[azI] : null;
+      if (azA && azA.id === 'zero' && t >= 4 && (!k.def.corona || k.stacks('corona') >= 2) && ok(azI)) return azI;
       const plan = thermPlan(k), dir = plan === 'cinder' || plan === 'flare' ? 1 : -1;
       const brink = k.has('brink') ? k.buffs.get('brink').data.el : 0, sb = k.def.stepBonus || 0;
       // (Latent Heat: the window is short, a big spell would land after it closed: swing back with the instant one)
@@ -1504,8 +1507,10 @@ const BOT_CLASS = {
       if (k.g.lwin) order.unshift(dir > 0 ? 'cinder' : 'rime');
       for (const id of [...new Set(order)]) {
         const i = idx(id), a = k.abilities[i];
-        if (!ok(i) || a.hold || (moving && k.castTime(a))) continue;
+        if (!ok(i) || a.hold || a.id === 'zero' || (moving && k.castTime(a))) continue;   // (Absolute Zero is pressed above, never as an ordinary rime step)
         const el = a.el || 0, big = id === 'flare' || id === 'lance';
+        // Thermocline (a Pendulum's or the base kit's, in Cinder Bolt's place) swings two steps AWAY from the side the dial is on: only when that is the way the plan goes
+        if (a.id === 'thermocline' && (Math.abs(t) < 1 || (t > 0 ? -1 : 1) !== dir)) continue;
         if (el && brink === el) continue;
         if (el && !(big && thermEdgeCast(k, el)) && Math.abs(t + el * ((big ? 2 : 1) + sb)) > 5) continue;
         return i;
@@ -1563,7 +1568,7 @@ const BOT_CLASS = {
       if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
       const cross = idx('cross'), impact = k.abilities[cross].id === 'impact';
       // Galeforce: the Drift held when Gale Run ends is the closing blade, so Crosswind waits out the last seconds of the run
-      if (k.talent('driftblade_galeforce') && k.has('gale') && k.remaining('gale') < 3 && ok(0)) return 0;
+      if (k.talent('driftblade_galeforce') && ['gale', 'roost', 'starwind'].some(r => k.has(r) && k.remaining(r) < 3) && ok(0)) return 0;
       if (ok(cross) && (k.g.drift >= full * 0.92 && (!impact || (flank && calm)))) return cross;
       if (k.ultWin && ok(cross) && k.g.drift >= 60) return cross;   // (Gale Line spends only 30)
       if (ok(0)) return 0;
@@ -1963,7 +1968,7 @@ Object.assign(BOT_CLASS, {
       const feastWait = k.talent('gorgemaw_triple') && b.length === 2 && b[0].m === b[1].m && max >= 3;
       // banking: a lone Morsel is kept (for the Digest, a pair, the Cud) and spat at two or more, a full Belly, a held Spike, or with the acid on it
       const spikeHeld = b.some(m => m.m === 'spike'), acidUp = k.has('acid') && b.length > 0;
-      if (ok(sp) && !sour && !feastWait && (acidUp || (regur ? b.length >= Math.min(2, max) : giz ? b.length >= max : k.def.fuse ? (b.length >= 2 && b[0].m === b[1].m) || b.length >= max - 1 || spikeHeld : b.length >= 2 || spikeHeld))) return sp;
+      if (ok(sp) && !sour && !feastWait && (acidUp || (regur ? b.length >= Math.min(2, max) : giz ? b.length >= max : k.def.fuse ? (b.length >= 2 && b[0].m === b[1].m) || b.length >= max - 1 || spikeHeld : k.talent('gorgemaw_overflow') ? b.length >= max || spikeHeld : b.length >= 2 || spikeHeld))) return sp;   // (Second Stomach: a Morsel eaten into a full Belly is spat back at once, so a bot holding it keeps the Belly full)
       return ok(0) ? 0 : null;
     },
   },
@@ -1992,7 +1997,7 @@ Object.assign(BOT_CLASS, {
       const st = idx('settle'), audit = k.abilities[st].id === 'audit';
       // (Escrow and Tithe pay for a long Ledger left to come due, so a bot holding either lets it grow before it settles)
       const books = k.talent('oathbroker_escrow') || k.talent('oathbroker_tithe');
-      if (ok(st) && weave && !fore && !partySoon && !myBuster && (audit ? oathAuditable(k).reduce((s, e) => s + e.a, 0) > H * (books ? 0.15 : 0.1) : (tot > H * (books ? 0.32 : 0.22) && hp > H * 0.6) || tot > H * (books ? 0.5 : 0.4))) return st;
+      if (ok(st) && weave && (!fore || (k.talent('oathbroker_stamp') && k.cdRemaining(k.abilities[df]) > 14)) && !partySoon && !myBuster && (audit ? oathAuditable(k).reduce((s, e) => s + e.a, 0) > H * (books ? 0.15 : 0.1) : (tot > H * (books ? 0.32 : 0.22) && hp > H * 0.6) || tot > H * (books ? 0.5 : 0.4))) return st;
       const li = idx('lien');
       if (k.abilities[li].id === 'cosign') {
         const held = k.g.cosign != null && k.g.cosignUntil > k.now + 2;
@@ -2253,9 +2258,12 @@ BotAI.lanternkeeper = function (bot, k, view) {
       // (Long Toss: each Carry lands with a pulse, so with the talent it goes on cooldown while someone is hurt and a lantern is in reach)
       if (n && lt('longtoss') && hurtN >= 1 && !BotAI.danger(bot, me.x, me.y, view)) return carry;
     }
-    if (ca && ca.id === 'trail' && ready(carry) && g.lan.filter(l => l.kind === 'small').length >= 3 && covers(g.lan.filter(l => l.kind === 'small').slice(-1)[0]) < 2 && nearMe < 2) return carry;
+    // (Trailblaze is a dash: never while turning walls are up, Volkar's Storm Walls, where it can carry her into an arm)
+    if (ca && ca.id === 'trail' && ready(carry) && g.lan.filter(l => l.kind === 'small').length >= 3 && covers(g.lan.filter(l => l.kind === 'small').slice(-1)[0]) < 2 && nearMe < 2 && !(view.sweeps || []).some(sw => view.t > sw.startAt - 1.5 && view.t < sw.end)) return carry;
     // Pathfinder: Trailblaze drops two small lights that heal double, so it goes in while the Stride runs and someone is hurt; Night Walk: it tops up every light it drags
-    if (ca && ca.id === 'trail' && ready(carry) && nearMe >= 1 && ((lt('pathfinder') && k.now < (g.strideUntil || 0) && hurtN >= 1) || (lt('nightwalk') && g.lan.filter(l => l.kind === 'small' && l.wick < 0.6).length >= 2)) && !BotAI.danger(bot, me.x, me.y, view)) return carry;
+    if (ca && ca.id === 'trail' && ready(carry) && nearMe >= 1 && !(view.sweeps || []).some(sw => view.t > sw.startAt - 1.5 && view.t < sw.end) && ((lt('pathfinder') && k.now < (g.strideUntil || 0) && hurtN >= 1) || (lt('nightwalk') && g.lan.filter(l => l.kind === 'small' && l.wick < 0.6).length >= 2)) && !BotAI.danger(bot, me.x, me.y, view)) return carry;
+    // Night Walk: the slide leaves nothing able to touch her, so a blow about to land on the spot she stands on is slid through (a lantern in reach is all it needs)
+    if (ca && lt('nightwalk') && ready(carry) && view.mechs.some(m => m.shape && m.type !== 'raidwide' && m.resolveAt - view.t > 0 && m.resolveAt - view.t < 0.45 && SHAPES.contains(m.shape, me.x, me.y, 22))) return carry;
   }
   if (k.gcdRemaining() > 0.0001 || k.cast) return null;
   // an emergency: Relight's heal (or a wisp) on the most hurt
@@ -2349,6 +2357,7 @@ BOT_CLASS.marionettist = {
     const weave = k.gcdRemaining() > 0.55 && !k.cast;
     const pull = idx('pull'), cross = idx('cross'), pir = idx('pirouette'), fin = idx('finale'), cue = idx('cue');
     const e = mariEnemy(k), me = { x: bot.x, y: bot.y };
+    const lineOn = () => (cross >= 0 && k.abilities[cross].id === 'crossfire' ? mariChordOn(k) : mariLineOn(k));   // (Crossfire cuts along the line between the Dolls)
     bot.aim = null;
     // keep every Doll out of the red
     if (e && !mariLimp(k)) {
@@ -2373,7 +2382,7 @@ BOT_CLASS.marionettist = {
       const st = mariStation(k, 0, me, e);
       if (!BotAI.dollDanger(view, st.x, st.y, 3)) { bot.aim = st; return pull; }
     }
-    if (weave && ok(cross) && k.abilities[cross].type === 'ogcd' && mariLineOn(k)) return cross;
+    if (weave && ok(cross) && k.abilities[cross].type === 'ogcd' && lineOn()) return cross;
     // Red Curtain (the talent in Swap's place): up for the raidwide, 15% less for everyone inside
     const sw = idx('swap');
     if (weave && sw >= 0 && ok(sw) && k.abilities[sw].id === 'redcurtain' && ((view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left < 2.5) || BotAI.incoming(view, 3) >= 0.3)) return sw;
@@ -2383,7 +2392,7 @@ BOT_CLASS.marionettist = {
     const dollsSafe = k.g.dolls.every(d => !BotAI.dollDanger(view, d.x, d.y, 3.2));
     // (Final Bow: nothing can touch the Doll during the show, so it starts with a blow on the way; Full House: with the Strings tied, or the pull far off)
     if (ok(fin) && k.g.encore >= (k.talent('marionettist_intermission') ? 4 : 5) && (dollsSafe || k.talent('marionettist_bow')) && (!k.talent('marionettist_fullhouse') || k.g.strings >= 3 || k.readyIn(k.abilities[pull]) > 2)) return fin;
-    if (ok(cross) && k.abilities[cross].type === 'gcd' && mariLineOn(k)) return cross;
+    if (ok(cross) && k.abilities[cross].type === 'gcd' && lineOn()) return cross;
     // (Cut the Cord snips a String, and a Pull Strings ties it back: with all three tied and a pull to follow)
     if (ok(pir) && (k.abilities[pir].id !== 'cutcord' || (k.g.strings >= 3 && k.charges(k.abilities[pull]) >= 1))) return pir;
     if (ok(cue)) return cue;   // (the filler: the Doll jabs on its own, Cue speeds it up)
@@ -2662,6 +2671,8 @@ BOT_CLASS.kenseier = {
       const a = k.abilities[defl];
       if (a && k.usable(a) && k.available(a) && !k.cast) return defl;
     }
+    // Feint (row I): right after a Good deflect the Pommel (a Warden's Redirect) is off the global cooldown and turns it into a Perfect
+    if (k.talent('kenseier_feint') && !kenBroken(k) && k.now < (k.g.feintUntil || 0) && ok(db)) return db;
     const weave = k.gcdRemaining() > 0.5 && !k.cast && k.lockUntil <= k.now;
     const ownBuster = hits.find(h => h.own && h.kind === 'buster');
     // Ash Mantle ahead of a tankbuster aimed at it (after a deflect press's lock, before the next beat)

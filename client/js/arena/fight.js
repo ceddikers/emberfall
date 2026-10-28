@@ -123,7 +123,7 @@ class FightSim {
     if (p.cls === 'kenseier') this.postureOn = true;   // (a Kenseier in the party: the boss carries Posture, KENSEI_HOST at the end of this file)
     const gear = p.gear || {};
     const maxHp = Math.round((playerBaseHp(p.role) + Math.max(0, Math.min(210, gear.hp || 0))) * (1 + (this.hpPct || 0)));   // (items.js GEAR_CAPS)
-    this.ps.set(p.id, { id: p.id, role: p.role, hp: maxHp, maxHp, alive: true, def: Math.max(0, Math.min(0.12, (gear.def || 0) / 1000)), shield: 0, shieldEnd: 0, shieldMax: 0, shieldFrom: null, shieldTag: null,
+    this.ps.set(p.id, { id: p.id, role: p.role, hp: maxHp, maxHp, alive: true, def: Math.max(0, Math.min(0.12, (gear.def || 0) / 1000)), shield: 0, shieldEnd: 0, shieldMax: 0, shieldFrom: null, shieldTag: null, shields: [],
       mits: [], vuln: 0, vulnEnd: 0, dmgDownEnd: 0, weakEnd: 0, hots: [], debuffs: {}, hist: [], diedAt: -99 });
     this.stats[p.id] = { damage: 0, healing: 0, overheal: 0, taken: 0, mitigated: 0, deaths: 0, avoidable: 0,
       // value counters (tools only, nothing reads them in a fight; credit(), mitCredit(), saveCredit()): what this player's own shields, cuts, heals and
@@ -493,7 +493,7 @@ class FightSim {
     for (const p of this.players()) {
       const s = p.s;
       s.mits = s.mits.filter(m => m.end > this.t);
-      if (s.shield > 0 && s.shieldEnd <= this.t) this.endShield(p.id, s);
+      if (s.shields.length) this.expireShields(p.id, s);
       if (s.vulnEnd <= this.t) s.vuln = 0;
       for (const k in s.debuffs) if (s.debuffs[k] <= this.t) delete s.debuffs[k];
       for (const h of s.hots) {
@@ -505,7 +505,7 @@ class FightSim {
         if (pl.pct) { const m = s.mits.find(x => x.pool === pl); if (m) m.end = this.t + 0.25; else s.mits.push({ pct: pl.pct, start: this.t, end: this.t + 0.25, pool: pl, from: pl.from }); }   // a ward circle (Alembist)
         if (this.t < pl.next) continue;
         if (pl.amount) this.applyHeal(pl.from, p.id, pl.amount);
-        if (pl.sh && s.shield < pl.sh) this.giveShield(pl.from, p.id, s, pl.sh, pl.interval + 0.6);
+        if (pl.sh) this.giveShield(pl.from, p.id, s, pl.sh, pl.interval + 0.6, 'pool');
       }
       if (s.alive) {
         s.hist.push([this.t, s.hp]);
@@ -558,7 +558,9 @@ class FightSim {
       }
       case 'ult': st.ults++; break;   // (an Ultimate pressed: main.js kitFx, raid-host bots)
       case 'heal': {
-        const tid = ev.target === 'party' ? null : this.resolveTarget(pid, ev.target, ev.not);
+        let tid = ev.target === 'party' ? null : this.resolveTarget(pid, ev.target, ev.not);
+        // (a heal meant for "another ally" (not -1) comes back to a hurt caster when that ally is whole)
+        if (ev.not === -1 && tid != null && tid !== pid && s.hp < s.maxHp * 0.97) { const o = this.ps.get(tid); if (o && o.hp >= o.maxHp * 0.97) tid = pid; }
         if (s.weakEnd > this.t) ev = Object.assign({}, ev, { amount: Math.round((ev.amount || 0) * (1 - (s.weakPct || 0))) });   // (raise sickness)
         this.applyHeal(pid, tid, ev.amount, ev.target === 'party');
         if (tid != null) this.threadHeal(pid, tid, ev.amount, ev.seam);   // a heal runs down the threads (classes-c)
@@ -576,10 +578,7 @@ class FightSim {
           const ts = this.ps.get(tid); if (!ts || !ts.alive) continue;
           this.ward(pid, tid, ts, true);
           if (ts.hollow) { this.hollowShield(pid, ts, ev.amount); continue; }   // (a Hollow knight: a shield pays the debt at half)
-          if ((ev.tag === 'item' || ts.shieldFrom !== pid) && ts.shield > 0 && ts.shield >= (ev.amount | 0)) continue;   // (a smaller shield from another source, or an item's small ward, never replaces a stronger live one; one's own shield still refreshes)
-          if (ts.shield > 0) this.endShield(tid, ts);
-          ts.shield = Math.min(ev.amount | 0, ts.maxHp); ts.shieldMax = ts.shield; ts.shieldEnd = this.t + Math.min(30, ev.dur || 15);
-          ts.shieldFrom = pid; ts.shieldTag = ev.tag || null;
+          this.giveShield(pid, tid, ts, ev.amount, ev.dur, 'k:' + (typeof ev.sk === 'string' ? ev.sk.slice(0, 40) : '') + ':' + (ev.tag || ''), ev.tag);   // (shields stack; a recast of the same one replaces it: giveShield)
         }
         break;
       case 'mit':
@@ -588,7 +587,9 @@ class FightSim {
           // (ev.last, Last Light's Wisp and Hand Lantern: only an ally under 20% health takes it, once every LAMP_HOST.LAST_CD for this caster: ONE timer, s.lastLightAt, shared with Relight's)
           if (ev.last) { if (ts.hp / ts.maxHp >= 0.2 || this.t - (s.lastLightAt ?? -999) < LAMP_HOST.LAST_CD) continue; s.lastLightAt = this.t; }
           this.ward(pid, tid, ts, true);
-          ts.mits.push({ pct: Math.max(0, Math.min(1, ev.pct)), start: this.t, end: this.t + Math.min(30, ev.dur || 5), kind: ev.kind, from: pid, dfl: ev.dfl ? 1 : 0 });   // (dfl: Ironpalm's Deflect, a Read that takes three quarters of a plain hit)
+          const sus = typeof ev.tag === 'string' && ev.tag.startsWith('sus:') ? ev.tag : null, held = sus && ts.mits.find(m => m.sus === sus && m.from === pid && m.end > this.t);   // (sus: a cut a kit re-sends every second while a condition holds, Molten Armour: ONE per caster and tag, its end pushed out, never stacked on itself)
+          if (held) { held.pct = Math.max(0, Math.min(1, ev.pct)); held.end = this.t + Math.min(30, ev.dur || 5); continue; }
+          ts.mits.push({ pct: Math.max(0, Math.min(1, ev.pct)), start: this.t, end: this.t + Math.min(30, ev.dur || 5), kind: ev.kind, from: pid, dfl: ev.dfl ? 1 : 0, sus });   // (dfl: Ironpalm's Deflect, a Read that takes three quarters of a plain hit)
         }
         break;
       case 'raise': {
@@ -642,7 +643,7 @@ class FightSim {
       case 'pool': {   // a healing pool at an ally's feet (Moonwell)
         const tp = this.players().find(q => q.id === this.resolveTarget(pid, ev.target)) || this.players().find(q => q.id === pid);
         if (!tp) break;
-        this.healPools = this.healPools.filter(pl => pl.from !== pid);
+        this.healPools = this.healPools.filter(pl => pl.from !== pid || pl.vial);   // (a new pool replaces the caster's old pool, not the splash patches: Spillover, Afterglow, Dawn Sanctum)
         this.healPools.push({ from: pid, x: tp.x, y: tp.y, r: Math.min(200, ev.r || 140), amount: Math.max(0, Math.min(3000, ev.amount | 0)), ticks: Math.min(12, ev.ticks || 6), interval: Math.max(0.5, ev.interval || 1.5), next: this.t + Math.max(0.5, ev.interval || 1.5) });
         break;
       }
@@ -677,7 +678,7 @@ class FightSim {
       if (!all && Math.hypot(p.x - at.x, p.y - at.y) > r) continue;
       const s = p.s;
       if (ev.amount) this.applyHeal(pid, p.id, num(ev.amount) * (ev.up ? 2 - s.hp / s.maxHp : 1) * (alone ? Math.max(1, Math.min(1.5, Number(ev.solo) || 1)) : 1));
-      if (ev.sh || (ev.sht && p === at)) this.giveShield(pid, p.id, s, p === at && ev.sht ? Math.max(num(ev.sh), num(ev.sht)) : num(ev.sh), ev.dur || 10);
+      if (ev.sh || (ev.sht && p === at)) { const sa = p === at && ev.sht ? Math.max(num(ev.sh), num(ev.sht)) : num(ev.sh); this.giveShield(pid, p.id, s, sa, ev.dur || 10, 'splash'); }   // (ev.tg: never over the caster's own tagged shield, a Petal shield or Barrier: Purify)   // (a ward from a splash never replaces a live shield that is as strong, the caster's own Barrier or Petal shield included)
       if (ev.cl & 1) { s.vuln = 0; s.vulnEnd = 0; s.dmgDownEnd = 0; }
       if (ev.cl & 2) { delete s.debuffs.slowed; delete s.debuffs.rooted; }
     }
@@ -685,17 +686,41 @@ class FightSim {
       const mine = this.healPools.filter(pl => pl.from === pid && pl.vial);
       if (mine.length >= 8) this.healPools.splice(this.healPools.indexOf(mine[0]), 1);
       const iv = Math.max(0.5, Math.min(3, Number(ev.interval) || 1.5));
-      this.healPools.push({ from: pid, vial: true, x: at.x, y: at.y, fol: ev.fol ? at.id : null, r: Math.max(0, Math.min(200, ev.pr || r || 100)), amount: num(ev.pa), sh: num(ev.ps),
+      const hx = ev.target === 'self' && Number.isFinite(ev.x) && Number.isFinite(ev.y) ? ARENA.clamp({ x: ev.x, y: ev.y }, 20) : at;   // (a cloud laid where the caster stands now, after a Shadowstep: the kit stamps the spot, main.js)
+      this.healPools.push({ from: pid, vial: true, x: hx.x, y: hx.y, fol: ev.fol ? at.id : null, r: Math.max(0, Math.min(200, ev.pr || r || 100)), amount: num(ev.pa), sh: num(ev.ps),
         pct: Math.max(0, Math.min(0.3, Number(ev.pct) || 0)), ticks: Math.max(1, Math.min(12, ev.ticks | 0)), interval: iv, next: this.t + iv });
     }
   }
-  giveShield(from, tid, ts, amount, dur) {
+  // Shields stack: every caster's shield is its own entry with its own size and time (ts.shields), and a hit is taken by the one
+  // due to run out first (damagePlayer). A recast of the same shield (same caster, same key: the move and its tag) replaces it.
+  // All of them together never hold more than the player's health. s.shield/shieldMax/shieldEnd/shieldFrom/shieldTag are the
+  // totals and the first in line, kept for every older reader (shieldSync).
+  giveShield(from, tid, ts, amount, dur, key, tag) {
     if (ts.hollow) { this.hollowShield(from, ts, amount); return; }
-    if (ts.shield > 0 && ts.shieldFrom !== from && ts.shield >= (amount | 0)) return;   // (a smaller shield from another source never replaces a stronger live one, as in 'shield')
-    if (ts.shield > 0) this.endShield(tid, ts);
-    ts.shield = Math.min(amount | 0, ts.maxHp); ts.shieldMax = ts.shield; ts.shieldEnd = this.t + Math.min(30, dur || 15);
-    ts.shieldFrom = from; ts.shieldTag = null;
+    if (!ts.shields) ts.shields = [];
+    const k = key || 'shield', old = ts.shields.find(e => e.from === from && e.key === k);
+    if (old) this.endShieldEntry(tid, ts, old);   // (the same shield again: it replaces the old one, whose end goes out first)
+    const room = Math.max(0, ts.maxHp - ts.shields.reduce((a, e) => a + e.amt, 0)), amt = Math.min(Math.max(0, amount | 0), room);
+    if (amt > 0) ts.shields.push({ from, key: k, tag: tag || null, amt, max: amt, end: this.t + Math.min(30, dur || 15) });
+    this.shieldSync(ts);
   }
+  shieldSync(s) {
+    const L = s.shields || (s.shields = []);
+    L.sort((a, b) => a.end - b.end);
+    let amt = 0, max = 0, end = 0;
+    for (const e of L) { amt += e.amt; max += e.max; end = Math.max(end, e.end); }
+    s.shield = amt; s.shieldMax = max; s.shieldEnd = end;
+    s.shieldFrom = L.length ? L[0].from : null; s.shieldTag = L.length ? L[0].tag : null;
+  }
+  // one shield ends (broken, run out, or replaced by its own recast): its caster hears how much of it was used
+  endShieldEntry(tid, s, e) {
+    const i = s.shields.indexOf(e); if (i < 0) return;
+    s.shields.splice(i, 1); this.shieldSync(s);
+    // (taken off the list before the news goes out: a kit answering it may shield this same ally again, Leaping Ward)
+    if (e.from != null) this.emit({ t: 'fev', k: 'shieldEnd', id: e.from, target: tid, tag: e.tag, frac: +(1 - Math.max(0, e.amt) / (e.max || 1)).toFixed(3) });
+  }
+  expireShields(tid, s) { for (const e of s.shields.filter(x => x.end <= this.t)) this.endShieldEntry(tid, s, e); }
+  clearShields(s) { s.shields = []; this.shieldSync(s); }   // (death: they go without a word, as before)
   resolveTarget(pid, target, not) {
     if (target === 'lowest') {   // the most hurt ally (by share of HP), for heals that find their own target
       let best = pid, bf = Infinity;   // (not: an ally to leave out; -1 leaves out the caster, who can't name their own id from the kit)
@@ -781,13 +806,7 @@ class FightSim {
     if (ts.hp < ts.maxHp * 0.25 && this.t - (this.saveAt[tid] ?? -99) >= 10) { this.saveAt[tid] = this.t; st.saves++; }
   }
 
-  endShield(tid, s) {
-    if (!s.shieldMax) return;
-    const frac = 1 - Math.max(0, s.shield) / s.shieldMax, from = s.shieldFrom, tag = s.shieldTag;
-    // cleared before the news goes out: a kit answering it may shield this same ally again (Leaping Ward), which must not end this one twice
-    s.shield = 0; s.shieldMax = 0; s.shieldFrom = null; s.shieldTag = null;
-    if (from != null) this.emit({ t: 'fev', k: 'shieldEnd', id: from, target: tid, tag, frac: +frac.toFixed(3) });
-  }
+  endShield(tid, s) { for (const e of (s.shields || []).slice()) this.endShieldEntry(tid, s, e); }   // (every shield on them ends)
 
   debuff(pid, name, dur) { const s = this.ps.get(pid); if (s) { s.debuffs[name] = this.t + dur; } }
   hasDebuff(pid, name) { const s = this.ps.get(pid); return !!(s && s.debuffs[name] > this.t); }
@@ -809,7 +828,7 @@ class FightSim {
       if (opts.n) pd.n = opts.n;
       this.emit(pd);
       if (s.hp > 0) return amt;
-      s.hp = 0; s.shield = 0; s.alive = false; s.mits = []; s.hots = []; s.diedAt = this.t; this.dropThreat(p.id);
+      s.hp = 0; this.clearShields(s); s.alive = false; s.mits = []; s.hots = []; s.diedAt = this.t; this.dropThreat(p.id);
       if (this.classDeath) this.classDeath(p, s);
       this.stats[p.id].deaths++;
       this.emit({ t: 'fev', k: 'death', id: p.id });
@@ -865,12 +884,16 @@ class FightSim {
     st.mitigated += Math.round(before - amt);
     const hp0 = s.hp, shFrom0 = s.shieldFrom; this.mitCredit(p, ap);
     let absorbed = 0;   // (sent with the hit: the number a shield ate, shown to the one it covered)
-    if (s.shield > 0 && amt > 0) {
-      const used = Math.min(s.shield, amt);
-      s.shield -= used; amt -= used; absorbed = Math.round(used);
-      const shSt = this.stats[s.shieldFrom]; if (shSt) shSt.healing += Math.round(used);
-      this.credit(s.shieldFrom, s.shieldFrom === p.id ? 'shieldSelf' : 'shieldGiven', used);
-      if (s.shield <= 0.5) this.endShield(p.id, s);
+    if (s.shield > 0 && amt > 0 && s.shields) {
+      for (const e of s.shields.slice()) {   // (in order of running out: shieldSync keeps the list sorted)
+        if (amt <= 0) break;
+        const used = Math.min(e.amt, amt); if (used <= 0) continue;
+        e.amt -= used; amt -= used; absorbed += used;
+        const shSt = this.stats[e.from]; if (shSt) shSt.healing += Math.round(used);
+        this.credit(e.from, e.from === p.id ? 'shieldSelf' : 'shieldGiven', used);
+        if (e.amt <= 0.5) this.endShieldEntry(p.id, s, e);
+      }
+      absorbed = Math.round(absorbed); this.shieldSync(s);
     }
     amt = Math.round(amt);
     // a Gloomsworn's Hollow (end of this file): a killing blow at full Gloom starts it, and while it runs every point is debt, not health
@@ -894,7 +917,7 @@ class FightSim {
     else if (this.postureOn && amt > 0 && (opts.kind === 'auto' || opts.kind === 'buster')) this.kenNote(p, kPre, amt, opts);   // (kept for a deflect pressed just after)   // (taken as Hollow debt: hp stays at 1)
     this.emit(pd);
     if (s.hp <= 0) {
-      s.hp = 0; s.alive = false; s.shield = 0; s.mits = []; s.hots = []; s.diedAt = this.t; this.dropThreat(p.id);
+      s.hp = 0; s.alive = false; this.clearShields(s); s.mits = []; s.hots = []; s.diedAt = this.t; this.dropThreat(p.id);
       if (this.classDeath) this.classDeath(p, s);
       st.deaths++;
       this.emit({ t: 'fev', k: 'death', id: p.id });
@@ -1534,10 +1557,11 @@ class FightSim {
       const debuffs = Object.keys(s.debuffs).filter(k => s.debuffs[k] > this.t).map(k => [k, Math.ceil(s.debuffs[k] - this.t)]);
       // heals over time on this player, for the party frames: [id, seconds left, caster]
       const hots = s.hots.map(h => [h.id, Math.max(1, Math.ceil((h.ticks - 1) * h.interval + h.next - this.t)), h.from]);
+      const shs = (s.shields || []).map(e => [Math.round(e.amt), e.from]);
       list.push([id, Math.round(s.hp), s.maxHp, Math.round(s.shield), s.alive ? 1 : 0,
         s.dmgDownEnd > this.t ? Math.ceil(s.dmgDownEnd - this.t) : 0, s.vulnEnd > this.t ? Math.round(s.vuln * 100) : 0,
         Math.round((1 - mit) * 100), s.weakEnd > this.t ? [Math.round((s.weakPct || 0) * 100), Math.ceil(s.weakEnd - this.t)] : 0, debuffs, hots,
-        s.hollow ? [1, Math.round(s.hollow.debt), Math.round(s.hollow.heal), +Math.max(0, s.hollow.until - this.t).toFixed(1), +Math.max(0, s.hollow.graceUntil - this.t).toFixed(1)] : 0]);   // (a Gloomsworn's Hollow: on, debt, healed, seconds left, grace left)
+        s.hollow ? [1, Math.round(s.hollow.debt), Math.round(s.hollow.heal), +Math.max(0, s.hollow.until - this.t).toFixed(1), +Math.max(0, s.hollow.graceUntil - this.t).toFixed(1)] : 0, shs]);   // (a Gloomsworn's Hollow: on, debt, healed, seconds left, grace left)
     }
     this.emit({ t: 'fps', ps: list, lb: Math.round(this.lb), dc: this.partyDeaths(), rc: this.recoverEnd > this.t ? Math.ceil(this.recoverEnd - this.t) : 0 });
   }
@@ -1627,7 +1651,7 @@ Object.assign(FightSim.prototype, {
     if (ev.type === 'maw') {
       if (me.cls !== 'gorgemaw') return;
       const dur = Math.max(0, Math.min(MAW_HOST.WIN, Number(ev.dur) || 0));
-      s.maw = { until: this.t + dur, all: !!ev.all && dur > 1 };
+      if (!(s.maw && s.maw.until > this.t + dur)) s.maw = { until: this.t + dur, all: !!ev.all && dur > 1 };   // (a shorter jaw, Iron Jaw's or the taunt's, never cuts a longer one short: Bottomless keeps eating raidwides)
       return;
     }
     if (ev.type === 'gloom') {   // the Gloomsworn's vessel, as its kit sees it (HOLLOW_HOST judges a killing blow by it)
@@ -1750,7 +1774,7 @@ Object.assign(FightSim.prototype, {
   hollowKill(pid, s, short) {
     const p = this.players().find(q => q.id === pid), st = this.stats[pid];
     this.emit({ t: 'pdmg', id: pid, a: Math.max(1, short), k: 'hollow', hp: 0, dd: 0, n: 'Hollow debt' });
-    s.hp = 0; s.alive = false; s.shield = 0; s.mits = []; s.hots = []; s.diedAt = this.t; this.dropThreat(pid);
+    s.hp = 0; s.alive = false; this.clearShields(s); s.mits = []; s.hots = []; s.diedAt = this.t; this.dropThreat(pid);
     if (this.classDeath) this.classDeath(p || { id: pid }, s);
     if (st) st.deaths++;
     this.emit({ t: 'fev', k: 'death', id: pid });
@@ -1812,7 +1836,7 @@ Object.assign(FightSim.prototype, {
         for (const th of cut) {
           const carried = th.log.reduce((s, l) => s + (l[0] >= this.t - WEAVE_HOST.CARRY_SECS ? l[1] : 0), 0);
           const heal = Math.min(3000, Math.max(floor, carried * value));
-          for (const e of [th.a, th.b]) { this.applyHeal(pid, e, heal); const es = this.ps.get(e); if (sh && es && es.alive) this.giveShield(pid, e, es, sh, 6); }
+          for (const e of [th.a, th.b]) { this.applyHeal(pid, e, heal); const es = this.ps.get(e); if (sh && es && es.alive) this.giveShield(pid, e, es, sh, 6, 'thread'); }
           this.threads.splice(this.threads.indexOf(th), 1);
         }
         if (cut.length) { this.emit({ t: 'thrs', l: cut.map(th => [th.a, th.b, 1]) }); this.weaveDirty = true; }
@@ -2054,7 +2078,7 @@ Object.assign(FightSim.prototype, {
 //   - Everyone gets the list ('lamps', 10 a second) to draw other keepers' lanterns.
 // Nothing here is trusted: positions, radii and amounts are clamped like any other combat event.
 // ===================================================================================================================
-const LAMP_HOST = { MAX: 12, R: 220, HEAL: 2000, STALE: 1.5, PULSE: 1, STEADY: 0.12, WAY_R: 240, LINE: 90, HEARTH: 6, LAST_CD: 40, LOW_AT: 0.5, LOW_MULT: 2 };
+const LAMP_HOST = { MAX: 12, R: 220, HEAL: 2000, STALE: 1.5, PULSE: 1, STEADY: 0.12, WARD: 0.15, WAY_R: 240, LINE: 90, HEARTH: 6, LAST_CD: 40, LOW_AT: 0.5, LOW_MULT: 2 };
 Object.assign(FightSim.prototype, {
   setLamps(pid, list) {
     if (!Array.isArray(list) || !this.ps.has(pid)) return;
@@ -2064,7 +2088,7 @@ Object.assign(FightSim.prototype, {
     const l = list.slice(0, LAMP_HOST.MAX).filter(o => o && typeof o === 'object').map(o => {
       const on = o.on === 'c' ? 'c' : o.on === 'self' ? pid : Number.isFinite(o.on) ? o.on : null;
       return { id: n(o.id, 0, 1e9), x: n(o.x, -2000, 2000), y: n(o.y, -2000, 2000), r: n(o.r, 0, LAMP_HOST.R), h: n(o.h, 0, LAMP_HOST.HEAL), w: n(o.w, 0, 100), k: n(o.k, 0, 5),
-        on, ox: n(o.ox, -200, 200), oy: n(o.oy, -200, 200), all: o.all ? 1 : 0, st: o.st ? 1 : 0, ln: o.ln ? 1 : 0, sg: o.sg ? 1 : 0, hh: n(o.hh, 0, LAMP_HOST.HEAL) };
+        on, ox: n(o.ox, -200, 200), oy: n(o.oy, -200, 200), all: o.all ? 1 : 0, st: o.st ? 1 : 0, ln: o.ln ? 1 : 0, sg: o.sg ? 1 : 0, wd: o.wd ? 1 : 0, hh: n(o.hh, 0, LAMP_HOST.HEAL) };
     });
     this.lamps.set(pid, { l, at: this.t, next: old ? old.next : this.t + LAMP_HOST.PULSE, inside: old ? old.inside : new Map(), lastAt: old ? old.lastAt : -999 });
   },
@@ -2104,7 +2128,7 @@ Object.assign(FightSim.prototype, {
           if (!(ev.all || this.inLamp(p, l, at))) continue;
           const full = p.s.hp >= p.s.maxHp - 0.5;
           if (amt && !(ev.full && full)) this.applyHeal(pid, p.id, amt);
-          if (sh && (!ev.full || full) && p.s.shield < sh) this.giveShield(pid, p.id, p.s, sh, 8);
+          if (sh && (!ev.full || full)) this.giveShield(pid, p.id, p.s, sh, 8, 'lamp');
         }
       }
     } else if (ev.op === 'waylight') {
@@ -2139,6 +2163,7 @@ Object.assign(FightSim.prototype, {
     const al = this.alive(), live = this.liveLamps();
     // Steady Glow: everyone inside a Great Beacon's glow takes less damage while there
     for (const [pid, l, at] of live) {
+      if (l.wd && typeof l.on === 'number') { const w = al.find(p => p.id === l.on), sm = w && w.s.mits.find(x => x.sus === 'sus:lkward' && x.from === pid && x.end > this.t), m = w && w.s.mits.find(x => x.lampWd); if (sm) { sm.end = Math.max(sm.end, this.t + 0.25); if (m) m.end = 0; } else if (m) m.end = this.t + 0.25; else if (w) w.s.mits.push({ pct: LAMP_HOST.WARD, start: this.t, end: this.t + 0.25, lampWd: true, from: pid }); }   // (Lantern Ward: 15% less damage for the one the Hand Lantern hangs on, while it hangs there)
       if (!l.st) continue;
       for (const p of al) {
         if (!this.inLamp(p, l, at)) continue;
@@ -2417,7 +2442,7 @@ Object.assign(FightSim.prototype, {
   // Guard Stance: a deflect shields the nearest ally (or two)
   kenGuard(owner, win) {
     const near = this.alive().filter(q => q.id !== owner.id).sort((a, b) => Math.hypot(a.x - owner.x, a.y - owner.y) - Math.hypot(b.x - owner.x, b.y - owner.y)).slice(0, win.ticks);
-    for (const q of near) if (q.s.shield < win.sh) { this.ward(owner.id, q.id, q.s, true); this.giveShield(owner.id, q.id, q.s, win.sh, 6); }
+    for (const q of near) { this.ward(owner.id, q.id, q.s, true); this.giveShield(owner.id, q.id, q.s, win.sh, 6, 'kenguard'); }
   },
   // a blow that landed with no deflect to meet it, kept half a second for a press that comes just after
   kenNote(p, pre, amt, opts) {
@@ -2431,7 +2456,7 @@ Object.assign(FightSim.prototype, {
 // getMe() gives the player's { id, x, y }; emit gets the host's messages (fev kdef / kbrk / kbend). The caller keeps sim.t on its clock.
 FightSim.kenYard = function (getMe, emit) {
   const sim = Object.create(FightSim.prototype), id = getMe().id;
-  const s = { id, role: 'tank', hp: 1, maxHp: 1, alive: true, shield: 0, mits: [], hots: [], debuffs: {} };
+  const s = { id, role: 'tank', hp: 1, maxHp: 1, alive: true, shield: 0, shields: [], mits: [], hots: [], debuffs: {} };
   Object.assign(sim, { t: 0, state: 'live', postureOn: true, emit, events: [], kenHits: [], def: {}, mode: 'normal',
     boss: { hp: 1, maxHp: 1, untargetable: false, cast: null, autoAt: 1e9, exposed: 0, exposedUntil: 0 },
     ps: new Map([[id, s]]), stats: { [id]: { perfects: 0, breaks: 0, taken: 0, mitigated: 0 } } });

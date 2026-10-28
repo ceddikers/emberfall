@@ -256,7 +256,7 @@ const CAELUM = {
         // (tools/check.js's timeline plays a clean party, whose healer has them back up: its dummies keep their health)
         if (!f.cleanRun) for (const p of f.alive()) {
           const s = p.s, lost = Math.max(0, s.hp - 1);
-          s.hp = 1; s.shield = 0;
+          s.hp = 1; f.clearShields(s);
           f.emit({ t: 'pdmg', id: p.id, a: Math.round(lost), k: 'clGrace', hp: 1, dd: 0, n: 'Grace Withdrawn' });
         }
         f.emit({ t: 'roomev', k: 'clgrace', dur: gap });

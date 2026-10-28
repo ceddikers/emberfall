@@ -139,7 +139,7 @@ for (const kind of ['doom', 'enrage', 'fall']) {
 // 10. the numbers on a shielded knight: a shield up before the blow soaks it first (and a Hollow is not started by a hit that does not kill)
 {
   const { sim, s, tank, gloom } = make();
-  s.hp = 300; s.shield = 5000; s.shieldMax = 5000; s.shieldEnd = 999; gloom(100);
+  s.hp = 300; s.shields = [{ from: 2, key: 'test', tag: null, amt: 5000, max: 5000, end: 999 }]; sim.shieldSync(s); gloom(100);   // (shields are a list now: fight.js giveShield)
   sim.damagePlayer(tank(), 2000, { kind: 'hit', raw: true });
   check(s.alive && !s.hollow && s.hp === 300, 'a shield that soaks the blow means no Hollow');
 }

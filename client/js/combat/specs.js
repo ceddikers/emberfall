@@ -284,7 +284,7 @@ const SPECS = {
               const quick = k.consume('quickmend'), light = k.talent('cleric_firstlight') && k.g.bloom >= 3;   // (Quick Mend, First Light: talents)
               k.heal(t, 250, { ab: this }); k.shield(t, 650 * clericForesight(k) * (light ? 1.3 : 1), 12, { ab: this, tag: 'barrier' });   // (Foresight, spec row VI; First Light: a dome 30% larger)
               // Quick Mend: an instant Barrier's dome also catches the most hurt other ally, at half strength
-              if (quick) k.env.emit({ type: 'shield', target: 'lowest', not: t, amount: k.healAmount(325 * clericForesight(k), { ab: this }).amount, dur: 12, ab: this, tag: 'barrier' });
+              if (quick) k.env.emit({ type: 'shield', target: 'lowest', not: t, amount: k.healAmount(325 * clericForesight(k) * (light ? 1.3 : 1), { ab: this }).amount, dur: 12, ab: this, tag: 'barrier' });
             },
             fx: { type: 'ring', color: '#ffe9a8', r: 46, onTarget: true },
           },
@@ -377,10 +377,11 @@ const SPECS = {
               k.heal(t, 200, { ab: this });
               k.hot(t, 120, 5, 3, { ab: this, id: 'rejuv' });
               const { amount } = k.healAmount(110, { ab: this });
-              k.env.emit({ type: 'hot', target: 'lowest', not: t, amount, ticks: 5, interval: 3, ab: this, id: 'rejuv2' });
-              k.g.rejuvs = k.g.rejuvs.filter(r => r.t !== t && r.t !== 'lowest');
-              k.g.rejuvs.push({ t, ticks: 5, next: k.now + 3 });
-              if (k.talent('grovekeeper_drinking')) k.g.rejuvs.push({ t: 'lowest', ticks: 5, next: k.now + 3, bloom: 7 });   // (Deep Drinking, spec row VI: the second root feeds Bloom too)
+              const other = groveOther(k, t);   // (the most hurt other ally, named here so the second root is tracked like the first: Canopy, Thick Bark, Nature's Balance, Last Blossom)
+              k.env.emit(other === 'lowest' ? { type: 'hot', target: 'lowest', not: t, amount, ticks: 5, interval: 3, ab: this, id: 'rejuv2' } : { type: 'hot', target: other, amount, ticks: 5, interval: 3, ab: this, id: 'rejuv2' });
+              k.g.rejuvs = k.g.rejuvs.filter(r => (r.second ? r.t !== other && r.t !== 'lowest' : r.t !== t));
+              k.g.rejuvs.push({ t, ticks: 5, next: k.now + 3, pair: other });
+              k.g.rejuvs.push({ t: other, second: true, ticks: 5, next: k.now + 3, bloom: k.talent('grovekeeper_drinking') ? 7 : 0 });   // (Deep Drinking, spec row VI: the second root's ticks feed Bloom too, and Bloom reaches its ally)
             },
             fx: { type: 'ring', color: '#6fffb0', r: 40, onTarget: true },
           },
@@ -391,7 +392,7 @@ const SPECS = {
               k.spend('bloom', 50);
               if (full && k.talent('grovekeeper_brimming')) { k.heal('party', 600, { ab: this }); k.fx('empower'); }   // (Overflowing Bloom, spec row VI)
               if (k.has('growth')) k.heal('party', 450, { ab: this });
-              for (const r of k.g.rejuvs) k.heal(r.t, 520, { ab: this });
+              for (const r of groveBloomRoots(k)) k.heal(r.t, 520, { ab: this });   // (the second root only with Deep Drinking)
               k.heal(k.g.rejuvs.length ? 'lowest' : 'self', 520, { ab: this });
               groveAwaken(k);
               groveBloom(k, this);
@@ -575,6 +576,8 @@ const SPECS = {
         },
         dmgMod: k => k.stacks('aim') * 0.04,
         abilities: {
+          rapid: { desc: 'Spend 50 Focus: a volley for {d:360} between your other shots. While Hunter\'s Mark is up it costs only 20 Focus and hits for {d:760}: Focus pooled for the Mark is worth far more.' },
+          mark: { desc: 'Party burst: the boss takes 8% more damage from everyone for 15s. For you, Keen Eye triggers more often, your critical chance is 10% higher and Rapid Fire costs only 20 Focus and hits for {d:760}. A Keen Eye you cash in it while a second is still banked readies Barrage again.' },
           pierce: {
             id: 'aimed', replaces: 'pierce', name: 'Aimed Shot', type: 'gcd', target: 'enemy', range: SPEC_RANGED, charges: 2, cd: 12, anim: 'attack',
             cast: k => (k.has('keen') ? 0 : 2),
@@ -725,7 +728,7 @@ const SPECS = {
               const o = bladeOpts(k, this, 'rear', bonus, mult);
               if (stalked && k.talent('shadowblade_deaddrop')) o.autoCrit = true;   // (Dead Drop, spec row VI: always a critical hit)
               const r = k.damage(pot + (o.feint ? bonus : 0), o), hit = o.feint || r.posHit;
-              if (r.posHit && k.talent('shadowblade_cloak')) { k.mitigate('self', 0.3, 4, { ab: this }); k.fx('dodge'); }   // (Cloak of Night, spec row VI)
+              if (hit && k.talent('shadowblade_cloak')) { k.mitigate('self', 0.3, 4, { ab: this }); k.fx('dodge'); }   // (Cloak of Night, spec row VI)
               if (cp >= 5 && k.perk('shadowblade_w2')) { k.damage((pot + (hit ? bonus : 0)) * 0.3, { ab: this, mult }); k.fx('empower'); }
               bladeFinisher(k, this, cp, (pot + (hit ? bonus : 0)) * mult);
             },
@@ -761,7 +764,7 @@ const SPECS = {
             pyro: {
               id: 'meteor', replaces: 'pyro', name: 'Meteor', type: 'gcd', target: 'enemy', range: SPEC_RANGED, anim: 'cast',
               cast: k => (k.has('hotstreak') ? 0 : 3.0),
-              desc: '3s cast: a rune circle on the target, and 1.5s later a meteor smashes it for {d:700} and leaves a burning crater ({d:50} every 3s for 9s). With Hot Streak it\'s instant and hits for {d:800}. Vent while it falls and it comes down at once, the Heat you vented burning in its crater ({d:10} more a tick for every 10 Heat).',
+              desc: '3s cast: a rune circle on the target, and 1.5s later a meteor smashes it for {d:700} and leaves a burning crater ({d:50} every 3s for 9s). With Hot Streak it\'s instant and hits for {d:800}. Vent (or Phoenix Flight) while it falls and it comes down at once, the Heat you vented burning in its crater ({d:10} more a tick for every 10 Heat).',
               glow: k => k.has('hotstreak'),
               effect(k) {
                 const hs = k.consume('hotstreak'), ab = this;
@@ -1247,15 +1250,15 @@ Object.assign(SPECS, {
     },
     {
       id: 'shears', name: 'Shears', title: 'The Cut Thread', accent: '#ff9ab8',
-      gaugeTip: 'Fills as your threads carry damage. Your threads hold 60% more of what they carry, and every thread Snap cuts gives back 10 Spool.',
+      gaugeTip: 'Fills as your threads carry damage. Your threads hold 60% more of what they carry, and Snap gives back 10 Spool for every thread you hold.',
       blurb: 'Tie it, let it take the strain, then cut it loose with a flourish.',
       focus: 'Burst healing. Threads store more, and Snap is your main heal on a short cooldown that pays you back. A Tie that pulls an ally also shields them.',
-      passive: { name: 'Sharp Shears', desc: 'Snap recharges in 8s, releases 60% more of what a thread carried, and every thread it cuts gives back 10 Spool. A raidwide is not shared along the threads; every thread rings, healing both its ends for 25% of what they took. A Tie that pulls an ally along a thread also wraps them in a {s:260} shield for 2s.' },
+      passive: { name: 'Sharp Shears', desc: 'Snap recharges in 8s, releases 60% more of what a thread carried, and it gives back 10 Spool for every thread you hold. A raidwide is not shared along the threads; every thread rings, healing both its ends for 25% of what they took. A Tie that pulls an ally along a thread also wraps them in a {s:260} shield for 2s.' },
       build: base => ({
         potMult: base.potMult * 1.06,
         store: 1.6, ring: 0.25, snipSpool: 10, snipPot: 170, lash: true, shuttleCut: 8,
         abilities: {
-          snip: { cd: 8, desc: 'Cut the threads on your target (all of yours, if it has none). Each one releases 60% more than the damage it carried in the last 5s as a heal to both its ends (at least {h:170}), and gives back 10 Spool.' },
+          snip: { cd: 8, desc: 'Cut the threads on your target (all of yours, if it has none). Each one releases 60% more than the damage it carried in the last 5s as a heal to both its ends (at least {h:170}), and gives back 10 Spool for every thread you hold.' },
           shuttle: { desc: 'Instant: throw the shuttle down every thread you hold, and down the cut ends of every thread Snap cut in the last 8s. It strikes the boss for {d:120} per thread, up to 5 ({d:600}), and each Thread on you tugs a {h:120} heal to whichever end of it is more hurt.' },
           tie: { desc: 'Tie your target to yourself with a glowing thread. Press it on a second ally within 2s and those two are tied to each other instead. On an ally already on your threads, it snaps them up to 220 px along the thread toward its far end instead, and wraps them in a {s:260} shield for 2s. Up to 3 threads; tying another drops your oldest. Two charges.' },
         },
@@ -1294,7 +1297,7 @@ Object.assign(SPECS, {
         dolls: 2, dollMult: 0.58,
         // (each Doll hits at 58%: the numbers here are per Doll)
         abilities: {
-          cue: { desc: 'You snap your fingers: each Doll in reach lunges at once for a {d:104.4} stab, and their next three Jabs come twice as fast. Builds 1 Encore. On their own the Dolls jab for {d:23.2} each every 4s all through a fight while they have the enemy in reach, whatever you press (5% faster for each String still tied).' },
+          cue: { desc: 'You snap your fingers: each Doll in reach lunges at once for a {d:104.4} stab, and their next six Jabs (three each) come twice as fast. Builds 1 Encore. On their own the Dolls jab for {d:23.2} each every 4s all through a fight while they have the enemy in reach, whatever you press (5% faster for each String still tied).' },
           pull: { desc: 'Fling the Doll nearest where you aim to that spot (within its strings\' reach). It cuts anything it passes through for {d:92.8}, and stays there until you pull it again or pick another target. Builds 1 Encore on a hit. Every pull also ties all three Strings back, and gets limp Dolls up at once. Two charges.' },
           cross: { desc: 'Your strings become blades and cut along the lines between you and the Dolls. Each line with the enemy on it cuts for {d:324.8}, and a cut gives 2 Encore; otherwise it cuts nothing.' },
           swap: { desc: 'You and the Doll nearest where you aim trade places in a flutter of silk. It\'s your escape, and the Doll takes your spot. Stage Cross: your next Cross-Cut within 6s cuts twice as hard and gives 1 more Encore.' },
@@ -1370,7 +1373,7 @@ SPECS.thresher = [
       potMult: base.potMult * 0.915 * 1.05,   // balance knob (tools/simulate.js)
       gapMult: 1.6, fourthMult: 1.4,
       abilities: {
-        finish: { desc: "Ends the string. After one swing a hooking cut ({d:80}) leaves a Drain mark; after two, the blade driven into the floor ({d:120}, a small ring) leaves a Bind that holds adds; after three, a skewer down a line ({d:170}) leaves a Death Mark; after four, a wide sweep ({d:350}) that leaves a Thread on everything in the arc. Needs a string in hand." },
+        finish: { desc: `Ends the string. After one swing a hooking cut ({d:${REAP.FIN[1]}}) leaves a Drain mark; after two, the blade driven into the floor ({d:${REAP.FIN[2]}}, a small ring) leaves a Bind that holds adds; after three, a skewer down a line ({d:${REAP.FIN[3]}}) leaves a Death Mark; after four, a wide sweep ({d:${Math.round(REAP.FIN[4] * 1.4)}}) that leaves a Thread on everything in the arc. Needs a string in hand.` },
       },
     }),
   },
@@ -1379,14 +1382,14 @@ SPECS.thresher = [
     gaugeTip: 'The four marks on your target, and the crescent. Blink holds three charges, and after a Blink the finisher is a teleport slash that leaves a Phantom mark Snap pops.',
     blurb: 'Blink, cut, vanish.',
     focus: 'Mobility. Blink has one more charge, and a Blink turns your next finisher into a slash from the far side of the target.',
-    passive: { name: 'Vanishing Edge', desc: 'Blink holds three charges. For 4s after a Blink, W also teleports you to the far side of the target for {d:80} more and leaves a Phantom mark (Snap pops it for {d:70}).' },
+    passive: { name: 'Vanishing Edge', get desc() { return `Blink holds three charges. For 4s after a Blink, W also teleports you to the far side of the target for {d:${REAP.SIM_PHANTOM}} more and leaves a Phantom mark (Snap pops it for {d:${REAP.POP.phantom}}).`; } },
     // (a raid moves it off the target more than the dummy does: it aims a little above its class here so its raid damage lands level)
     balance: 1.06 * 1.14,
     build: base => ({
       potMult: base.potMult * 1.14,
       dashPlus: 1, phantom: true,
       abilities: {
-        finish: { desc: "Ends the string. After one swing a hooking cut ({d:80}) leaves a Drain mark; after two, the blade driven into the floor ({d:120}, a small ring) leaves a Bind that holds adds; after three, a skewer down a line ({d:170}) leaves a Death Mark; after four, a wide sweep ({d:250}) that leaves a Thread on everything in the arc. Within 4s of a Blink it also teleports you to the target's far side for {d:80} more and leaves a Phantom mark. Needs a string in hand." },
+        finish: { desc: `Ends the string. After one swing a hooking cut ({d:${REAP.FIN[1]}}) leaves a Drain mark; after two, the blade driven into the floor ({d:${REAP.FIN[2]}}, a small ring) leaves a Bind that holds adds; after three, a skewer down a line ({d:${REAP.FIN[3]}}) leaves a Death Mark; after four, a wide sweep ({d:${REAP.FIN[4]}}) that leaves a Thread on everything in the arc. Within 4s of a Blink it also teleports you to the target's far side for {d:${REAP.SIM_PHANTOM}} more and leaves a Phantom mark. Needs a string in hand.` },
       },
     }),
   },

@@ -213,7 +213,7 @@ HERO_GUIDE.gloomsworn = {
     { keys: ['d', 'q', 'q'], text: 'Black Mantle as the tankbuster lands on you (40% less, +15 Gloom), then keep striking. Hollow already started? Press it at once: it cuts every blow while you are down to 1 HP, so your healer has less debt to pay back.' },
     { keys: ['r'], text: 'Black Pall on the raidwide that matters: 25% less for the whole party for 6s, for 30 Gloom. Do not cast it with a full vessel unless the raid needs it more than your Hollow.' },
     { keys: ['f'], text: 'Last Rite when you are low: all your Gloom becomes a barrier and a heal. It leaves the vessel empty, so there is no Hollow behind it.' },
-    { keys: ['w', 't'], text: 'Eclipse of the Vigil with the vessel full: a huge blow, a barrier on the whole party and 10% less damage for 6s. It empties the vessel.' },
+    { keys: ['w', 't'], text: 'Eclipse of the Vigil with the vessel full: a huge blow, a barrier on the whole party and 10% less damage for 6s. It empties the vessel (the blow itself fills 8 again).' },
   ],
 };
 // Reaper (damage, class 19; the id stays thresher)
@@ -248,7 +248,7 @@ HERO_GUIDE.kenseier = {
     { keys: ['w', 'w', 'w'], text: 'Deflect every swing as the ring closes, not before: a miss costs Poise and locks the key for a moment. A steady run of Perfects is the whole rotation. W glows at the Perfect moment.' },
     { keys: ['q', 'q', 'q'], text: 'Ember Cut between the blows: the third cut adds 8 Posture and carries your taunt. With the boss on someone else, a single press is the third cut and pulls it.' },
     { keys: ['e'], text: 'Mikiri Step as a frontal or a charge lands on you: it passes through untouched and adds 25 Posture. It glows when a telegraph is about to land where you stand.' },
-    { keys: ['w', 'r'], text: 'When the Break comes, hold Deathblow for the party\'s burst: {d:900}, and it heals you, but it ends the Break early. Out of a Break, R is a Pommel (or a Redirect, as a Warden of the Ash).' },
+    { keys: ['w', 'r'], text: 'When the Break comes, hold Deathblow for the party\'s burst: {d:820}, and it heals you, but it ends the Break early. Out of a Break, R is a Pommel (or a Redirect, as a Warden of the Ash).' },
     { keys: ['d', 'w'], text: 'Ash Mantle before a tankbuster: 40% less damage, and every deflect inside it counts as Good at least, so a late press still turns the blow.' },
     { keys: ['f', 'w'], text: 'Guard Stance when the party is about to take a hit: for 6s every deflect of yours also shields the nearest ally. As a Deathblade it becomes Iai Stance: your next Perfect is followed by a counter-cut.' },
     { keys: ['t'], text: 'Flash of Ash when T is full: the boss Breaks at once and a free Deathblow lands at double strength. Perfects fill it, so save it for the heaviest stretch.' },

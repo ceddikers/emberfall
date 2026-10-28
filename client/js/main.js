@@ -152,7 +152,7 @@
   // ---------------------------------------------------------------- local combat (your class kit)
   let actor = null;
   let lockedAlly = null, hoverFrame = null, lastEnemy = null, lockedEnemy = null;
-  const town = { buffs: [], abuffs: [], vuln: 0, vulnEnd: 0, mits: [], shield: null, taken: [], meter: null, meterDone: null };
+  const town = { buffs: [], abuffs: [], vuln: 0, vulnEnd: 0, mits: [], shields: [], taken: [], meter: null, meterDone: null };
 
   const inArena = () => scene === 'arena' && !!raid;
   const inRoom = () => scene === 'town' && inTrophyRoom(player);   // (inside the Trophy Hall: its own room east of the town, town.js)
@@ -263,7 +263,7 @@
       if (inArena() && raid.bond) { m.dmg += raid.bond.dmg; m.crit += raid.bond.crit; m.haste += raid.bond.haste; }   // gear party bonus
       return m;
     },
-    targetMods: () => ({ vuln: inArena() ? (raid.boss.v || 0) : (town.vulnEnd > now ? town.vuln : 0) }),
+    targetMods: () => ({ vuln: inArena() ? (raid.boss.v || 0) : Math.min(0.25, Object.values(town.vulns || {}).reduce((s, e) => s + (e.end > now ? e.v : 0), 0)) }),   // (town: one weakness per tag, summed, as the host does: a Ranger's Virulence stacks with their Mark)
     selfMods: () => {
       const s = myState(), m = { dmgDown: inArena() && s && s.dd ? FIGHT.DMG_DOWN : 0, dmg: 0, haste: 0 };
       // a healer's buff on you (engine.js ALLY_BUFFS: the host's 'abuff'; in town, your own on yourself)
@@ -412,6 +412,8 @@
     'all', 'op', 'older', 'mark', 'freeze', 'drop', 'merge', 'hit', 'push', 'due', 'col', 'small', 'tithe', 'mult',   // (jaw and Ledger orders)
     'pair', 'mx', 'st', 'dp', 'hm', 'seam', 'both', 'mit', 'keep', 'ub',
     'lid', 'full', 'last',
+    'sk',   // (which shield a shield event is: fight.js giveShield stacks different ones, a recast replaces its own)
+    'tg',   // (a splash ward that never replaces the caster's own tagged shield: Purify)
     'x', 'y', 'dist',   // (a Reaper's gather and field: fight.js reaperEvent reads the spot)
     'pay', 'solo', 'sht', 'rg', 'dfl', 'min',   // (Overdraft's share, the Alembist's lone splash and Salve shield, the Loomwright ring)
     'instant'];   // (an instant raise: the heavier raise sickness, fight.js FIGHT.SICK)   // (a lantern's burst: fight.js lampEvent)   // (threads; ub: a hit of an Ultimate or its window)
@@ -484,6 +486,7 @@
       default:
         if (SIM_EVENTS.has(ev.type)) {
           if (inArena()) {
+            if (ev.type === 'splash' && ev.here) { ev.x = Math.round(player.x); ev.y = Math.round(player.y); }   // (a cloud laid where you stand now: Smoke Trail, either side of a Shadowstep)
             sendCombat(ev);
             if (ev.type === 'heal' || (ev.type === 'splash' && ev.amount)) showHeal(ev.target, ev.amount, ev.crit);
             if ((ev.type === 'shield' || ev.type === 'mit') && ev.target === 'party') partyWard(ev);
@@ -597,13 +600,15 @@
       case 'allyBuff':   // (no host in town: only one on yourself takes)
         if (ev.target === 'self' || ev.target === Net.id) { town.abuffs = town.abuffs.filter(b => b.end > now && b.id !== ev.id); town.abuffs.push({ to: Net.id, id: ev.id, kind: ev.kind, value: ev.value, end: now + ev.dur, from: Net.id }); }
         break;
-      case 'targetDebuff': if (ev.kind === 'vuln') { town.vuln = ev.value; town.vulnEnd = now + ev.dur; } break;
+      case 'targetDebuff': if (ev.kind === 'vuln') { (town.vulns || (town.vulns = {}))[ev.tag || ''] = { v: ev.value, end: now + ev.dur }; town.vuln = ev.value; town.vulnEnd = now + ev.dur; } break;
       case 'mit': if (ev.target === 'self' || ev.target === Net.id || ev.target === 'party') town.mits.push({ kind: ev.kind, pct: ev.pct, start: now, end: now + ev.dur }); break;
       case 'shield':
         if (ev.target === 'self' || ev.target === Net.id || ev.target === 'party') {
-          if (ev.tag === 'item' && town.shield && town.shield.end > now && town.shield.amount >= ev.amount) break;   // (an item's ward never replaces a stronger shield)
-          if (town.shield) endTownShield();
-          town.shield = { amount: ev.amount, max: ev.amount, end: now + (ev.dur || 15), tag: ev.tag };
+          // (shields stack, as in the raid host: a recast of the same one, by its move and tag, replaces it; fight.js giveShield)
+          const key = 'k:' + (typeof ev.sk === 'string' ? ev.sk : ev.ab && ev.ab.id || '') + ':' + (ev.tag || ''), old = town.shields.find(x => x.key === key);
+          if (old) endTownShield(old);
+          town.shields.push({ key, amount: ev.amount, max: ev.amount, end: now + (ev.dur || 15), tag: ev.tag });
+          town.shields.sort((a, b) => a.end - b.end);
         } else if (ev.tag === 'ward' && actor) {
           // a Spellwarden's Ward on a friend in town soaks nothing (no host here), but still ends with its blast
           const a = actor; later(ev.dur || 8, () => { if (actor === a) a.notify('shieldEnd', { tag: 'ward', frac: 0 }); });
@@ -613,9 +618,9 @@
       case 'maw': case 'ledger': if (typeof CLASS_TOWN !== 'undefined') CLASS_TOWN.event(town, ev, now, actor); break;   // the advanced tanks on the sparring dummy
     }
   }
-  function endTownShield() {
-    const s = town.shield; if (!s) return;
-    town.shield = null;
+  function endTownShield(s) {
+    const i = town.shields.indexOf(s); if (i < 0) return;
+    town.shields.splice(i, 1);
     actor && actor.notify('shieldEnd', { tag: s.tag, frac: 1 - Math.max(0, s.amount) / s.max });
   }
   // ---- a Kenseier on the sparring dummy. The yard plays host with the raid host's own Posture functions (fight.js FightSim.kenYard:
@@ -699,10 +704,11 @@
     }
     if (typeof CLASS_TOWN !== 'undefined') amt = CLASS_TOWN.hit(town, amt, now, actor, player);   // an open jaw, a Ledger
     let absorbed = 0;
-    if (town.shield) {
-      const used = Math.min(town.shield.amount, amt);
-      town.shield.amount -= used; amt -= used; absorbed = used;
-      if (town.shield.amount <= 0.5) endTownShield();
+    for (const s of town.shields.slice()) {   // (the one due to run out first takes it first)
+      if (amt <= 0) break;
+      const used = Math.min(s.amount, amt);
+      s.amount -= used; amt -= used; absorbed += used;
+      if (s.amount <= 0.5) endTownShield(s);
     }
     amt = rnd(amt);
     if (kenK && !kd && amt > 0) kenK.sim.kenNote({ id: Net.id }, kPre, amt, { kind });   // (kept for a deflect pressed just after)
@@ -2069,14 +2075,15 @@
     raid.rc = msg.rc > 0 ? msg.rc : 0;   // seconds of 'recovering' left (fight.js FIGHT.REC)
     raid.dc = msg.dc > 0 ? msg.dc : 0;   // the party's deaths this pull (raise sickness grows with them: fight.js FIGHT.SICK)
     const listed = new Set();
-    for (const [id, hp, maxHp, shield, alive, dd, vuln, mit, weak, debuffs, hots, hol] of msg.ps) {
+    for (const [id, hp, maxHp, shield, alive, dd, vuln, mit, weak, debuffs, hots, hol, shs] of msg.ps) {
       listed.add(id);
       const s = raid.party.get(id);
       // a Gloomsworn's Hollow: [on, debt, healed, seconds left, grace left] (party frames: raid-ui.js; its own gauge: the kit)
       if (s) s.hollow = Array.isArray(hol) && hol[0] ? { debt: hol[1], healed: hol[2], left: hol[3], grace: hol[4], at: now } : null;
       if (id === Net.id && actor && actor.cls.id === 'gloomsworn') actor.notify('hollowtick', Array.isArray(hol) && hol[0] ? { on: 1, debt: hol[1], healed: hol[2], left: hol[3], grace: hol[4] } : { on: 0 });
       if (SH && s && id === Net.id && s.alive && alive) { if (shield > 0 && !(s.shield > 0)) SH.play('shield-up', { vol: 0.6, key: 'shield-up', minGap: 0.5 }); if (Array.isArray(debuffs) && debuffs.length > (Array.isArray(s.debuffs) ? s.debuffs.length : 0)) SH.play('debuff-on', { vol: 0.75, key: 'debuff-on', minGap: 0.4 }); }
-      if (s) Object.assign(s, { hp, maxHp, shield, alive: !!alive, dd, vuln, mit, weak, debuffs, hots: hots || [], left: false });
+      if (s) Object.assign(s, { hp, maxHp, shield, alive: !!alive, dd, vuln, mit, weak, debuffs, hots: hots || [], left: false,
+        shs: Array.isArray(shs) ? shs.map(([a, from]) => ({ a, c: casterAccent(from) })) : [] });   // (each shield, first to run out first, in its caster's class colour)
     }
     // the host stops listing anyone who left the raid; don't leave their last numbers frozen on the frames
     for (const [id, s] of raid.party) if (!listed.has(id) && !s.left) Object.assign(s, { left: true, alive: false, hp: 0, shield: 0, hots: [], debuffs: [] });
@@ -3034,7 +3041,7 @@
       }
     }
     town.buffs = town.buffs.filter(b => b.end > now);
-    if (town.shield && town.shield.end <= now) endTownShield();
+    for (const s of town.shields.filter(x => x.end <= now)) endTownShield(s);
     if (typeof CLASS_TOWN !== 'undefined') CLASS_TOWN.tick(town, now, actor, player);
     town.taken = town.taken.filter(x => x.t > now - 10);
     updateMeter();
@@ -3364,6 +3371,11 @@
   // their name, their pings and their frame wear it; the role keeps its colour on the frame's role mark and the class
   // name under a town nameplate. null for anyone outside the party (a PvP foe), who keeps the role's colour.
   const PARTY_ORDER = { tank: 0, healer: 1, dps: 2 };
+  // a shield's colour: the class colour of whoever cast it (the party frames, the over-head bar and the body's dome)
+  function casterAccent(id) {
+    const r = raid.roster && raid.roster.find(x => x.id === id), c = r && CLASSES.find(q => q.id === r.cls);
+    return (c && c.accent) || '#dcecff';
+  }
   function partyColor(id) {
     const list = inArena() ? raid.roster.map(r => ({ id: r.id, role: r.role }))
       : [{ id: Net.id, role: player.cls && player.cls.role }, ...[...remotes.values()].map(r => ({ id: r.id, role: r.cls && r.cls.role }))];
@@ -3394,7 +3406,11 @@
       e._hpT = f >= (e._hpT ?? 0) ? f : now - (e._hpHit ?? -9) > 0.45 ? Math.max(f, e._hpT - tdt * 0.7) : e._hpT;
       if (e._hpT > f + 0.002) rrect(ctx, x0 + w * f, y0, w * (e._hpT - f), 5, 1.5, 'rgba(255,226,196,0.7)');
       if (f > 0) rrect(ctx, x0, y0, w * f, 5, 1.5, f < 0.35 ? '#e8503f' : f < 0.7 ? '#c9c45a' : '#5fcf78');
-      if (sf > 0) rrect(ctx, x0 + w * f, y0, w * sf, 5, 1.5, 'rgba(236,244,255,0.85)');
+      if (sf > 0) {
+        const parts = hp.shs && hp.shs.length ? hp.shs.slice().reverse() : [{ a: hp.shield, c: '#ecf4ff' }], tot = parts.reduce((q, p) => q + p.a, 0) || 1;
+        let sx = x0 + w * f;
+        for (const p of parts) { const pw = w * sf * p.a / tot; if (pw > 0.3) { rrect(ctx, sx, y0, pw, 5, 1.5, rgba(p.c, 0.9)); sx += pw; } }
+      }
     } else if (e.cls && !inArena()) label(ctx, e.cls.name, e.x, y + 12, color, 10);
     drawCastBar(e);
     if (e.chat && now < e.chatUntil) {

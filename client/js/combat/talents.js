@@ -71,8 +71,8 @@ const TALENTS = {
         spec: { berserker: 'Hack & Maul becomes a three-hit combo: Hack > Maul > Gore, a goring blow for {d:560} that gives 20 Rage.' } },
       { id: 'bloodreaver_rend', name: 'Rend', ab: 'hack', text: 'Maul now carves a Wound in the boss (up to 3). Crimson Drain tears every Wound open for {d:130} extra each.',
         spec: { berserker: 'Maul now carves a Wound in the boss (up to 3). Rampage tears every Wound open for {d:130} extra each.' } },
-      { id: 'bloodreaver_retaliate', name: 'Retaliation', ab: 'letting', text: 'A heavy hit on you (a tenth of your HP or more) wets the blade: for 4s your Bloodletting cuts twice as deep and gives twice the Blood.',
-        spec: { hemomancer: 'A heavy hit on you (a tenth of your HP or more) wets the blade: for 4s your Blood Lance strikes twice as hard and gives twice the Blood.' } },
+      { id: 'bloodreaver_retaliate', name: 'Retaliation', ab: 'letting', text: 'Taking a tenth of your HP or more within 4s wets the blade: for as long as that holds your Bloodletting cuts twice as deep and gives twice the Blood.',
+        spec: { hemomancer: 'Taking a tenth of your HP or more within 4s wets the blade: for as long as that holds your Blood Lance strikes twice as hard and gives twice the Blood.' } },
     ],
     [
       { id: 'bloodreaver_sanguine', name: 'Sanguine Shield', ab: 'drain', text: 'Crimson Drain hardens a quarter of the damage it cashes into a shield on you, up to 8% of your HP, for 8s.',
@@ -93,17 +93,17 @@ const TALENTS = {
     [
       { id: 'bloodreaver_frenzied', name: 'Frenzied Letting', ab: 'frenzy', text: 'Frenzy now also opens your veins: it refills Bloodletting\'s charges.',
         spec: { hemomancer: 'Frenzy now also opens your veins: it refills Blood Lance\'s charges.' } },
-      { id: 'bloodreaver_quickvein', name: 'Quickened Vein', ab: 'letting', cd: { letting: -6 }, text: 'Bloodletting recharges 6s faster.', spec: { hemomancer: 'Blood Lance recharges 6s faster.' } },
+      { id: 'bloodreaver_quickvein', name: 'Quickened Vein', ab: 'letting', cd: { letting: -6 }, text: 'Bloodletting recharges 6s faster.', spec: { berserker: 'Bloodletting recharges 6s faster (Bloodbath, if you take it, recharges in 11s instead of 15s).', hemomancer: 'Blood Lance recharges in 11s instead of 15s.' } },
       { id: 'bloodreaver_tide', name: 'Crimson Tide', ab: 'drain', text: 'Crimson Drain\'s healing now also flows to the most hurt ally, at a third of the strength.',
         spec: { berserker: 'Rampage\'s healing now also flows to the most hurt ally, at a third of the strength.', hemomancer: 'Shared Vein now flows to the party at 35% of the strength instead of 25%.' } },
     ],
     [
       { id: 'bloodreaver_moon', name: 'Blood Moon', ab: 'undying', grants: true,
-        text: 'Undying becomes Blood Moon (120s): for 10s you cannot drop below 1 HP and your heals on yourself are doubled. When it sets you burst in a tide of blood: the boss takes damage for every hit you took under it (up to {d:1500}), and you heal for a quarter of that.' },
+        text: 'Undying becomes Blood Moon (120s): for 10s you cannot drop below 1 HP and your heals are doubled. When it sets you burst in a tide of blood: the boss takes damage for every hit you took under it (up to {d:1500}), and you heal for a quarter of that.' },
       { id: 'bloodreaver_hemorrhage', name: 'Hemorrhage', ab: 'drain', text: 'Crimson Drain now opens a Hemorrhage on the boss, {d:55} every 3s for 9s. While it bleeds, each hit of Hack & Maul heals you for 2% of your HP.',
         spec: { berserker: 'Rampage now opens a Hemorrhage on the boss, {d:55} every 3s for 9s. While it bleeds, each hit of Hack & Maul heals you for 2% of your HP.' } },
-      { id: 'bloodreaver_bloodlust', name: 'Bloodlust', ab: 'frenzy', text: 'When Frenzy ends you finish with a free Crimson Drain that remembers every hit you took while it lasted.',
-        spec: { berserker: 'When Frenzy ends you finish with a free Rampage that remembers every hit you took while it lasted.' } },
+      { id: 'bloodreaver_bloodlust', name: 'Bloodlust', ab: 'frenzy', text: 'When Frenzy ends you finish with a free Crimson Drain that remembers every hit you took while it lasted. Its blood is warm, and every Drain talent you hold rides on it.',
+        spec: { berserker: 'When Frenzy ends you finish with a free Rampage that remembers every hit you took while it lasted. Its blood is warm, and every Rampage talent you hold rides on it.' } },
     ],
   ],
 
@@ -113,12 +113,12 @@ const TALENTS = {
         spec: { runeblade: 'Every fifth Rune Blade hit overflows: a Rune spills out and bursts into the boss for {d:200}.' } },
       { id: 'runeguard_echo', name: 'Glyph Echo', ab: 'glyph', text: 'Glyph Burst now leaves its glyph hanging on the boss: the next time you raise a Runic Ward, it goes off again for a quarter.',
         spec: { runeblade: 'Rune Cleave now leaves its rune hanging on the boss: the next time you raise a Runic Ward, it goes off again for a quarter.' } },
-      { id: 'runeguard_answer', name: 'Answering Rune', ab: 'strike', text: 'After a Ward of yours breaks or Mirror Aegis reflects, your next three Rune Strikes each give an extra Rune.',
-        spec: { runeblade: 'After a Ward of yours breaks or Mirror Aegis reflects, your next three Rune Blade hits each give an extra Rune.' } },
+      { id: 'runeguard_answer', name: 'Answering Rune', ab: 'strike', text: 'After a Ward of yours breaks or Mirror Aegis reflects, your next three Rune Strikes within 15s each give an extra Rune.',
+        spec: { runeblade: 'After a Ward of yours breaks or Mirror Aegis reflects, your next three Rune Blade hits within 15s each give an extra Rune.' } },
     ],
     [
       { id: 'runeguard_leap', name: 'Leaping Ward', ab: 'ward', text: 'A Runic Ward that ends with strength left now leaps: what is left of it, topped up by half of what the Ward soaked, jumps to the most hurt ally (never back onto you) for 10s.' },
-      { id: 'runeguard_patient', name: 'Patient Mirror', ab: 'mirror', text: 'Mirror Aegis raised while the boss is casting now waits for that cast to land (up to 8s) instead of 3s. A tankbuster it reflects also shields the rest of the party for {s:350} for 6s.' },
+      { id: 'runeguard_patient', name: 'Patient Mirror', ab: 'mirror', text: 'Mirror Aegis raised while the boss is casting now waits for that cast to land (up to 8s) instead of 3s. A tankbuster it reflects also shields the whole party (you too) for {s:350} for 6s.' },
       { id: 'runeguard_emergency', name: 'Emergency Ward', ab: 'ward', text: 'With no Rune in hand, Runic Ward still goes up, at 80% strength (once every 20s). The next Rune you gain pays for it. If it breaks all the way, the debt is forgiven and the Rune comes back.' },
     ],
     [
@@ -159,8 +159,9 @@ const TALENTS = {
     ],
     [
       { id: 'ranger_explosive', name: 'Explosive Shot', ab: 'rapid', grants: true,
-        text: 'Rapid Fire becomes Explosive Shot: spend 50 Focus (25 in your Mark) to plant a charge that blows 2.5s later for {d:400} ({d:860} in your Mark). Every Quick Shot or Piercing Arrow that lands before then makes the blast 35% bigger.' },
-      { id: 'ranger_focusfire', name: 'Focus Fire', ab: 'quick', text: 'At full Focus, Quick Shot no longer wastes it: instead of giving Focus it hits twice as hard.' },
+        text: 'Rapid Fire becomes Explosive Shot: spend 50 Focus (25 in your Mark) to plant a charge that blows 2.5s later for {d:400} ({d:860} in your Mark). Every Quick Shot or Piercing Arrow that lands before then makes the blast 35% bigger.',
+        spec: { sharpshooter: 'Rapid Fire becomes Explosive Shot: spend 50 Focus (20 in your Mark) to plant a charge that blows 2.5s later for {d:400} ({d:860} in your Mark). Every Quick Shot or Aimed Shot that lands before then makes the blast 35% bigger.', venomstrike: 'Rapid Fire becomes Explosive Shot: spend 50 Focus (25 in your Mark) to plant a charge that blows 2.5s later for {d:400} ({d:860} in your Mark). Every Quick Shot that lands before then makes the blast 35% bigger; a Caustic Arrow does not.' } },
+      { id: 'ranger_focusfire', name: 'Focus Fire', ab: 'quick', text: 'At full Focus, Quick Shot no longer wastes it: instead of giving Focus it hits twice as hard (a Barrage keeps its three arrows).' },
       { id: 'ranger_tracking', name: 'Tracking', ab: 'quick', text: 'Each Quick Shot that doesn\'t light Keen Eye gives 2 more Focus than the one before (up to 14 more). Keen Eye only halves the count.' },
     ],
     [
@@ -226,7 +227,7 @@ const TALENTS = {
       { id: 'pyromancer_hurry', name: 'Overcharged Blast', ab: 'fireblast', text: 'A Fire Blast fired mid-cast finishes that cast at once, 40% harder, and your global cooldown ends 0.8s sooner.' },
     ],
     [
-      { id: 'pyromancer_molten', name: 'Molten Armour', ab: 'fireball', text: 'While your Heat is above 50, you take 20% less damage.' },
+      { id: 'pyromancer_molten', name: 'Molten Armour', ab: 'fireball', text: 'While your Heat is above 50, you take 24% less damage.' },
       { id: 'pyromancer_cauterize', name: 'Cauterize', ab: 'fireblast', text: 'A Fire Blast that turns Heating Up into Hot Streak also heals you for 10% of your HP.' },
       { id: 'pyromancer_haze', name: 'Heat Haze', ab: 'fireball', text: 'Whenever the boss begins a cast, your next Fireball is instant and 35% harder.' },
     ],
@@ -234,17 +235,17 @@ const TALENTS = {
       { id: 'pyromancer_firestep', name: 'Firestep', ab: 'smolder', grants: true,
         text: 'Smolder becomes Firestep (15s): blink forward through a burst of flame that scorches the boss for {d:300} and gives 8 Heat. Nothing can touch you as you go, the party takes 8% less damage for 4s, and your next Fireball is instant and 30% harder.' },
       { id: 'pyromancer_banked', name: 'Banked Embers', ab: 'fireball', text: 'Your Heat no longer cools off on its own, and Vent leaves 25 Heat behind.' },
-      { id: 'pyromancer_flashpoint', name: 'Flashpoint', ab: 'fireblast', text: 'A Fire Blast at 85 Heat or more now vents 30 Heat into the boss as a second blast for {d:400}, a sure critical hit, instead of adding more.' },
+      { id: 'pyromancer_flashpoint', name: 'Flashpoint', ab: 'fireblast', text: 'A Fire Blast at 85 Heat or more now vents 30 Heat into the boss as a second blast for {d:650}, a sure critical hit, instead of adding more.' },
     ],
     [
       { id: 'pyromancer_afterburn', name: 'Afterburn', ab: 'combust', text: 'When Combustion ends, it goes out in a blast of {d:700}, and you get Hot Streak and both Fire Blast charges back.', spec: { sigilmancer: 'When Ember Circle fades, you get Hot Streak and both Fire Blast charges back.' } },
       { id: 'pyromancer_wildfire', name: 'Wildfire', ab: 'combust', text: 'Every crit during Combustion now leaves a flame on the boss that burns for {d:60} every 2s for 6s (up to 3 at once).',
-        spec: { sigilmancer: 'Every crit while you stand in Ember Circle now leaves a flame on the boss that burns for {d:60} every 2s for 6s (up to 3 at once).' } },
+        spec: { sigilmancer: 'Every crit while you stand in Ember Circle now leaves a flame on the boss that burns for {d:120} every 2s for 6s (up to 3 at once).' } },
       { id: 'pyromancer_longburn', name: 'Long Burn', ab: 'combust', text: 'Combustion lasts 4s longer.', spec: { sigilmancer: 'Ember Circle lasts 7s longer and is 25% wider.' } },
     ],
     [
       { id: 'pyromancer_phoenix', name: 'Phoenix Flight', ab: 'vent', grants: true,
-        text: 'Vent becomes Phoenix Flight (12s): release all your Heat as a phoenix that sweeps through the boss and wheels back twice more, each pass {d:80} plus {d:24} for every 10 Heat. At 60 Heat or more it leaves you Hot Streak.' },
+        text: 'Vent becomes Phoenix Flight (12s): release all your Heat as a phoenix that sweeps through the boss and wheels back twice more, each pass {d:80} plus {d:24} for every 10 Heat. At 60 Heat or more it leaves you Hot Streak, and a Meteor still falling comes down at once.' },
       { id: 'pyromancer_twin', name: 'Twin Flame', ab: 'pyro', text: 'A Hot Streak Pyroblast now splits: a second, smaller Pyroblast hits for 25%.', spec: { cataclysm: 'A Hot Streak Meteor now brings a second, smaller meteor down a moment later, for 25%.' } },
       { id: 'pyromancer_bomb', name: 'Living Bomb', ab: 'fireball', text: 'Every third Fireball now plants an ember in the boss that bursts 3s later for {d:220}.' },
     ],
@@ -259,17 +260,17 @@ const TALENTS = {
     ],
     [
       { id: 'cleric_quickmend', name: 'Quick Mend', ab: 'mend', text: 'After you spend a Petal, your next Mend is instant, heals half again as much, and counts as a whole Petal toward Dawnstar.', spec: { aegis: 'After you spend a Petal, your next Divine Barrier is instant, and its dome also catches the most hurt other ally at half strength.' } },
-      { id: 'cleric_purify', name: 'Purify', ab: 'petal', text: 'Dawn Petal now washes Vulnerability and Damage Down off its target and whoever stands close, and leaves each a ward of {s:260} for 8s (once every 10s).' },
+      { id: 'cleric_purify', name: 'Purify', ab: 'petal', text: 'Dawn Petal now washes Vulnerability and Damage Down off its target and whoever stands close, and leaves each a ward of {s:275} for 8s (once every 10s).', spec: { aegis: 'Dawn Petal now washes Vulnerability and Damage Down off its target and whoever stands close, and leaves each a ward of {s:275} for 8s (once every 10s). The ward never replaces your own Petal shield or Barrier, so the Petal\'s target keeps that shield and its refund.' } },
       { id: 'cleric_wings', name: 'Wings of Dawn', ab: 'petal', text: 'Dawn Petal cast on an ally now carries you toward them on wings of light (up to 200, and never onto a marked floor), and you and that ally take 25% less damage for 4s.' },
     ],
     [
       { id: 'cleric_bloom', name: 'Bloom of Dawn', ab: 'intervene', grants: true,
         text: 'Intervention becomes Bloom of Dawn (24s, instant): spend all your Petals on one ally. A fallen ally rises at once, with heavy Raise Sickness; a living one is healed for {h:900} per Petal and left a regen of {h:90} per Petal every 3s for 9s. Every Petal counts toward Dawnstar.' },
       { id: 'cleric_favour', name: 'Sun\'s Favour', ab: 'smite', text: 'Dawnstar gives back two Petals and heals the most hurt ally for {h:600}.' },
-      { id: 'cleric_firstlight', name: 'First Light', ab: 'mend', text: 'While Dawnstar is ready, Mend now casts instantly and heals half again as much.', spec: { aegis: 'While Dawnstar is ready, Divine Barrier now casts instantly and its dome is 30% larger.' } },
+      { id: 'cleric_firstlight', name: 'First Light', ab: 'mend', text: 'While Dawnstar is ready, Mend now casts instantly and heals half again as much (with Quick Mend too, twice as much).', spec: { aegis: 'While Dawnstar is ready, Divine Barrier now casts instantly and its dome is 30% larger.' } },
     ],
     [
-      { id: 'cleric_twinbless', name: 'Twin Blessing', ab: 'bene', text: 'Benediction also lands at once on the most hurt other ally: three-quarters of the heal and shield, and they are Blessed too.',
+      { id: 'cleric_twinbless', name: 'Twin Blessing', ab: 'bene', text: 'Benediction also lands at once on the most hurt other ally: three-quarters of the heal and four-fifths of the shield, and they are Blessed too.',
         spec: { inquisitor: 'Condemn is followed 1.5s later by a second lance for three-quarters of the damage, with the same brand.' } },
       { id: 'cleric_sunfall', name: 'Sunfall', ab: 'smite', text: 'Dawnstar now leaves a small sun on the boss that burns it for {d:60} every 2s for 12s; each burn warms the most hurt ally for {h:80}.' },
       { id: 'cleric_benevolence', name: 'Benevolence', ab: 'bene', cd: { bene: -18 }, specMods: { inquisitor: { cd: { bene: -15 } } }, text: 'Benediction recharges 18s faster.', spec: { inquisitor: 'Condemn recharges 15s faster and brands 3 more hits.' } },
@@ -284,8 +285,8 @@ const TALENTS = {
 
   grovekeeper: [
     [
-      { id: 'grovekeeper_balance', name: 'Nature\'s Balance', ab: 'wrath', text: 'Wrath now also heals everyone under your Rejuvenate for half of its damage, and a Rejuvenate cast while Thornlash is on the boss heals 5% more.',
-        spec: { lifebinder: 'Wrath now also heals everyone under your Lifebind for half of its damage, and a Lifebind cast while Thornlash is on the boss heals 5% more.' } },
+      { id: 'grovekeeper_balance', name: 'Nature\'s Balance', ab: 'wrath', text: 'Wrath now also heals everyone under your Rejuvenate for half of its damage, and a Rejuvenate cast while Thornlash (or your Treant) is on the boss heals 5% more.',
+        spec: { lifebinder: 'Wrath now also heals everyone under your Lifebind, both roots, for half of its damage, and a Lifebind cast while Thornlash (or your Treant) is on the boss heals 5% more.' } },
       { id: 'grovekeeper_moonfire', name: 'Moonfire', ab: 'wrath', text: 'Every second Wrath is instant and hits for {d:480}; the most hurt ally is healed for a quarter of it.' },
       { id: 'grovekeeper_sprout', name: 'Quick Sprout', ab: 'rejuv', text: 'Once every 30s, Rejuvenate takes only a moment: its global cooldown is 1.2s.', spec: { lifebinder: 'Once every 30s, Lifebind takes only a moment: its global cooldown is 1.2s, and it grows 15 Bloom.' } },
     ],
@@ -312,7 +313,7 @@ const TALENTS = {
         text: 'Thornlash becomes Treant (45s): call up a treant beside the boss for 15s. It slams the boss for {d:170} every 3s, and every slam heals your most hurt ally for {h:150}.' },
       { id: 'grovekeeper_naturewrath', name: 'Nature\'s Wrath', ab: 'bloom', text: 'Bloom now also tears roots up under the boss: a strike for {d:90}, then lashes of {d:60} every 3s for 12s, and each lash heals your most hurt ally for {h:50}.' },
       { id: 'grovekeeper_pulse', name: 'Verdant Pulse', ab: 'growth', text: 'Wild Growth now pulses every 3s while it lasts, and each pulse grows 8 Bloom.',
-        spec: { moonwell: 'Moonwell now pulses every 3s while it lasts, and each pulse grows 8 Bloom.' } },
+        spec: { moonwell: 'Moonwell now pulses every 3s while it lasts, and each pulse grows 10 Bloom.' } },
     ],
   ],
 
@@ -357,7 +358,7 @@ Object.assign(TALENTS, {
   thermist: [
     [
       { id: 'thermist_embers', name: 'Banked Embers', ab: 'cinder', text: 'A fire spell cast at +3 or hotter now leaves an ember in the target (up to 4). Your next Thermal Shock sets every ember off, {d:200} each.' },
-      { id: 'thermist_flicker', name: 'Flicker', ab: 'rime', text: 'A Cinder Bolt or Rime Shard now makes your next Flare or Glacier Lance instant and 50% harder (within 6s).' },
+      { id: 'thermist_flicker', name: 'Flicker', ab: 'rime', text: 'A Cinder Bolt or Rime Shard (Absolute Zero counts as one) now makes your next Flare or Glacier Lance instant and 50% harder (within 6s).' },
       { id: 'thermist_afterglow', name: 'Afterglow', ab: 'flare', text: 'A Flare or Glacier Lance cast at its own edge now leaves the target burning or freezing for {d:120} every 3s for 9s.' },
     ],
     [
@@ -372,7 +373,7 @@ Object.assign(TALENTS, {
     ],
     [
       { id: 'thermist_vortex', name: 'Polar Vortex', ab: 'invert', text: 'Inversion now leaves a vortex on the target that strikes for {d:220} every 1.5s for 12s.', spec: { zenith: 'Inversion, or Red Giant in its place, now leaves a vortex on the target that strikes for {d:220} every 1.5s for 12s.' } },
-      { id: 'thermist_pulse', name: 'Equilibrium Pulse', ab: 'equil', text: 'Equilibrium now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far.', spec: { zenith: 'Sunset now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far.' } },
+      { id: 'thermist_pulse', name: 'Equilibrium Pulse', ab: 'equil', text: 'Equilibrium now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far.', spec: { zenith: 'Sunset now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far. With Solar Wind it sets it off without moving the dial.' } },
       { id: 'thermist_solstice', name: 'Solstice', ab: 'invert', text: 'Inversion now flips the dial back 5s later: a Shock at 85% strength if it\'s still far enough from 0.', spec: { zenith: 'Inversion now flips the dial back 5s later: a Shock at 85% strength if it\'s still far enough from 0. That Shock leaves your Corona for the next one. With Red Giant in its place, the dial flips once, when Red Giant ends.' } },
     ],
     [
@@ -400,9 +401,9 @@ Object.assign(TALENTS, {
       { id: 'driftblade_hover', name: 'Hover', ab: 'carve', text: 'A Carve you make while standing still now gives 25 Drift and holds your Drift for 4s.' },
     ],
     [
-      { id: 'driftblade_galeforce', name: 'Galeforce', ab: 'gale', text: 'Gale Run now looses a free blade of wind at the target when it begins, {d:100} plus {d:60} for every 10 Drift you hold, and another when it ends: {d:100} plus {d:80} for every 10 Drift. Both always crit and spend nothing.' },
+      { id: 'driftblade_galeforce', name: 'Galeforce', ab: 'gale', text: 'Gale Run now looses a free blade of wind at the target when it begins, {d:100} plus {d:60} for every 10 Drift you hold, and another when it ends: {d:100} plus {d:80} for every 10 Drift. Both always crit and spend nothing. Roost loosed them the same way over its 10s; Starfall leaves a wind behind for 5s and looses the second when it dies.' },
       { id: 'driftblade_jet', name: 'Jetstream', ab: 'slip', text: 'A Slipstream through an enemy now gives its charge back (once every 6s), the Passing Strike hits twice as hard, and you take 20% less damage for 2s.' },
-      { id: 'driftblade_hurricane', name: 'Hurricane', ab: 'gale', text: 'During Gale Run, each Passing Strike now makes it last 2s longer (up to 10s) and gives 10 more Drift.' },
+      { id: 'driftblade_hurricane', name: 'Hurricane', ab: 'gale', text: 'During Gale Run, each Passing Strike now makes it last 2s longer (up to 10s) and gives 10 more Drift. Roost lasts longer the same way, and Starfall leaves a 5s wind that Passing Strikes stretch and feed too (Drift cannot drain while it blows).' },
     ],
     [
       { id: 'driftblade_tailspin', name: 'Tailspin', ab: 'still', grants: true, text: 'New move on D, in place of Stillpoint. Tailspin: whirl in place, parrying like Stillpoint and cutting the nearest enemy three times for {d:115} each, then spring 150 px the way you\'re heading.' },
@@ -417,12 +418,12 @@ Object.assign(TALENTS, {
 // kits.js and takes the slot named in its `replaces`): Grand Blend (row III) and Quicksilver (row V).
 TALENTS.alembist = [
   [
-    { id: 'alembist_ricochet', name: 'Ricochet', ab: 'throw', text: 'Once every 8s, a Fire Bomb now bounces off its target and bursts again a second later, a quarter as strong, and the bounce heals your most hurt ally for {h:120}.' },
-    { id: 'alembist_scorch', name: 'Scorch', ab: 'throw', text: 'A Fire Bomb now leaves its target scorched for 10s: every heal vial you land in that time also flicks a spark into it for {d:90}.' },
+    { id: 'alembist_ricochet', name: 'Ricochet', ab: 'throw', text: 'Once every 8s, a bomb you throw (any bomb, the Kiln Bomb too) now bounces off its target and bursts again a second later, a quarter as strong, and the bounce heals your most hurt ally for {h:120}.' },
+    { id: 'alembist_scorch', name: 'Scorch', ab: 'throw', text: 'A bomb now leaves its target scorched for 10s: every heal vial you land in that time (a healing cloud too) also flicks a spark into it for {d:90}.' },
     { id: 'alembist_kindle', name: 'Kindling', ab: 'ember', text: 'Starting a brew with Ember now flicks an ember at your target for {d:100} and leaves it burning for {d:60} every 3s for 12s.' },
   ],
   [
-    { id: 'alembist_flask', name: 'Flask Armour', ab: 'batch', text: 'While your bandolier is full, you take 15% less damage, and the ally you last threw a cure at takes 8% less for 4s.' },
+    { id: 'alembist_flask', name: 'Flask Armour', ab: 'batch', text: 'While your bandolier is full, you take 18% less damage, and the ally you last threw a cure at takes 8% less for 4s.' },
     { id: 'alembist_cling', name: 'Clinging Steam', ab: 'throw', text: 'Steam clouds now follow the ally they landed on and heal {h:160} every 1.5s (was {h:80}).' },
     { id: 'alembist_spill', name: 'Spill', ab: 'throw', text: 'Vials ripen 60% sooner, and a vial that spoils now spills at your feet at full strength instead of going to waste.',
       spec: { volatile: 'Vials heat up 40% sooner, and a vial whose fuse runs out now goes off at full strength where it helps: a cure on the most hurt ally, a bomb at the enemy. It no longer burns you.' } },
@@ -432,7 +433,7 @@ TALENTS.alembist = [
       text: 'Grand Batch becomes Grand Blend (40s): pour every vial in your bandolier into one. Thrown, it does all of their effects at once, each at one and a half times full strength, and it lights the Kiln fully. It adds two ripe copies of the last vial you brewed.' },
     { id: 'alembist_cask', name: 'Oak Cask', ab: 'throw', text: 'Ripe vials now keep ripening, up to 80% stronger at 20s, but spoil at 30s. A vial thrown ripe splashes a second time at 65%.',
       spec: { volatile: 'Your fuses burn 2s longer, and a vial keeps heating until it goes off, up to 60% stronger. A vial thrown fully heated splashes a second time at 40%.' } },
-    { id: 'alembist_echo', name: 'Mother Liquor', ab: 'dew', text: 'Brewing the same recipe twice in a row makes the second vial ripe at once.',
+    { id: 'alembist_echo', name: 'Mother Liquor', ab: 'dew', text: 'Brewing the same recipe twice in a row makes the second vial ripe at once (and under Oak Cask it keeps ripening half again as fast).',
       spec: { volatile: 'Brewing the same recipe twice in a row makes the second vial heat up fully at once, and it lights the Kiln twice.' } },
   ],
   [
@@ -469,7 +470,7 @@ Object.assign(TALENTS, {
     ],
     [
       { id: 'gorgemaw_regurgitate', name: 'Regurgitate', ab: 'spit', grants: true, text: 'New move on E, in place of Spit. Regurgitate: bring the whole Belly up at once, every Morsel spat in its own shape at full strength, and the acid from a Digest rides on every Morsel in the volley.', spec: { glutton: 'New move on E, in place of Spit. Regurgitate: bring the whole Belly up at once, every Morsel spat in its own shape at 115% strength. Pairs of a shape still fuse, and the acid from a Digest rides on every Morsel in the volley.' } },
-      { id: 'gorgemaw_lining', name: 'Iron Lining', ab: 'digest', text: 'Every Morsel in your Belly now makes you take 8% less damage (up to 30%).' },
+      { id: 'gorgemaw_lining', name: 'Iron Lining', ab: 'digest', text: 'Every Morsel in your Belly now makes you take 10% less damage (up to 35%).' },
       { id: 'gorgemaw_sour', name: 'Sour Stomach', ab: 'spit', text: 'A Morsel you have kept for 15s or more turns sour: spat, it hits 40% harder.' },
     ],
     [
@@ -488,12 +489,12 @@ Object.assign(TALENTS, {
     [
       { id: 'oathbroker_interest', name: 'Interest', ab: 'collect', text: 'Collect, the third strike, now hits for 30 more for every entry in your Ledger (up to 5), and Levy, the second, for 12 more.' },
       { id: 'oathbroker_garnish', name: 'Garnish', ab: 'collect', text: '65% of whatever your strikes pay down is now also struck from the boss.' },
-      { id: 'oathbroker_stamp', name: 'Rubber Stamp', ab: 'settle', text: 'Settle now also stamps the boss: a blow worth three-quarters of the Ledger you settled (up to {d:900}, or {d:650} from an Audit).' },
+      { id: 'oathbroker_stamp', name: 'Rubber Stamp', ab: 'settle', text: 'Settle now also stamps the boss: a blow worth three-quarters of the Ledger you settled (up to {d:900}, or {d:650} from an Audit).', spec: { collector: 'Settle now also stamps the boss: a blow worth the whole Ledger you settled (up to {d:1200}, or {d:900} from an Audit), and the settled lines strike the boss for half their size, as if they had come due.' } },
     ],
     [
       { id: 'oathbroker_grace', name: 'Grace Period', ab: 'reneg', text: 'Entries written while you are below half health come due after 14s instead of 8s.' },
       { id: 'oathbroker_amnesty', name: 'Amnesty', ab: 'reneg', text: 'Renegotiate, or Moratorium in its place, now also erases your two smallest entries and strikes the boss for 60% of what they held.' },
-      { id: 'oathbroker_escrow', name: 'Escrow', ab: 'settle', text: 'While your Ledger holds 3 entries or more, you take 10% less damage.' },
+      { id: 'oathbroker_escrow', name: 'Escrow', ab: 'settle', text: 'While your Ledger holds 3 entries or more, you take 12% less damage.' },
     ],
     [
       { id: 'oathbroker_audit', name: 'Audit', ab: 'settle', grants: true, text: 'New move on E, in place of Settle. Audit (12s): every entry at least 3s old is paid now at 20% of its size; newer ones stay.' },
@@ -502,12 +503,12 @@ Object.assign(TALENTS, {
     ],
     [
       { id: 'oathbroker_receivership', name: 'Receivership', ab: 'default', text: 'Default now also shields the whole party for half of what it tore up (at most 20% of your HP) and gives them 25% less damage for 8s.', spec: { collector: 'Foreclose now also shields the whole party for half of what it tore up (at most 20% of your HP) and gives them 25% less damage for 8s.' } },
-      { id: 'oathbroker_garnishwrit', name: 'Writ of Execution', ab: 'writ', text: 'Entries written during Writ of Protection are now half paid by the boss when they come due, and Writ of Protection is back in 40s instead of 90s.' },
+      { id: 'oathbroker_garnishwrit', name: 'Writ of Execution', ab: 'writ', text: 'Entries written during Writ of Protection are now half paid by the boss when they come due, and Writ of Protection is back in 40s instead of 90s. Blanket Surety and Warrant, in its place, get the same: entries written in them are half paid by the boss, and they are back in 40s instead of 60s.' },
       { id: 'oathbroker_slate', name: 'Clean Slate', ab: 'default', text: 'Default now also brings Renegotiate, Settle, Lien and Writ of Protection straight back, and your credit freezes for 6s instead of 10s.', spec: { collector: 'Foreclose now also brings Renegotiate, Settle, Lien and your Writ of Protection (or Warrant) straight back, and your credit freezes for 6s instead of 10s.' } },
     ],
     [
       { id: 'oathbroker_moratorium', name: 'Moratorium', ab: 'reneg', grants: true, text: 'New move on W, in place of Renegotiate. Moratorium (35s): for 5s nothing comes due and every timer in the Ledger stops; you take 30% less damage, and every entry is marked renegotiated, as Renegotiate does.' },
-      { id: 'oathbroker_tithe', name: 'Tithe', ab: 'lien', text: 'Every bill you pay now heals your most hurt ally for three-quarters of it.' },
+      { id: 'oathbroker_tithe', name: 'Tithe', ab: 'lien', text: 'Every bill you pay now heals the most hurt member of the party (you too, if it is you) for three-quarters of it.' },
       { id: 'oathbroker_notary', name: 'Notary', ab: 'collect', text: 'Collect, the third strike, now also settles your oldest entry on the spot at a third of its size; the boss takes half of what that spares you.' },
     ],
   ],
@@ -523,51 +524,51 @@ Object.assign(TALENTS, {
       { id: 'threadweaver_taut', name: 'Taut', ab: 'needle', text: 'While you hold 2 threads or more, Needle is instant, strikes 12% harder and its tugs heal 40% more.' },
     ],
     [
-      { id: 'threadweaver_thimble', name: 'Thimble', ab: 'snip', text: 'Every thread Snap cuts now also shields both its ends for {s:150} for 6s, and an end under half health gets {s:300} instead.' },
+      { id: 'threadweaver_thimble', name: 'Thimble', ab: 'snip', text: 'Every thread Snap cuts now also shields both its ends for {s:150} for 6s, and an end under half health gets {s:300} instead. Thrum, if you took it, shields the ends of every thread it rings the same way.' },
       { id: 'threadweaver_reelin', name: 'Reel In', ab: 'tie', text: 'A Tie that pulls an ally along a thread now pulls both ends together to meet in the middle, and gives the Tie back. The one pulled heals {h:160} (the thread carries part of it to the other end), and both take 20% less damage for 4s.' },
-      { id: 'threadweaver_knotwork', name: 'Knotwork', ab: 'tie', text: 'A thread that snaps on its own, or that you Snap, now gives back a charge of Tie and wraps both its ends in a {s:200} shield for 5s.' },
+      { id: 'threadweaver_knotwork', name: 'Knotwork', ab: 'tie', text: 'A thread that snaps on its own, or that you Snap, now gives back a charge of Tie (one for every thread a Snap cuts) and wraps both its ends in a {s:200} shield for 5s. Thrum, if you took it, does the same for every thread it rings.' },
     ],
     [
       { id: 'threadweaver_embroider', name: 'Embroider', ab: 'mend', grants: true, text: 'New move on E, in place of Mend Seam. Embroider: instant. A {h:300} heal that runs down every thread on your target at full strength, and on through their threads at 60%. With 20 Spool it spends them and heals {h:480} instead.' },
       { id: 'threadweaver_bobbin', name: 'Full Bobbin', ab: 'mend', text: 'A Mend Seam that spends Spool now heals 20% more and winds 10 of that Spool back.' },
-      { id: 'threadweaver_tension', name: 'Tension', ab: 'snip', text: 'Every thread Snap cuts now gives back 15 Spool, and your next Mend Seam within 8s heals 20% more.' },
+      { id: 'threadweaver_tension', name: 'Tension', ab: 'snip', text: 'Snap now gives back 15 Spool for every thread you hold, and your next Mend Seam within 8s heals 20% more. Thrum, if you took it, pays the same for every thread it rings.' },
     ],
     [
-      { id: 'threadweaver_grand', name: 'Grand Tapestry', ab: 'tapestry', text: 'When Tapestry ends, the web now lets go in a {h:300} heal on the whole party, plus three quarters of what it split, up to {h:900} more.' },
-      { id: 'threadweaver_selvedge', name: 'Selvedge', ab: 'tapestry', text: 'While Tapestry holds, none of your threads can snap, however far apart their ends are pulled, Tapestry lasts 4s longer and the party takes 10% less damage.' },
+      { id: 'threadweaver_grand', name: 'Grand Tapestry', ab: 'tapestry', text: 'When Tapestry ends, the web now lets go in a {h:300} heal on the whole party, plus three quarters of what it split, up to {h:900} more. With Severance, it lets go when the cover ends instead.' },
+      { id: 'threadweaver_selvedge', name: 'Selvedge', ab: 'tapestry', text: 'While Tapestry holds, none of your threads can snap, however far apart their ends are pulled, Tapestry lasts 4s longer and the party takes 10% less damage. With Severance, its cover lasts 4s longer and the threads it ties again cannot snap for 6s.' },
       { id: 'threadweaver_longthread', name: 'Long Thread', ab: 'tapestry', text: 'Tapestry holds two charges and lasts 3s longer. If you took Severance, it recharges 10s faster instead.' },
     ],
     [
       { id: 'threadweaver_cradle', name: 'Cat\'s Cradle', ab: 'shuttle', grants: true, text: 'New move on D, in place of Shuttle. Cat\'s Cradle (20s): a cradle of threads at your feet for 9s. Allies inside take 20% less damage and heal {h:90} every 1.5s, and its shuttle strikes the boss for {d:240} per thread you hold.', specMods: { shears: { cd: { shuttle: -3 } } }, spec: { shears: 'New move on D, in place of Shuttle. Cat\'s Cradle (17s): a cradle of threads at your feet for 9s. Allies inside take 20% less damage and heal {h:90} every 1.5s, and its shuttle strikes the boss for {d:240} per thread you hold or Snap cut in the last 8s (up to 5).' } },
-      { id: 'threadweaver_heartstring', name: 'Heartstring', ab: 'snip', text: 'Every Snap that cuts a thread now also whips the boss for {d:150} and leaves it Frayed: the whole party deals 8% more to it for 10s.' },
+      { id: 'threadweaver_heartstring', name: 'Heartstring', ab: 'snip', text: 'Every Snap that cuts a thread now also whips the boss for {d:150} and leaves it Frayed: the whole party deals 8% more to it for 10s. Thrum, if you took it, whips the boss the same way.' },
       { id: 'threadweaver_skein', name: 'Double Knot', ab: 'tie', text: 'A thread you tie can\'t snap for its first 6s, however far apart its ends are pulled, and the ally you tie takes 8% less damage while it holds.' },
     ],
   ],
 
   marionettist: [
     [
-      { id: 'marionettist_flourish', name: 'Flourish', ab: 'cue', text: 'The last of the quick Jabs a Cue gives now flourishes into a second, lighter stab for {d:135}. Let all three land before you Cue again.', spec: { understudy: 'The last of the quick Jabs a Cue gives now flourishes into a second, lighter stab: {d:145} from each Doll. Let all six land before you Cue again.' } },
+      { id: 'marionettist_flourish', name: 'Flourish', ab: 'cue', text: 'The last of the quick Jabs a Cue gives now flourishes into a second, lighter stab for {d:135}. Let all three land before you Cue again. Strum sends no quick Jabs, so its pluck rings a second stab of {d:110} instead.', spec: { understudy: 'The last of the quick Jabs a Cue gives now flourishes into a second, lighter stab: {d:145} from each Doll. Let all six land before you Cue again.' } },
       { id: 'marionettist_riposte', name: 'Riposte', ab: 'cue', text: 'Every second Jab the Doll makes is a Riposte, a heavier stab for {d:120} that builds 1 Encore. Its own Jabs now feed the Finale: keep it in reach.', spec: { understudy: 'Every third Jab the Dolls make is a Riposte, a heavier stab for {d:87} that builds 1 Encore. Their own Jabs now feed the Finale: keep them in reach.' } },
-      { id: 'marionettist_longarms', name: 'Long Arms', ab: 'pull', text: 'Out of reach, the Doll no longer stops: it jabs down the strings from wherever it stands, for {d:28}. Park it clear of a telegraph and it keeps working.', spec: { understudy: 'Out of reach, the Dolls no longer stop: each jabs down the strings from wherever it stands for {d:23.2} on its own beat, and Cue and Pirouette strike from where the Dolls stand. Park them clear of a telegraph and they keep working.' } },
+      { id: 'marionettist_longarms', name: 'Long Arms', ab: 'pull', text: 'Out of reach, the Doll no longer stops: it jabs down the strings from wherever it stands, for {d:28}. Park it clear of a telegraph and it keeps working.', spec: { understudy: 'Out of reach, the Dolls no longer stop: each jabs down the strings from wherever it stands for {d:23.2} on its own beat, and Cue, Pirouette, Tangle and Cut the Cord strike from where the Dolls stand. Park them clear of a telegraph and they keep working.' } },
     ],
     [
       { id: 'marionettist_slack', name: 'Slack Line', ab: 'pull', text: 'The Doll straying past the strings\' reach no longer tears a String: it is only yanked back, and the strings reach 40 px further. Only a blow tears one now, so you can run and keep your Strung, and each String you keep is worth 8% (not 5%).' },
       { id: 'marionettist_mended', name: 'Safe Landing', ab: 'pull', text: 'Pull Strings now also leaves the Doll untouchable for 3s where it lands, with a {d:120} cut as it touches down, and a blow it shrugs off in that time builds 1 Encore, as under Pirouette.', spec: { understudy: 'Pull Strings now also leaves both Dolls untouchable for 3s where they stand, with a {d:69.6} cut from each as the pulled one touches down, and a blow either shrugs off in that time builds 1 Encore, as under Pirouette.' } },
-      { id: 'marionettist_standin', name: 'Stand-In', ab: 'swap', text: 'For 3s after a Swap, a blow that lands on the Doll no longer tears a String, you take 15% less damage, and a parting flourish as the Doll takes your place cuts the enemy for {d:250}.' },
+      { id: 'marionettist_standin', name: 'Stand-In', ab: 'swap', text: 'For 3s after a Swap, a blow that lands on the Doll no longer tears a String, you take 15% less damage, and a parting flourish as the Doll takes your place cuts the enemy for {d:250}. Red Curtain gives the same: the Dolls\' bow holds the Strings 3s and cuts the enemy for {d:250}.' },
     ],
     [
       { id: 'marionettist_tangle', name: 'Tangle', ab: 'pirouette', grants: true, text: 'New move on R, in place of Pirouette. Tangle: the Doll winds its strings round the enemy, a {d:160} cut now and a bleed of {d:46} every 2s for 10s, and it builds 2 Encore.', spec: { understudy: 'New move on R, in place of Pirouette. Tangle: each Doll winds its strings round the enemy, a {d:110} cut now and a bleed of {d:43} every 2s for 10s, and it builds 2 Encore.' } },
       { id: 'marionettist_cutcord', name: 'Cut the Cord', ab: 'pirouette', grants: true, text: 'New move on R, in place of Pirouette. Cut the Cord: snip one of your own Strings for a {d:680} strike and 2 Encore, and the Doll dances free of any blow for 1.5s. You lose that String\'s Strung until it grows back (6s), or until a Pull Strings ties it back for another Encore.', spec: { understudy: 'New move on R, in place of Pirouette. Cut the Cord: snip one of your own Strings, and each Doll strikes for {d:500}, with 2 Encore, and the Dolls dance free of any blow for 1.5s. You lose that String\'s Strung until it grows back (4s), or until a Pull Strings ties it back for another Encore.' } },
-      { id: 'marionettist_secondact', name: 'Second Act', ab: 'pirouette', text: 'Pirouette now also gives back a charge of Pull Strings, and that free pull cuts four times as hard and builds 2 Encore.' },
+      { id: 'marionettist_secondact', name: 'Second Act', ab: 'pirouette', text: 'Pirouette (or Tangle, or Cut the Cord) now also gives back a charge of Pull Strings, and that free pull cuts four times as hard and builds 2 Encore.' },
     ],
     [
-      { id: 'marionettist_curtain', name: 'Standing Ovation', ab: 'finale', text: 'The last hit of Grand Finale now sends the Doll out quick: its next three Jabs come twice as fast, as after a Cue.' },
+      { id: 'marionettist_curtain', name: 'Standing Ovation', ab: 'finale', text: 'The last hit of Grand Finale now sends the Doll out quick: its next three Jabs come twice as fast, as after a Cue.', spec: { understudy: 'The last hit of Grand Finale now sends the Dolls out quick: their next six Jabs (three each) come twice as fast, as after a Cue.' } },
       { id: 'marionettist_intermission', name: 'Intermission', ab: 'finale', text: 'Grand Finale can start from 3 Encore: the routine has one hit for each Encore you spend, and a show shorter than five hits lands each hit 50% harder and recharges Grand Finale 2s faster for each hit it lacks.' },
       { id: 'marionettist_fullhouse', name: 'Full House', ab: 'finale', text: 'A Grand Finale started with all three Strings tied ends with a sixth hit, a bow three quarters as hard as the others. Keep your Strings whole for the show.' },
     ],
     [
       { id: 'marionettist_curtainrise', name: 'Red Curtain', ab: 'swap', grants: true, text: 'New move on D, in place of Swap. Red Curtain: a red curtain round you for 8s; allies inside take 15% less damage, the Dolls bow where they stand, and your next Cross-Cut within 6s cuts twice as hard and gives 1 more Encore, as after a Swap (30s).' },
-      { id: 'marionettist_twin', name: 'Twin Strings', ab: 'cross', text: 'Cross-Cut\'s line now lingers for 3s and cuts whatever still crosses it for {d:45} every second.', spec: { understudy: 'Cross-Cut\'s lines now linger for 3s and cut whatever still crosses them for {d:32} every second.' } },
+      { id: 'marionettist_twin', name: 'Twin Strings', ab: 'cross', text: 'Cross-Cut\'s line now lingers for 3s and cuts whatever still crosses it for {d:45} every second.', spec: { understudy: 'Cross-Cut\'s lines now linger for 3s and cut whatever still crosses them for {d:32} every second. Crossfire\'s line between the Dolls lingers too, for {d:56}.' } },
       { id: 'marionettist_bow', name: 'Final Bow', ab: 'finale', text: 'Nothing can touch the Doll while Grand Finale plays, and a blow it dances through during the show builds 1 Encore, as under Pirouette. The last beat of the show hits twice as hard.' },
     ],
   ],
@@ -591,7 +592,7 @@ TALENTS.ironpalm = [
   [
     { id: 'ironpalm_bellows', name: 'Bellows Stance', ab: 'skin', grants: true, text: 'New move on D, in place of Iron Skin. Bellows Stance (60s): for 10s you take 30% less damage, your Breath refills half again as fast, and every named move you finish breathes out a shockwave ({d:80}) and gives back 6 Breath.',
       spec: { stillwater: 'New move on D, in place of Still Pond. Bellows Stance (60s): for 10s you take 30% less damage, your Breath refills half again as fast, every named move you finish breathes out a shockwave ({d:80}) and gives back 6 Breath, and a blow you read under it gives the Read back and breathes out the shockwave too.' } },
-    { id: 'ironpalm_lungs', name: 'Deep Lungs', ab: 'palm', text: 'While your Breath is above half, your Heavy and Kick presses hit 12% harder.' },
+    { id: 'ironpalm_lungs', name: 'Deep Lungs', ab: 'palm', text: 'While your Breath is above half, your Heavy and Kick presses hit 12% harder. Your Breath also refills a fifth faster, always.' },
     { id: 'ironpalm_quiet', name: 'Quiet Mind', ab: 'read', text: 'Finishing a named move leaves your next press Crisp, and it hits 20% harder.' },
   ],
   [
@@ -622,7 +623,7 @@ Object.assign(TALENTS, {
       { id: 'gloomsworn_bearer', name: 'Pallbearers', ab: 'pall', text: 'Black Pall (or Vigil Ward in its place) now also lays a barrier of {s:150} on every ally for 8s, and lays it afresh 4s later for anyone who has worn it down.', spec: { duskreaver: 'Dusk Reave (or Vigil Ward in its place) now also lays a barrier of {s:170} on every ally for 8s, and lays it afresh 4s later for anyone who has worn it down.' } },
     ],
     [
-      { id: 'gloomsworn_vigil', name: 'Vigil Ward', ab: 'pall', grants: true, text: 'New move on R, in place of Black Pall. Vigil Ward (45s, 20 Gloom): stand watch over whoever is hurt most. They take 50% less damage for 5s and are wrapped in a barrier of {s:200}; you take 15% less damage for 5s, and the rest of the party takes 20% less damage for 6s, as under the Pall.', spec: { duskreaver: 'New move on R, in place of Dusk Reave. Vigil Ward (30s, 30 Gloom): a reaping cut for {d:600}, then stand watch over whoever is hurt most. They take 50% less damage for 5s and are wrapped in a barrier of {s:200}; you take 15% less damage for 5s.' } },
+      { id: 'gloomsworn_vigil', name: 'Vigil Ward', ab: 'pall', grants: true, text: 'New move on R, in place of Black Pall. Vigil Ward (45s, 20 Gloom): stand watch over whoever is hurt most. They take 50% less damage for 5s and are wrapped in a barrier of {s:200}; you take 15% less damage for 5s, and the whole party takes 20% less damage for 6s, as under the Pall (the one you ward too: the two cuts stack).', spec: { duskreaver: 'New move on R, in place of Dusk Reave. Vigil Ward (30s, 30 Gloom): a reaping cut for {d:600}, then stand watch over whoever is hurt most. They take 50% less damage for 5s and are wrapped in a barrier of {s:200}; you take 15% less damage for 5s.' } },
       { id: 'gloomsworn_spill', name: 'Spill', ab: 'strike', text: 'Gloom that would run past 100 now hardens into a barrier on you for 8s: {s:35} for every point that spilled.' },
       { id: 'gloomsworn_feast', name: 'Feast on the Hollow', ab: 'rend', text: 'Gloaming drinks: it heals you for 4% of your HP for every 20 Gloom you hold above 40 (up to three drinks). While you are Hollow, every strike you land heals you for 4% too, and that counts against your debt.' },
     ],
@@ -632,7 +633,7 @@ Object.assign(TALENTS, {
       { id: 'gloomsworn_quick', name: 'Quick Rites', ab: 'rite', text: 'Every Gloom Strike takes 8s off the recharge of Last Rite (or of Black Pyre, in its place), and 6s off Black Mantle. Spending Gloom on Strikes brings the big buttons back.' },
     ],
     [
-      { id: 'gloomsworn_pyre', name: 'Black Pyre', ab: 'rite', grants: true, text: 'New move on F, in place of Last Rite. Black Pyre (60s): spend all your Gloom (at least 30), and the vessel breaks over your target in black fire for {d:600} plus {d:15} for every point, and a barrier of {s:150} plus {s:5} for every point wraps you for 8s. The fire warms you too: you heal 6% of your HP.' },
+      { id: 'gloomsworn_pyre', name: 'Black Pyre', ab: 'rite', grants: true, text: 'New move on F, in place of Last Rite. Black Pyre (60s): spend all your Gloom (at least 30), and the vessel breaks over your target in black fire for {d:600} plus {d:15} for every point, and a barrier of {s:150} plus {s:5} for every point wraps you for 8s. The fire warms you too: you heal 6% of your HP. The blow itself fills 8 Gloom again.' },
       { id: 'gloomsworn_weeping', name: 'Weeping Wake', ab: 'strike', text: 'Every 20 Gloom you spend, on any move, wells up as a barrier of {s:100} on the most hurt ally for 8s. A Hollow you stand up from also shields the whole party for half your debt (at most a quarter of your HP).' },
       { id: 'gloomsworn_dusk', name: 'Last Light', ab: 'rite', text: 'Eclipse of the Vigil now keeps all your Gloom, and adds 40 more (up to full), instead of emptying the vessel.' },
     ],
@@ -668,7 +669,7 @@ Object.assign(TALENTS, {
     [
       { id: 'thresher_gravewalk', name: 'Gravewalk', ab: 'veil', grants: true, text: 'New move on D, in place of Dusk Veil. Gravewalk (30s): step out of the world for 1.5s, where nothing can touch you, and get a Blink charge back.' },
       { id: 'thresher_moonrise', name: 'Moonrise', ab: 'snap', text: 'Your Blink is a slash through its whole path: every enemy it crosses takes {d:100} and fills the crescent by 8. With a full crescent it takes {d:200}, and the crescent is not spent.' },
-      { id: 'thresher_grave', name: 'Grave Ward', ab: 'veil', text: 'Dusk Veil mends you, and the most hurt ally, for 2% of your health for every mark you have snapped in the last 10s (up to 8).' },
+      { id: 'thresher_grave', name: 'Grave Ward', ab: 'veil', text: 'Dusk Veil (or Gravewalk) mends you, and the most hurt ally besides you, for 2% of your health for every mark you have snapped in the last 10s (up to 8).' },
     ],
   ],
 });
@@ -677,11 +678,11 @@ Object.assign(TALENTS, {
 TALENTS.tidecaller = [
   [
     { id: 'tidecaller_spindrift', name: 'Spindrift', ab: 'spray', text: 'Salt Spray breaks twice: a moment later the spray strikes again for {d:100}, and with the tide above half the second break also heals the most hurt ally for {h:100}.' },
-    { id: 'tidecaller_foam', name: 'Foam', ab: 'sip', text: 'A Sip on the ally who wears your Riptide Mark, or on any ally under half health, foams over: the most hurt other ally heals {h:180}, and the foam keeps healing them {h:50} every 2s for 8s.', spec: { springtide: 'A Swell on the ally who wears your Riptide Mark, or on any ally under half health, foams over: the most hurt other ally heals {h:180}, and the foam keeps healing them {h:50} every 2s for 8s.' } },
+    { id: 'tidecaller_foam', name: 'Foam', ab: 'sip', text: 'A Sip on the ally who wears your Riptide Mark, or on any ally under half health, foams over: the most hurt other ally heals {h:180}, and the foam keeps healing them {h:50} every 2s for 8s. With Maelstrom, any Sip while the whirlpool is open foams over.', spec: { springtide: 'A Swell on the ally who wears your Riptide Mark, or on any ally under half health, foams over: the most hurt other ally heals {h:180}, and the foam keeps healing them {h:50} every 2s for 8s. With Maelstrom, any Swell while the whirlpool is open foams over.' } },
     { id: 'tidecaller_lowwater', name: 'Low Water', ab: 'sip', text: 'When the water touches the floor (the ebb, or a Surge or Sip that drains it), your next Sip costs no tide and heals half again as much.', spec: { springtide: 'When the water touches the floor (the ebb, or a Surge that drains it), your next Swell heals half again as much and runs on to the most hurt other ally at half.' } },
   ],
   [
-    { id: 'tidecaller_kelp', name: 'Kelp Bind', ab: 'riptide', text: 'Riptide Mark also binds its ally in kelp: they take 15% less damage until the mark pops (or runs out).' },
+    { id: 'tidecaller_kelp', name: 'Kelp Bind', ab: 'riptide', text: 'Riptide Mark also binds its ally in kelp: they take 15% less damage until the mark pops (or runs out). With Maelstrom, the whirlpool covers 30% instead of 20%.' },
     { id: 'tidecaller_tidewalk', name: 'Tidewalk', ab: 'current', text: 'Current also carries you: you ride the water a short way in the direction you are heading, and nothing can touch you while you ride.' },
     { id: 'tidecaller_seawall', name: 'Seawall', ab: 'breakwater', cd: { breakwater: -15 }, text: 'Breakwater recharges 15s faster. While it stands, every Sip also raises a wall of {s:100} around its ally and costs no tide.', spec: { springtide: 'Breakwater recharges 15s faster. While it stands, every Swell also raises a wall of {s:120} around its ally and lifts the tide twice as far.' } },
   ],
@@ -697,26 +698,26 @@ TALENTS.tidecaller = [
   ],
   [
     { id: 'tidecaller_leviathan', name: 'Leviathan', ab: 'surge', text: 'Spring Flood lasts 3s longer, and when it ends after a Surge, the flood rises out of the deep and strikes the boss for {d:600}, then pulls back and leaves a tenth of a new Spring Flood.', spec: { undertow: 'Spring Flood lasts 3s longer, and when it ends after an Undertow, the flood rises out of the deep and strikes the boss for {d:600}, then pulls back and leaves a tenth of a new Spring Flood.' } },
-    { id: 'tidecaller_bore', name: 'Tidal Bore', ab: 'surge', grants: true, text: 'New move on R, in place of Surge. Tidal Bore: instant, spend all the tide in a wave rolled out ahead of you. It heals the party from {h:190} up to {h:480} by the tide, leaves a {s:80} shield and breaks on the boss for {d:30} up to {d:100}.' },
-    { id: 'tidecaller_neap', name: 'Neap and Spring', ab: 'surge', text: 'Every second crest is a long one: it holds 1.5s more, and a Surge at a long crest heals 20% more.', spec: { undertow: 'Every second crest is a long one: it holds 1.5s more, and an Undertow at a long crest heals 20% more.' } },
+    { id: 'tidecaller_bore', name: 'Tidal Bore', ab: 'surge', grants: true, text: 'New move on R, in place of Surge. Tidal Bore: instant, spend all the tide in a wave rolled out ahead of you. It heals the party from {h:190} up to {h:480} by the tide, leaves a {s:80} shield and breaks on the boss for {d:30} up to {d:100}.', spec: { undertow: 'New move on R, in place of Undertow. Tidal Bore: instant, spend all the tide in a wave rolled out ahead of you. It heals the party from {h:190} up to {h:480} by the tide, leaves a {s:80} shield, breaks on the boss for {d:30} up to {d:100} and wraps you in a Deep Shield of {s:100} up to {s:250} for 8s.' } },
+    { id: 'tidecaller_neap', name: 'Neap and Spring', ab: 'surge', text: 'Every second crest is a long one: it holds 1.5s more, and a Surge at a long crest (or in a Spring Flood) heals 20% more.', spec: { undertow: 'Every second crest is a long one: it holds 1.5s more, and an Undertow at a long crest (or in a Spring Flood) heals 20% more.' } },
   ],
 ];
 
 // ----------------------------------------------------------------------- LANTERNKEEPER (healer, class 21)
 TALENTS.lanternkeeper = [
   [
-    { id: 'lanternkeeper_spark', name: 'Spark Chain', ab: 'trim', text: 'Trim the Wick leaps from lantern to lantern: every lantern you have lit is topped up, and each pulses {h:25} for everyone in its glow.' },
+    { id: 'lanternkeeper_spark', name: 'Spark Chain', ab: 'trim', text: 'Trim the Wick leaps on from the lantern it tops up to every other lantern you have lit: each is topped up too, and pulses {h:25} for everyone in its glow.' },
     { id: 'lanternkeeper_moth', name: 'Moth Light', ab: 'trim', text: 'Each Trim the Wick sends a moth to the lantern it tops up: everyone in that glow heals {h:70}.' },
-    { id: 'lanternkeeper_emberward', name: 'Ember Ward', ab: 'set', text: 'A lantern set down while the boss is casting pulses as the cast lands: a shield of {s:60} on everyone in its glow.', spec: { beacon: 'A Great Beacon raised while the boss is casting pulses as the cast lands: a shield of {s:170} on everyone in its glow, and your other Great Beacon pulses a heal and the same shield too.', wayfarer: 'Every light of a Lamplighter\'s Stride dropped while the boss is casting pulses as the cast lands: a shield of {s:60} on everyone in its glow.' } },
+    { id: 'lanternkeeper_emberward', name: 'Ember Ward', ab: 'set', text: 'A lantern set down while the boss is casting pulses as the cast lands: a shield of {s:60} on everyone in its glow. Lantern Festival\'s floating lanterns each do the same.', spec: { beacon: 'A Great Beacon raised while the boss is casting pulses as the cast lands: a shield of {s:170} on everyone in its glow, and your other Great Beacon pulses a heal and the same shield too.', wayfarer: 'Every light of a Lamplighter\'s Stride dropped while the boss is casting pulses as the cast lands: a shield of {s:60} on everyone in its glow.' } },
   ],
   [
-    { id: 'lanternkeeper_ward', name: 'Lantern Ward', ab: 'hand', text: 'Whoever carries your Hand Lantern takes 15% less damage while it hangs on them.' },
+    { id: 'lanternkeeper_ward', name: 'Lantern Ward', ab: 'hand', text: 'Whoever carries your Hand Lantern takes 15% less damage for as long as it hangs on them, and at least 12s.' },
     { id: 'lanternkeeper_longtoss', name: 'Long Toss', ab: 'carry', text: 'Carry the Flame reaches twice as far, and the lantern lands with a pulse: everyone in its new glow heals {h:250}.', spec: { beacon: 'Call the Beacon reaches twice as far, tops its wick up to full, lights it for 6s longer and pulses {h:250} as it lands.', wayfarer: 'Trailblaze dashes twice as far and drops a small light where it ends, which pulses {h:150} as it lands.' } },
     { id: 'lanternkeeper_nightwalk', name: 'Night Walk', ab: 'carry', text: 'Carrying a lantern carries you too: you dash a short way on in the direction you are heading, and nothing can touch you while you slide.', spec: { beacon: 'Calling a Beacon carries you too: you dash a short way on in the direction you are heading, and nothing can touch you while you slide.', wayfarer: 'Trailblaze also tops every light it drags up to full and lets each burn 3s longer.' } },
   ],
   [
     { id: 'lanternkeeper_hoard', name: 'Hoarded Embers', ab: 'set', text: 'You can hold 5 Embers instead of 4, and your lanterns heal 12% more for every Ember you hold above 3, and an Ember that comes while you are full tops up every lantern\'s wick by a third.' },
-    { id: 'lanternkeeper_emberfall', name: 'Ember Fall', ab: 'set', text: 'A lantern that goes out with its wick burned to a stub gives you an Ember back and pulses a last {h:80} for everyone in it.', spec: { wayfarer: 'Every third small light that goes out gives you an Ember back, and each one pulses a last {h:60} for everyone in it.' } },
+    { id: 'lanternkeeper_emberfall', name: 'Ember Fall', ab: 'set', text: 'A lantern that goes out with its wick burned to a stub gives you an Ember back and pulses a last {h:80} for everyone in it. Lantern Festival\'s floating lanterns each pulse a last {h:60} when they go out, and the set gives one Ember back.', spec: { beacon: 'A Great Beacon that burns out gives you an Ember back and pulses a last {h:80} for everyone in its glow.', wayfarer: 'Every third small light that goes out gives you an Ember back, and each one pulses a last {h:60} for everyone in it.' } },
     { id: 'lanternkeeper_wisp', name: 'Will-o\'-Wisp', ab: 'relight', grants: true, text: 'New move on F, in place of Relight. Will-o\'-Wisp (10s), 1 Ember: a wandering wisp floats to the most hurt ally and heals them {h:60} every second for 6s, tops every lantern\'s wick up by a third and lets it burn 3s longer.' },
   ],
   [
@@ -790,7 +791,7 @@ const SPEC_TALENTS = {
       [
         { id: 'runeguard_wardglyph', name: 'Glyph of Warding', ab: 'glyph', grants: true,
           text: 'Glyph Burst becomes Glyph of Warding: spend 3 Runes to ward every ally for {s:120} for 8s and cut the target for {d:780} ({d:1020} in Runic Overload).' },
-        { id: 'runeguard_surge', name: 'Warding Surge', ab: 'overload', text: 'Runic Overload also wards every ally for {s:250} for 8s, and again for {s:150} 7s later.' },
+        { id: 'runeguard_surge', name: 'Warding Surge', ab: 'overload', text: 'Runic Overload also wards every ally for {s:250} for 8s, and again for {s:150} for 8s as the first fades.' },
       ],
     ],
     // Runeblade, The Carved Edge: melee damage with a sword combo
@@ -939,7 +940,7 @@ SPEC_TALENTS.shadowblade = {
     ],
     [
       { id: 'shadowblade_curtain', name: 'Curtain Call', ab: 'dance', text: 'When Shadow Dance ends you close it with one last spin: {d:1400} on the boss, a sure critical hit.' },
-      { id: 'shadowblade_eye', name: 'Eye of the Storm', ab: 'step', text: 'The blades turn blows aside: you take 7% less damage for each Tempo you hold (up to 21%), until the Flourish is spent.' },
+      { id: 'shadowblade_eye', name: 'Eye of the Storm', ab: 'step', text: 'The blades turn blows aside: you take 8% less damage for each Tempo you hold (up to 24%), until the Flourish is spent.' },
     ],
   ],
   nightstalker: [
@@ -968,7 +969,7 @@ SPEC_TALENTS.pyromancer = {
   ],
   sigilmancer: [
     [
-      { id: 'pyromancer_hearth', name: 'Hearth', ab: 'combust', text: 'While you stand in your Ember Circle the whole party takes 12% less damage: plant it where the fight will be.' },
+      { id: 'pyromancer_hearth', name: 'Hearth', ab: 'combust', text: 'While you stand in your Ember Circle the whole party takes 13% less damage: plant it where the fight will be.' },
       { id: 'pyromancer_rekindle', name: 'Rekindle', ab: 'combust', text: 'Stepping back into your Ember Circle after leaving it flares it: {d:350} on the boss, a Fire Blast charge back, and your next Fireball is instant and 35% harder (within 8s, once every 6s).' },
     ],
     [
@@ -987,7 +988,7 @@ SPEC_TALENTS.thermist = {
     ],
     [
       { id: 'thermist_bell', name: 'Tolling Bell', ab: 'invert', text: 'Whenever the boss begins a cast, the dial swings two steps toward the other side by itself.' },
-      { id: 'thermist_deadcentre', name: 'Dead Centre', ab: 'equil', text: 'Equilibrium now counts as a crossing of 0: it fills Momentum to 5 and holds it 3s longer.' },
+      { id: 'thermist_deadcentre', name: 'Dead Centre', ab: 'equil', text: 'Equilibrium now counts as a crossing of 0: it fills Momentum to 5 and holds it 3s longer, and Counterweight wraps you in its shield as for any crossing, on top of the shield Equilibrium gives.' },
     ],
   ],
   zenith: [
@@ -1080,7 +1081,7 @@ Object.assign(SPEC_TALENTS, {
         { id: 'cleric_penance', name: 'Penance', ab: 'petal', text: 'Every Dawn Petal you spend also brands the boss for 4 hits and leaves a regen half again as strong: mercy first, then the verdict.' },
       ],
       [
-        { id: 'cleric_absolve', name: 'Absolution', ab: 'mend', text: 'Mend also brands the boss for 3 hits and washes Vulnerability and Damage Down off its target and whoever stands close, leaving each a ward of {s:150} for 8s (once every 15s): judgment first, mercy after.' },
+        { id: 'cleric_absolve', name: 'Absolution', ab: 'mend', text: 'Mend also brands the boss for 3 hits and washes Vulnerability and Damage Down off its target and whoever stands close, leaving each a ward of {s:160} for 8s (once every 15s): judgment first, mercy after.' },
         { id: 'cleric_judgehour', name: 'Judge\'s Hour', ab: 'smite', text: 'A Dawnstar brands 6 hits instead of 4, or 8 while the party\'s damage is boosted, and the hits burst a quarter harder (half again as hard when boosted).' },
       ],
     ],
@@ -1199,7 +1200,7 @@ Object.assign(SPEC_TALENTS, {
     stillwater: [
       [
         { id: 'ironpalm_ripples', name: 'Ripples', ab: 'read', text: 'A perfect Read on a tankbuster ripples out to the party: everyone takes 20% less damage for 8s. Any other perfect Read ripples out a lighter one: 15% for 4s (at most once every 8s).' },
-        { id: 'ironpalm_flood', name: 'Flood Tide', ab: 'palm', text: 'A perfect Read, on any blow, brings the tide in: your next two named moves each wash out a second blow for {d:70}.' },
+        { id: 'ironpalm_flood', name: 'Flood Tide', ab: 'palm', text: 'A perfect Read, on any blow, brings the tide in: your next two named moves (within 6s) each wash out a second blow for {d:70}.' },
       ],
       [
         { id: 'ironpalm_calm', name: 'Calm Before the Blow', ab: 'read', text: 'Whenever the boss begins a cast aimed at you, you draw a long breath: your Breath fills to the top, and for 4s your presses cost no Breath.' },
@@ -1210,11 +1211,11 @@ Object.assign(SPEC_TALENTS, {
     avalanche: [
       [
         { id: 'ironpalm_cascade', name: 'Cascade', ab: 'fist', text: 'A named move of four inputs or more brings the rocks down behind it: a rockfall of {d:8} for every point of Momentum.' },
-        { id: 'ironpalm_bedrock', name: 'Bedrock', ab: 'palm', text: 'While you hold 6 Momentum or more you take 10% less damage.' },
+        { id: 'ironpalm_bedrock', name: 'Bedrock', ab: 'palm', text: 'While you hold 6 Momentum or more you take 12% less damage.' },
       ],
       [
         { id: 'ironpalm_wake', name: 'Mountain Wakes', ab: 'kick', text: 'Whenever the boss begins a cast aimed at you, your Momentum leaps to full and holds for 8s, and you take 20% less damage for 5s.' },
-        { id: 'ironpalm_scree', name: 'Scree', ab: 'fist', text: 'A named move of four inputs or more throws up rubble for the party: the most hurt ally gets a {s:30} shield, and {s:8} more for every point of Momentum (once every 3s).' },
+        { id: 'ironpalm_scree', name: 'Scree', ab: 'fist', text: 'A named move of four inputs or more throws up rubble for the party: the most hurt member of the party (you too) gets a {s:30} shield, and {s:8} more for every point of Momentum (once every 3s).' },
       ],
     ],
   },
@@ -1227,7 +1228,7 @@ Object.assign(SPEC_TALENTS, {
     guarantor: [
       [
         { id: 'oathbroker_endorse', name: 'Endorsement', ab: 'collect', text: 'While a Co-Sign stands, every Collect strike puts a {s:120} shield on the co-signed ally for 6s (at most once every 2s).' },
-        { id: 'oathbroker_roving', name: 'Roving Surety', ab: 'lien', text: 'Co-Sign lasts 3s longer, and no longer stays where you put it: every 3s it moves on to whoever is hurt most. While it stands you take 10% less damage.' },
+        { id: 'oathbroker_roving', name: 'Roving Surety', ab: 'lien', text: 'Co-Sign lasts 3s longer, and no longer stays where you put it: every 3s it moves on to whoever is hurt most. While it stands you take 12% less damage.' },
       ],
       [
         { id: 'oathbroker_foresight', name: 'Foresight', ab: 'lien', text: 'Whenever the boss begins a cast, Co-Sign is ready again at once, and you take 20% less damage for 5s (at most once every 10s).' },
@@ -1267,11 +1268,11 @@ SPEC_TALENTS.tidecaller = {
   undertow: [
     [
       { id: 'tidecaller_bell', name: 'Drowned Bell', ab: 'surge', text: 'When your Deep Shield runs its course, a drowned bell tolls: the party heals {h:60} up to {h:120} by the water Undertow spent.' },
-      { id: 'tidecaller_grip', name: 'Grip of the Deep', ab: 'riptide', text: 'Riptide Mark pulls from two allies: the most hurt other ally is marked too, heals with it and pops with it.' },
+      { id: 'tidecaller_grip', name: 'Grip of the Deep', ab: 'riptide', text: 'Riptide Mark pulls from two allies: the most hurt other ally is marked too, heals with it and pops with it. With Maelstrom, a second, smaller whirlpool opens on the most hurt other ally and follows them.' },
     ],
     [
       { id: 'tidecaller_pressure', name: 'Pressure', ab: 'spray', text: 'While your Deep Shield stands, Salt Spray hits 40% harder, seeps {h:60} to the most hurt ally and lifts the tide twice as far.' },
-      { id: 'tidecaller_slack', name: 'Slack Water', ab: 'current', text: 'Current pressed while your Deep Shield stands holds its drain: the shield stands 5s longer, topped up by {s:150}, and the party heals {h:80} three times.' },
+      { id: 'tidecaller_slack', name: 'Slack Water', ab: 'current', text: 'Current pressed while your Deep Shield stands holds its drain: the shield stands 5s longer, topped back up to its full size and {s:150} more, and the party heals {h:80} three times.' },
     ],
   ],
 };
@@ -1321,7 +1322,7 @@ TALENTS.kenseier = [
     { id: 'kenseier_whirlwind', name: 'Whirlwind Slash', ab: 'mikiri', grants: true, text: 'New move on E, in place of Mikiri Step. Whirlwind Slash (12s): a spin that cuts every enemy in reach for {d:80} and adds 6 Posture for each one it hits, so adds count. For fights with adds.' },
   ],
   [
-    { id: 'kenseier_fireside', name: 'Fireside Guard', ab: 'guard', text: 'Guard Stance lasts 10s (6s), comes back in 60s (90s), and shields two allies instead of one, for {s:220} each.', spec: { deathblade: 'Iai Stance\'s counter-cut also shields every ally for {s:200}.' } },
+    { id: 'kenseier_fireside', name: 'Fireside Guard', ab: 'guard', text: 'Guard Stance lasts 10s (6s), comes back in 60s (90s), and shields two allies instead of one, for {s:220} each. Ember Duel in its place comes back in 60s too, and guards two allies the same way for its 10s.', spec: { deathblade: 'Iai Stance\'s counter-cut also shields every ally for {s:200}. Ember Duel in its place comes back in 60s, and the first Perfect deflect inside it does the same.' } },
     { id: 'kenseier_unbroken', name: 'Unbroken', ab: 'mantle', text: 'Ash Mantle lasts 14s (8s), and while it is up a deflect that catches nothing costs no Poise.' },
     { id: 'kenseier_blazing', name: 'Blazing Mantle', ab: 'mantle', text: 'Ash Mantle ends in a burst of ember: {d:250} for every Perfect deflect you made inside it.' },
   ],
@@ -1361,7 +1362,8 @@ TALENTS.houndmaster = [
   ],
   [
     { id: 'houndmaster_kingofpack', name: 'King of the Pack', ab: 'finisher', text: 'The spectral hounds of Wild Hunt stay for 10s after it ends, and the free finisher stays with them.' },
-    { id: 'houndmaster_longchase', name: 'The Long Chase', ab: 'quarry', grants: true, text: 'New move on F, in place of Mark the Quarry. The Long Chase (45s): the pack runs a lap round the boss. Each quarter it passes bites for {d:300} and gives 4 Bond, and the lap ends with the boss taking 5% more damage for 10s and both hounds behind it: a Bring Down.' },
+    { id: 'houndmaster_longchase', name: 'The Long Chase', ab: 'quarry', grants: true, text: 'New move on F, in place of Mark the Quarry. The Long Chase (45s): the pack runs a lap round the boss. Each quarter it passes bites for {d:300} and gives 4 Bond, and the lap ends with the boss taking 5% more damage for 10s and both hounds behind it: a Bring Down.',
+      spec: { lonewolf: 'New move on F, in place of Mark the Quarry. The Long Chase (45s): Greyfang runs a lap round the boss. Each quarter it passes bites for {d:450} and gives 6 Bond, and the lap ends with the boss taking 5% more damage for 10s and Greyfang behind it.' } },
     { id: 'houndmaster_alpha', name: 'Alpha', ab: 'finisher', text: 'A Bring Down is a sure critical hit that hits 25% harder, and gives 15 Bond, when it follows a pounce that formed the pair (within 10s), or when both hounds have their own Bond full.' },
   ],
 ];
@@ -1375,7 +1377,7 @@ SPEC_TALENTS.kenseier = {
       { id: 'kenseier_patient', name: 'Patient Edge', ab: 'deathblow', text: 'A Break you did not spend a Deathblow on within 2s gives the party +10% damage for what is left of it, and the Deathblow you land at its end hits 30% harder.' },
     ],
     [
-      { id: 'kenseier_crane', name: 'Crane Form', ab: 'guard', text: 'Iai Stance\'s counter-cut adds 70 Posture, and brings Iai Stance back 40s sooner.' },
+      { id: 'kenseier_crane', name: 'Crane Form', ab: 'guard', text: 'Iai Stance\'s counter-cut adds 70 Posture, and brings Iai Stance back 40s sooner. With Ember Duel in its place, the first Perfect deflect inside the Duel adds 35 Posture and brings the Duel back 40s sooner.' },
       { id: 'kenseier_double', name: 'Double Stroke', ab: 'deathblow', text: 'Deathblow strikes twice: a second, smaller stroke ({d:170}) follows a moment later.' },
     ],
   ],
