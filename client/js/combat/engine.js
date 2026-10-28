@@ -447,7 +447,7 @@ class Kit {
   readyIn(ab) {
     let t = Math.max(0, this.lockUntil - this.now);
     if (this.cast && !ab.duringCast) t = Math.max(t, this.cast.end - this.now + ENGINE.CAST_LOCK_EXTRA);
-    if (ab.type === 'gcd' && !(ab.freeGcd && ab.freeGcd(this))) t = Math.max(t, this.gcdRemaining());   // (ab.freeGcd(k): a GCD move that is off the global cooldown right now: the Kenseier's Feint)
+    if (ab.type === 'gcd' && !(ab.freeGcd && ab.freeGcd(this)) && !(ab.gcdSkip && ab.gcdSkip(this))) t = Math.max(t, this.gcdRemaining());   // (ab.freeGcd(k): a GCD move that is off the global cooldown right now: the Kenseier's Feint; ab.gcdSkip(k): it skips the wait, then starts a fresh GCD: Heat Haze's Fireball)
     t = Math.max(t, this.cdRemaining(ab));
     return t;
   }

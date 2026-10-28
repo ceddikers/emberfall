@@ -430,7 +430,7 @@ const Hud = {
       // off its own cooldown (not the GCD): one soft ring
       if (s.onCd && !onCd && s.ab0 === ab) this.readyFlash(s);
       s.onCd = onCd; s.ab0 = ab;
-      if (ab.type === 'gcd' && k.gcdRemaining() > 0 && cdLeft <= 0) frac = Math.max(frac, k.gcdRemaining() / k.gcdLen);
+      if (ab.type === 'gcd' && k.gcdRemaining() > 0 && cdLeft <= 0 && !(ab.gcdSkip && ab.gcdSkip(k))) frac = Math.max(frac, k.gcdRemaining() / k.gcdLen);
       // no GCD (a paced kit): its moves show the recovery of the last press instead
       if (ab.type === 'gcd' && k.gcdFree() && cdLeft <= 0 && k.lockUntil > now) frac = Math.max(frac, (k.lockUntil - now) / Math.max(0.1, k.lockLen));
       hudCd(s.sweep, frac.toFixed(3));

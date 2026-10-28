@@ -494,10 +494,13 @@ const KITS = {
       {
         id: 'fireball', name: 'Fireball', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
         cast: k => (k.has('haze') || k.has('firestep') ? 0 : 1.8),   // (Heat Haze and Firestep, talents, make it instant)
+        gcdSkip: k => !!k.g.hazeSkip && k.has('haze'),   // (Heat Haze's Fireball goes at once, mid-GCD, and starts a fresh GCD; Rekindle's haze does not)
+        glow: k => !!k.g.hazeSkip && k.has('haze'),
         desc: '1.8s cast: {d:300} and +12 Heat. Crits warm you up toward Hot Streak.',
         effect(k) {
           // (Firestep makes the Fireball instant and 30% harder, Heat Haze and Rekindle instant and 35% harder; Overcharged Blast, 40% harder)
           const stepped = k.consume('firestep'), hazed = !stepped && k.consume('haze');
+          if (hazed) k.g.hazeSkip = false;
           k.damage(300, { ab: this, mult: (stepped ? 1.3 : hazed ? 1.35 : 1) * pyroHurried(k) }); k.gain('heat', 12, 100);
           if (k.talent('pyromancer_stoke') && k.dotRemaining('crater') > 0) { k.damage(90, { ab: this, extra: true }); k.fx('twinFlame'); }   // (Stoke the Crater, Cataclysm's spec row VI)
           if (k.talent('pyromancer_bomb') && (k.g.fireballs = (k.g.fireballs || 0) + 1) % 3 === 0) { k.fx('bombPlant'); k.after(3, () => { k.damage(220, { ab: this, extra: true }); k.fx('bomb'); }); }
@@ -1397,7 +1400,7 @@ function bladeTick(k) {
 // ----------------------------------------------------------------- Pyromancer
 function pyroTick(k) {
   if (k.talent('pyromancer_molten') && k.g.heat > 50 && k.now >= (k.g.armorAt || 0)) { k.g.armorAt = k.now + 1; k.mitigate('self', 0.24, 1.25, { ab: k.abById('fireball'), tag: 'sus:molten' }); }   // (re-sent every second and kept as ONE cut by the host, never stacked on itself: a steady 24%, which is what 20% in overlapping 1.2s pieces averaged)
-  if (k.talent('pyromancer_haze')) onBossCast(k, () => { k.buff('haze', 10); k.fx('haze'); });
+  if (k.talent('pyromancer_haze')) onBossCast(k, () => { k.buff('haze', 10); k.g.hazeSkip = true; k.fx('haze'); });
   // Hearth (Sigilmancer's spec row VI): while you stand in your Ember Circle the whole party takes less damage
   if (k.talent('pyromancer_hearth') && k.has('incircle') && k.now >= (k.g.hearthAt || 0)) { k.g.hearthAt = k.now + 1; k.mitigate('party', 0.13, 1.25, { ab: k.abById('fireball'), tag: 'sus:hearth' }); }   // (one steady cut, host-kept: 13% is what 12% in overlapping 1.1s pieces averaged)
 }

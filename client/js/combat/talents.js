@@ -230,7 +230,7 @@ const TALENTS = {
     [
       { id: 'pyromancer_molten', name: 'Molten Armour', ab: 'fireball', text: 'While your Heat is above 50, you take 24% less damage.' },
       { id: 'pyromancer_cauterize', name: 'Cauterize', ab: 'fireblast', text: 'A Fire Blast that turns Heating Up into Hot Streak also heals you for 10% of your HP.' },
-      { id: 'pyromancer_haze', name: 'Heat Haze', ab: 'fireball', text: 'Whenever the boss begins a cast, your next Fireball is instant and 35% harder.' },
+      { id: 'pyromancer_haze', name: 'Heat Haze', ab: 'fireball', text: 'Whenever the boss begins a cast, your next Fireball is instant and 35% harder, and you can fire it at once, even mid-global cooldown.' },
     ],
     [
       { id: 'pyromancer_firestep', name: 'Firestep', ab: 'smolder', grants: true,
