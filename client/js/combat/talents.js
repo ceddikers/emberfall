@@ -103,8 +103,8 @@ const TALENTS = {
         text: 'Undying becomes Blood Moon (120s): for 10s you cannot drop below 1 HP and your heals are doubled. When it sets you burst in a tide of blood: the boss takes damage for every hit you took under it (up to {d:1500}), and you heal for a quarter of that.' },
       { id: 'bloodreaver_hemorrhage', name: 'Hemorrhage', ab: 'drain', text: 'Crimson Drain now opens a Hemorrhage on the boss, {d:55} every 3s for 9s. While it bleeds, each hit of Hack & Maul heals you for 2% of your HP.',
         spec: { berserker: 'Rampage now opens a Hemorrhage on the boss, {d:55} every 3s for 9s. While it bleeds, each hit of Hack & Maul heals you for 2% of your HP.' } },
-      { id: 'bloodreaver_bloodlust', name: 'Bloodlust', ab: 'frenzy', text: 'When Frenzy ends you finish with a free Crimson Drain that remembers every hit you took while it lasted. Its blood is warm, and every Drain talent you hold rides on it.',
-        spec: { berserker: 'When Frenzy ends you finish with a free Rampage that remembers every hit you took while it lasted. Its blood is warm, and every Rampage talent you hold rides on it.' } },
+      { id: 'bloodreaver_bloodlust', name: 'Bloodlust', ab: 'frenzy', text: 'When Frenzy ends, Crimson Drain glows for 6s. Your next Drain in that time costs no Blood, its bank holds all the damage you took during Frenzy instead of only the last 6s, and it always gets the warm blood bonus. Your other Drain talents apply to it too.',
+        spec: { berserker: 'When Frenzy ends, Rampage glows for 6s. Your next Rampage in that time costs no Rage, its bank holds all the damage you took during Frenzy instead of only the last 6s, and it always gets the warm blood bonus. Your other Rampage talents apply to it too.' } },
     ],
   ],
 

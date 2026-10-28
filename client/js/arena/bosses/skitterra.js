@@ -33,7 +33,7 @@
 //     time and she tears free, staggered (+25% damage taken, 8 s). Fail and she devours the party.
 //     Hard (24 s): the Metamorphosis. She comes out as the Moth Queen either way (fight.js setForm 'moth': the bar, the room's look and
 //     the art change); pass it and she is staggered as she emerges, fail it and nobody dies for it, but she has +100% damage for the rest of
-//     the fight (the boss bar's Fury), and she heals three bars as she comes out (mend). She opens with her three wing moves (Scale Wave, then
+//     the fight (the boss bar's Fury), and she heals a bar and a half as she comes out (mend). She opens with her three wing moves (Scale Wave, then
 //     Flutter and Moonlight in either order) before any spider move returns, then the rings and the spider's kit; the finale (From the Dark) is the same.
 // The tank's own beat: Fang Strike (both difficulties). She rears and drives a fang down a lane from her through the tank, drawn
 // from the cast and set where he stood when it began: he steps out of it, and the party keeps out of the strip behind him (whoever
@@ -50,10 +50,10 @@
 
 const SKITTERRA = {
   id: 'skitterra', name: 'Queen Skitterra', title: 'Spider Broodmother',
-  hp: { normal: 3700000, hard: 3500000 },   // (Hard 4.3M before 2026-10-27, 4.0M before the Moth Queen heals three bars as she emerges: the 30000 she gets back is this much less to kill first)
+  hp: { normal: 3700000, hard: 3800000 },   // (Hard 4.3M before 2026-10-27, 4.0M before the Moth Queen heals a bar and a half as she emerges: the 15000 she gets back is this much less to kill first)
   hardDmg: 1.09,   // (Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
   autoDmg: { normal: 1800, hard: 1650 },
-  enrage: { normal: 602, hard: 568 },   // the cast starts here and lands 8 s later (10:10 / 9:36)
+  enrage: { normal: 602, hard: 595 },   // the cast starts here and lands 8 s later (10:10 / 10:03)
   enrageName: 'Devour',
   vuln: 0.5,
   arena: { theme: 'webcave' },
@@ -792,10 +792,10 @@ const SKITTERRA = {
     //     the pass's stagger or the fail's +100% damage (boss.dmgUp: the boss bar's Fury) start;
     //   a pass leaves her staggered (+25% damage taken) from the decision until 8 s after the burst.
     const CRACK = 2.4;
-    // She heals as she comes out: three bars of the boss bar (BAR_HP 10000 each, raid-ui.js; boss.hp is in the same scaled units), poured back in over
+    // She heals as she comes out: a bar and a half of the boss bar (BAR_HP 10000 each, raid-ui.js; boss.hp is in the same scaled units), poured back in over
     // about a second and a half, one bar at a time (so the bar visibly refills; roomev 'mend' draws the light going into her). Pass or fail alike.
     // The HP gates are all behind her by now (Act III has no `until`; fight.js hpTriggers shifts each one off as it fires), so nothing fires twice or is skipped.
-    const MEND = 30000, MEND_N = 3, MEND_GAP = 0.55;
+    const MEND = 15000, MEND_N = 3, MEND_GAP = 0.55;
     const mend = () => {
       f.emit({ t: 'roomev', k: 'mend', n: MEND_N, gap: MEND_GAP, dur: MEND_GAP * MEND_N + 0.6 });
       for (let i = 0; i < MEND_N; i++) f.afterKeep(i * MEND_GAP, () => { if (f.state === 'live') B.hp = Math.min(B.maxHp, B.hp + MEND / MEND_N); });

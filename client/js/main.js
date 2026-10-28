@@ -3174,7 +3174,7 @@
     town.buffs = town.buffs.filter(b => b.end > now);
     for (const s of town.shields.filter(x => x.end <= now)) endTownShield(s);
     if (typeof CLASS_TOWN !== 'undefined') CLASS_TOWN.tick(town, now, actor, player);
-    town.taken = town.taken.filter(x => x.t > now - 10);
+    town.taken = town.taken.filter(x => x.t > now - 30);
     updateMeter();
   }
 
@@ -3287,7 +3287,7 @@
     if (raid.eggs && now > raid.eggs.end + 0.3) raid.eggs = null;
     raid.pbuffs = raid.pbuffs.filter(x => x.end > now);
     if (raid.abuffs.length) raid.abuffs = raid.abuffs.filter(x => x.end > now);
-    raid.taken = raid.taken.filter(x => x.t > now - 10);
+    raid.taken = raid.taken.filter(x => x.t > now - 30);   // (30s: Bloodlust's bank reaches back over a whole Frenzy, Boiling Blood's extra included)
     if (raid.cast && now > raid.cast.start + raid.cast.dur + 0.3) raid.cast = null;
     if (raid.pvp) PvpUI.frame(raid.pvp, raid.party, now, pvpName);
     if (!raid.pvp && raid.result && raid.resultAt && now >= raid.resultAt) {
