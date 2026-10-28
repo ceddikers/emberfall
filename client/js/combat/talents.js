@@ -61,7 +61,8 @@ const TALENTS = {
         text: 'Oath of Valor becomes Avatar of Dawn (60s): wings of light for 15s. Everything Oath of Valor does, and every Perfect Block calls a pillar of light down on the boss for {d:200}.',
         spec: { crusader: 'Oath of Valor becomes Avatar of Dawn (60s): wings of light for 20s. Everything Oath of Valor does, and every Perfect Block calls a pillar of light down on the boss for {d:200}.' } },
       { id: 'bastion_sunlit', name: 'Sunlit Shield', ab: 'brace', text: 'A Perfect Block now also throws a flash of light into the boss for {d:160}.' },
-      { id: 'bastion_echo', name: 'Edge of Judgment', ab: 'blade', text: 'Judgment now also hurls a shard of Holy Edge at the boss for {d:75}, and it heals you for {h:60}.' },
+      { id: 'bastion_echo', name: 'Edge of Judgment', ab: 'blade', text: 'Judgment now also hurls a shard of Holy Edge at the boss for {d:75}, and it heals you for {h:60}.',
+        spec: { sentinel: 'Judgment now also splinters a shard off your shield and hurls it at the boss for {d:75}, and it heals you for {h:60}.' } },
     ],
   ],
 
@@ -293,7 +294,8 @@ const TALENTS = {
     [
       { id: 'grovekeeper_ironbark', name: 'Ironbark', ab: 'rejuv', text: 'A Rejuvenate cast while the boss is casting also wraps the ally in bark, and the bark spreads to the most hurt other ally: 20% less damage for 6s.',
         spec: { lifebinder: 'A Lifebind cast while the boss is casting also wraps the ally in bark, and the bark spreads to the most hurt other ally: 20% less damage for 6s.' } },
-      { id: 'grovekeeper_thickbark', name: 'Thick Bark', ab: 'bloom', text: 'When you, or anyone under your Rejuvenate, drops below 35% health, bark closes over them: 35% less damage for 5s (once every 40s for each).' },
+      { id: 'grovekeeper_thickbark', name: 'Thick Bark', ab: 'bloom', text: 'When you, or anyone under your Rejuvenate, drops below 35% health, bark closes over them: 35% less damage for 5s (once every 40s for each).',
+        spec: { lifebinder: 'When you, or anyone under your Lifebind (either root of it), drops below 35% health, bark closes over them: 35% less damage for 5s (once every 40s for each).' } },
       { id: 'grovekeeper_roots', name: 'Shared Roots', ab: 'bloom', text: 'Bloom now also heals the most hurt ally for {h:350} and grows a regen on them ({h:100} every 3s for 9s). With nobody under your Rejuvenate, the Bloom itself goes to them instead of you.',
         spec: { lifebinder: 'Bloom now also heals the most hurt ally for {h:800} and grows a regen on them ({h:200} every 3s for 12s).' } },
     ],
@@ -504,7 +506,7 @@ Object.assign(TALENTS, {
     [
       { id: 'oathbroker_receivership', name: 'Receivership', ab: 'default', text: 'Default now also shields the whole party for half of what it tore up (at most 20% of your HP) and gives them 25% less damage for 8s.', spec: { collector: 'Foreclose now also shields the whole party for half of what it tore up (at most 20% of your HP) and gives them 25% less damage for 8s.' } },
       { id: 'oathbroker_garnishwrit', name: 'Writ of Execution', ab: 'writ', text: 'Entries written during Writ of Protection are now half paid by the boss when they come due, and Writ of Protection is back in 40s instead of 90s. Blanket Surety and Warrant, in its place, get the same: entries written in them are half paid by the boss, and they are back in 40s instead of 60s.' },
-      { id: 'oathbroker_slate', name: 'Clean Slate', ab: 'default', text: 'Default now also brings Renegotiate, Settle, Lien and Writ of Protection straight back, and your credit freezes for 6s instead of 10s.', spec: { collector: 'Foreclose now also brings Renegotiate, Settle, Lien and your Writ of Protection (or Warrant) straight back, and your credit freezes for 6s instead of 10s.' } },
+      { id: 'oathbroker_slate', name: 'Clean Slate', ab: 'default', text: 'Default now also brings Renegotiate, Settle, Lien and Writ of Protection straight back, and your credit freezes for 6s instead of 10s.', spec: { guarantor: 'Default now also brings Renegotiate, Settle, Co-Sign and Writ of Protection straight back, and your credit freezes for 6s instead of 10s.', collector: 'Foreclose now also brings Renegotiate, Settle, Lien and your Writ of Protection (or Warrant) straight back, and your credit freezes for 6s instead of 10s.' } },
     ],
     [
       { id: 'oathbroker_moratorium', name: 'Moratorium', ab: 'reneg', grants: true, text: 'New move on W, in place of Renegotiate. Moratorium (35s): for 5s nothing comes due and every timer in the Ledger stops; you take 30% less damage, and every entry is marked renegotiated, as Renegotiate does.' },
@@ -679,7 +681,7 @@ TALENTS.tidecaller = [
   [
     { id: 'tidecaller_spindrift', name: 'Spindrift', ab: 'spray', text: 'Salt Spray breaks twice: a moment later the spray strikes again for {d:100}, and with the tide above half the second break also heals the most hurt ally for {h:100}.' },
     { id: 'tidecaller_foam', name: 'Foam', ab: 'sip', text: 'A Sip on the ally who wears your Riptide Mark, or on any ally under half health, foams over: the most hurt other ally heals {h:180}, and the foam keeps healing them {h:50} every 2s for 8s. With Maelstrom, any Sip while the whirlpool is open foams over.', spec: { springtide: 'A Swell on the ally who wears your Riptide Mark, or on any ally under half health, foams over: the most hurt other ally heals {h:180}, and the foam keeps healing them {h:50} every 2s for 8s. With Maelstrom, any Swell while the whirlpool is open foams over.' } },
-    { id: 'tidecaller_lowwater', name: 'Low Water', ab: 'sip', text: 'When the water touches the floor (the ebb, or a Surge or Sip that drains it), your next Sip costs no tide and heals half again as much.', spec: { springtide: 'When the water touches the floor (the ebb, or a Surge that drains it), your next Swell heals half again as much and runs on to the most hurt other ally at half.' } },
+    { id: 'tidecaller_lowwater', name: 'Low Water', ab: 'sip', text: 'When the water touches the floor (the ebb, or a Surge or Sip that drains it), your next Sip costs no tide and heals half again as much.', spec: { undertow: 'When the water touches the floor (the ebb, or an Undertow or Sip that drains it), your next Sip costs no tide and heals half again as much.', springtide: 'When the water touches the floor (the ebb, or a Surge that drains it), your next Swell heals half again as much and runs on to the most hurt other ally at half.' } },
   ],
   [
     { id: 'tidecaller_kelp', name: 'Kelp Bind', ab: 'riptide', text: 'Riptide Mark also binds its ally in kelp: they take 15% less damage until the mark pops (or runs out). With Maelstrom, the whirlpool covers 30% instead of 20%.' },
@@ -1328,7 +1330,8 @@ TALENTS.kenseier = [
   ],
   [
     { id: 'kenseier_grand', name: 'Grand Deathblow', ab: 'deathblow', text: 'A Deathblow in the last 2s of a Break hits 35% harder and heals you 20% more, and the party keeps the Break\'s 15% bonus for 2s after it ends.' },
-    { id: 'kenseier_duel', name: 'Ember Duel', ab: 'guard', grants: true, text: 'New move on F, in place of Guard Stance. Ember Duel (90s): the clash that opens it adds 40 Posture to the boss. For 10s its autos then come at a steady beat, every 2s exactly, each a quarter lighter, and every Perfect deflect adds double Posture.' },
+    { id: 'kenseier_duel', name: 'Ember Duel', ab: 'guard', grants: true, text: 'New move on F, in place of Guard Stance. Ember Duel (90s): the clash that opens it adds 40 Posture to the boss. For 10s its autos then come at a steady beat, every 2s exactly, each a quarter lighter, and every Perfect deflect adds double Posture.',
+        spec: { deathblade: 'New move on F, in place of Iai Stance. Ember Duel (90s): the clash that opens it adds 40 Posture to the boss. For 10s its autos then come at a steady beat, every 2s exactly, each a quarter lighter, and every Perfect deflect adds double Posture.' } },
     { id: 'kenseier_lastspark', name: 'Last Spark', ab: 'deathblow', text: 'When you Break the boss yourself, Flash of Ash charges by a quarter (not on the Break Flash of Ash makes).' },
   ],
 ];

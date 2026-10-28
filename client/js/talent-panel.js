@@ -32,6 +32,8 @@ const TalentPanel = (() => {
   const rowName = (r, kit, sp) => (r >= 5 ? (sp ? sp.name : '') : ['Rhythm', 'Guard', (kit.gauge && kit.gauge.label) || 'Gauge', 'Cooldowns', 'Mastery'][r]);
   // the move a talent changes, as this hero's spec has it (a replacement move shows under its own name)
   const abFor = (kit, id) => kit.abilities.find(a => (a.replaces || a.id) === id) || null;
+  // its icon: with a spec, the spec's own move's (the icon the action bar shows for it, abilityIconId), else the base move's
+  const iconOf = (kit, spec, id) => { const ab = spec ? abFor(kit, id) : null; return ab ? abilityIconId(ab) : id; };
 
   // the talent's numbers as the hero would see them ({d:150} -> the hit it really does, as in ability tooltips)
   const numText = (text, cls, spec) => (typeof Num !== 'undefined' ? Num.fill(text, { cls, spec }) : text);
@@ -43,7 +45,7 @@ const TalentPanel = (() => {
     const mv = t.grants && typeof talentMoveFor === 'function' ? talentMoveFor(cls.id, spec, t.id) : null;
     const text = numText(talentText(t, spec), cls.id, spec);
     if (mv) return `<div class="tip-ab"><i class="ab-icon ${mv.type}" style="background-image:url(${abilityIcon(cls.id, abilityIconId(Object.assign({ fromTalent: t.id }, mv)))})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · ${mv.name === where ? 'rides on' : 'new move, replaces'} ${where}</em></div></div>${text}${text.includes(mv.name) ? '' : `<div class="it-talent"><span><u>${mv.name}:</u> ${mv.desc}</span></div>`}`;
-    return `<div class="tip-ab"><i class="ab-icon ${ab ? ab.type : ''}" style="background-image:url(${abilityIcon(cls.id, t.ab)})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · ${where}</em></div></div>${text}`;
+    return `<div class="tip-ab"><i class="ab-icon ${ab ? ab.type : ''}" style="background-image:url(${abilityIcon(cls.id, iconOf(kit, spec, t.ab))})"></i><div><b>${t.name}</b><em>${ROMAN[r]} · ${where}</em></div></div>${text}`;
   }
 
   function render() {
@@ -66,7 +68,7 @@ const TalentPanel = (() => {
       const cards = sealed ? `<div class="tal-card tal-lock" aria-disabled="true"><span>Opens after row ${ROMAN[r - 1]}</span><u>${coin}${cost}</u></div>` : row.map((t, c) => {
         const picked = open && pickOf(r) === c;
         return `<button class="tal-card${picked ? ' picked' : ''}${next ? ' preview' : ''}" data-r="${r}" data-c="${c}"${!open || locked ? ' aria-disabled="true"' : ''}>
-          <i class="ab-icon" style="background-image:url(${abilityIcon(cls.id, (mv => (mv ? abilityIconId(Object.assign({ fromTalent: t.id }, mv)) : t.ab))(typeof talentMoveFor === 'function' && talentMoveFor(cls.id, spec, t.id)))})"></i>
+          <i class="ab-icon" style="background-image:url(${abilityIcon(cls.id, (mv => (mv ? abilityIconId(Object.assign({ fromTalent: t.id }, mv)) : iconOf(kit, spec, t.ab)))(typeof talentMoveFor === 'function' && talentMoveFor(cls.id, spec, t.id)))})"></i>
           <span><b>${t.name}</b><p>${numText(talentText(t, spec), cls.id, spec)}</p></span></button>`;
       }).join('');
       return `${r === 5 ? '<div class="tal-spec-rule"><span>' + sp.name + '</span></div>' : ''}<section class="tal-row ${open ? 'open' : next ? 'next' : 'sealed'}${r >= 5 ? ' spec' : ''}">${tier}<div class="tal-cards${row.length === 2 ? ' two' : ''}">${cards}</div></section>`;
