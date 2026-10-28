@@ -28,7 +28,7 @@ const RaidUI = (() => {
     root.className = 'hidden';
     root.innerHTML = `
       <div id="boss-bar">
-        <div class="bb-top"><b class="bb-name"></b><i class="bb-title"></i><span class="bb-mode"></span><em class="bb-tot"></em><span class="bb-time"></span></div>
+        <div class="bb-top"><b class="bb-name"></b><i class="bb-title"></i><u class="bb-seal"></u><span class="bb-mode"></span><em class="bb-tot"></em><span class="bb-time"></span></div>
         <div class="bb-hp"><div class="under"></div><div class="trail"></div><div class="fill"></div><div class="ticks"></div><div class="gates"></div><div class="vuln"></div><div class="goal hidden"></div><span></span><b class="bb-x"></b></div>
         <div class="bb-post hidden"><div class="back"></div><div class="fill"></div><div class="crack"></div></div>
         <div class="bb-status"></div>
@@ -207,6 +207,7 @@ const RaidUI = (() => {
     layeredHp(raid, now, dt, fm);
     q('#boss-bar').classList.toggle('untargetable', !!b.u);
     q('#boss-bar').classList.toggle('walled', !!raid.wallLabel);   // sealed at a gate (fight.js raiseWall)
+    setText(q('.bb-seal'), raid.wallLabel || '');   // (its name on the bar while the seal holds)
     posture(raid, now, dt);
     gateTicks(raid);
     q('#boss-bar').classList.toggle('stopped', paused(raid, now));   // a Time Stop (fight.js pauseBoss)

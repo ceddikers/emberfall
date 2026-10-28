@@ -1658,7 +1658,7 @@
       return;
     }
     closePanels();
-    RaidUI.hideResults();
+    RaidUI.hideResults(); WallFx.reset();
     resetRaidInput();
     FX.clear(); VFX.clear(); clearTimers();
     ARENA.use(def.id);
@@ -2130,12 +2130,28 @@
     if (msg.na != null) raid.nextAutoAt = now + msg.na;
     raid.bossStatus = Array.isArray(msg.bs) ? msg.bs : [];   // what's on the boss (fight.js bossStatus)
     if (Array.isArray(msg.g)) raid.gates = msg.g;   // the HP gates (ticks on the boss bar) and the wall's label while the boss is sealed (fight.js raiseWall)
-    raid.wallLabel = msg.wl || null;
+    { const wl = msg.wl || null; if (wl !== (raid.wallLabel || null)) wallEdge(wl, raid.wallLabel || null); raid.wallLabel = wl; }   // (a wall going up or breaking: wallEdge below)
     // a Kenseier in the party: the boss's Posture bar and Break (fight.js kenPack), for the HUD and the kit (world.boss)
     raid.posture = Array.isArray(msg.po) ? { p: msg.po[0], max: msg.po[1], broken: msg.po[2], hold: !!msg.po[3], rec: !!msg.po[4], by: msg.po[5], at: now } : null;
     if (SH && raid.state === 'live' && msg.mx > 0 && Math.floor(msg.hp / msg.mx * 20) !== raid.hpBucket) { raid.hpBucket = Math.floor(msg.hp / msg.mx * 20); SH.vo('boss-hp', { bossId: raid.def.id, hp: msg.hp, maxHp: msg.mx }); }   // (every 5%)
     if (msg.ph != null && msg.ph !== raid.ph) { const first = raid.ph == null; raid.ph = msg.ph; if (SH && raid.state === 'live') { SH.phase(raid.def.id, msg.ph); if (!first) SH.vo('boss-phase', { bossId: raid.def.id, n: msg.ph }); } }
   });
+  // A wall (fight.js raiseWall) goes up when the host's wall label appears and breaks when it clears while the fight is live (fb 'wl'; a wipe or a
+  // clear ends the fight first, so neither counts as a break). Presentation only: the title and bar (wall-fx.js), the shake, flash and shards, and the sounds.
+  // One label replacing another is a break and a new wall. Replayed or hidden frames (a snapshot, a hidden tab: FX.muted) only keep the state.
+  function wallEdge(label, was) {
+    if (!raid) return;
+    const quiet = raid.state !== 'live' || FX.muted;
+    const duck = (a, s) => { try { if (typeof Sound !== 'undefined' && Sound.music && Sound.music.duck) Sound.music.duck(a, s); } catch (e) { /* (the music is only a mood) */ } };
+    if (was) {
+      if (!quiet) { WallFx.broke(raid.bossDraw, was, RAID_BOSS_SCALE); if (SH) { SH.play('wall-break', { vol: 1, key: 'wall-break', minGap: 0.5 }); duck(0.3, 0.9); } }
+      raid.wallAt = null;
+    }
+    if (label) {
+      raid.wallAt = quiet ? -9 : now;
+      if (!quiet) { WallFx.up(raid.bossDraw, label, RAID_BOSS_SCALE); if (SH) { SH.play('wall-up', { vol: 1, key: 'wall-up', minGap: 0.5 }); duck(0.5, 2.2); } }
+    }
+  }
   // the boss's next moves, from the host about once a second: [[name, seconds until], ...] (drawn under the cast bar)
   Net.on('bnext', msg => {
     if (!raid) return;
@@ -3774,6 +3790,7 @@
     VFX.draw(ctx, 'ground');
     Lamps.drawFloor(ctx, now, { entById, me: Net.id, party: units });   // lantern glows: faint, and under every telegraph (lanterns.js)
     Kennel.drawFloor(ctx, now, { entById, me: Net.id, boss: bd });   // a Houndmaster's position arcs round the boss: faint, under every telegraph (kennel.js)
+    if (raid.wallLabel && !raid.pvp) WallFx.floor(ctx, bd.x, bd.y, now, RAID_BOSS_SCALE, now - (raid.wallAt ?? -9));   // the seal's rune ring on the floor: under every telegraph (wall-fx.js)
     ArenaView.drawTelegraphs(ctx, raid.tgs, now, tellEnv);
     BossTells.drawRollers(ctx, raid.rollers, now, tellEnv);
     BossTells.drawSweeps(ctx, raid.sweeps, now, tellEnv);
@@ -3824,7 +3841,7 @@
           if (sk) ctx.restore();
           if (sk) SK_FX.thread(ctx, bd, sk);
         }
-        if (raid.wallLabel) ArenaView.wallShield(ctx, bd.x, bd.y, now, RAID_BOSS_SCALE);
+        if (raid.wallLabel) WallFx.shell(ctx, bd.x, bd.y, now, RAID_BOSS_SCALE, now - (raid.wallAt ?? -9));   // (a thin skin of glass: wall-fx.js)
       } else if (e.kind === 'knight') {
         const k = e.k, a = Math.min(1, (now - k.born) / 0.6) * (k.gone ? Math.max(0, 1 - (now - k.gone) / 0.8) : 1);
         drawEchoKnight(ctx, k.x, k.y, k.f, k.st, a * (1 - 0.3 * raid.nightK));
