@@ -69,7 +69,7 @@ const WallFx = (() => {
     ring(x, y, { r: 360, color: '#ffd27a', w: 11, dur: 0.85 });
     ring(x, y, { r: 210, color: '#fff3c8', w: 6, dur: 0.5, delay: 0.07 });
     ring(x, y, { r: 110, color: '#ffffff', w: 4, dur: 0.32, delay: 0.14 });
-    VFX.flash(x, y - 50, 230, '#ffe6a8', 0.4);
+    VFX.flash(x, y - 50, 170, '#ffe6a8', 0.3);
     VFX.pillar(x, y, { r: 62 * sc, h: 380, color: '#ffd27a', dur: 1.0 });
     VFX.motes(x, y, { color: '#ffe9a0', n: 18, r: 70 * sc, rise: 1, life: 1.5 });
     VFX.sparks(x, y - 30, { color: '#fff2c0', n: 14, speed: 360, up: 160 });
@@ -112,10 +112,10 @@ const WallFx = (() => {
         life: rand(0.7, 1.1), size: rand(9, 16), color: i % 3 ? '#ffeab0' : '#ffffff', kind: 'shard', add: false, vr: rand(-12, 12) });
     }
     ring(x, y, { r: 330, color: '#ffe9b0', w: 10, dur: 0.7 });
-    ring(x, y, { r: 150, color: '#ffffff', w: 5, dur: 0.38 });
-    VFX.flash(x, y - 50, 250, '#fff4d0', 0.32);
+    ring(x, y, { r: 150, color: '#fff3c8', w: 3, dur: 0.3 });
+    VFX.flash(x, y - 50, 170, '#fff4d0', 0.22);
     VFX.sparks(x, y - 40, { color: '#fff2c0', n: 22, speed: 520, up: 200 });
-    cam('flash', '#fff1c8', 0.4, 0.45);
+    cam('flash', '#fff1c8', 0.22, 0.35);
     cam('punch', 0.03, 0.45);
     cam('stop', 0.07);
     shake(11);
