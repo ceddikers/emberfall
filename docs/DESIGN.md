@@ -221,7 +221,7 @@ Specs: **Pack Leader** (Pounce keeps two charges; Harmony rewards changing the p
 Every healer both heals and attacks: heals are aimed by ally-targeting (see Combat rules), and the attack fills the kit's gauge.
 
 **Cleric, Priest of Dawn** (1). Signature: **Petal economy**. Gauge: a sundial with 3 petals.
-Smite (after three Petals' worth, where a Mend counts as half, it becomes the instant Dawnstar) / Mend (cast heal) / Dawn Petal (instant heal and regen; Petals regrow every 15 s) / Prayer Circle (party mitigation and regen) / Intervention (raise, or a heal) / Benediction (heal, shield, and Blessed). Ultimate **Dawn Breaks** (a party heal that grows with Petals held, then a smite).
+Smite (after three Petals' worth, where a Mend counts as half, it becomes the instant Dawnstar) / Mend (cast heal) / Dawn Petal (instant heal and regen; Petals regrow every 15 s) / Prayer Circle (party mitigation and regen) / Intervention (a big cast heal on a short cooldown, or the raise on its own 30 s lockout) / Benediction (heal, shield, and Blessed). Ultimate **Dawn Breaks** (a party heal that grows with Petals held, then a smite).
 Specs: **Aegis** (Petals leave shields; Mend becomes Divine Barrier), **Inquisitor** (Smite brands the boss so allies' hits burst; Benediction becomes Condemn; less healing).
 
 **Grovekeeper, Druid** (2). Signature: **planting heals early**. Gauge: a sprouting seed (Bloom).

@@ -906,7 +906,7 @@ class FightSim {
       if (m.kind === 'living') continue;
       if (m.kind === 'brace' && this.t - m.start <= FIGHT.PERFECT_WINDOW && !perfect) { perfect = m; mult *= 0.4; continue; }
       if (m.kind === 'parry' && !opts.raw && this.t - m.start <= FIGHT.READ_WINDOW && !read) { read = m; mult *= opts.kind === 'buster' ? 0.4 : m.dfl ? 0.25 : 0.5; continue; }   // (a caught tankbuster lands at 40%, as a Perfect Block's does; Deflect: any other blow at a quarter)
-      if (m.kind === 'reflect') { if (!reflect) { reflect = m; mult *= 0.2; } continue; }
+      if (m.kind === 'reflect') { if (!reflect && (opts.kind === 'buster' || amt >= s.maxHp * 0.2)) { reflect = m; mult *= 0.2; } continue; }   // (a Mirror Aegis lets autos and burn ticks pass: it waits for a tankbuster, or a hit of a fifth of your health or more)
       if (m.kind === 'once') { if (onceHit || amt < s.maxHp * 0.2) continue; onceHit = m; }   // (a Tidecaller's Riptide Mark: the next big hit, a fifth of their health or more, is cut and the cut is used up)
       mult *= 1 - m.pct;
     }

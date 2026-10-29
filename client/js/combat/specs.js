@@ -117,7 +117,7 @@ const SPECS = {
         abilities: {
           drain: {
             id: 'rampage', replaces: 'drain', name: 'Rampage', type: 'gcd', target: 'enemy', range: SPEC_MELEE, anim: 'attack',
-            desc: 'Spend 40 Rage: a wild blow for {d:320}, up to {d:250} more the more the bank holds (the damage you took since your last Rampage, 6s at most). Within 1.2s of a hit that took a tenth of your HP your blood is warm: {d:340} more; after that the bank has gone cold and counts for 30%. It hits harder the lower your HP (up to 70% harder near death) and heals you for 20% of the bank. It also guards you: 15% less damage for 2s, or 35% for 3s when thrown below half HP. Thrown while the boss is winding up a big blow at you, that blow also lands 35% lighter.',
+            desc: 'Spend 40 Rage: a wild blow for {d:320}, up to {d:250} more the more the bank holds (the damage you took since your last Rampage, 6s at most). Within 1.2s of a hit that took a tenth of your HP your blood is warm: {d:340} more; after that the bank has gone cold and counts for 30%. It hits harder the lower your HP (up to 70% harder near death) and heals you for 20% of the bank. It also guards you: 15% less damage for 2s, or 35% for 3s when thrown below half HP. Thrown while the boss is winding up a big blow at you, that blow also lands 60% lighter.',
             usable: k => reaverDrainOk(k),
             glow: k => reaverDrainGlow(k) || (k.g.blood >= 40 && k.env.hpFrac() < 0.5),
             effect(k) {
@@ -180,7 +180,7 @@ const SPECS = {
       gaugeTip: 'Rune Strike gives 1 (2 during Runic Overload), a Ward that absorbed at least half refunds its Rune (a sanctified one always does), and Mirror Aegis reflecting a tankbuster gives 1. Runic Ward spends 1, Glyph Burst spends all 3.',
       blurb: 'Your Wards go where they\'re needed. When they break, they break for you.',
       focus: 'Shielding allies. Your Ward goes on whoever needs it, and pays its Rune back more easily.',
-      passive: { name: 'Shared Ward', desc: 'Runic Ward goes on an ally (yourself if none is picked). It explodes from them when it ends, and refunds its Rune once it has absorbed half. A Ward broken all the way shatters outward for {d:250} more.' },
+      passive: { name: 'Shared Ward', desc: 'Runic Ward goes on an ally (yourself if none is picked). It explodes from them when it ends, and refunds its Rune once it has absorbed half. A Ward broken all the way shatters outward for {d:250} more. Mirror Aegis has two charges.' },
       classPassive: 'Runic Wards explode when they end. The more they absorbed, the bigger the blast ({d:150} up to {d:600}), and one that absorbed at least half refunds its Rune.',
       build: base => ({
         potMult: 0.63,
@@ -194,6 +194,7 @@ const SPECS = {
               if (k.talent('runeguard_reclaim') && k.now >= (k.g.reclaimAt || 0) && k.env.allyHp && (k.env.allyHp(t) ?? 1) < 0.8) { k.g.reclaimAt = k.now + 6; k.gain('runes', 1, 3); k.fx('rune-echo'); }
             },
           },
+          mirror: { charges: 2, desc: 'For 3s, the next tankbuster or big hit you take (a fifth of your health or more) is reduced by 80% and reflected back for {d:1500}. A reflected tankbuster also carves a Rune. Two charges.' },
         },
         onNotify(k, type, d) {
           if (type === 'shieldEnd' && d.tag === 'ward') {
@@ -257,7 +258,7 @@ const SPECS = {
             },
             fx: { type: 'slash', color: '#e0b8ff', r: 64, span: 2.2 },
           },
-          mirror: { charges: 2, desc: 'For 3s, the next hit you take is reduced by 80% and reflected back for {d:1500}. A reflected tankbuster also carves a Rune. Two charges.' },
+          mirror: { charges: 2, desc: 'For 3s, the next tankbuster or big hit you take (a fifth of your health or more) is reduced by 80% and reflected back for {d:1500}. A reflected tankbuster also carves a Rune. Two charges.' },
           overload: { desc: 'Burst: 15s of +10% damage. Rune Blade hits give 2 Runes, Rune Cleave hits for {d:860} and burns for {d:110}, Ward blasts hit 50% harder, and a Ward broken all the way gives 1 more Rune.' },
         },
       }),
@@ -458,7 +459,7 @@ const SPECS = {
       passive: { name: 'Echo', desc: 'Temporal Bolt and Recall repeat 3s later at half strength (full strength during Echo Chamber). Accelerando becomes Echo Chamber.' },
       build: base => {
         // one Bolt hit, at a share of its strength: damage, then the stance's heal
-        const bolt = (k, ab, share, to) => chronoBolt(k, ab, share, 0.56, 1.35, to);
+        const bolt = (k, ab, share, to) => chronoBolt(k, ab, share, 0.85, 1.35, to);
         const echo = (k, fn) => k.g.echoes.push({ at: k.now + 3, fn });
         // an echo goes to the most hurt ally when the one it was meant for is above 90% by the time it lands
         const echoTo = (k, t) => { const f = k.env.allyHp && typeof t === 'number' ? k.env.allyHp(t) : null; return f != null && f > 0.9 ? 'lowest' : t; };
@@ -478,12 +479,12 @@ const SPECS = {
           },
           abilities: {
             bolt: {
-              desc: '1.5s cast attack for {d:280} that repeats 3s later at half strength. Slow: heals your linked ally for 135% of its damage (the echo goes to the most hurt ally instead if your link is above 90%). Haste: heals everyone for 56%.',
+              desc: '1.5s cast attack for {d:280} that repeats 3s later at half strength. Slow: heals your linked ally for 135% of its damage (the echo goes to the most hurt ally instead if your link is above 90%). Haste: heals everyone for 85%.',
               effect(k) {
                 const ab = this;
                 // (Resonance, spec row VI: an echo that crits echoes once more)
                 const ring = again => echo(k, () => { const r = bolt(k, ab, share(k), echoTo(k, k.g.link ?? k.env.defaultLink())); k.fx('echo'); if (again && r && r.crit && k.talent('chronomancer_resonance')) ring(false); });
-                bolt(k, this, chronoInstant(k)); ring(true); chronoBoltAfter(k, this, 0.56, 1.35, true);
+                bolt(k, this, chronoInstant(k)); ring(true); chronoBoltAfter(k, this, 0.85, 1.35, true);
               },
             },
             recall: {
@@ -1333,24 +1334,29 @@ SPECS.gloomsworn = [
   },
   {
     id: 'duskreaver', name: 'Reaver of Dusk', title: 'The Hollow Blade', accent: '#c85a8a',
+    balance: 1.07,   // a damage spec: aims for this share of the base Gloomsworn's damage (tools/check.js; its Last Rite comes back sooner, and so does its Hollow)
     gaugeTip: 'Every hit you land fills 8 Gloom and every hit you take 6. Gloom Strike spends 40, Dusk Reave 25 (nothing while you are Hollow), Last Rite all of it. Full Gloom when a blow would kill you makes you Hollow, for 10s instead of 8s, and Gloom Strike echoes while you are. A full vessel also hardens you (10% less damage taken), and a Hollow leaves 40 Gloom of dregs with both Gloom Strikes back and echoing.',
     blurb: 'The dark is a weapon. Let it hollow you out, and cut.',
     focus: 'Damage. You hit harder, you trade Black Pall for a cut of your own, and a Hollow is your window: 10s, free Reaves, and every Gloom Strike hits twice.',
-    passive: { name: 'Hollow Blade', desc: 'You deal 6% more damage. Black Pall becomes Dusk Reave. Hollow lasts 10s instead of 8s, and while you are Hollow Gloom Strike echoes, hitting again for 85%.' },
+    passive: { name: 'Hollow Blade', desc: 'You deal 6% more damage. Black Pall becomes Dusk Reave. Hollow lasts 10s instead of 8s, and while you are Hollow Gloom Strike echoes, hitting again for 85%. Gloom Strike also lays a barrier ({s:80}) on the most hurt ally. Black Mantle comes back in 45s instead of 60s, and Last Rite in 100s instead of 120s.' },
     build: base => ({
       potMult: base.potMult * 0.985,   // balance knob (tools/simulate.js)
       hollowLong: true, hollowEcho: true,
       dmgMod: k => base.dmgMod(k) + 0.06,
       abilities: {
+        strike: { desc: 'Spend 40 Gloom: a heavy blow for {d:760} that wraps you in a barrier of {s:150} for 6s, and the ally who is hurt most in one of {s:80} for 8s. Two charges. Needs 40 Gloom. It glows while the shade is behind it, while you are Hollow, and when the vessel is full with the Hollow still coming back.' },
+        mantle: { cd: 45 },    // (a Reaver's Mantle is back in 45s, not 60s, and Last Rite in 100s, not 120s: a Hollow Blade has no pall of its own to stand behind)
+        rite: { cd: 100 },
         pall: {
           id: 'reave', replaces: 'pall', icon: 'reave', name: 'Dusk Reave', type: 'ogcd', target: 'enemy', range: SPEC_MELEE, cd: 30, lock: 0.5, anim: 'attack',
-          desc: 'Spend 25 Gloom (nothing while you are Hollow): a reaping cut for {d:600}, and the dark closes round the wound: you take 10% less damage for 5s.',
+          desc: 'Spend 25 Gloom (nothing while you are Hollow): a reaping cut for {d:600}, and the dark closes round the wound: you take 20% less damage for 6s, and the whole party 10% less.',
           usable: k => (k.g.gloom || 0) >= 25 || gloomHollow(k),
           glow: k => gloomHollow(k),
           effect(k) {
             if (!gloomHollow(k)) gloomSpend(k, 25);
             k.damage(600, { ab: this });
-            k.mitigate('self', 0.1, 5 + (k.perk('gloomsworn_w3') ? 2 : 0), { ab: this });
+            k.mitigate('self', 0.2, 6 + (k.perk('gloomsworn_w3') ? 2 : 0), { ab: this });
+            k.mitigate('party', 0.1, 6 + (k.perk('gloomsworn_w3') ? 2 : 0), { ab: this });
             if (k.talent('gloomsworn_bearer')) gloomBearers(k, this, 170);
           },
           fx: { type: 'slash', color: '#c85a8a', r: 70, span: 2.4 },

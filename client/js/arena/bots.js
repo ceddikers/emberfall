@@ -1282,15 +1282,18 @@ const BotAI = {
         // (raid-host holds the bot still until stillUntil, and lets it go the moment that stops being true). Not while
         // someone still standing is about to drop: keep them up first (an asked-for raise waits only for someone lower).
         // (the target first: a raise's cast time can depend on who it's aimed at, kits.js targetDown)
+        const was = bot.healTarget;
+        bot.healTarget = first.id;   // (aimed first: whether the raise is ready can depend on who it lands on, kits.js Intervention's lockout)
         if (r >= 0 && readyIdx(r) && !(hurt[0] && hurt[0].f < (asked ? 0.25 : 0.35))) {
-          const was = bot.healTarget;
-          bot.healTarget = first.id;
           const ct = k.castTime(ab(r)) || 0;
           if (!ct || BotAI.stillOk(bot, view)) { if (ct) bot.stillUntil = view.t + ct + 0.15; bot.raiseFor = { id: first.id, until: view.t + ct + 0.5 }; return r; }
-          bot.healTarget = was;
         }
+        bot.healTarget = was;
         const rw = idx('rewind');
-        if (rw >= 0 && readyIdx(rw)) { bot.healTarget = first.id; return rw; }
+        // (Rewind only brings back someone who fell in the last few seconds, and not the one a Recall is already on)
+        const dsn = bot.deadSince || (bot.deadSince = {}); for (const d of dead) { const e = dsn[d.id]; if (!e || view.t - e.last > 1) dsn[d.id] = { first: view.t, last: view.t }; else e.last = view.t; }
+        const rwD = dead.filter(d => view.t - dsn[d.id].first < 3.4 && !(bot.raiseFor && bot.raiseFor.until > view.t && bot.raiseFor.id === d.id));
+        if (rw >= 0 && readyIdx(rw) && rwD.length) { bot.healTarget = (rwD.find(d => d.id === first.id) || rwD[0]).id; return rw; }
       }
       let low = hurt[0];
       // a Gloomsworn gone Hollow (held at 1 HP, its damage written down as a debt): heal it until the debt is covered
@@ -1403,10 +1406,10 @@ const BotAI = {
         const a = ab(i);
         if (!readyIdx(i)) continue;
         if (a.id === 'brace' && left < 0.6) return i;
-        if (a.id === 'mirror' && left < 0.9) return i;
+        if (a.id === 'mirror' && left < 0.9 && !(view.t - (bot.mirrorAt ?? -9) < 3.2)) { bot.mirrorAt = view.t; return i; }   // (one Mirror Aegis per buster: with two charges the next tick would spend the second on the same blow)
         if (a.id === 'ward' && left < 3 && k.gcdRemaining() <= 0 && !k.cast) { bot.healTarget = bot.id; return i; }
         // (a blow a Perfect Block alone leaves most of the HP of is no reason to spend the big cooldown: it is kept for the one that would kill, e.g. the Sovereign's hot Brand)
-        if (!mitigated && left < 3 && TANK_CDS.includes(a.id) && !BotAI.braceHolds(bot, k, view, myBuster)) { bot.mitUntil = view.t + 4; return i; }
+        if (!mitigated && left < 3 && TANK_CDS.includes(a.id) && !BotAI.braceHolds(bot, k, view, myBuster) && !BotAI.reaverHolds(bot, k, view, myBuster, a)) { bot.mitUntil = view.t + 4; return i; }
       }
     }
     // a Pyromancer near overheating while badly hurt (the burn costs 15% of its HP): Vent, or let the Heat cool
@@ -1454,12 +1457,13 @@ const BotAI = {
         markMit = true;
       } else if (defensive && !(castingBig && view.bossCast.left < 3)) continue;
       // a tank keeps what it answers busters with when the feed shows the next buster close
-      if (bot.role === 'tank' && TANK_CDS.includes(a.id) && nextTankBuster && nextTankBuster[1] < 15) continue;
+      if (bot.role === 'tank' && TANK_CDS.includes(a.id) && nextTankBuster && nextTankBuster[1] < 15 ) continue;
       if (a.id === 'shift') {
         const groupHurt = hurt.filter(h => h.f < 0.8).length >= 2;
         // (Haste heals the whole party: go early when party-wide damage is coming and people are already hurt)
         if (k.g.stance === 'slow' && ((k.g.flux >= 95 && !(k.talent('chronomancer_overwound') && raidSoon && !(view.bossCast && RAID_CASTS.test(view.bossCast.name)))) || (groupHurt && k.g.flux >= (raidSoon ? 25 : 40)) ||
-          (k.def.spec === 'echoist' && view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left > 1.2 && k.g.flux >= 25))) return i;   // (an Echoist's echoes come 3s after the Bolt: begin as the cast does)
+          (k.def.spec === 'echoist' && view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left > 1.2 && k.g.flux >= 25) ||
+          (BotAI.graceWindow(view).prep && BotAI.graceWindow(view).at < 4 && k.g.flux >= 40) || (view.bossCast && view.bossCast.name === 'Nightfall' && k.g.flux >= 20))) return i;   // (an Echoist's echoes come 3s after the Bolt: begin as the cast does. Grace Withdrawn: Haste as the party drops to 1 HP, so every Bolt heals all of them for Nightfall)
         // (back to Slow before the Flux runs dry, for Paradox)
         if (k.g.stance === 'haste' && ((k.talent('chronomancer_credit') ? !!k.g.owed && k.g.owed - k.now < 1.2 : k.g.flux < 14) || (!groupHurt && k.g.flux < 45 && hurt[0] && hurt[0].f < 0.6))) return i;
         continue;
@@ -1694,6 +1698,19 @@ BotAI.braceHolds = function (bot, k, view, m) {
   return m.dmg * view.dmgScale * 0.9 * 0.4 < me.hp - me.maxHp * 0.03;
 };
 
+// a Bloodreaver bot keeps Undying (150 s) for the blow that a Rampage thrown into the cast (60% off, and its 15% guard) would not leave it standing through:
+// True: hold it (the tankTalents block above throws the Rampage)
+// War Cry (a roar that shields the party and takes 10% off its damage) is for the party's blows, so a buster aimed at it leaves it alone unless Undying is not up for a lethal one.
+BotAI.reaverHolds = function (bot, k, view, m, a) {
+  if (k.def.spec !== 'berserker' || (a.id !== 'undying' && a.id !== 'warcry')) return false;   // (the Hemomancer answers a buster as before)
+  const me = view.players.find(p => p.id === bot.id);
+  if (!me || !view.dmgScale || !m.dmg) return false;
+  const lethal = m.dmg * view.dmgScale * 0.9 * 0.4 * 0.85 >= me.hp - me.maxHp * 0.03;
+  if (a.id === 'undying') return !lethal;
+  const ui = k.abilities.findIndex(x => x.id === 'undying');
+  return !(lethal && ui >= 0 && k.readyIn(k.abilities[ui]) > 0.0001);
+};
+
 // an Oathbroker bot keeps Writ of Protection (90 s) for the blow that would bury the Ledger: one worth two of its whole HP or more (what gear leaves of the
 // telegraph's raw dmg), or a harder one than the same move had before (the Sovereign's Brand inside the burn). True: hold it.
 BotAI.writHolds = function (bot, view, m, H) {
@@ -1757,6 +1774,15 @@ BotAI.healerTalents = function (bot, k, view, c) {
     // Bloom of Dawn: the whole stack of Petals into one big heal on whoever is lowest
     const di = idx('intervene');
     if (di >= 0 && k.abilities[di].id === 'dawnbloom' && gcdFree && low && low.f < 0.7 && ready(di) && (k.g.petals >= 3 || (k.g.petals >= 2 && low.f < 0.5))) return to(di, low.p);
+    // Intervention on the living (the big cast heal, back every 15s): on someone well under half, standing, or planted where this spot is about as safe as the planned one
+    if (di >= 0 && k.abilities[di].id === 'intervene' && gcdFree && low && low.f < 0.5) {
+      const was = bot.healTarget; bot.healTarget = low.p.id;   // (aimed first: the move's cooldown and the raise's lockout both depend on who it lands on)
+      if (ready(di)) {
+        if (!moving) return di;
+        if (BotAI.stillOk(bot, view) && BotAI.danger(bot, bot.x, bot.y, view) < 400) { bot.stillUntil = view.t + (k.castTime(k.abilities[di]) || 0) + 0.15; return di; }
+      }
+      bot.healTarget = was;
+    }
     // Foresight (Aegis): a Petal or a Divine Barrier that lands while the boss is casting has its shield half again as strong
     if (k.talent('cleric_foresight') && big && castLeft > 0.3 && gcdFree && view.t - (bot.foreAt ?? -99) > 4) {
       const who = busterSoon && tankH ? tankH : hurt[0], pi = idx('petal'), mi = idx('mend');
@@ -1819,14 +1845,14 @@ BotAI.alembist = function (bot, k, view) {
   const enemyNear = !!k.env.target({ target: 'enemy', range: RANGED });
   const hollowN = BotAI.hollowNeed(view);   // (a Hollow Gloomsworn: heals on it pay its debt)
   // (a lone tank also counts: it is the one the blows land on)
-  const gw = BotAI.graceWindow(view);   // (Grace Withdrawn: the cures are brewed ahead and held for the climb back from 1 HP)
+  const gw = BotAI.graceWindow(view); const raiseWanted = dead.length > 0 && k.now + 4 >= k.g.raiseAt && !vials.some(v => ['DD', 'DQ', 'DDD'].includes(v.r));   // (Grace Withdrawn: the cures are brewed ahead and held for the climb back from 1 HP; a fallen ally and the raise nearly ready: a Draught is wanted in the bandolier)
   const needHeal = !!hollowN || gw.prep || hurt.length >= 2 || (hurt[0] && frac(hurt[0]) < 0.62) || !!(tank && frac(tank) < (busterNear ? 0.95 : 0.82));
 
   // oGCDs: Catalyst whenever a brew is about to start; Distill when healing is urgent; Grand Batch / Blend in a crunch
   const di = idx('distill'), bi = idx('batch');
   if (k.gcdRemaining() > 0.15 && !k.cast) {
     if (k.abilities[di].id === 'catalyst') { if (ready(di) && !k.g.half.length && room) return di; }
-    else if (ready(di) && !k.g.half.length && room && (needHeal || vials.length === 0 || (k.talent('alembist_fume') && raidwideSoon))) return di;   // (Fume: Distill cloaks the party, so ahead of a raidwide)
+    else if (ready(di) && !k.g.half.length && room && (needHeal || raiseWanted || vials.length === 0 || (k.talent('alembist_fume') && raidwideSoon))) return di;   // (Fume: Distill cloaks the party, so ahead of a raidwide)
     if (ready(bi)) {
       if (k.abilities[bi].id === 'blend') { if (vials.length >= 2 && needHeal && vials.some(alemIsHeal)) return bi; }
       else if (vials.length <= 1 && k.g.last && ((needHeal && alemInfo(k.g.last).kind === 'heal') || (!hurt.length && alemInfo(k.g.last).kind === 'bomb'))) return bi;
@@ -1878,7 +1904,10 @@ BotAI.alembist = function (bot, k, view) {
     const S = idx('salt') >= 0 && k.abilities[idx('salt')].reagent === 'Q' ? 'Q' : 'S';
     let plan;
     const bombs = vials.filter(v => kindOf(v) === 'bomb').length, under = alive.some(p => frac(p) < 0.9);
-    if (needHeal && heals < 2) plan = need === 3 ? 'DDD' : (hurt.length >= 3 ? 'DE' : 'DD');
+    if (raiseWanted) plan = need === 3 ? 'DDD' : 'DD';
+    else if (gw.prep && A.fuse && need === 3 && !vials.some(v => v.r === 'DES')) plan = 'DES';   // (Grace Withdrawn: a Volatile's fuse is short, so one Philosopher's Draught, brewed ahead, for the whole party at 1 HP)
+    else if (gw.prep && !A.fuse && heals < Math.min(A.slots, 4)) plan = need === 3 ? 'DDD' : 'DD';   // (an Apothecary's bandolier stocked with cures: the party climbs back from 1 HP before the blow, a splash at a time)
+    else if (needHeal && heals < 2) plan = need === 3 ? 'DDD' : (hurt.length >= 3 ? 'DE' : 'DD');
     else if (busterNear && !shields) plan = need === 3 ? 'DD' + S : 'D' + S;
     else if (heals < 1) plan = need === 3 ? 'DDD' : 'DD';
     else if (busterNear && heals < 2) plan = need === 3 ? 'DDD' : 'DD';   // (a Draught and a Salve or Ward stocked for the blow)
@@ -1940,6 +1969,17 @@ BotAI.tankTalents = function (bot, k, view) {
     if (k.talent('bastion_aegis') && ab(bw).id === 'aegis' && myBust && myBust.resolveAt - t < 3 && !(bot.mitUntil > t) && weave && ok('bulwark') >= 0) { bot.mitUntil = t + 4; return bw; }
   }
   if (cls === 'bloodreaver') {
+    // A tankbuster aimed at us. A Rampage thrown into the cast makes that blow land 60% lighter and its guard (15% for 2s) covers the landing, so one goes out
+    // in the last 2.7s of the cast (a Hack before it would leave the next free GCD too late); Undying is kept for the blow that would still kill after both
+    // (the Sovereign's hot Brand) and goes up as it nears.
+    if (k.def.spec === 'berserker' && myBust && myBust.dmg && view.dmgScale && me && me.maxHp) {   // (the Hemomancer's Drain has no such cut)
+      const raw = myBust.dmg * view.dmgScale * 0.9, left = myBust.resolveAt - t, um = idx('undying');
+      const cut = 0.4 * 0.85;
+      if (raw * cut >= me.hp - me.maxHp * 0.03 && ab(um).id === 'undying' && left < 2.2 && weave && ok('undying') >= 0) return um;
+      if (gcdFree && left < 2.7 && left > 0.25 && bot.brRamp !== myBust.resolveAt && ok('drain') >= 0) { bot.brRamp = myBust.resolveAt; return idx('drain'); }
+    }
+    // War Cry for the party's big blow (a stack or raidwide worth most of a damage dealer's health), so its shield and its 10% cut are up when it lands
+    if (k.def.spec === 'berserker' && weave && !myBust && ab(idx('warcry')).id === 'warcry' && BotAI.incoming(view, 3.2) >= 0.8 && ok('warcry') >= 0) return idx('warcry');
     // Bloodletting at the moment a talent pays for it: Retaliation (within 4s of a heavy hit: twice as deep, twice the Blood), Cauterize (a tankbuster's
     // Vulnerability on us: the cut washes it off), Bleed the Cast (Blood Lance thrown into a cast wards the party)
     const le = ok('letting');
@@ -1968,7 +2008,7 @@ BotAI.tankTalents = function (bot, k, view) {
 };
 BotAI.tankHold = function (k, a) {
   if (a.id === 'hallowed') return !k.glows(a);   // (Hallowed Ground only with the gauge full)
-  if (a.id === 'moon' || a.id === 'scab' || a.id === 'whirl') return true;   // (pressed in tankTalents, at their moment)
+  if (a.id === 'moon' || a.id === 'scab' || a.id === 'whirl' || (a.id === 'warcry' && k.def.spec === 'berserker')) return true;   // (pressed in tankTalents, at their moment)
   return false;
 };
 
@@ -2563,14 +2603,14 @@ BOT_CLASS.gloomsworn = {
     const holdFull = brimWait && gloom >= 70 && gloom < 99.5 && !hollow;
     if (weave || (myBuster && k.gcdRemaining() > 0.1)) {
       // (the Mantle waits for the buster when one is in the feed: it was once spent at half health on a small blow and missing for the hot Brand)
-      if (ok(mantle) && (myBuster || (hp < 0.5 && !hollow && !(k.def.sentinel && nb && nb[1] < 25)))) return mantle;
+      if (ok(mantle) && (myBuster || (hp < 0.5 && !hollow && !((k.def.sentinel || k.def.hollowEcho) && nb && nb[1] < 25)))) return mantle;
       // a blow worth more than the Mantle can stand against (the Sovereign's hot Brand is two and a half times the knight's health): the cuts are layered, as a player would,
       // the Pall (or what stands in its place) and then the Rite's barrier, unless the Hollow is the better answer (a full vessel that cannot be saved by the layers keeps its Gloom)
-      if (k.def.sentinel && myBuster && me && me.maxHp > 0 && !hollow && myBuster.dmg && view.dmgScale) {
-        const mx = me.maxHp, est = myBuster.dmg * view.dmgScale * 0.9 * (gloom >= 99.5 ? 0.9 : 1) * (k.has('mantle') || ok(mantle) ? 0.6 : 1), safe = mx * 0.1;
+      if ((k.def.sentinel || k.def.hollowEcho) && myBuster && me && me.maxHp > 0 && !hollow && myBuster.dmg && view.dmgScale) {
+        const mx = me.maxHp, est = myBuster.dmg * view.dmgScale * 0.9 * (gloom >= 99.5 ? 0.9 : 1) * (k.has('mantle') || ok(mantle) ? 0.6 : 1), safe = mx * (k.def.hollowEcho ? 0.02 : 0.1);   // (a Reaver has the Hollow to fall back on, so the Rite is kept for a blow that would really kill through the Mantle)
         if (me.hp - est < safe) {
           const pa = k.abilities[pall], ra = k.abilities[rite], pid = pa ? pa.id : '';
-          const pc = pid === 'pall' ? 0.64 : pid === 'vigil' ? (k.def.hollowEcho ? 0.85 : 0.68) : 0.9;
+          const pc = pid === 'pall' ? 0.64 : pid === 'vigil' ? (k.def.hollowEcho ? 0.85 : 0.68) : (k.def.hollowEcho ? 0.72 : 0.9);
           const pallOk = !!pa && ok(pall) && gloom >= gloomPallCost(k), riteOk = !!ra && ok(rite) && gloom >= (ra.id === 'pyre' ? 30 : 20);
           const g2 = gloom - (pallOk ? gloomPallCost(k) : 0), sh = riteOk ? (ra.id === 'pyre' ? (150 + 5 * g2) * 0.5 + mx * 0.06 : (220 + 7 * g2) * 0.5 + mx * (0.05 + 0.0007 * g2)) : 0;
           const survives = me.hp - est * (pallOk ? pc : 1) + sh > mx * 0.03, hollowReady = gloom >= 99.5 && k.now >= (k.g.hollowCdAt || 0);
@@ -2586,7 +2626,16 @@ BOT_CLASS.gloomsworn = {
       if (ok(rite) && hp < 0.35 && !hollow && gloom >= 20 && !myBuster) return rite;
       // (a Reaver of Dusk's Dusk Reave stands in Black Pall's place: a cut on cooldown, free in a Hollow, and not out of the Gloom a tankbuster is coming for)
       // (the Reaver's Vigil Ward is a Dusk Reave with a ward on someone: pressed the same way, and for a buster at someone else above)
-      if (k.abilities[pall] && (k.abilities[pall].id === 'reave' || (k.abilities[pall].id === 'vigil' && k.def.hollowEcho))) { if (ok(pall) && (hollow || (gloom >= 55 && !busterSoon))) return pall; }
+      // (Dusk Reave also lays a cut on the whole party: it is held a few seconds for a raidwide, never longer than ten once ready, and pressed freely in a Hollow)
+      if (k.abilities[pall] && k.abilities[pall].id === 'reave') {
+        if (!ok(pall)) bot.rvSince = 0;
+        else {
+          if (!bot.rvSince) bot.rvSince = view.t;
+          const inc = BotAI.incoming(view, 4.5) >= 0.3 || !!(view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left < 3);
+          if (hollow || (gloom >= 25 && inc && !busterSoon) || (gloom >= 55 && !busterSoon && view.t - bot.rvSince > 10)) { bot.rvSince = 0; return pall; }
+        }
+      }
+      else if (k.abilities[pall] && (k.abilities[pall].id === 'vigil' && k.def.hollowEcho)) { if (ok(pall) && (hollow || (gloom >= 55 && !busterSoon))) return pall; }
       // (a Sentinel's Pall is kept for the hit that would kill: 60s is long, and it was once spent on a Kindling with the Twin Brands' stack 20s away)
       else if (ok(pall) && gloom >= 30 && !hollow && (BotAI.incoming(view, 4.5) >= (k.def.sentinel ? 0.6 : 0.3) || (view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left < 3 && BotAI.incoming(view, 4.5) >= (k.def.sentinel ? 0.6 : 0.12)))) return pall;
       if (ok(shade) && !k.has('shade') && gloom >= 50 && !hollow && !holdFull) return shade;   // (the echoes are for Gloom Strikes: step when the vessel can pay for two)

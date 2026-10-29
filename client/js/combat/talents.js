@@ -266,7 +266,7 @@ const TALENTS = {
     ],
     [
       { id: 'cleric_bloom', name: 'Bloom of Dawn', ab: 'intervene', grants: true,
-        text: 'Intervention becomes Bloom of Dawn (24s, instant): spend all your Petals on one ally. A fallen ally rises at once, with heavy Raise Sickness; a living one is healed for {h:900} per Petal and left a regen of {h:90} per Petal every 3s for 9s. Every Petal counts toward Dawnstar.' },
+        text: 'Intervention becomes Bloom of Dawn (15s, instant): spend all your Petals on one ally. A living one is healed for {h:900} per Petal and left a regen of {h:90} per Petal every 3s for 9s; a fallen one rises at once, with heavy Raise Sickness (once every 30s). Every Petal counts toward Dawnstar.' },
       { id: 'cleric_favour', name: 'Sun\'s Favour', ab: 'smite', text: 'Dawnstar gives back two Petals and heals the most hurt ally for {h:600}.' },
       { id: 'cleric_firstlight', name: 'First Light', ab: 'mend', text: 'While Dawnstar is ready, Mend now casts instantly and heals half again as much (with Quick Mend too, twice as much).', spec: { aegis: 'While Dawnstar is ready, Divine Barrier now casts instantly and its dome is 30% larger.' } },
     ],

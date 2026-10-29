@@ -277,7 +277,10 @@ class Kit {
     }
   }
   charges(ab) { if (!ab.charges) return 0; this.refreshCharges(ab); return this.cd[ab.id].charges; }
+  // ab.cdSkip(k): this press is not held by the move's own cooldown, nor does it start one (the Cleric's raise has a lockout of its own; the heal on a living ally keeps the cooldown)
+  cdFree(ab) { return !!(ab.cdSkip && ab.cdSkip(this)); }
   cdRemaining(ab) {
+    if (this.cdFree(ab)) return 0;
     const c = this.cd[ab.id];
     if (ab.charges) { this.refreshCharges(ab); return c.charges > 0 ? 0 : c.next - this.now; }
     return Math.max(0, c - this.now);
@@ -291,7 +294,7 @@ class Kit {
   }
   startCooldown(ab) {
     const r = this.recast(ab);
-    if (!r) return;
+    if (!r || this.cdFree(ab)) return;
     if (ab.charges) {
       const c = this.cd[ab.id];
       this.refreshCharges(ab);
@@ -552,7 +555,7 @@ class Kit {
         this.cast = null;
         this.stats.interrupts++;
         if (c.ab.type === 'gcd') { this.gcdReady = now + 0.5; this.stats.gcdTime -= this.gcdLen - 0.5; }
-        if (c.ab.type === 'ogcd' || c.ab.cd) this.resetCooldown(c.ab);
+        if ((c.ab.type === 'ogcd' || c.ab.cd) && !this.cdFree(c.ab)) this.resetCooldown(c.ab);
         this.env.emit({ type: 'interrupted', ab: c.ab });
       } else if (now >= c.end) {
         this.cast = null;
