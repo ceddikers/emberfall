@@ -72,7 +72,7 @@ const Net = (() => {
   const dispatch = msg => { const fn = net.handlers[msg.t]; if (fn) try { fn(msg); } catch (e) { console.error(e); } };
   const num = (v, lo, hi, fallback) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fallback);
   const clock = v => (Number.isFinite(v) && v >= 0 ? Math.round(v * 1000) / 1000 : null);   // a sender's game clock, in seconds
-  const pub = p => ({ id: p.id, name: p.name, cls: p.cls, spec: p.spec || null, x: p.x, y: p.y, a: p.a });
+  const pub = p => ({ id: p.id, name: p.name, cls: p.cls, spec: p.spec || null, sv: p.sv || null, x: p.x, y: p.y, a: p.a });
 
   function describe(err) {
     switch (err.type) {
@@ -147,7 +147,12 @@ const Net = (() => {
         break;
       case 'cls':
         // spec: the hero's specialization id (specs.js), or none for the base kit
-        if (CLASS_IDS.has(msg.id)) { p.cls = msg.id; p.spec = /^[a-z]{1,16}$/.test(msg.spec) ? msg.spec : null; broadcast({ t: 'cls', id: p.id, cls: p.cls, spec: p.spec }, p.id); }
+        // sv: the Cinder Sovereign's cosmetic rewards this hero wears, { wings, glow } or none (heroes.js SvRewards: drawn on remote heroes from this)
+        if (CLASS_IDS.has(msg.id)) {
+          p.cls = msg.id; p.spec = /^[a-z]{1,16}$/.test(msg.spec) ? msg.spec : null;
+          p.sv = msg.sv && typeof msg.sv === 'object' && (msg.sv.wings || msg.sv.glow) ? { wings: msg.sv.wings ? 1 : 0, glow: msg.sv.glow ? 1 : 0 } : null;
+          broadcast({ t: 'cls', id: p.id, cls: p.cls, spec: p.spec, sv: p.sv }, p.id);
+        }
         break;
       case 'cast':
         if (!p.cls || !Number.isInteger(msg.i) || msg.i < 0 || msg.i > 7) return;   // (6: the dash, 7: the Ultimate)

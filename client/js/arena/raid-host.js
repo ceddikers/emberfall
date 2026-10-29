@@ -350,7 +350,7 @@ class RaidHost {
   // tankbuster when the gauge is full; a healer saves a sinking party; any role with three bars raises a fallen ally (the raise is every role's).
   botLimit() {
     const sim = this.sim, L = FIGHT.LB, lv = Math.floor(sim.lb / L.BAR), t = sim.t;
-    if (lv < 1 || t - sim.lbUsedAt < 3) return;
+    if (lv < 1 || t - sim.lbUsedAt < 3 || sim.setPieceHold()) return;   // (a set piece: the Limit Break is held, FightSim.setPiece)
     const ps = [...sim.ps.values()].filter(q => !q.left), alive = ps.filter(q => q.alive), dead = ps.length - alive.length;
     const low = alive.filter(q => q.hp / q.maxHp < 0.35).length;
     const busterSoon = [...sim.mechs.values()].some(m => m.type === 'buster' && m.resolveAt - t < 1.5);
@@ -433,7 +433,7 @@ class RaidHost {
       bot.actor.update();
       if (bot.actor.taunt) this.botTaunt(bot, view);
       // the Ultimate (T): BotAI.ult says when (the party's burst, a check, a buster, a raidwide)
-      if (bot.actor.kit.ult && BotAI.ult(bot, bot.actor.kit, view, ultCtx)) bot.actor.press(7);
+      if (bot.actor.kit.ult && !sim.setPieceHold() && BotAI.ult(bot, bot.actor.kit, view, ultCtx)) bot.actor.press(7);
       if (this.sim.t >= bot.nextAct) {
         const i = BotAI.act(bot, bot.actor.kit, view);
         if (i !== null && i !== undefined) {
@@ -515,6 +515,15 @@ class RaidHost {
         const a = Math.atan2(bot.y - msg.y, bot.x - msg.x);
         const to = ARENA.clamp({ x: bot.x + Math.cos(a) * msg.d, y: bot.y + Math.sin(a) * msg.d }, 12);  // the arena has a wall, same as for players
         PROPS.clipMove(bot, to, this.sim.props, 14);   // ... and a throw stops at a solid prop
+        bot.x = to.x; bot.y = to.y;
+      }
+    }
+    if (msg.t === 'svdrift') {   // (the Sovereign's Ember and Ash: a gentle pull on every hero; a human's own client adds it to their walking, a bot is moved here)
+      for (const [id, vx, vy] of msg.v) {
+        const bot = this.bots.find(b => b.id === id);
+        if (!bot || (vx === 0 && vy === 0) || bot.actor.kit.ultSteady()) continue;
+        const to = ARENA.clamp({ x: bot.x + vx * msg.dt, y: bot.y + vy * msg.dt }, 12);
+        PROPS.clipMove(bot, to, this.sim.props, 14);
         bot.x = to.x; bot.y = to.y;
       }
     }

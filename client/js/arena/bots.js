@@ -363,14 +363,14 @@ const BotAI = {
   // spot and of him (a ring further in once the edge is full): the nearest such spot. Planned once a seed and kept on its
   // telegraph, so the carrier doesn't change its mind on the way.
   seedSpot(me, view) {
-    const seeds = view.mechs.filter(m => m.tag === 'mgSeed'), mine = seeds.find(m => m.follow === me);
+    const seeds = view.mechs.filter(m => m.tag === 'mgSeed' || m.tag === 'svSeed'), mine = seeds.find(m => m.follow === me);
     if (!mine) return null;
     if (mine.botSpot) return mine.botSpot;
     const holes = (view.floor || []).filter(fl => fl.kind === 'hole'), taken = seeds.filter(m => m.botSpot).map(m => m.botSpot);
     const p = view.players.find(q => q.id === me) || { x: 0, y: 0 }, b = view.boss;
     let best = null, bs = Infinity;
     // beside an old hole the seed feeds it instead of digging a new one: the nearest such place that is floor and clear of the rest
-    for (const h of holes) for (let k = 0; k < 16; k++) {
+    for (const h of (mine.tag === 'svSeed' ? [] : holes)) for (let k = 0; k < 16; k++) {   // (the Sovereign's seeds always dig a new hole: no feeding an old one)
       const a = k * Math.PI / 8, x = h.x + Math.cos(a) * (h.r + 66), y = h.y + Math.sin(a) * (h.r + 66);
       if (hypot2(x, y) > ARENA.inner - 70 || holes.some(o => o !== h && hypot2(o.x - x, o.y - y) < o.r + 60) || taken.some(t => hypot2(t.x - x, t.y - y) < 360) || hypot2(b.x - x, b.y - y) < 260) continue;
       const v = hypot2(p.x - x, p.y - y);
@@ -569,7 +569,8 @@ const BotAI = {
     // The Rune Pair (Azerath): the two bearers stand together or well apart, whichever the coming spell wants (view.runes). When they
     // must meet, the higher id walks to the other, so a bot comes to a human bearer and not the other way round
     const rp = view.runes;
-    if (rp && rp.on && (rp.a === me || rp.b === me)) {
+    if (rp && rp.on && rp.goal && rp.goal[me]) { const g = rp.goal[me]; pen += Math.max(0, hypot2(g.x - px, g.y - py) - g.r) * 25; }   // (the Sovereign's Twin Brands: each bearer has a spot to stand, the lit wall's circle or a far corner)
+    else if (rp && rp.on && (rp.a === me || rp.b === me)) {
       const other = alive.find(o => o.id === (rp.a === me ? rp.b : rp.a));
       if (other) {
         const d = hypot2(other.x - px, other.y - py);
@@ -692,7 +693,7 @@ const BotAI = {
           // a circle that follows me (Spice Rack's jar) goes wherever I go until it locks: nothing to dodge yet
           // ... so carry it where it lands on nobody else (a cask out where it can stand as cover, not in his lap)
           if (m.follow === me && dt > (m.lockAt || 0) + 0.1) {
-            if (m.tag === 'mgSeed') { const sp = this.seedSpot(me, view); if (sp) pen += hypot2(sp.x - px, sp.y - py) * 40 * Math.max(urgency, 0.5); }
+            if (m.tag === 'mgSeed' || m.tag === 'svSeed') { const sp = this.seedSpot(me, view); if (sp) pen += hypot2(sp.x - px, sp.y - py) * 40 * Math.max(urgency, 0.5); }
             for (const o of alive) if (o.id !== me && hypot2(o.x - px, o.y - py) < s.r + 45) pen += 1500 * Math.max(urgency, 0.4);
             // (a circle that locks where you stand when it does: be on the move by then, so you are leaving it at full speed, not starting to)
             if (m.tag === 'glob') pen += Math.max(0, 150 - hypot2(px - bot.x, py - bot.y)) * 6 * Math.min(1, (dt - (m.lockAt || 0)) + 0.5);
@@ -931,6 +932,8 @@ const BotAI = {
     bot.backs = (bot.backs || []).filter(e => e.until > view.t);
     for (const m of view.mechs) if (m.tag === 'cleaver' && !bot.backs.some(e => e.id === m.id)) bot.backs.push({ id: m.id, shape: m.shape, from: m.resolveAt, until: m.resolveAt + 1.7 });
     const cands = [home, { x: bot.x, y: bot.y }];
+    const rpGoal = view.runes && view.runes.on && view.runes.goal ? view.runes.goal[bot.id] : null;   // (Twin Brands: the bearer's own spot, a candidate however far, and worth wading to)
+    if (rpGoal) cands.push({ x: rpGoal.x, y: rpGoal.y });
     if (bot.job) cands.push({ x: bot.job.x, y: bot.job.y });
     const cir = bot.actor && bot.actor.kit.g.circle;
     if (cir && cir.end > view.t + 1) cands.push({ x: cir.x + (bot.x - cir.x) * 0.3, y: cir.y + (bot.y - cir.y) * 0.3 });
@@ -971,7 +974,7 @@ const BotAI = {
         const s = m.shape, c = Math.cos(s.angle), sn = Math.sin(s.angle);
         cands.push({ x: s.x + c * d - sn * off * s.w, y: s.y + sn * d + c * off * s.w });
       }
-      if (m.tag === 'mgSeed' && m.follow === bot.id && view.t < m.resolveAt - (m.lockAt || 0)) { const sp = this.seedSpot(bot.id, view); if (sp) cands.push(sp); }
+      if ((m.tag === 'mgSeed' || m.tag === 'svSeed') && m.follow === bot.id && view.t < m.resolveAt - (m.lockAt || 0)) { const sp = this.seedSpot(bot.id, view); if (sp) cands.push(sp); }
       if (m.type === 'drop' && m.follow === bot.id && (m.tag === 'platedrop' || m.tag === 'groundrod' || m.tag === 'clEmber')) { const sp = m.tag === 'platedrop' ? this.rushSpot(bot.id, view) : m.tag === 'clEmber' ? this.emberSpot(bot.id, view) : this.rodSpot(bot.id, view); if (sp) cands.push(sp); }
       if (m.type === 'own' && m.target === bot.id) cands.push({ x: m.shape.x, y: m.shape.y });
       if (m.type === 'bait' && m.aimFromBoss === bot.id) cands.push(this.writSpot(bot.id, view));
@@ -1036,7 +1039,7 @@ const BotAI = {
     // plates that leave you Stuffed (Order Up! on Hard) coming up soon that aren't ours: don't walk across one as it lands
     const myT = view.mechs.some(m => m.type === 'tower' && m.stuff) ? this.towerFor(bot.id, view) : null;
     const plates = view.mechs.filter(m => m.type === 'tower' && m.stuff && m.id !== myT && m.resolveAt - view.t < 3);
-    const burns = (view.zones || []).filter(z => z.effect === 'burn' && (z.tag === 'writburn' || z.tag === 'drown' || (bot.role === 'healer' && z.tag !== 'stovefire')) && view.t > z.startAt - 1);
+    const burns = (view.zones || []).filter(z => z.effect === 'burn' && (z.tag === 'writburn' || z.tag === 'drown' || z.tag === 'svSunk' || z.tag === 'svStump' || z.tag === 'svWall' || (bot.role === 'healer' && z.tag !== 'stovefire')) && view.t > z.startAt - 1);
     const pathCost = c => {
       let pen = 0;
       const dist = hypot2(c.x - bot.x, c.y - bot.y);
@@ -1060,7 +1063,7 @@ const BotAI = {
       if (view.room && view.room.safe && view.room.fallen !== Infinity) for (const q of [0.2, 0.4, 0.6, 0.8]) if (!view.room.safe(bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q)) pen += 15000;
       for (const pd of view.puddles) if (hypot2(pd.x - bot.x, pd.y - bot.y) > pd.r + 20 && segDist(pd.x, pd.y, bot.x, bot.y, c.x, c.y) < pd.r + 20) pen += 1200;
       // burning strips (the Writ's spokes): don't walk through one
-      for (const z of burns) for (const q of [0.25, 0.5, 0.75]) if (SHAPES.contains(z.shape, bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q, 16)) { pen += 3000; break; }
+      for (const z of burns) for (const q of [0.25, 0.5, 0.75]) if (SHAPES.contains(z.shape, bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q, 16)) { pen += rpGoal && z.tag === 'svSunk' ? 250 : 3000; break; }
       if (sweeps.length) {
         const d = hypot2(c.x - bot.x, c.y - bot.y), arrive = d / 230;
         for (const q of [0.25, 0.5, 0.75, 1]) if (inWall(bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q, view.t + arrive * q)) pen += 5000;

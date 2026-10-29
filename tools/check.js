@@ -114,6 +114,12 @@ RAIDS.push(
   ['Morrow-Oak', 'morrowoak', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post3'],
   ['Caelum Vey', 'caelum', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post3'],
   ['Caelum Vey', 'caelum', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post3', 'runs=6'],   // (this line-up clears Caelum about 45% after the 2026-10-26 pass, which made his Normal busier: six tries)
+  // the Ultimate, one act at a time (bot-raid.js phase=N until=N: the run starts at act N and counts as a clear when the fight passes its gate, so the suite never plays the 15 minute fight; Act IV plays to the kill).
+  // Perfect-bot clear rates per run at gear=post5, 24 runs each 2026-10-29: Act I 100%, II 83%, III 88%, IV 67%: the tries below make a chance miss rare.
+  ['Sovereign, Act I', 'sovereign', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=1', 'until=1'],
+  ['Sovereign, Act II', 'sovereign', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=2', 'until=2', 'runs=4'],
+  ['Sovereign, Act III', 'sovereign', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=3', 'until=3'],
+  ['Sovereign, Act IV', 'sovereign', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=4', 'runs=8'],
 );
 // Hard smoke runs: one per boss, with the plain line-up. Bots aren't expected to clear Hard; the script just has to run
 // clean and the longest of 3 fights has to last a while (HARD_MIN seconds) before they wipe
@@ -844,7 +850,7 @@ async function heavy() {
   const [sim, tal, ...raids] = await Promise.all([
     Promise.all(Array.from({ length: SIM_PARTS }, (_, i) => run([path.join(__dirname, 'simulate.js'), `--part=${i}/${SIM_PARTS}`], { group: 'balance sim', weight: 4 }))).then(joinOut),
     Promise.all(Object.keys(TALENTS).map(cls => run([path.join(__dirname, 'talents.js'), cls], { group: 'talents', weight: 6 }))).then(joinOut),
-    ...RAIDS.map(([, boss, ...rest]) => raidJob('normal', +((rest.find(a => /^runs=/.test(a)) || '').slice(5) || RAID_RUNS), boss, rest.filter(a => !/^(gear|runs)=/.test(a)).join(','), rest.filter(a => /^gear=/.test(a)), 'bot raids', true)),
+    ...RAIDS.map(([, boss, ...rest]) => raidJob('normal', +((rest.find(a => /^runs=/.test(a)) || '').slice(5) || RAID_RUNS), boss, rest.filter(a => !/^(gear|runs|phase|until)=/.test(a)).join(','), rest.filter(a => /^(gear|phase|until)=/.test(a)), 'bot raids', true)),
     ...trialIds.map(id => raidJob('normal', 2, 'trial:' + id, '', [], 'spec trials')),
     ...HARD_BOSSES.map(([, boss, gear]) => raidJob('hard', 3, boss, HARD_COMP, gear ? [gear] : [], 'hard smoke')),
   ]);
@@ -904,7 +910,7 @@ function verdicts(sim, tal, raids, trials, hards, trialIds, specOf) {
 
   // bot raids: a bot party clears each boss on Normal at least once in RAID_RUNS (it stops at the first clear; a fail has played them all)
   RAIDS.forEach(([boss, , ...rest], i) => {
-    const comp = rest.filter(a => !/^(gear|runs)=/.test(a)), gear = rest.find(a => /^gear=/.test(a));
+    const comp = rest.filter(a => !/^(gear|runs|phase|until)=/.test(a)), gear = rest.find(a => /^gear=/.test(a));
     const r = raids[i], m = r.out.match(/cleared (\d+) of (\d+)/), name = `Bots clear ${boss} (Normal, ${comp.join(' ')}${gear ? ', ' + gear : ''})`;
     const won = r.out.match(/^run (\d+): clear /m);   // (the pool stops a line-up at its first clear: raidJob early)
     if (r.code === 0 && m && +m[1] >= 1) pass(name, won ? `cleared on run ${won[1]}` : `${m[1]} of ${m[2]}`);

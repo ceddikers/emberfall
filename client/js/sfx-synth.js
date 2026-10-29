@@ -712,63 +712,90 @@
     'bm-skitterra-silk-lines': 3.5, 'bm-skitterra-silk-reel': 3.5, 'bm-skitterra-silk-wrap': 2.5, 'bm-skitterra-snare-weave': 2,
     'bm-skitterra-spiderlings': 11, 'bm-skitterra-spin': 8, 'bm-skitterra-spinneret-volley': 16, 'bm-skitterra-strand-reel': 5.5,
     'bm-skitterra-the-swarm': 11.5, 'bm-skitterra-the-web-gives-way': 0.5, 'bm-skitterra-tightening-web': 2, 'bm-skitterra-venom-drip': 4,
-    'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4, 'bm-titan-avalanche': 0.5, 'bm-titan-breath-of-winter': 1.5,
-    'bm-titan-endless-winter': -1.5, 'bm-titan-frostbite': 2.5, 'bm-titan-glacial-stomp': -0.5, 'bm-titan-icebreaker': 2,
-    'bm-titan-icefall': 2.5, 'bm-titan-intro': -3, 'bm-titan-rime-slam': 0.5, 'bm-titan-titans-grip': 2.5,
-    'bm-titan-titans-sweep': 2, 'bm-titan-twin-slam': 2, 'bm-titan-whiteout': 1.5, 'bm-titan-winters-grasp': 2.5,
-    'bm-titan-winters-howl': -1, 'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3,
-    'bm-volkar-crossing-arms': 2.5, 'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4,
-    'bm-volkar-gathering-storm': 0.5, 'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5,
-    'bm-volkar-lightning-rods': 9, 'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5,
-    'bm-volkar-pulse': 4.5, 'bm-volkar-reaching-arms': 0.5, 'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5,
-    'bm-volkar-squall-line': 3, 'bm-volkar-static-field': 5, 'bm-volkar-static-lash': 4.5, 'bm-volkar-still-air': 3,
-    'bm-volkar-storm-burst': -1.5, 'bm-volkar-storm-groan': 1, 'bm-volkar-storm-heart': 1, 'bm-volkar-storm-hush': 1.5,
-    'bm-volkar-storm-roar': -1, 'bm-volkar-storm-roll': 2.5, 'bm-volkar-storm-unbound': -1, 'bm-volkar-storm-walls': 2,
-    'bm-volkar-supercell': 2, 'bm-volkar-thunder-crash': 1, 'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5,
-    'bm-volkar-titan-fist': -1.5, 'bm-volkar-twin-fall': -1.5, 'bm-wyrm-cinder-rain': 7.5, 'bm-wyrm-ember-breath': 3.5,
-    'bm-wyrm-intro': -4, 'bm-wyrm-pounce': 0.5, 'bm-wyrm-take-flight': 3.5, 'bm-wyrm-twin-breath': 3.5,
-    'boss-death': -2.5, 'boss-enrage': -2.5, 'boss-impact-heavy': 0.5, 'boss-impact-light': 7,
-    'boss-intro': -1.5, 'buff-on': -0.5, 'chest-drop': 3.5, 'chest-open': -5,
-    'cleanse': -5, 'clear': -4.5, 'crit': 4, 'dash': 6.5,
-    'debuff-on': -1, 'dummy-hit': 3, 'emote-cheer': -6.5, 'emote-laugh': -2,
-    'emote-wave': 2, 'feast-chew': 6.5, 'feast-clink': -5.5, 'feast-serve': -3.5,
-    'feast-sting': -2.5, 'fish-bite': 3, 'fish-cast': 1.5, 'fish-catch': -3,
-    'fish-lost': -0.5, 'fish-reel': -0.5, 'gloom-hollow-off': -2, 'gloom-hollow-on': 2,
-    'heal-land': -2.5, 'hit-heavy': 5, 'hit-light': 9, 'hm-bark-ash': -0.5,
-    'hm-bark-ghost': 3.5, 'hm-bark-greyfang': 0.5, 'hm-bark-rust': 0.5, 'hm-bite': 8,
-    'hm-bite-big': 2.5, 'hm-bringdown': -3, 'hm-calloff': 1.5, 'hm-down': 3,
-    'hm-hamstring': 1, 'hm-horn': -6, 'hm-howl': -3.5, 'hm-longchase': 1.5,
-    'hm-mount': -1, 'hm-quarry': 6.5, 'hm-relay': 4, 'hm-rend': 0.5,
-    'hm-ridedown': 2.5, 'hm-snap': 7, 'hm-up': 2.5, 'hm-whistle-hold': -7.5,
-    'hm-whistle-pounce': -7, 'ken-blaze': 0.5, 'ken-break': -0.5, 'ken-deathblow': -2,
-    'ken-good': 8, 'ken-iai': 2.5, 'ken-miss': 7.5, 'ken-off': 4.5,
-    'ken-pass': 6.5, 'ken-perfect': 2, 'ken-pommel': 6.5, 'ken-redirect': 1,
-    'lamp-drop': 11, 'lamp-ember': 14.5, 'lamp-end': 6.5, 'lamp-eternal': 0.5,
-    'lamp-pilgrim': 4.5, 'lamp-pillar': 3, 'lamp-snuff': 5.5, 'lamp-sparks': 5,
-    'lb-fire': -1.5, 'lb-ready': -5, 'loot-take': -2, 'low-hp': -4.5,
-    'npc-talk': -6, 'ping': 2.5, 'pip-up': 12, 'portal-enter': -3,
-    'portal-hum': -22.5, 'pull-count': 0.5, 'pull-count-last': -3.5, 'pull-go': -2,
-    'reaper-blink': 5.5, 'reaper-danse': 5, 'reaper-finish1': 4.5, 'reaper-finish2': -0.5,
-    'reaper-finish3': 1, 'reaper-finish4': -2, 'reaper-frenzy': -2.5, 'reaper-gate-bloom': -2.5,
-    'reaper-gate-close': -1, 'reaper-gate-open': 3.5, 'reaper-gate-tone': 8, 'reaper-gatebreaker': 1.5,
-    'reaper-harvest': -1, 'reaper-moon': 1.5, 'reaper-pop-bind': 4.5, 'reaper-pop-death': 3,
-    'reaper-pop-drain': 4, 'reaper-pop-thread': 9, 'reaper-rune': 12.5, 'reaper-rune-emp': 6,
-    'reaper-slack': 14.5, 'reaper-slash': 2.5, 'reaper-star-collapse': -2, 'reaper-star-open': 0.5,
-    'reaper-swing': 12, 'reaper-veil': -0.5, 'revive': -2, 'shield-break': 5,
-    'shield-up': -4, 'stack-1': 8, 'stack-2': -2.5, 'step-grass': 8,
-    'step-stone': 8.5, 'step-wood': 1.5, 'story-page': 3.5, 'tg-aoe': 1.5,
-    'tg-buster': 1, 'tg-charge': 0.5, 'tg-gaze': 0.5, 'tg-knockback': 2.5,
-    'tg-raidwide': -0.5, 'tg-spread': 5.5, 'tg-stack': 1.5, 'tide-bell': 1,
-    'tide-crash': -1.5, 'tide-crest': 4.5, 'tide-gull': 9.5, 'tide-pop': 1.5,
-    'tide-slack': 10.5, 'tide-wave': 2.5, 'title-sting': -3, 'ui-bounty': 0.5,
-    'ui-buy': -6, 'ui-click': 2, 'ui-close': -0.5, 'ui-equip': -2.5,
-    'ui-error': -3, 'ui-feat': -7, 'ui-gold': -4, 'ui-hover': 13,
-    'ui-secret': -6, 'ult-alembist': 0.5, 'ult-bastion': 1.5, 'ult-bloodreaver': 1,
-    'ult-driftblade': 6.5, 'ult-fire': -1.5, 'ult-gloomsworn': -1, 'ult-gorgemaw': 1,
-    'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5, 'ult-kenseier': -1.5, 'ult-lanternkeeper': -2,
-    'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1, 'ult-ranger': 3,
-    'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4, 'ult-thermist': -1,
-    'ult-threadweaver': -1, 'ult-tidecaller': -2, 'wall-break': -1.5, 'wall-up': -3.5, 'waymark': 11.5, 'wipe': -2,
+    'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4, 'bm-sovereign-aftershock': -1.5, 'bm-sovereign-ashen-sweep': -1,
+    'bm-sovereign-brand': -1.5, 'bm-sovereign-brand-sear': 1.5, 'bm-sovereign-burning-web': 4, 'bm-sovereign-call': 1,
+    'bm-sovereign-cinder-dive': -2, 'bm-sovereign-cloche': 3.5, 'bm-sovereign-crescent': 2, 'bm-sovereign-crossed-blades': 2,
+    'bm-sovereign-cupped-ember': -0.5, 'bm-sovereign-ember-and-ash': 1, 'bm-sovereign-emberfall': -1, 'bm-sovereign-flambe': 0.5,
+    'bm-sovereign-flambe-service': 0.5, 'bm-sovereign-fuse': 7.5, 'bm-sovereign-glass-floor': -1.5, 'bm-sovereign-grace-withdrawn': -2.5,
+    'bm-sovereign-halo-turn': -1.5, 'bm-sovereign-heads-of-flame': -2, 'bm-sovereign-hollow-kings-bell': 1.5, 'bm-sovereign-intro': -0.5,
+    'bm-sovereign-kindling': -2, 'bm-sovereign-knights-sweep': -0.5, 'bm-sovereign-knot': 4, 'bm-sovereign-lance': -3,
+    'bm-sovereign-lantern': 4, 'bm-sovereign-mince': 0.5, 'bm-sovereign-nightfall': -1, 'bm-sovereign-pyre': 2.5,
+    'bm-sovereign-royal-doom': 1, 'bm-sovereign-scatter': 0.5, 'bm-sovereign-seeds-of-ash': 1, 'bm-sovereign-shadow': -0.5,
+    'bm-sovereign-sovereigns-dance': -0.5, 'bm-sovereign-sunwheel-of-embers': 0.5, 'bm-sovereign-surge': -1.5, 'bm-sovereign-twin-brands': 2,
+    'bm-sovereign-two-dancers': 2, 'bm-titan-avalanche': 0.5, 'bm-titan-breath-of-winter': 1.5, 'bm-titan-endless-winter': -1.5,
+    'bm-titan-frostbite': 2.5, 'bm-titan-glacial-stomp': -0.5, 'bm-titan-icebreaker': 2, 'bm-titan-icefall': 2.5,
+    'bm-titan-intro': -3, 'bm-titan-rime-slam': 0.5, 'bm-titan-titans-grip': 2.5, 'bm-titan-titans-sweep': 2,
+    'bm-titan-twin-slam': 2, 'bm-titan-whiteout': 1.5, 'bm-titan-winters-grasp': 2.5, 'bm-titan-winters-howl': -1,
+    'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3, 'bm-volkar-crossing-arms': 2.5,
+    'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4, 'bm-volkar-gathering-storm': 0.5,
+    'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5, 'bm-volkar-lightning-rods': 9,
+    'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5, 'bm-volkar-pulse': 4.5,
+    'bm-volkar-reaching-arms': 0.5, 'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5, 'bm-volkar-squall-line': 3,
+    'bm-volkar-static-field': 5, 'bm-volkar-static-lash': 4.5, 'bm-volkar-still-air': 3, 'bm-volkar-storm-burst': -1.5,
+    'bm-volkar-storm-groan': 1, 'bm-volkar-storm-heart': 1, 'bm-volkar-storm-hush': 1.5, 'bm-volkar-storm-roar': -1,
+    'bm-volkar-storm-roll': 2.5, 'bm-volkar-storm-unbound': -1, 'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2,
+    'bm-volkar-thunder-crash': 1, 'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5, 'bm-volkar-titan-fist': -1.5,
+    'bm-volkar-twin-fall': -1.5, 'bm-wyrm-cinder-rain': 7.5, 'bm-wyrm-ember-breath': 3.5, 'bm-wyrm-intro': -4,
+    'bm-wyrm-pounce': 0.5, 'bm-wyrm-take-flight': 3.5, 'bm-wyrm-twin-breath': 3.5, 'boss-death': -2.5,
+    'boss-enrage': -2.5, 'boss-impact-heavy': 0.5, 'boss-impact-light': 7, 'boss-intro': -1.5,
+    'buff-on': -0.5, 'chest-drop': 3.5, 'chest-open': -5, 'cleanse': -5,
+    'clear': -4.5, 'crit': 4, 'dash': 6.5, 'debuff-on': -1,
+    'dummy-hit': 3, 'emote-cheer': -6.5, 'emote-laugh': -2, 'emote-wave': 2,
+    'feast-chew': 6.5, 'feast-clink': -5.5, 'feast-serve': -3.5, 'feast-sting': -2.5,
+    'fish-bite': 3, 'fish-cast': 1.5, 'fish-catch': -3, 'fish-lost': -0.5,
+    'fish-reel': -0.5, 'gloom-hollow-off': -2, 'gloom-hollow-on': 2, 'heal-land': -2.5,
+    'hit-heavy': 5, 'hit-light': 9, 'hm-bark-ash': -0.5, 'hm-bark-ghost': 3.5,
+    'hm-bark-greyfang': 0.5, 'hm-bark-rust': 0.5, 'hm-bite': 8, 'hm-bite-big': 2.5,
+    'hm-bringdown': -3, 'hm-calloff': 1.5, 'hm-down': 3, 'hm-hamstring': 1,
+    'hm-horn': -6, 'hm-howl': -3.5, 'hm-longchase': 1.5, 'hm-mount': -1,
+    'hm-quarry': 6.5, 'hm-relay': 4, 'hm-rend': 0.5, 'hm-ridedown': 2.5,
+    'hm-snap': 7, 'hm-up': 2.5, 'hm-whistle-hold': -7.5, 'hm-whistle-pounce': -7,
+    'ken-blaze': 0.5, 'ken-break': -0.5, 'ken-deathblow': -2, 'ken-good': 8,
+    'ken-iai': 2.5, 'ken-miss': 7.5, 'ken-off': 4.5, 'ken-pass': 6.5,
+    'ken-perfect': 2, 'ken-pommel': 6.5, 'ken-redirect': 1, 'lamp-drop': 11,
+    'lamp-ember': 14.5, 'lamp-end': 6.5, 'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5,
+    'lamp-pillar': 3, 'lamp-snuff': 5.5, 'lamp-sparks': 5, 'lb-fire': -1.5,
+    'lb-ready': -5, 'loot-take': -2, 'low-hp': -4.5, 'npc-talk': -6,
+    'ping': 2.5, 'pip-up': 12, 'portal-enter': -3, 'portal-hum': -22.5,
+    'pull-count': 0.5, 'pull-count-last': -3.5, 'pull-go': -2, 'reaper-blink': 5.5,
+    'reaper-danse': 5, 'reaper-finish1': 4.5, 'reaper-finish2': -0.5, 'reaper-finish3': 1,
+    'reaper-finish4': -2, 'reaper-frenzy': -2.5, 'reaper-gate-bloom': -2.5, 'reaper-gate-close': -1,
+    'reaper-gate-open': 3.5, 'reaper-gate-tone': 8, 'reaper-gatebreaker': 1.5, 'reaper-harvest': -1,
+    'reaper-moon': 1.5, 'reaper-pop-bind': 4.5, 'reaper-pop-death': 3, 'reaper-pop-drain': 4,
+    'reaper-pop-thread': 9, 'reaper-rune': 12.5, 'reaper-rune-emp': 6, 'reaper-slack': 14.5,
+    'reaper-slash': 2.5, 'reaper-star-collapse': -2, 'reaper-star-open': 0.5, 'reaper-swing': 12,
+    'reaper-veil': -0.5, 'revive': -2, 'shield-break': 5, 'shield-up': -4,
+    'stack-1': 8, 'stack-2': -2.5, 'step-grass': 8, 'step-stone': 8.5,
+    'step-wood': 1.5, 'story-page': 3.5, 'sv-bite': 1, 'sv-boil': 3.5,
+    'sv-burnback': 0.5, 'sv-call-archmage': 0.5, 'sv-call-brannoc': 2.5, 'sv-call-corvane': -1,
+    'sv-call-grubnak': 0.5, 'sv-call-hollowking': 1.5, 'sv-call-hydra': -3, 'sv-call-morrowoak': 0.5,
+    'sv-call-skitterra': 3, 'sv-call-titan': 1, 'sv-call-volkar': 1, 'sv-call-wyrm': -3,
+    'sv-crescent-fan': -0.5, 'sv-crumble': -3.5, 'sv-cut': -2, 'sv-dance-cut': 0.5,
+    'sv-dance-cut2': 1, 'sv-dance-image': -1, 'sv-descent': -1.5, 'sv-dive-fall': -2,
+    'sv-dive-line': 1, 'sv-drift-loop': -11, 'sv-emberfall-below': -1, 'sv-everyname': -0.5,
+    'sv-gutter': 1, 'sv-head-rise': -2, 'sv-heart-breath': 6, 'sv-heart-loop': -14,
+    'sv-hole-town': 0.5, 'sv-lance-dash': -1, 'sv-lantern-down': 0.5, 'sv-lantern-fly': 7,
+    'sv-lie-bell': -2.5, 'sv-pillar': -2, 'sv-pyre-cut': 1.5, 'sv-rebirth-blast': -1,
+    'sv-rebirth-choir': -1.5, 'sv-rebirth-draw': -1.5, 'sv-rebirth-halo': -1, 'sv-rebirth-sky': -2,
+    'sv-relight': -0.5, 'sv-sapling-arrive': -3, 'sv-sapling-creak': 2.5, 'sv-sapling-die': -4,
+    'sv-seal-shatter': -1.5, 'sv-seed-burst': -1.5, 'sv-seed-pulse': 2, 'sv-stance-comet': -1,
+    'sv-stance-crane': 0.5, 'sv-stance-parting': 4, 'sv-steam-burst': -1, 'sv-twin-bloom': -2,
+    'sv-twin-bolt': 3.5, 'sv-twin-fire': -0.5, 'sv-twin-meet': -0.5, 'sv-twin-shift': 3.5,
+    'sv-twin-void': -0.5, 'sv-wall-fire': -0.5, 'sv-wall-out': 0.5, 'sv-water-hiss': -1.5,
+    'sv-wheel-clang': 3, 'sv-wheel-loop': -10, 'sv-wheel-throw': 1, 'sv-wipe-chord': -1.5,
+    'tg-aoe': 1.5, 'tg-buster': 1, 'tg-charge': 0.5, 'tg-gaze': 0.5,
+    'tg-knockback': 2.5, 'tg-raidwide': -0.5, 'tg-spread': 5.5, 'tg-stack': 1.5,
+    'tide-bell': 1, 'tide-crash': -1.5, 'tide-crest': 4.5, 'tide-gull': 9.5,
+    'tide-pop': 1.5, 'tide-slack': 10.5, 'tide-wave': 2.5, 'title-sting': -3,
+    'ui-bounty': 0.5, 'ui-buy': -6, 'ui-click': 2, 'ui-close': -0.5,
+    'ui-equip': -2.5, 'ui-error': -3, 'ui-feat': -7, 'ui-gold': -4,
+    'ui-hover': 13, 'ui-secret': -6, 'ult-alembist': 0.5, 'ult-bastion': 1.5,
+    'ult-bloodreaver': 1, 'ult-driftblade': 6.5, 'ult-fire': -1.5, 'ult-gloomsworn': -1,
+    'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5, 'ult-kenseier': -1.5,
+    'ult-lanternkeeper': -2, 'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1,
+    'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4,
+    'ult-thermist': -1, 'ult-threadweaver': -1, 'ult-tidecaller': -2, 'wall-break': -1.5,
+    'wall-up': -3.5, 'waymark': 11.5, 'wipe': -2,
   };
   // @@TRIM-END
 
@@ -5062,8 +5089,1204 @@
     S.bubbles({ at: 0.1, n: 7, f: 700, f1: 160, spread: 0.8, size: 0.05, peak: 0.1 });
   });
 
+  // ---------------------------------------------------------------------------------------------- The Cinder Sovereign (the Ultimate, boss id sovereign)
+  // ember and ash: a deep crackling body of fire under everything, and a struck-blade ring on the blade moves (a bar of steel and a thread of glass,
+  // lower and hotter than Caelum's cold glass). The twelve call stings borrow one signature texture from each fallen boss and lay the same ember
+  // crackle over it, so every echo sounds like itself and like this fight. Set pieces are soft rising tones, bells and a choir. No words.
+  const svBody = (S, at, dur, pk, dens, pan) => {       // the deep crackling body: a low fire roar, a crackle, a sizzle
+    S.noise({ at, color: 'brown', bp: 110, bp1: 300, q: 0.9, dur, a: Math.min(0.4, dur * 0.3), pts: [[dur * 0.55, 1], [dur, 0]], peak: pk, pan });
+    S.crackle({ at, dens: dens || 1.4, f: 2400, dur, pts: [[Math.min(0.2, dur * 0.15), 1], [dur, 0]], peak: pk * 0.55, pan });
+    S.sizzle({ at, dur, pts: [[dur * 0.2, 1], [dur, 0]], peak: pk * 0.3, pan });
+  };
+  const svLay = (S, at, dur, pk, pan) => {              // the ember crackle laid over a sting
+    S.crackle({ at, dens: 1.8, f: 3000, dur, pts: [[0.08, 1], [dur, 0]], peak: pk, pan });
+    S.noise({ at, color: 'brown', bp: 140, bp1: 260, q: 0.8, dur, a: 0.1, pts: [[dur * 0.5, 1], [dur, 0]], peak: pk * 0.9, pan });
+  };
+  const svRing = (S, at, f, pk, dur, pan) => {          // a struck blade: steel bar, its inharmonic overtone, a thread of glass
+    S.metal({ at, set: 'bar', f, dur: dur || 1.8, peak: pk, strike: 0.5, pan });
+    S.metal({ at: at + 0.004, set: 'bar', f: f * 2.76, dur: 0.8, peak: pk * 0.3, click: 0, pan });
+    S.glass({ at: at + 0.01, f: f * 1.5, dur: (dur || 1.8) * 0.5, peak: pk * 0.12, pan });
+  };
+  const svSwing = (S, at, f, pk, pan, d) => S.whoosh({ at, f: f * 0.4, f1: f * 2.4, dur: d || 0.3, peakAt: 0.8, peak: pk, q: 1.5, pan });
+  const svHush = (S, at, d, pk, f0, f1, pan) => S.noise({ at, bp: f0 || 900, bp1: f1 || 3200, q: 3, dur: d, a: d * 0.85, pts: [[d * 0.92, 1], [d, 0]], peak: pk, pan });   // the breath drawn in before a cut
+  const svCloche = (S, at, pk) => {                     // a cloche lid lifted: a clank, a slide, a service bell's ting, a puff of steam
+    S.metal({ at, set: 'plate', f: 900, dur: 0.5, peak: 0.22 * pk, strike: 0.8 });
+    S.scrape({ at: at + 0.03, f: 2600, q: 2, dur: 0.2, rate: 30, peak: 0.07 * pk, pts: [[0.05, 1], [0.2, 0]] });
+    S.metal({ at: at + 0.2, set: 'bar', f: 2900, dur: 0.7, peak: 0.1 * pk, strike: 0.6 });
+    S.glass({ at: at + 0.21, f: 4300, dur: 0.5, peak: 0.05 * pk });
+    S.noise({ at: at + 0.1, hp: 3500, dur: 0.35, a: 0.02, pts: [[0.05, 1], [0.35, 0]], peak: 0.07 * pk });
+  };
+  const svFlambe = (S, at, pk) => {                     // a flambé: the whoosh builds, then the fwoomp of the pan catching
+    S.whoosh({ at, f: 300, f1: 2400, dur: 0.9, peakAt: 0.85, peak: 0.34 * pk, q: 0.8 });
+    S.crackle({ at: at + 0.2, dens: 1.8, f: 2800, dur: 1.0, pts: [[0.5, 1], [1.0, 0.4]], peak: 0.16 * pk });
+    S.thud({ at: at + 0.92, f: 62, f1: 30, dur: 0.8, drive: 2.8, peak: 0.6 * pk });
+    S.whoosh({ at: at + 0.92, color: 'brown', f: 500, f1: 120, dur: 0.7, peakAt: 0.1, peak: 0.3 * pk });
+    S.sizzle({ at: at + 0.95, dur: 0.8, pts: [[0.05, 1], [0.8, 0]], peak: 0.18 * pk });
+  };
+  const svMince = (S, at, pk) => {                      // the Mince: the cleaver comes down twice, fast, and the board rings
+    S.whoosh({ at, f: 400, f1: 2200, dur: 0.9, peakAt: 0.9, peak: 0.28 * pk, q: 1 });
+    B.cleaver(S, at + 0.78, pk); B.cleaver(S, at + 1.0, pk * 1.1);
+    S.thud({ at: at + 0.98, f: 70, f1: 30, dur: 0.7, drive: 2.6, peak: 0.55 * pk });
+    svRing(S, at + 0.98, 700, 0.1 * pk, 1.0);
+  };
+  const svChoirHit = (S, at, pk, dur) => S.choir({ at, notes: [mf(38), mf(45), mf(50), mf(57), mf(62)], dur: dur || 4.2, vowel: 'a', vowel1: 'o', lp: 2400, peak: pk, pts: [[1.2, 1], [dur || 4.2, 0]] });
+
+  def('bm-sovereign-intro', 'sting', S => {
+    S.space('hall', 0.7);
+    // the Ember wakes: a slow double heartbeat in a cold hall, the fire catching under it, one low bell
+    [0, 0.7].forEach((at, i) => S.thud({ at, f: 52 - i * 4, f1: 26, dur: 0.9, drive: 3, peak: 0.5 + i * 0.1 }));
+    svBody(S, 0.3, 2.2, 0.18, 1.2);
+    S.bell({ at: 1.0, f: mf(38), dur: 3.4, peak: 0.2, lp: 2400 });
+    S.choir({ at: 0.8, notes: [mf(38), mf(45)], vowel: 'u', dur: 2.6, a: 1.0, peak: 0.08 });
+  });
+  def('bm-sovereign-call', 'bm', S => {
+    S.space('hall', 0.6);
+    // the Sovereign says a name: one low breath of a voice over a drawn-in crackle, and a soft bell for the dead
+    S.voice({ at: 0.1, f: 88, f1: 76, dur: 1.2, vowel: 'o', vowel1: 'u', breath: 3, lp: 1500, peak: 0.16, a: 0.3 });
+    svHush(S, 0, 0.7, 0.08, 500, 1800);
+    S.crackle({ at: 0.2, dens: 1.2, f: 2400, dur: 1.2, pts: [[0.3, 1], [1.2, 0]], peak: 0.1 });
+    S.bell({ at: 0.55, f: mf(50), dur: 2.2, peak: 0.12, lp: 2400 });
+  });
+  def('bm-sovereign-kindling', 'bm', S => {
+    S.space('hall', 0.6);
+    // the raidwide that opens every act: the fire draws breath, catches, and rolls over the room
+    S.whoosh({ f: 200, f1: 2200, dur: 1.0, peakAt: 0.9, peak: 0.34, q: 0.8 });
+    S.noise({ color: 'brown', bp: 90, bp1: 700, q: 0.8, dur: 1.0, a: 0.8, pts: [[0.9, 1], [1.0, 0.7]], peak: 0.3 });
+    S.thud({ at: 1.0, f: 60, f1: 26, dur: 1.4, drive: 3.4, peak: 0.9 });
+    S.crack({ at: 1.0, peak: 0.28, dur: 0.2 });
+    svBody(S, 1.0, 2.4, 0.3, 1.5);
+    S.bell({ at: 1.02, f: mf(38), dur: 3.2, peak: 0.16, lp: 2400 });
+  });
+  def('bm-sovereign-brand', 'bm', S => {
+    S.space('hall', 0.5);
+    // the blade drawn red and laid on the tank: a hush, the ring of it struck, the iron's hiss, a glow that holds
+    svHush(S, 0, 0.7, 0.1, 1200, 3600);
+    svSwing(S, 0.5, 1200, 0.3, 0, 0.3);
+    svRing(S, 0.8, 880, 0.22, 2.0);
+    S.thud({ at: 0.8, f: 66, f1: 28, dur: 0.8, drive: 2.8, peak: 0.8 });
+    S.crack({ at: 0.8, peak: 0.26, dur: 0.14 });
+    S.sizzle({ at: 0.85, dur: 1.4, pts: [[0.05, 1], [1.4, 0]], peak: 0.26 });
+    S.crackle({ at: 0.85, dens: 1.6, f: 2600, dur: 1.4, pts: [[0.2, 1], [1.4, 0]], peak: 0.18 });
+    S.glass({ at: 0.95, f: mf(81), dur: 1.8, peak: 0.07, am: [3, 0.3] });
+  });
+  def('bm-sovereign-brand-sear', 'hud', S => {
+    // the burn's tick on the tank, every few seconds for a long while: a short sear and a low pulse, nothing more
+    S.sizzle({ dur: 0.45, pts: [[0.02, 1], [0.45, 0]], peak: 0.3 });
+    S.thud({ f: 70, f1: 36, dur: 0.3, drive: 1.5, peak: 0.35 });
+    S.crackle({ at: 0.02, dens: 1.4, f: 2600, dur: 0.4, pts: [[0.02, 1], [0.4, 0]], peak: 0.2 });
+  });
+  def('bm-sovereign-ashen-sweep', 'bm', S => {
+    S.space('hall', 0.5);
+    // half the room swept by the blade: a long breath, a huge low sweep of ash and steel, the ring trailing after it
+    svHush(S, 0, 0.8, 0.1, 600, 2400);
+    S.whoosh({ at: 0.5, f: 180, f1: 1300, dur: 0.8, peakAt: 0.8, peak: 0.42, q: 0.9 });
+    S.noise({ at: 0.7, color: 'pink', hp: 1400, lp: 7000, grain: 0.8, dur: 1.2, pts: [[0.25, 1], [1.2, 0]], peak: 0.18 });
+    svRing(S, 1.18, 1180, 0.2, 2.0);
+    S.thud({ at: 1.18, f: 54, f1: 24, dur: 1.2, drive: 3.4, peak: 0.85 });
+    svBody(S, 1.2, 1.6, 0.2, 1.8);
+  });
+  def('bm-sovereign-cupped-ember', 'bm', S => {
+    S.space('hall', 0.5);
+    // an ember held in a cupped hand: a warm low hum that swells and brightens, the crackle drawing in, a soft weight at the end for the stack to catch
+    S.tone({ type: 'saw', f: mf(38), f1: mf(40), lp: 500, am: [5, 0.4], dur: 1.8, a: 1.1, pts: [[1.6, 1], [1.8, 0]], peak: 0.22 });
+    S.tone({ f: mf(62), f1: mf(65), dur: 1.8, a: 1.2, swell: true, peak: 0.05, vib: [5, 0.006] });
+    S.crackle({ dens: 0.9, f: 2200, dur: 1.8, pts: [[1.3, 1], [1.8, 0.5]], peak: 0.14 });
+    S.bell({ at: 1.5, f: mf(62), dur: 1.8, peak: 0.1, lp: 3000 });
+    S.thud({ at: 1.7, f: 60, f1: 34, dur: 0.7, drive: 1.8, peak: 0.5 });
+  });
+  def('bm-sovereign-scatter', 'bm', S => {
+    S.space('hall', 0.45);
+    // the ember bursts into sparks flung to every hero: a rush outward and a dozen cracking pops, thrown wide
+    S.whoosh({ f: 400, f1: 3200, dur: 0.7, peakAt: 0.7, peak: 0.3, q: 1 });
+    for (let i = 0; i < 9; i++) {
+      const at = 0.45 + i * 0.075, pan = Math.sin(i * 2.4) * 0.85;
+      S.crack({ at, peak: 0.12 + (i % 3) * 0.03, dur: 0.1, pan });
+      S.crackle({ at, dens: 2.4, f: 4200, dur: 0.3, pts: [[0.02, 1], [0.3, 0]], peak: 0.1, pan });
+    }
+    S.thud({ at: 0.45, f: 70, f1: 34, dur: 0.7, drive: 2.2, peak: 0.55 });
+    svBody(S, 0.5, 1.1, 0.16, 2.2);
+  });
+  def('bm-sovereign-halo-turn', 'bm', S => {
+    S.space('hall', 0.55);
+    // the halo's beams sweep round like lighthouse lamps (a thin tone that leans and swells), then lock, and fire red
+    S.tone({ f: 330, f1: 740, dur: 2.0, a: 1.4, am: [3.2, 0.5], lp: 2400, pts: [[1.7, 1], [2.0, 0]], peak: 0.14 });
+    S.noise({ bp: 500, bp1: 3400, q: 3, dur: 2.0, a: 1.5, am: [3.2, 0.6], pts: [[1.8, 1], [2.0, 0]], peak: 0.2 });
+    S.glass({ at: 1.0, f: mf(86), dur: 0.8, peak: 0.05 }); S.glass({ at: 1.5, f: mf(91), dur: 0.8, peak: 0.05 });
+    svBody(S, 0, 2.2, 0.12, 1.1);
+    S.whoosh({ at: 1.75, f: 800, f1: 5200, dur: 0.3, peakAt: 0.85, peak: 0.3, q: 2 });
+    svRing(S, 2.05, 1480, 0.22, 2.4);
+    S.thud({ at: 2.05, f: 56, f1: 26, dur: 1.2, drive: 3.2, peak: 0.85 });
+    S.crack({ at: 2.05, peak: 0.3, dur: 0.18 });
+    svBody(S, 2.05, 1.4, 0.2, 2.0);
+  });
+  def('bm-sovereign-rebirth', 'bm', S => {
+    S.space('hall', 0.8);
+    // the room's whole fire spirals into one point: a swelling pull of air and flame, a deepening drone, then held (the choir hit is the set piece's)
+    S.noise({ color: 'pink', bp: 200, bp1: 3800, q: 1.2, dur: 3.4, a: 2.8, pts: [[3.2, 1], [3.4, 0.8]], peak: 0.3 });
+    S.tone({ type: 'saw', f: 40, f1: 110, dur: 3.6, a: 3.0, lp: 700, peak: 0.2, am: [4, 0.3] });
+    S.crackle({ dens: 0.8, f: 2600, dur: 3.4, pts: [[3.0, 1], [3.4, 0.6]], peak: 0.2 });
+    S.rumble({ dur: 3.6, f: 40, peak: 0.4, a: 2.4 });
+    moVoid(S, 2.2, 1.2, 0.2, 700, 70);
+    S.bell({ at: 3.3, f: mf(38), dur: 3.0, peak: 0.12, lp: 2200 });
+  });
+  // Act III's four casts are WIND-UPS of about three and a half seconds (the bar's lead: the blow lands that long after it begins). The cuts, fans and rings are played
+  // by sound-hooks.js from the room's events at the true landing times (sv-dance-cut, sv-crescent-fan, sv-lance-dash, sv-pyre-cut, sv-cross-ring), so nothing here lands.
+  def('bm-sovereign-sovereigns-dance', 'bm', S => {
+    S.space('hall', 0.6);
+    // the blade begins its dance (3.4 s on the bar before the first cut): a long breath, the blade drawn and held, a thin glass shimmer climbing, the fire gathering low
+    svHush(S, 0, 2.8, 0.1, 700, 3200);
+    S.scrape({ at: 0.2, f: 3200, q: 2.2, dur: 0.9, rate: 26, peak: 0.07, pts: [[0.5, 1], [0.9, 0]] });
+    S.tone({ f: 330, f1: 990, dur: 3.2, a: 2.8, am: [3.4, 0.4], lp: 2600, pts: [[3.0, 1], [3.2, 0]], peak: 0.1 });
+    [[0.9, 86], [1.7, 91], [2.5, 98]].forEach(([at, m], i) => S.glass({ at, f: mf(m), dur: 1.0, peak: 0.05, pan: (i - 1) * 0.5 }));
+    svBody(S, 0.4, 2.9, 0.12, 1.1);
+    S.thud({ at: 3.2, f: 56, f1: 30, dur: 0.5, drive: 1.6, peak: 0.3 });
+  });
+  def('bm-sovereign-crescent', 'bm', S => {
+    S.space('hall', 0.55);
+    // the wind-up of one huge arc (3.4 s before the first fan): a held breath drawn in, two long drawn-out sweeps of air leaning from opposite walls, a low gathering note
+    svHush(S, 0.2, 2.8, 0.1, 500, 2600);
+    S.whoosh({ at: 0.6, f: 160, f1: 900, dur: 2.2, peakAt: 0.85, peak: 0.2, q: 1.1, pan: -0.7 });
+    S.whoosh({ at: 1.0, f: 180, f1: 1100, dur: 2.1, peakAt: 0.85, peak: 0.16, q: 1.1, pan: 0.7 });
+    S.tone({ type: 'saw', f: mf(38), f1: mf(45), lp: 500, dur: 3.3, a: 2.7, pts: [[3.1, 1], [3.3, 0]], peak: 0.12, am: [4, 0.3] });
+    svBody(S, 0.2, 3.0, 0.1, 1.0);
+    S.glass({ at: 2.9, f: mf(90), dur: 0.5, peak: 0.04 });
+  });
+  def('bm-sovereign-lance', 'bm', S => {
+    S.space('hall', 0.45);
+    // the wind-up of a straight thrust (3.6 s before the dash): the blade drawn back (a scrape and a hush), one thin note stretched tighter and tighter, then a held silence
+    svHush(S, 0, 3.0, 0.1, 1800, 4800);
+    S.scrape({ at: 0.1, f: 3000, q: 2.2, dur: 0.8, rate: 24, peak: 0.07, pts: [[0.5, 1], [0.8, 0]] });
+    S.tone({ f: 880, f1: 2640, dur: 3.2, a: 3.0, lp: 4200, pts: [[3.1, 1], [3.2, 0]], peak: 0.08, vib: [6, 0.004] });
+    S.tone({ type: 'saw', f: mf(38), lp: 420, dur: 3.2, a: 2.6, pts: [[3.0, 1], [3.2, 0]], peak: 0.08 });
+    svBody(S, 0.4, 2.8, 0.08, 0.9);
+    S.crack({ at: 3.3, peak: 0.1, dur: 0.08 });
+  });
+  def('bm-sovereign-pyre', 'bm', S => {
+    S.space('hall', 0.65);
+    // the wind-up of the blink-cuts (3.4 s before the first, longer for a larger party): the ground splitting with heat, a roar of flame building, the crackle thickening, nothing yet struck
+    S.crack({ at: 0.15, peak: 0.16, dur: 0.14 }); S.crack({ at: 0.9, peak: 0.18, dur: 0.14 }); S.crack({ at: 1.9, peak: 0.2, dur: 0.14 });
+    S.noise({ color: 'brown', bp: 100, bp1: 900, q: 0.8, dur: 3.3, a: 2.8, pts: [[3.1, 1], [3.3, 0.8]], peak: 0.3 });
+    S.whoosh({ at: 1.2, color: 'brown', f: 200, f1: 2200, dur: 2.0, peakAt: 0.9, peak: 0.28 });
+    S.crackle({ at: 0.4, dens: 1.2, f: 3000, dur: 2.9, pts: [[2.6, 1], [2.9, 0.6]], peak: 0.2 });
+    S.rumble({ dur: 3.3, f: 42, peak: 0.34, a: 2.6 });
+  });
+  def('bm-sovereign-emberfall', 'bm', S => {
+    S.space('hall', 0.95);
+    // the enrage: the whole sky of embers comes down. A vast swelling roar of fire and falling bells, the strike, then the long burn
+    S.rumble({ dur: 8.4, f: 38, peak: 0.6, a: 5, pts: [[6.4, 1], [7.8, 0.8], [8.4, 0]] });
+    S.noise({ color: 'brown', bp: 90, bp1: 1400, q: 0.8, dur: 7.2, a: 5.4, pts: [[6.4, 1], [7.2, 0.7]], peak: 0.4 });
+    S.crackle({ dens: 1.0, f: 2800, dur: 7.2, pts: [[5.6, 1], [7.2, 0.7]], peak: 0.26 });
+    S.choir({ at: 1.2, notes: [mf(38), mf(45), mf(50), mf(57)], dur: 5.4, vowel: 'a', vowel1: 'o', lp: 2000, peak: 0.14, pts: [[4, 1], [5.4, 0.8]] });
+    [0.8, 2.4, 3.8, 4.8, 5.6].forEach((at, i) => { S.bell({ at, f: mf(33 + (i % 2) * 5), dur: 4.2, peak: 0.2 + i * 0.02, lp: 1800 }); S.thud({ at, f: 44, f1: 22, dur: 0.9, drive: 3, peak: 0.4 + i * 0.05 }); });
+    for (let i = 0; i < 18; i++) S.crackle({ at: 2 + i * 0.28, dens: 3, f: 5200, dur: 0.2, pts: [[0.01, 1], [0.2, 0]], peak: 0.06 + i * 0.004, pan: Math.sin(i * 2.1) * 0.8 });
+    S.whoosh({ at: 5.8, color: 'brown', f: 200, f1: 3800, dur: 1.5, peakAt: 0.95, peak: 0.44 });
+    S.thud({ at: 7.4, f: 36, f1: 14, dur: 3.2, drive: 4.5, peak: 1 });
+    S.crack({ at: 7.4, peak: 0.36, dur: 0.3 });
+    svBody(S, 7.4, 3.2, 0.4, 1.6);
+    svRing(S, 7.45, 660, 0.2, 3.4);
+  });
+
+  // ---- the twelve call stings: one per fallen boss, about a second and a half, in its colours, ember crackle laid over each
+  const SV_CALL = {
+    grubnak: S => {      // a cleaver's ring and the sizzle of the pan
+      B.cleaver(S, 0, 1.1); svRing(S, 0.2, 640, 0.18, 1.2);
+      S.metal({ at: 0.32, set: 'plate', f: 480, dur: 0.9, peak: 0.16, strike: 0.4 });
+      S.sizzle({ at: 0.3, dur: 1.1, pts: [[0.1, 1], [1.1, 0]], peak: 0.2 });
+    },
+    skitterra: S => {    // silk drawn tight and the chitter of many legs, a snap
+      B.silk(S, 0, 0.8, 1.2); S.skitter({ at: 0.35, n: 30, dur: 0.9, f: 2400, peak: 0.22 }); B.snap(S, 0.85, 1);
+    },
+    volkar: S => {       // a thunder crack and its rolling
+      B.thunder(S, 0, 1.1, false); S.zap({ f: 70, dur: 0.4, peak: 0.12 });
+    },
+    hollowking: S => {   // a funeral bell, and a rattle of chain
+      S.bell({ f: mf(38), dur: 2.4, peak: 0.42, lp: 3000 });
+      S.choir({ notes: [mf(38), mf(45)], vowel: 'u', dur: 1.8, a: 0.6, peak: 0.1 });
+      chains(S, 0.5, 0.6, 0.8);
+    },
+    wyrm: S => {         // two wing beats and a roar
+      S.whoosh({ f: 120, f1: 420, dur: 0.4, peakAt: 0.6, peak: 0.3 }); S.whoosh({ at: 0.42, f: 120, f1: 380, dur: 0.4, peakAt: 0.6, peak: 0.3 });
+      S.thud({ at: 0.38, f: 60, f1: 30, dur: 0.5, drive: 2, peak: 0.4 });
+      S.voice({ at: 0.75, f: 58, f1: 42, dur: 1.2, vowel: 'a', vowel1: 'o', breath: 6, peak: 0.34, lp: 3800, pts: [[0.2, 1], [1.2, 0]] });
+      S.rumble({ at: 0.75, dur: 1.4, f: 80, peak: 0.35, a: 0.05 });
+    },
+    titan: S => {        // ice cracking, four times, down a long fault, and a bright fall of shards
+      [0, 0.17, 0.42, 0.7].forEach((at, i) => { S.crack({ at, peak: 0.34 - i * 0.04, dur: 0.14 }); S.noise({ at: at + 0.02, bp: 4800, bp1: 1400, q: 2.2, dur: 0.5, grain: 0.8, pts: [[0.02, 1], [0.5, 0]], peak: 0.14, pan: (i - 1.5) * 0.4 }); });
+      S.thud({ at: 0.42, f: 80, f1: 38, dur: 0.6, drive: 2, peak: 0.4 }); S.glass({ at: 0.8, f: 2200, dur: 0.8, peak: 0.08 });
+    },
+    archmage: S => {     // a rune chime climbing three notes, with the thin ring of each circle closing
+      [64, 67, 71].forEach((m, i) => { S.bell({ at: i * 0.22, f: mf(m), dur: 1.6, peak: 0.16, lp: 5000 }); S.glass({ at: i * 0.22 + 0.01, f: mf(m + 24), dur: 0.9, peak: 0.05 }); });
+      S.pad({ notes: [mf(45), mf(52)], dur: 1.6, det: 9, type: 'saw', lpEnv: [300, 1100, 400, 0.8], peak: 0.1 });
+    },
+    hydra: S => {        // a long hiss from many mouths, wet at the edges
+      B.hiss(S, 0, 1.2, 1.2); B.hiss(S, 0.25, 1.0, 0.8);
+      S.voice({ at: 0.3, f: 150, f1: 110, dur: 1.0, vowel: 'o', breath: 7, peak: 0.1, lp: 4000 });
+      S.bubbles({ at: 0.3, n: 6, f: 300, f1: 900, spread: 0.9, size: 0.04, peak: 0.07 });
+    },
+    corvane: S => {      // a sword drawn from its scabbard and the ring of it at the end
+      S.scrape({ f: 3400, q: 2.2, dur: 0.9, rate: 26, peak: 0.16, pts: [[0.5, 1], [0.9, 0]] });
+      S.metal({ at: 0.95, set: 'bar', f: 1480, dur: 1.8, peak: 0.16, strike: 0.4 }); S.bell({ at: 0.97, f: mf(88), dur: 1.4, peak: 0.05, lp: 8000 });
+    },
+    brannoc: S => {      // a crowd's roar over the hum of the spinning wheel, a shield ringing
+      brCrowd(S, 0, 1.4, 0.22); brWhirr(S, 0.3, 1.1, 1800, 3200, 0, 0.3); brClang(S, 1.3, 560, 0.2);
+    },
+    morrowoak: S => {    // old wood groaning, leaves, one deep settling thud
+      moCreak(S, 0, 1.4, 0.24, 0, 20, 11); moLeaves(S, 0.2, 1.3, 0.12);
+      S.thud({ at: 1.1, f: 56, f1: 26, dur: 0.8, drive: 3, peak: 0.5 });
+    },
+    caelum: S => {       // a glass chime and a scatter of starlight, one clean cut
+      S.glass({ at: 0.1, f: mf(93), dur: 1.6, peak: 0.14 }); S.glass({ at: 0.16, f: mf(100), dur: 1.4, peak: 0.08 });
+      caStars(S, 0, 6, 1.0, 0.04, 2600, 6200); caSlice(S, 0.7, 3200, 0.2);
+    },
+  };
+  Object.keys(SV_CALL).forEach(who => def('sv-call-' + who, 'sting', S => {
+    S.space('hall', 0.5);
+    SV_CALL[who](S);
+    svLay(S, 0, 1.7, 0.1);                                                  // the ember crackle every call shares
+    S.thud({ f: 48, f1: 30, dur: 0.7, drive: 2, peak: 0.22 });
+  }));
+  def('sv-assemble', 'sting', S => {
+    S.space('hall', 0.6);
+    // cinders drawn together into a shape: air and ash pulled in, a swelling crackle, a low tone rising, and the settle
+    S.noise({ color: 'pink', bp: 200, bp1: 2800, q: 1.2, dur: 2.2, a: 1.7, pts: [[2.0, 1], [2.2, 0.7]], peak: 0.26 });
+    S.crackle({ dens: 0.7, f: 2400, dur: 2.2, pts: [[1.8, 1], [2.2, 0.6]], peak: 0.2 });
+    S.tone({ type: 'saw', f: 60, f1: 150, dur: 2.2, a: 1.8, lp: 500, peak: 0.12 });
+    S.thud({ at: 2.15, f: 56, f1: 30, dur: 0.8, drive: 2.4, peak: 0.5 });
+    S.sizzle({ at: 2.15, dur: 0.6, pts: [[0.03, 1], [0.6, 0]], peak: 0.16 });
+  });
+  def('sv-crumble', 'hud', S => {
+    S.space('hall', 0.5);
+    // an echo crumbling to ash: a dry cascade of crackle and soft thuds fading, a last sigh
+    S.crackle({ dens: 1.4, f: 2200, dur: 2.6, pts: [[0.2, 1], [2.6, 0]], peak: 0.3 });
+    S.noise({ color: 'brown', bp: 260, bp1: 90, q: 0.8, dur: 2.4, a: 0.1, pts: [[0.2, 1], [2.4, 0]], peak: 0.3 });
+    [0.1, 0.5, 0.95, 1.5].forEach((at, i) => S.thud({ at, f: 80 - i * 8, f1: 34, dur: 0.4, drive: 1.5, peak: 0.3 - i * 0.05 }));
+    S.sizzle({ at: 0.2, dur: 2.0, pts: [[0.1, 1], [2.0, 0]], peak: 0.12 });
+  });
+
+  // ---- Act I: the echoes' moves
+  def('bm-sovereign-cloche', 'bm', S => { S.space('room', 0.3); svCloche(S, 0, 1); });
+  def('bm-sovereign-flambe', 'bm', S => { S.space('room', 0.3); svFlambe(S, 0, 1); });
+  def('bm-sovereign-mince', 'bm', S => { S.space('room', 0.3); svMince(S, 0, 1); });
+  def('bm-sovereign-flambe-service', 'bm', S => {   // the whole service in one: lid, flambé, Mince
+    S.space('room', 0.35);
+    svCloche(S, 0, 1); svFlambe(S, 0.7, 0.9); svMince(S, 2.2, 1);
+  });
+  def('bm-sovereign-burning-web', 'bm', S => {
+    S.space('cave', 0.4);
+    // three threads set alight across the room, one after another: silk drawn tight, the flame running along it, a spitting crackle
+    for (let i = 0; i < 3; i++) {
+      const at = i * 0.45, pan = (i - 1) * 0.6;
+      B.silk(S, at, 0.9, 0.8, 1 + i * 0.12);
+      S.whoosh({ at: at + 0.1, f: 300, f1: 2600, dur: 0.6, peakAt: 0.6, peak: 0.22, pan });
+      S.sizzle({ at: at + 0.15, dur: 1.2, pts: [[0.1, 1], [1.2, 0]], peak: 0.16, pan });
+    }
+    svBody(S, 0.3, 2.4, 0.16, 1.7);
+    S.tone({ at: 1.2, f: 1100, f1: 2200, dur: 1.2, a: 0.9, swell: true, peak: 0.03, vib: [6, 0.01] });
+  });
+  def('bm-sovereign-knot', 'bm', S => {
+    S.space('cave', 0.35);
+    // a knot breaking: a hard snap, a spit of ember, a short sear; the fuse begins to run
+    B.snap(S, 0, 1.2);
+    S.crack({ at: 0.01, peak: 0.24, dur: 0.1 });
+    S.crackle({ at: 0.02, dens: 2.6, f: 4200, dur: 0.4, pts: [[0.02, 1], [0.4, 0]], peak: 0.16 });
+    S.thud({ at: 0.02, f: 90, f1: 42, dur: 0.3, drive: 1.6, peak: 0.4 });
+    S.sizzle({ at: 0.08, dur: 0.5, pts: [[0.03, 1], [0.5, 0]], peak: 0.14 });
+  });
+  def('bm-sovereign-fuse', 'bm', S => {
+    S.space('cave', 0.3);
+    // the flame racing out along a thread from the break: a hiss that climbs, a stream of crackle, a thin tone that rises
+    S.noise({ bp: 1800, bp1: 6500, q: 1.2, dur: 1.8, a: 0.1, grain: 0.9, pts: [[0.3, 1], [1.8, 0.5]], peak: 0.26 });
+    S.crackle({ dens: 3, f: 4200, dur: 1.8, pts: [[0.1, 1], [1.8, 0.4]], peak: 0.2 });
+    S.tone({ f: 1400, f1: 3600, dur: 1.8, a: 0.2, peak: 0.03 });
+    S.whoosh({ f: 400, f1: 2800, dur: 1.0, peakAt: 0.7, peak: 0.16, q: 1.4 });
+  });
+  def('bm-sovereign-shadow', 'bm', S => {
+    S.space('cave', 0.5);
+    // her shadow dropping along every thread left whole: a dark pull, a thousand small legs running, then the strike (lands at 1 s)
+    S.noise({ color: 'brown', bp: 1400, bp1: 80, q: 1.0, dur: 1.0, pts: [[0.9, 1], [1.0, 0.5]], peak: 0.3 });
+    S.skitter({ n: 24, dur: 0.9, f: 2000, bias: 0.6, peak: 0.12 });
+    S.thud({ at: 1.0, f: 54, f1: 26, dur: 1.0, drive: 3, peak: 0.8 });
+    S.crack({ at: 1.0, peak: 0.26, dur: 0.16 });
+    S.sizzle({ at: 1.02, dur: 1.2, pts: [[0.05, 1], [1.2, 0]], peak: 0.2 });
+    svBody(S, 1.0, 1.4, 0.18, 1.6);
+  });
+  def('bm-sovereign-ember-and-ash', 'bm', S => {
+    S.space('hall', 0.45);
+    // a low magnetic hum between two poles, beating, with a thread of static and the embers drawn along it
+    S.tone({ type: 'saw', f: 55, lp: 400, am: [11, 0.6], dur: 2.4, a: 0.8, pts: [[2.2, 1], [2.4, 0]], peak: 0.26 });
+    S.tone({ f: 110, am: [11, 0.6], dur: 2.4, a: 0.8, pts: [[2.2, 1], [2.4, 0]], peak: 0.12 });
+    S.zap({ f: 60, dur: 2.2, bf: 1500, peak: 0.07, a: 0.4 });
+    svBody(S, 0.2, 2.2, 0.12, 1.0);
+  });
+  def('bm-sovereign-surge', 'bm', S => {
+    S.space('hall', 0.5);
+    // the Surge: the poles snap together: a rising rush, a bolt of static and the thump of it
+    S.whoosh({ f: 200, f1: 3200, dur: 0.8, peakAt: 0.9, peak: 0.3, q: 1 });
+    B.polarity(S, 0.7, true, 0.7);
+    S.zap({ at: 0.75, f: 90, dur: 0.3, peak: 0.25 });
+    S.crack({ at: 0.85, peak: 0.42, dur: 0.14 });
+    S.thud({ at: 0.85, f: 64, f1: 28, dur: 0.9, drive: 2.8, peak: 0.8 });
+    svBody(S, 0.85, 1.2, 0.18, 2.2);
+  });
+  def('bm-sovereign-hollow-kings-bell', 'bm', S => {
+    S.space('hall', 0.7);
+    // the Hollow King's funeral bell, answered: the same toll with an ember crackle laid over it
+    S.bell({ f: mf(36), dur: 3.6, peak: 0.42, lp: 3000 });
+    S.bell({ at: 0.02, f: mf(48), dur: 2.4, peak: 0.12, lp: 4000 });
+    S.choir({ notes: [mf(36), mf(43)], vowel: 'u', dur: 3.0, a: 0.8, peak: 0.08 });
+    svLay(S, 0.3, 2.4, 0.09);
+    S.rumble({ dur: 2.2, f: 90, peak: 0.14, a: 0.05 });
+  });
+  def('bm-sovereign-royal-doom', 'bm', S => {
+    S.space('hall', 0.65);
+    // a doom set on one of you: three tolls falling in pitch, a low swell under them, the crack of the sentence
+    [[0, 38], [0.95, 36], [1.9, 33]].forEach(([at, m], i) => { S.bell({ at, f: mf(m), dur: 3.0, peak: 0.34 - i * 0.02, lp: 2800 }); S.thud({ at, f: 50, f1: 26, dur: 0.8, drive: 2.6, peak: 0.45 }); });
+    S.rumble({ dur: 3.4, f: 44, peak: 0.3, a: 1.8 });
+    S.crack({ at: 2.9, peak: 0.28, dur: 0.18 });
+    svBody(S, 2.9, 1.2, 0.18, 1.4);
+  });
+  def('bm-sovereign-lantern', 'bm', S => {
+    S.space('room', 0.4);
+    // the lantern carried: a rattle of chain, a warm glass note, and the small steady flicker of a flame in a case
+    chains(S, 0, 0.6, 0.9);
+    S.glass({ at: 0.15, f: mf(81), dur: 1.6, peak: 0.1, am: [4, 0.25] });
+    S.crackle({ at: 0.1, dens: 0.8, f: 1800, dur: 1.6, pts: [[0.2, 1], [1.6, 0.3]], peak: 0.12 });
+    S.noise({ at: 0.1, color: 'pink', bp: 700, q: 1.2, dur: 1.6, a: 0.2, am: [9, 0.5], pts: [[0.3, 1], [1.6, 0]], peak: 0.07 });
+  });
+  def('bm-sovereign-knights-sweep', 'bm', S => {
+    S.space('hall', 0.6);
+    // a knight replaying a sweep: a rewinding hush, the swing, and the ring of it again, fainter and lower, twice
+    svHush(S, 0, 0.5, 0.07, 4000, 900);
+    svSwing(S, 0.45, 1000, 0.32, 0, 0.4);
+    svRing(S, 0.85, 1000, 0.2, 1.6);
+    S.thud({ at: 0.85, f: 62, f1: 28, dur: 0.9, drive: 2.8, peak: 0.7 });
+    svRing(S, 1.15, 940, 0.08, 1.2, -0.4); svRing(S, 1.45, 880, 0.04, 1.0, 0.4);
+    svBody(S, 0.9, 1.4, 0.14, 1.6);
+  });
+
+  // ---- the set pieces
+  def('sv-descent', 'sting', S => {
+    S.space('hall', 0.8);
+    // the halo lighting: twelve soft rising tones, one for every half second (D minor, climbing), under a swelling drone and a gathering fire,
+    // then a low weight as the Sovereign is whole
+    const scale = [0, 2, 3, 5, 7, 8, 10, 12, 14, 15, 17, 19];
+    scale.forEach((n, i) => {
+      S.bell({ at: i * 0.5, f: mf(62 + n), dur: 2.2, peak: 0.07 + i * 0.006, lp: 5000, pan: Math.sin(i * 2.4) * 0.5 });
+      S.glass({ at: i * 0.5 + 0.01, f: mf(86 + n), dur: 1.0, peak: 0.025 });
+    });
+    S.pad({ notes: [mf(38), mf(45), mf(50)], dur: 6.4, det: 8, type: 'saw', lpEnv: [140, 900, 240, 3.8], peak: 0.12 });
+    S.rumble({ dur: 6.4, f: 40, peak: 0.3, a: 3.8 });
+    S.crackle({ dens: 0.8, f: 2400, dur: 6.2, pts: [[5.0, 1], [6.2, 0.6]], peak: 0.12 });
+    S.thud({ at: 6.0, f: 48, f1: 24, dur: 1.4, drive: 3, peak: 0.7 });
+    S.bell({ at: 6.0, f: mf(38), dur: 3.0, peak: 0.16, lp: 2200 });
+  });
+  def('sv-burnback', 'bm', S => {
+    S.space('hall', 0.7);
+    // the burnback: the four braziers pulled out inward one after another, the floor cracking all round, and four struck bells one by one
+    [[-0.9, 0], [0.9, 0.45], [-0.6, 0.9], [0.6, 1.35]].forEach(([pan, at]) => {
+      moVoid(S, at, 0.7, 0.22, 400, 60);
+      S.crackle({ at, dens: 2, f: 3200, dur: 0.6, pts: [[0.05, 1], [0.6, 0]], peak: 0.14, pan });
+      S.thud({ at: at + 0.68, f: 60, f1: 30, dur: 0.5, drive: 2, peak: 0.35, pan });
+    });
+    for (let i = 0; i < 10; i++) {
+      const at = 2.2 + i * 0.2 + (i % 3) * 0.04;
+      S.crack({ at, peak: 0.16 + (i % 3) * 0.04, dur: 0.12, pan: Math.sin(i * 1.9) * 0.8 });
+    }
+    S.noise({ at: 2.2, color: 'brown', bp: 400, bp1: 90, q: 0.9, dur: 2.2, a: 0.2, grain: 0.9, pts: [[0.4, 1], [2.2, 0]], peak: 0.26 });
+    [0, 0.5, 1.1, 1.7].forEach((at, i) => S.thud({ at: 2.3 + at, f: 52 - i * 3, f1: 24, dur: 0.9, drive: 3, peak: 0.5 }));
+    [[4.4, 50], [5.4, 45], [6.4, 41], [7.4, 38]].forEach(([at, m], i) => {
+      S.bell({ at, f: mf(m), dur: 3.6, peak: 0.28 + i * 0.03, lp: 2600 });
+      S.thud({ at, f: 48 - i * 3, f1: 24, dur: 0.9, drive: 3, peak: 0.45 + i * 0.05 });
+      S.glass({ at: at + 0.01, f: mf(m + 36), dur: 1.4, peak: 0.04 });
+    });
+    S.rumble({ at: 4.4, dur: 4.2, f: 38, peak: 0.25, a: 2.4 });
+  });
+  def('sv-rebirth-choir', 'bm', S => {
+    S.space('hall', 0.85);
+    // the choir hit of Rebirth: the held breath breaks, a full chord from the dark, a drum of a heart, the new fire catching
+    S.thud({ f: 40, f1: 18, dur: 2.6, drive: 4, peak: 1 });
+    S.crack({ peak: 0.32, dur: 0.22 });
+    svChoirHit(S, 0.02, 0.22, 4.4);
+    S.choir({ at: 0.04, notes: [mf(62), mf(69)], dur: 3.4, vowel: 'i', vowel1: 'a', lp: 3400, peak: 0.07 });
+    S.bell({ at: 0.05, f: mf(38), dur: 5.0, peak: 0.26, lp: 1800 });
+    svBody(S, 0.05, 3.2, 0.3, 1.6);
+    S.whoosh({ f: 1200, f1: 120, dur: 0.9, peakAt: 0.1, peak: 0.3, color: 'brown' });
+  });
+  // ---- Act I, the rest: the Hollow King's lantern in flight, and the Ember and Ash drift (a quiet magnetic hum while the charges pull)
+  def('sv-lantern-fly', 'hud', S => {
+    S.space('hall', 0.4);
+    // the lantern's flame leaving the Hollow King's sigil and crossing the room: a thin rising rush, a flicker, a small glass note carried with it
+    S.whoosh({ f: 500, f1: 2200, dur: 1.1, peakAt: 0.85, peak: 0.2, q: 1.6 });
+    S.crackle({ dens: 1.4, f: 3000, dur: 1.1, pts: [[0.2, 1], [1.1, 0.4]], peak: 0.12 });
+    S.glass({ at: 0.05, f: mf(86), dur: 1.1, peak: 0.05, am: [5, 0.3] });
+  });
+  loop('sv-drift-loop', 'loop', L => {
+    // two poles of a charge, humming just apart (they beat slowly), a thread of static over them
+    const body = L.g(0.16);
+    [55, 55.7].forEach(f => L.c(L.osc('sawtooth', f), body));
+    const lp = L.f('lowpass', 300, 1.5); L.lfo(lp.frequency, 0.4, 90); L.c(body, lp, L.out);
+    const hi = L.g(0.03); L.c(L.osc('sine', 110), hi); L.lfo(hi.gain, 1.7, 0.02); L.c(hi, L.out);
+    L.c(L.crackle(0.8), L.f('highpass', 4500), L.g(0.05), L.out);
+  }, 0.8);
+
+  // ---- Act II: Glass Floor (Hrimgar: ice, glass and a heavy foot)
+  def('bm-sovereign-glass-floor', 'bm', S => {
+    S.space('hall', 0.6);
+    // Hrimgar's stamp, ember-lit: the foot lifted, one huge blow, and the floor answers: a crack that opens under the heel and RUNS outward, split after split,
+    // brighter and farther each time, the ember crackle in every seam
+    S.whoosh({ f: 100, f1: 520, dur: 0.6, peakAt: 0.9, peak: 0.3, q: 0.9 });
+    S.thud({ at: 0.6, f: 46, f1: 20, dur: 1.6, drive: 4, peak: 1 });
+    S.crack({ at: 0.6, peak: 0.4, dur: 0.22 });
+    S.metal({ at: 0.62, set: 'bar', f: 520, dur: 2.4, peak: 0.16, strike: 0.5 });
+    for (let i = 0; i < 7; i++) {
+      const at = 0.72 + i * 0.22 + (i % 2) * 0.03, pan = Math.sin(i * 2.3) * 0.8;
+      S.crack({ at, peak: 0.3 - i * 0.025, dur: 0.14, pan });
+      S.noise({ at: at + 0.01, bp: 5200 - i * 300, bp1: 1400, q: 2.2, dur: 0.5, grain: 0.8, pts: [[0.02, 1], [0.5, 0]], peak: 0.13, pan });
+      S.glass({ at: at + 0.02, f: 1800 + i * 260, dur: 0.9, peak: 0.05, pan });
+    }
+    S.crackle({ at: 0.7, dens: 4, f: 4600, dur: 2.0, pts: [[0.05, 1], [0.8, 0.8], [2.0, 0]], peak: 0.2 });
+    S.rumble({ at: 0.6, dur: 2.6, f: 50, peak: 0.4, a: 0.05 });
+    svLay(S, 0.8, 2.2, 0.12);
+    S.sizzle({ at: 1.4, dur: 1.6, pts: [[0.2, 1], [1.6, 0]], peak: 0.1 });
+  });
+  def('sv-glass-shatter', 'bm', S => {
+    S.space('hall', 0.45);
+    // one sheet of the floor giving way as the crack reaches it: a pane going all at once, a bright spill of shards, and the black water coming up under it
+    S.crack({ peak: 0.4, dur: 0.16 });
+    S.noise({ bp: 6200, bp1: 1800, q: 1.8, dur: 0.7, grain: 0.9, pts: [[0.015, 1], [0.7, 0]], peak: 0.26 });
+    for (let i = 0; i < 5; i++) S.glass({ at: 0.02 + i * 0.045 + S.rr(0, 0.03), f: S.rr(2200, 5200), dur: S.rr(0.5, 0.9), peak: 0.07 });
+    S.crackle({ at: 0.03, dens: 3.2, f: 5200, dur: 0.6, pts: [[0.02, 1], [0.6, 0]], peak: 0.16 });
+    S.thud({ at: 0.02, f: 110, f1: 46, dur: 0.4, drive: 2, peak: 0.5 });
+    S.noise({ at: 0.15, color: 'brown', bp: 300, bp1: 90, q: 0.8, dur: 0.7, a: 0.05, pts: [[0.1, 1], [0.7, 0]], peak: 0.18 });
+  });
+  def('sv-water-hiss', 'hud', S => {
+    S.space('hall', 0.35);
+    // black water standing where the sheet was: a long hiss of steam off cold, hot iron, and a few slow bubbles
+    S.sizzle({ dur: 1.4, pts: [[0.05, 1], [1.4, 0]], peak: 0.28 });
+    S.noise({ bp: 3600, bp1: 1400, q: 0.9, dur: 1.4, a: 0.1, grain: 0.9, pts: [[0.2, 1], [1.4, 0]], peak: 0.22 });
+    S.bubbles({ at: 0.15, n: 6, f: 200, f1: 520, spread: 0.9, size: 0.05, peak: 0.08 });
+  });
+
+  // ---- Act II: Heads of Flame (the Hydra: many mouths, hiss and throat; a head of fire)
+  def('bm-sovereign-heads-of-flame', 'bm', S => {
+    S.space('cave', 0.5);
+    // the Hydra's answer: many mouths drawing breath at once, a wet hiss with a bubbling growl in it, the fire catching in the throats
+    B.hiss(S, 0, 1.4, 1.2); B.hiss(S, 0.2, 1.2, 0.8);
+    S.voice({ at: 0.25, f: 150, f1: 96, dur: 1.4, vowel: 'o', vowel1: 'a', breath: 7, peak: 0.16, lp: 3600, pts: [[0.3, 1], [1.4, 0]] });
+    S.bubbles({ at: 0.1, n: 7, f: 700, f1: 160, spread: 0.8, size: 0.05, peak: 0.1 });
+    S.noise({ bp: 400, bp1: 2200, q: 1.2, dur: 1.5, a: 1.0, pts: [[1.3, 1], [1.5, 0.4]], peak: 0.22 });
+    svLay(S, 0.3, 1.4, 0.1);
+    S.thud({ at: 1.3, f: 80, f1: 38, dur: 0.5, drive: 2, peak: 0.45 });
+  });
+  def('sv-head-rise', 'bm', S => {
+    S.space('cave', 0.55);
+    // a head of fire rising out of its sigil in the floor: the stone splits under the heat, a roar of flame climbs and climbs, and the head clears the floor at 1.6 s
+    // with a throaty cry and a gout
+    S.crack({ at: 0.05, peak: 0.2, dur: 0.14 }); S.crack({ at: 0.35, peak: 0.24, dur: 0.14 });
+    S.noise({ color: 'brown', bp: 90, bp1: 1100, q: 0.8, dur: 1.7, a: 1.4, pts: [[1.55, 1], [1.7, 0.8]], peak: 0.34 });
+    S.whoosh({ at: 0.6, color: 'brown', f: 180, f1: 2200, dur: 1.0, peakAt: 0.95, peak: 0.34 });
+    S.crackle({ dens: 1.4, f: 2800, dur: 3.0, pts: [[1.6, 1], [3.0, 0]], peak: 0.2 });
+    S.voice({ at: 1.5, f: 170, f1: 104, dur: 1.5, vowel: 'a', vowel1: 'o', breath: 6, peak: 0.2, lp: 3200, pts: [[0.15, 1], [1.5, 0]] });
+    S.thud({ at: 1.6, f: 58, f1: 26, dur: 1.2, drive: 3, peak: 0.8 });
+    S.rumble({ at: 1.5, dur: 1.8, f: 60, peak: 0.3, a: 0.2 });
+    svBody(S, 1.6, 2.0, 0.2, 1.6);
+  });
+  def('sv-bite', 'bm', S => {
+    S.space('cave', 0.4);
+    // a head lunging at one hero: the breath drawn in over the long lock (a thin hiss climbing, flame gathering in the throat), then the jaws clap shut on a gout
+    // (lands at 1.97 s)
+    S.noise({ bp: 700, bp1: 3400, q: 3, dur: 1.9, a: 1.6, pts: [[1.8, 1], [1.9, 0]], peak: 0.12 });
+    S.tone({ type: 'saw', f: 90, f1: 200, lp: 500, dur: 1.9, a: 1.5, peak: 0.1, am: [7, 0.4] });
+    S.crackle({ at: 0.6, dens: 1.2, f: 2600, dur: 1.4, pts: [[1.2, 1], [1.4, 0.8]], peak: 0.12 });
+    S.wood({ at: 1.96, f: 520, dur: 0.12, peak: 0.4 });
+    S.crack({ at: 1.96, peak: 0.34, dur: 0.12 });
+    S.thud({ at: 1.97, f: 70, f1: 32, dur: 0.6, drive: 2.4, peak: 0.6 });
+    S.whoosh({ at: 1.97, color: 'brown', f: 500, f1: 150, dur: 0.6, peakAt: 0.1, peak: 0.3 });
+    svBody(S, 1.98, 1.0, 0.16, 1.8);
+  });
+  def('sv-cut', 'bm', S => {
+    S.space('cave', 0.5);
+    // a head cut down: the blow, a cry that climbs and is cut off mid-breath, the fire dropping out of the neck in a gush, and the stump left burning low
+    S.whoosh({ f: 400, f1: 2600, dur: 0.25, peakAt: 0.8, peak: 0.26, q: 1.4 });
+    S.crack({ at: 0.24, peak: 0.34, dur: 0.14 });
+    S.thud({ at: 0.24, f: 90, f1: 38, dur: 0.6, drive: 2.4, peak: 0.7 });
+    S.voice({ at: 0.1, f: 200, f1: 360, dur: 0.5, vowel: 'a', vowel1: 'i', breath: 6, peak: 0.2, lp: 3600, pts: [[0.1, 1], [0.34, 1], [0.5, 0]] });
+    S.noise({ at: 0.3, color: 'brown', bp: 500, bp1: 120, q: 0.8, dur: 1.0, a: 0.05, pts: [[0.1, 1], [1.0, 0]], peak: 0.3 });
+    S.sizzle({ at: 0.3, dur: 1.2, pts: [[0.05, 1], [1.2, 0]], peak: 0.2 });
+    S.crackle({ at: 0.5, dens: 1.0, f: 2200, dur: 2.2, pts: [[0.3, 1], [2.2, 0.15]], peak: 0.16 });
+    S.bell({ at: 0.28, f: mf(40), dur: 1.8, peak: 0.1, lp: 2000 });
+  });
+
+  // ---- Act II: Cinder Dive (Vhalgrath: wings, a roar, the ground taking him)
+  def('bm-sovereign-cinder-dive', 'bm', S => {
+    S.space('cave', 0.5);
+    // Vhalgrath's call: two heavy wing beats and a roar that climbs, the tyrant leaving his peak; a hot low hum under it that stays, ember crackle in every breath
+    S.whoosh({ f: 120, f1: 460, dur: 0.45, peakAt: 0.6, peak: 0.3 });
+    S.whoosh({ at: 0.5, f: 120, f1: 400, dur: 0.45, peakAt: 0.6, peak: 0.32 });
+    S.thud({ at: 0.42, f: 56, f1: 28, dur: 0.5, drive: 2, peak: 0.45 });
+    S.thud({ at: 0.92, f: 52, f1: 26, dur: 0.5, drive: 2, peak: 0.5 });
+    S.voice({ at: 0.9, f: 66, f1: 130, dur: 1.4, vowel: 'a', vowel1: 'o', breath: 6, peak: 0.3, lp: 3800, pts: [[0.3, 1], [1.4, 0]] });
+    S.rumble({ at: 0.9, dur: 1.6, f: 80, peak: 0.3, a: 0.1 });
+    S.tone({ type: 'saw', f: 60, f1: 120, lp: 400, dur: 1.6, a: 1.0, peak: 0.1, am: [6, 0.4] });
+    svLay(S, 0.2, 1.8, 0.12);
+  });
+  def('sv-dive-line', 'bm', S => {
+    S.space('cave', 0.4);
+    // the line of his dive lit from the rim to the spot: a long low roar of flame that runs the length of the floor, a spitting crackle along it, a hot tone rising
+    S.whoosh({ color: 'brown', f: 160, f1: 1800, dur: 1.2, peakAt: 0.7, peak: 0.34, q: 0.7 });
+    S.noise({ color: 'brown', bp: 100, bp1: 900, q: 0.8, dur: 1.6, a: 0.3, pts: [[0.8, 1], [1.6, 0]], peak: 0.28 });
+    S.crackle({ dens: 3, f: 3400, dur: 1.6, pts: [[0.2, 1], [1.6, 0]], peak: 0.22 });
+    S.tone({ type: 'saw', f: 110, f1: 330, lp: 700, dur: 1.4, a: 1.0, peak: 0.08 });
+    S.sizzle({ at: 0.1, dur: 1.4, pts: [[0.1, 1], [1.4, 0]], peak: 0.14 });
+  });
+  def('sv-dive-fall', 'bm', S => {
+    S.space('cave', 0.55);
+    // Vhalgrath coming down the line: a shriek of air falling in pitch, the roar close behind it, and the ground taking him at 1.4 s: a huge low blow, a wall of crackle
+    // and a gush of steam off the glass
+    S.whoosh({ f: 2400, f1: 110, dur: 1.4, peakAt: 0.9, peak: 0.4, q: 1.1 });
+    S.voice({ at: 0.3, f: 140, f1: 52, dur: 1.2, vowel: 'a', vowel1: 'o', breath: 6, peak: 0.26, lp: 3600, pts: [[0.4, 1], [1.2, 0.7]] });
+    S.noise({ color: 'brown', bp: 100, bp1: 700, q: 0.8, dur: 1.4, a: 1.1, pts: [[1.3, 1], [1.4, 0.8]], peak: 0.26 });
+    S.thud({ at: 1.4, f: 44, f1: 18, dur: 2.2, drive: 4.2, peak: 1 });
+    S.crack({ at: 1.4, peak: 0.36, dur: 0.24 });
+    S.rumble({ at: 1.4, dur: 2.4, f: 56, peak: 0.45, a: 0.02 });
+    svBody(S, 1.42, 2.6, 0.32, 1.6);
+    S.noise({ at: 1.5, hp: 2800, dur: 1.4, a: 0.05, pts: [[0.1, 1], [1.4, 0]], peak: 0.14 });
+    svRing(S, 1.42, 700, 0.12, 2.4);
+  });
+  def('bm-sovereign-aftershock', 'bm', S => {
+    S.space('hall', 0.7);
+    // the landing's ring: the ground gathers itself (a low swell and three small tremors drawing in), then the ring goes out from the middle across the whole
+    // floor (a sweep from low to high, lands at 2.8 s) and a long boom runs behind it; the quiet middle is the one place it never reaches
+    S.rumble({ dur: 2.9, f: 46, peak: 0.34, a: 2.2 });
+    [0.2, 0.9, 1.7].forEach((at, i) => S.thud({ at, f: 70 - i * 6, f1: 32, dur: 0.5, drive: 1.8, peak: 0.28 + i * 0.1 }));
+    S.noise({ color: 'brown', bp: 80, bp1: 1200, q: 0.9, dur: 2.8, a: 2.4, pts: [[2.6, 1], [2.8, 0.8]], peak: 0.26 });
+    S.crackle({ at: 0.6, dens: 1.2, f: 2800, dur: 2.2, pts: [[1.8, 1], [2.2, 0.6]], peak: 0.14 });
+    S.whoosh({ at: 2.1, color: 'brown', f: 120, f1: 2800, dur: 0.7, peakAt: 0.9, peak: 0.36, q: 0.8 });
+    S.thud({ at: 2.8, f: 40, f1: 16, dur: 2.4, drive: 4.2, peak: 1 });
+    S.crack({ at: 2.8, peak: 0.3, dur: 0.22 });
+    svBody(S, 2.82, 2.2, 0.28, 1.8);
+    svRing(S, 2.82, 560, 0.14, 2.6);
+  });
+  def('sv-boil', 'bm', S => {
+    S.space('cave', 0.4);
+    // the water in the sunk sheets where the line crossed it, coming to the boil: bubbles that quicken, a steady hiss swelling, the last of it about to break (lasts 3.6 s)
+    S.bubbles({ n: 26, f: 160, f1: 700, spread: 3.4, size: 0.06, bias: 0.5, peak: 0.1 });
+    S.noise({ bp: 3200, bp1: 1800, q: 0.9, dur: 3.6, a: 3.0, grain: 0.9, pts: [[3.3, 1], [3.6, 0.7]], peak: 0.22 });
+    S.sizzle({ at: 0.4, dur: 3.2, pts: [[2.8, 1], [3.2, 0.6]], peak: 0.16 });
+    S.rumble({ dur: 3.6, f: 70, peak: 0.16, a: 3.0 });
+  });
+  def('sv-steam-burst', 'bm', S => {
+    S.space('hall', 0.45);
+    // steam breaking up through the glass in a column: a hard hiss like a vent opening, a hollow thump, the boiling water thrown out in pops
+    S.whoosh({ f: 800, f1: 5200, dur: 0.35, peakAt: 0.4, peak: 0.34, q: 0.8 });
+    S.noise({ hp: 2400, dur: 1.2, a: 0.04, grain: 0.7, pts: [[0.05, 1], [1.2, 0]], peak: 0.3 });
+    S.thud({ at: 0.04, f: 80, f1: 34, dur: 0.6, drive: 2.4, peak: 0.7 });
+    S.crack({ at: 0.04, peak: 0.2, dur: 0.1 });
+    S.bubbles({ at: 0.1, n: 8, f: 500, f1: 150, spread: 0.7, size: 0.05, peak: 0.1 });
+    S.crackle({ at: 0.1, dens: 1.6, f: 3000, dur: 0.8, pts: [[0.02, 1], [0.8, 0]], peak: 0.12 });
+  });
+
+  // ---- Act II: Twin Brands (Azerath's circles: two brands burn on, and one of four walls lights in its element; fire and the void to flee, frost and lightning to meet)
+  def('bm-sovereign-twin-brands', 'bm', S => {
+    S.space('hall', 0.6);
+    // Azerath's cast (1.6 s): two circles drawn in the air (a rising arcane hum and a thin gathering hiss), then a brand searing on each bearer, one a note above the other
+    S.tone({ type: 'saw', f: 70, f1: 150, lp: 600, dur: 1.6, a: 1.2, peak: 0.1, am: [6, 0.3] });
+    S.noise({ bp: 600, bp1: 3600, q: 2.2, dur: 1.5, a: 1.2, pts: [[1.3, 1], [1.5, 0]], peak: 0.14 });
+    S.glass({ at: 0.1, f: mf(86), dur: 1.2, peak: 0.04, am: [5, 0.3] });
+    [[0.75, -0.6, 1000], [1.1, 0.6, 1190]].forEach(([at, pan, f]) => {
+      S.sizzle({ at, dur: 0.8, pts: [[0.03, 1], [0.8, 0]], peak: 0.2, pan });
+      S.thud({ at, f: 78, f1: 38, dur: 0.5, drive: 2, peak: 0.45, pan });
+      svRing(S, at, f, 0.12, 1.4, pan);
+    });
+    svLay(S, 0.6, 1.6, 0.1);
+  });
+  def('sv-twin-fire', 'bm', S => {
+    S.space('hall', 0.5);
+    // the fire wall lighting (north): a roar of flame that climbs up the wall, the crackle spitting along it, a low blow as it takes and burns on
+    S.whoosh({ color: 'brown', f: 120, f1: 1800, dur: 1.0, peakAt: 0.7, peak: 0.34, q: 0.7 });
+    S.noise({ color: 'brown', bp: 90, bp1: 700, q: 0.8, dur: 2.4, a: 0.8, pts: [[1.0, 1], [2.4, 0.5]], peak: 0.3 });
+    S.crackle({ dens: 3, f: 3200, dur: 2.4, pts: [[0.3, 1], [2.4, 0.3]], peak: 0.2 });
+    S.thud({ at: 0.75, f: 58, f1: 28, dur: 1.0, drive: 3, peak: 0.6 });
+    S.sizzle({ at: 0.2, dur: 2.0, pts: [[0.3, 1], [2.0, 0]], peak: 0.12 });
+  });
+  def('sv-twin-frost', 'bm', S => {
+    S.space('hall', 0.6);
+    // the frost wall lighting (east): ice forming along it, a run of high glass chimes (a cold open chord), a breath of cold air
+    S.crack({ peak: 0.14, dur: 0.12 });
+    [[0, 0], [0.12, 7], [0.26, 12], [0.42, 19]].forEach(([at, n], i) => S.glass({ at, f: mf(86 + n), dur: 2.0, peak: 0.1, pan: -0.5 + i * 0.33 }));
+    S.bell({ at: 0.02, f: mf(74), dur: 2.6, peak: 0.12, lp: 6000 });
+    S.noise({ hp: 4000, dur: 1.6, a: 0.2, pts: [[0.3, 1], [1.6, 0]], peak: 0.07 });
+    S.tone({ f: mf(62), dur: 2.2, a: 0.6, peak: 0.04, am: [4, 0.3], lp: 3000 });
+  });
+  def('sv-twin-bolt', 'bm', S => {
+    S.space('hall', 0.5);
+    // the lightning wall lighting (south): a run of cracks along it, the static spitting, a low rumble of thunder under the last
+    for (let i = 0; i < 4; i++) { const pan = -0.5 + i * 0.33; S.zap({ at: i * 0.1, f: 100, dur: 0.16, peak: 0.28, pan }); S.crack({ at: i * 0.1, peak: 0.2, dur: 0.13, pan }); }
+    S.zap({ at: 0.2, f: 60, dur: 1.2, bf: 1100, a: 0.02, peak: 0.2, pts: [[0.05, 1], [0.6, 0.6], [1.2, 0]] });
+    S.crackle({ at: 0.1, dens: 4, f: 4600, dur: 2.0, pts: [[0.1, 1], [2.0, 0.2]], peak: 0.2 });
+    S.rumble({ at: 0.35, dur: 1.8, f: 160, peak: 0.28, a: 0.05, grain: 0.5 });
+  });
+  def('sv-twin-void', 'bm', S => {
+    S.space('hall', 0.7);
+    // the void wall lighting (west): no flame and no glass, only a hum that the room leans into, two low notes beating, a dark swell and a hollow knock
+    moVoid(S, 0, 1.6, 0.22, 400, 50);
+    S.tone({ type: 'saw', f: 55, dur: 2.6, a: 1.0, lp: 300, peak: 0.12, am: [0.7, 0.3] });
+    S.tone({ type: 'saw', f: 55.9, dur: 2.6, a: 1.0, lp: 300, peak: 0.1 });
+    S.rumble({ dur: 2.6, f: 38, peak: 0.3, a: 1.0 });
+    S.thud({ at: 1.0, f: 46, f1: 24, dur: 1.2, drive: 3, peak: 0.55 });
+  });
+  def('sv-twin-shift', 'bm', S => {
+    S.space('hall', 0.45);
+    // the lit wall changing, once: the glow drawn off one wall (a falling slide) and thrown across to another (a quick rising one), a click as it settles
+    S.whoosh({ f: 1800, f1: 160, dur: 0.5, peakAt: 0.3, peak: 0.26, q: 1.2 });
+    S.whoosh({ at: 0.35, f: 160, f1: 2200, dur: 0.5, peakAt: 0.85, peak: 0.28, q: 1.2 });
+    S.glass({ at: 0.3, f: mf(88), dur: 0.9, peak: 0.07 });
+    S.crack({ at: 0.85, peak: 0.2, dur: 0.1 });
+    S.thud({ at: 0.86, f: 90, f1: 44, dur: 0.4, drive: 1.8, peak: 0.35 });
+  });
+  def('sv-twin-meet', 'bm', S => {
+    S.space('hall', 0.55);
+    // the brands answering at the wall circle (lands at 0.55 s): two tones drawn together from far apart, then one joined ring and a soft weight
+    S.tone({ f: 220, f1: 330, dur: 0.55, a: 0.4, peak: 0.12, lp: 2000, pan: -0.5 });
+    S.tone({ f: 495, f1: 330, dur: 0.55, a: 0.4, peak: 0.12, lp: 2000, pan: 0.5 });
+    S.bell({ at: 0.55, f: mf(62), dur: 2.6, peak: 0.22, lp: 4200 });
+    S.bell({ at: 0.55, f: mf(69), dur: 2.2, peak: 0.12, lp: 4200 });
+    S.glass({ at: 0.56, f: mf(98), dur: 1.4, peak: 0.05 });
+    S.thud({ at: 0.55, f: 60, f1: 30, dur: 0.8, drive: 2.4, peak: 0.55 });
+    svBody(S, 0.55, 1.0, 0.1, 1.2);
+  });
+  def('sv-twin-bloom', 'bm', S => {
+    S.space('hall', 0.65);
+    // the bloom at the lit wall and the circles on the two bearers (lands at 0.6 s): a breath drawn in and the fire (or the dark) going out from the wall all at once
+    S.noise({ bp: 400, bp1: 2600, q: 1.4, dur: 0.6, a: 0.5, pts: [[0.55, 1], [0.6, 0.6]], peak: 0.2 });
+    S.thud({ at: 0.6, f: 48, f1: 20, dur: 1.8, drive: 4, peak: 1 });
+    S.crack({ at: 0.6, peak: 0.34, dur: 0.2 });
+    S.whoosh({ at: 0.6, color: 'brown', f: 200, f1: 3200, dur: 0.8, peakAt: 0.2, peak: 0.36, q: 0.8 });
+    S.rumble({ at: 0.6, dur: 2.0, f: 52, peak: 0.4, a: 0.02 });
+    svBody(S, 0.62, 2.0, 0.26, 1.6);
+    svRing(S, 0.62, 600, 0.1, 2.0);
+  });
+
+  // ---- the wall: The Heart Remembers (a heartbeat under the sealed room, a pillar of fire from each stump in cut order, a held breath, the glass seal shattering)
+  def('bm-sovereign-the-heart-remembers', 'bm', S => {
+    S.space('hall', 0.8);
+    // the Sovereign's cast over the sealed room (3.0 s): the heart heard first, slow, then a low bell tolled for each head (three, each a step down), the drone gathering
+    [0.1, 0.5, 1.3, 1.7].forEach((at, i) => S.thud({ at, f: (i % 2 ? 62 : 52), f1: 28, dur: 0.8, drive: 3, peak: i % 2 ? 0.4 : 0.55 }));
+    [[0.9, 50], [1.8, 47], [2.7, 43]].forEach(([at, m]) => {
+      S.bell({ at, f: mf(m), dur: 3.2, peak: 0.22, lp: 2600 });
+      S.glass({ at: at + 0.01, f: mf(m + 36), dur: 1.2, peak: 0.03 });
+    });
+    S.pad({ notes: [mf(38), mf(45), mf(50)], dur: 3.6, det: 8, type: 'saw', lpEnv: [140, 700, 240, 2.8], peak: 0.1 });
+    S.rumble({ dur: 3.4, f: 40, peak: 0.3, a: 2.4 });
+    S.crackle({ at: 1.2, dens: 0.8, f: 2400, dur: 2.2, pts: [[1.6, 1], [2.2, 0.6]], peak: 0.12 });
+  });
+  const svHeartBuf = ctx => makeBuf(ctx, 'svheart', 1.25, 1, (d, sr) => {
+    const beat = (at, f0, f1, dec, amp) => {
+      const i0 = Math.floor(at * sr), N = Math.floor(dec * 7 * sr); let ph = 0;
+      for (let j = 0; j < N && i0 + j < d.length; j++) { const tt = j / sr, f = f1 + (f0 - f1) * Math.exp(-tt / 0.04); ph += TAU * f / sr; d[i0 + j] += amp * Math.sin(ph) * Math.exp(-tt / dec) * Math.min(1, j / 50); }
+    };
+    beat(0.02, 62, 34, 0.11, 1); beat(0.4, 70, 40, 0.08, 0.7);
+    normPeak(d, 0.95);
+  });
+  loop('sv-heart-loop', 'loop', L => {
+    // the wall's heart, a slow double beat about once a second, under a low drone and one held string note: nothing else
+    L.c(L.src(svHeartBuf(L.ctx), 1), L.f('lowpass', 220), L.g(1.0), L.out);
+    const drone = L.g(0.07); [41, 41.5].forEach(f => L.c(L.osc('sine', f), drone)); L.lfo(drone.gain, 0.11, 0.025); L.c(drone, L.out);
+    const str = L.g(0.03), lp = L.f('lowpass', 900, 0.7); [mf(62), mf(62) * 1.004].forEach(f => L.c(L.osc('sawtooth', f), str)); L.lfo(str.gain, 0.17, 0.012); L.c(str, lp, L.out);
+  }, 1.2);
+  def('sv-pillar', 'bm', S => {
+    S.space('cave', 0.5);
+    // a stump's pillar of fire (lands at 0.9 s; the hook plays it a little higher for each in the cut order): the floor splitting, a roar of flame climbing, the column
+    // going up in one blow with a crack of the floor, and the fire left burning
+    S.crack({ at: 0.1, peak: 0.2, dur: 0.14 }); S.crack({ at: 0.45, peak: 0.24, dur: 0.14 });
+    S.noise({ color: 'brown', bp: 90, bp1: 1300, q: 0.8, dur: 0.95, a: 0.8, pts: [[0.88, 1], [0.95, 0.8]], peak: 0.34 });
+    S.whoosh({ color: 'brown', f: 160, f1: 2600, dur: 0.9, peakAt: 0.95, peak: 0.3 });
+    S.thud({ at: 0.9, f: 56, f1: 24, dur: 1.4, drive: 3.6, peak: 0.95 });
+    S.crack({ at: 0.9, peak: 0.34, dur: 0.2 });
+    S.whoosh({ at: 0.9, color: 'brown', f: 400, f1: 120, dur: 0.9, peakAt: 0.1, peak: 0.34 });
+    S.rumble({ at: 0.9, dur: 1.6, f: 54, peak: 0.34, a: 0.02 });
+    svBody(S, 0.92, 2.2, 0.26, 1.8);
+    svRing(S, 0.92, 520, 0.1, 2.0);
+  });
+  def('sv-heart-breath', 'bm', S => {
+    S.space('hall', 0.5);
+    // the held breath after the last pillar (1.0 s): the whole room drawing in at once (a thin hiss climbing and stopping dead) and one high glass note held over a silence
+    S.noise({ bp: 900, bp1: 4200, q: 3, dur: 0.95, a: 0.9, pts: [[0.9, 1], [0.95, 0]], peak: 0.16 });
+    S.glass({ at: 0.1, f: mf(98), dur: 1.0, peak: 0.05, am: [5, 0.2] });
+    S.tone({ f: mf(74), f1: mf(74) * 1.02, dur: 1.0, a: 0.8, peak: 0.04, lp: 2200 });
+  });
+  def('sv-seal-shatter', 'bm', S => {
+    S.space('hall', 0.8);
+    // the seal breaking like glass (the room-wide pane goes at once): one huge crack, then shards streaking out low and fast in every direction (bright noise sweeping
+    // up and out, glass slivers panning wide), a white-gold ring running across the floor (a rising bell shimmer) and the boom behind it
+    S.crack({ peak: 0.5, dur: 0.26 });
+    S.thud({ f: 42, f1: 18, dur: 2.4, drive: 4.2, peak: 1 });
+    S.noise({ bp: 1400, bp1: 7000, q: 1.6, dur: 1.2, grain: 0.9, pts: [[0.02, 1], [1.2, 0]], peak: 0.3 });
+    S.whoosh({ at: 0.05, f: 300, f1: 6000, dur: 0.9, peakAt: 0.5, peak: 0.3, q: 0.9 });
+    for (let i = 0; i < 14; i++) S.glass({ at: 0.04 + i * 0.055 + S.rr(0, 0.03), f: S.rr(2400, 6200), dur: S.rr(0.6, 1.2), peak: 0.06, pan: S.rr(-0.9, 0.9) });
+    S.crackle({ at: 0.05, dens: 4, f: 5000, dur: 1.2, pts: [[0.02, 1], [1.2, 0]], peak: 0.2 });
+    [0, 4, 7, 12, 16].forEach((n, i) => S.bell({ at: 0.15 + i * 0.12, f: mf(74 + n), dur: 2.6, peak: 0.1, lp: 6000, pan: Math.sin(i * 2.4) * 0.5 }));
+    S.rumble({ dur: 3.0, f: 46, peak: 0.34, a: 0.05 });
+    svRing(S, 0.05, 900, 0.12, 2.4);
+  });
+
+  // ---- Rebirth (the set piece: the blade drives into the floor and every fire in the room is drawn into it, the dark, the halo opening, the sky splitting, the choir, and the raidwide)
+  def('sv-rebirth-draw', 'bm', S => {
+    S.space('hall', 0.8);
+    // from the instant the seal breaks (the shatter has the first second): the blade driven into the floor at 0.9 s (a plunge, a ring, a blow), every fire in the room
+    // drawn into it as ribbons (a band of noise sweeping from high to low, the crackle thinning, a rising tone drawn tight), and at 2.5 s all of it snuffed out at once
+    S.whoosh({ at: 0.6, f: 2400, f1: 200, dur: 0.4, peakAt: 0.7, peak: 0.26, q: 1.2 });
+    S.metal({ at: 0.9, set: 'bar', f: 380, dur: 2.4, peak: 0.2, strike: 0.5 });
+    S.thud({ at: 0.9, f: 50, f1: 22, dur: 1.6, drive: 3.6, peak: 0.9 });
+    S.crack({ at: 0.9, peak: 0.28, dur: 0.18 });
+    S.noise({ at: 1.0, color: 'pink', bp: 3800, bp1: 260, q: 1.4, dur: 1.5, a: 0.2, pts: [[0.6, 1], [1.5, 0.9]], peak: 0.28 });
+    S.noise({ at: 1.1, color: 'pink', bp: 2600, bp1: 180, q: 1.6, dur: 1.4, a: 0.2, pts: [[0.6, 1], [1.4, 0.9]], peak: 0.18, pan: 0.5 });
+    S.crackle({ at: 1.0, dens: 3, f: 3000, dur: 1.5, pts: [[0.1, 1], [1.5, 0]], peak: 0.2 });
+    S.tone({ type: 'saw', at: 1.0, f: 60, f1: 340, dur: 1.5, a: 1.3, lp: 900, peak: 0.12 });
+    S.rumble({ at: 0.9, dur: 1.6, f: 44, peak: 0.34, a: 0.3 });
+    S.whoosh({ at: 2.3, f: 1600, f1: 90, dur: 0.25, peakAt: 0.5, peak: 0.3, q: 1.4 });
+    S.thud({ at: 2.5, f: 40, f1: 20, dur: 0.7, drive: 2.4, peak: 0.5 });
+  });
+  def('sv-rebirth-halo', 'bm', S => {
+    S.space('hall', 0.9);
+    // the halo opening out of the dark to the edge of the room and settling into twelve sigils (lands at 0.4 s): a breath of air out from the middle, twelve glass bells
+    // fanning out round the room one after another, and a low swell under it
+    S.noise({ bp: 500, bp1: 4200, q: 1.2, dur: 1.4, a: 0.4, pts: [[0.5, 1], [1.4, 0]], peak: 0.2 });
+    S.whoosh({ at: 0.3, f: 200, f1: 3400, dur: 0.9, peakAt: 0.4, peak: 0.28, q: 0.8 });
+    const scale = [0, 2, 3, 5, 7, 8, 10, 12, 14, 15, 17, 19];
+    scale.forEach((n, i) => {
+      S.bell({ at: 0.4 + i * 0.07, f: mf(74 + n), dur: 2.4, peak: 0.09, lp: 6000, pan: Math.sin(i * 2.4) * 0.8 });
+      S.glass({ at: 0.41 + i * 0.07, f: mf(98 + n), dur: 1.2, peak: 0.03, pan: Math.sin(i * 2.4) * 0.8 });
+    });
+    S.pad({ notes: [mf(38), mf(45), mf(50)], at: 0.2, dur: 2.8, det: 8, type: 'saw', lpEnv: [140, 800, 240, 1.2], peak: 0.1 });
+    S.thud({ at: 0.4, f: 54, f1: 26, dur: 1.2, drive: 3, peak: 0.6 });
+  });
+  def('sv-rebirth-sky', 'bm', S => {
+    S.space('cave', 0.85);
+    // the sky splitting and the meteor rekindling overhead, the floor becoming the crater (lands at 0.5 s): a tearing rip across the whole width, then a roar of fire
+    // that comes from far above and does not stop, the crater's floor breaking up under it
+    S.noise({ bp: 800, bp1: 6000, q: 1.2, dur: 0.6, a: 0.45, grain: 0.9, pts: [[0.5, 1], [0.6, 0.5]], peak: 0.26 });
+    S.crack({ at: 0.5, peak: 0.46, dur: 0.3 });
+    S.thud({ at: 0.5, f: 44, f1: 18, dur: 2.6, drive: 4.2, peak: 1 });
+    S.noise({ at: 0.5, color: 'brown', bp: 70, bp1: 700, q: 0.8, dur: 3.2, a: 1.4, pts: [[1.2, 1], [3.2, 0]], peak: 0.36 });
+    S.whoosh({ at: 0.3, color: 'brown', f: 80, f1: 1400, dur: 1.6, peakAt: 0.6, peak: 0.3 });
+    S.crackle({ at: 0.5, dens: 2.4, f: 3000, dur: 3.0, pts: [[0.3, 1], [3.0, 0]], peak: 0.22 });
+    for (let i = 0; i < 9; i++) S.crack({ at: 0.7 + i * 0.16 + (i % 3) * 0.03, peak: 0.18, dur: 0.12, pan: Math.sin(i * 1.9) * 0.8 });
+    S.rumble({ at: 0.5, dur: 3.2, f: 38, peak: 0.42, a: 0.1 });
+    svBody(S, 0.55, 2.6, 0.26, 1.8);
+  });
+  def('sv-rebirth-blast', 'bm', S => {
+    S.space('hall', 0.85);
+    // the Rebirth raidwide landing over the whole room as the set piece ends (the cast's own swell has run up to it): a huge low blow, a bright ring of fire out of the
+    // crater's middle, and a long boom
+    S.thud({ f: 38, f1: 16, dur: 2.8, drive: 4.4, peak: 1 });
+    S.crack({ peak: 0.4, dur: 0.24 });
+    S.whoosh({ color: 'brown', f: 200, f1: 3200, dur: 0.9, peakAt: 0.25, peak: 0.38, q: 0.8 });
+    svBody(S, 0.02, 2.6, 0.32, 1.8);
+    S.rumble({ dur: 3.0, f: 48, peak: 0.44, a: 0.02 });
+    svRing(S, 0.03, 560, 0.16, 2.8);
+    S.choir({ at: 0.05, notes: [mf(38), mf(45), mf(50)], dur: 2.6, vowel: 'a', vowel1: 'o', lp: 2200, peak: 0.1, pts: [[0.8, 1], [2.6, 0]] });
+  });
+
+  // ---- Act III: Corvane's stance and the crossed blades, the unleashings' landings, the Sovereign's Dance with Caelum's afterimages, and Brannoc's Sunwheel of Embers
+  def('bm-sovereign-crossed-blades', 'bm', S => {
+    S.space('hall', 0.55);
+    // Corvane's answer (1.6 s; the same cast opens every stance): two blades drawn from opposite sides and brought across one another, a breath held, and the faint
+    // ring of the two touching, a fifth apart (the unleashing's own rings come later, from the room's events)
+    S.scrape({ f: 3400, q: 2.2, dur: 0.8, rate: 26, peak: 0.1, pts: [[0.5, 1], [0.8, 0]], pan: -0.7 });
+    S.scrape({ at: 0.12, f: 3800, q: 2.2, dur: 0.7, rate: 30, peak: 0.1, pts: [[0.45, 1], [0.7, 0]], pan: 0.7 });
+    svHush(S, 0, 0.9, 0.06, 900, 3000);
+    svRing(S, 0.9, 1180, 0.12, 1.6, -0.3); svRing(S, 0.91, 1770, 0.12, 1.6, 0.3);
+    S.thud({ at: 0.9, f: 60, f1: 34, dur: 0.5, drive: 1.5, peak: 0.3 });
+    svLay(S, 0.1, 1.2, 0.05);
+  });
+  def('sv-stance-crane', 'bm', S => {
+    S.space('hall', 0.6);
+    // Corvane's low stance (the blade held low, Crescent), 2.2 s: one long breath drawn slowly in, a blade turning flat over the floor (a slow, low scrape that falls), a
+    // low note settling, and a soft ring at rest
+    svHush(S, 0, 1.7, 0.1, 260, 1000);
+    S.scrape({ at: 0.3, f: 1500, q: 2, dur: 1.5, rate: 12, peak: 0.08, pts: [[0.8, 1], [1.5, 0]] });
+    S.tone({ f: 330, f1: 247, dur: 2.0, a: 0.9, lp: 1400, peak: 0.07, vib: [4, 0.006], pts: [[1.2, 1], [2.0, 0]] });
+    svRing(S, 1.7, 520, 0.12, 2.0);
+    S.thud({ at: 1.7, f: 56, f1: 34, dur: 0.6, drive: 1.4, peak: 0.25 });
+  });
+  def('sv-stance-comet', 'bm', S => {
+    S.space('hall', 0.5);
+    // Corvane's drawn stance (the blade out of its scabbard, Lance), 2.2 s: a quick breath, the blade drawn in one bright scrape that ends on a hard ring, then a thin high note held tight
+    svHush(S, 0, 1.2, 0.1, 1800, 4200);
+    S.scrape({ at: 0.7, f: 3600, q: 2.4, dur: 0.7, rate: 28, peak: 0.12, pts: [[0.45, 1], [0.7, 0]] });
+    S.metal({ at: 1.4, set: 'bar', f: 2300, dur: 1.6, peak: 0.16, strike: 0.4 });
+    S.bell({ at: 1.42, f: mf(88), dur: 1.2, peak: 0.05, lp: 8000 });
+    S.tone({ f: 1760, f1: 1800, dur: 2.0, a: 1.6, lp: 4000, peak: 0.04, pts: [[1.6, 1], [2.0, 0]] });
+    S.crack({ at: 1.4, peak: 0.12, dur: 0.08 });
+  });
+  def('sv-stance-parting', 'bm', S => {
+    S.space('hall', 0.6);
+    // Corvane's sheathed stance (the blade put away, Pyre), 2.2 s: a breath drawn in, the blade run home (a scrape that falls in pitch), the click of the guard against the mouth of the
+    // scabbard, and the breath let out over a silence
+    svHush(S, 0, 1.0, 0.08, 800, 2400);
+    S.scrape({ at: 0.6, f: 3400, f1: 1400, q: 2.2, dur: 0.8, rate: 22, peak: 0.1, pts: [[0.3, 1], [0.8, 0]] });
+    S.metal({ at: 1.45, set: 'bar', f: 2800, dur: 0.3, peak: 0.1, click: 0.7 });
+    S.wood({ at: 1.46, f: 700, dur: 0.1, peak: 0.12 });
+    S.thud({ at: 1.46, f: 90, f1: 50, dur: 0.3, drive: 1.2, peak: 0.2 });
+    S.noise({ at: 1.55, bp: 600, bp1: 220, q: 1.4, dur: 0.6, a: 0.05, pts: [[0.1, 1], [0.6, 0]], peak: 0.08 });
+  });
+  def('sv-cross-ring', 'bm', S => {
+    S.space('hall', 0.6);
+    // two blades unleashing together, ringing in harmony: one struck bar low and left, one a fifth above it on the right, a glass third over both, and the floor under them
+    svRing(S, 0.05, 1180, 0.2, 2.0, -0.45);
+    svRing(S, 0.06, 1770, 0.2, 2.0, 0.45);
+    S.glass({ at: 0.08, f: mf(98), dur: 1.4, peak: 0.05, am: [4, 0.3] });
+    S.pad({ notes: [mf(62), mf(69)], at: 0.05, dur: 1.6, det: 6, type: 'saw', lpEnv: [300, 1400, 400, 0.4], peak: 0.06 });
+    S.thud({ at: 0.05, f: 62, f1: 28, dur: 0.7, drive: 2.2, peak: 0.5 });
+    S.crack({ at: 0.05, peak: 0.16, dur: 0.1 });
+  });
+  def('sv-crescent-fan', 'bm', S => {
+    S.space('hall', 0.55);
+    // a fan of the blade across the room, landing at 0.9 s: a long sweep from one side and, a breath behind it, its crossing from the other, a heavy low blow and a high crescent shimmer, the fire left in the air
+    S.whoosh({ at: 0, f: 220, f1: 2400, dur: 0.9, peakAt: 0.95, peak: 0.34, q: 1.2, pan: -0.8 });
+    S.whoosh({ at: 0.1, f: 260, f1: 2800, dur: 0.8, peakAt: 0.95, peak: 0.26, q: 1.2, pan: 0.8 });
+    S.thud({ at: 0.9, f: 58, f1: 26, dur: 1.0, drive: 3, peak: 0.7 });
+    S.noise({ at: 0.9, color: 'pink', hp: 3000, dur: 0.8, pts: [[0.04, 1], [0.8, 0]], peak: 0.1, grain: 0.7 });
+    svBody(S, 0.9, 1.3, 0.16, 1.8);
+  });
+  def('sv-lance-dash', 'bm', S => {
+    S.space('hall', 0.45);
+    // the blade-dash through a hero and out to the wall, landing at 0.4 s: a needle of air, a hard crack and a high ring, a low blow, sparks along the line
+    S.whoosh({ at: 0, f: 800, f1: 5200, dur: 0.4, peakAt: 0.9, peak: 0.38, q: 2.4 });
+    S.crack({ at: 0.4, peak: 0.38, dur: 0.14 });
+    svRing(S, 0.4, 2600, 0.22, 1.6);
+    S.thud({ at: 0.4, f: 72, f1: 30, dur: 0.7, drive: 3, peak: 0.65 });
+    S.crackle({ at: 0.42, dens: 2.6, f: 4600, dur: 0.7, pts: [[0.02, 1], [0.7, 0]], peak: 0.14 });
+  });
+  def('sv-pyre-cut', 'bm', S => {
+    S.space('hall', 0.5);
+    // one blink-cut of the Pyre, landing at 0.18 s (the hook plays it a little higher for each beat, and a fifth over for Corvane's): a flick of air, a hard tick, a short bright ring
+    // and a flare of cinders where the blade has passed
+    S.whoosh({ at: 0, f: 1000, f1: 5400, dur: 0.18, peakAt: 0.9, peak: 0.3, q: 2 });
+    S.crack({ at: 0.18, peak: 0.3, dur: 0.1 });
+    svRing(S, 0.18, 2000, 0.18, 1.0);
+    S.thud({ at: 0.18, f: 80, f1: 38, dur: 0.4, drive: 2, peak: 0.45 });
+    S.sizzle({ at: 0.2, dur: 0.5, pts: [[0.03, 1], [0.5, 0]], peak: 0.18 });
+    S.crackle({ at: 0.2, dens: 2.4, f: 4200, dur: 0.4, pts: [[0.02, 1], [0.4, 0]], peak: 0.1 });
+  });
+  def('bm-sovereign-two-dancers', 'bm', S => {
+    S.space('hall', 0.5);
+    // Caelum's answer (1.6 s): two glass notes struck a third apart (the two dancers), the second just behind the first, a scatter of starlight, and one clean cut
+    S.glass({ at: 0.1, f: mf(91), dur: 1.4, peak: 0.14, pan: -0.4 }); S.glass({ at: 0.28, f: mf(95), dur: 1.3, peak: 0.12, pan: 0.4 });
+    caEcho(S, 0.1, mf(98), 0.06, 3, -0.3);
+    caStars(S, 0, 7, 1.0, 0.04, 2600, 6200);
+    caSlice(S, 0.85, 3200, 0.2);
+  });
+  def('sv-dance-image', 'hud', S => {
+    S.space('hall', 0.5);
+    // an afterimage standing where the blade will be (the hook plays them in order, each a step up a scale): one glass note and the faint after-ring of it
+    S.glass({ f: mf(86), dur: 1.3, peak: 0.16 });
+    S.glass({ at: 0.012, f: mf(86) * 2.01, dur: 0.7, peak: 0.04 });
+    S.bell({ at: 0.01, f: mf(74), dur: 1.1, peak: 0.05, lp: 5000 });
+    caEcho(S, 0.14, mf(86), 0.04, 2);
+  });
+  def('sv-dance-cut', 'bm', S => {
+    S.space('hall', 0.5);
+    // one cut of the Sovereign's Dance, landing at 0.22 s: a glassy slice of air, the blade struck and ringing, a low blow and a spit of cinders
+    caSlice(S, 0, 2200, 0.22);
+    svRing(S, 0.22, 1480, 0.18, 1.4);
+    S.thud({ at: 0.22, f: 64, f1: 30, dur: 0.6, drive: 2.4, peak: 0.55 });
+    S.crackle({ at: 0.24, dens: 2.2, f: 3600, dur: 0.4, pts: [[0.02, 1], [0.4, 0]], peak: 0.1 });
+  });
+  def('sv-dance-cut2', 'bm', S => {
+    S.space('hall', 0.55);
+    // Caelum's blade cutting alongside, deeper than the Sovereign's (lands at 0.22 s): the same slice an octave down, a heavier bar and a cold glass ring over it
+    S.whoosh({ at: 0, f: 160, f1: 1300, dur: 0.26, peakAt: 0.85, peak: 0.28, q: 1.6 });
+    S.metal({ at: 0.22, set: 'bar', f: 740, dur: 1.6, peak: 0.2, strike: 0.5 });
+    S.metal({ at: 0.224, set: 'bar', f: 740 * 2.76, dur: 0.7, peak: 0.06, click: 0 });
+    S.glass({ at: 0.23, f: mf(81), dur: 1.2, peak: 0.07 });
+    S.thud({ at: 0.22, f: 48, f1: 24, dur: 0.8, drive: 2.8, peak: 0.6 });
+  });
+  const svWheelRing = (S, at, f, pk, pan) => {   // the Sunwheel's bronze: a plate struck hard and a bar a little over it
+    S.metal({ at, set: 'plate', f, dur: 1.1, peak: pk, strike: 0.8, pan });
+    S.metal({ at: at + 0.01, set: 'bar', f: f * 3.1, dur: 0.6, peak: pk * 0.35, click: 0, pan });
+    S.crack({ at, peak: pk * 0.5, dur: 0.1, pan });
+  };
+  def('bm-sovereign-sunwheel-of-embers', 'bm', S => {
+    S.space('hall', 0.5);
+    // Brannoc's cast (4.6 s, the wheel is thrown as it ends): the old crowd's roar swelling, the shield spun up on his arm (a whirr that climbs and brightens with embers
+    // catching along its rim), a drum, and the held moment before the throw
+    brCrowd(S, 0, 3.6, 0.16);
+    brWhirr(S, 0.6, 3.6, 500, 2400, 0, 0.22);
+    S.crackle({ at: 1.2, dens: 1.0, f: 2600, dur: 3.2, pts: [[2.8, 1], [3.2, 0.5]], peak: 0.14 });
+    S.drum({ at: 2.2, f: 70, dur: 0.7, peak: 0.34 }); S.drum({ at: 3.4, f: 66, dur: 0.7, peak: 0.4 }); S.drum({ at: 4.1, f: 62, dur: 0.8, peak: 0.5 });
+    svWheelRing(S, 3.0, 420, 0.08, 0);
+    svBody(S, 1.0, 3.4, 0.1, 1.0);
+  });
+  def('sv-wheel-throw', 'bm', S => {
+    S.space('hall', 0.55);
+    // the throw (the wheel leaves his hand at 0.2 s): a heavy sling of air, a bright release, a drum, and the shield's whirr taking off across the room
+    S.whoosh({ at: 0, f: 300, f1: 2600, dur: 0.4, peakAt: 0.9, peak: 0.38, q: 1.2 });
+    S.thud({ at: 0.2, f: 68, f1: 32, dur: 0.6, drive: 2.4, peak: 0.6 });
+    svWheelRing(S, 0.2, 520, 0.14, 0);
+    brWhirr(S, 0.2, 0.9, 1800, 3200, 0, 0.2);
+    S.sizzle({ at: 0.22, dur: 0.8, pts: [[0.05, 1], [0.8, 0]], peak: 0.14 });
+  });
+  loop('sv-wheel-loop', 'loop', L => {
+    // the wheel rolling: a bronze whirr (a noise band chopped fast), a low spinning tone under it, a trail of cinders; the loop stops when it comes to the ring
+    const n = L.g(0.1), bp = L.f('bandpass', 2200, 3);
+    L.c(L.crackle(2.4), bp, n, L.out); L.lfo(n.gain, 30, 0.08, 'square');
+    const lo = L.g(0.1); [96, 96.9].forEach(f => L.c(L.osc('sawtooth', f), lo)); const lp = L.f('lowpass', 700, 0.7); L.lfo(lo.gain, 26, 0.05, 'square'); L.c(lo, lp, L.out);
+    const hum = L.g(0.05); L.c(L.osc('sine', 190), hum); L.lfo(hum.gain, 0.8, 0.02); L.c(hum, L.out);
+    L.c(L.crackle(0.9), L.f('highpass', 4200), L.g(0.04), L.out);
+  }, 0.15);
+  def('sv-wheel-clang', 'bm', S => {
+    S.space('hall', 0.5);
+    // the wheel striking the wall (a bounce): bronze on stone, one hard clang and its overtone, a low blow, a spray of sparks
+    svWheelRing(S, 0, 620, 0.24, 0);
+    S.thud({ f: 60, f1: 30, dur: 0.6, drive: 2.4, peak: 0.55 });
+    S.crackle({ at: 0.02, dens: 3, f: 4200, dur: 0.5, pts: [[0.02, 1], [0.5, 0]], peak: 0.14 });
+  });
+  def('sv-wall-fire', 'bm', S => {
+    S.space('cave', 0.45);
+    // a wall of fire roaring up along a leg of the wheel's road (it takes at 0.5 s): the whoosh building along its length, the blow of it catching and a long settled roar with crackle under it
+    S.whoosh({ at: 0, color: 'brown', f: 120, f1: 2000, dur: 0.6, peakAt: 0.9, peak: 0.34, q: 0.7 });
+    S.thud({ at: 0.5, f: 58, f1: 28, dur: 0.9, drive: 3, peak: 0.6 });
+    S.noise({ at: 0.45, color: 'brown', bp: 90, bp1: 600, q: 0.8, dur: 2.6, a: 0.2, pts: [[0.4, 1], [2.6, 0.2]], peak: 0.3 });
+    S.crackle({ at: 0.4, dens: 3, f: 3000, dur: 2.6, pts: [[0.2, 1], [2.6, 0.2]], peak: 0.2 });
+    S.sizzle({ at: 0.5, dur: 1.8, pts: [[0.1, 1], [1.8, 0]], peak: 0.1 });
+  });
+  def('sv-wheel-catch', 'bm', S => {
+    S.space('hall', 0.5);
+    // the wheel caught: the shield stopped dead in a pair of hands (a heavy thud, a short clang that is cut off, the whirr dying away), the catcher grunting low
+    S.thud({ f: 48, f1: 22, dur: 1.0, drive: 3.4, peak: 0.9 });
+    svWheelRing(S, 0, 360, 0.16, 0);
+    S.whoosh({ at: 0.02, f: 2400, f1: 200, dur: 0.5, peakAt: 0.1, peak: 0.24, q: 1.2 });
+    S.voice({ at: 0.04, f: 90, f1: 62, dur: 0.4, vowel: 'o', vowel1: 'u', breath: 2, lp: 1400, peak: 0.1, a: 0.05 });
+    S.rumble({ dur: 1.2, f: 50, peak: 0.3, a: 0.02 });
+  });
+  def('sv-wall-out', 'bm', S => {
+    S.space('cave', 0.45);
+    // the walls snuffed out (a catch puts every wall out at once): a huge drawn-in breath, the roar cut off in a gust, steam hissing off cooling stone, one low settle
+    S.whoosh({ at: 0, f: 2600, f1: 140, dur: 0.5, peakAt: 0.15, peak: 0.34, q: 1 });
+    S.noise({ at: 0.1, hp: 3800, dur: 1.4, a: 0.1, pts: [[0.1, 1], [1.4, 0]], peak: 0.14 });
+    S.crackle({ at: 0.05, dens: 2, f: 2400, dur: 0.8, pts: [[0.05, 1], [0.8, 0]], peak: 0.1 });
+    S.thud({ at: 0.04, f: 52, f1: 26, dur: 0.8, drive: 2.6, peak: 0.55 });
+  });
+
+  // ---- Act III, the rest: Grace Withdrawn and Nightfall, Morrow-Oak's Seeds of Ash and the holes and saplings they leave, and the push into Every Name
+  def('bm-sovereign-grace-withdrawn', 'bm', S => {
+    S.space('hall', 0.7);
+    // the cast (3.2 s): everyone's life drawn out to a thread. Air pulled inward in one narrowing rush, the fire's roar starved thin, a heart stumbling softer and slower,
+    // and a held high tone that rises out of a thread of glass and carries on into Nightfall's cast. The last low fall is the grace leaving (3.1 s)
+    S.whoosh({ f: 320, f1: 3000, dur: 3.0, peakAt: 0.92, peak: 0.3, q: 2.2 });
+    S.noise({ color: 'brown', bp: 220, bp1: 60, q: 0.9, dur: 2.9, a: 0.1, pts: [[0.3, 1], [2.9, 0]], peak: 0.26 });
+    S.crackle({ dens: 1.6, f: 2600, dur: 2.6, pts: [[0.2, 1], [2.6, 0]], peak: 0.12 });
+    [[0.15, 0.5, 52], [1.05, 0.36, 48], [2.1, 0.24, 44]].forEach(([at, pk, f]) => {
+      S.thud({ at, f, f1: 26, dur: 0.7, drive: 2.4, peak: pk });
+      S.thud({ at: at + 0.3, f: f + 8, f1: 30, dur: 0.5, drive: 2, peak: pk * 0.6 });
+    });
+    S.tone({ at: 1.5, f: mf(88), dur: 3.6, a: 1.4, pts: [[1.4, 1], [3.0, 0.9], [3.6, 0]], peak: 0.07, vib: [5.2, 0.004, 1.0] });
+    S.tone({ at: 1.5, f: mf(88) * 1.0045, dur: 3.6, a: 1.4, pts: [[1.4, 1], [3.0, 0.9], [3.6, 0]], peak: 0.05 });
+    S.glass({ at: 2.2, f: mf(100), dur: 1.8, peak: 0.05 });
+    S.thud({ at: 3.1, f: 44, f1: 20, dur: 1.2, drive: 3, peak: 0.6 });
+    S.bell({ at: 3.1, f: mf(33), dur: 3.0, peak: 0.1, lp: 1500 });
+  });
+  def('bm-sovereign-nightfall', 'bm', S => {
+    S.space('hall', 0.8);
+    // the cast (8 s) and the blow it ends on: the held high tone thin over a cold wind, a great bell tolled slower than a heart, then faster and lower each time, and the
+    // dark landing on everyone at 8.0 s: a rush drawn in, one huge blow, the bell, the fire's body
+    S.tone({ f: mf(88), dur: 8.0, a: 0.6, pts: [[0.5, 1], [7.0, 0.8], [7.9, 0]], peak: 0.045, vib: [5.2, 0.004, 0.5] });
+    S.tone({ f: mf(88) * 1.0045, dur: 8.0, a: 0.6, pts: [[0.5, 1], [7.0, 0.8], [7.9, 0]], peak: 0.03 });
+    S.noise({ color: 'pink', bp: 520, bp1: 170, q: 1.1, dur: 7.6, a: 2.4, pts: [[2.6, 0.6], [6.8, 1], [7.6, 0]], peak: 0.09 });
+    [[0.3, 38, 0.14], [2.3, 36, 0.16], [4.1, 34, 0.18], [5.6, 33, 0.2], [6.7, 31, 0.22], [7.4, 29, 0.26]].forEach(([at, m, pk], i) => {
+      S.bell({ at, f: mf(m), dur: 3.4, peak: pk, lp: 2200 });
+      S.thud({ at, f: 46 - i * 2, f1: 24, dur: 0.9, drive: 2.6, peak: 0.28 + i * 0.05 });
+      S.glass({ at: at + 0.01, f: mf(m + 36), dur: 1.2, peak: 0.02 + i * 0.004 });
+    });
+    S.whoosh({ at: 6.9, color: 'brown', f: 120, f1: 2200, dur: 1.1, peakAt: 0.92, peak: 0.34, q: 0.8 });
+    S.thud({ at: 8.0, f: 42, f1: 18, dur: 1.9, drive: 4, peak: 0.95 });
+    S.crack({ at: 8.0, peak: 0.26, dur: 0.2 });
+    svBody(S, 8.0, 2.0, 0.26, 1.4);
+    S.bell({ at: 8.02, f: mf(26), dur: 3.4, peak: 0.2, lp: 1600 });
+  });
+  def('bm-sovereign-seeds-of-ash', 'bm', S => {
+    S.space('hall', 0.5);
+    // Morrow-Oak's answer (1.6 s): seeds scattered over the party. A hush of breath, a dry rattle of husks, an ember warming under it and a soft pop as they settle
+    svHush(S, 0, 1.2, 0.08, 700, 2800);
+    [0.2, 0.34, 0.5, 0.63, 0.82, 0.95, 1.12].forEach((at, i) => S.wood({ at, f: 2200 + (i * 613) % 1400, dur: 0.05, peak: 0.1 - i * 0.006, pan: Math.sin(i * 2.1) * 0.6 }));
+    S.crackle({ at: 0.3, dens: 1.2, f: 2400, dur: 1.4, pts: [[0.6, 1], [1.4, 0.4]], peak: 0.1 });
+    S.tone({ at: 0.2, f: mf(50), f1: mf(57), dur: 1.5, a: 1.2, pts: [[1.2, 1], [1.5, 0]], peak: 0.07, lp: 1200 });
+    S.thud({ at: 1.45, f: 92, f1: 50, dur: 0.3, drive: 1.6, peak: 0.34 });
+    S.glass({ at: 1.46, f: mf(86), dur: 0.9, peak: 0.05 });
+  });
+  def('sv-seed-pulse', 'hud', S => {
+    S.space('room', 0.3);
+    // a seed beating on its carrier (the hook plays it faster and higher as the burst nears): a low warm throb, a breath of ember
+    S.thud({ f: 74, f1: 44, dur: 0.36, drive: 1.6, peak: 0.5, click: 0.15 });
+    S.tone({ f: mf(45), dur: 0.42, a: 0.02, peak: 0.16, lp: 900 });
+    S.crackle({ at: 0.02, dens: 1.5, f: 2200, dur: 0.3, pts: [[0.04, 1], [0.3, 0]], peak: 0.1 });
+    S.glass({ at: 0.03, f: mf(81), dur: 0.5, peak: 0.025 });
+  });
+  def('sv-seed-burst', 'bm', S => {
+    S.space('cave', 0.5);
+    // a seed bursting and the floor burning through (the hook plays it as the hole opens): a crack in the stone, the fire's blow coming up, a roar of it, and the rubble
+    // falling away into the dark below, stone by stone
+    S.crack({ at: 0, peak: 0.34, dur: 0.3 });
+    S.whoosh({ at: 0, color: 'brown', f: 160, f1: 2000, dur: 0.7, peakAt: 0.25, peak: 0.34, q: 0.7 });
+    S.thud({ at: 0.04, f: 52, f1: 22, dur: 1.5, drive: 3.6, peak: 0.95 });
+    svBody(S, 0.05, 2.4, 0.3, 1.8);
+    S.noise({ at: 0.2, color: 'brown', bp: 320, bp1: 90, q: 0.8, dur: 1.9, a: 0.1, grain: 0.9, pts: [[0.2, 1], [1.9, 0]], peak: 0.22 });
+    [0.25, 0.42, 0.6, 0.85, 1.15, 1.55].forEach((at, i) => S.bell({ at, set: 'stone', f: 220 - i * 18, dur: 0.5, peak: 0.1 - i * 0.012, pan: Math.sin(i * 1.7) * 0.7, strike: 0.5 }));
+    S.sizzle({ at: 0.1, dur: 1.6, pts: [[0.1, 1], [1.6, 0]], peak: 0.12 });
+  });
+  def('sv-hole-town', 'hud', S => {
+    S.space('hall', 0.6);
+    // the town's sound, faint, up through a new hole (the hook plays it a moment after the burst): a bell far off, a cold breath of wind over the square, the Tankard's sign swinging
+    S.bell({ at: 0.35, f: mf(62), dur: 3.0, peak: 0.1, lp: 1300 });
+    S.noise({ color: 'pink', bp: 480, bp1: 900, q: 1.2, dur: 3.4, a: 1.2, pts: [[1.2, 1], [3.4, 0]], peak: 0.08 });
+    S.creak({ at: 1.3, dur: 0.8, f: 14, f1: 9, res: [500, 1000], q: 9, peak: 0.025 });
+    S.tone({ at: 0.5, f: mf(62) * 2.01, dur: 1.6, a: 0.02, pts: [[0.05, 1], [1.6, 0]], peak: 0.012, lp: 1800 });
+  });
+  def('sv-sapling-creak', 'hud', S => {
+    S.space('room', 0.3);
+    // a burning sapling taking a step (the hook plays one every step or two while it walks): green wood groaning, a root pulled out of ground, the cinders spitting
+    S.creak({ dur: 0.55, f: 20, f1: 11, res: [420, 900, 1500], q: 12, peak: 0.16 });
+    S.thud({ at: 0.28, f: 88, f1: 48, dur: 0.22, drive: 1.4, peak: 0.24, click: 0 });
+    S.wood({ at: 0.3, f: 520, dur: 0.1, peak: 0.1 });
+    S.crackle({ at: 0.05, dens: 1.6, f: 2600, dur: 0.5, pts: [[0.1, 1], [0.5, 0.2]], peak: 0.09 });
+  });
+  def('sv-sapling-die', 'hud', S => {
+    S.space('cave', 0.45);
+    // a sapling cut down: the trunk splits, the crown comes down in a rush of sparks, and the fire hisses out on the ground, a low sigh going with it
+    S.crack({ at: 0, f: 700, peak: 0.3, dur: 0.3 });
+    [0.04, 0.09, 0.15].forEach((at, i) => S.wood({ at, f: 600 + i * 260, dur: 0.1, peak: 0.12 }));
+    S.whoosh({ at: 0.1, f: 2000, f1: 220, dur: 0.7, peakAt: 0.1, peak: 0.24, q: 0.9 });
+    S.thud({ at: 0.38, f: 62, f1: 30, dur: 0.8, drive: 2, peak: 0.5 });
+    S.crackle({ at: 0.1, dens: 2.2, f: 3000, dur: 1.2, pts: [[0.05, 1], [1.2, 0]], peak: 0.14 });
+    S.sizzle({ at: 0.5, dur: 1.0, pts: [[0.05, 1], [1.0, 0]], peak: 0.1 });
+    S.voice({ at: 0.15, f: 72, f1: 50, dur: 1.0, vowel: 'o', vowel1: 'u', breath: 3, lp: 1200, peak: 0.05, a: 0.2 });
+  });
+  def('sv-sapling-arrive', 'hud', S => {
+    S.space('hall', 0.5);
+    // a sapling reaching the Sovereign and going up in one flare: a rising rush, a burst of sparks, a bright note at the top
+    S.whoosh({ f: 260, f1: 3200, dur: 0.8, peakAt: 0.88, peak: 0.26, q: 1.2 });
+    S.crackle({ at: 0.1, dens: 2.4, f: 3200, dur: 0.9, pts: [[0.6, 1], [0.9, 0]], peak: 0.16 });
+    S.thud({ at: 0.78, f: 66, f1: 34, dur: 0.6, drive: 2, peak: 0.4 });
+    S.glass({ at: 0.8, f: mf(89), dur: 1.0, peak: 0.06 });
+  });
+  def('sv-relight', 'bm', S => {
+    S.space('hall', 0.6);
+    // a dark sigil on the halo catching again: a breath, the fwump of the flame taking, a struck blade ringing as it lights, a thread of glass and one low bell
+    S.whoosh({ f: 300, f1: 2400, dur: 0.4, peakAt: 0.9, peak: 0.26, q: 1.2 });
+    S.thud({ at: 0.36, f: 70, f1: 34, dur: 0.8, drive: 2.4, peak: 0.55 });
+    S.crackle({ at: 0.3, dens: 2, f: 3000, dur: 1.2, pts: [[0.1, 1], [1.2, 0]], peak: 0.14 });
+    svRing(S, 0.38, 1180, 0.12, 1.6);
+    S.glass({ at: 0.4, f: mf(93), dur: 1.2, peak: 0.05 });
+    S.bell({ at: 0.4, f: mf(50), dur: 2.2, peak: 0.08, lp: 2000 });
+    S.sizzle({ at: 0.38, dur: 0.8, pts: [[0.05, 1], [0.8, 0]], peak: 0.1 });
+  });
+  def('sv-everyname', 'bm', S => {
+    S.space('hall', 0.8);
+    // the push (set piece, 10 s): the crater peeling away in strips like burning paper (a rip and a curl of fire for each, crackle all the while), the camera pulling back
+    // (one wide rush of air that opens and falls away), and a low swell of strings and voices under it all, with one deep bell where the second line is spoken (6 s)
+    for (let i = 0; i < 11; i++) {
+      const at = 0.15 + i * 0.32 + (i % 3) * 0.05, pan = Math.sin(i * 2.3) * 0.8;
+      S.scrape({ at, f: 3000 + (i % 4) * 500, q: 1.5, dur: 0.38, rate: 90, pts: [[0.04, 1], [0.38, 0]], peak: 0.09, pan });
+      S.whoosh({ at: at + 0.05, color: 'brown', f: 300, f1: 2400, dur: 0.55, peakAt: 0.45, peak: 0.13, pan });
+    }
+    S.crackle({ at: 0, dens: 2.6, f: 3000, dur: 4.6, pts: [[0.4, 1], [3.4, 1], [4.6, 0]], peak: 0.2 });
+    S.whoosh({ f: 180, f1: 1900, dur: 3.6, peakAt: 0.5, peak: 0.34, q: 0.7 });
+    S.whoosh({ at: 0.3, color: 'brown', f: 90, f1: 700, dur: 4.0, peakAt: 0.4, peak: 0.26, q: 0.6 });
+    S.thud({ at: 3.4, f: 50, f1: 24, dur: 1.4, drive: 3, peak: 0.55 });
+    S.pad({ notes: [mf(38), mf(45), mf(50)], dur: 10, det: 8, type: 'saw', lpEnv: [140, 900, 200, 5], peak: 0.15 });
+    S.choir({ at: 2.4, notes: [mf(50), mf(57), mf(62)], dur: 7.2, a: 3.0, vowel: 'o', vowel1: 'a', lp: 2200, peak: 0.07, pts: [[3.0, 1], [7.2, 0]] });
+    svBody(S, 0.5, 8.0, 0.1, 0.9);
+    S.bell({ at: 6.0, f: mf(38), dur: 4.0, peak: 0.16, lp: 1800 });
+  });
+  def('sv-hk-climb', 'bm', S => {
+    S.space('hall', 0.6);
+    // the Hollow King climbing out of the portal ring uncalled (the echo rises for 2.3 s): the ring's stones grinding apart and shifting, a heavy armoured foot on the
+    // flagstones as he stands, and last his lantern catching: a puff of flame, a chain swinging, a small warm bell
+    S.scrape({ f: 340, q: 1.2, dur: 1.9, rate: 14, pts: [[0.3, 1], [1.5, 0.8], [1.9, 0]], peak: 0.17 });
+    S.rumble({ dur: 2.4, f: 90, peak: 0.3, a: 0.5 });
+    [0.3, 0.85, 1.45].forEach((at, i) => S.bell({ at, set: 'stone', f: 150 - i * 12, dur: 0.6, peak: 0.12, strike: 0.5 }));
+    S.metal({ at: 1.75, set: 'plate', f: 380, dur: 0.6, peak: 0.12, strike: 0.7 });
+    S.thud({ at: 1.95, f: 56, f1: 28, dur: 0.9, drive: 2.8, peak: 0.65 });
+    S.whoosh({ at: 2.2, f: 400, f1: 2400, dur: 0.35, peakAt: 0.6, peak: 0.16, q: 1.2 });
+    S.crackle({ at: 2.25, dens: 1.8, f: 2800, dur: 0.9, pts: [[0.1, 1], [0.9, 0]], peak: 0.12 });
+    S.creak({ at: 2.4, dur: 0.4, f: 40, f1: 28, res: [900, 1800], q: 10, peak: 0.07 });
+    S.bell({ at: 2.3, f: mf(57), set: 'hand', dur: 1.4, peak: 0.1 });
+    S.glass({ at: 2.31, f: mf(81), dur: 1.0, peak: 0.04 });
+  });
+
+  // ---- The last flame, the enrage and the wipe (set pieces 6 and 7). The kill is played by the room's own events, one sound per beat: a soft bell as each echo lies down
+  // (sv-lie-bell, pitched down a minor scale by sound-hooks.js), the Hollow King's lantern set down, the fire's long exhale; Emberfall's rise from below sits under the cast's sky of
+  // embers (bm-sovereign-emberfall), so it keeps clear of the roar and carries the seams, the town's timbers and the ash instead.
+  def('sv-lie-bell', 'hud', S => {
+    S.space('hall', 0.6);
+    // one echo lying down: a soft bell (the pitch is set by the rate, falling for each of the twelve), a pane of glass over it, the small thud of a body on stone and a last dust of ember
+    S.bell({ f: mf(62), dur: 3.2, peak: 0.22, lp: 3600 });
+    S.glass({ at: 0.01, f: mf(86), dur: 1.3, peak: 0.03 });
+    S.thud({ at: 0.03, f: 72, f1: 38, dur: 0.5, drive: 1.4, peak: 0.16 });
+    S.crackle({ at: 0.06, dens: 0.7, f: 2000, dur: 1.0, pts: [[0.1, 1], [1.0, 0]], peak: 0.05 });
+  });
+  def('sv-lantern-down', 'bm', S => {
+    S.space('hall', 0.6);
+    // the Hollow King sets his lantern down on the stones and lies down beside it: the glass base on flagstone and the chain going slack, a small warm note in the case,
+    // the armour settling (plate, a long low thud), the flame sinking to a flicker and one last low bell
+    S.metal({ set: 'plate', f: 640, dur: 0.5, peak: 0.14, strike: 0.6 });
+    chains(S, 0.1, 0.5, 0.8);
+    S.thud({ at: 0.05, f: 92, f1: 50, dur: 0.35, drive: 1.6, peak: 0.22 });
+    S.glass({ at: 0.22, f: mf(81), dur: 2.0, peak: 0.08, am: [4, 0.25] });
+    [0.95, 1.2, 1.5].forEach((at, i) => S.metal({ at, set: 'plate', f: 300 - i * 40, dur: 0.4, peak: 0.1 - i * 0.02, strike: 0.7 }));
+    S.thud({ at: 1.0, f: 56, f1: 30, dur: 1.0, drive: 2.4, peak: 0.42 });
+    S.crackle({ at: 0.2, dens: 0.8, f: 1800, dur: 3.0, pts: [[0.2, 1], [3.0, 0]], peak: 0.1 });
+    S.noise({ at: 0.2, color: 'pink', bp: 700, q: 1.2, dur: 3.0, a: 0.2, am: [9, 0.5], pts: [[0.3, 1], [3.0, 0]], peak: 0.06 });
+    S.bell({ at: 1.3, f: mf(38), dur: 3.6, peak: 0.14, lp: 1800 });
+  });
+  def('sv-gutter', 'bm', S => {
+    S.space('hall', 0.85);
+    // the fire draining out of the square (8.5 s): a long exhale. The roar sinks and darkens, the crackle thins and stops, a saw sagging in pitch like a breath let go,
+    // the last embers ticking down, and a hush where it ends
+    S.noise({ color: 'brown', bp: 900, bp1: 80, q: 0.8, dur: 8.2, a: 0.1, pts: [[0.5, 1], [4.5, 0.55], [8.2, 0]], peak: 0.3 });
+    S.whoosh({ at: 0.2, color: 'brown', f: 1600, f1: 90, dur: 3.4, peakAt: 0.12, peak: 0.3, q: 0.7 });
+    S.rumble({ dur: 8.4, f: 58, peak: 0.28, a: 0.2, pts: [[3, 0.8], [8.4, 0]] });
+    S.crackle({ dens: 1.8, f: 2600, dur: 7.6, pts: [[0.3, 1], [3.5, 0.5], [7.6, 0]], peak: 0.2 });
+    S.tone({ type: 'saw', f: 170, f1: 38, dur: 8, a: 0.2, lp: 480, peak: 0.1 });
+    S.sizzle({ at: 4, dur: 4.2, pts: [[0.3, 1], [4.2, 0]], peak: 0.08 });
+    [5.2, 6.4, 7.3, 7.9].forEach((at, i) => S.thud({ at, f: 64 - i * 6, f1: 30, dur: 0.5, drive: 1.4, peak: 0.16 - i * 0.025 }));
+  });
+  def('sv-emberfall-below', 'bm', S => {
+    S.space('hall', 0.9);
+    // the town igniting from below (set piece, 8 s: the seams go white-gold at 0.8, the town ignites at 2.4, the ash closes in at 4.4): cracks running out across the stones,
+    // a deep swell from under the floor and the weight of it catching, burning timbers (crack, creak, a bell tolling in a tower that is alight), then ash falling in a fine hiss.
+    // No roar of its own: the cast's sound carries the sky.
+    S.scrape({ at: 0.7, f: 170, q: 1.2, dur: 1.8, rate: 16, pts: [[0.3, 1], [1.8, 0]], peak: 0.15 });
+    for (let i = 0; i < 16; i++) S.crack({ at: 0.8 + i * 0.1 + (i % 3) * 0.02, peak: 0.1 + i * 0.012, dur: 0.1, pan: Math.sin(i * 1.7) * 0.9 });
+    S.glass({ at: 0.8, f: mf(86), dur: 1.8, peak: 0.04, am: [6, 0.3] });
+    S.thud({ at: 2.4, f: 38, f1: 16, dur: 3.0, drive: 4, peak: 0.9 });
+    S.tone({ type: 'sine', f: 30, f1: 46, dur: 5.2, at: 2.2, a: 1.6, peak: 0.26 });
+    for (let i = 0; i < 9; i++) S.creak({ at: 2.6 + i * 0.42 + (i % 2) * 0.1, dur: 0.5, f: 46 + (i % 3) * 8, f1: 30, res: [800, 1700], q: 10, peak: 0.07, pan: Math.sin(i * 2.2) * 0.8 });
+    for (let i = 0; i < 12; i++) S.crack({ at: 2.5 + i * 0.36 + S.rr(0, 0.12), peak: 0.1 + (i % 4) * 0.03, dur: 0.12, pan: Math.sin(i * 2.9) * 0.9 });
+    S.crackle({ at: 2.4, dens: 3, f: 3200, dur: 5.6, pts: [[1.4, 1], [4.5, 0.8], [5.6, 0]], peak: 0.2 });
+    [3.1, 4.3, 5.4, 6.3].forEach((at, i) => { S.bell({ at, set: 'hand', f: mf(45 + (i % 2) * 3), dur: 3.0, peak: 0.13 + i * 0.01, lp: 2400, pan: i % 2 ? 0.5 : -0.5 }); S.thud({ at, f: 52, f1: 28, dur: 0.6, drive: 2, peak: 0.28 }); });
+    S.noise({ at: 4.4, hp: 3200, dur: 3.8, a: 2.2, pts: [[2.4, 1], [3.8, 0.4]], peak: 0.07 });
+    S.sizzle({ at: 4.4, dur: 3.8, pts: [[1.6, 1], [3.8, 0.3]], peak: 0.12 });
+  });
+  def('sv-wipe-chord', 'bm', S => {
+    S.space('hall', 0.8);
+    // a wipe: the halo relights in full, as if nothing was learned. Twelve bright tones flick on round the ring in half a second, then one cruel chord: a major seventh
+    // hung high over the dark key (D, F sharp, A, C sharp), brass and glass, a drum, the fire flaring behind it
+    for (let i = 0; i < 12; i++) S.glass({ at: i * 0.04, f: mf(74 + [0, 2, 3, 5, 7, 8, 10, 12, 14, 15, 17, 19][i]), dur: 1.2, peak: 0.05, pan: Math.sin(i * 2.4) * 0.6 });
+    S.thud({ at: 0.5, f: 46, f1: 22, dur: 1.8, drive: 3.4, peak: 0.85 });
+    S.crack({ at: 0.5, peak: 0.3, dur: 0.18 });
+    S.pad({ at: 0.5, notes: [mf(50), mf(62), mf(66), mf(69), mf(73)], type: 'saw', dur: 2.2, det: 10, lpEnv: [1400, 6200, 2200, 0.25], peak: 0.2 });
+    S.choir({ at: 0.52, notes: [mf(74), mf(78), mf(81), mf(85)], dur: 2.0, vowel: 'a', vowel1: 'a', lp: 6000, peak: 0.09, pts: [[0.1, 1], [2.0, 0]] });
+    [74, 78, 81, 85].forEach((m, i) => S.bell({ at: 0.5 + i * 0.015, f: mf(m), dur: 2.2, peak: 0.12, lp: 7000 }));
+    svRing(S, 0.5, 880, 0.14, 1.8);
+    svBody(S, 0.5, 1.8, 0.2, 2.4);
+    S.whoosh({ at: 0.35, color: 'brown', f: 300, f1: 2600, dur: 0.3, peakAt: 0.95, peak: 0.3 });
+  });
+
   // ---------------------------------------------------------------------------------------------- install
-  const API = { mf, st, CAT, TRIM, ABIL, ACC, strict: false, names: () => DEFS.map(d => d[0]), loops: () => LOOPS.map(d => d[0]), installed: false };
+  const API ={ mf, st, CAT, TRIM, ABIL, ACC, strict: false, names: () => DEFS.map(d => d[0]), loops: () => LOOPS.map(d => d[0]), installed: false };
   function install(Snd) {
     for (const [name, fn] of DEFS) {
       Snd.define(name, (ctx, out, t0, p) => {

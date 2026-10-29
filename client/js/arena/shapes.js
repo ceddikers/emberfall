@@ -132,6 +132,11 @@ const ARENA_DEFS = {
   'morrowoak:remade': { kind: 'circle', r: 520 },
   'skitterra:moth': { kind: 'poly', n: 8, r: 560 },   // (Hard, after the Chrysalis: the same web cave, the Moth Queen's form; arena-view.js draws it as the cave until the art is painted)
   caelum: { kind: 'circle', r: 560 },   // the crater floor round the half-buried star, under the meteor's shadow (caelum.js)
+  sovereign: { kind: 'circle', r: 520 },   // the Ultimate (sovereign.js): the hall of Act I, then the forge, the crater, the burning square and the real square at night (sovereign-rooms.js)
+  'sovereign:forge': { kind: 'circle', r: 520 },
+  'sovereign:crater': { kind: 'circle', r: 520 },
+  'sovereign:square': { kind: 'circle', r: 520 },
+  'sovereign:night': { kind: 'circle', r: 520 },
   'caelum:sky': { kind: 'circle', r: 520 },   // ...then a circle of cloud above the falling meteor   // ...then the floating pieces of the grove over the dark, the holes still in them
 };
 let POLY_NORMALS = null;   // ARENA.sd's cos/sin of a 'poly' room's side normals, for the current side count

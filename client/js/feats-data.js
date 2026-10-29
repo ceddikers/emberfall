@@ -37,6 +37,9 @@ const FEATS = [
   { id: 'second-road', cat: 'road', name: 'The Second Road', desc: 'Defeat all four of the bosses beyond the Barrow.', title: 'Walker of the Second Road', hidden: false, needs: 'wyrm',
     check: { type: 'clearAll', mode: 'normal', set: 2 } },
 
+  { id: 'who-walked-home', cat: 'road', name: 'The Last Door', desc: 'Defeat the Cinder Sovereign.', title: 'Who Walked Home', hidden: true, hint: 'Something in town is still sealed.', needs: 'sovereign',
+    check: { type: 'clear', boss: 'sovereign' } },
+
   // ---------------------------------------------------------------- hard
   { id: 'sent-it-back', cat: 'hard', name: 'Sent It Back', desc: 'Defeat Grubnak on Hard.', title: 'Sent It Back', hidden: false,
     check: { type: 'clear', boss: 'grubnak', mode: 'hard' } },
@@ -72,6 +75,8 @@ const FEATS = [
     check: { type: 'mark', k: 'me:spotless' } },
   { id: 'not-a-mark', cat: 'clean', name: 'Not a Mark on Us', desc: 'Defeat a boss on Hard with nobody dying and nobody taking an avoidable hit.', title: 'The Immaculate', hidden: false,
     check: { type: 'mark', k: 'party:spotlessHard' } },
+  { id: 'nobody-left-in-ash', cat: 'clean', name: 'Nobody Left in the Ash', desc: 'Defeat the Cinder Sovereign without anyone dying.', title: 'Unburnt', hidden: true, hint: 'Not everyone has to stay behind.', needs: 'sovereign',
+    check: { type: 'clearNoDeaths', boss: 'sovereign' } },
   { id: 'express-service', cat: 'clean', name: 'Express Service', desc: 'Defeat Grubnak in under 7 minutes.', title: null, hidden: false,
     check: { type: 'clearUnder', boss: 'grubnak', secs: 420 } },
   { id: 'brief-audience', cat: 'clean', name: 'A Brief Audience', desc: 'Defeat the Hollow King in under 8 minutes.', title: null, hidden: false,

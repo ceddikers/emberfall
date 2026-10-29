@@ -179,7 +179,8 @@ const Pastimes = (() => {
   // ---------------------------------------------------------------- secrets around town
   function secretsHere() {
     const s = st();
-    return SECRETS_().filter(x => !s.secrets[x.id] && deps.matches(x.when || {}));
+    // a secret with `whole` can be read once more when its `whole.when` holds (the full inscription after the Ultimate)
+    return SECRETS_().filter(x => (!s.secrets[x.id] && deps.matches(x.when || {})) || (s.secrets[x.id] && x.whole && !s.marks['whole:' + x.id] && deps.matches(x.whole.when || {})));
   }
   function drawSecrets(ctx, now) {
     const p = deps.player;
@@ -208,7 +209,11 @@ const Pastimes = (() => {
   }
   function find(x) {
     const s = st();
-    if (s.secrets[x.id]) return;
+    const whole = x.whole && deps.matches(x.whole.when || {}) ? x.whole : null;
+    if (s.secrets[x.id] && (!whole || s.marks['whole:' + x.id])) return;
+    const again = !!s.secrets[x.id];
+    if (whole) s.marks['whole:' + x.id] = 1;
+    if (again) { commit(); card(whole.name || x.name, whole.lines || [], ''); if (typeof Sound !== 'undefined') Sound.play('ui-secret', { bus: 'ui' }); return; }
     s.secrets[x.id] = Date.now();
     if (x.set) { const t = Save.get('town') || {}; t.flags = t.flags || {}; t.flags[x.set] = 1; Save.set('town', t); }
     commit();
@@ -217,7 +222,7 @@ const Pastimes = (() => {
     if (r.gold) { deps.addGold(r.gold); got = `${r.gold} gold`; }
     if (r.gift && deps.giveGift(r.gift)) got = (typeof TOWN_GIFTS !== 'undefined' && TOWN_GIFTS[r.gift] ? TOWN_GIFTS[r.gift].name : 'a gift');
     if (r.title) grantFeat(r.title);
-    card(x.name, x.lines || [], got);
+    card(whole && whole.name || x.name, whole && whole.lines || x.lines || [], got);
     if (typeof Sound !== 'undefined') Sound.play('ui-secret', { bus: 'ui' });
     event('secret', { id: x.id });
   }
@@ -565,8 +570,10 @@ const Pastimes = (() => {
   const storyOpen = () => !!document.getElementById('story');
   // the prologue, on your first visit to town
   function storyCheck() {
-    if (storyOpen() || !STORY_() || st().story.prologue) return;
-    storyPages('prologue');
+    if (storyOpen() || !STORY_()) return;
+    if (!st().story.prologue) { storyPages('prologue'); return; }
+    // the epilogue, once, after this account's first clear of the Ultimate
+    if (!st().story.epilogue && deps.beaten('sovereign')) storyPages('epilogue');
   }
 
   // ---------------------------------------------------------------- each frame / drawing hooks

@@ -336,9 +336,11 @@ const Sound = (() => {
   }
   const hasTrack = id => !!id && manifest.has('music/' + id);
   let musicLoop = true;
+  // an id may be a fallback chain (['mus-ult-1', 'mus-hollowking']): the first track that exists plays, none is silence
+  const pickTrack = id => (Array.isArray(id) ? id.find(hasTrack) || null : id);
   function applyMusic(id, fade) {
     if (!ctx || !unlocked) return;
-    const target = hasTrack(id) ? id : null;
+    const pick = pickTrack(id), target = hasTrack(pick) ? pick : null;
     if (target === musicCur) return;
     if (musicCur) fadeTrack('music/' + musicCur, 0, fade);
     musicCur = target;
@@ -350,12 +352,24 @@ const Sound = (() => {
       fadeTrack('music/' + target, 1, fade);
     }
   }
-  // opts: { fade = 1.5, loop = true }
+  // seconds until the playing track's next bar line (0 when nothing plays or the tempo is unknown)
+  const barWait = bpm => {
+    const cur = musicCur && tracks.get('music/' + musicCur);
+    if (!(bpm > 0) || !cur || cur.el.paused) return 0;
+    const bar = 240 / bpm;
+    return bar - (cur.el.currentTime % bar);
+  };
+  let barTimer = null;
+  // opts: { fade = 1.5, loop = true, bar = bpm of the playing track }. A bar tempo holds the change until the playing track's next bar line.
+  // id may be one id, a fallback chain (an array) or null for silence
   music.set = (id, opts) => safe(() => {
     const fade = opts && Number.isFinite(opts.fade) ? opts.fade : 1.5;
+    clearTimeout(barTimer); barTimer = null;
     musicWant = id || null;
     musicLoop = !(opts && opts.loop === false);
     if (!manifestLoaded) { setTimeout(() => { if (musicWant === (id || null)) music.set(id, opts); }, 400); return; }
+    const wait = opts && opts.bar > 0 ? barWait(opts.bar) : 0;
+    if (wait > 0.03) { const want = musicWant, lp = musicLoop; barTimer = setTimeout(() => { barTimer = null; if (musicWant === want) { musicLoop = lp; applyMusic(want, fade); } }, wait * 1000); return; }
     applyMusic(musicWant, fade);
   });
   // the harder variant: '<id>' -> '<id>-hard' (the Hard track, else an older '<id>-b'), on the next bar when the tempo is
@@ -392,7 +406,7 @@ const Sound = (() => {
     g.setTargetAtTime(clamp(1 - amount, 0, 1), t, 0.06);
     g.setTargetAtTime(1, duckUntil, 0.35);
   });
-  music.has = id => hasTrack(id);   // is this track in the manifest (a boss's '-hard' music is used only if it is)
+  music.has = id => (Array.isArray(id) ? id.some(hasTrack) : hasTrack(id));   // is this track in the manifest (a boss's '-hard' music is used only if it is)
   S.music = music;
 
   // ---------------------------------------------------------------- voice lines

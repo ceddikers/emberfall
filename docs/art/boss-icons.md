@@ -211,3 +211,44 @@ These 15 still show the drawn placeholder in the cast frame (October 2026). Some
 13. **Writ of Execution** (`hollowking/writ-of-execution`): an unrolled parchment writ with a heavy red wax seal, three iron chains running from it out to the edges of the square, and a fourth chain hanging broken. (Lines going out from one point, one of them harmless.)
 14. **Royal Tithe** (`hollowking/royal-tithe`): a tarnished gold offering bowl on a short foot, a floating gold crown above it, and a stream of green life-light pouring up out of the bowl into the crown, a few pale motes in it.
 15. **Dirge** (`hollowking/dirge`): an old iron funeral bell hanging still from a short beam, wide slow rings of sound spreading out beneath it in grave-light green, fading as they widen.
+
+---
+
+## The Cinder Sovereign, the Ultimate (27 icons, 3 sheets)
+
+Background: deep soot black with a faint ember-red vignette. Objects: charcoal, slag iron, smoke violet. Accent: ember orange and white-gold, used only where the danger is. Where an icon is "the call" of a fallen boss, draw that boss's own floor sigil (a ringed circle with its glyph, as in the game) burning, not the boss itself.
+
+**Sheet 1 (its own moves)**
+1. **Kindling** (`sovereign/kindling`): a ring of twelve small flames around a dark centre, all leaping outward at once. (The raidwide.)
+2. **Brand** (`sovereign/brand`): a thin molten blade pressed flat against a dark shield, a glowing brand-mark seared where it touches. (The tankbuster: heavy.)
+3. **Ashen Sweep** (`sovereign/ashen-sweep`): a long thin molten blade sweeping across one half of the square, the swept half lit ember orange, the other half plain. ("One side.")
+4. **Cupped Ember** (`sovereign/cupped-ember`): a single ember held in a cupped dark palm, small blue arrows pointing in at it from three sides. ("Come together.")
+5. **Scatter** (`sovereign/scatter`): one ember bursting into five sparks flying apart, a small ring round each spark. ("Spread out.")
+6. **Halo Turn** (`sovereign/halo-turn`): a ring of sigils seen from above, three straight beams of light shooting outward from three of them, the rest dark.
+7. **Rebirth** (`sovereign/rebirth`): a ring of twelve blades opening outward like a flower, a white-gold core blazing in the middle.
+8. **The Sovereign's Dance** (`sovereign/dance`): three numbered burning slash marks hanging in the air in a zigzag, a thin blade at the end of the last one.
+9. **Emberfall** (`sovereign/emberfall`): the enrage. Flagstones seen from above, every seam between them blazing white-gold from underneath.
+
+**Sheet 2 (its unleashings and its calls, part 1)**
+10. **Crescent** (`sovereign/crescent`): two wide fans of flame crossing each other at an angle.
+11. **Lance** (`sovereign/lance`): a blade-thin streak of flame running straight across the square to a cracked wall.
+12. **Pyre** (`sovereign/pyre`): four numbered small flames in a ring, joined by quick cuts in order.
+13. **Call: Grubnak** (`sovereign/call-grubnak`): Grubnak's floor sigil, a cloche and cleaver glyph, burning in its ring.
+14. **Call: Skitterra** (`sovereign/call-skitterra`): Skitterra's web glyph burning in its ring.
+15. **Call: Volkar** (`sovereign/call-volkar`): Volkar's bolt glyph burning in its ring.
+16. **Call: the Hollow King** (`sovereign/call-hollowking`): the crown and bell glyph burning in its ring.
+17. **Call: Vhalgrath** (`sovereign/call-wyrm`): the wings glyph burning in its ring.
+18. **Call: Hrimgar** (`sovereign/call-titan`): the snowflake glyph burning in its ring.
+
+**Sheet 3 (its calls, part 2, and the set pieces)**
+19. **Call: Azerath** (`sovereign/call-archmage`): the star-of-two-triangles glyph burning in its ring.
+20. **Call: the Hydra** (`sovereign/call-hydra`): the three-headed glyph burning in its ring.
+21. **Call: Corvane** (`sovereign/call-corvane`): the crossed-blades glyph burning in its ring.
+22. **Call: Brannoc** (`sovereign/call-brannoc`): the wheel glyph burning in its ring.
+23. **Call: Morrow-Oak** (`sovereign/call-morrowoak`): the tree glyph burning in its ring.
+24. **Call: Caelum Vey** (`sovereign/call-caelum`): the star glyph burning in its ring.
+25. **The Heart Remembers** (`sovereign/heart-remembers`): a cracked glass seal over a dark heart, three small flames standing in a row in front of it.
+26. **Every Name** (`sovereign/every-name`): twelve tiny sigils in a ring, all dark but for three lit together.
+27. **The Last Flame** (`sovereign/last-flame`): one small guttering flame on a dark stone, a thin curl of smoke above it.
+
+The rewards (painted later, for the inventory and the hero page): **Cinder Wings** (`items/cinder-wings`: twelve ember feathers spread like a fan, dark tips, glowing quills) and **Ember Glow** (`items/ember-glow`: a sword blade with a thin line of embers running along its edge).

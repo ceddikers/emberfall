@@ -139,8 +139,15 @@ const Save = (() => {
       const h = data.heroes[classId] = data.heroes[classId] || { clears: {} };
       const b = h.clears[bossId] = h.clears[bossId] || { normal: 0, hard: 0 };
       b[mode === 'hard' ? 'hard' : 'normal'] += 1;
+      if (bossId === 'sovereign') h.svr = 1;   // the Ultimate's cosmetic rewards (cinder wings, ember glow): earned by the hero who cleared it (heroes.js SvRewards)
       write();
     },
+    // has this hero earned the Cinder Sovereign's rewards? heroes[classId].svr = 1, added without a version bump (optional; missing means no)
+    svRewards: classId => !!((data.heroes[classId] || {}).svr),
+    // the furthest act (1-4) a party this account was in has reached in a REAL pull of the Cinder Sovereign: data.svReach, added without a version bump
+    // (optional; missing means 0). The fourth portal's Reach card (sovereign-portal.js) offers a start at any act up to it. Practice starts never record it.
+    svReach: () => Math.max(0, Math.min(4, data.svReach | 0)),
+    recordSvReach(act) { act = Number(act); if (!Number.isInteger(act) || act < 1 || act > 4 || act <= (data.svReach | 0)) return false; data.svReach = act; write(); return true; },
     // the boss journal (journal.js), per hero: { met: {boss: 1}, won: {boss: 1}, moves: {boss: {cast name: {seen, pass}}} }
     journal(classId) {
       const h = data.heroes[classId];

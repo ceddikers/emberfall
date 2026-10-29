@@ -22,6 +22,7 @@ const STATUS_GLYPH = {
   laden: stSvg('<path d="M6 1.3C3.9 1.3 2.4 4.3 2.4 6.9a3.6 3.6 0 0 0 7.2 0C9.6 4.3 8.1 1.3 6 1.3Z" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="5" cy="7.3" r=".9" fill="currentColor"/><circle cx="7.2" cy="5.6" r=".7" fill="currentColor"/>'),
   pardoned: stSvg('<path d="M2.5 1.5h6v4l-1.2.8 1.2.8v3.4h-6v-3.4l1.2-.8-1.2-.8Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M4 3.6h3" stroke="currentColor" stroke-width="1.1"/>'),
   cracked: stSvg('<path d="M6 1 10.5 2.6V6c0 2.6-2 4.2-4.5 5C3.5 10.2 1.5 8.6 1.5 6V2.6Z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M6 1.4 5 4.2l2 1.6-1.6 2.4.6 2.6" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>'),
+  svbrand: stSvg('<path d="M3 10 9 2.5M7 2h2.5V4.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 7.8c.3 1.4 1.4 2.4 2.8 2.2" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>'),
   aggro: stSvg('<path d="M1 6c1.6-2.6 3.2-3.6 5-3.6S9.4 3.4 11 6c-1.6 2.6-3.2 3.6-5 3.6S2.6 8.6 1 6Z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="6" r="1.7" fill="currentColor"/>'),
   // party buffs, gear bonds and item effects
   'p-dmg': stSvg('<path d="M10.5 1.5 9.8 4 4.6 9.2 2.8 7.4 8 2.2ZM2.8 7.4 1.5 10.5l3.1-1.3" fill="currentColor"/>'),
@@ -54,6 +55,7 @@ const STATUS_INFO = {
   static: ['Static', 'The storm is building on you, a jolt every 1.5s.'],
   frostbite: ['Frostbitten', 'Slowed by the cold, and when it runs out you are frozen solid.'],
   gripped: ['Gripped', 'Held fast in a fist of ice.'],
+  svbrand: ['Branded', 'A blade burns in you. A Brand that lands inside the burn hits much harder.'],
   cracked: ['Cracked Guard', 'Your guard is broken open: the next heavy blow lands harder.'],
 };
 

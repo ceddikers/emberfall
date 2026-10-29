@@ -322,5 +322,13 @@ const BOSSES = [
   },
 ];
 
+// The Ultimate (set 4, docs/plans/2026-10-ultimate-raid.md). NOT in BOSSES on purpose: the Raid Board, the town statues and every per-boss list read that array, and the
+// fight is sealed until its unlock is built (Wave 6). It starts through main.js RAID_DEFS (window.__game.startRaid('normal', true, 'sovereign')) and tools/bot-raid.js.
+const ULTIMATE_BOSS = {
+  id: 'sovereign', name: 'The Cinder Sovereign', title: 'the Ember', color: '#ff9a3c', playable: false, set: 4,
+  blurb: 'The fire under every room you fought in. Everything you killed burned back into it.',
+  mechanics: [],
+};
+
 // Lets Node tools reuse this file.
-if (typeof module !== 'undefined') module.exports = { ROLES, KEYS, CLASSES, BOSSES };
+if (typeof module !== 'undefined') module.exports = { ROLES, KEYS, CLASSES, BOSSES, ULTIMATE_BOSS };
