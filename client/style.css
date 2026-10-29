@@ -2179,3 +2179,33 @@ body.in-pvp #boss-bar, body.in-pvp #boss-cast, body.in-pvp #lb-gauge, body.in-pv
 .it-fx u { text-decoration: none; color: #ffb066; font-weight: 700; }
 .it-from { color: var(--muted); font-size: 11px; }
 @media (max-width: 900px) { .fg-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* The Founding (founding/*.js): the town's "set out" panel at the foot of the south road, and the town HUD put away while it runs */
+#fd-gate { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 20; width: 400px; padding: 12px 14px 14px; background: #0d0b0af4; border: 1px solid #3a2a1c; border-radius: 3px; box-shadow: 0 0 0 1px #000, 0 14px 34px #000c; }
+#fd-gate.hidden { display: none; }
+#fd-gate header { display: flex; align-items: center; justify-content: space-between; }
+#fd-gate h3 { margin: 0; font-family: var(--fantasy); font-size: 13px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); }
+#fd-gate .close { background: none; border: 0; color: var(--muted); font-size: 18px; cursor: pointer; }
+#fd-gate .fd-note { margin: 6px 0 0; font-size: 12px; line-height: 1.5; color: #d8cdb8; }
+#fd-gate .fd-note.dim { color: var(--muted); font-size: 11.5px; }
+#fd-gate .fd-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #2a2018; font-size: 11.5px; color: var(--muted); }
+#fd-gate .fd-row em { font-style: normal; }
+#fd-gate { max-height: 92vh; overflow: auto; }
+#fd-gate .fd-trials { margin-top: 12px; padding-top: 10px; border-top: 1px solid #2a2018; }
+#fd-gate .fd-trials h4 { margin: 0; font-family: var(--fantasy); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-dim); font-weight: 600; }
+#fd-gate .fd-tlist { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+#fd-gate .fd-tr { position: relative; display: block; width: 100%; text-align: left; padding: 6px 30px 6px 10px; background: #15110e; border: 1px solid #2f2418; border-radius: 3px; color: #cfc4aa; cursor: pointer; font: inherit; }
+#fd-gate .fd-tr b { display: block; font-size: 12.5px; font-weight: 600; color: #e6dcc4; }
+#fd-gate .fd-tr span { display: block; margin-top: 1px; font-size: 11px; line-height: 1.4; color: var(--muted); }
+#fd-gate .fd-tr i { position: absolute; right: 9px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border: 1px solid #5a4630; border-radius: 2px; background: #0d0b0a; }
+#fd-gate .fd-tr:hover { border-color: #5a4630; background: #1b1511; }
+#fd-gate .fd-tr.on { border-color: var(--gold-dim); background: #211a11; }
+#fd-gate .fd-tr.on i { background: var(--gold); border-color: var(--gold); box-shadow: inset 0 0 0 2px #211a11; }
+#fd-gate .fd-tr.done b::after { content: 'cleared'; margin-left: 8px; font-size: 9.5px; font-weight: 400; letter-spacing: .12em; text-transform: uppercase; color: #8fbf98; }
+#fd-gate .fd-tr.ro { cursor: default; }
+#fd-gate .fd-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; font-size: 11.5px; color: var(--muted); }
+#fd-gate .fd-link { background: none; border: 0; padding: 0; color: var(--gold); font: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: #8a6f3566; text-underline-offset: 3px; }
+#fd-gate .fd-link:hover { text-decoration-color: var(--gold); }
+body.in-founding #hud-tl, body.in-founding #objective, body.in-founding #minimap, body.in-founding #party, body.in-founding #menu-chip,
+body.in-founding #meter-btn, body.in-founding #help, body.in-founding #target-frame, body.in-founding #focus-frame, body.in-founding #tutorial-btn,
+body.in-founding #combat-hud, body.in-founding #gold-hud, body.in-founding #bag-btn { display: none !important; }

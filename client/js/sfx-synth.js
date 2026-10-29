@@ -731,44 +731,76 @@
     'boss-intro': -1.5, 'buff-on': -0.5, 'chest-drop': 3.5, 'chest-open': -5,
     'cleanse': -5, 'clear': -4.5, 'crit': 4, 'dash': 6.5,
     'debuff-on': -1, 'dummy-hit': 3, 'emote-cheer': -6.5, 'emote-laugh': -2,
-    'emote-wave': 2, 'feast-chew': 6.5, 'feast-clink': -5.5, 'feast-serve': -3.5,
-    'feast-sting': -2.5, 'fish-bite': 3, 'fish-cast': 1.5, 'fish-catch': -3,
-    'fish-lost': -0.5, 'fish-reel': -0.5, 'gloom-hollow-off': -2, 'gloom-hollow-on': 2,
-    'heal-land': -2.5, 'hit-heavy': 5, 'hit-light': 9, 'hm-bark-ash': -0.5,
-    'hm-bark-ghost': 3.5, 'hm-bark-greyfang': 0.5, 'hm-bark-rust': 0.5, 'hm-bite': 8,
-    'hm-bite-big': 2.5, 'hm-bringdown': -3, 'hm-calloff': 1.5, 'hm-down': 3,
-    'hm-hamstring': 1, 'hm-horn': -6, 'hm-howl': -3.5, 'hm-longchase': 1.5,
-    'hm-mount': -1, 'hm-quarry': 6.5, 'hm-relay': 4, 'hm-rend': 0.5,
-    'hm-ridedown': 2.5, 'hm-snap': 7, 'hm-up': 2.5, 'hm-whistle-hold': -7.5,
-    'hm-whistle-pounce': -7, 'ken-blaze': 0.5, 'ken-break': -0.5, 'ken-deathblow': -2,
-    'ken-good': 8, 'ken-iai': 2.5, 'ken-miss': 7.5, 'ken-off': 4.5,
-    'ken-pass': 6.5, 'ken-perfect': 2, 'ken-pommel': 6.5, 'ken-redirect': 1,
-    'lamp-drop': 11, 'lamp-ember': 14.5, 'lamp-end': 6.5, 'lamp-eternal': 0.5,
-    'lamp-pilgrim': 4.5, 'lamp-pillar': 3, 'lamp-snuff': 5.5, 'lamp-sparks': 5,
-    'lb-fire': -1.5, 'lb-ready': -5, 'loot-take': -2, 'low-hp': -4.5,
-    'npc-talk': -6, 'ping': 2.5, 'pip-up': 12, 'portal-enter': -3,
-    'portal-hum': -22.5, 'pull-count': 0.5, 'pull-count-last': -3.5, 'pull-go': -2,
-    'reaper-blink': 5.5, 'reaper-danse': 5, 'reaper-finish1': 4.5, 'reaper-finish2': -0.5,
-    'reaper-finish3': 1, 'reaper-finish4': -2, 'reaper-frenzy': -2.5, 'reaper-gate-bloom': -2.5,
-    'reaper-gate-close': -1, 'reaper-gate-open': 3.5, 'reaper-gate-tone': 8, 'reaper-gatebreaker': 1.5,
-    'reaper-harvest': -1, 'reaper-moon': 1.5, 'reaper-pop-bind': 4.5, 'reaper-pop-death': 3,
-    'reaper-pop-drain': 4, 'reaper-pop-thread': 9, 'reaper-rune': 12.5, 'reaper-rune-emp': 6,
-    'reaper-slack': 14.5, 'reaper-slash': 2.5, 'reaper-star-collapse': -2, 'reaper-star-open': 0.5,
-    'reaper-swing': 12, 'reaper-veil': -0.5, 'revive': -2, 'shield-break': 5,
-    'shield-up': -4, 'stack-1': 8, 'stack-2': -2.5, 'step-grass': 8,
-    'step-stone': 8.5, 'step-wood': 1.5, 'story-page': 3.5, 'tg-aoe': 1.5,
-    'tg-buster': 1, 'tg-charge': 0.5, 'tg-gaze': 0.5, 'tg-knockback': 2.5,
-    'tg-raidwide': -0.5, 'tg-spread': 5.5, 'tg-stack': 1.5, 'tide-bell': 1,
-    'tide-crash': -1.5, 'tide-crest': 4.5, 'tide-gull': 9.5, 'tide-pop': 1.5,
-    'tide-slack': 10.5, 'tide-wave': 2.5, 'title-sting': -3, 'ui-bounty': 0.5,
-    'ui-buy': -6, 'ui-click': 2, 'ui-close': -0.5, 'ui-equip': -2.5,
-    'ui-error': -3, 'ui-feat': -7, 'ui-gold': -4, 'ui-hover': 13,
-    'ui-secret': -6, 'ult-alembist': 0.5, 'ult-bastion': 1.5, 'ult-bloodreaver': 1,
-    'ult-driftblade': 6.5, 'ult-fire': -1.5, 'ult-gloomsworn': -1, 'ult-gorgemaw': 1,
-    'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5, 'ult-kenseier': -1.5, 'ult-lanternkeeper': -2,
-    'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1, 'ult-ranger': 3,
-    'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4, 'ult-thermist': -1,
-    'ult-threadweaver': -1, 'ult-tidecaller': -2, 'wall-break': -1.5, 'wall-up': -3.5, 'waymark': 11.5, 'wipe': -2,
+    'emote-wave': 2, 'fd-alert': -6, 'fd-arrow': 7, 'fd-auto-cast': 7,
+    'fd-auto-ember': 12.5, 'fd-auto-hit-arrow': 8.5, 'fd-auto-hit-ember': 16, 'fd-auto-hit-holy': 11,
+    'fd-auto-hit-melee': 7.5, 'fd-auto-holy': 9, 'fd-auto-melee': -1, 'fd-auto-shot': 8.5,
+    'fd-ballista': 1, 'fd-banner': -0.5, 'fd-bash': 4, 'fd-boon': -3,
+    'fd-boss-arrive': -3, 'fd-boss-down': -2, 'fd-brace': 1, 'fd-brand': 9.5,
+    'fd-brute-slam': 3, 'fd-buy': -3, 'fd-camp-hit': 5.5, 'fd-carve': 5.5,
+    'fd-chain-ash-breath': 1, 'fd-chain-bell': 0.5, 'fd-chain-bubble': 3.5, 'fd-chain-down': -3,
+    'fd-chain-far': -3, 'fd-chain-oak-cut': 4.5, 'fd-chain-pike-lunge': 3.5, 'fd-chain-pike-slap': 5,
+    'fd-chain-ram-charge': 0.5, 'fd-chain-ram-stamp': 2.5, 'fd-chain-root-snare': 1, 'fd-chain-soak-ok': -1,
+    'fd-chain-stump-throw': 3, 'fd-chain-sweep': 2, 'fd-chain-whelp-call': 1.5, 'fd-count': 6,
+    'fd-cover': -1, 'fd-dawn': -0.5, 'fd-dawn-breaks': -1, 'fd-defeat': -1.5,
+    'fd-deliver': 1.5, 'fd-elite-die': -3, 'fd-enemy-die': 5, 'fd-enemy-hit': 5.5,
+    'fd-erupt': -0.5, 'fd-fireball-cast': 7.5, 'fd-fireball-hit': 3.5, 'fd-firestep': 3,
+    'fd-flamecircle': 1, 'fd-flood-rise': 2, 'fd-gate-break': 0.5, 'fd-gate-hit': 3,
+    'fd-gate-shut': -2.5, 'fd-gnaw-breath': -3, 'fd-gnaw-lunge': -2.5, 'fd-gnaw-sniff': 0.5,
+    'fd-gnaw-stamp': 1, 'fd-hero-down': -1, 'fd-hyperforge': -3, 'fd-levelup': -0.5,
+    'fd-log-break': 2.5, 'fd-march': -6, 'fd-mark': 3.5, 'fd-mend': -2.5,
+    'fd-meteor-fall': 1.5, 'fd-meteor-hit': -2, 'fd-mire-charge': 2.5, 'fd-mire-drown': -1.5,
+    'fd-mire-stamp': -1, 'fd-night': -1, 'fd-page': 1.5, 'fd-perfect': 2,
+    'fd-pickup': 4, 'fd-pierce': 7, 'fd-ping': 8.5, 'fd-post-out': 5.5,
+    'fd-post-plant': 0.5, 'fd-quake': 0.5, 'fd-quest-done': -1.5, 'fd-quest-missed': -2,
+    'fd-quest-offer': -5.5, 'fd-rankup': 2.5, 'fd-recall': -3, 'fd-recall-done': -2.5,
+    'fd-relight': 0.5, 'fd-sanctum': -2.5, 'fd-sell': -2, 'fd-setdown': 2.5,
+    'fd-smite': 0.5, 'fd-soldier-heal': 9.5, 'fd-soldier-shot': 12, 'fd-soldier-swing': 4,
+    'fd-spit': 6, 'fd-stalker': 1.5, 'fd-starfall': 2, 'fd-step': 1.5,
+    'fd-strike-claw': 7.5, 'fd-strike-dart': 7.5, 'fd-strike-shade': 7, 'fd-strike-slag': 4,
+    'fd-strike-torch': 7, 'fd-tail-sweep': 1, 'fd-tower-fall': -2.5, 'fd-trap-arm': 3,
+    'fd-trap-burst': 3.5, 'fd-tunnel-burrow': -0.5, 'fd-tunnel-surface': -1.5, 'fd-victory': -4.5,
+    'fd-wall': -1, 'fd-wave': -7, 'fd-whelps': 15, 'fd-wick-breath': 0.5,
+    'fd-wick-eat': 5.5, 'fd-wick-glow': 2.5, 'fd-wick-lunge': 2, 'fd-wild-boar': -4.5,
+    'fd-wild-howl': -6.5, 'fd-wild-return': -3.5, 'fd-wild-snap': 2, 'fd-wild-stone': 2.5,
+    'fd-wild-wake': -3.5, 'fd-wild-wolf': -5, 'feast-chew': 6.5, 'feast-clink': -5.5,
+    'feast-serve': -3.5, 'feast-sting': -2.5, 'fish-bite': 3, 'fish-cast': 1.5,
+    'fish-catch': -3, 'fish-lost': -0.5, 'fish-reel': -0.5, 'gloom-hollow-off': -2,
+    'gloom-hollow-on': 2, 'heal-land': -2.5, 'hit-heavy': 5, 'hit-light': 9,
+    'hm-bark-ash': -0.5, 'hm-bark-ghost': 3.5, 'hm-bark-greyfang': 0.5, 'hm-bark-rust': 0.5,
+    'hm-bite': 8, 'hm-bite-big': 2.5, 'hm-bringdown': -3, 'hm-calloff': 1.5,
+    'hm-down': 3, 'hm-hamstring': 1, 'hm-horn': -6, 'hm-howl': -3.5,
+    'hm-longchase': 1.5, 'hm-mount': -1, 'hm-quarry': 6.5, 'hm-relay': 4,
+    'hm-rend': 0.5, 'hm-ridedown': 2.5, 'hm-snap': 7, 'hm-up': 2.5,
+    'hm-whistle-hold': -7.5, 'hm-whistle-pounce': -7, 'ken-blaze': 0.5, 'ken-break': -0.5,
+    'ken-deathblow': -2, 'ken-good': 8, 'ken-iai': 2.5, 'ken-miss': 7.5,
+    'ken-off': 4.5, 'ken-pass': 6.5, 'ken-perfect': 2, 'ken-pommel': 6.5,
+    'ken-redirect': 1, 'lamp-drop': 11, 'lamp-ember': 14.5, 'lamp-end': 6.5,
+    'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5, 'lamp-pillar': 3, 'lamp-snuff': 5.5,
+    'lamp-sparks': 5, 'lb-fire': -1.5, 'lb-ready': -5, 'loot-take': -2,
+    'low-hp': -4.5, 'npc-talk': -6, 'ping': 2.5, 'pip-up': 12,
+    'portal-enter': -3, 'portal-hum': -22.5, 'pull-count': 0.5, 'pull-count-last': -3.5,
+    'pull-go': -2, 'reaper-blink': 5.5, 'reaper-danse': 5, 'reaper-finish1': 4.5,
+    'reaper-finish2': -0.5, 'reaper-finish3': 1, 'reaper-finish4': -2, 'reaper-frenzy': -2.5,
+    'reaper-gate-bloom': -2.5, 'reaper-gate-close': -1, 'reaper-gate-open': 3.5, 'reaper-gate-tone': 8,
+    'reaper-gatebreaker': 1.5, 'reaper-harvest': -1, 'reaper-moon': 1.5, 'reaper-pop-bind': 4.5,
+    'reaper-pop-death': 3, 'reaper-pop-drain': 4, 'reaper-pop-thread': 9, 'reaper-rune': 12.5,
+    'reaper-rune-emp': 6, 'reaper-slack': 14.5, 'reaper-slash': 2.5, 'reaper-star-collapse': -2,
+    'reaper-star-open': 0.5, 'reaper-swing': 12, 'reaper-veil': -0.5, 'revive': -2,
+    'shield-break': 5, 'shield-up': -4, 'stack-1': 8, 'stack-2': -2.5,
+    'step-grass': 8, 'step-stone': 8.5, 'step-wood': 1.5, 'story-page': 3.5,
+    'tg-aoe': 1.5, 'tg-buster': 1, 'tg-charge': 0.5, 'tg-gaze': 0.5,
+    'tg-knockback': 2.5, 'tg-raidwide': -0.5, 'tg-spread': 5.5, 'tg-stack': 1.5,
+    'tide-bell': 1, 'tide-crash': -1.5, 'tide-crest': 4.5, 'tide-gull': 9.5,
+    'tide-pop': 1.5, 'tide-slack': 10.5, 'tide-wave': 2.5, 'title-sting': -3,
+    'ui-bounty': 0.5, 'ui-buy': -6, 'ui-click': 2, 'ui-close': -0.5,
+    'ui-equip': -2.5, 'ui-error': -3, 'ui-feat': -7, 'ui-gold': -4,
+    'ui-hover': 13, 'ui-secret': -6, 'ult-alembist': 0.5, 'ult-bastion': 1.5,
+    'ult-bloodreaver': 1, 'ult-driftblade': 6.5, 'ult-fire': -1.5, 'ult-gloomsworn': -1,
+    'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5, 'ult-kenseier': -1.5,
+    'ult-lanternkeeper': -2, 'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1,
+    'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4,
+    'ult-thermist': -1, 'ult-threadweaver': -1, 'ult-tidecaller': -2, 'wall-break': -1.5,
+    'wall-up': -3.5, 'waymark': 11.5, 'wipe': -2,
   };
   // @@TRIM-END
 
@@ -5060,6 +5092,864 @@
     S.voice({ f: 190, f1: 120, dur: 1.1, vowel: 'o', vowel1: 'a', breath: 6, peak: 0.16, lp: 3000, pts: [[0.3, 1], [1.1, 0]] });
     S.bell({ at: 0.15, f: mf(98), dur: 1.4, peak: 0.12, lp: 2600 });
     S.bubbles({ at: 0.1, n: 7, f: 700, f1: 160, spread: 0.8, size: 0.05, peak: 0.1 });
+  });
+
+  // ============================================================================================== 7. The Founding
+  // The hero-defense mode (client/js/founding/). Earthy and warm: wood, stone, fire, water, canvas, the founders' camp.
+  // Played by name (Sound.play('fd-...')), so none of these need an SfxMap entry. The noisy repeats (autos, enemy hits)
+  // sit in the 'ui' / 'hud' targets, short and soft; skills are 'ab', Ultimates 'ult', boss moves 'bm', big beats 'sting'.
+
+  // ---- heroes: Bastion
+  def('fd-bash', 'ab', S => {
+    S.thud({ f: 150, f1: 70, dur: 0.18, peak: 0.55, click: 0.4, clickF: 3000, lp: 900 });
+    S.metal({ at: 0.005, set: 'plate', f: 480, dur: 0.35, peak: 0.3, strike: 0.7 });
+    S.wood({ at: 0.01, f: 260, dur: 0.12, peak: 0.25 });
+  });
+  def('fd-banner', 'ab', S => {
+    S.whoosh({ color: 'white', f: 400, f1: 1500, dur: 0.22, peakAt: 0.5, peak: 0.2 });
+    S.thud({ at: 0.18, f: 85, f1: 50, dur: 0.22, peak: 0.55, click: 0.2 });
+    S.wood({ at: 0.19, f: 340, dur: 0.14, peak: 0.28 });
+    S.noise({ at: 0.24, color: 'pink', bp: 900, q: 1, dur: 0.45, am: [9, 0.7], peak: 0.12, pts: [[0.05, 1], [0.45, 0]] });
+    S.horn({ at: 0.28, f: mf(46), dur: 0.55, peak: 0.1, bright: 4 });
+  });
+  def('fd-brace', 'ab', S => {
+    S.metal({ set: 'bar', f: 210, dur: 0.3, peak: 0.28, strike: 0.5 });
+    S.creak({ dur: 0.18, f: 40, f1: 25, res: [500, 1100], q: 10, peak: 0.12 });
+    S.thud({ at: 0.14, f: 100, f1: 60, dur: 0.18, peak: 0.45, click: 0.15, lp: 700 });
+  });
+  def('fd-perfect', 'ab', S => {
+    S.space('room', 0.2);
+    S.crack({ peak: 0.35, dur: 0.15, f: 2200 });
+    S.bell({ at: 0.01, f: mf(81), dur: 0.9, peak: 0.28 });
+    S.glass({ at: 0.05, f: mf(100), dur: 0.5, peak: 0.1 });
+    S.whoosh({ f: 300, f1: 3200, dur: 0.3, peakAt: 0.3, peak: 0.25 });
+    S.thud({ f: 120, f1: 60, dur: 0.22, peak: 0.5, click: 0.3 });
+  });
+  def('fd-wall', 'ult', S => {
+    S.space('hall', 0.25);
+    S.rumble({ dur: 0.95, f: 90, peak: 0.45, a: 0.25 });
+    S.scrape({ f: 700, q: 1.5, rate: 22, dur: 0.6, peak: 0.2, pts: [[0.1, 1], [0.6, 0.6]] });
+    [0.3, 0.46, 0.62].forEach((at, i) => {
+      S.thud({ at, f: 75 - i * 6, f1: 36, dur: 0.4, drive: 1.8, peak: 0.55, pan: (i - 1) * 0.4 });
+      S.metal({ at, set: 'stone', f: 190 + i * 40, dur: 0.5, peak: 0.2, strike: 0.6, pan: (i - 1) * 0.4 });
+    });
+    S.glass({ at: 0.85, f: 1760, dur: 0.9, peak: 0.08 });
+  });
+
+  // ---- heroes: Cleric
+  def('fd-mend', 'hud', S => {
+    S.space('room', 0.3);
+    S.glass({ f: mf(88), dur: 0.5, peak: 0.16 });
+    S.glass({ at: 0.09, f: mf(93), dur: 0.7, peak: 0.14 });
+    S.bubbles({ n: 4, f: 700, f1: 2000, spread: 0.3, size: 0.03, peak: 0.07 });
+    S.voice({ f: 330, f1: 392, dur: 0.5, vowel: 'o', breath: 3, peak: 0.07 });
+  });
+  def('fd-smite', 'ab', S => {
+    S.crack({ peak: 0.4, dur: 0.18, f: 2000 });
+    S.bell({ f: mf(76), dur: 0.8, peak: 0.22 });
+    S.whoosh({ f: 3000, f1: 400, dur: 0.18, peakAt: 0.2, peak: 0.25 });
+    S.thud({ at: 0.06, f: 130, f1: 70, dur: 0.15, peak: 0.35, click: 0 });
+  });
+  def('fd-sanctum', 'ab', S => {
+    S.space('hall', 0.3);
+    S.pad({ notes: [mf(55), mf(62), mf(67)], type: 'tri', dur: 1.3, a: 0.35, peak: 0.22, lpEnv: [500, 2200, 900] });
+    S.bell({ at: 0.1, f: mf(79), dur: 1.2, peak: 0.16 });
+    S.bubbles({ at: 0.2, n: 6, f: 900, f1: 2800, spread: 0.9, size: 0.03, peak: 0.05 });
+    S.thud({ f: 70, f1: 45, dur: 0.3, peak: 0.3, click: 0, lp: 400 });
+  });
+  def('fd-dawn', 'ult', S => {
+    S.space('hall', 0.45);
+    S.choir({ notes: [mf(50), mf(57), mf(62)], vowel: 'a', vowel1: 'o', dur: 2.2, a: 0.9, peak: 0.16 });
+    S.whoosh({ f: 200, f1: 4200, dur: 1.4, peakAt: 0.8, peak: 0.24 });
+    [[0.7, 74], [0.85, 78], [1.0, 81], [1.2, 86]].forEach(([at, n]) => S.bell({ at, f: mf(n), dur: 1.4, peak: 0.16 }));
+    S.thud({ at: 1.4, f: 62, f1: 38, dur: 0.7, peak: 0.45, click: 0, lp: 300 });
+    S.bubbles({ at: 1.3, n: 9, f: 1200, f1: 3500, spread: 0.8, size: 0.03, peak: 0.05 });
+  });
+
+  // ---- heroes: Pyromancer
+  def('fd-fireball-cast', 'ab', S => {
+    S.whoosh({ color: 'white', f: 500, f1: 2400, dur: 0.22, peakAt: 0.4, peak: 0.28 });
+    S.sizzle({ dur: 0.22, peak: 0.16, pts: [[0.04, 1], [0.22, 0]] });
+    S.thud({ f: 110, f1: 60, dur: 0.12, peak: 0.25, click: 0 });
+  });
+  def('fd-fireball-hit', 'ab', S => {
+    S.thud({ f: 85, f1: 40, dur: 0.3, drive: 2, peak: 0.6 });
+    S.whoosh({ color: 'white', f: 2500, f1: 300, dur: 0.25, peakAt: 0.15, peak: 0.28 });
+    S.crackle({ at: 0.05, dens: 2, f: 3000, dur: 0.45, pts: [[0.05, 1], [0.45, 0]], peak: 0.2 });
+    S.sizzle({ at: 0.04, dur: 0.3, peak: 0.1, pts: [[0.05, 1], [0.3, 0]] });
+  });
+  def('fd-flamecircle', 'ab', S => {
+    S.space('room', 0.2);
+    [-0.7, 0, 0.7].forEach((pan, i) => S.whoosh({ at: i * 0.11, color: 'brown', f: 150, f1: 900, dur: 0.35, peakAt: 0.5, peak: 0.24, pan }));
+    S.crackle({ dens: 1.5, f: 2400, dur: 0.7, pts: [[0.3, 1], [0.7, 0.4]], peak: 0.2 });
+    S.thud({ at: 0.3, f: 70, f1: 45, dur: 0.3, peak: 0.35, click: 0, lp: 300 });
+  });
+  def('fd-erupt', 'ab', S => {
+    S.thud({ f: 62, f1: 30, dur: 0.5, drive: 2.5, peak: 0.7 });
+    S.whoosh({ color: 'brown', f: 200, f1: 2200, dur: 0.4, peakAt: 0.35, peak: 0.34 });
+    S.crack({ at: 0.02, peak: 0.3, dur: 0.2 });
+    S.crackle({ at: 0.1, dens: 1.7, f: 2800, dur: 0.6, pts: [[0.05, 1], [0.6, 0]], peak: 0.2 });
+    S.rumble({ dur: 0.6, f: 100, peak: 0.25, a: 0.1 });
+  });
+  def('fd-firestep', 'ab', S => {
+    S.whoosh({ color: 'white', f: 1800, f1: 600, dur: 0.16, peakAt: 0.3, peak: 0.26 });
+    S.noise({ at: 0.14, color: 'pink', lp: 1400, dur: 0.12, a: 0.004, peak: 0.25 });
+    S.crackle({ at: 0.14, dens: 2.2, f: 3400, dur: 0.5, pts: [[0.05, 1], [0.5, 0]], peak: 0.13 });
+    S.tone({ at: 0.14, f: 220, f1: 110, dur: 0.12, peak: 0.12, lp: 500 });
+  });
+  def('fd-meteor-fall', 'ult', S => {
+    S.space('hall', 0.25);
+    S.tone({ f: 1900, f1: 260, dur: 1.3, curve: 'exp', a: 0.5, peak: 0.07, lp: 3500 });
+    S.whoosh({ color: 'pink', f: 300, f1: 2600, dur: 1.4, peakAt: 0.95, peak: 0.32 });
+    S.rumble({ dur: 1.4, f: 80, peak: 0.28, a: 0.9 });
+    S.crackle({ at: 0.3, dens: 1.4, f: 3000, dur: 1.0, pts: [[0.8, 1], [1.0, 0]], peak: 0.1 });
+  });
+  def('fd-meteor-hit', 'ult', S => {
+    S.space('hall', 0.3);
+    S.thud({ f: 56, f1: 22, dur: 1.2, drive: 3, peak: 0.9 });
+    S.crack({ peak: 0.4, dur: 0.25 });
+    S.rumble({ dur: 1.7, f: 90, peak: 0.4, a: 0.12 });
+    S.whoosh({ color: 'brown', f: 200, f1: 2400, dur: 0.5, peakAt: 0.25, peak: 0.34 });
+    S.crackle({ at: 0.15, dens: 1.6, f: 2800, dur: 1.2, pts: [[0.1, 1], [1.2, 0]], peak: 0.2 });
+    S.skitter({ at: 0.2, dur: 0.9, n: 14, f: 1500, f1: 800, peak: 0.1, bias: 0.6 });
+  });
+
+  // ---- heroes: Ranger
+  def('fd-arrow', 'ab', S => {
+    S.pluck({ f: mf(43), dur: 0.18, bright: 12, peak: 0.3 });
+    S.whoosh({ color: 'white', at: 0.02, f: 3200, f1: 1400, dur: 0.2, peakAt: 0.3, peak: 0.18 });
+    S.wood({ f: 600, dur: 0.05, peak: 0.12 });
+  });
+  def('fd-pierce', 'ab', S => {
+    S.wood({ f: 520, dur: 0.08, peak: 0.4 });
+    S.noise({ hp: 3000, dur: 0.02, a: 0.0005, peak: 0.3 });
+    S.metal({ set: 'bar', f: 1700, dur: 0.14, peak: 0.08, click: 0 });
+    S.whoosh({ color: 'white', f: 2200, f1: 900, dur: 0.12, peakAt: 0.3, peak: 0.16 });
+  });
+  def('fd-trap-arm', 'hud', S => {
+    S.tick({ f: 1900, peak: 0.15 });
+    S.tick({ at: 0.07, f: 2400, peak: 0.13 });
+    S.metal({ at: 0.03, set: 'bar', f: 900, dur: 0.12, peak: 0.1, click: 0 });
+    S.wood({ at: 0.14, f: 600, dur: 0.06, peak: 0.12 });
+  });
+  def('fd-trap-burst', 'ab', S => {
+    S.crack({ peak: 0.45, dur: 0.22, f: 1600 });
+    S.thud({ f: 100, f1: 50, dur: 0.3, drive: 1.5, peak: 0.55 });
+    S.skitter({ at: 0.02, dur: 0.4, n: 12, f: 2200, f1: 1200, peak: 0.12 });
+    S.whoosh({ color: 'white', f: 2400, f1: 500, dur: 0.22, peakAt: 0.15, peak: 0.25 });
+  });
+  def('fd-mark', 'hud', S => {
+    S.glass({ f: mf(96), dur: 0.35, peak: 0.14 });
+    S.tone({ type: 'tri', f: 520, f1: 1040, dur: 0.14, peak: 0.15, lp: 3000 });
+    S.tone({ at: 0.12, type: 'tri', f: 1040, dur: 0.12, peak: 0.1, lp: 3000 });
+    S.tick({ at: 0.12, f: 2800, peak: 0.1 });
+  });
+  def('fd-starfall', 'ult', S => {
+    S.space('hall', 0.25);
+    S.pad({ notes: [mf(62), mf(69)], type: 'tri', dur: 2.0, a: 0.8, peak: 0.1, lpEnv: [600, 2500, 800] });
+    for (let i = 0; i < 14; i++) {
+      const at = 0.1 + i * 0.12 + S.rr(0, 0.08), pan = S.rr(-0.8, 0.8);
+      S.whoosh({ at, color: 'white', f: S.rr(3200, 4200), f1: S.rr(900, 1500), dur: 0.18, peakAt: 0.3, peak: 0.12, pan });
+      S.wood({ at: at + 0.16, f: S.rr(420, 760), dur: 0.06, peak: 0.12, pan });
+    }
+    S.glass({ at: 0.2, f: mf(93), dur: 1.6, peak: 0.07 });
+    S.glass({ at: 0.9, f: mf(98), dur: 1.4, peak: 0.06 });
+  });
+
+  // ---- heroes: autos and states (short and soft)
+  def('fd-auto-melee', 'ui', S => {
+    S.whoosh({ color: 'pink', f: S.rr(650, 800), f1: 1800, dur: 0.08, peakAt: 0.4, peak: 0.14 });
+    S.thud({ at: 0.05, f: S.rr(140, 170), f1: 80, dur: 0.07, peak: 0.3, click: 0.5, lp: 1200 });
+  });
+  def('fd-auto-shot', 'ui', S => {
+    S.pluck({ f: S.rr(300, 360), dur: 0.1, bright: 10, peak: 0.18 });
+    S.whoosh({ color: 'white', f: 3000, f1: 1800, dur: 0.1, peakAt: 0.3, peak: 0.08 });
+  });
+  def('fd-auto-cast', 'ui', S => {
+    S.tone({ f: 700, f1: 1250, dur: 0.1, peak: 0.16, lp: 3000 });
+    S.glass({ at: 0.02, f: S.rr(2200, 2600), dur: 0.16, peak: 0.06 });
+    S.noise({ hp: 4000, dur: 0.05, a: 0.004, peak: 0.05 });
+  });
+  def('fd-hero-down', 'sting', S => {
+    S.space('room', 0.2);
+    S.thud({ f: 90, f1: 45, dur: 0.35, peak: 0.55, click: 0.2, lp: 700 });
+    S.noise({ at: 0.04, color: 'pink', bp: 700, bp1: 300, q: 0.8, dur: 0.4, pts: [[0.05, 1], [0.4, 0]], peak: 0.15 });
+    S.voice({ f: 160, f1: 85, dur: 0.7, vowel: 'o', vowel1: 'u', breath: 8, peak: 0.16, pts: [[0.1, 1], [0.7, 0]] });
+    S.metal({ at: 0.1, set: 'plate', f: 220, dur: 0.4, peak: 0.1, strike: 0.5 });
+  });
+  def('fd-hero-rise', 'sting', S => {
+    S.space('hall', 0.3);
+    S.pad({ notes: [mf(55), mf(62)], type: 'tri', dur: 1.1, a: 0.35, peak: 0.2, lpEnv: [400, 2400, 1200] });
+    S.bell({ at: 0.3, f: mf(79), dur: 1.0, peak: 0.2 });
+    S.whoosh({ f: 300, f1: 2800, dur: 0.5, peakAt: 0.8, peak: 0.16 });
+    S.voice({ at: 0.15, f: 196, f1: 262, dur: 0.7, vowel: 'a', breath: 3, peak: 0.1 });
+  });
+  def('fd-levelup', 'sting', S => {
+    S.space('room', 0.25);
+    [64, 68, 71, 76].forEach((n, i) => { S.glass({ at: i * 0.08, f: mf(n + 12), dur: 0.5, peak: 0.12 }); S.pluck({ at: i * 0.08, f: mf(n), dur: 0.4, bright: 6, peak: 0.12 }); });
+    S.bell({ at: 0.3, f: mf(88), dur: 1.0, peak: 0.16 });
+    S.bubbles({ at: 0.25, n: 7, f: 1200, f1: 3500, spread: 0.5, size: 0.03, peak: 0.05 });
+  });
+  def('fd-rankup', 'hud', S => {
+    S.space('room', 0.2);
+    S.pluck({ f: mf(69), dur: 0.3, bright: 6, peak: 0.18 });
+    S.bell({ at: 0.09, f: mf(83), dur: 0.6, peak: 0.12 });
+  });
+
+  // ---- enemies
+  def('fd-enemy-hit', 'ui', S => {
+    S.thud({ f: S.rr(120, 150), f1: 75, dur: 0.06, peak: 0.35, click: 0.6, clickF: 1800, lp: 1200 });
+    S.noise({ color: 'pink', bp: 900, dur: 0.05, a: 0.002, peak: 0.12 });
+  });
+  def('fd-enemy-die', 'hud', S => {
+    S.splat({ peak: 0.3, dur: 0.2 });
+    S.tone({ f: 200, f1: 70, dur: 0.22, peak: 0.2, lp: 600 });
+    S.noise({ at: 0.04, color: 'pink', lp: 900, lp1: 250, dur: 0.2, pts: [[0.05, 1], [0.2, 0]], peak: 0.12 });
+  });
+  def('fd-elite-die', 'ab', S => {
+    S.space('room', 0.2);
+    S.thud({ f: 70, f1: 35, dur: 0.6, drive: 1.5, peak: 0.6 });
+    S.voice({ f: 120, f1: 58, dur: 0.6, vowel: 'o', vowel1: 'u', breath: 6, peak: 0.2, pts: [[0.08, 1], [0.6, 0]] });
+    S.splat({ at: 0.03, peak: 0.3, dur: 0.3 });
+    S.rumble({ dur: 0.6, f: 80, peak: 0.2, a: 0.1 });
+    S.metal({ at: 0.2, set: 'plate', f: 250, dur: 0.4, peak: 0.1, strike: 0.5 });
+  });
+  def('fd-spit', 'hud', S => {
+    S.bubbles({ n: 5, f: 300, f1: 1000, spread: 0.12, size: 0.03, peak: 0.12 });
+    S.whoosh({ at: 0.04, color: 'white', f: 1200, f1: 2400, dur: 0.14, peakAt: 0.4, peak: 0.12 });
+    S.noise({ color: 'pink', bp: 1400, bp1: 500, q: 3, dur: 0.1, peak: 0.12, grain: 0.3 });
+  });
+  def('fd-brute-slam', 'bm', S => {
+    S.space('room', 0.15);
+    S.thud({ f: 80, f1: 38, dur: 0.5, drive: 2, peak: 0.7 });
+    S.crack({ peak: 0.28, dur: 0.15, f: 1400 });
+    S.wood({ at: 0.02, f: 200, dur: 0.25, peak: 0.25 });
+    S.rumble({ dur: 0.45, f: 100, peak: 0.25, a: 0.05 });
+    S.skitter({ at: 0.06, dur: 0.3, n: 8, f: 1800, f1: 900, peak: 0.08 });
+  });
+  def('fd-stalker', 'hud', S => {
+    S.skitter({ dur: 0.35, n: 8, f: 2500, peak: 0.1, bias: 0.8 });
+    S.noise({ at: 0.05, hp: 4000, dur: 0.3, a: 0.08, peak: 0.07, pts: [[0.15, 1], [0.3, 0]] });
+    S.voice({ at: 0.1, f: 90, f1: 70, dur: 0.3, vowel: 'i', breath: 8, peak: 0.07 });
+  });
+  def('fd-camp-hit', 'ab', S => {
+    S.thud({ f: 110, f1: 65, dur: 0.22, peak: 0.45, click: 0.2, lp: 500 });
+    S.creak({ at: 0.05, dur: 0.3, f: 25, f1: 15, res: [420, 900], q: 9, peak: 0.12 });
+    S.noise({ color: 'pink', bp: 600, q: 0.8, dur: 0.18, pts: [[0.03, 1], [0.18, 0]], peak: 0.18 });
+  });
+  def('fd-gate-hit', 'ab', S => {
+    S.thud({ f: 75, f1: 40, dur: 0.35, drive: 1.5, peak: 0.6 });
+    S.wood({ f: 180, dur: 0.25, peak: 0.32 });
+    S.crack({ at: 0.02, peak: 0.2, dur: 0.1, f: 900 });
+    S.creak({ at: 0.1, dur: 0.3, f: 22, f1: 14, res: [380, 800], q: 9, peak: 0.1 });
+  });
+  def('fd-gate-break', 'imp', S => {
+    S.space('hall', 0.25);
+    S.crack({ peak: 0.45, dur: 0.3, f: 900 });
+    for (let i = 0; i < 6; i++) S.wood({ at: 0.02 + i * 0.07 + S.rr(0, 0.04), f: S.rr(180, 600), dur: 0.2, peak: 0.28, pan: S.rr(-0.5, 0.5) });
+    S.thud({ f: 55, f1: 25, dur: 1.0, drive: 3, peak: 0.85 });
+    S.rumble({ dur: 1.2, f: 110, peak: 0.35, a: 0.1 });
+    S.skitter({ at: 0.3, dur: 0.8, n: 16, f: 1400, f1: 700, peak: 0.1 });
+  });
+
+  // ---- bosses
+  def('fd-boss-arrive', 'sting', S => {
+    S.space('hall', 0.45);
+    S.horn({ f: mf(38), dur: 2.2, peak: 0.4, bright: 5 });
+    S.horn({ at: 0.4, f: mf(45), dur: 1.8, peak: 0.25, bright: 4 });
+    [1.2, 1.7].forEach(at => S.drum({ at, f: 58, dur: 0.9, peak: 0.55 }));
+    S.rumble({ dur: 2.6, f: 60, peak: 0.4, a: 0.6 });
+    S.choir({ at: 0.3, notes: [mf(38), mf(45)], vowel: 'u', dur: 2.4, a: 1.0, peak: 0.1 });
+  });
+  def('fd-boss-down', 'sting', S => {
+    S.space('hall', 0.5);
+    S.thud({ f: 50, f1: 22, dur: 1.6, drive: 3, peak: 0.85 });
+    S.rumble({ at: 0.1, dur: 2.2, f: 70, peak: 0.4, a: 0.1, pts: [[0.1, 1], [2.2, 0]] });
+    S.choir({ at: 0.3, notes: [mf(43), mf(50), mf(55)], vowel: 'o', vowel1: 'u', dur: 2.4, a: 0.8, bend: -2, peak: 0.12 });
+    S.bell({ at: 1.0, f: mf(57), dur: 2.2, peak: 0.2 });
+    S.skitter({ at: 0.1, dur: 1.2, n: 16, f: 1200, f1: 700, peak: 0.08, bias: 0.7 });
+  });
+  def('fd-tunnel-burrow', 'bm', S => {
+    S.space('cave', 0.2);
+    S.scrape({ f: 600, q: 1.2, rate: 28, dur: 0.85, peak: 0.28, pts: [[0.15, 1], [0.6, 0.8], [0.85, 0]] });
+    S.noise({ color: 'brown', lp: 700, lp1: 150, dur: 1.0, a: 0.1, pts: [[0.2, 1], [1.0, 0]], peak: 0.4 });
+    [0.1, 0.3, 0.5].forEach((at, i) => S.thud({ at, f: 70 - i * 10, f1: 32, dur: 0.3, peak: 0.45, click: 0.2, lp: 400 }));
+    S.rumble({ dur: 1.1, f: 80, f1: 40, peak: 0.3, a: 0.2 });
+  });
+  def('fd-tunnel-surface', 'bm', S => {
+    S.space('cave', 0.25);
+    S.crack({ peak: 0.4, dur: 0.3, f: 800 });
+    S.thud({ at: 0.02, f: 58, f1: 26, dur: 0.9, drive: 2.5, peak: 0.8 });
+    S.noise({ color: 'brown', lp: 2200, lp1: 300, dur: 0.7, a: 0.01, peak: 0.45 });
+    S.skitter({ at: 0.05, dur: 0.8, n: 18, f: 1400, f1: 700, peak: 0.1, bias: 0.6 });
+    S.voice({ at: 0.15, f: 100, f1: 66, dur: 0.6, vowel: 'a', breath: 7, peak: 0.16, pts: [[0.1, 1], [0.6, 0]] });
+  });
+  def('fd-tail-sweep', 'bm', S => {
+    S.whoosh({ color: 'brown', f: 100, f1: 800, dur: 0.6, peakAt: 0.6, peak: 0.36 });
+    S.thud({ at: 0.45, f: 64, f1: 30, dur: 0.6, drive: 2, peak: 0.65 });
+    S.wood({ at: 0.46, f: 240, dur: 0.2, peak: 0.25 });
+    S.scrape({ at: 0.45, f: 900, q: 1.2, rate: 30, dur: 0.35, peak: 0.12, pts: [[0.05, 1], [0.35, 0]] });
+    S.skitter({ at: 0.5, dur: 0.4, n: 10, f: 1500, peak: 0.07 });
+  });
+  def('fd-quake', 'bm', S => {
+    S.space('cave', 0.3);
+    S.rumble({ dur: 1.7, f: 70, peak: 0.5, a: 0.4 });
+    [0.2, 0.55, 0.9, 1.2].forEach((at, i) => { S.crack({ at, peak: 0.25, dur: 0.18, f: 900 }); S.thud({ at, f: 60 - i * 4, f1: 30, dur: 0.4, peak: 0.4, click: 0.1 }); });
+    S.noise({ color: 'brown', lp: 1500, dur: 1.6, a: 0.3, pts: [[0.5, 1], [1.6, 0]], peak: 0.3, grain: 0.4 });
+  });
+
+  // the Wick-Eater: a thin thing that eats light
+  def('fd-wick-glow', 'tg', S => {
+    S.space('cave', 0.3);
+    S.tone({ f: 400, f1: 900, dur: 1.1, a: 0.8, swell: true, peak: 0.13, am: [7, 0.4] });
+    S.voice({ f: 300, f1: 520, dur: 1.0, vowel: 'i', breath: 6, peak: 0.1, pts: [[0.7, 1], [1.0, 0.6]] });
+    S.glass({ at: 0.6, f: 3000, dur: 0.6, peak: 0.07 });
+    S.sizzle({ dur: 1.1, peak: 0.05, pts: [[0.8, 1], [1.1, 0]] });
+  });
+  def('fd-wick-lunge', 'bm', S => {
+    S.whoosh({ color: 'white', f: 4000, f1: 800, dur: 0.25, peakAt: 0.35, peak: 0.4 });
+    S.crack({ at: 0.18, peak: 0.3, dur: 0.15, f: 1500 });
+    S.wood({ at: 0.18, f: 1100, dur: 0.1, peak: 0.25 });
+    S.thud({ at: 0.18, f: 100, f1: 50, dur: 0.2, peak: 0.4, click: 0 });
+    S.voice({ at: 0.02, f: 420, f1: 260, dur: 0.3, vowel: 'i', breath: 9, peak: 0.12 });
+  });
+  def('fd-wick-breath', 'bm', S => {
+    S.space('hall', 0.3);
+    S.noise({ color: 'pink', bp: 3500, bp1: 1200, q: 0.8, dur: 1.5, a: 0.3, pts: [[0.3, 1], [1.5, 0]], peak: 0.32 });
+    S.partials({ set: 'glass', f: 1900, dur: 1.4, peak: 0.06, am: [8, 0.5], a: 0.2, swell: true });
+    S.rumble({ dur: 1.6, f: 65, peak: 0.3, a: 0.4 });
+    S.voice({ f: 95, f1: 70, dur: 1.4, vowel: 'o', breath: 9, peak: 0.1, pts: [[0.3, 1], [1.4, 0]] });
+  });
+  def('fd-wick-eat', 'bm', S => {
+    S.whoosh({ color: 'pink', f: 2500, f1: 500, dur: 0.35, peakAt: 0.3, peak: 0.28 });
+    S.noise({ at: 0.32, color: 'pink', lp: 800, dur: 0.1, a: 0.003, peak: 0.3 });
+    S.sizzle({ at: 0.3, dur: 0.5, peak: 0.1, pts: [[0.05, 1], [0.5, 0]] });
+    S.tone({ at: 0.36, f: 220, f1: 110, dur: 0.16, peak: 0.15, lp: 600 });
+    S.glass({ at: 0.33, f: 1500, dur: 0.3, peak: 0.04 });
+  });
+
+  // the Mirebull: a huge drowned ox that floods the ford
+  def('fd-mire-stamp', 'bm', S => {
+    S.space('room', 0.2);
+    S.thud({ f: 70, f1: 32, dur: 0.8, drive: 2, peak: 0.7 });
+    S.splat({ at: 0.02, peak: 0.45, dur: 0.4 });
+    S.bubbles({ at: 0.1, n: 8, f: 250, f1: 900, spread: 0.5, size: 0.05, peak: 0.1 });
+    S.voice({ f: 70, f1: 55, dur: 0.8, vowel: 'o', breath: 6, peak: 0.2, pts: [[0.1, 1], [0.8, 0]] });
+  });
+  def('fd-mire-charge', 'bm', S => {
+    S.space('room', 0.15);
+    [0, 0.22, 0.42, 0.6, 0.76, 0.9, 1.03, 1.15].forEach((at, i) => {
+      S.thud({ at, f: 85, f1: 45, dur: 0.18, peak: 0.28 + i * 0.03, click: 0.1, lp: 600, pan: (i % 2 ? 0.2 : -0.2) });
+      S.noise({ at, color: 'pink', bp: 1200, q: 0.8, dur: 0.12, peak: 0.1 });
+    });
+    S.whoosh({ color: 'brown', f: 120, f1: 700, dur: 1.3, peakAt: 0.85, peak: 0.26 });
+    S.voice({ f: 66, f1: 80, dur: 0.9, vowel: 'o', breath: 6, peak: 0.12, pts: [[0.1, 1], [0.9, 0]] });
+  });
+  def('fd-flood-rise', 'bm', S => {
+    S.space('hall', 0.3);
+    S.noise({ color: 'pink', bp: 300, bp1: 900, q: 0.9, dur: 2.0, a: 0.8, pts: [[1.0, 0.8], [1.7, 1], [2.0, 0]], peak: 0.4 });
+    S.bubbles({ n: 12, f: 220, f1: 1100, spread: 1.6, size: 0.05, peak: 0.1 });
+    S.rumble({ dur: 2.0, f: 70, peak: 0.35, a: 0.8 });
+    S.splat({ at: 0.05, peak: 0.25, dur: 0.3 });
+  });
+  def('fd-log-break', 'bm', S => {
+    S.space('room', 0.2);
+    S.crack({ peak: 0.45, dur: 0.25, f: 900 });
+    S.crack({ at: 0.09, peak: 0.35, dur: 0.2, f: 700 });
+    S.wood({ at: 0.02, f: 150, dur: 0.4, peak: 0.45 });
+    S.thud({ at: 0.04, f: 70, f1: 36, dur: 0.5, peak: 0.55 });
+    S.splat({ at: 0.14, peak: 0.4, dur: 0.4 });
+    S.creak({ at: 0.04, dur: 0.35, f: 28, f1: 12, res: [320, 760], q: 10, peak: 0.12 });
+  });
+  def('fd-mire-drown', 'bm', S => {
+    S.space('hall', 0.4);
+    S.voice({ f: 100, f1: 56, dur: 1.8, vowel: 'o', vowel1: 'u', breath: 7, peak: 0.24, pts: [[0.2, 1], [1.8, 0]] });
+    S.bubbles({ at: 0.2, n: 18, f: 600, f1: 120, spread: 1.8, size: 0.06, peak: 0.12 });
+    S.noise({ color: 'brown', lp: 1100, lp1: 160, dur: 2.2, a: 0.3, pts: [[0.8, 1], [2.2, 0]], peak: 0.4 });
+    S.thud({ at: 1.7, f: 44, f1: 22, dur: 0.9, drive: 2, peak: 0.55 });
+  });
+
+  // Old Gnaw: a vast blind ash beast that sniffs for warmth
+  def('fd-gnaw-sniff', 'bm', S => {
+    S.space('cave', 0.3);
+    [0, 0.38, 0.8].forEach((at, i) => S.noise({ at, color: 'pink', bp: 400 + i * 80, bp1: 1000 + i * 100, q: 1.6, dur: 0.28, a: 0.03, pts: [[0.1, 1], [0.28, 0]], peak: 0.28 }));
+    S.rumble({ dur: 1.4, f: 60, peak: 0.35, a: 0.3 });
+    S.voice({ at: 0.1, f: 55, f1: 62, dur: 1.2, vowel: 'o', breath: 10, peak: 0.12, pts: [[0.3, 1], [1.2, 0]] });
+  });
+  def('fd-gnaw-breath', 'bm', S => {
+    S.space('hall', 0.35);
+    S.noise({ color: 'brown', lp: 1300, lp1: 700, dur: 1.7, a: 0.35, pts: [[0.4, 1], [1.7, 0]], peak: 0.45 });
+    S.crackle({ at: 0.1, dens: 2, f: 3200, dur: 1.5, pts: [[0.4, 1], [1.5, 0]], peak: 0.18 });
+    S.voice({ f: 60, f1: 48, dur: 1.6, vowel: 'a', breath: 10, peak: 0.2, pts: [[0.25, 1], [1.6, 0]] });
+    S.sizzle({ at: 0.2, dur: 1.4, peak: 0.07, pts: [[0.3, 1], [1.4, 0]] });
+  });
+  def('fd-gnaw-stamp', 'bm', S => {
+    S.space('cave', 0.35);
+    S.thud({ f: 40, f1: 20, dur: 1.2, drive: 3.2, peak: 0.95 });
+    S.rumble({ dur: 1.5, f: 65, peak: 0.45, a: 0.08 });
+    S.noise({ at: 0.05, color: 'brown', lp: 1800, lp1: 250, dur: 1.0, a: 0.01, peak: 0.35, grain: 0.4 });
+    S.skitter({ at: 0.15, dur: 1.0, n: 18, f: 1100, f1: 600, peak: 0.1, bias: 0.6 });
+  });
+  def('fd-gnaw-lunge', 'bm', S => {
+    S.space('cave', 0.25);
+    S.whoosh({ color: 'brown', f: 80, f1: 500, dur: 0.6, peakAt: 0.7, peak: 0.4 });
+    S.voice({ f: 80, f1: 140, dur: 0.6, vowel: 'a', breath: 8, peak: 0.2, pts: [[0.1, 1], [0.6, 0.8]] });
+    [0.55, 0.62, 0.7].forEach((at, i) => S.wood({ at, f: 140 + i * 90, dur: 0.12, peak: 0.28 }));
+    S.thud({ at: 0.58, f: 46, f1: 24, dur: 0.8, drive: 2.8, peak: 0.8 });
+    S.crack({ at: 0.58, peak: 0.25, dur: 0.15, f: 800 });
+  });
+  def('fd-whelps', 'bm', S => {
+    S.skitter({ dur: 1.0, n: 26, f: 2800, f1: 1400, peak: 0.12, bias: 0.8 });
+    S.crackle({ dens: 2.4, f: 3600, dur: 0.9, pts: [[0.2, 1], [0.9, 0]], peak: 0.12 });
+    [0.1, 0.35, 0.6].forEach(at => S.voice({ at, f: S.rr(550, 700), f1: S.rr(800, 950), dur: 0.14, vowel: 'i', breath: 4, peak: 0.07, pan: S.rr(-0.6, 0.6) }));
+    S.sizzle({ dur: 0.7, peak: 0.05, pts: [[0.1, 1], [0.7, 0]] });
+  });
+
+  // ---- world and quests
+  def('fd-wave', 'hud', S => {
+    S.space('hall', 0.3);
+    S.horn({ f: mf(48), dur: 0.5, peak: 0.28, bright: 5 });
+    S.horn({ at: 0.35, f: mf(55), dur: 0.7, peak: 0.26, bright: 5 });
+    S.drum({ at: 0.35, f: 70, dur: 0.5, peak: 0.35 });
+  });
+  def('fd-night', 'sting', S => {
+    S.space('hall', 0.35);
+    S.pad({ notes: [mf(45), mf(52), mf(57)], type: 'tri', dur: 2.4, a: 0.8, bend: -1.5, peak: 0.2, lpEnv: [900, 500, 250] });
+    S.noise({ color: 'pink', bp: 500, q: 0.6, dur: 2.2, a: 0.8, pts: [[1.0, 1], [2.2, 0]], peak: 0.1 });
+    [0.8, 1.35].forEach((at, i) => S.voice({ at, f: 400 - i * 60, f1: 340 - i * 60, dur: 0.4, vowel: 'o', breath: 2, peak: 0.07 }));
+    S.skitter({ at: 0.2, dur: 1.8, n: 14, f: 5000, peak: 0.03 });
+  });
+  def('fd-dawn-breaks', 'sting', S => {
+    S.space('hall', 0.35);
+    S.pad({ notes: [mf(50), mf(57), mf(62), mf(66)], type: 'tri', dur: 2.4, a: 1.0, peak: 0.2, lpEnv: [400, 2600, 1600] });
+    S.bell({ at: 0.6, f: mf(78), dur: 1.6, peak: 0.14 });
+    [0.9, 1.15, 1.4, 1.62, 1.9].forEach((at, i) => S.tone({ at, f: 3000 + (i * 370) % 1200, f1: 3900 + (i * 290) % 900, dur: 0.07, a: 0.005, peak: 0.05 }));
+    S.whoosh({ f: 300, f1: 2500, dur: 1.4, peakAt: 0.9, peak: 0.1 });
+  });
+  def('fd-quest-offer', 'hud', S => {
+    S.space('room', 0.2);
+    S.wood({ f: 430, dur: 0.1, peak: 0.28 });
+    S.wood({ at: 0.12, f: 440, dur: 0.1, peak: 0.26 });
+    S.horn({ at: 0.3, f: mf(55), dur: 0.5, peak: 0.16, bright: 4 });
+    S.horn({ at: 0.62, f: mf(62), dur: 0.6, peak: 0.16, bright: 4 });
+  });
+  def('fd-quest-done', 'sting', S => {
+    S.space('hall', 0.3);
+    [62, 66, 69].forEach((n, i) => S.pluck({ at: i * 0.07, f: mf(n), dur: 0.8, bright: 6, peak: 0.2 }));
+    S.bell({ at: 0.3, f: mf(86), dur: 1.4, peak: 0.16 });
+    S.choir({ at: 0.15, notes: [mf(50), mf(57)], vowel: 'o', dur: 1.2, a: 0.4, peak: 0.1 });
+    S.coins({ at: 0.35, n: 3, f: 3400, spread: 0.12, peak: 0.1 });
+  });
+  def('fd-quest-missed', 'hud', S => {
+    S.space('room', 0.25);
+    S.pluck({ f: mf(50), dur: 0.5, bright: 3, peak: 0.2 });
+    S.pluck({ at: 0.28, f: mf(46), dur: 0.8, bright: 3, peak: 0.2 });
+    S.wood({ at: 0.28, f: 210, dur: 0.15, peak: 0.2 });
+    S.creak({ at: 0.35, dur: 0.4, f: 22, f1: 12, res: [380, 760], q: 9, peak: 0.07 });
+  });
+  def('fd-pickup', 'town', S => {
+    S.noise({ color: 'pink', bp: 1500, bp1: 2800, q: 0.9, dur: 0.14, am: [24, 0.6], pts: [[0.04, 1], [0.14, 0]], peak: 0.2 });
+    S.wood({ at: 0.05, f: 600, dur: 0.06, peak: 0.1 });
+    S.tone({ at: 0.04, f: 280, f1: 380, dur: 0.1, peak: 0.08, lp: 900 });
+  });
+  def('fd-setdown', 'town', S => {
+    S.thud({ f: 110, f1: 70, dur: 0.14, peak: 0.4, click: 0.2, lp: 500 });
+    S.noise({ at: 0.03, color: 'pink', bp: 1100, q: 0.9, dur: 0.1, am: [20, 0.5], peak: 0.1 });
+  });
+  def('fd-deliver', 'hud', S => {
+    S.space('room', 0.2);
+    S.thud({ f: 100, f1: 60, dur: 0.15, peak: 0.4, click: 0.2, lp: 600 });
+    S.wood({ at: 0.01, f: 380, dur: 0.12, peak: 0.25 });
+    S.bell({ at: 0.1, f: mf(79), dur: 0.7, peak: 0.12 });
+    S.glass({ at: 0.14, f: mf(91), dur: 0.5, peak: 0.07 });
+  });
+  def('fd-post-plant', 'hud', S => {
+    S.thud({ f: 90, f1: 50, dur: 0.16, peak: 0.45, click: 0.3, lp: 600 });
+    S.thud({ at: 0.13, f: 85, f1: 48, dur: 0.16, peak: 0.45, click: 0.3, lp: 600 });
+    S.wood({ at: 0.14, f: 300, dur: 0.12, peak: 0.22 });
+    S.whoosh({ at: 0.3, color: 'brown', f: 150, f1: 600, dur: 0.22, peakAt: 0.4, peak: 0.2 });
+    S.crackle({ at: 0.3, dens: 1.6, f: 3000, dur: 0.4, pts: [[0.05, 1], [0.4, 0]], peak: 0.1 });
+  });
+  def('fd-post-out', 'hud', S => {
+    S.sizzle({ dur: 0.35, peak: 0.16, pts: [[0.03, 1], [0.35, 0]] });
+    S.noise({ color: 'pink', lp: 900, dur: 0.1, a: 0.003, peak: 0.25 });
+    S.tone({ f: 400, f1: 150, dur: 0.35, peak: 0.1, lp: 700 });
+    S.creak({ at: 0.05, dur: 0.2, f: 24, f1: 14, res: [400, 800], q: 9, peak: 0.06 });
+  });
+  def('fd-relight', 'hud', S => {
+    S.space('room', 0.2);
+    S.whoosh({ color: 'brown', f: 150, f1: 900, dur: 0.3, peakAt: 0.5, peak: 0.26 });
+    S.crackle({ at: 0.1, dens: 1.8, f: 3000, dur: 0.5, pts: [[0.05, 1], [0.5, 0]], peak: 0.13 });
+    S.bell({ at: 0.15, f: mf(81), dur: 0.8, peak: 0.1 });
+    S.tone({ type: 'tri', f: 300, f1: 520, dur: 0.3, a: 0.1, peak: 0.1, lp: 1200 });
+  });
+  def('fd-brand', 'hud', S => {
+    S.tick({ f: 3000, peak: 0.2 });
+    S.scrape({ f: 3500, q: 2, rate: 60, dur: 0.12, peak: 0.1 });
+    S.whoosh({ at: 0.13, color: 'pink', f: 200, f1: 1200, dur: 0.25, peakAt: 0.3, peak: 0.26 });
+    S.crackle({ at: 0.15, dens: 1.5, f: 2800, dur: 0.6, pts: [[0.05, 1], [0.6, 0.3]], peak: 0.14 });
+  });
+  def('fd-carve', 'ui', S => {
+    S.metal({ set: 'stone', f: S.rr(1300, 1600), dur: 0.12, peak: 0.28 });
+    S.noise({ hp: 3000, dur: 0.05, a: 0.001, peak: 0.12 });
+    S.tick({ at: 0.01, f: 3000, peak: 0.08 });
+  });
+  def('fd-cover', 'hud', S => {
+    S.space('room', 0.2);
+    S.scrape({ f: 320, q: 1, rate: 18, dur: 0.7, peak: 0.28, pts: [[0.1, 1], [0.7, 0.4]] });
+    S.rumble({ dur: 0.8, f: 85, peak: 0.28, a: 0.2 });
+    S.thud({ at: 0.68, f: 70, f1: 38, dur: 0.3, peak: 0.45, click: 0.1 });
+    S.metal({ at: 0.68, set: 'stone', f: 170, dur: 0.5, peak: 0.12, strike: 0.5 });
+  });
+  def('fd-boon', 'hud', S => {
+    S.space('hall', 0.3);
+    [79, 83, 86].forEach((n, i) => S.glass({ at: i * 0.06, f: mf(n), dur: 0.9, peak: 0.12 }));
+    S.pad({ notes: [mf(55), mf(62)], type: 'tri', dur: 0.9, a: 0.25, peak: 0.12, lpEnv: [400, 1800, 900] });
+    S.bubbles({ at: 0.1, n: 5, f: 1200, f1: 3200, spread: 0.5, size: 0.03, peak: 0.04 });
+  });
+  def('fd-buy', 'ui', S => {
+    S.coins({ n: 3, f: 3000, spread: 0.1, peak: 0.18 });
+    S.thud({ at: 0.12, f: 110, f1: 70, dur: 0.1, peak: 0.3, click: 0, lp: 500 });
+    S.wood({ at: 0.13, f: 500, dur: 0.07, peak: 0.1 });
+  });
+  def('fd-forge', 'ab', S => {
+    S.space('room', 0.25);
+    S.thud({ f: 100, f1: 60, dur: 0.12, peak: 0.45, click: 0.4 });
+    S.metal({ set: 'bar', f: 880, dur: 0.9, peak: 0.34, strike: 0.9 });
+    S.metal({ at: 0.01, set: 'plate', f: 1320, dur: 0.4, peak: 0.1, click: 0 });
+    S.sizzle({ at: 0.15, dur: 0.6, peak: 0.12, pts: [[0.05, 1], [0.6, 0]] });
+  });
+  def('fd-hyperforge', 'ab', S => {
+    S.space('hall', 0.35);
+    S.thud({ f: 90, f1: 55, dur: 0.15, peak: 0.5, click: 0.4 });
+    S.metal({ set: 'bar', f: 880, dur: 1.1, peak: 0.34, strike: 0.9 });
+    S.bell({ at: 0.15, f: mf(81), dur: 1.6, peak: 0.2 });
+    S.whoosh({ at: 0.1, f: 400, f1: 4200, dur: 0.7, peakAt: 0.8, peak: 0.22 });
+    [88, 93, 97, 100].forEach((n, i) => S.glass({ at: 0.35 + i * 0.09, f: mf(n), dur: 0.9, peak: 0.08 }));
+    S.sizzle({ at: 0.2, dur: 0.8, peak: 0.1, pts: [[0.05, 1], [0.8, 0]] });
+  });
+  def('fd-page', 'hud', S => {
+    S.space('room', 0.2);
+    S.noise({ hp: 2500, bp: 5000, q: 0.6, dur: 0.14, am: [30, 0.7], pts: [[0.04, 1], [0.14, 0]], peak: 0.18 });
+    S.noise({ at: 0.09, hp: 2500, bp: 4200, q: 0.6, dur: 0.1, am: [26, 0.7], peak: 0.12 });
+    S.glass({ at: 0.14, f: mf(91), dur: 0.7, peak: 0.1 });
+  });
+  def('fd-gate-shut', 'sting', S => {
+    S.space('hall', 0.4);
+    S.creak({ dur: 1.0, f: 18, f1: 9, res: [300, 640, 1100], q: 11, peak: 0.2 });
+    S.whoosh({ color: 'brown', at: 0.7, f: 100, f1: 600, dur: 0.4, peakAt: 0.9, peak: 0.25 });
+    S.thud({ at: 1.0, f: 45, f1: 20, dur: 1.6, drive: 3, peak: 0.95 });
+    S.metal({ at: 1.0, set: 'stone', f: 140, dur: 1.5, peak: 0.25, strike: 0.7 });
+    S.wood({ at: 1.35, f: 160, dur: 0.4, peak: 0.4 });
+    S.thud({ at: 1.35, f: 60, f1: 34, dur: 0.5, peak: 0.55 });
+    S.rumble({ at: 1.0, dur: 1.8, f: 70, peak: 0.35, a: 0.05 });
+    S.bell({ at: 1.7, f: mf(38), dur: 2.2, peak: 0.2 });
+  });
+  def('fd-count', 'hud', S => {
+    S.space('room', 0.2);
+    S.wood({ f: 300, dur: 0.1, peak: 0.25 });
+    S.bell({ at: 0.02, f: mf(72), dur: 0.55, peak: 0.14 });
+  });
+  def('fd-victory', 'sting', S => {
+    S.space('hall', 0.45);
+    S.horn({ f: mf(50), dur: 0.5, peak: 0.3, bright: 5 });
+    S.horn({ at: 0.45, f: mf(57), dur: 0.45, peak: 0.3, bright: 5 });
+    S.horn({ at: 0.85, f: mf(62), dur: 1.9, peak: 0.34, bright: 5 });
+    S.drum({ f: 70, dur: 0.6, peak: 0.45 }); S.drum({ at: 0.45, f: 70, dur: 0.6, peak: 0.45 }); S.drum({ at: 0.85, f: 62, dur: 1.0, peak: 0.5 });
+    S.choir({ at: 0.9, notes: [mf(50), mf(57), mf(62), mf(66)], vowel: 'a', vowel1: 'o', dur: 2.3, a: 0.5, peak: 0.14 });
+    [74, 78, 81, 86].forEach((n, i) => S.bell({ at: 1.0 + i * 0.16, f: mf(n), dur: 1.6, peak: 0.14 }));
+    S.coins({ at: 1.2, n: 5, f: 3400, spread: 0.5, peak: 0.1 });
+  });
+  def('fd-defeat', 'sting', S => {
+    S.space('hall', 0.5);
+    S.pad({ notes: [mf(38), mf(45), mf(50)], type: 'tri', dur: 2.8, a: 0.5, bend: -1.5, peak: 0.24, lpEnv: [800, 500, 200] });
+    S.drum({ f: 52, dur: 1.0, peak: 0.55 }); S.drum({ at: 0.95, f: 46, dur: 1.4, peak: 0.55 });
+    S.voice({ at: 0.2, f: 110, f1: 78, dur: 2.0, vowel: 'u', vowel1: 'o', breath: 5, peak: 0.16, pts: [[0.4, 1], [2.0, 0]] });
+    S.bell({ at: 1.0, f: mf(62), dur: 2.2, peak: 0.14 });
+    S.rumble({ dur: 2.6, f: 55, peak: 0.3, a: 0.3 });
+  });
+
+  // ---- the Founding, pass 2: recall, pings, a lane under strain, a wave step, a sale (all quiet)
+  def('fd-recall', 'hud', S => {
+    S.space('hall', 0.35);
+    S.pad({ notes: [mf(57), mf(64), mf(69)], type: 'tri', dur: 1.6, a: 0.7, peak: 0.16, lpEnv: [500, 2200, 1400] });
+    S.whoosh({ f: 400, f1: 2800, dur: 1.5, peakAt: 0.9, peak: 0.07 });
+    [0.35, 0.7, 1.05].forEach((at, i) => S.glass({ at, f: mf(78 + i * 3), dur: 0.7, peak: 0.07 }));
+  });
+  def('fd-recall-done', 'hud', S => {
+    S.space('hall', 0.3);
+    [72, 79, 84].forEach((n, i) => S.glass({ at: i * 0.07, f: mf(n), dur: 0.9, peak: 0.12 }));
+    S.pad({ notes: [mf(55), mf(62)], type: 'tri', dur: 0.8, a: 0.1, peak: 0.1, lpEnv: [1600, 900, 500] });
+    S.bubbles({ at: 0.05, n: 4, f: 1600, f1: 3400, spread: 0.3, size: 0.03, peak: 0.03 });
+  });
+  def('fd-ping', 'hud', S => {
+    S.space('room', 0.15);
+    S.tick({ f: 2000, peak: 0.28 });
+    S.glass({ at: 0.04, f: mf(88), dur: 0.35, peak: 0.07 });
+  });
+  def('fd-alert', 'hud', S => {
+    S.space('hall', 0.35);
+    S.horn({ f: mf(47), dur: 0.9, peak: 0.16, bright: 3 });
+    S.horn({ at: 0.04, f: mf(54), dur: 0.8, peak: 0.07, bright: 3 });
+    S.pad({ notes: [mf(40)], type: 'tri', dur: 1.1, a: 0.3, peak: 0.08, lpEnv: [300, 500, 250] });
+  });
+  def('fd-step', 'hud', S => {
+    S.space('hall', 0.3);
+    S.pad({ notes: [mf(43), mf(50), mf(55)], type: 'tri', dur: 1.4, a: 0.4, bend: 0.8, peak: 0.12, lpEnv: [400, 1000, 400] });
+    S.drum({ f: 74, dur: 0.5, peak: 0.2 });
+    S.metal({ at: 0.05, set: 'plate', f: 260, dur: 0.7, peak: 0.05 });
+  });
+  def('fd-sell', 'ui', S => {
+    S.coins({ n: 3, f: 3300, spread: 0.12, peak: 0.16 });
+    S.wood({ at: 0.02, f: 560, dur: 0.06, peak: 0.1 });
+    S.thud({ at: 0.14, f: 130, f1: 80, dur: 0.09, peak: 0.16, click: 0, lp: 500 });
+  });
+
+  // ---- the Founding, pass 4: defence towers, squads, wild camps (all soft; they repeat a lot)
+  def('fd-bell-ring', 'hud', S => {
+    S.space('hall', 0.3);
+    S.bell({ f: mf(64), dur: 1.6, peak: 0.2, beat: 1.4 });
+    S.bell({ at: 0.01, f: mf(71), dur: 1.0, peak: 0.06 });
+    S.glass({ at: 0.08, f: mf(95), dur: 1.1, peak: 0.035, am: [5, 0.4] });
+  });
+  def('fd-ballista', 'ui', S => {
+    S.thud({ f: 125, f1: 55, dur: 0.16, peak: 0.5, click: 0.25, lp: 800 });
+    S.pluck({ f: mf(40), dur: 0.4, peak: 0.34, bright: 5, bend: -4 });
+    S.wood({ at: 0.004, f: 320, dur: 0.1, peak: 0.22 });
+    S.whoosh({ at: 0.03, color: 'white', f: 3200, f1: 900, dur: 0.15, peakAt: 0.3, peak: 0.07 });
+  });
+  def('fd-tower-fall', 'ab', S => {
+    S.space('room', 0.2);
+    S.creak({ dur: 0.22, f: 22, f1: 14, res: [380, 800], q: 9, peak: 0.12 });
+    S.crack({ at: 0.04, peak: 0.28, dur: 0.22, f: 800 });
+    for (let i = 0; i < 5; i++) S.wood({ at: 0.1 + i * 0.07 + S.rr(0, 0.04), f: S.rr(160, 520), dur: 0.2, peak: 0.24, pan: S.rr(-0.4, 0.4) });
+    S.thud({ at: 0.12, f: 72, f1: 34, dur: 0.6, drive: 1.8, peak: 0.6 });
+    S.metal({ at: 0.14, set: 'stone', f: 170, dur: 0.5, peak: 0.14, strike: 0.6 });
+    S.rumble({ at: 0.1, dur: 0.8, f: 90, peak: 0.24, a: 0.05 });
+    S.skitter({ at: 0.2, dur: 0.6, n: 12, f: 1400, f1: 700, peak: 0.07 });
+  });
+  def('fd-march', 'hud', S => {
+    S.space('hall', 0.35);
+    S.horn({ f: mf(43), dur: 0.75, peak: 0.13, bright: 3 });
+    S.horn({ at: 0.6, f: mf(50), dur: 1.0, peak: 0.13, bright: 3 });
+    [0, 0.3, 0.6, 0.85].forEach((at, i) => S.drum({ at, f: 78 - (i > 2 ? 8 : 0), dur: 0.35, peak: 0.18 }));
+    S.pad({ notes: [mf(43), mf(50)], type: 'tri', dur: 1.5, a: 0.3, peak: 0.05, lpEnv: [300, 700, 300] });
+  });
+  def('fd-wild-wake', 'hud', S => {
+    S.space('room', 0.15);
+    S.noise({ color: 'pink', bp: 1500, bp1: 500, q: 1.2, dur: 0.22, a: 0.02, peak: 0.15, pts: [[0.05, 1], [0.22, 0]] });
+    S.voice({ at: 0.12, f: 88, f1: 62, dur: 0.6, vowel: 'o', vowel1: 'u', breath: 7, peak: 0.16, pts: [[0.12, 1], [0.6, 0]] });
+    S.rumble({ at: 0.1, dur: 0.5, f: 70, peak: 0.12, a: 0.1 });
+  });
+  def('fd-wild-howl', 'hud', S => {
+    S.space('hall', 0.4);
+    S.voice({ f: 300, f1: 540, dur: 0.7, vowel: 'o', vowel1: 'u', breath: 2, peak: 0.13, pts: [[0.3, 1], [0.7, 0.9]] });
+    S.voice({ at: 0.65, f: 540, f1: 380, dur: 1.1, vowel: 'u', vowel1: 'o', breath: 2, peak: 0.13, pts: [[0.15, 0.9], [0.7, 0.6], [1.1, 0]] });
+    S.noise({ at: 0.1, color: 'pink', bp: 1800, q: 1, dur: 1.4, a: 0.3, peak: 0.03, pts: [[0.4, 1], [1.4, 0]] });
+  });
+  def('fd-wild-return', 'ui', S => {
+    S.thud({ f: 90, f1: 48, dur: 0.3, peak: 0.4, click: 0, lp: 450 });
+    S.noise({ at: 0.04, color: 'brown', lp: 900, lp1: 250, dur: 0.4, a: 0.05, peak: 0.25, pts: [[0.1, 1], [0.4, 0]] });
+    S.voice({ at: 0.08, f: 75, f1: 58, dur: 0.35, vowel: 'u', breath: 6, peak: 0.07 });
+  });
+  def('fd-wild-boar', 'ui', S => {
+    S.thud({ f: 110, f1: 60, dur: 0.14, peak: 0.45, click: 0.2, lp: 700 });
+    S.voice({ f: 120, f1: 80, dur: 0.22, vowel: 'o', breath: 7, peak: 0.12 });
+    S.wood({ at: 0.01, f: 260, dur: 0.1, peak: 0.18 });
+  });
+  def('fd-wild-wolf', 'ui', S => {
+    S.noise({ hp: 2500, dur: 0.03, a: 0.001, peak: 0.2 });
+    S.wood({ at: 0.005, f: 1500, dur: 0.07, peak: 0.2 });
+    S.voice({ at: 0.02, f: 190, f1: 130, dur: 0.25, vowel: 'a', breath: 8, peak: 0.1 });
+    S.thud({ at: 0.03, f: 100, f1: 56, dur: 0.1, peak: 0.25, click: 0, lp: 500 });
+  });
+  def('fd-wild-snap', 'ui', S => {
+    S.wood({ f: 900, dur: 0.06, peak: 0.28 });
+    S.wood({ at: 0.07, f: 700, dur: 0.06, peak: 0.2 });
+    S.splat({ at: 0.02, peak: 0.12, dur: 0.15 });
+  });
+  def('fd-wild-stone', 'ui', S => {
+    S.metal({ set: 'stone', f: 210, dur: 0.35, peak: 0.28, strike: 0.7 });
+    S.thud({ f: 85, f1: 45, dur: 0.2, peak: 0.4, click: 0.1, lp: 500 });
+    S.skitter({ at: 0.03, dur: 0.18, n: 5, f: 1600, peak: 0.07 });
+  });
+
+  // ---- the Founding: the hidden chain (names only; see client-chain.js)
+  def('fd-chain-bell', 'ab', S => {
+    S.space('hall', 0.4);
+    S.bell({ f: mf(55), dur: 2.0, peak: 0.26, beat: 2.4 });
+    S.bell({ at: 0.01, f: mf(55) * 1.06, dur: 1.2, peak: 0.1 });
+    S.crackle({ at: 0.02, dens: 1.3, f: 2400, dur: 0.5, pts: [[0.03, 1], [0.5, 0]], peak: 0.07 });
+    S.thud({ f: 100, f1: 60, dur: 0.12, peak: 0.25, click: 0.2, lp: 500 });
+  });
+  def('fd-chain-far', 'sting', S => {
+    S.space('cave', 0.5);
+    S.horn({ f: mf(36), dur: 1.7, peak: 0.3, bright: 2.5 });
+    S.drum({ at: 0.3, f: 54, dur: 1.0, peak: 0.45 });
+    S.rumble({ dur: 1.8, f: 60, peak: 0.3, a: 0.5 });
+    S.choir({ at: 0.2, notes: [mf(36)], vowel: 'u', dur: 1.6, a: 0.7, peak: 0.07, lp: 900 });
+  });
+  def('fd-chain-ram-charge', 'bm', S => {
+    S.space('cave', 0.15);
+    for (let i = 0; i < 9; i++) S.thud({ at: 0.04 + i * 0.1 - i * i * 0.004, f: 82 - i, f1: 40, dur: 0.18, peak: 0.1 + i * 0.045, click: 0.15, lp: 450 });
+    S.noise({ color: 'pink', bp: 1400, bp1: 500, q: 1, dur: 0.18, a: 0.01, peak: 0.12 });
+    S.whoosh({ at: 0.1, color: 'brown', f: 120, f1: 900, dur: 0.8, peakAt: 0.9, peak: 0.28 });
+    S.rumble({ dur: 0.95, f: 80, peak: 0.25, a: 0.5 });
+  });
+  def('fd-chain-ram-stamp', 'bm', S => {
+    S.space('cave', 0.25);
+    S.thud({ f: 62, f1: 30, dur: 0.6, drive: 2, peak: 0.7 });
+    S.crack({ at: 0.01, peak: 0.28, dur: 0.18, f: 1300 });
+    S.glass({ at: 0.03, f: mf(96), dur: 0.7, peak: 0.1 });
+    S.metal({ at: 0.02, set: 'stone', f: 150, dur: 0.5, peak: 0.16, strike: 0.6 });
+    S.rumble({ dur: 0.5, f: 90, peak: 0.22, a: 0.04 });
+    S.skitter({ at: 0.05, dur: 0.3, n: 8, f: 2200, f1: 1200, peak: 0.07 });
+  });
+  def('fd-chain-sweep', 'bm', S => {
+    S.whoosh({ color: 'brown', f: 120, f1: 1000, dur: 0.55, peakAt: 0.75, peak: 0.32 });
+    S.wood({ at: 0.4, f: 200, dur: 0.2, peak: 0.34 });
+    S.thud({ at: 0.4, f: 80, f1: 40, dur: 0.4, drive: 1.5, peak: 0.55 });
+    S.glass({ at: 0.41, f: mf(90), dur: 0.5, peak: 0.07 });
+    S.noise({ at: 0.42, color: 'pink', bp: 1000, q: 0.8, dur: 0.3, pts: [[0.03, 1], [0.3, 0]], peak: 0.12 });
+  });
+  def('fd-chain-pike-lunge', 'bm', S => {
+    S.space('room', 0.2);
+    S.noise({ color: 'pink', lp: 3000, lp1: 500, dur: 0.4, a: 0.02, pts: [[0.1, 1], [0.4, 0]], peak: 0.32, grain: 0.3 });
+    S.bubbles({ n: 7, f: 300, f1: 1400, spread: 0.2, size: 0.035, peak: 0.1 });
+    S.wood({ at: 0.2, f: 1200, dur: 0.06, peak: 0.3 });
+    S.wood({ at: 0.24, f: 950, dur: 0.07, peak: 0.22 });
+    S.splat({ at: 0.18, peak: 0.25, dur: 0.25 });
+  });
+  def('fd-chain-pike-slap', 'bm', S => {
+    S.space('room', 0.2);
+    S.splat({ peak: 0.6, dur: 0.35 });
+    S.crack({ peak: 0.2, dur: 0.15, f: 1800 });
+    S.thud({ f: 90, f1: 46, dur: 0.3, peak: 0.45, click: 0.1, lp: 500 });
+    S.bubbles({ at: 0.06, n: 8, f: 900, f1: 3000, spread: 0.35, size: 0.02, peak: 0.07, bias: 1.5 });
+  });
+  def('fd-chain-bubble', 'hud', S => {
+    S.bubbles({ n: 6, f: 280, f1: 1000, spread: 0.14, size: 0.03, peak: 0.12 });
+    S.whoosh({ at: 0.04, color: 'white', f: 1000, f1: 2000, dur: 0.14, peakAt: 0.4, peak: 0.09 });
+    S.glass({ at: 0.16, f: mf(86), dur: 0.5, peak: 0.05 });
+  });
+  def('fd-chain-root-snare', 'bm', S => {
+    S.space('cave', 0.2);
+    S.creak({ dur: 0.7, f: 20, f1: 36, res: [300, 700, 1300], q: 10, peak: 0.2, pts: [[0.1, 1], [0.7, 0.4]] });
+    S.scrape({ f: 500, q: 1.3, rate: 24, dur: 0.5, peak: 0.16, pts: [[0.1, 1], [0.5, 0]] });
+    [0.1, 0.22, 0.32].forEach(at => { S.crack({ at, peak: 0.2, dur: 0.12, f: 1000 }); S.wood({ at, f: S.rr(200, 400), dur: 0.15, peak: 0.25 }); });
+    S.thud({ at: 0.05, f: 70, f1: 36, dur: 0.5, drive: 1.6, peak: 0.5 });
+  });
+  def('fd-chain-stump-throw', 'bm', S => {
+    S.space('room', 0.2);
+    S.creak({ dur: 0.3, f: 24, f1: 16, res: [350, 800], q: 9, peak: 0.14 });
+    S.whoosh({ at: 0.15, color: 'brown', f: 150, f1: 900, dur: 0.4, peakAt: 0.5, peak: 0.28 });
+    S.thud({ at: 0.18, f: 100, f1: 52, dur: 0.2, peak: 0.4, click: 0.2, lp: 700 });
+    S.wood({ at: 0.19, f: 240, dur: 0.18, peak: 0.28 });
+  });
+  def('fd-chain-ash-breath', 'bm', S => {
+    S.space('hall', 0.3);
+    S.noise({ color: 'pink', bp: 1600, bp1: 700, q: 0.7, dur: 1.4, a: 0.3, pts: [[0.3, 1], [1.4, 0]], peak: 0.3 });
+    S.crackle({ dens: 1.4, f: 2800, dur: 1.2, pts: [[0.3, 1], [1.2, 0]], peak: 0.13 });
+    S.rumble({ dur: 1.5, f: 65, peak: 0.28, a: 0.4 });
+    S.voice({ f: 100, f1: 72, dur: 1.2, vowel: 'o', breath: 9, peak: 0.1, pts: [[0.3, 1], [1.2, 0]] });
+    S.sizzle({ at: 0.2, dur: 1.0, peak: 0.04, pts: [[0.3, 1], [1.0, 0]] });
+  });
+  def('fd-chain-whelp-call', 'bm', S => {
+    S.space('cave', 0.3);
+    S.voice({ f: 220, f1: 170, dur: 0.7, vowel: 'a', vowel1: 'o', breath: 4, peak: 0.16, pts: [[0.15, 1], [0.7, 0]] });
+    [0.45, 0.65, 0.88].forEach(at => S.voice({ at, f: S.rr(620, 760), f1: S.rr(900, 1050), dur: 0.16, vowel: 'i', breath: 4, peak: 0.08, pan: S.rr(-0.6, 0.6) }));
+    S.skitter({ at: 0.5, dur: 0.6, n: 14, f: 2600, f1: 1400, peak: 0.08, bias: 0.8 });
+  });
+  def('fd-chain-oak-cut', 'ab', S => {
+    S.space('room', 0.12);
+    S.thud({ f: 130, f1: 70, dur: 0.14, peak: 0.4, click: 0.35, lp: 900 });
+    S.wood({ at: 0.004, f: 330, dur: 0.18, peak: 0.34 });
+    S.crack({ at: 0.01, peak: 0.16, dur: 0.1, f: 1500 });
+    S.skitter({ at: 0.06, dur: 0.25, n: 6, f: 1800, f1: 1000, peak: 0.06 });
+  });
+  def('fd-chain-soak-ok', 'hud', S => {
+    S.space('room', 0.3);
+    [79, 83, 88].forEach((n, i) => S.glass({ at: i * 0.07, f: mf(n), dur: 0.8, peak: 0.1 }));
+    S.bubbles({ at: 0.02, n: 4, f: 800, f1: 2200, spread: 0.25, size: 0.03, peak: 0.04 });
+    S.pad({ notes: [mf(55), mf(62)], type: 'tri', dur: 0.7, a: 0.1, peak: 0.06, lpEnv: [900, 600, 400] });
+  });
+  def('fd-chain-down', 'sting', S => {
+    S.space('hall', 0.4);
+    S.horn({ f: mf(48), dur: 0.5, peak: 0.2, bright: 4 });
+    S.horn({ at: 0.45, f: mf(55), dur: 1.2, peak: 0.2, bright: 4 });
+    S.drum({ f: 66, dur: 0.6, peak: 0.4 }); S.drum({ at: 0.45, f: 62, dur: 0.9, peak: 0.4 });
+    [76, 83, 88].forEach((n, i) => S.bell({ at: 0.55 + i * 0.12, f: mf(n), dur: 1.4, peak: 0.1 }));
+    S.coins({ at: 0.7, n: 4, f: 3300, spread: 0.3, peak: 0.07 });
+  });
+
+  // ---- the Founding, pass 5: basic combat (autos, their impacts, small enemy strikes, soldiers). Constant, so very soft, short and varied.
+  def('fd-auto-holy', 'ui', S => {
+    const n = [88, 91, 95][S.vi(3)];
+    S.glass({ f: mf(n), dur: 0.22, peak: 0.1 });
+    S.tone({ f: S.rr(620, 720), f1: S.rr(900, 1000), dur: 0.09, peak: 0.1, lp: 2400 });
+    S.noise({ hp: 5000, dur: 0.03, a: 0.003, peak: 0.03 });
+  });
+  def('fd-auto-ember', 'ui', S => {
+    S.whoosh({ color: 'pink', f: S.rr(900, 1100), f1: 2600, dur: 0.1, peakAt: 0.5, peak: 0.12 });
+    S.crackle({ dens: 1.8, f: 3000, dur: 0.12, pts: [[0.02, 1], [0.12, 0]], peak: 0.09 });
+    S.tone({ f: S.rr(420, 520), f1: 260, dur: 0.1, peak: 0.07, lp: 1500 });
+  });
+  def('fd-auto-hit-melee', 'ui', S => {
+    S.thud({ f: S.rr(130, 170), f1: 75, dur: 0.07, peak: 0.28, click: 0.4, lp: 1000 });
+    S.metal({ set: 'bar', f: S.rr(900, 1300), dur: 0.12, peak: 0.07, strike: 0.5 });
+  });
+  def('fd-auto-hit-arrow', 'ui', S => {
+    S.wood({ f: S.rr(520, 760), dur: 0.07, peak: 0.2 });
+    S.thud({ f: S.rr(150, 190), f1: 100, dur: 0.05, peak: 0.12, click: 0, lp: 700 });
+  });
+  def('fd-auto-hit-holy', 'ui', S => {
+    S.glass({ f: mf([93, 96, 100][S.vi(3)]), dur: 0.2, peak: 0.08 });
+    S.noise({ color: 'pink', bp: 2200, q: 1, dur: 0.05, a: 0.003, peak: 0.07 });
+  });
+  def('fd-auto-hit-ember', 'ui', S => {
+    S.noise({ color: 'pink', lp: 1400, dur: 0.07, a: 0.002, peak: 0.16 });
+    S.crackle({ dens: 2.2, f: 3400, dur: 0.14, pts: [[0.02, 1], [0.14, 0]], peak: 0.08 });
+    S.thud({ f: S.rr(120, 150), f1: 70, dur: 0.06, peak: 0.12, click: 0, lp: 600 });
+  });
+  def('fd-strike-claw', 'ui', S => {
+    S.noise({ color: 'white', bp: S.rr(2400, 3400), bp1: 1400, q: 1.5, dur: 0.07, a: 0.004, peak: 0.12 });
+    S.skitter({ at: 0.01, dur: 0.06, n: 3, f: 2800, peak: 0.07 });
+    S.thud({ at: 0.02, f: S.rr(110, 140), f1: 70, dur: 0.06, peak: 0.12, click: 0, lp: 600 });
+  });
+  def('fd-strike-dart', 'ui', S => {
+    S.whoosh({ color: 'white', f: S.rr(3500, 4200), f1: 1200, dur: 0.09, peakAt: 0.3, peak: 0.1 });
+    S.crackle({ at: 0.04, dens: 2, f: 3600, dur: 0.1, pts: [[0.02, 1], [0.1, 0]], peak: 0.06 });
+    S.thud({ at: 0.05, f: S.rr(150, 190), f1: 90, dur: 0.05, peak: 0.1, click: 0, lp: 700 });
+  });
+  def('fd-strike-slag', 'ui', S => {
+    S.thud({ f: S.rr(75, 95), f1: 45, dur: 0.16, peak: 0.34, click: 0.15, lp: 500 });
+    S.metal({ at: 0.01, set: 'stone', f: S.rr(150, 200), dur: 0.2, peak: 0.1, strike: 0.5 });
+    S.crackle({ at: 0.03, dens: 1.2, f: 2400, dur: 0.14, pts: [[0.02, 1], [0.14, 0]], peak: 0.05 });
+  });
+  def('fd-strike-torch', 'ui', S => {
+    S.whoosh({ color: 'brown', f: 200, f1: S.rr(1000, 1400), dur: 0.12, peakAt: 0.5, peak: 0.16 });
+    S.crackle({ at: 0.03, dens: 1.5, f: 2800, dur: 0.16, pts: [[0.02, 1], [0.16, 0]], peak: 0.08 });
+    S.thud({ at: 0.06, f: S.rr(120, 150), f1: 80, dur: 0.06, peak: 0.1, click: 0, lp: 500 });
+  });
+  def('fd-strike-shade', 'ui', S => {
+    S.space('room', 0.25);
+    S.whoosh({ color: 'pink', f: 1800, f1: 500, dur: 0.18, peakAt: 0.4, peak: 0.08 });
+    S.glass({ at: 0.03, f: mf(S.vi(2) ? 83 : 86), dur: 0.3, peak: 0.03 });
+    S.thud({ at: 0.08, f: 90, f1: 50, dur: 0.08, peak: 0.1, click: 0, lp: 400 });
+  });
+  def('fd-soldier-swing', 'ui', S => {
+    S.whoosh({ color: 'pink', f: S.rr(500, 650), f1: 1500, dur: 0.07, peakAt: 0.4, peak: 0.1 });
+    S.metal({ at: 0.045, set: 'bar', f: S.rr(700, 1000), dur: 0.1, peak: 0.07, strike: 0.5 });
+    S.thud({ at: 0.045, f: S.rr(140, 180), f1: 85, dur: 0.05, peak: 0.12, click: 0.2, lp: 900 });
+  });
+  def('fd-soldier-shot', 'ui', S => {
+    S.pluck({ f: S.rr(280, 340), dur: 0.08, bright: 8, peak: 0.12 });
+    S.whoosh({ color: 'white', f: 3000, f1: 1800, dur: 0.08, peakAt: 0.3, peak: 0.05 });
+  });
+  def('fd-soldier-heal', 'ui', S => {
+    S.space('room', 0.2);
+    S.glass({ f: mf([84, 88, 91][S.vi(3)]), dur: 0.35, peak: 0.08 });
+    S.bubbles({ n: 3, f: 900, f1: 2000, spread: 0.12, size: 0.025, peak: 0.03 });
   });
 
   // ---------------------------------------------------------------------------------------------- install

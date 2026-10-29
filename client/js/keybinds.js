@@ -21,10 +21,20 @@ const Keybinds = (() => {
     // the Alembist's own: the number keys mark the vial Throw takes (main.js), so party selection moves to F1-F4
     ...[1, 2, 3, 4, 5].map(i => ({ id: 'vial' + i, def: String(i), name: `Mark vial ${i}`, cls: 'alembist' })),
     ...[1, 2, 3, 4].map(i => ({ id: 'alemAlly' + i, def: 'f' + i, name: `Party member ${i}`, cls: 'alembist' })),
+    // The Founding's own (founding/client.js): its Q W E R and Tab are the hotbar's first four slots and Next enemy above
+    { id: 'fdTent', def: 't', name: 'Supply tent', mode: 'founding' }, { id: 'fdRecall', def: 'b', name: 'Recall to the camp', mode: 'founding' }, { id: 'fdForge', def: 'f', name: 'Forge', mode: 'founding' }, { id: 'fdBuild', def: 'h', name: "Builder's board", mode: 'founding' },
+    { id: 'fdFlask', def: 'v', name: 'Drink the flask', mode: 'founding' }, { id: 'fdUse', def: 'g', name: 'Pick up or dig', mode: 'founding' },
+    { id: 'fdDrop', def: 'x', name: 'Put down', mode: 'founding' }, { id: 'fdCenter', def: ' ', name: 'Centre on your hero', mode: 'founding' },
+    { id: 'fdPassive', def: 'd', name: 'Learn the passive', mode: 'founding' },
+    ...[1, 2, 3, 4, 5, 6].map(i => ({ id: 'fdItem' + i, def: String(i), name: `Use item ${i}`, mode: 'founding' })),
   ];
-  const CLASS_KEYS = { alembist: { name: 'Alembist', note: 'Number keys mark a vial for Throw; the party moves to F1-F4.' } };
-  const live = (a, cls) => (!a.cls || a.cls === cls) && a.not !== cls;
-  const clash = (a, b) => (a.cls ? live(b, a.cls) : b.cls ? live(a, b.cls) : true);
+  const CLASS_KEYS = { alembist: { name: 'Alembist', note: 'Number keys mark a vial for Throw; the party moves to F1-F4.' },
+    founding: { name: 'The Founding', note: 'Skills use your first four hotbar keys; Shift with one ranks it up, and Learn the passive ranks up the passive. Alt + left-click pings a spot for your party.' } };
+  // a mode's keys (The Founding) are never live in town or a raid, and clash only with each other and the keys that mode borrows
+  const MODE_SHARES = { founding: new Set(['s0', 's1', 's2', 's3', 'cycle']) };
+  const live = (a, cls) => !a.mode && (!a.cls || a.cls === cls) && a.not !== cls;
+  const modeClash = (m, o) => o.mode === m || MODE_SHARES[m].has(o.id);
+  const clash = (a, b) => (a.mode ? modeClash(a.mode, b) : b.mode ? modeClash(b.mode, a) : a.cls ? live(b, a.cls) : b.cls ? live(a, b.cls) : true);
   // keys the game keeps for itself (chat, targeting, menus)
   const RESERVED = new Set(['escape', 'shift', 'alt', 'control', 'meta', 'mouse0', 'mouse1', 'mouse2', 'f3', 'f5', 'f11', 'f12']);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -36,6 +46,8 @@ const Keybinds = (() => {
     try {
       const v = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (v && typeof v === 'object') for (const a of ACTIONS) if (typeof v[a.id] === 'string' && v[a.id].length <= 12 && !RESERVED.has(v[a.id])) binds[a.id] = v[a.id];
+      // (The Founding's Supply tent moved from B to T when Recall took B: a saved old default follows)
+      if (v && typeof v === 'object' && !('fdRecall' in v) && v.fdTent === 'b') binds.fdTent = 't';
       // (an action newer than the saved keys starts unbound if its default is already taken by one it clashes with)
       if (v && typeof v === 'object') for (const a of ACTIONS) if (!(a.id in v) && ACTIONS.some(o => o !== a && binds[o.id] === a.def && clash(o, a))) binds[a.id] = '';
     } catch (e) { /* the defaults */ }
@@ -66,6 +78,8 @@ const Keybinds = (() => {
   // which action this key is bound to for a hero of class cls (the class-only keys: CLASS_KEYS), or null
   function actionOf(k, cls) { if (!k) return null; for (const a of ACTIONS) if (binds[a.id] === k && live(a, cls)) return a.id; return null; }
   const keyFor = id => binds[id];
+  // which of a mode's actions (or the keys it borrows) this key is, for The Founding's own key handler
+  function modeAction(k, mode) { if (!k) return null; for (const a of ACTIONS) if (binds[a.id] === k && (a.mode === mode || MODE_SHARES[mode].has(a.id))) return a.id; return null; }
 
   // ---------------------------------------------------------------- the HUD layout
   // Each piece can be nudged anywhere on screen; the offsets are applied as a CSS translate (the docking and the
@@ -152,9 +166,9 @@ const Keybinds = (() => {
   function render() {
     // a class's own keys show only while you play that class (CLASS_KEYS)
     panel.querySelector('.kb-list').innerHTML = ACTIONS.map((a, i) => {
-      if (!live(a, heroCls) || (a.id === 'resync' && !canResync())) return '';   // (the other class's keys; Resync for a host or solo player, who always sees the fight as it is)
+      if (!a.mode && !live(a, heroCls) || (a.id === 'resync' && !canResync())) return '';   // (the other class's keys; Resync for a host or solo player, who always sees the fight as it is)
       const n = a.name || namer(Number(a.id.slice(1))) || `Skill ${Number(a.id.slice(1)) + 1}`;
-      const head = a.cls && (i === 0 || ACTIONS[i - 1].cls !== a.cls) && CLASS_KEYS[a.cls] ? `<div class="kb-sub"><b>${esc(CLASS_KEYS[a.cls].name)}</b><span class="kb-note">${esc(CLASS_KEYS[a.cls].note)}</span></div>` : '';
+      const grp = a.cls || a.mode, head = grp && (i === 0 || (ACTIONS[i - 1].cls || ACTIONS[i - 1].mode) !== grp) && CLASS_KEYS[grp] ? `<div class="kb-sub"><b>${esc(CLASS_KEYS[grp].name)}</b><span class="kb-note">${esc(CLASS_KEYS[grp].note)}</span></div>` : '';
       return `${head}<div class="kb-row"><span>${esc(n)}</span><button type="button" class="kb-key${capturing === a.id ? ' wait' : ''}" data-a="${a.id}">${capturing === a.id ? 'Press a key…' : esc(label(binds[a.id]))}</button></div>`;
     }).join('');
   }
@@ -294,5 +308,5 @@ const Keybinds = (() => {
     for (const sel of ['#combat-hud', '#raid-ui', '#hud-tl', '#party']) { const el = document.querySelector(sel); if (el && el.style.zoom !== String(uiScale)) el.style.zoom = uiScale === 1 ? '' : String(uiScale); }
   }
   load();
-  return { ACTIONS, keyOf, actionOf, keyFor, label, openPanel, closePanel, panelOpen, applyLayout, arrange, isArranging: () => arranging, isCapturing: () => !!capturing };
+  return { ACTIONS, keyOf, actionOf, keyFor, modeAction, label, openPanel, closePanel, panelOpen, applyLayout, arrange, isArranging: () => arranging, isCapturing: () => !!capturing };
 })();

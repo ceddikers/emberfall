@@ -132,7 +132,7 @@ let into = results;   // where pass() and fail() write: the stage being read (se
 const pass = (name, detail = '') => into.push({ ok: true, name, detail });
 const fail = (name, detail = '') => into.push({ ok: false, name, detail });
 // each stage's results go in a bucket of their own, and the buckets print in this order (children finish in any order)
-const BUCKETS = ['syntax', 'core', 'hollow', 'kenseier', 'houndmaster', 'rejoin', 'stamps', 'journal', 'reaper', 'feats', 'pvp', 'heavy'];
+const BUCKETS = ['syntax', 'core', 'hollow', 'kenseier', 'houndmaster', 'rejoin', 'stamps', 'journal', 'reaper', 'feats', 'founding', 'pvp', 'heavy'];
 const buckets = {};
 const stage = (name, fn) => { const prev = into; into = buckets[name] || (buckets[name] = []); try { return fn(); } finally { into = prev; } };
 
@@ -782,6 +782,44 @@ function journalCheck(r) {
   else fail('Journals: no digits, within the word cap, every move is a real cast', out.slice(-900));
 }
 
+function foundingWildCheck(r) {
+  const name = 'The Founding: wild camps wake, leash, respawn and pay';
+  if (r.code === 0 && /Wild OK/.test(r.out)) pass(name, ''); else fail(name, r.out.slice(-900));
+}
+
+function foundingItemsCheck(r) {
+  const name = 'The Founding: items and their passives';
+  if (r.code === 0 && /Items OK/.test(r.out)) pass(name, ''); else fail(name, r.out.slice(-900));
+}
+
+function foundingChainCheck(r) {
+  const name = 'The Founding: the hidden chain wakes, pays and ends';
+  if (r.code === 0 && /Chain OK/.test(r.out)) pass(name, ''); else fail(name, r.out.slice(-900));
+}
+
+function foundingDefenceCheck(r) {
+  const name = 'The Founding: towers and soldiers';
+  if (r.code === 0 && /Defence OK/.test(r.out)) pass(name, ''); else fail(name, r.out.slice(-900));
+}
+
+function foundingTrialsCheck(r) {
+  const name = 'The Founding: the Trials, the book and the feats';
+  if (r.code === 0 && /Trials OK/.test(r.out)) pass(name, ''); else fail(name, r.out.slice(-900));
+}
+
+function foundingQuestsCheck(r) {
+  const name = 'The Founding: the later quests and their boons';
+  if (r.code === 0 && /Quests OK/.test(r.out)) pass(name, ''); else fail(name, r.out.slice(-900));
+}
+
+// ---------------------------------------------------------------- 3j. The Founding: Day one played headless (tools/founding-test.js)
+function foundingCheck(r) {
+  const out = r.out;
+  const name = 'The Founding: Day one plays through, quests done and missed, forge, boons and payout';
+  if (r.code === 0 && /Founding OK/.test(out)) pass(name, out.trim().split(/\r?\n/).filter(l => /wins:/.test(l)).pop() || '');
+  else fail(name, out.slice(-900));
+}
+
 // ---------------------------------------------------------------- 3e. feats and titles (tools/feats-test.js)
 function featsCheck(r) {
   const out = r.out;
@@ -831,6 +869,13 @@ const TESTS = [
   ['journal', 'journal-lint.js', journalCheck, 'Journals checked', 1],
   ['reaper', 'reaper-test.js', reaperCheck, 'Reaper checked', 2],
   ['feats', 'feats-test.js', featsCheck, 'Feats checked', 1],
+  ['founding', 'founding-test.js', foundingCheck, 'Founding checked', 4],
+  ['founding', 'founding-quests-test.js', foundingQuestsCheck, 'Quests checked', 1],
+  ['founding', 'founding-trials-test.js', foundingTrialsCheck, 'Trials checked', 1],
+  ['founding', 'founding-defence-test.js', foundingDefenceCheck, 'Defence checked', 1],
+  ['founding', 'founding-wild-test.js', foundingWildCheck, 'Wild checked', 1],
+  ['founding', 'founding-items-test.js', foundingItemsCheck, 'Items checked', 1],
+  ['founding', 'founding-chain-test.js', foundingChainCheck, 'Chain checked', 1],
 ];
 const PVP_RUNS = [['duel', '3', 'ranger', 'bastion'], ['duel', '2', 'cleric', 'shadowblade'], ['team', '2', 'bastion', 'pyromancer', 'gorgemaw', 'cleric'], ['ctf', '2', 'bastion', 'ranger', 'gorgemaw', 'cleric']];
 

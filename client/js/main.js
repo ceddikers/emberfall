@@ -115,8 +115,13 @@
   // The first dummy fights back (every 2.8s, like a raid boss's auto-attack) so tanks can practice their defensives.
   const dummies = TOWN.dummies.map((d, i) => ({ kind: 'dummy', x: d.x, y: d.y, st: { t: 0, hit: -10 }, spar: i === 0, nextSwing: 0, windup: 0 }));
 
+  // The Founding (founding/client.js): an old fingerpost at the foot of the south road, where the valley's first road began
+  const FOUNDING_POST = { x: 1146, y: 1545 };   // (on the road's west verge, above the hotbar even with the camera at the world's bottom edge)
+  const foundingPost = { kind: 'stagecraft', x: FOUNDING_POST.x, y: FOUNDING_POST.y, draw: c => drawFoundingPost(c, FOUNDING_POST.x, FOUNDING_POST.y, now) };
+
   const interactables = [
     { x: keeper.x, y: keeper.y, r: 22, reach: 80, label: 'Barkeep', open: () => openSelect(null) },
+    ...(typeof Founding !== 'undefined' ? [{ x: FOUNDING_POST.x, y: FOUNDING_POST.y, r: 24, reach: 95, label: 'The Founding', open: () => openFoundingGate() }] : []),
     { x: trainer.x, y: trainer.y, r: 22, reach: 80, label: 'Trainer', open: () => openTalents() },
     ...statues.map(b => ({ x: b.x, y: b.y, r: 58 * PED_S, reach: 115, get label() { return bossOpen(b.boss) ? b.boss.name : 'Sealed'; }, open: () => openBossPanel(b.boss) })),
     ...TOWN.portals.map(P => ({ x: P.x, y: P.y, r: P.r, reach: 130, get label() { return P.sealed ? 'Sealed' : portalOpen(P) ? P.name : P.name + ' (sealed)'; }, open: () => portalUse(P) })),
@@ -1348,6 +1353,109 @@
   function closePractice() { if (practicePanel) practicePanel.classList.add('hidden'); }
   const practiceOpen = () => !!practicePanel && !practicePanel.classList.contains('hidden');
 
+  // ---------------------------------------------------------------- The Founding (founding/*.js)
+  // A hero-defense run in the valley the year the ember fell. The host sets out and everyone in the room goes with them; the
+  // mode's heroes are its own (picked in its camp), so no town hero is needed. The scene takes over the canvas while it runs.
+  let foundingGate = null;
+  function openFoundingGate() {
+    if (raid) return;
+    if (!foundingGate) {
+      foundingGate = document.createElement('div');
+      foundingGate.id = 'fd-gate'; foundingGate.className = 'hidden';
+      document.body.appendChild(foundingGate);
+      foundingGate.addEventListener('mousedown', e => e.stopPropagation());
+      foundingGate.addEventListener('click', e => {
+        const t = e.target.closest('button');
+        if (!t) return;
+        if (t.classList.contains('close')) { closeFoundingGate(); return; }
+        if (t.dataset.go) { if (!Net.isHost) { toast('Only the host can set out.'); return; } closeFoundingGate(); startFounding(); return; }
+        if (t.dataset.book && typeof FoundingBook !== 'undefined') { FoundingBook.openBook(); return; }
+        if (t.dataset.trial && typeof FoundingBook !== 'undefined') {   // (the host picks the Trials for the room)
+          if (!Net.isHost) { toast('The host chooses the Trials.'); return; }
+          const f = FoundingBook.progress(), id = t.dataset.trial;
+          f.on = f.on.includes(id) ? f.on.filter(x => x !== id) : FOUNDING_STORY.validTrials([...f.on, id]);
+          Save.commit(); openFoundingGate();
+        }
+      });
+    }
+    const n = 1 + [...remotes.values()].length;
+    const fb = typeof FoundingBook !== 'undefined' ? FoundingBook.progress() : null;
+    foundingGate.innerHTML = `<header><h3>The Founding</h3><button type="button" class="close" aria-label="Close" data-tip="Close (Esc)">×</button></header>
+      <p class="fd-note">The road ends here, at a post older than the town. Walk back to the year the ember fell, and hold the valley while the founders raise what will be Emberfall.</p>
+      <p class="fd-note dim">Day one. Your own heroes do not come: you take up one of the founding wardens. Gold is paid for every wave you hold.</p>
+      ${foundingTrialsHtml(fb)}${fb && (fb.wins || fb.pages.length) ? `<div class="fd-meta"><span>${fb.wins ? `Won ${fb.wins} ${fb.wins === 1 ? 'time' : 'times'}` : 'Not yet won'}</span><button type="button" class="fd-link" data-book="1" data-tip="The pages of the founders' book you have found">The founders' book (${fb.pages.length})</button></div>` : ''}
+      <div class="fd-row"><span>${n} ${n === 1 ? 'hero' : 'heroes'} in the room</span>${Net.isHost ? '<button type="button" class="cta" data-go="1">Set out</button>' : '<em>The host sets out for everyone.</em>'}</div>`;
+    foundingGate.classList.remove('hidden');
+  }
+  // after a first win the post offers the Founder's Trials: opt-in ways to make a run harder, each cleared by a win with it on
+  // (a title, never power). The host chooses for the room; everyone earns the clear.
+  function foundingTrialsHtml(fb) {
+    if (!fb || !fb.wins || typeof FOUNDING_STORY === 'undefined') return '';
+    const host = Net.isHost;
+    return `<div class="fd-trials"><h4>Founder's Trials</h4>
+      <p class="fd-note dim">${host ? 'Choose any, or none. A run won with a Trial on clears it.' : 'The host chooses the Trials for the room. A run won with one on clears it.'}</p>
+      <div class="fd-tlist">${FOUNDING_STORY.TRIALS.map(t => `<button type="button" class="fd-tr${fb.on.includes(t.id) ? ' on' : ''}${fb.trials[t.id] > 0 ? ' done' : ''}${host ? '' : ' ro'}" data-trial="${t.id}" data-tip="Title: ${escapeHtml(t.title)}${fb.trials[t.id] > 0 ? ' (earned)' : ''}"><b>${escapeHtml(t.name)}</b><span>${escapeHtml(t.text)}</span><i></i></button>`).join('')}</div></div>`;
+  }
+  // a run ended: remember it (pages, wins, Trials cleared, the marks the feats read), then let the feats look
+  function foundingRecord(m) {
+    if (typeof FoundingBook === 'undefined' || typeof Founding === 'undefined' || !Founding.active() || !m) return;
+    const out = FoundingBook.record(m);
+    const ps = Save.get('pastimes');
+    if (ps && typeof ps === 'object') { ps.marks = ps.marks || {}; for (const k of out.marks) ps.marks[k] = 1; Save.commit(); }
+    Pastimes.event('founding', out);
+  }
+  // the old fingerpost at the foot of the south road: a weathered post leaning a little, a ring of sunk stones round its foot,
+  // one arm pointing back down the road with the mode's name burnt into it, and a small lantern that never quite goes out
+  function drawFoundingPost(g, x, y, t) {
+    g.save();
+    g.translate(x, y);
+    glow(g, 10, -34, 46, '#ffb860', 0.18 + Math.sin(t * 2.3) * 0.03);
+    ellipse(g, 2, 6, 30, 12, 0, 'rgba(0,0,0,0.26)');
+    for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2 + 0.3; ellipse(g, Math.cos(a) * 24, 4 + Math.sin(a) * 9, 5.5, 3.6, a, i % 3 ? '#77736a' : '#8a857a', '#4b4740', 1); }
+    for (const [bx, by] of [[-18, 10], [14, 12], [-6, 14]]) { ellipse(g, bx, by, 2.4, 2.4, 0, '#6f86d6'); ellipse(g, bx + 3, by - 1, 2, 2, 0, '#8aa0e6'); }
+    g.rotate(-0.06);
+    g.fillStyle = '#4a3624'; g.fillRect(-3.5, -58, 7, 62);   // the post
+    g.fillStyle = '#5e452e'; g.fillRect(-3.5, -58, 2.5, 62);
+    g.fillStyle = '#3a2a1c'; g.fillRect(-5, -60, 10, 4);
+    // the arm, pointing down the road (south, toward the viewer's lower right)
+    g.save(); g.translate(0, -44); g.rotate(0.16);
+    g.beginPath(); g.moveTo(-6, -8); g.lineTo(58, -8); g.lineTo(68, 0); g.lineTo(58, 8); g.lineTo(-6, 8); g.closePath();
+    g.fillStyle = '#6b4f33'; g.fill(); g.strokeStyle = '#2e2116'; g.lineWidth = 1.5; g.stroke();
+    g.fillStyle = '#d9b56a'; g.font = '700 8px Cinzel, Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('THE FOUNDING', 30, 0.5);
+    g.restore();
+    // the lantern on its hook
+    const sw = Math.sin(t * 1.7) * 0.08;
+    g.save(); g.translate(-2, -56); g.rotate(sw);
+    g.strokeStyle = '#2a2018'; g.lineWidth = 1; g.beginPath(); g.moveTo(-10, 0); g.lineTo(-10, 8); g.stroke();
+    g.fillStyle = '#2a2018'; g.fillRect(-15, 8, 10, 3); g.fillRect(-15, 21, 10, 3);
+    g.fillStyle = rgba('#ffcf7a', 0.85 + Math.sin(t * 5.1) * 0.08); g.fillRect(-14, 11, 8, 10);
+    glow(g, -10, 16, 16, '#ffc060', 0.5);
+    g.restore();
+    g.restore();
+  }
+  function closeFoundingGate() { if (foundingGate) foundingGate.classList.add('hidden'); }
+  const foundingGateOpen = () => !!foundingGate && !foundingGate.classList.contains('hidden');
+  function startFounding() {
+    if (!Net.isHost || raid || typeof Founding === 'undefined') return;
+    const players = [{ id: Net.id, name: player.name || 'Hero' }, ...[...remotes.values()].map(r => ({ id: r.id, name: r.name || 'Hero' }))].slice(0, 4);
+    if (typeof FoundingSim !== 'undefined') FoundingSim.trials = typeof FoundingBook !== 'undefined' && FoundingBook.progress().wins ? FoundingBook.progress().on.slice() : [];   // (the host's chosen Trials, only once they are open)
+    Founding.enterAsHost(players);
+  }
+  function foundingEnterScene() {
+    closePanels(); closeFoundingGate();
+    scene = 'founding';
+    document.body.classList.add('in-founding');
+    if (SH) SH.castEnd();
+  }
+  function foundingLeaveScene() {
+    scene = 'town';
+    document.body.classList.remove('in-founding');
+    Inventory.refreshGold();
+    player.target = null; player.dashMove = null;
+    updateCamera(0, true);
+  }
+
   // ---------------------------------------------------------------- the Barrow Gate (barrow-gate.js)
   // The spec trials taken at the town's second portal: this hero's two specializations, each with its trial. Starting one is
   // the hero panel's own button (trialGo / beginTrial below), so solo and host-only exactly as there.
@@ -1933,6 +2041,12 @@
 
   // --- messages from the host's fight
   Net.on('raid', enterArena);
+  // The Founding: the host's 'fdgo' takes every tab in (the host's own too); the module hands the town back when the run is over
+  if (typeof Founding !== 'undefined') {
+    Founding.init({ canvas, ctx, DPR: () => DPR, W: () => W, H: () => H, Net, Save, Sound: () => SH, toast: m => toast(m), myName: () => player.name || 'Hero', onLeave: () => foundingLeaveScene() });
+    Net.on('fdgo', msg => { if (raid) return; foundingEnterScene(); Founding.enter(msg); });
+    { const fdendPrev = Net.handlers.fdend; Net.on('fdend', m => { if (fdendPrev) fdendPrev(m); foundingRecord(m); }); }   // (the module shows the card; the record is the account's)
+  }
   Net.on('raidend', () => {
     if (!Net.isHost && raid && (raid.state === 'live' || raid.state === 'countdown')) toast(raid.pvp ? 'The host ended the bout.' : 'The host ended the raid.');
     leaveRaid(false);
@@ -2647,7 +2761,7 @@
     if (scene !== 'town') return null;
     const m = mouseWorld();
     let best = null, bd = Infinity;
-    for (const it of [...interactables, ...lineup.map(h => ({ x: h.x, y: h.y, r: 24, reach: 80, label: h.cls.name, open: () => openHeroPanel(h.cls) })), ...TownLife.interactables(), ...Pastimes.interactables(), ...BarrowGate.interactables()]) {
+    for (const it of [...interactables, ...lineup.map(h => ({ x: h.x, y: h.y, r: 24, reach: 80, label: h.cls.name, open: () => openHeroPanel(h.cls) })), ...TownLife.interactables(), ...Pastimes.interactables(), ...BarrowGate.interactables(), ...(typeof TownMark !== 'undefined' ? TownMark.interactables() : [])]) {
       const d = Math.hypot(m.x - it.x, m.y - it.y);
       if (d < it.r && d < bd) { best = it; bd = d; }
     }
@@ -2668,17 +2782,20 @@
   // right-click is the game's anywhere on the page (the browser's menu only in a text box)
   document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); });
   canvas.addEventListener('mousemove', e => {
+    if (scene === 'founding') return;   // (The Founding takes its own input: founding/client.js)
     mouse.x = e.clientX; mouse.y = e.clientY;
     if (Pings.wheelIsOpen()) Pings.wheelMove(e.clientX, e.clientY);
     if (mouse.rightDown && !player.dashMove && !mouse.holdOff) moveTo(mouseWorld(), false);
   });
   // the wheel scrolls the raid camera out a little (and back in); kept between pulls
   canvas.addEventListener('wheel', e => {
+    if (scene === 'founding') return;   // (The Founding takes its own input: founding/client.js)
     if (scene !== 'arena' || panelOpen()) return;
     e.preventDefault();
     Save.setSetting('camout', Math.round(clamp(camOut() - Math.sign(e.deltaY) * 0.05, 0.8, 1) * 100) / 100);
   }, { passive: false });
   canvas.addEventListener('mousedown', e => {
+    if (scene === 'founding') return;   // (The Founding takes its own input: founding/client.js)
     if (!started) return;
     // clicking the world takes keyboard focus back from any UI button
     if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
@@ -2714,6 +2831,7 @@
     player.interact = null; moveTo(mouseWorld(), true);
   });
   window.addEventListener('mouseup', e => {
+    if (scene === 'founding') return;   // (The Founding takes its own input: founding/client.js)
     if (e.button >= 3 && Keybinds.actionOf('mouse' + e.button, player.cls && player.cls.id)) e.preventDefault();   // (a bound side button never goes Back)
     if (e.button === 2) mouse.rightDown = false;
     if (e.button === 0 && Pings.wheelIsOpen()) { const c = Pings.wheelClose(); if (c && pingFrom && inArena()) sendPing(pingFrom.x, pingFrom.y, c); pingFrom = null; }
@@ -2778,9 +2896,10 @@
     open: () => openBarrow(),
     banner: text => TownLife.banner(text),
     focus: pt => { camFocus = { f: pt, until: now + 5 }; },
-    busy: () => TownLife.busy() || TownLife.isTalking() || panelOpen() || practiceOpen(),
+    busy: () => TownLife.busy() || TownLife.isTalking() || panelOpen() || practiceOpen() || foundingGateOpen() || (typeof FoundingBook !== 'undefined' && FoundingBook.bookOpen()),
     sound: () => { if (typeof Sound !== 'undefined') Sound.play('arrival', { vol: 0.8 }); },
   });
+  if (typeof TownMark !== 'undefined') TownMark.init({ open: () => { if (typeof FoundingBook !== 'undefined') FoundingBook.openBook(); }, busy: () => TownLife.busy() || TownLife.isTalking() || panelOpen() || practiceOpen() || foundingGateOpen() || (typeof FoundingBook !== 'undefined' && FoundingBook.bookOpen()) });
   Inventory.setExtra(clsId => TownLife.feastTotals(clsId));
   const feastAt = new Map();
   function hostFeast(pid, m) {
@@ -2885,10 +3004,12 @@
   window.addEventListener('keyup', e => { shiftDown = !!e.shiftKey; }, true);
   window.addEventListener('blur', () => { shiftDown = false; });
   window.addEventListener('keydown', e => {
+    if (scene === 'founding') return;   // (The Founding takes its own input: founding/client.js)
     if (e.key === 'Alt') e.preventDefault();   // (Alt is the ping wheel: it must never pull focus to the browser's menu)
     if (!started) return;
     if (e.key === 'Escape' && Pings.panelOpen()) { Pings.closePanel(); return; }
     if (e.key === 'Escape' && practiceOpen()) { closePractice(); return; }
+    if (e.key === 'Escape' && foundingGateOpen()) { closeFoundingGate(); return; }
     if (e.key === 'Escape' && barrowOpen()) { closeBarrow(); return; }
     if (e.key === 'Escape' && Keybinds.panelOpen()) { Keybinds.closePanel(); return; }
     if (e.key === 'Escape' && Journal.isOpen()) { Journal.close(); return; }
@@ -3002,6 +3123,7 @@
     TownLife.update(dt, now, scene === 'town' && started && !inRoom());   // (the town's moments wait while you are inside the Trophy Hall)
     Pastimes.update(now, scene === 'town' && started);
     BarrowGate.update(dt, now, scene === 'town' && started && !inRoom());
+    if (typeof TownMark !== 'undefined') TownMark.update(dt, now, scene === 'town' && started && !inRoom());   // (what a first win of The Founding leaves in town)
     if (scene === 'town') TownLife.checkDistance(); else if (TownLife.isTalking()) TownLife.endTalk();
     updateCamera(dt);
   }
@@ -3710,9 +3832,10 @@
     Lamps.drawFloor(ctx, now, scEnv);   // your lanterns light the training yard too
     Pastimes.drawGround(ctx, now);
     BarrowGate.drawGround(ctx, now);
+    if (typeof TownMark !== 'undefined') TownMark.drawGround(ctx, now);
     TownLife.drawGround(ctx, now, TOWN.pedestals, BOSSES.map(b => b.id));
     for (const h of lineup) drawDeckPad(ctx, h.home ? h.home.x : h.x, h.home ? h.home.y : h.y, lineup.filter(o => o.cls.role === h.cls.role).length > 3);
-    const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv), ...Kennel.entities(now, scEnv), ...TownLife.entities(HERO_SCALE), ...BarrowGate.entities(now), ...plaques].filter(e => !TownLife.hides(e) && (e.x == null || inTrophyRoom(e) === inRoom()));   // (what is in the Trophy Hall's room is only drawn from inside it, and the town only from outside)
+    const ents = [...lineup, keeper, trainer, ...statues, ...dummies, player, ...townRemotes, ...Stagecraft.entities(now, scEnv), ...Kennel.entities(now, scEnv), ...TownLife.entities(HERO_SCALE), ...BarrowGate.entities(now), ...(typeof TownMark !== 'undefined' ? TownMark.entities(now) : []), ...plaques, ...(typeof Founding !== 'undefined' ? [foundingPost] : [])].filter(e => !TownLife.hides(e) && (e.x == null || inTrophyRoom(e) === inRoom()));   // (what is in the Trophy Hall's room is only drawn from inside it, and the town only from outside)
     ents.sort((a, b) => a.y - b.y);
     for (const e of ents) { if (e.kind === 'stagecraft') e.draw(ctx); else drawEntity(e); }
     Stagecraft.drawOver(ctx, now, scEnv);
@@ -4739,6 +4862,8 @@
     updatePartyList();
     setTimeout(() => sendRoad(msg.p.id), 0);   // (the newcomer walks your road: after their welcome, which goes out just after this, as they drop anything before it)
     setTimeout(() => sendTitle(Pastimes.title()), 400);   // (and hears your title)
+    // a run of The Founding is on: a hero kept under their name goes straight back in, anyone else is told it is underway (after their welcome)
+    if (Net.isHost && scene === 'founding' && typeof Founding !== 'undefined' && Founding.guestJoined) setTimeout(() => Founding.guestJoined(msg.p.id, msg.p.name), 450);
   });
   // the host's road, for whoever's in its game (see hostRoad)
   function sendRoad(id) {
@@ -4758,6 +4883,7 @@
     if (!r) return;
     remotes.delete(msg.id); toast(`${r.name} left.`); updatePartyList();
     if (raid && raid.away) raid.away.delete(msg.id);
+    if (Net.isHost && scene === 'founding' && typeof Founding !== 'undefined' && Founding.playerLeft) Founding.playerLeft(msg.id);   // (their founding hero leaves the run)
     if (Net.isHost) { hostHeld.delete(msg.id); if (raidHost) raidHost.releaseStandIn(msg.id); rsyncAt.delete(msg.id); Loot.hostLeft(msg.id); }   // (the hold ran out: a stand-in steps out for good)
     if (raidHost || pvpHost) { const h = hostRoster.find(x => x.id === msg.id); if (h) { h.left = true; (pvpHost || raidHost).sim.removePlayer(msg.id); } }
   });
@@ -4889,7 +5015,7 @@
     remotes.clear(); updatePartyList();
     if (scene === 'arena') leaveRaid(false);
     closePanels(); if (Inventory.isOpen()) Inventory.toggle();
-    Journal.close(); Tutorial.close(); Keybinds.closePanel(); Keybinds.arrange(false); Pings.closePanel(); closePractice(); closeBarrow();
+    Journal.close(); Tutorial.close(); Keybinds.closePanel(); Keybinds.arrange(false); Pings.closePanel(); closePractice(); closeFoundingGate(); closeBarrow();
     TownLife.endTalk(); Loot.leave(); TalentPanel.close(); Forge.close();
     chatInput.classList.add('hidden'); chatInput.blur();
     started = false;
@@ -5053,6 +5179,8 @@
     last = ts;
     rnow = realNow();
     DebugOverlay.frame(raw);   // the real frame time
+    // The Founding draws and runs itself while it is up (founding/client.js); the town waits underneath
+    if (scene === 'founding' && typeof Founding !== 'undefined' && Founding.active()) { Founding.frame(raw); soundTick(); requestAnimationFrame(frame); return; }
     // a slow frame is caught up in steps of at most 50 ms (up to a quarter second), so cast bars and timers keep
     // the host's real time
     if (!paused) { let left = Math.min(0.25, raw); const k = killSlowK(); while (left > 1e-4) { const dt = Math.min(0.05, left), vdt = dt * k; now += vdt; update(vdt); left -= dt; } }

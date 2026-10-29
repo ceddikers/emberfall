@@ -11,7 +11,7 @@
 
 const FEAT_CATS = [
   ['road', 'The road'], ['hard', 'Hard'], ['clean', 'Clean clears'], ['party', 'The party'], ['mastery', 'Mastery'],
-  ['self', 'Your own fights'], ['arena', 'The Arena'], ['town', 'In town'],
+  ['self', 'Your own fights'], ['arena', 'The Arena'], ['town', 'In town'], ['founding', 'The Founding'],
 ];
 
 const FEATS = [
@@ -182,6 +182,30 @@ const FEATS = [
     check: { type: 'items', rarity: 4 } },
   { id: 'an-old-road', cat: 'town', name: 'An Old Road', desc: 'Walk a road the court remembers.', title: null, hidden: true, hint: 'A road the Hollow King once knew.',
     check: { type: 'trial', n: 1 } },
+
+  // ---------------------------------------------------------------- the Founding (marks come from main.js foundingRecord, story.js record)
+  { id: 'founding-won', cat: 'founding', name: 'The Valley Has a Name', desc: 'Win The Founding.', title: 'Counted Into Emberfall', hidden: false,
+    check: { type: 'mark', k: 'founding:won' } },
+  { id: 'founding-every-hand', cat: 'founding', name: 'Every Hand', desc: 'Win The Founding with every quest done.', title: 'Every Hand Laid', hidden: false,
+    check: { type: 'mark', k: 'founding:allquests' } },
+  { id: 'founding-alone', cat: 'founding', name: 'Alone at the Hearth', desc: 'Win The Founding with no one beside you.', title: 'Held It Alone', hidden: false,
+    check: { type: 'mark', k: 'founding:solo' } },
+  { id: 'founding-book', cat: 'founding', name: 'Marginalia', desc: 'Find four pages of the founders\' book.', title: null, hidden: false,
+    check: { type: 'mark', k: 'founding:pages4' } },
+  { id: 'founding-trial-quick', cat: 'founding', name: 'Short Days', desc: 'Win The Founding with the Short Days Trial.', title: 'Quick of the First Watch', hidden: true, hint: 'The founders set harder tests for those who return.',
+    check: { type: 'mark', k: 'founding:trial:quick' } },
+  { id: 'founding-trial-dry', cat: 'founding', name: 'The Dry Spring', desc: 'Win The Founding with the Dry Spring Trial.', title: 'Dry-Throated Warden', hidden: true, hint: 'The founders set harder tests for those who return.',
+    check: { type: 'mark', k: 'founding:trial:dry' } },
+  { id: 'founding-trial-dark', cat: 'founding', name: 'No Moon', desc: 'Win The Founding with the No Moon Trial.', title: 'Lamp in the Dark', hidden: true, hint: 'The founders set harder tests for those who return.',
+    check: { type: 'mark', k: 'founding:trial:dark' } },
+  { id: 'founding-trial-lean', cat: 'founding', name: 'A Lean Purse', desc: 'Win The Founding with the Lean Purse Trial.', title: 'Of the Lean Winter', hidden: true, hint: 'The founders set harder tests for those who return.',
+    check: { type: 'mark', k: 'founding:trial:lean' } },
+  { id: 'founding-trial-bold', cat: 'founding', name: 'The Ash, Bolder', desc: 'Win The Founding with the Bolder Ash Trial.', title: 'Faced the Bold Ash', hidden: true, hint: 'The founders set harder tests for those who return.',
+    check: { type: 'mark', k: 'founding:trial:bold' } },
+  { id: 'founding-grain', cat: 'founding', name: 'Against the Grain', desc: 'Win The Founding with three Trials at once.', title: 'Founder\'s Own', hidden: true, hint: 'The founders set harder tests for those who return.',
+    check: { type: 'mark', k: 'founding:trials3' } },
+  { id: 'founding-all-trials', cat: 'founding', name: 'Every Trial', desc: 'Clear every Founder\'s Trial.', title: 'Keeper of the Trials', hidden: true, hint: 'The founders set harder tests for those who return.',
+    check: { type: 'mark', k: 'founding:trialsAll' } },
 ];
 
 if (typeof module !== 'undefined') module.exports = { FEATS, FEAT_CATS };
