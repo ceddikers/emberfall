@@ -216,6 +216,19 @@ The room becomes Emberfall's burning square, with the act's holes in it. The Hol
 | 15:20 | Kindling every fifteen seconds, each harder, until it falls. |
 | ~17:00 | **Emberfall** |
 
+### The dance pass (2026-10-29, from `docs/research/ff14-ultimates.md`)
+
+The user wants the fight to feel like a dance the party learns: the boss can stand still, but the telegraphs steer the four of them through the room, and what looks random on the first pull turns out to be choreography. The real Ultimates do this with **a personal schedule per hero** (a number, a countdown ring) laid over **a shape that is the same every pull**. Each act gets one such block, about 25 to 45 s, in the place where it fits the story. They are not a rule for the whole fight, and nothing outside these blocks changes.
+
+| Act | Block | Taken from | What the party does |
+|---|---|---|---|
+| I | **Halo Procession** (the first Halo Turn grows into it) | Pantokrator | The four stand together. Two lit arcs of the halo sweep around the Sovereign as red wedges, and which way they turn shows in their first inch of movement, so the party walks a lap ahead of them. Each hero has a countdown ring, a few seconds apart; when a ring closes, that hero bursts a red circle, so they step out of the group just before and come back after. The lap ends on a Cupped Ember, which pulls them together again. |
+| II | **The Anvil Count** | Program Loop | Each hero gets one to four pips. Blue towers rise on the forge sheets in pip order, each one placed away from the hero it belongs to, so every soak is a run across a floor that Hrimgar's water has already cut up. A soak by the wrong hero, or none, is a raidwide, not a wipe. The healer's number sits in the middle so the healer never has the longest run. |
+| III | **Foretold** | Fate Projection | Caelum shows the future: four ghost heroes stand in the room, each one marked with what will happen to its hero (a red spread, a blue share, one ghost carries a seed). Each hero walks into their own ghost before the Sovereign's blades arrive. The seed bursts where its ghost stood, so the party sees ahead where Act IV's next hole will be. |
+| IV | **The First Signal** | Diamond Dust, Heavensfall | In each pass the first answer to land sets the frame, and the other two answers of that pass land on the same frame, turned with it. The turn is fixed per pass (the fight is fixed), so a party that has learned it reads the first answer and knows where the next two go. |
+
+The patterns came with timings for human players: gaps of about 6 to 9 s between personal beats, and only the next strike shown in full. Every block keeps the telegraph rules: red for damage, blue for a soak or a share, and no safe spot is ever painted. Ideas left out for now: per-act DPS-check casts (the closing loops already do that job), conga-line tethers, beat-based debuffs, and Rewind pins.
+
 **Rules that keep it fair:**
 - Never more than three rules live at once, and three only in Act IV.
 - A chain shows its next strike clearly, not the whole chain.

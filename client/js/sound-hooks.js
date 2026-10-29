@@ -232,6 +232,7 @@ const SoundHooks = (() => {
   //   water coming to the boil, the steam bursting (the casts Glass Floor, Heads of Flame, Cinder Dive and Aftershock sound from bossCast)
   //   svtwin:<n>   Twin Brands' wall lighting in its element (fire, frost, bolt, void: sv-twin-<el>, placed at the wall), the shift (sv-twin-shift, then the new wall) and the
   //   resolving (meet at the wall circle, or the bloom: it lands 'at' s after the message, and a shifted cast's first wall never bursts, so its timer is dropped)
+  //   svanvilt:<m>   The Anvil Count: a tower rising on its sheet (sv-anvil-rise) and, when it can be soaked, struck (sv-anvil-strike); the cast itself sounds from bossCast
   //   svheart   the wall: a heartbeat loop under the room (ducking the music as the burnback does), then the held breath after the last pillar;  svpillar:<n>   a pillar
   //   erupting (a little higher for each in the cut order);  svseal   the glass seal shattering;  svrebirth   the set piece's beats: the fire drawn into the blade, the dark
   //   (the music gone), the halo opening, the sky splitting, the choir, and the raidwide (its tag is hidden, so it is timed from here)
@@ -370,10 +371,18 @@ const SoundHooks = (() => {
         }
         return;
       }
+      if (/^svsignal:/.test(k)) {   // the First Signal: the pass's first sigil flares as its echo stands
+        svLater(+msg.at || 0, () => play('sv-signal', { vol: 0.8, at: svSpot(msg), key: 'svsignal', minGap: 1 }));
+        return;
+      }
       m = /^svechoact:(\d+)$/.exec(k);
       if (m) {
         if (msg.anim === 'bell' || msg.anim === 'knell') play('bm-sovereign-hollow-kings-bell', { vol: 0.9, key: 'svbell', minGap: 0.5 });
         else if (msg.anim === 'crane' || msg.anim === 'comet' || msg.anim === 'parting') play('sv-stance-' + msg.anim, { vol: 0.9, at: svSpot(svEchoes.get(+m[1])), key: 'svstance', minGap: 1 });   // (Corvane's stance)
+        return;
+      }
+      if (/^svproc:/.test(k) && Array.isArray(msg.at)) {   // Halo Procession: each hero's ring closing and bursting (the recipe's pop is 1.0 s in; the cast's own sound carries the arcs lighting)
+        msg.at.forEach((s, i) => svLater(s - 1.0, () => play('sv-proc-burst', { vol: 0.8, key: 'svproc:' + i, minGap: 0.5 })));
         return;
       }
       m = /^svcrescent:/.exec(k);
@@ -392,6 +401,11 @@ const SoundHooks = (() => {
       if (/^svpyre:/.test(k)) {   // each beat: a cut from each end of the order, a step higher every beat, Corvane's a fifth over the Sovereign's
         const cut = (list, who, fifth) => (Array.isArray(list) ? list : []).forEach((q, i) => svLater((+q[4] || 0) - 0.18, () => play('sv-pyre-cut', { vol: 0.8, at: svPt(q[2], q[3]), rate: Math.pow(1.0595, Math.min(i, 9)) * (fifth ? 1.498 : 1), key: 'svpyre:' + who + i, minGap: 0.1 })));
         cut(msg.s, 's', false); cut(msg.c, 'c', true);
+        return;
+      }
+      if (/^svfore:/.test(k) && Array.isArray(msg.g)) {   // Foretold: each ghost forms as a glass note a step up the scale, then the three fans land together
+        msg.g.forEach((q, i) => svLater(0.25 + i * 0.22, () => play('sv-fore-ghost', { vol: 0.7, at: svPt(q[1], q[2]), rate: Math.pow(2, SV_SCALE[Math.min(i, SV_SCALE.length - 1)] / 12), key: 'svforeg:' + i, minGap: 0.1 })));
+        svLater((+msg.fan || 6.8) - 0.22, () => play('sv-fore-blades', { vol: 0.85, at: svPt(msg.ox, msg.oy), key: 'svforeb', minGap: 1 }));
         return;
       }
       if (/^svdance:/.test(k) && Array.isArray(msg.l)) {
@@ -514,6 +528,12 @@ const SoundHooks = (() => {
         const p = msg.x != null ? { x: msg.x, y: msg.y } : null, fly = +msg.fly || 1.1;
         play('sv-lantern-fly', { vol: 0.7, key: 'svlfly', minGap: 0.5 });
         svLater(fly, () => play('bm-sovereign-lantern', { vol: 0.75, at: p, key: 'svlantern', minGap: 0.5 }));
+        return;
+      }
+      if (/^svanvilt:/.test(k)) {   // The Anvil Count: a tower rises on its sheet, and is struck when it can be soaked (the recipe's blow lands 0.1 s in)
+        const p = svSpot(msg), at = +msg.at || 5;
+        play('sv-anvil-rise', { vol: 0.7, at: p, key: 'svanvilrise', minGap: 0.5 });
+        svLater(Math.max(0, at - 0.1), () => play('sv-anvil-strike', { vol: 0.95, at: p, key: 'svanvilstrike', minGap: 0.5 }));
         return;
       }
       if (k === 'svsheets') {   // (the water of the sunk sheets: it hisses as one more goes under)

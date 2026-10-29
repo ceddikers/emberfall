@@ -2261,8 +2261,15 @@ const BossTells = (() => {
   // The Cinder Sovereign (the Ultimate, sovereign.js; tags are in docs/plans/2026-10-ultimate-build.md): shape and colour only for now, the outline and wash every telegraph gets;
   // the fire-and-cinder drawing comes with sovereign-fx.js. Red is damage and blue a stack or soak (ROLE_RIM), so these only name an ember tint for what is painted inside.
   const SV = {};
-  for (const [tag, color] of Object.entries({ svKindling: '#ff7a2a', svBrand: '#ff5a2a', svSweep: '#ff9a3c', svEmber: '#ffb86a', svScatter: '#ff9a3c', svLine: '#ffd36a', svPlate: '#ffd89a', svFlambe: '#ff8a3a', svMince: '#ff9a3c', svFuse: '#ff6a2a', svShadow: '#ff9a3c', svSurge: '#ffd36a', svReplay: '#ffb86a', svDirge: '#ff7a2a', svGlass: '#ff7a4a', svBite: '#ff6a2a', svDiveLand: '#ff5a2a', svDivePath: '#ff8a3a', svAfter: '#ff7a2a', svSteam: '#ffcf9a', svMeet: '#9ad8ff', svBloom: '#ff6a2a', svTwin: '#ff9a3c', svPillar: '#ff7a2a', svCrescent: '#ffb86a', svLance: '#ffd36a', svPyre: '#ff7a4a', svDance: '#ffe0a0', svWheel: '#ff9a3c', svCatch: '#9ad8ff', svSeed: '#ff9a3c', svNight: '#ffb86a' })) SV[tag] = { color };
+  for (const [tag, color] of Object.entries({ svKindling: '#ff7a2a', svBrand: '#ff5a2a', svSweep: '#ff9a3c', svEmber: '#ffb86a', svScatter: '#ff9a3c', svLine: '#ffd36a', svPlate: '#ffd89a', svFlambe: '#ff8a3a', svMince: '#ff9a3c', svFuse: '#ff6a2a', svShadow: '#ff9a3c', svSurge: '#ffd36a', svReplay: '#ffb86a', svDirge: '#ff7a2a', svGlass: '#ff7a4a', svBite: '#ff6a2a', svDiveLand: '#ff5a2a', svDivePath: '#ff8a3a', svAfter: '#ff7a2a', svSteam: '#ffcf9a', svMeet: '#9ad8ff', svBloom: '#ff6a2a', svTwin: '#ff9a3c', svPillar: '#ff7a2a', svCrescent: '#ffb86a', svLance: '#ffd36a', svPyre: '#ff7a4a', svDance: '#ffe0a0', svWheel: '#ff9a3c', svCatch: '#9ad8ff', svAnvil: '#9ad8ff', svSeed: '#ff9a3c', svNight: '#ffb86a', svWedge: '#ff4a24', svBurst: '#ff9a3c' })) SV[tag] = { color };
   SV.svKindling.raidwide = true; SV.svNight.raidwide = true;
+  // Halo Procession (Act I): a wedge is a run of narrow red cones laid a beat apart (two wedges, opposite each other). Each slice draws its red wash only, no rim, so the wedge reads as one
+  // shape that advances; its first slices laid show which way it turns (sv-procession.js adds the lit halo arcs, the hot edges and the countdown rings). A burst is the plain red circle on a hero.
+  SV.svWedge.outline = false;
+  SV.svWedge.ground = (ctx, tg, s, p, k) => {
+    const late = clamp(1 - (1 - p) * tg.dur / 0.6, 0, 1);
+    ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba(COL.danger, (0.2 + 0.16 * late) * k); ctx.fill(); ctx.restore();
+  };
   SV.svDirge.raidwide = true; SV.svRebirth = { color: '#ffd89a', raidwide: true };
   SV.svSurge = V.surge;   // (Ember and Ash: Volkar's Surge drawing, the bonds and the crackle between heroes by charge)
   function get(tg, env) {
@@ -2323,7 +2330,7 @@ const BossTells = (() => {
   // A chain of the same move (Eightfold Lunge's legs, Whisk's crosses, Simmer's waves): the one landing next is drawn
   // full strength, the one after it as a ghost, anything later fainter still.
   function ghost(tg, env) {
-    if (!env.tgs || env.bossId === 'brannoc' || env.bossId === 'morrowoak' || env.bossId === 'caelum' || (env.bossId === 'sovereign' && tg.tag === 'svWheel')) return 1;   // (the Sovereign's Sunwheel of Embers path is read whole, as Brannoc's) (Brannoc's path pieces, waves and heel blows, Morrow-Oak's petals, strands and rods, Caelum's Wake cuts are read together, never ghosted)
+    if (!env.tgs || env.bossId === 'brannoc' || env.bossId === 'morrowoak' || env.bossId === 'caelum' || (env.bossId === 'sovereign' && (tg.tag === 'svWheel' || tg.tag === 'svWedge'))) return 1;   // (the Sovereign's Sunwheel of Embers path is read whole, as Brannoc's) (Brannoc's path pieces, waves and heel blows, Morrow-Oak's petals, strands and rods, Caelum's Wake cuts are read together, never ghosted)
     if (tg.tag === 'lunge' && env.bossId === 'skitterra') return lungeOrder(tg, env) === 0 ? 1 : 0;   // (ground() draws the one after next as an outline)
     const at = tg.start + tg.dur;
     // (steps, not telegraphs: a layer of many circles landing together counts once)

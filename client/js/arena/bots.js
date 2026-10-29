@@ -166,7 +166,10 @@ const BotAI = {
     const al = view.players.filter(p => p.alive);
     const st = new Map(al.map(p => [p.id, { x: p.x, y: p.y, free: view.t, full: view.t + (view.debuffs(p.id).stuffed || 0), tank: p.role === 'tank', n: 0 }]));
     const mine = {};
+    // (a tower that names its owner, the Anvil Count's: that hero takes it, whoever else could reach it)
+    for (const m of towers) if (m.anvilFor != null) { const o = st.get(m.anvilFor); if (o) { mine[m.anvilFor] = m.id; o.n++; } }
     for (const m of towers) {
+      if (m.anvilFor != null) continue;
       let best = null, bs = Infinity;
       for (const p of al) {
         const s = st.get(p.id);
@@ -723,6 +726,8 @@ const BotAI = {
           break;
         }
         case 'stack': {
+          // Foretold's share (the Sovereign): only the tank and the healer are in it, and each walks to its own ghost (view.runes.goal); nobody else is drawn to it
+          if (m.tag === 'svForeShare') break;
           // (a spread of my own landing first, or with it: drop that clear of everyone, then come in)
           if (view.mechs.some(o => o.type === 'spread' && o.follow === me && o.resolveAt < m.resolveAt + 1)) break;
           // Thunder Crash: each + player carries one; their partner stacks in, everyone else keeps out

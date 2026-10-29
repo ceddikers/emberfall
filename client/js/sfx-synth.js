@@ -716,69 +716,71 @@
     'bm-sovereign-brand': -1.5, 'bm-sovereign-brand-sear': 1.5, 'bm-sovereign-burning-web': 4, 'bm-sovereign-call': 1,
     'bm-sovereign-cinder-dive': -2, 'bm-sovereign-cloche': 3.5, 'bm-sovereign-crescent': 2, 'bm-sovereign-crossed-blades': 2,
     'bm-sovereign-cupped-ember': -0.5, 'bm-sovereign-ember-and-ash': 1, 'bm-sovereign-emberfall': -1, 'bm-sovereign-flambe': 0.5,
-    'bm-sovereign-flambe-service': 0.5, 'bm-sovereign-fuse': 7.5, 'bm-sovereign-glass-floor': -1.5, 'bm-sovereign-grace-withdrawn': -2.5,
-    'bm-sovereign-halo-turn': -1.5, 'bm-sovereign-heads-of-flame': -2, 'bm-sovereign-hollow-kings-bell': 1.5, 'bm-sovereign-intro': -0.5,
-    'bm-sovereign-kindling': -2, 'bm-sovereign-knights-sweep': -0.5, 'bm-sovereign-knot': 4, 'bm-sovereign-lance': -3,
-    'bm-sovereign-lantern': 4, 'bm-sovereign-mince': 0.5, 'bm-sovereign-nightfall': -1, 'bm-sovereign-pyre': 2.5,
-    'bm-sovereign-royal-doom': 1, 'bm-sovereign-scatter': 0.5, 'bm-sovereign-seeds-of-ash': 1, 'bm-sovereign-shadow': -0.5,
-    'bm-sovereign-sovereigns-dance': -0.5, 'bm-sovereign-sunwheel-of-embers': 0.5, 'bm-sovereign-surge': -1.5, 'bm-sovereign-twin-brands': 2,
-    'bm-sovereign-two-dancers': 2, 'bm-titan-avalanche': 0.5, 'bm-titan-breath-of-winter': 1.5, 'bm-titan-endless-winter': -1.5,
-    'bm-titan-frostbite': 2.5, 'bm-titan-glacial-stomp': -0.5, 'bm-titan-icebreaker': 2, 'bm-titan-icefall': 2.5,
-    'bm-titan-intro': -3, 'bm-titan-rime-slam': 0.5, 'bm-titan-titans-grip': 2.5, 'bm-titan-titans-sweep': 2,
-    'bm-titan-twin-slam': 2, 'bm-titan-whiteout': 1.5, 'bm-titan-winters-grasp': 2.5, 'bm-titan-winters-howl': -1,
-    'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3, 'bm-volkar-crossing-arms': 2.5,
-    'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4, 'bm-volkar-gathering-storm': 0.5,
-    'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5, 'bm-volkar-lightning-rods': 9,
-    'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5, 'bm-volkar-pulse': 4.5,
-    'bm-volkar-reaching-arms': 0.5, 'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5, 'bm-volkar-squall-line': 3,
-    'bm-volkar-static-field': 5, 'bm-volkar-static-lash': 4.5, 'bm-volkar-still-air': 3, 'bm-volkar-storm-burst': -1.5,
-    'bm-volkar-storm-groan': 1, 'bm-volkar-storm-heart': 1, 'bm-volkar-storm-hush': 1.5, 'bm-volkar-storm-roar': -1,
-    'bm-volkar-storm-roll': 2.5, 'bm-volkar-storm-unbound': -1, 'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2,
-    'bm-volkar-thunder-crash': 1, 'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5, 'bm-volkar-titan-fist': -1.5,
-    'bm-volkar-twin-fall': -1.5, 'bm-wyrm-cinder-rain': 7.5, 'bm-wyrm-ember-breath': 3.5, 'bm-wyrm-intro': -4,
-    'bm-wyrm-pounce': 0.5, 'bm-wyrm-take-flight': 3.5, 'bm-wyrm-twin-breath': 3.5, 'boss-death': -2.5,
-    'boss-enrage': -2.5, 'boss-impact-heavy': 0.5, 'boss-impact-light': 7, 'boss-intro': -1.5,
-    'buff-on': -0.5, 'chest-drop': 3.5, 'chest-open': -5, 'cleanse': -5,
-    'clear': -4.5, 'crit': 4, 'dash': 6.5, 'debuff-on': -1,
-    'dummy-hit': 3, 'emote-cheer': -6.5, 'emote-laugh': -2, 'emote-wave': 2,
-    'feast-chew': 6.5, 'feast-clink': -5.5, 'feast-serve': -3.5, 'feast-sting': -2.5,
-    'fish-bite': 3, 'fish-cast': 1.5, 'fish-catch': -3, 'fish-lost': -0.5,
-    'fish-reel': -0.5, 'gloom-hollow-off': -2, 'gloom-hollow-on': 2, 'heal-land': -2.5,
-    'hit-heavy': 5, 'hit-light': 9, 'hm-bark-ash': -0.5, 'hm-bark-ghost': 3.5,
-    'hm-bark-greyfang': 0.5, 'hm-bark-rust': 0.5, 'hm-bite': 8, 'hm-bite-big': 2.5,
-    'hm-bringdown': -3, 'hm-calloff': 1.5, 'hm-down': 3, 'hm-hamstring': 1,
-    'hm-horn': -6, 'hm-howl': -3.5, 'hm-longchase': 1.5, 'hm-mount': -1,
-    'hm-quarry': 6.5, 'hm-relay': 4, 'hm-rend': 0.5, 'hm-ridedown': 2.5,
-    'hm-snap': 7, 'hm-up': 2.5, 'hm-whistle-hold': -7.5, 'hm-whistle-pounce': -7,
-    'ken-blaze': 0.5, 'ken-break': -0.5, 'ken-deathblow': -2, 'ken-good': 8,
-    'ken-iai': 2.5, 'ken-miss': 7.5, 'ken-off': 4.5, 'ken-pass': 6.5,
-    'ken-perfect': 2, 'ken-pommel': 6.5, 'ken-redirect': 1, 'lamp-drop': 11,
-    'lamp-ember': 14.5, 'lamp-end': 6.5, 'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5,
-    'lamp-pillar': 3, 'lamp-snuff': 5.5, 'lamp-sparks': 5, 'lb-fire': -1.5,
-    'lb-ready': -5, 'loot-take': -2, 'low-hp': -4.5, 'npc-talk': -6,
-    'ping': 2.5, 'pip-up': 12, 'portal-enter': -3, 'portal-hum': -22.5,
-    'pull-count': 0.5, 'pull-count-last': -3.5, 'pull-go': -2, 'reaper-blink': 5.5,
-    'reaper-danse': 5, 'reaper-finish1': 4.5, 'reaper-finish2': -0.5, 'reaper-finish3': 1,
-    'reaper-finish4': -2, 'reaper-frenzy': -2.5, 'reaper-gate-bloom': -2.5, 'reaper-gate-close': -1,
-    'reaper-gate-open': 3.5, 'reaper-gate-tone': 8, 'reaper-gatebreaker': 1.5, 'reaper-harvest': -1,
-    'reaper-moon': 1.5, 'reaper-pop-bind': 4.5, 'reaper-pop-death': 3, 'reaper-pop-drain': 4,
-    'reaper-pop-thread': 9, 'reaper-rune': 12.5, 'reaper-rune-emp': 6, 'reaper-slack': 14.5,
-    'reaper-slash': 2.5, 'reaper-star-collapse': -2, 'reaper-star-open': 0.5, 'reaper-swing': 12,
-    'reaper-veil': -0.5, 'revive': -2, 'shield-break': 5, 'shield-up': -4,
-    'stack-1': 8, 'stack-2': -2.5, 'step-grass': 8, 'step-stone': 8.5,
-    'step-wood': 1.5, 'story-page': 3.5, 'sv-bite': 1, 'sv-boil': 3.5,
-    'sv-burnback': 0.5, 'sv-call-archmage': 0.5, 'sv-call-brannoc': 2.5, 'sv-call-corvane': -1,
-    'sv-call-grubnak': 0.5, 'sv-call-hollowking': 1.5, 'sv-call-hydra': -3, 'sv-call-morrowoak': 0.5,
-    'sv-call-skitterra': 3, 'sv-call-titan': 1, 'sv-call-volkar': 1, 'sv-call-wyrm': -3,
-    'sv-crescent-fan': -0.5, 'sv-crumble': -3.5, 'sv-cut': -2, 'sv-dance-cut': 0.5,
-    'sv-dance-cut2': 1, 'sv-dance-image': -1, 'sv-descent': -1.5, 'sv-dive-fall': -2,
-    'sv-dive-line': 1, 'sv-drift-loop': -11, 'sv-emberfall-below': -1, 'sv-everyname': -0.5,
-    'sv-gutter': 1, 'sv-head-rise': -2, 'sv-heart-breath': 6, 'sv-heart-loop': -14,
-    'sv-hole-town': 0.5, 'sv-lance-dash': -1, 'sv-lantern-down': 0.5, 'sv-lantern-fly': 7,
-    'sv-lie-bell': -2.5, 'sv-pillar': -2, 'sv-pyre-cut': 1.5, 'sv-rebirth-blast': -1,
-    'sv-rebirth-choir': -1.5, 'sv-rebirth-draw': -1.5, 'sv-rebirth-halo': -1, 'sv-rebirth-sky': -2,
-    'sv-relight': -0.5, 'sv-sapling-arrive': -3, 'sv-sapling-creak': 2.5, 'sv-sapling-die': -4,
-    'sv-seal-shatter': -1.5, 'sv-seed-burst': -1.5, 'sv-seed-pulse': 2, 'sv-stance-comet': -1,
+    'bm-sovereign-flambe-service': 0.5, 'bm-sovereign-foretold': 1, 'bm-sovereign-fuse': 7.5, 'bm-sovereign-glass-floor': -1.5,
+    'bm-sovereign-grace-withdrawn': -2.5, 'bm-sovereign-halo-procession': -0.5, 'bm-sovereign-halo-turn': -1.5, 'bm-sovereign-heads-of-flame': -2,
+    'bm-sovereign-hollow-kings-bell': 1.5, 'bm-sovereign-intro': -0.5, 'bm-sovereign-kindling': -2, 'bm-sovereign-knights-sweep': -0.5,
+    'bm-sovereign-knot': 4, 'bm-sovereign-lance': -3, 'bm-sovereign-lantern': 4, 'bm-sovereign-mince': 0.5,
+    'bm-sovereign-nightfall': -1, 'bm-sovereign-pyre': 2.5, 'bm-sovereign-royal-doom': 1, 'bm-sovereign-scatter': 0.5,
+    'bm-sovereign-seeds-of-ash': 1, 'bm-sovereign-shadow': -0.5, 'bm-sovereign-sovereigns-dance': -0.5, 'bm-sovereign-sunwheel-of-embers': 0.5,
+    'bm-sovereign-surge': -1.5, 'bm-sovereign-the-anvil-count': 2, 'bm-sovereign-twin-brands': 2, 'bm-sovereign-two-dancers': 2,
+    'bm-titan-avalanche': 0.5, 'bm-titan-breath-of-winter': 1.5, 'bm-titan-endless-winter': -1.5, 'bm-titan-frostbite': 2.5,
+    'bm-titan-glacial-stomp': -0.5, 'bm-titan-icebreaker': 2, 'bm-titan-icefall': 2.5, 'bm-titan-intro': -3,
+    'bm-titan-rime-slam': 0.5, 'bm-titan-titans-grip': 2.5, 'bm-titan-titans-sweep': 2, 'bm-titan-twin-slam': 2,
+    'bm-titan-whiteout': 1.5, 'bm-titan-winters-grasp': 2.5, 'bm-titan-winters-howl': -1, 'bm-volkar-avalanche': 0.5,
+    'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3, 'bm-volkar-crossing-arms': 2.5, 'bm-volkar-eye-closes': 2,
+    'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4, 'bm-volkar-gathering-storm': 0.5, 'bm-volkar-grounding-rods': 3,
+    'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5, 'bm-volkar-lightning-rods': 9, 'bm-volkar-polarity-minus': 3,
+    'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5, 'bm-volkar-pulse': 4.5, 'bm-volkar-reaching-arms': 0.5,
+    'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5, 'bm-volkar-squall-line': 3, 'bm-volkar-static-field': 5,
+    'bm-volkar-static-lash': 4.5, 'bm-volkar-still-air': 3, 'bm-volkar-storm-burst': -1.5, 'bm-volkar-storm-groan': 1,
+    'bm-volkar-storm-heart': 1, 'bm-volkar-storm-hush': 1.5, 'bm-volkar-storm-roar': -1, 'bm-volkar-storm-roll': 2.5,
+    'bm-volkar-storm-unbound': -1, 'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2, 'bm-volkar-thunder-crash': 1,
+    'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5, 'bm-volkar-titan-fist': -1.5, 'bm-volkar-twin-fall': -1.5,
+    'bm-wyrm-cinder-rain': 7.5, 'bm-wyrm-ember-breath': 3.5, 'bm-wyrm-intro': -4, 'bm-wyrm-pounce': 0.5,
+    'bm-wyrm-take-flight': 3.5, 'bm-wyrm-twin-breath': 3.5, 'boss-death': -2.5, 'boss-enrage': -2.5,
+    'boss-impact-heavy': 0.5, 'boss-impact-light': 7, 'boss-intro': -1.5, 'buff-on': -0.5,
+    'chest-drop': 3.5, 'chest-open': -5, 'cleanse': -5, 'clear': -4.5,
+    'crit': 4, 'dash': 6.5, 'debuff-on': -1, 'dummy-hit': 3,
+    'emote-cheer': -6.5, 'emote-laugh': -2, 'emote-wave': 2, 'feast-chew': 6.5,
+    'feast-clink': -5.5, 'feast-serve': -3.5, 'feast-sting': -2.5, 'fish-bite': 3,
+    'fish-cast': 1.5, 'fish-catch': -3, 'fish-lost': -0.5, 'fish-reel': -0.5,
+    'gloom-hollow-off': -2, 'gloom-hollow-on': 2, 'heal-land': -2.5, 'hit-heavy': 5,
+    'hit-light': 9, 'hm-bark-ash': -0.5, 'hm-bark-ghost': 3.5, 'hm-bark-greyfang': 0.5,
+    'hm-bark-rust': 0.5, 'hm-bite': 8, 'hm-bite-big': 2.5, 'hm-bringdown': -3,
+    'hm-calloff': 1.5, 'hm-down': 3, 'hm-hamstring': 1, 'hm-horn': -6,
+    'hm-howl': -3.5, 'hm-longchase': 1.5, 'hm-mount': -1, 'hm-quarry': 6.5,
+    'hm-relay': 4, 'hm-rend': 0.5, 'hm-ridedown': 2.5, 'hm-snap': 7,
+    'hm-up': 2.5, 'hm-whistle-hold': -7.5, 'hm-whistle-pounce': -7, 'ken-blaze': 0.5,
+    'ken-break': -0.5, 'ken-deathblow': -2, 'ken-good': 8, 'ken-iai': 2.5,
+    'ken-miss': 7.5, 'ken-off': 4.5, 'ken-pass': 6.5, 'ken-perfect': 2,
+    'ken-pommel': 6.5, 'ken-redirect': 1, 'lamp-drop': 11, 'lamp-ember': 14.5,
+    'lamp-end': 6.5, 'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5, 'lamp-pillar': 3,
+    'lamp-snuff': 5.5, 'lamp-sparks': 5, 'lb-fire': -1.5, 'lb-ready': -5,
+    'loot-take': -2, 'low-hp': -4.5, 'npc-talk': -6, 'ping': 2.5,
+    'pip-up': 12, 'portal-enter': -3, 'portal-hum': -22.5, 'pull-count': 0.5,
+    'pull-count-last': -3.5, 'pull-go': -2, 'reaper-blink': 5.5, 'reaper-danse': 5,
+    'reaper-finish1': 4.5, 'reaper-finish2': -0.5, 'reaper-finish3': 1, 'reaper-finish4': -2,
+    'reaper-frenzy': -2.5, 'reaper-gate-bloom': -2.5, 'reaper-gate-close': -1, 'reaper-gate-open': 3.5,
+    'reaper-gate-tone': 8, 'reaper-gatebreaker': 1.5, 'reaper-harvest': -1, 'reaper-moon': 1.5,
+    'reaper-pop-bind': 4.5, 'reaper-pop-death': 3, 'reaper-pop-drain': 4, 'reaper-pop-thread': 9,
+    'reaper-rune': 12.5, 'reaper-rune-emp': 6, 'reaper-slack': 14.5, 'reaper-slash': 2.5,
+    'reaper-star-collapse': -2, 'reaper-star-open': 0.5, 'reaper-swing': 12, 'reaper-veil': -0.5,
+    'revive': -2, 'shield-break': 5, 'shield-up': -4, 'stack-1': 8,
+    'stack-2': -2.5, 'step-grass': 8, 'step-stone': 8.5, 'step-wood': 1.5,
+    'story-page': 3.5, 'sv-anvil-rise': 3.5, 'sv-anvil-strike': -1.5, 'sv-bite': 1,
+    'sv-boil': 3.5, 'sv-burnback': 0.5, 'sv-call-archmage': 0.5, 'sv-call-brannoc': 2.5,
+    'sv-call-corvane': -1, 'sv-call-grubnak': 0.5, 'sv-call-hollowking': 1.5, 'sv-call-hydra': -3,
+    'sv-call-morrowoak': 0.5, 'sv-call-skitterra': 3, 'sv-call-titan': 1, 'sv-call-volkar': 1,
+    'sv-call-wyrm': -3, 'sv-crescent-fan': -0.5, 'sv-crumble': -3.5, 'sv-cut': -2,
+    'sv-dance-cut': 0.5, 'sv-dance-cut2': 1, 'sv-dance-image': -1, 'sv-descent': -1.5,
+    'sv-dive-fall': -2, 'sv-dive-line': 1, 'sv-drift-loop': -11, 'sv-emberfall-below': -1,
+    'sv-everyname': -0.5, 'sv-fore-ghost': 0.5, 'sv-gutter': 1, 'sv-head-rise': -2,
+    'sv-heart-breath': 6, 'sv-heart-loop': -14, 'sv-hole-town': 0.5, 'sv-lance-dash': -1,
+    'sv-lantern-down': 0.5, 'sv-lantern-fly': 7, 'sv-lie-bell': -2.5, 'sv-pillar': -2,
+    'sv-proc-burst': -1, 'sv-pyre-cut': 1.5, 'sv-rebirth-blast': -1, 'sv-rebirth-choir': -1.5,
+    'sv-rebirth-draw': -1.5, 'sv-rebirth-halo': -1, 'sv-rebirth-sky': -2, 'sv-relight': -0.5,
+    'sv-sapling-arrive': -3, 'sv-sapling-creak': 2.5, 'sv-sapling-die': -4, 'sv-seal-shatter': -1.5,
+    'sv-seed-burst': -1.5, 'sv-seed-pulse': 2, 'sv-signal': -3, 'sv-stance-comet': -1,
     'sv-stance-crane': 0.5, 'sv-stance-parting': 4, 'sv-steam-burst': -1, 'sv-twin-bloom': -2,
     'sv-twin-bolt': 3.5, 'sv-twin-fire': -0.5, 'sv-twin-meet': -0.5, 'sv-twin-shift': 3.5,
     'sv-twin-void': -0.5, 'sv-wall-fire': -0.5, 'sv-wall-out': 0.5, 'sv-water-hiss': -1.5,
@@ -5219,6 +5221,29 @@
     S.crack({ at: 2.05, peak: 0.3, dur: 0.18 });
     svBody(S, 2.05, 1.4, 0.2, 2.0);
   });
+  def('bm-sovereign-halo-procession', 'bm', S => {
+    S.space('hall', 0.55);
+    // Act I's Halo Procession (a 2.4 s cast): the halo lights two arcs and they begin to turn, like two lamps drawn apart. Two thin tones a fifth apart lean away from each other and
+    // swell, a turning shimmer under them, a glass note as each arc catches, and the halo's fire under it all, ending on a soft struck ring (the wedges' strikes are sound-hooks.js's)
+    S.tone({ f: 330, f1: 392, dur: 2.4, a: 1.2, am: [2.4, 0.4], lp: 2200, pts: [[2.0, 1], [2.4, 0]], peak: 0.12, pan: -0.4 });
+    S.tone({ f: 495, f1: 588, dur: 2.4, a: 1.2, am: [2.4, 0.4], lp: 2600, pts: [[2.0, 1], [2.4, 0]], peak: 0.1, pan: 0.4 });
+    S.noise({ bp: 700, bp1: 2600, q: 3, dur: 2.4, a: 1.6, am: [2.4, 0.6], pts: [[2.1, 1], [2.4, 0]], peak: 0.14 });
+    S.glass({ at: 0.7, f: mf(86), dur: 0.9, peak: 0.05, pan: -0.4 }); S.glass({ at: 1.2, f: mf(93), dur: 0.9, peak: 0.05, pan: 0.4 });
+    svBody(S, 0, 2.6, 0.12, 1.1);
+    svRing(S, 2.2, 1320, 0.16, 1.6);
+    S.thud({ at: 2.2, f: 60, f1: 30, dur: 0.9, drive: 2.4, peak: 0.55 });
+  });
+  def('sv-proc-burst', 'bm', S => {
+    S.space('hall', 0.45);
+    // a hero's ring closing and bursting (1.6 s, the burst 1.0 s in): a rising rush as the embers are drawn in, a held breath, then a bright pop and a ring of sparks flung wide
+    S.whoosh({ f: 500, f1: 2600, dur: 1.0, peakAt: 0.9, peak: 0.22, q: 1.4 });
+    S.tone({ f: 440, f1: 880, dur: 1.0, a: 0.9, lp: 3000, pts: [[0.9, 1], [1.0, 0]], peak: 0.07 });
+    S.crack({ at: 1.0, peak: 0.26, dur: 0.14 });
+    S.thud({ at: 1.0, f: 72, f1: 34, dur: 0.8, drive: 2.2, peak: 0.6 });
+    for (let i = 0; i < 6; i++) S.crackle({ at: 1.02 + i * 0.05, dens: 2.2, f: 4000, dur: 0.25, pts: [[0.02, 1], [0.25, 0]], peak: 0.08, pan: Math.sin(i * 2.1) * 0.8 });
+    svRing(S, 1.02, 1640, 0.12, 1.4);
+    svBody(S, 1.0, 0.8, 0.14, 2.0);
+  });
   def('bm-sovereign-rebirth', 'bm', S => {
     S.space('hall', 0.8);
     // the room's whole fire spirals into one point: a swelling pull of air and flame, a deepening drone, then held (the choir hit is the set piece's)
@@ -5767,6 +5792,38 @@
     svRing(S, 0.62, 600, 0.1, 2.0);
   });
 
+  // ---- Act II: The Anvil Count (the Sovereign's own move: a pip count rung on an anvil, then one tower after another struck in turn)
+  def('bm-sovereign-the-anvil-count', 'bm', S => {
+    S.space('hall', 0.6);
+    // the cast (3.6 s): a forge hum swelling under it and four rings struck on an anvil, each a step higher, one for every place in the count
+    S.tone({ type: 'saw', f: 58, f1: 92, lp: 520, dur: 3.2, a: 1.4, peak: 0.1, am: [4, 0.3] });
+    S.noise({ bp: 500, bp1: 2400, q: 2, dur: 3.0, a: 1.4, pts: [[2.6, 1], [3.0, 0]], peak: 0.09 });
+    [0, 3, 7, 12].forEach((n, i) => {
+      const at = 0.3 + i * 0.8, pan = -0.45 + i * 0.3;
+      S.thud({ at, f: 74, f1: 38, dur: 0.5, drive: 2, peak: 0.4, pan });
+      svRing(S, at, mf(70 + n), 0.13, 1.5, pan);
+    });
+    svLay(S, 0.4, 3.0, 0.07);
+  });
+  def('sv-anvil-rise', 'bm', S => {
+    S.space('hall', 0.5);
+    // a tower coming up on its sheet: the iron heating (a rising hiss and a low swell), the anvil settling with one soft low note
+    S.noise({ bp: 400, bp1: 2600, q: 1.8, dur: 1.2, a: 0.8, pts: [[1.0, 1], [1.2, 0]], peak: 0.12 });
+    S.tone({ type: 'saw', f: 60, f1: 120, lp: 500, dur: 1.2, a: 0.7, peak: 0.08 });
+    S.thud({ at: 0.9, f: 66, f1: 40, dur: 0.5, drive: 1.6, peak: 0.3 });
+    svRing(S, 0.92, mf(62), 0.07, 1.0);
+  });
+  def('sv-anvil-strike', 'bm', S => {
+    S.space('hall', 0.55);
+    // the hammer coming down on the tower (lands at 0.1 s): a bright ring of steel, the blow under it and a spray of sparks
+    S.crack({ at: 0.1, peak: 0.34, dur: 0.16 });
+    S.thud({ at: 0.1, f: 70, f1: 30, dur: 0.9, drive: 3, peak: 0.7 });
+    svRing(S, 0.1, mf(74), 0.2, 2.2);
+    svRing(S, 0.11, mf(81), 0.1, 1.4);
+    S.crackle({ at: 0.12, dens: 3.5, f: 4200, dur: 0.9, pts: [[0.02, 1], [0.9, 0]], peak: 0.16 });
+    svBody(S, 0.12, 1.0, 0.1, 1.2);
+  });
+
   // ---- the wall: The Heart Remembers (a heartbeat under the sealed room, a pillar of fire from each stump in cut order, a held breath, the glass seal shattering)
   def('bm-sovereign-the-heart-remembers', 'bm', S => {
     S.space('hall', 0.8);
@@ -5977,6 +6034,34 @@
     caEcho(S, 0.1, mf(98), 0.06, 3, -0.3);
     caStars(S, 0, 7, 1.0, 0.04, 2600, 6200);
     caSlice(S, 0.85, 3200, 0.2);
+  });
+  def('bm-sovereign-foretold', 'bm', S => {
+    S.space('hall', 0.6);
+    // Caelum's answer, Foretold (the bar runs about seven seconds; the first three are here): a long breath drawn in, glass notes climbing a pentatonic scale one after another (the four
+    // ghosts forming), a cold shimmer under them that swells, the fire held low, and one thin note stretched tighter over it all
+    svHush(S, 0, 2.6, 0.08, 900, 3600);
+    [[0.4, 79], [0.95, 83], [1.5, 86], [2.05, 91]].forEach(([at, m], i) => { S.glass({ at, f: mf(m), dur: 1.4, peak: 0.1, pan: (i - 1.5) * 0.35 }); caEcho(S, at + 0.14, mf(m), 0.03, 2, (i - 1.5) * 0.35); });
+    S.tone({ f: 660, f1: 1320, dur: 3.2, a: 2.6, am: [3.0, 0.35], lp: 3000, pts: [[2.9, 1], [3.2, 0]], peak: 0.07 });
+    caStars(S, 0.3, 8, 2.4, 0.03, 2400, 6000);
+    svBody(S, 0.2, 2.8, 0.08, 1.0);
+    S.thud({ at: 2.9, f: 52, f1: 32, dur: 0.5, drive: 1.4, peak: 0.2 });
+  });
+  def('sv-fore-ghost', 'hud', S => {
+    S.space('hall', 0.5);
+    // one ghost forming (the hook plays each a step up the scale): a soft glass note with a breath of cold air under it and a few specks of starlight
+    S.glass({ f: mf(84), dur: 1.2, peak: 0.13 });
+    S.glass({ at: 0.012, f: mf(84) * 2.01, dur: 0.6, peak: 0.03 });
+    S.whoosh({ at: 0, f: 400, f1: 2400, dur: 0.5, peakAt: 0.6, peak: 0.07, q: 1.4 });
+    caStars(S, 0.05, 4, 0.5, 0.025, 3000, 6400);
+  });
+  def('sv-fore-blades', 'bm', S => {
+    S.space('hall', 0.55);
+    // the three fans of the Foretold landing at 0.22 s: three glassy slices a third apart in quick succession, the blades struck and ringing together, a low blow and a spit of cinders
+    [0, 0.05, 0.1].forEach((d, i) => caSlice(S, d, 2000 + i * 500, 0.2, (i - 1) * 0.6));
+    svRing(S, 0.22, 1480, 0.16, 1.4);
+    svRing(S, 0.27, 1870, 0.12, 1.2);
+    S.thud({ at: 0.22, f: 60, f1: 28, dur: 0.7, drive: 2.6, peak: 0.6 });
+    S.crackle({ at: 0.24, dens: 2.4, f: 3600, dur: 0.5, pts: [[0.02, 1], [0.5, 0]], peak: 0.1 });
   });
   def('sv-dance-image', 'hud', S => {
     S.space('hall', 0.5);
@@ -6226,6 +6311,15 @@
     S.glass({ at: 0.01, f: mf(86), dur: 1.3, peak: 0.03 });
     S.thud({ at: 0.03, f: 72, f1: 38, dur: 0.5, drive: 1.4, peak: 0.16 });
     S.crackle({ at: 0.06, dens: 0.7, f: 2000, dur: 1.0, pts: [[0.1, 1], [1.0, 0]], peak: 0.05 });
+  });
+  def('sv-signal', 'hud', S => {
+    S.space('hall', 0.5);
+    // the First Signal: the first sigil of a pass flaring (once, short, quiet): a struck pane of glass and its octave answering, a thin rising air, a spit of ember
+    S.glass({ f: mf(93), dur: 1.5, peak: 0.15 });
+    S.glass({ at: 0.015, f: mf(93) * 2.01, dur: 0.9, peak: 0.05 });
+    S.whoosh({ at: 0, f: 700, f1: 3200, dur: 0.3, peakAt: 0.9, peak: 0.07, q: 1.8 });
+    S.bell({ at: 0.28, f: mf(81), dur: 1.4, peak: 0.07, lp: 4200 });
+    S.crackle({ at: 0.04, dens: 1.2, f: 3000, dur: 0.5, pts: [[0.05, 1], [0.5, 0]], peak: 0.05 });
   });
   def('sv-lantern-down', 'bm', S => {
     S.space('hall', 0.6);

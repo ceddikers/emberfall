@@ -2494,6 +2494,7 @@
   Net.on('roomev', msg => {
     if (!raid) return;
     if (raid.def.id === 'sovereign' && SH && SH.sovereignRoom) SH.sovereignRoom(msg);   // the Ultimate's echoes and moves (sound-hooks.js)
+    if (raid.def.id === 'sovereign' && raid.state === 'live' && player.cls && !raid.practice && typeof msg.k === 'string' && msg.k.startsWith('svsignal:')) Journal.castStart(player.cls.id, 'sovereign', String(msg.name), 3, now);   // (the First Signal: not a cast, so its journal page is told by this roomev)
     if (raid.def.id === 'sovereign' && msg.k === 'svact' && !raid.practice) SvPortal.reached(msg.act);   // (the furthest act of a real pull: the fourth portal's Reach card)
     if (raid.def.id === 'sovereign' && (msg.k === 'svline' || msg.k === 'svhalo')) {   // the Sovereign's two lines, a quiet line of boss speech: the town's name as the twelfth flame lights (the script sends none), then the first hero who fell (nothing if nobody did)
       const first = msg.k === 'svhalo' && msg.lit === 0xfff && raid.svLit != null && raid.svLit !== 0xfff && !raid.svSaid;

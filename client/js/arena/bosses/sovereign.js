@@ -37,7 +37,7 @@ const SOVEREIGN = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      kindling: 12000, brand: 17700, burn: 650, sweep: 67900, ember: 20000, scatter: 11000, line: 48950,
+      kindling: 12000, brand: 17700, burn: 650, sweep: 67900, ember: 20000, scatter: 11000, line: 48950, wedge: 6000, burst: 6500,   // (Halo Procession's wedges and a ring's burst)
       plate: 7000, plateFail: 39500, flambe: 45850, mince: 53750,
       sting: 5400, fuse: 36300, whole: 55300, knotHp: 16000,
       surgeAlone: 25200, surgeSame: 56850, surgePair: 5050, dirge: 8000,
@@ -166,6 +166,36 @@ const SOVEREIGN = {
         const a = a0 + i * TAU / 12, c = Math.cos(a), s = Math.sin(a);
         f.aoe({ kind: 'rect', x: Math.round(B.x + c * 150), y: Math.round(B.y + s * 150), angle: +a.toFixed(3), len: 1300, w: 64 }, d, dmg.line, { tag: 'svLine', from: 'Halo Turn' });
       }
+    };
+
+    // --- Halo Procession (Act I's dance block, Pantokrator) --------------------------------------------------------------------
+    // The first Halo Turn grown up: two lit arcs of the halo sweep round the Sovereign as red wedges (opposite each other; each is a run of narrow cones
+    // laid a beat ahead of where it lands, so the painted wedge advances; the way they turn, a random one per pull, shows in the first slices laid). The
+    // party walks a lap ahead of them. Every hero also carries a countdown ring (roomev 'svproc', the clients draw it), a few seconds apart in a random
+    // order: when a ring closes that hero bursts a red circle on themselves that hurts everyone else in it (the hero themselves takes nothing), so they step
+    // out of the group just before and come back after. It ends on a Cupped Ember, which pulls them together again. About 27 s in all.
+    const PROC = { a0: 0.3, step: 0.5, arc: 0.15, lead: 2.4, first: 4.2, n: 38, ring0: 7.0, gap: 5.5, burstR: 150, burstLead: 2.6, emberAt: 23.0 };
+    let procN = 0;
+    const procession = () => {
+      if (f.state !== 'live') return;
+      const P = PROC, n = ++procN, dir = f.rng() < 0.5 ? 1 : -1, c0 = { x: Math.round(B.x), y: Math.round(B.y) };
+      const ids = f.shuffle(f.alive().map(p => p.id)).slice(0, 4), at = ids.map((_, i) => +(P.ring0 + i * P.gap).toFixed(2));
+      f.cast('Halo Procession', 2.4, 'haloturn');
+      hold(P.emberAt + 5);
+      f.emit({ t: 'roomev', k: 'svproc:' + n, x: c0.x, y: c0.y, a0: P.a0, dir, arc: P.arc, step: P.step, first: P.first, n: P.n, lead: P.lead, ids, at, r: P.burstR, dur: +(P.emberAt + 5).toFixed(2) });
+      // the wedges: slice k of each lands at first + k x step, laid `lead` before (afterKeep: the sweep runs on whatever the act does)
+      for (let k = 0; k < P.n; k++) {
+        f.afterKeep(P.first + k * P.step - P.lead, () => {
+          if (f.state !== 'live') return;
+          for (const w of [0, 1]) f.mech({ type: 'aoe', shape: { kind: 'cone', x: c0.x, y: c0.y, r: 760, angle: +(P.a0 + w * Math.PI + dir * k * P.arc).toFixed(3), arc: +(P.arc * 1.04).toFixed(3) }, delay: P.lead, dmg: dmg.wedge, tag: 'svWedge', from: 'Halo Procession' });
+        });
+      }
+      // the rings: the red circle goes down on the hero a beat before the ring closes and follows them until just before it bursts
+      ids.forEach((id, i) => f.afterKeep(at[i] - P.burstLead, () => {
+        const p = live(id); if (f.state !== 'live' || !p) return;
+        f.mech({ type: 'aoe', shape: { kind: 'circle', x: p.x, y: p.y, r: P.burstR }, delay: P.burstLead, dmg: dmg.burst, follow: id, lockAt: 0.7, group: new Set([id]), tag: 'svBurst', from: 'Halo Procession' });
+      }));
+      f.afterKeep(P.emberAt, ember);
     };
 
     // --- Call: Grubnak. Flambé Service ----------------------------------------------------------------------------------------
@@ -489,12 +519,12 @@ const SOVEREIGN = {
       // (one list, cut into sets after: each step's delay is from the step before it, across the sets)
       const all = line([
         [0, descent, 'The Way Down'], [8, kindling, 'Kindling'], [18, () => sweep(), 'Ashen Sweep'], [28, brand, 'Brand'],
-        [40, flambe, 'Grubnak, the Ogre Chef'], [65, () => haloTurn(0.26), 'Halo Turn'], [78, ember, 'Cupped Ember'],
-        [90, web, 'Skitterra, the Spider Broodmother'], [110, brand, 'Brand'], [125, shadowDrop, 'Burning Web'], [130, () => sweep({ swap: true }), 'Ashen Sweep'],
+        [40, flambe, 'Grubnak, the Ogre Chef'], [65, procession, 'Halo Procession'],   // (the first Halo Turn, grown: it ends on its own Cupped Ember at about 92)
+        [93, web, 'Skitterra, the Spider Broodmother'], [110, brand, 'Brand'], [125, shadowDrop, 'Burning Web'], [130, () => sweep({ swap: true }), 'Ashen Sweep'],
         [140, volkar, 'Volkar, the Storm Titan'], [150, surge, 'Polarity Surge'], [160, scatter, 'Scatter'], [172, brand, 'Brand'],
         [180, crier, 'The Hollow King'], [200, tithe, 'Royal Tithe'], [208, dirge, 'Dirge'],
       ]);
-      const sets = [all.slice(0, 4), all.slice(4, 7), all.slice(7, 11), all.slice(11, 15), all.slice(15, 16), all.slice(16)];
+      const sets = [all.slice(0, 4), all.slice(4, 6), all.slice(6, 10), all.slice(10, 14), all.slice(14, 15), all.slice(15)];
       return f.course({
         onStart: () => actDmg(1),
         until: 0.78,
@@ -706,8 +736,9 @@ const SOVEREIGN = {
     // The bots read it as f.runePair (the Rune Pair's own field, plus `goal`: { id: { x, y, r } }, where each bearer is to stand).
     const TWIN = { fire: { a: -90, rule: 'split' }, frost: { a: 0, rule: 'pair' }, bolt: { a: 90, rule: 'pair' }, void: { a: 180, rule: 'split' } };
     const TW = { r: 380, meet: 150, bloom: 290, spread: 125, corner: 360 };
-    const wallPoint = el => { const a = TWIN[el].a * Math.PI / 180; return { x: Math.round(Math.cos(a) * TW.r), y: Math.round(Math.sin(a) * TW.r) }; };
-    const cornersFor = el => [-45, 45].map(d => { const b = (TWIN[el].a + 180 + d) * Math.PI / 180; return { x: Math.round(Math.cos(b) * TW.corner), y: Math.round(Math.sin(b) * TW.corner) }; });
+    let twinRot = 0;   // (degrees: Act IV's pass three turns the four walls with its frame, the First Signal; Act III's Twin Brands never sets it)
+    const wallPoint = el => { const a = (TWIN[el].a + twinRot) * Math.PI / 180; return { x: Math.round(Math.cos(a) * TW.r), y: Math.round(Math.sin(a) * TW.r) }; };
+    const cornersFor = el => [-45, 45].map(d => { const b = (TWIN[el].a + twinRot + 180 + d) * Math.PI / 180; return { x: Math.round(Math.cos(b) * TW.corner), y: Math.round(Math.sin(b) * TW.corner) }; });
     const twinPair = () => {
       const nts = f.nonTanks(), pool = nts.length >= 2 ? nts : f.alive();
       return pool.slice().sort((p, q) => Math.hypot(p.x, p.y) - Math.hypot(q.x, q.y) || p.id - q.id).slice(0, 2);
@@ -771,6 +802,76 @@ const SOVEREIGN = {
     const pairMove = () => {
       cinderDive(2, 1, { fly: 0, wait: 7.0 });
       f.afterKeep(f.ct(3.9), () => { if (f.state === 'live') glassFloor({ fly: 0, home: { x: -150, y: 300 }, reach: 2 }); });
+    };
+
+    // --- The Anvil Count (Act II's dance block: Program Loop; docs/plans/2026-10-ultimate-raid.md "The dance pass") -------------------------------------------------
+    // The Sovereign's own move. Every hero is given 1 to 4 pips over their head: their place in the count (the healer is never the last, so never waits longest). Blue towers then rise
+    // one at a time in pip order, each 7.4 s after the last; the tower for pip k is placed 5.2 s before it can be soaked, on a whole forge sheet on the far side of the room from where its
+    // hero stands then (the point opposite them through the middle, the nearest whole sheet 320 to 620 away), and it glows in that hero's own colour. So each soak is a run across a
+    // floor Hrimgar's water has cut up. A tower soaked by the wrong hero, or by no one, is a raidwide (not a wipe). Only the tower in play is on the floor: the later ones do not exist yet.
+    // The Hydra's heads hold their bites for the count. 3.6 s cast, towers at 9.0, 16.4, 23.8 and 31.2 s: about 32 s in all with four heroes.
+    // The bots read each tower's owner as m.anvilFor (bots.js towerPlan).
+    Object.assign(dmg, { anvil: 3000, anvilFail: 8000 });   // (the soak's tick and the raidwide of a bad soak: neither is scaled by the act, see actDmg)
+    const ANVIL = { cast: 3.6, first: 5.4, gap: 7.4, lead: 5.2, r: 85, rim: 380, hold: 1.2, wet: 400 };
+    let anvilN = 0;
+    sv.anvil = { done: 0, bad: 0, skip: 0 };
+    // who has which pip: a shuffle, then the healer moved off the last place (2 or 3 of 4; the middle of 3; first of 2)
+    const anvilOrder = al => {
+      const ord = al.slice();
+      for (let i = ord.length - 1; i > 0; i--) { const j = Math.floor(f.rng() * (i + 1)); [ord[i], ord[j]] = [ord[j], ord[i]]; }
+      const n = ord.length, hi = ord.findIndex(p => p.s.role === 'healer');
+      if (hi >= 0 && n >= 2) {
+        const okay = n === 2 ? [0] : n === 3 ? [1] : [1, 2];
+        if (!okay.includes(hi)) { const to = okay[Math.floor(f.rng() * okay.length)]; [ord[hi], ord[to]] = [ord[to], ord[hi]]; }
+      }
+      return ord;
+    };
+    // the sheet for a tower: whole (never a sunk or cracking one), well inside the rim, clear of a head or a stump, and across the room from the hero
+    const anvilSpot = (p, used = []) => {
+      const busyAt = heads.filter(h => !h.dead && f.adds.has(h.add.id)).map(h => ({ x: h.x, y: h.y })).concat(sv.stumps.map(s => ({ x: s.x, y: s.y })));
+      const free = s => s.st === 0 && !busyAt.some(b => Math.hypot(b.x - s.cx, b.y - s.cy) < 150) && !used.some(b => Math.hypot(b.x - s.cx, b.y - s.cy) < 200);   // (and not near an earlier tower of this count: each rises on a sheet of its own)
+      for (const [lo, hi, rim] of [[320, 620, ANVIL.rim], [240, 760, ANVIL.rim], [150, 1400, 440]]) {
+        let best = null, bd = Infinity;
+        for (const s of sheets) {
+          if (!free(s) || Math.hypot(s.cx, s.cy) > rim) continue;
+          const d = Math.hypot(s.cx - p.x, s.cy - p.y); if (d < lo || d > hi) continue;
+          let o = Math.hypot(s.cx + p.x, s.cy + p.y);   // (the distance from the point opposite the hero, and every sunk sheet the straight run crosses counts against a sheet: the run is across cut-up floor, not through the worst of it)
+          for (const w of sheets) { if (w.st !== 2) continue; const q = clipSheet(p, { x: s.cx, y: s.cy }, w); if (q && (q[1] - q[0]) * d > 40) o += ANVIL.wet; }
+          if (o < bd - 1e-6) { bd = o; best = s; }
+        }
+        if (best) return { x: best.cx, y: best.cy };
+      }
+      return { x: Math.round(-p.x * 0.8), y: Math.round(-p.y * 0.8) };   // (every sheet that far out is under water: the far side anyway)
+    };
+    const anvilCount = () => {
+      if (f.state !== 'live' || sv.quiet) return;
+      const al = f.alive(); if (!al.length) return;
+      const ord = anvilOrder(al), n = ord.length, d = f.ct(ANVIL.cast), N = ++anvilN, used = [], R = k => d + ANVIL.first + k * ANVIL.gap, total = R(n - 1) + ANVIL.hold;
+      const slots = ord.map(p => f.slotOf(p.id));
+      f.cast('The Anvil Count', d, 'call');
+      hold(total); busy(total + 0.5);
+      biteGate = Math.max(biteGate, f.t + total + 0.5);
+      for (const h of heads) h.nextBite = Math.max(h.nextBite, f.t + total + 2.0);
+      f.emit({ t: 'roomev', k: 'svanvil:' + N, ids: ord.map(p => p.id), slots, at: ord.map((_, k) => +R(k).toFixed(2)), r: ANVIL.r, dur: +(total + 0.6).toFixed(2) });
+      ord.forEach((p, k) => {
+        const rise = R(k) - ANVIL.lead;
+        f.afterKeep(rise, () => {
+          if (f.state !== 'live' || sv.quiet) return;
+          const q = live(p.id);
+          if (!q) { sv.anvil.skip++; return; }   // (the hero it belongs to has fallen: nothing rises for them)
+          const at = anvilSpot(q, used), delay = ANVIL.lead;
+          used.push(at);
+          f.emit({ t: 'roomev', k: 'svanvilt:' + (N * 10 + k), x: at.x, y: at.y, id: p.id, slot: slots[k], pips: k + 1, at: +delay.toFixed(2), dur: +(delay + 2.4).toFixed(2) });
+          f.mech({ type: 'tower', shape: { kind: 'circle', x: at.x, y: at.y, r: ANVIL.r }, delay, dmg: dmg.anvil, failDmg: dmg.anvilFail, need: 1, tag: 'svAnvil', from: 'The Anvil Count', anvilFor: p.id,
+            onResolve: inside => {
+              if (inside.some(o => o.id === p.id)) { sv.anvil.done++; return; }
+              sv.anvil.bad++;
+              // nobody inside: the engine has already hit everyone for failDmg. Someone else inside: the raidwide is laid here.
+              if (inside.length) for (const o of f.alive()) f.damagePlayer(o, dmg.anvilFail, { kind: 'tower-fail', avoidable: false, n: 'The Anvil Count' });
+            } });
+        });
+      });
+      return total;
     };
 
     // --- The wall at 50%: The Heart Remembers ---------------------------------------------------------------------------------
@@ -1148,6 +1249,70 @@ const SOVEREIGN = {
     // the act's one pair: the Sovereign's Dance, and the seeds burst as it ends
     const dancePair = () => { const total = dance(); seeds(2, total + 0.2); };
 
+    // --- Foretold (Act III, 11:30; the dance pass's Fate Projection) -------------------------------------------------------------------
+    // Caelum's echo shows the future: four GHOSTS, each a translucent copy of one hero, stand in three pockets of the room, each marked with what will be done to that hero:
+    //   the tank and the healer carry the blue SHARE (their two ghosts stand 100 apart in one pocket), a DPS carries a red SPREAD, the other DPS carries the SEED (the next one in id
+    //   order after the last carrier, as at every seed: sv.seedLast). Every hero walks into their own ghost. FORE.walk s after the ghosts rise the Sovereign's three fans arrive from the
+    //   middle (red, painted for FORE.lead s, as ever: the pockets are the gaps between them and nothing marks them); one second after, the marks land on the ghosts' spots: the share
+    //   (a blue circle on the tank, the healer inside it), the spread (red, on its hero) and the seed (red; it bursts where the ghost stood: a hole, as every seed, so the party sees
+    //   Act IV's next hole before it opens). Whoever is not in a pocket is cut down by a fan. The layout is the same every pull (the first of 24 turns of it, 15 degrees apart, that keeps
+    //   every ghost clear of the holes already made and of the Sovereign). The bots read it as f.runePair.goal (one spot for each hero).
+    Object.assign(dmg, { foreFan: 76000, foreSpread: 2200, foreSeed: 2200, foreShare: 5200 });   // (the marks are small on purpose: they land on a hero who did the right thing; the fan is the check. They are Normal's numbers before ACT_DMG)
+    const FORE = { walk: 6.8, lead: 3.4, lag: 1.0, gap: 0.6, span: 2.0 * Math.PI, spreadR: 100, seedR: 95, shareR: 140, goalR: 26 };
+    const fore = { n: 0 };
+    let foreN = 0;
+    f.ticker(() => { if (fore.n && sv.pushed) { f.emit({ t: 'roomev', k: 'svfore:' + fore.n, dur: 0.1 }); fore.n = 0; } });   // (the push into Act IV takes the ghosts off at once)
+    const foretold = () => {
+      if (f.state !== 'live' || sv.pushed) return;
+      const al = f.alive(); if (!al.length) return;
+      const F = f.ct(FORE.walk), lead = f.ct(FORE.lead), lag = f.ct(FORE.lag);
+      // the marks: share on the first two (tank, healer), the seed on one of the rest (the next carrier in id order), the spread on whoever is left
+      const rank = { tank: 0, healer: 1 }, order = al.slice().sort((p, q) => (rank[p.role] ?? 2) - (rank[q.role] ?? 2) || p.id - q.id);
+      const share = order.length >= 3 ? order.slice(0, 2) : [], rest = order.slice(share.length).sort((p, q) => p.id - q.id);
+      let si = rest.findIndex(p => p.id > sv.seedLast); if (si < 0) si = 0;
+      const seedP = rest[si]; sv.seedLast = seedP.id;
+      const spreadP = rest.filter(p => p !== seedP);
+      // the layout: three pockets between three fans, round the middle; the first turn that keeps every ghost off the holes and the Sovereign
+      // the fans come out of a point between the middle and the Sovereign (never farther than 190 from the middle), so the ghosts stand about as near the Sovereign as the room allows
+      const bd = Math.hypot(B.x, B.y) || 1, ok = Math.min(0.5, 190 / bd), Ox = Math.round(B.x * ok), Oy = Math.round(B.y * ok);
+      const arc = (FORE.span - 3 * FORE.gap) / 3, base = -100 * Math.PI / 180;
+      const spots = a0 => {
+        const A = [a0, a0 + FORE.span / 3, a0 + 2 * FORE.span / 3], at = (a, r) => ({ x: Math.round(Ox + Math.cos(a) * r), y: Math.round(Oy + Math.sin(a) * r) }), out = [];
+        share.forEach((p, i) => out.push({ p, kind: 0, a: A[0], r: i ? 190 : 290 }));   // (the tank outer, the healer inner)
+        spreadP.forEach(p => out.push({ p, kind: 1, a: A[1], r: 255 }));
+        out.push({ p: seedP, kind: 2, a: A[2], r: 255 });
+        return out.map(o => Object.assign(o, at(o.a, o.r)));
+      };
+      let a0 = base, lay = spots(base), best = Infinity;
+      for (let k = 0; k < 24; k++) {   // (of the turns that fit, the one that keeps everybody nearest the Sovereign, the tank most of all: nobody is out of reach for long)
+        const t0 = base + k * 15 * Math.PI / 180, L = spots(t0);
+        if (!L.every(o => !holes.some(h => Math.hypot(o.x - h.x, o.y - h.y) < h.r + 70) && Math.hypot(o.x - B.x, o.y - B.y) > 110 && ARENA.sd(o.x, o.y) < -80)) continue;
+        const cost = L.reduce((sum, o) => sum + Math.hypot(o.x - B.x, o.y - B.y) * (o.p.role === 'tank' ? 2 : 1), 0);
+        if (cost < best - 1) { best = cost; a0 = t0; lay = L; }
+      }
+      const n = ++foreN, fanA = [0, 1, 2].map(i => a0 + FORE.span / 3 * i + FORE.gap / 2 + arc / 2);   // (the fans' middles: halfway between one gap and the next)
+      fore.n = n; busy(F + lag + 2.0); hold(F + lag + 0.6);
+      B.noAutoUntil = Math.max(B.noAutoUntil || 0, f.t + F + lag + 1.0);
+      f.cast('Foretold', F, 'dance');
+      f.emit({ t: 'roomev', k: 'svfore:' + n, g: lay.map(o => [o.p.id, o.x, o.y, o.kind, +Math.atan2(Oy - o.y, Ox - o.x).toFixed(2)]), ox: Ox, oy: Oy, a: fanA.map(a => +a.toFixed(3)), arc: +arc.toFixed(3), fan: +F.toFixed(2), mark: +(F + lag).toFixed(2), lead: +lead.toFixed(2), sr: FORE.spreadR, hr: FORE.shareR, dur: +(F + lag + 3).toFixed(2) });
+      if (sv.caelum) f.emit({ t: 'roomev', k: 'svechoact:' + sv.caelum.n, anim: 'attack', dur: 2.4 });
+      const goal = {}; for (const o of lay) goal[o.p.id] = { x: o.x, y: o.y, r: FORE.goalR };
+      f.runePair = { a: null, b: null, on: 1, rule: 'fore', goal };
+      f.afterKeep(F + lag + 0.5, () => { if (f.runePair && f.runePair.rule === 'fore') f.runePair = null; });
+      // the fans and the marks are laid `lead` s before the fans land (the marks one second after them: they follow their hero until the fans land, then hold)
+      f.afterKeep(Math.max(0.01, F - lead), () => {
+        if (f.state !== 'live' || sv.pushed) return;
+        const grp = new Set();
+        for (const a of fanA) f.aoe({ kind: 'cone', x: Ox, y: Oy, r: 1100, arc: +arc.toFixed(3), angle: +a.toFixed(3) }, lead, dmg.foreFan, { tag: 'svForeFan', group: grp, from: 'Foretold' });
+        const at = lead + lag, tank = share[0];
+        if (tank) f.mech({ type: 'stack', shape: { kind: 'circle', x: Math.round(tank.x), y: Math.round(tank.y), r: FORE.shareR }, delay: at, dmg: dmg.foreShare, need: Math.min(2, share.length), follow: tank.id, lockAt: lag, tag: 'svForeShare', from: 'Foretold' });
+        for (const p of spreadP) f.mech({ type: 'spread', shape: { kind: 'circle', x: Math.round(p.x), y: Math.round(p.y), r: FORE.spreadR }, delay: at, dmg: dmg.foreSpread, follow: p.id, lockAt: lag, tag: 'svForeSpread', from: 'Foretold' });
+        const m = f.mech({ type: 'aoe', shape: { kind: 'circle', x: Math.round(seedP.x), y: Math.round(seedP.y), r: FORE.seedR }, delay: at, dmg: dmg.foreSeed, follow: seedP.id, lockAt: lag, tag: 'svForeSeed', from: 'Foretold', avoidable: false,
+          onResolve: () => { const g = lay.find(o => o.p === seedP), near = g && Math.hypot(m.shape.x - g.x, m.shape.y - g.y) < 45; burst(near ? g.x : m.shape.x, near ? g.y : m.shape.y); } });   // (it opens where the ghost stood, if the hero stands in it)
+        f.emit({ t: 'roomev', k: 'svseed:' + (++seedN), ids: [seedP.id], at: +at.toFixed(2), lock: lag, r: FORE.seedR, dur: +(at + 1).toFixed(2) });   // (the seed over its carrier's head: the Seeds of Ash drawing, and its pulse)
+      });
+    };
+
     // A sapling that arrives relights the most recently darkened sigil that has not been relit yet (the order they first went dark: Morrow-Oak's own, then Brannoc's, Caelum's...), and
     // that name is called again for one short answer: the flame flies from the halo (into the echo if it stands, or a new one rises), then:
     //   Morrow-Oak: one seed.   Brannoc: a Sunwheel with one bounce.   anyone else: the Sovereign's Cupped Ember, a blue stack.
@@ -1281,13 +1446,35 @@ const SOVEREIGN = {
       return n;
     };
     // the three names in turn, then then(ns) as the third cast ends (D0: the dance begins). list: [[sigil, home, stand(n) (runs as that echo stands)]]
-    const callThree = (list, then) => {
-      const L = f.ct(1.2), ns = [];
-      list.forEach(([i, home, stand], k) => {
-        const go = () => { if (f.state !== 'live') return; ns[k] = floorCall(i, home, L); if (stand) f.afterKeep(RISE, () => { if (f.state === 'live') stand(ns[k]); }); };
+    // THE FIRST SIGNAL (Diamond Dust, Heavensfall): in each pass the first echo's answer is the frame, and the other two answers land on the same frame turned by the pass's fixed angle
+    // (FRAME, degrees, passes one to four; the fight is fixed, so a party that has learned it reads the first answer and knows where the next two go). The first echo's sigil flares as
+    // it stands (roomev svsignal { x, y, turn, at, dur }, nothing else). The second and third echoes stand on their sigils turned by the angle (nudged a few degrees to clear any hole),
+    // and each answer's geometry is turned with them (the pass functions below). Who is targeted is untouched.
+    const FRAME = [0, 90, 45, 180];
+    const turnPt = (p, deg) => {
+      if (!deg) return p;
+      const a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a), x = Math.round(p.x * c - p.y * s), y = Math.round(p.x * s + p.y * c);
+      return { x, y, face: +Math.atan2(-y, -x).toFixed(2) };
+    };
+    const framePt = (p, deg) => { const c = [0, 12, -12, 24, -24].map(o => turnPt(p, deg + o)); return pickFree(c, 100) || c[0]; };   // (a turned place that is not over a hole, if one is near)
+    let signalN = 0;
+    const signal = (i, at, turn) => {
+      const hk = i === 3 && sv.hk4, q = hk || at || spot(i), t0 = hk ? 0.5 : RISE;
+      f.emit({ t: 'roomev', k: 'svsignal:' + (++signalN), name: 'The First Signal', who: ECHO[i], x: q.x, y: q.y, turn, at: t0, dur: t0 + 2.6 });
+    };
+    // then(ns, ats): ats[k] is where echo k stands (null: on its own sigil)
+    const callThree = (list, then, turn = 0) => {
+      const L = f.ct(1.2), ns = [], ats = list.map(([i, home], k) => (k && turn ? framePt(home || spot(i), turn) : home || null));
+      list.forEach(([i], k) => {
+        const go = () => {
+          if (f.state !== 'live') return;
+          ns[k] = floorCall(i, ats[k], L);
+          if (k === 0) signal(i, ats[k], turn);
+          const stand = list[k][2]; if (stand) f.afterKeep(RISE, () => { if (f.state === 'live') stand(ns[k]); });
+        };
         if (k === 0) go(); else f.afterKeep(k * L, go);
       });
-      f.afterKeep(list.length * L, () => { if (f.state === 'live') then(ns); });
+      f.afterKeep(list.length * L, () => { if (f.state === 'live') then(ns, ats); });
     };
     const CORVANE_AT = (() => { const a = (8 + 0.5) / 12 * TAU - Math.PI / 2, x = Math.round(Math.cos(a) * 240), y = Math.round(Math.sin(a) * 240); return { x, y, face: +Math.atan2(-y, -x).toFixed(2) }; })();   // (where he knelt in Act III)
 
@@ -1309,16 +1496,16 @@ const SOVEREIGN = {
       endEcho(ns[0], T2 + 0.4);
     };
     // Vhalgrath, Cinder Dive shortened: onto the scorched spot (of the three) with the most floor round it, from another spot's side; the landing alone (no Aftershock, no steam: the floor has no sheets)
-    const diveShort = (ns, wait) => {
-      const spots = [0, 1, 2].map(spotXY), L = pickFree(spots, 130) || spots[0], P = spots[(spots.indexOf(L) + 1) % 3];
+    const diveShort = (ns, wait, T = 0) => {
+      const spots = [0, 1, 2].map(i => turnPt(spotXY(i), T)), L = pickFree(spots, 130) || spots[0], P = spots[(spots.indexOf(L) + 1) % 3];
       const r = dive(L, P, null, wait);
       f.afterKeep(r.d + 0.03, () => { if (f.state === 'live') f.emit({ t: 'roomev', k: 'svechoact:' + ns[1], anim: 'attack', dur: 1.2 }); });
       endEcho(ns[1], r.d + 0.7);
     };
     // Corvane, Crossed Blades shortened to the Lance: his stance names it (the comet), then the Sovereign's lance (from the dance point it stands on) lands at D0 + 10.15 and his own 1.5 s later,
     // each through the hero farthest from its blade (never the same hero twice), aimed when laid
-    const lanceTwo = (D, ns) => {
-      const O = D.pts[3], C = CORVANE_AT, skip = new Set(), g = new Set();   // (the Sovereign has cut to the fourth point by 10.15)
+    const lanceTwo = (D, ns, C = CORVANE_AT) => {
+      const O = D.pts[3], skip = new Set(), g = new Set();   // (the Sovereign has cut to the fourth point by 10.15)
       f.afterKeep(5.55, () => { if (f.state === 'live') f.emit({ t: 'roomev', k: 'svechoact:' + ns[2], anim: 'comet', dur: 7.5 }); });
       const one = (from, d) => {
         const t = farthest(from.x, from.y, skip) || farthest(from.x, from.y, new Set()); if (!t) return;
@@ -1332,13 +1519,14 @@ const SOVEREIGN = {
       endEcho(ns[2], 11.65 + 0.9);
     };
     // pass one: Grubnak, Vhalgrath, Corvane
-    const passOne = () => callThree([[0], [4], [8, CORVANE_AT]], ns => {
-      const D = { pts: dancePts(0) };
-      dance({ rot: 0, lead: 3.4, step: 1.5 });
+    // (the First Signal: the plates are the signal, the dive's three spots and Corvane's place are turned by FRAME[0], and so is the dance)
+    const passOne = () => callThree([[0], [4], [8, CORVANE_AT]], (ns, ats) => {
+      const T = FRAME[0], D = { pts: dancePts(T) };
+      dance({ rot: T, lead: 3.4, step: 1.5 });
       flambeTwo(D, ns);
-      f.afterKeep(5.25, () => { if (f.state === 'live') diveShort(ns, 3.4); });
-      lanceTwo(D, ns);
-    });
+      f.afterKeep(5.25, () => { if (f.state === 'live') diveShort(ns, 3.4, T); });
+      lanceTwo(D, ns, ats[2]);
+    }, FRAME[0]);
 
     // Skitterra, Burning Web shortened: two threads with a knot each (two of the three canonical threads, or turns of them, whose knots stand clear of the holes). Break a knot and its thread burns
     // out from it; a thread left whole goes up at D0 + 5.65 with her shadow racing along it (laid at D0 + 2.65)
@@ -1356,8 +1544,9 @@ const SOVEREIGN = {
       return [a, b].map((w, i) => Object.assign(w, { id: i, order: i }));
     };
     // Hrimgar, Glass Floor shortened: a small patch of the floor (the nine sheets round the one under his foot) shatters in three beats, then the floor is whole again (no sinking)
-    const glassPatch = ns => {
-      const at = spot(5), w = glassWave(at.x, at.y, { reach: 1.5, lead: 2.6, step: 0.5, sink: false });
+    const glassPatch = (ns, at0) => {
+      const at = at0 || spot(5), foot = sheetAt(at.x, at.y) || sheets.reduce((m, s) => (!m || Math.hypot(s.cx - at.x, s.cy - at.y) < Math.hypot(m.cx - at.x, m.cy - at.y) ? s : m), null);   // (a turned place can fall between the sheets: the nearest one is the foot)
+      const w = foot && glassWave(foot.cx, foot.cy, { reach: 1.5, lead: 2.6, step: 0.5, sink: false });
       f.emit({ t: 'roomev', k: 'svechoact:' + ns[1], anim: 'attack', dur: 1.2 });
       endEcho(ns[1], (w ? w.end : 1.5) + 0.7);
     };
@@ -1388,10 +1577,11 @@ const SOVEREIGN = {
       pts.push([x + dx * t * WH.frac, y + dy * t * WH.frac]);
       return { pts, hitsH };
     };
-    const wheelPlan = () => {
-      const at = spot(9), aims = [], hs = holes.slice().sort((p, q) => Math.hypot(p.x - at.x, p.y - at.y) - Math.hypot(q.x - at.x, q.y - at.y));
+    const wheelPlan = (at0, T = 0) => {
+      const at = at0 || spot(9), aims = [], hs = holes.slice().sort((p, q) => Math.hypot(p.x - at.x, p.y - at.y) - Math.hypot(q.x - at.x, q.y - at.y));
       for (const h of hs) for (const off of [0, 0.1, -0.1, 0.2, -0.2]) aims.push(Math.atan2(h.y - at.y, h.x - at.x) + off);
-      aims.push(Math.atan2(WH.aim.y - at.y, WH.aim.x - at.x));
+      const wa = turnPt(WH.aim, T);
+      aims.push(Math.atan2(wa.y - at.y, wa.x - at.x));
       let best = null;
       for (const a of aims) for (const n of [3, 2]) {
         const r = wheelPathH(at.x, at.y, a, n), e = r.pts[r.pts.length - 1];
@@ -1400,15 +1590,17 @@ const SOVEREIGN = {
         if (r.hitsH >= 1) return r.pts;
         if (!best) best = r.pts;
       }
-      return best || wheelPath(at.x, at.y, Math.atan2(WH.aim.y - at.y, WH.aim.x - at.x), 3);
+      return best || wheelPath(at.x, at.y, Math.atan2(wa.y - at.y, wa.x - at.x), 3);
     };
     // pass two: Skitterra, Hrimgar, Brannoc
-    const passTwo = () => callThree([[1, null, n => { layWeb(webTwo()); sv.webN = n; sv.webEnded = false; }], [5], [9]], ns => {
-      dance({ rot: 30, lead: 3.4, step: 1.5 });
+    // (the First Signal: the threads are the signal; Hrimgar's patch, Brannoc's throw (from where he stands) and the dance are turned by FRAME[1])
+    const passTwo = () => callThree([[1, null, n => { layWeb(webTwo()); sv.webN = n; sv.webEnded = false; }], [5], [9]], (ns, ats) => {
+      const T = FRAME[1];
+      dance({ rot: 30 + T, lead: 3.4, step: 1.5 });
       f.afterKeep(2.65, () => { if (f.state === 'live') shadowDrop(3.0, true); });
-      f.afterKeep(5.65, () => { if (f.state === 'live') glassPatch(ns); });
-      f.afterKeep(8.7, () => { if (f.state === 'live') wheelThrow({ n: ns[2] }, { d: 2.7, noCast: true, fire: false, path: wheelPlan() }); });
-    });
+      f.afterKeep(5.65, () => { if (f.state === 'live') glassPatch(ns, ats[1]); });
+      f.afterKeep(8.7, () => { if (f.state === 'live') wheelThrow({ n: ns[2] }, { d: 2.7, noCast: true, fire: false, path: wheelPlan(ats[2], T) }); });
+    }, FRAME[1]);
 
     // ---- S4b: the end of the fight --------------------------------------------------------------------------------------------------------
     // The Royal Tithe of Act IV (13:30): the Hollow King's echo already stands (f.sv.hk4) and keeps standing, so the Dirge must not end it (sv.hkEnded stays true).
@@ -1434,7 +1626,7 @@ const SOVEREIGN = {
       const el = els.find(e => room(e) >= 0) || els.slice().sort((a, b) => room(b) - room(a))[0];
       const W = wallPoint(el), tn = ++twinN, lead = 5.75, last = f.ct(3.0);
       busy(lead + last + 1.2);
-      f.emit({ t: 'roomev', k: 'svtwin:' + tn, el, wall: TWIN[el].a, x: W.x, y: W.y, rule, ids, corners: rule === 'split' ? cornersFor(el).map(q => [q.x, q.y]) : null,
+      f.emit({ t: 'roomev', k: 'svtwin:' + tn, el, wall: TWIN[el].a + twinRot, x: W.x, y: W.y, rule, ids, corners: rule === 'split' ? cornersFor(el).map(q => [q.x, q.y]) : null,
         r: rule === 'pair' ? TW.meet : TW.bloom, at: +(lead + last).toFixed(2), shift: 0, from: null, dur: +(lead + last + 1.5).toFixed(2) });
       f.emit({ t: 'roomev', k: 'svechoact:' + n, anim: 'attack', dur: 1.2 });
       f.afterKeep(lead, () => { if (f.state === 'live') layTwin(ids, el, last, rule); });
@@ -1447,12 +1639,16 @@ const SOVEREIGN = {
       seeds(1, f.ct(6));
       endEcho(n, f.ct(6) + 0.8);
     };
-    const passThree = () => callThree([[2, null, n => { f.emit({ t: 'roomev', k: 'svechoact:' + n, anim: 'howl', dur: 1.6 }); giveCharges(); }], [6, null, twinRead], [10]], ns => {
-      dance({ rot: 60, lead: 3.4, step: 1.5 });
-      f.afterKeep(5.65, () => morrowSeed(ns[2]));
-      f.afterKeep(9.0, clearCharges);
-      endEcho(ns[0], 9.3);
-    });
+    // (the First Signal: Volkar's charges are the signal; the lit wall (the four walls turn together) and the dance are turned by FRAME[2]. Morrow-Oak's seed falls on whoever carries it)
+    const passThree = () => {
+      twinRot = FRAME[2]; f.afterKeep(20, () => { twinRot = 0; });
+      callThree([[2, null, n => { f.emit({ t: 'roomev', k: 'svechoact:' + n, anim: 'howl', dur: 1.6 }); giveCharges(); }], [6, null, twinRead], [10]], ns => {
+        dance({ rot: 60 + FRAME[2], lead: 3.4, step: 1.5 });
+        f.afterKeep(5.65, () => morrowSeed(ns[2]));
+        f.afterKeep(9.0, clearCharges);
+        endEcho(ns[0], 9.3);
+      }, FRAME[2]);
+    };
 
     // Pass four (14:50): the Hollow King, the Hydra, Caelum Vey (D0 as above, rot 90).
     //   The Hollow King (already standing: his name is cast and his bell rings) answers at D0 + 5.65 with the LAST Doom: two heroes at once (the glow, 6.5 s ahead, is a course step), one lantern, so the
@@ -1460,34 +1656,36 @@ const SOVEREIGN = {
     //   The Hydra: the heads the party cut in Act II come back as PILLARS (circle r 150, tag svPillar) in the order they were cut (f.sv.cutOrder; a head never cut follows in head order, so three
     //     always stand), each at a FRESH spot clear of the holes (not the head's sigil), painted 2.2 s ahead, 1.5 s apart: erupting at D0 + 8.65, 10.15 and 11.65.
     //   Caelum Vey: the Sovereign's Dance runs through whatever floor is left and he cuts alongside on its last three beats (the S3a dance; sv.caelum is set before it begins).
-    const pillarSpots = () => {
+    const pillarSpots = (T = 0) => {
       const order = sv.cutOrder.slice();
       for (const k of [0, 1, 2]) if (!order.includes(k)) order.push(k);
       const out = [];
       for (const k of order.slice(0, 3)) {
-        const a0 = Math.atan2(HEAD_AT[k].y, HEAD_AT[k].x) + 1.05, cands = [...ring(300, 12, a0), ...ring(190, 8, a0 + 0.2)];
+        const a0 = Math.atan2(HEAD_AT[k].y, HEAD_AT[k].x) + 1.05 + T * Math.PI / 180, cands = [...ring(300, 12, a0), ...ring(190, 8, a0 + 0.2)];
         const q = pickFree(cands, PIL.r * 0.5 + 30, c => out.every(o => Math.hypot(c.x - o.x, c.y - o.y) >= 300)) || cands[0];
         out.push({ k, x: q.x, y: q.y });
       }
       return out;
     };
-    const hydraPillars = n => {
+    const hydraPillars = (n, T = 0) => {
       if (f.state !== 'live') return;
       f.emit({ t: 'roomev', k: 'svechoact:' + n, anim: 'roar', dur: 1.6 });
-      pillarSpots().forEach((e, i) => f.afterKeep(i * 1.5, () => {
+      pillarSpots(T).forEach((e, i) => f.afterKeep(i * 1.5, () => {
         if (f.state !== 'live') return;
         f.emit({ t: 'roomev', k: 'svpillar:' + (++pillarN), head: e.k + 1, x: e.x, y: e.y, order: i + 1, live: 0, r: PIL.r, at: PIL.lead, dur: PIL.lead + 1.2 });
         f.aoe({ kind: 'circle', x: e.x, y: e.y, r: PIL.r }, PIL.lead, dmg.pillar, { tag: 'svPillar', from: 'Heads of Flame' });
       }));
       endEcho(n, 2 * 1.5 + PIL.lead + 1.2);
     };
+    // (the First Signal: the Hollow King's Doom is the signal; the pillars' places and the dance (Caelum's cuts with it) are turned by FRAME[3])
     const passFour = () => callThree([[3], [7], [11]], ns => {
+      const T = FRAME[3];
       sv.caelum = { n: ns[2] };
-      dance({ rot: 90, lead: 3.4, step: 1.5 });
+      dance({ rot: 90 + T, lead: 3.4, step: 1.5 });
       f.afterKeep(5.65, () => { if (f.state === 'live') { if (sv.hk4) bell(sv.hk4.n, 1.6); doomLand(); } });
-      f.afterKeep(6.45, () => hydraPillars(ns[1]));
+      f.afterKeep(6.45, () => hydraPillars(ns[1], T));
       f.afterKeep(f.ct(3.4) + 6 * f.ct(1.5) + 0.3, () => { sv.caelum = null; endEcho(ns[2], 0.3); });
-    });
+    }, FRAME[3]);
 
     // The enrage, Emberfall: set piece 'svemberfall' (8 s, nothing hits, the boss is NOT immune). roomev svemberfall { seams, ignite, ash, dur } in seconds from the message: the flagstone seams
     // go white-gold, the town ignites from below, the ash closes in from the edges. At its end everyone dies (kind 'enrage'), unless the Sovereign has fallen meanwhile.
@@ -1626,7 +1824,7 @@ const SOVEREIGN = {
         [540, sunwheel, 'Brannoc, the Undefeated'], [555, brand, 'Brand'],
         // (S3b) Grace Withdrawn comes alone, a dance's length clear of the Dance at 8:42 and of the next at 10:40; Nightfall lands GRACE.gap s after it has taken everyone to 1 HP
         [565, grace, 'Grace Withdrawn'], [590, morrow, 'Morrow-Oak, the Starved Grove'], [610, () => unleash('lance'), 'Lance'], [625, kindling, 'Kindling'],
-        [640, dancePair, "The Sovereign's Dance"], [665, brand, 'Brand'], [675, () => unleash('pyre'), 'Pyre'], [695, seedOne, 'Seeds of Ash'], [710, kindling, 'Kindling'],
+        [640, dancePair, "The Sovereign's Dance"], [665, brand, 'Brand'], [675, () => unleash('pyre'), 'Pyre'], [690, foretold, 'Foretold'], [710, kindling, 'Kindling'],
       ]);
       return f.course({
         onStart: () => { actDmg(3); if (f.skipTo >= 3 && f.t < 1) { sv.lit = 0xf00; halo(); } },   // (eight sigils dark: set 1 and set 2's four)
@@ -1646,10 +1844,10 @@ const SOVEREIGN = {
         [212, burnback, 'The Road Burns Back'], [215, kindling, 'Kindling'],
         [228, glassFloor, 'Hrimgar, Warden of the White Reach'], [245, brand, 'Brand'],
         [250, flameHeads, 'The Hydra, Mother of Nine Heads'], [270, () => cinderDive(1, 2), 'Vhalgrath, Tyrant of the Cinder Peaks'],
-        [290, () => haloTurn(0.45), 'Halo Turn'], [305, () => headCall(1), 'Heads of Flame'],
-        [315, brand, 'Brand'], [325, () => twinBrands({ el: 'frost' }), 'Azerath, Master of the Seven Circles'],
-        [345, () => sweep(), 'Ashen Sweep'], [350, () => headCall(2), 'Heads of Flame'],
-        [360, brand, 'Brand'], [375, pairMove, 'Vhalgrath, Tyrant of the Cinder Peaks'],
+        [290, anvilCount, 'The Anvil Count'], [323, () => headCall(1), 'Heads of Flame'],   // (4:50 The Anvil Count replaces the first Halo Turn: about 32 s, the Hydra's bites held; the second head rises as it ends, 5:23 instead of 5:05, and the steps after it close up)
+        [328, brand, 'Brand'], [340, () => twinBrands({ el: 'frost' }), 'Azerath, Master of the Seven Circles'],
+        [355, () => sweep(), 'Ashen Sweep'], [359, () => headCall(2), 'Heads of Flame'],
+        [367, brand, 'Brand'], [379, pairMove, 'Vhalgrath, Tyrant of the Cinder Peaks'],
         [400, kindling, 'Kindling'], [415, () => haloTurn(0.7), 'Halo Turn'],
         [430, () => twinBrands({ el: 'void', to: 'frost', fly: 0 }), 'Azerath, Master of the Seven Circles'], [455, ember, 'Cupped Ember'],
         // (5:25 Twin Brands lights frost, a wall to meet at; 7:10's lights the void, a wall to flee, and changes once to frost, the east wall again (the south is under the first waves' water by then). Cupped Ember, the
@@ -1667,12 +1865,12 @@ const SOVEREIGN = {
     };
     // Per-act damage (tuning): the `dmg` table (damage, not the adds' health, and not the plate, the Aftershock, Scatter, the catch, the burst or the raidwides (Kindling, Dirge, Rebirth, Nightfall), which must stay survivable: each takes under about 65% of a full-health hero's health) is scaled by the act's number at the act's start, so each act can be set to
     // its own rate with a human party (a practice start runs the onStart of the acts it passes over, so the act it begins in is the last set).
-    const ACT_DMG = [3.3, 3.5, 4.5, 4.15], dmg0 = Object.assign({}, dmg);
-    const actDmg = n => { B.dmgUp = 0; for (const k in dmg0) dmg[k] = /Hp$|^(catch|burst|plate|after|scatter|kindling|dirge|rebirth|night)$/.test(k) ? dmg0[k] : Math.round(dmg0[k] * ACT_DMG[n - 1]); };
+    const ACT_DMG = [3.3, 3.5, 4.5, 4.4], dmg0 = Object.assign({}, dmg);
+    const actDmg = n => { B.dmgUp = 0; for (const k in dmg0) dmg[k] = /Hp$|^(catch|burst|plate|anvil|anvilFail|after|scatter|kindling|dirge|rebirth|night)$/.test(k) ? dmg0[k] : Math.round(dmg0[k] * ACT_DMG[n - 1]); };
     actI(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.sweep())
-    f.moves = { kindling, brand, sweep, ember, scatter, haloTurn, flambe, web, shadowDrop, call, endEcho, halo, setSide, volkar, surge, crier, tithe, dirge, burnback, clearCharges, glassFloor, glassWave, mendSheets, flameHeads, headRise, headCall, hydraEnd, cinderDive, dive, sinkSheet, twinBrands, pairMove, heartRun, rebirth, corvane, unleash, crescent, lance, pyre, caelum, dance, sunwheel, grace, morrow, seeds, seedOne, dancePair, burst, sprout, recall, everyName, digHole, floorCall, callThree, doomAt, doomGlow, doomLand, lanternOn, passOne, passTwo, passThree, passFour, twinRead, giveCharges, pillarSpots, tithe4, dancePts, wheelPlan, webTwo, glassPatch, lastFlame: () => f.bossFell() };
+    f.moves = { kindling, brand, sweep, ember, scatter, haloTurn, procession,flambe, web, shadowDrop, call, endEcho, halo, setSide, volkar, surge, crier, tithe, dirge, burnback, clearCharges, glassFloor, glassWave, mendSheets, flameHeads, headRise, headCall, hydraEnd, cinderDive, dive, sinkSheet, twinBrands, pairMove, anvilCount, heartRun, rebirth, corvane, unleash, crescent, lance, pyre, caelum, dance, sunwheel, grace, morrow, seeds, seedOne, foretold, dancePair, burst, sprout, recall, everyName, digHole, floorCall, callThree, doomAt, doomGlow, doomLand, lanternOn, passOne, passTwo, passThree, passFour, twinRead, giveCharges, pillarSpots, tithe4, dancePts, wheelPlan, webTwo, glassPatch, lastFlame: () => f.bossFell() };
   },
 };
 
