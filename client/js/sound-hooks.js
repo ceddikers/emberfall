@@ -216,6 +216,440 @@ const SoundHooks = (() => {
     play(heavy ? 'boss-impact-heavy' : 'boss-impact-light', { vol: heavy ? 0.9 : 0.7, key: 'bimp', minGap: 0.12 });
   }
 
+  // ---------------------------------------------------------------- the Ultimate (boss id sovereign; the contract is docs/plans/2026-10-ultimate-build.md)
+  // The Sovereign's own casts sound from bossCast (SfxMap: Kindling, Brand, Ashen Sweep, the call's names ...). What a cast cannot say is read off the
+  // room's events and the set pieces: main.js hands each 'roomev' to sovereignRoom(msg) and each 'setpiece' to sovereignSetPiece(id) while the raid is the
+  // Ultimate, and the Brand's burn tick on you to sovereignBurn().
+  //   svecho:<n> with who   an echo called: its sting at once, the cinder-assembly when the flame lands (fly s later), the crumble when it ends or its time is up
+  //   svecho:<n> without who  the answer landed: the echo crumbles now
+  //   svechoact:<n> { anim: 'bell' }  the Hollow King's bell
+  //   svflambe:<n>   Flambe Service: a lid per plate (at[i]), a flambe line behind each plate but the last, the Mince after the last plate
+  //   svfuse:<n>   a knot breaks and its flame runs out along the thread;  svshadow:<n>   her shadow drops on every whole thread
+  //   svlantern:<n>   the Hollow King's lantern flame in flight, then the lantern set down;  telegraph tags (the host's 'tg' message, read by svWire below): svSurge and
+  //   svReplay sound as they land, the Ember and Ash drift (the 'svdrift' message) is a quiet magnetic hum while it lasts
+  //   svglass:<n>   Glass Floor's wave: one shatter for every ring of sheets as the crack reaches it;  svsheets   the water of a sheet that has sunk
+  //   svhead:<k>   a head rising;  svbite:<n>   its bite, from the head;  svcut:<k>   a head cut;  svdive:<n>   Cinder Dive: the line lit, the fall and the landing, the
+  //   water coming to the boil, the steam bursting (the casts Glass Floor, Heads of Flame, Cinder Dive and Aftershock sound from bossCast)
+  //   svtwin:<n>   Twin Brands' wall lighting in its element (fire, frost, bolt, void: sv-twin-<el>, placed at the wall), the shift (sv-twin-shift, then the new wall) and the
+  //   resolving (meet at the wall circle, or the bloom: it lands 'at' s after the message, and a shifted cast's first wall never bursts, so its timer is dropped)
+  //   svanvilt:<m>   The Anvil Count: a tower rising on its sheet (sv-anvil-rise) and, when it can be soaked, struck (sv-anvil-strike); the cast itself sounds from bossCast
+  //   svheart   the wall: a heartbeat loop under the room (ducking the music as the burnback does), then the held breath after the last pillar;  svpillar:<n>   a pillar
+  //   erupting (a little higher for each in the cut order);  svseal   the glass seal shattering;  svrebirth   the set piece's beats: the fire drawn into the blade, the dark
+  //   (the music gone), the halo opening, the sky splitting, the choir, and the raidwide (its tag is hidden, so it is timed from here)
+  //   svechoact:<n> { anim: crane | comet | parting }   Corvane's stance (the cast Crossed Blades has its own sound);  svcrescent:<n>, svlance:<n>, svpyre:<n>   the unleashing's landings, the
+  //   Sovereign's blade and Corvane's together (a fan, a dash, a cut each beat: a fifth apart for his, so the two ring in harmony);  svdance:<n>   Caelum's afterimages as glass notes up a scale,
+  //   then a struck blade for each cut and a deeper second blade on the beats where Caelum cuts alongside;  svwheel:<n>   the Sunwheel of Embers: the throw, a hum while it rolls, a clang at
+  //   each bounce, fire roaring up along each leg, and svwallout:<n> (a catch: the catch, then the walls snuffed); an uncaught wheel's fire burns itself out
+  //   svseed:<n>   Seeds of Ash laid: each seed beats on its carrier (a throb that quickens and rises toward the burst, full for your own, faint for the rest);  svhole:<n>   a seed has
+  //   burst: the floor burns through (sv-seed-burst), and a moment later the town's sound faintly up through it (a far bell, wind);  svfall:<n>   a hero fell into a hole (sv-hole-fall, where they stood);  svsapling:<n>   a sapling climbs out and walks toward the
+  //   Sovereign, creaking as it goes (placed along its walk), until svsapdie:<n> (felled) or svsaparr:<n> (it arrived);  svrecall:<n>   its arrival relights a sigil: a flame catching on the halo,
+  //   then that boss's own call sting again, softer (the echo's sting, if a new one rises, is brought down to match);  svecho of the Hollow King with dur -1   rising uncalled from the portal
+  //   ring (the climb, no call sting);  the 'sveveryname' set piece   the crater peeling, the camera pulling back, a low swell (music ducked as in the burnback)
+  //   svlie   the kill: a soft bell as each echo lies down (sv-lie-bell, falling a step each), the music sinking a step with each, and the Hollow King's lantern set down on the stones (sv-lantern-down);
+  //   svgutter   the fire draining (sv-gutter, a long exhale);  svact 'night'   the room cools and mus-ult-end begins (see the music block below);  svemberfall   the town igniting from below
+  //   (sv-emberfall-below sits under the cast's own sky of embers, bm-sovereign-emberfall: no second roar);  svwipe   the halo relighting in full, one bright cruel chord (sv-wipe-chord)
+  const SV_WHO = new Set(['grubnak', 'skitterra', 'volkar', 'hollowking', 'wyrm', 'titan', 'archmage', 'hydra', 'corvane', 'brannoc', 'morrowoak', 'caelum']);
+  const SV_SET = { svdescent: ['sv-descent', 0.9], svburnback: ['sv-burnback', 0.95], sveveryname: ['sv-everyname', 0.9] };   // (the kill's set piece has no sound of its own: svlie, svgutter and the night play it, below)
+  // ---- the Ultimate's music (docs/plans/2026-10-ultimate-raid.md "Music"; what each track is: docs/art/music-now.md). Six tracks carry one theme through the fight, each handed over
+  // at a moment the room's events already name, never mid-phrase. The tracks are generated later, so every slot is a fallback chain (audio.js music.set takes one: the first track
+  // in the manifest plays, none is silence, nothing errors) and the fight plays today on the older tracks; a file that appears is used from the next load.
+  //   slot     track             BPM  fallbacks                                   when
+  //   Act I    mus-ult-1         84   mus-hollowking                              the pull (bossTrack, below), or the act the room is in
+  //   Act II   mus-ult-2         96   mus-hydra                                   the burnback (svact 2): Act I ends on its next bar line, the set piece's silence, and Act II comes in on the
+  //                                                                               fourth struck bell (7.4 s into the set piece)
+  //   the wall mus-ult-heart     60   mus-pull                                    svheart, on the Act II track's next bar line; the seal's shatter (svseal) ends it and Rebirth's dark is silent
+  //   Act III  mus-ult-3         88   mus-caelum, mus-archmage-hard               Rebirth's halo opening (the choir hit), full weight, no intro
+  //   Act IV   mus-ult-4         92   mus-caelum-hard, mus-caelum, mus-wyrm-hard  Every Name (svact 4): Act III ends on its next bar line and the town's dulcimer enters at 6.5 s, after the second line's bell
+  //   the kill mus-ult-end       -    mus-victory, mus-town (the town tune)       the room turning to night (svact 'night'), once; main.js skips the generic victory music for the Sovereign
+  // (the last fallback of Acts III and IV, and mus-town for the kill, are stand-ins so the last fight is never silent: mus-caelum and mus-victory do not exist yet either.)
+  const SV_MUS = {
+    1: { ids: ['mus-ult-1', 'mus-hollowking'] }, 2: { ids: ['mus-ult-2', 'mus-hydra'] }, heart: { ids: ['mus-ult-heart', 'mus-pull'] },
+    3: { ids: ['mus-ult-3', 'mus-caelum', 'mus-archmage-hard'] }, 4: { ids: ['mus-ult-4', 'mus-caelum-hard', 'mus-caelum', 'mus-wyrm-hard'] },
+    end: { ids: ['mus-ult-end', 'mus-victory', 'mus-town'], loop: false },
+  };
+  const SV_BPM = { 'mus-ult-1': 84, 'mus-ult-2': 96, 'mus-ult-heart': 60, 'mus-ult-3': 88, 'mus-ult-4': 92 };   // (a bar line is known only for the real tracks; a fallback is changed at once)
+  let svAct = 1;          // the act the room last named (1 to 4)
+  let svMusOn = false;    // the fight's music is the Ultimate's (set by bossTrack at the pull, ended by a wipe)
+  let svSlot = 0;         // the slot playing or promised: 1 to 4, 'heart', 'seal' (the silence after the wall) or 'end'
+  const svMusT = [], svFxT = [];   // the timers of a pending music change, and of the kill's beats
+  const svClear = list => { while (list.length) clearTimeout(list.pop()); };
+  const svAfter = (list, sec, fn) => { list.push(setTimeout(() => safe(fn), Math.max(0, sec) * 1000)); };
+  const svBpm = () => (has() && Sound.music ? SV_BPM[Sound.music.current()] || 0 : 0);
+  function svPlayMusic(slot, o) {
+    const d = SV_MUS[slot];
+    if (!d || !has()) return;
+    svSlot = slot;
+    safe(() => Sound.music.set(d.ids, { fade: o && o.fade != null ? o.fade : 0.8, loop: d.loop !== false, bar: o && o.bar }));
+  }
+  function svSilence(fade, bar) { if (has()) safe(() => Sound.music.set(null, { fade, bar })); }
+  function svMusicReset() { svClear(svMusT); svClear(svFxT); svMusOn = false; svSlot = 0; svAct = 1; }
+  function svActMusic(act) {
+    if (act === 'night') {   // the room cools into the real square: the town's tune on one whistle
+      svClear(svMusT); svAct = 1;
+      if (svMusOn) svPlayMusic('end', { fade: 1.5 });
+      return;
+    }
+    const a = +act;
+    if (!(a >= 1 && a <= 4)) return;
+    svAct = a;
+    if (!svMusOn || svSlot === a) return;
+    const was = svSlot;
+    svClear(svMusT);
+    if (was === 1 && a === 2) {   // the burnback: Act I ends on a bar, four bells, and Act II comes in on the fourth (7.4 s)
+      svSlot = 2; svSilence(1.2, svBpm());
+      svAfter(svMusT, 7.4, () => { if (svMusOn && svSlot === 2) svPlayMusic(2, { fade: 0.4 }); });
+    } else if (was === 3 && a === 4) {   // Every Name: Act III ends on a bar, the peel and the second line's bell, then the town's dulcimer
+      svSlot = 4; svSilence(1.6, svBpm());
+      svAfter(svMusT, 6.5, () => { if (svMusOn && svSlot === 4) svPlayMusic(4, { fade: 0.8 }); });
+    } else svPlayMusic(a, { fade: 0.6, bar: svBpm() });
+  }
+  const svEchoes = new Map();   // n -> { x, y, t } while the echo stands (the crumble's place, and its timer)
+  const svLaterT = [], svLoops = new Set();   // the timers of the room's delayed sounds, and the loops it has running (both dropped when the fight is left: svReset)
+  const svLater = (sec, fn) => {
+    if (!(sec > 0)) { safe(fn); return; }
+    const id = setTimeout(() => { const i = svLaterT.indexOf(id); if (i >= 0) svLaterT.splice(i, 1); safe(fn); }, sec * 1000);
+    svLaterT.push(id);
+  };
+  const svSpot = e => (e && e.x != null ? { x: e.x, y: e.y } : null);
+  let svSunk = 0;   // how many sheets of the forge floor stand sunk (a new one is heard)
+  const svTwinT = new Map();   // n -> the timer of Twin Brands' burst (dropped when a shifted cast changes the wall)
+  let svHeart = null;          // the wall's heartbeat: { loop, timers }
+  const svWheels = new Map();  // n -> { c: [x, y], out: timer of the fire's natural end } for the Sunwheel in flight
+  const SV_SCALE = [0, 2, 4, 7, 9, 12, 14, 16];   // the afterimages climb a pentatonic scale
+  const svSaps = new Map();    // n -> { go, end, timer } for a sapling on its walk (its creaks are placed along the way)
+  let svRecall = null;         // { who, t, said }: a relight just heard (the sting of a new echo for that name plays softer)
+  const svPt = (x, y) => (x == null ? null : { x, y });
+  function svHeartStop(fade) {
+    if (!svHeart) return;
+    const h = svHeart; svHeart = null;
+    h.timers.forEach(clearTimeout);
+    if (h.loop) h.loop.stop(fade == null ? 0.3 : fade);
+  }
+  // Two messages are not room events: the host's 'tg' (the tags svSurge and svReplay have a landing a cast cannot say) and 'svdrift' (Ember and Ash's pull). main.js owns
+  // those handlers (Net keeps one per type), so they are wrapped once, the first time the Ultimate's room speaks, and the original is always called first.
+  let svWired = false, svHum = null, svHumT = 0;
+  function svWire() {
+    if (svWired || typeof Net === 'undefined' || !Net.handlers) return;
+    svWired = true;
+    const wrap = (type, fn) => { const old = Net.handlers[type]; Net.handlers[type] = msg => { try { if (old) old(msg); } finally { safe(() => fn(msg)); } }; };
+    wrap('tg', msg => {
+      if (!has() || !msg || typeof msg.tag !== 'string') return;
+      const d = +msg.dur || 0;
+      if (msg.tag === 'svSurge') svLater(d - 0.85, () => play('bm-sovereign-surge', { vol: 0.9, key: 'svsurge', minGap: 1 }));       // (the recipe's strike is 0.85 s in)
+      else if (msg.tag === 'svReplay') svLater(d - 0.85, () => play('bm-sovereign-knights-sweep', { vol: 0.9, key: 'svreplay', minGap: 1 }));
+    });
+    wrap('svdrift', msg => {
+      if (!has() || !msg || !Array.isArray(msg.v) || !msg.v.length) return;
+      if (!svHum) svHum = Sound.loop('sv-drift-loop', { vol: 0.5, fade: 0.8 });
+      clearTimeout(svHumT);
+      svHumT = setTimeout(() => { if (svHum) { svHum.stop(1.0); svHum = null; } }, 900);   // (the host sends it every 0.2 s while a charge exists)
+    });
+  }
+  // leaving the fight (stopBeds): nothing the Ultimate's room had promised may sound in town: the pending music changes, the delayed sounds, the standing echoes,
+  // wheels, twins and saplings, the heartbeat, the drift hum and the wheel's loop
+  function svReset() {
+    svMusicReset(); svClear(svLaterT);
+    for (const r of svEchoes.values()) if (r.t) clearTimeout(r.t);
+    svEchoes.clear();
+    for (const r of svWheels.values()) if (r.out) clearTimeout(r.out);
+    svWheels.clear();
+    for (const t of svTwinT.values()) clearTimeout(t);
+    svTwinT.clear();
+    svSapAll(); svHeartStop(0.3);
+    clearTimeout(svHumT); if (svHum) { svHum.stop(0.3); svHum = null; }
+    for (const h of svLoops) safe(() => h.stop(0.3));
+    svLoops.clear();
+    svSunk = 0; svRecall = null;
+  }
+  function svSapStop(n) { const r = svSaps.get(n); if (r) { clearInterval(r.timer); svSaps.delete(n); } }
+  function svSapAll() { for (const n of [...svSaps.keys()]) svSapStop(n); }
+  function sovereignRoom(msg) {
+    if (!has() || !msg || typeof msg.k !== 'string') return;
+    safe(() => {
+      svWire();
+      const k = msg.k;
+      let m = /^svecho:(\d+)$/.exec(k);
+      if (m) {
+        const n = +m[1];
+        if (msg.who) {
+          if (!SV_WHO.has(msg.who)) return;
+          const at = svSpot(msg), rec = { x: msg.x, y: msg.y, t: null };
+          if (msg.who === 'hollowking' && msg.dur === -1) {   // (the Hollow King rising uncalled at Every Name: no call, no flame; the stones and his lantern instead)
+            play('sv-hk-climb', { vol: 0.9, at, key: 'svhkclimb', minGap: 1 });
+            svEchoes.set(n, rec);
+            return;
+          }
+          const again = svRecall && svRecall.who === msg.who && Date.now() - svRecall.t < 1500;   // (the sting of a name called again is the softer one)
+          if (again) svRecall.said = true;
+          play('sv-call-' + msg.who, { vol: again ? 0.42 : 0.9, at, key: 'svcall:' + n, minGap: 0.3 });
+          svLater(+msg.fly || 0, () => play('sv-assemble', { vol: 0.75, at, key: 'svasm:' + n, minGap: 0.3 }));
+          if (msg.dur > 0) rec.t = setTimeout(() => { if (svEchoes.get(n) === rec) { svEchoes.delete(n); safe(() => play('sv-crumble', { vol: 0.8, at, key: 'svcr:' + n, minGap: 0.3 })); } }, Math.max(0, msg.dur - 2.6) * 1000);
+          const old = svEchoes.get(n); if (old && old.t) clearTimeout(old.t);
+          svEchoes.set(n, rec);
+        } else {
+          const rec = svEchoes.get(n);
+          if (rec) { if (rec.t) clearTimeout(rec.t); svEchoes.delete(n); play('sv-crumble', { vol: 0.8, at: svSpot(rec), key: 'svcr:' + n, minGap: 0.3 }); }
+        }
+        return;
+      }
+      if (/^svsignal:/.test(k)) {   // the First Signal: the pass's first sigil flares as its echo stands
+        svLater(+msg.at || 0, () => play('sv-signal', { vol: 0.8, at: svSpot(msg), key: 'svsignal', minGap: 1 }));
+        return;
+      }
+      m = /^svechoact:(\d+)$/.exec(k);
+      if (m) {
+        if (msg.anim === 'bell' || msg.anim === 'knell') play('bm-sovereign-hollow-kings-bell', { vol: 0.9, key: 'svbell', minGap: 0.5 });
+        else if (msg.anim === 'crane' || msg.anim === 'comet' || msg.anim === 'parting') play('sv-stance-' + msg.anim, { vol: 0.9, at: svSpot(svEchoes.get(+m[1])), key: 'svstance', minGap: 1 });   // (Corvane's stance)
+        return;
+      }
+      if (/^svproc:/.test(k) && Array.isArray(msg.at)) {   // Halo Procession: each hero's ring closing and bursting (the recipe's pop is 1.0 s in; the cast's own sound carries the arcs lighting)
+        msg.at.forEach((s, i) => svLater(s - 1.0, () => play('sv-proc-burst', { vol: 0.8, key: 'svproc:' + i, minGap: 0.5 })));
+        return;
+      }
+      m = /^svcrescent:/.exec(k);
+      if (m) {   // two fans, each from the Sovereign and, a quarter round, from Corvane: the sweep builds for 0.9 s and the blades ring together as it lands
+        const at = Array.isArray(msg.at) ? msg.at : [], p = svPt(msg.x, msg.y);
+        at.forEach((s, i) => {
+          svLater(s - 0.9, () => play('sv-crescent-fan', { vol: 0.9, at: p, rate: 1 + i * 0.08, key: 'svfan:' + i, minGap: 0.3 }));
+          svLater(s - 0.05, () => play('sv-cross-ring', { vol: 0.75, key: 'svxring:' + i, minGap: 0.3 }));
+        });
+        return;
+      }
+      if (/^svlance:/.test(k) && Array.isArray(msg.l)) {   // the Sovereign's dash, then Corvane's a fifth above: two blades, one chord
+        msg.l.forEach((q, i) => svLater((+q[4] || 0) - 0.4, () => play('sv-lance-dash', { vol: i ? 0.8 : 0.9, at: svPt(q[0], q[1]), rate: i ? 1.498 : 1, key: 'svdash:' + i, minGap: 0.3 })));
+        return;
+      }
+      if (/^svpyre:/.test(k)) {   // each beat: a cut from each end of the order, a step higher every beat, Corvane's a fifth over the Sovereign's
+        const cut = (list, who, fifth) => (Array.isArray(list) ? list : []).forEach((q, i) => svLater((+q[4] || 0) - 0.18, () => play('sv-pyre-cut', { vol: 0.8, at: svPt(q[2], q[3]), rate: Math.pow(1.0595, Math.min(i, 9)) * (fifth ? 1.498 : 1), key: 'svpyre:' + who + i, minGap: 0.1 })));
+        cut(msg.s, 's', false); cut(msg.c, 'c', true);
+        return;
+      }
+      if (/^svfore:/.test(k) && Array.isArray(msg.g)) {   // Foretold: each ghost forms as a glass note a step up the scale, then the three fans land together
+        msg.g.forEach((q, i) => svLater(0.25 + i * 0.22, () => play('sv-fore-ghost', { vol: 0.7, at: svPt(q[1], q[2]), rate: Math.pow(2, SV_SCALE[Math.min(i, SV_SCALE.length - 1)] / 12), key: 'svforeg:' + i, minGap: 0.1 })));
+        svLater((+msg.fan || 6.8) - 0.22, () => play('sv-fore-blades', { vol: 0.85, at: svPt(msg.ox, msg.oy), key: 'svforeb', minGap: 1 }));
+        return;
+      }
+      if (/^svdance:/.test(k) && Array.isArray(msg.l)) {
+        const lead = +msg.lead || 3.4, step = +msg.step || 0.65;
+        msg.l.forEach((q, i) => {   // the afterimages appear one after another as glass notes climbing a scale (the cuts then run the same order)
+          svLater(0.25 + i * 0.28, () => play('sv-dance-image', { vol: 0.75, at: svPt(q[0], q[1]), rate: Math.pow(2, SV_SCALE[Math.min(i, SV_SCALE.length - 1)] / 12), key: 'svimg:' + i, minGap: 0.1 }));
+          svLater(lead + (i + 1) * step - 0.22, () => play('sv-dance-cut', { vol: 0.85, at: svPt(q[0], q[1]), rate: 1 + i * 0.03, key: 'svdcut:' + i, minGap: 0.1 }));
+        });
+        (Array.isArray(msg.c) ? msg.c : []).forEach(q => svLater(lead + (+q[4] || 1) * step - 0.22, () => play('sv-dance-cut2', { vol: 0.85, at: svPt((q[0] + q[2]) / 2, (q[1] + q[3]) / 2), key: 'svdcut2:' + q[4], minGap: 0.1 })));   // (Caelum, alongside, on the last beats)
+        return;
+      }
+      if (/^svwheel:/.test(k) && Array.isArray(msg.l) && msg.l.length > 1) {
+        const n = k.slice(8), pts = msg.l, sp = +msg.sp || 950, at = +msg.at || 4.6, last = pts.length - 1, along = [0];
+        for (let i = 1; i <= last; i++) along.push(along[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+        const tEnd = along[last] / sp, old = svWheels.get(n); if (old && old.out) clearTimeout(old.out);
+        const rec = { c: Array.isArray(msg.c) && msg.c[0] ? msg.c[0] : pts[last], out: null };
+        svWheels.set(n, rec);
+        svLater(at - 0.2, () => play('sv-wheel-throw', { vol: 0.9, at: svPt(pts[0][0], pts[0][1]), key: 'svwthrow', minGap: 1 }));   // (the recipe lets go 0.2 s in)
+        svLater(at, () => { const h = Sound.loop('sv-wheel-loop', { vol: 0.7, fade: 0.15 }); if (h) svLoops.add(h); svLater(Math.max(0.3, tEnd), () => { if (h) { svLoops.delete(h); h.stop(0.25); } }); });
+        for (let i = 1; i < last; i++) svLater(at + along[i] / sp, () => play('sv-wheel-clang', { vol: 0.9, at: svPt(pts[i][0], pts[i][1]), key: 'svwclang:' + i, minGap: 0.1 }));   // (a bounce)
+        const fire = Array.isArray(msg.fire) ? msg.fire : [];
+        fire.forEach((q, i) => svLater((+q[4] || 0) - 0.5, () => play('sv-wall-fire', { vol: 0.8, at: svPt((q[0] + q[2]) / 2, (q[1] + q[3]) / 2), key: 'svwfire:' + i, minGap: 0.1 })));   // (the fire takes 0.5 s in)
+        const burnOut = fire.reduce((a, q) => Math.max(a, +q[4] || 0), 0) + (+msg.life || 7);
+        rec.out = setTimeout(() => { rec.out = null; svWheels.delete(n); safe(() => play('sv-wall-out', { vol: 0.45, key: 'svwout', minGap: 1 })); }, burnOut * 1000);   // (an uncaught wheel: the walls only burn down, quietly)
+        return;
+      }
+      if (/^svwallout:/.test(k)) {   // a catch: the wheel stopped dead, and every wall put out at once
+        const n = k.slice(10), rec = svWheels.get(n);
+        if (rec && rec.out) clearTimeout(rec.out);
+        svWheels.delete(n);
+        play('sv-wheel-catch', { vol: 0.95, at: rec ? svPt(rec.c[0], rec.c[1]) : null, key: 'svwcatch', minGap: 1 });
+        svLater(0.15, () => play('sv-wall-out', { vol: 0.9, key: 'svwout', minGap: 0.5 }));
+        return;
+      }
+      if (/^svflambe:/.test(k) && Array.isArray(msg.at) && msg.at.length) {
+        const at = msg.at, last = at.length - 1, pos = Array.isArray(msg.plates) ? msg.plates : [];
+        at.forEach((s, i) => {
+          const p = pos[i] ? { x: pos[i][0], y: pos[i][1] } : null;
+          svLater(s, () => play('bm-sovereign-cloche', { vol: 0.8, at: p, key: 'svcloche:' + i, minGap: 0.2 }));
+          if (i < last) svLater(s + 0.75, () => play('bm-sovereign-flambe', { vol: 0.85, at: p, key: 'svflambe:' + i, minGap: 0.2 }));   // (the whoosh builds and lands 1.7 s after the plate)
+        });
+        svLater(at[last] + 1.65, () => play('bm-sovereign-mince', { vol: 0.95, key: 'svmince', minGap: 0.5 }));   // (the chops land 2.6 s after the last plate)
+        return;
+      }
+      if (k === 'svact') { svSunk = 0; svHeartStop(0.3); svSapAll(); svActMusic(msg.act); return; }
+      if (k === 'svlie') {   // the kill: each echo lies down to a soft bell falling down the minor scale, the music losing a layer with each; the Hollow King last, setting his lantern down
+        svClear(svFxT);
+        const ord = Array.isArray(msg.order) && msg.order.length ? msg.order : [0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 3], n = ord.length, last = n - 1;
+        const start = +msg.start || 1.8, step = +msg.step || 0.62, hk = +msg.hk || 1.3, night = +msg.night || 10.4, pos = Array.isArray(msg.pos) ? msg.pos : [];
+        const SEMI = [12, 10, 8, 7, 5, 3, 2, 0, -2, -3, -5, -7];   // (D, C, B flat, A, G, F, E, D, C, B flat, G: down to the lantern)
+        for (let i = 0; i < n; i++) {
+          const t = i < last ? start + i * step : start + (last - 1) * step + hk, p = pos[i] ? { x: pos[i][0], y: pos[i][1] } : null;
+          svAfter(svFxT, t, () => {
+            const amt = i < last ? Math.min(0.9, 0.1 + 0.075 * (i + 1)) : 0.94;
+            if (svMusOn) Sound.music.duck(amt, Math.max(0.5, night - t));   // (each echo takes a layer: the music sinks a step lower, to the silence before the night)
+            if (i < last) play('sv-lie-bell', { vol: 0.8, at: p, rate: Math.pow(2, SEMI[Math.min(i, SEMI.length - 1)] / 12), key: 'svlie:' + i, minGap: 0.1 });
+            else { play('sv-lantern-down', { vol: 0.9, at: p, key: 'svlantern-down', minGap: 1 }); play('sv-lie-bell', { vol: 0.7, at: p, rate: 0.5, key: 'svlie:hk', minGap: 0.1 }); }
+          });
+        }
+        return;
+      }
+      if (k === 'svgutter') { play('sv-gutter', { vol: 0.85, key: 'svgutter', minGap: 1 }); return; }   // (the fire draining out of the square: a long exhale)
+      if (k === 'svemberfall') {   // the enrage's set piece: the town igniting from below (the cast's own sound carries the sky of embers above it)
+        play('sv-emberfall-below', { vol: 0.85, key: 'svemberfall', minGap: 1 });
+        if (has()) Sound.music.duck(0.45, +msg.dur || 8);
+        return;
+      }
+      if (k === 'svwipe') {   // a wipe: the halo relights in full and the fire flares; the generic wipe sting is skipped (main.js) and the wipe card comes 2.8 s on
+        svMusicReset(); svHeartStop(0.2);
+        play('sv-wipe-chord', { vol: msg.enrage ? 1 : 0.9, key: 'svwipe', minGap: 1 });
+        return;
+      }
+      m = /^svtwin:(\d+)$/.exec(k);
+      if (m) {
+        const n = +m[1], el = String(msg.el || ''), p = msg.x != null ? { x: msg.x, y: msg.y } : null, burst = +msg.at || 0, meet = msg.rule === 'pair';
+        if (svTwinT.has(n)) { clearTimeout(svTwinT.get(n)); svTwinT.delete(n); }   // (a shifted cast: the first wall's burst never comes)
+        if (msg.shift) play('sv-twin-shift', { vol: 0.8, at: p, key: 'svtwinshift', minGap: 0.5 });
+        if (/^(fire|frost|bolt|void)$/.test(el)) svLater(msg.shift ? 0.4 : 0, () => play('sv-twin-' + el, { vol: 0.9, at: p, key: 'svtwin:' + el, minGap: 0.5 }));
+        const lead = meet ? 0.55 : 0.6;   // (the recipes land 0.55 and 0.6 s in)
+        svTwinT.set(n, setTimeout(() => { svTwinT.delete(n); safe(() => play(meet ? 'sv-twin-meet' : 'sv-twin-bloom', { vol: 0.95, at: p, key: 'svtwinburst', minGap: 1 })); }, Math.max(0, burst - lead) * 1000));
+        return;
+      }
+      if (k === 'svheart') {
+        svHeartStop(0.2);
+        const ps = Array.isArray(msg.pillars) ? msg.pillars : [], sweep = +msg.sweep || 0, end = +msg.sealAt || +msg.end || +msg.dur || 0;
+        const lastAt = ps.reduce((a, q) => Math.max(a, +q[2] || 0), 0), breath = lastAt + 0.25, hold = Math.max(0.5, sweep - breath);
+        const realHeart = Sound.music.has('mus-ult-heart'), h = svHeart = { loop: Sound.loop('sv-heart-loop', { vol: realHeart ? 0.45 : 0.9, fade: 1.2 }), timers: [] };   // (the track's own heartbeat carries it when it exists)
+        const later = (sec, fn) => h.timers.push(setTimeout(() => safe(fn), Math.max(0, sec) * 1000));
+        if (svMusOn && svSlot !== 'heart') { svClear(svMusT); svPlayMusic('heart', { fade: 0.5, bar: svBpm() }); }   // (the music becomes a heartbeat and a drone, on the next bar line)
+        if (!realHeart) Sound.music.duck(0.5, breath);   // (with no heart track the music only drops under the heart, as in the burnback)
+        later(breath, () => {   // after the last pillar: the heart stops dead and the room holds its breath until the blade sweeps
+          if (h.loop) { h.loop.stop(0.1); h.loop = null; }
+          play('sv-heart-breath', { vol: 0.85, key: 'svbreath', minGap: 1 });
+          Sound.music.duck(0.93, hold);   // (the held breath: the track stops with it)
+        });
+        later(end + 0.5, () => svHeartStop(0.3));   // (a wipe leaves nothing running longer than the wall would have)
+        return;
+      }
+      m = /^svpillar:(\d+)$/.exec(k);
+      if (m) {   // (a little higher for each in the cut order; the recipe's blow is 0.9 s in)
+        const rate = 1 + (Math.max(1, +msg.order || 1) - 1) * 0.12;
+        svLater((+msg.at || 2.2) - 0.9, () => play('sv-pillar', { vol: 0.95, at: svSpot(msg), rate, key: 'svpil:' + m[1], minGap: 0.3 }));
+        return;
+      }
+      if (k === 'svseal') { svHeartStop(0.1); if (svMusOn) { svClear(svMusT); svSlot = 'seal'; svSilence(0.4); } play('sv-seal-shatter', { vol: 1, key: 'svseal', minGap: 1 }); return; }
+      if (k === 'svrebirth') {
+        svHeartStop(0.2);
+        const dark = Array.isArray(msg.dark) ? msg.dark : [2.5, 4.0], halo = +msg.halo || 4, crater = +msg.crater || 5, choir = +msg.choir || 6, dur = +msg.dur || 12;
+        play('sv-rebirth-draw', { vol: 0.9, key: 'svrbdraw', minGap: 1 });
+        Sound.music.duck(0.6, dark[0]);
+        svLater(dark[0], () => Sound.music.duck(0.97, Math.max(0.2, halo - dark[0] - 0.15)));   // (the dark: the music is gone until the choir; the duck lifts just before it)
+        if (svMusOn) { svClear(svMusT); svAfter(svMusT, halo - 0.1, () => { if (svMusOn) svPlayMusic(3, { fade: 0.15 }); }); }   // (Act III's track opens on the halo, full weight)
+        svLater(halo - 0.4, () => play('sv-rebirth-halo', { vol: 0.9, key: 'svrbhalo', minGap: 1 }));   // (the recipe's halo opens 0.4 s in)
+        svLater(crater - 0.5, () => play('sv-rebirth-sky', { vol: 0.95, key: 'svrbsky', minGap: 1 }));   // (the recipe's sky splits 0.5 s in)
+        svLater(halo, () => play('sv-rebirth-choir', { vol: 0.95, key: 'svsp:svrebirth', minGap: 1 }));   // (the recipe's hit is at 0)
+        svLater(dur + 0.05, () => play('sv-rebirth-blast', { vol: 1, key: 'svrbblast', minGap: 1 }));   // (the raidwide is hidden, so no telegraph cue plays for it)
+        return;
+      }
+      if (/^svlantern:/.test(k)) {
+        const p = msg.x != null ? { x: msg.x, y: msg.y } : null, fly = +msg.fly || 1.1;
+        play('sv-lantern-fly', { vol: 0.7, key: 'svlfly', minGap: 0.5 });
+        svLater(fly, () => play('bm-sovereign-lantern', { vol: 0.75, at: p, key: 'svlantern', minGap: 0.5 }));
+        return;
+      }
+      if (/^svanvilt:/.test(k)) {   // The Anvil Count: a tower rises on its sheet, and is struck when it can be soaked (the recipe's blow lands 0.1 s in)
+        const p = svSpot(msg), at = +msg.at || 5;
+        play('sv-anvil-rise', { vol: 0.7, at: p, key: 'svanvilrise', minGap: 0.5 });
+        svLater(Math.max(0, at - 0.1), () => play('sv-anvil-strike', { vol: 0.95, at: p, key: 'svanvilstrike', minGap: 0.5 }));
+        return;
+      }
+      if (k === 'svsheets') {   // (the water of the sunk sheets: it hisses as one more goes under)
+        const n = Array.isArray(msg.sunk) ? msg.sunk.length : 0;
+        if (n > svSunk) play('sv-water-hiss', { vol: 0.5, key: 'svhiss', minGap: 0.6 });
+        svSunk = n;
+        return;
+      }
+      if (/^svglass:/.test(k) && Array.isArray(msg.s) && msg.s.length) {   // (the sheets of one ring break together: one shatter for each, louder the more of them)
+        const rings = new Map();
+        for (const [cx, cy, at] of msg.s) { const key = Math.round(at * 10), g = rings.get(key) || { at, n: 0, cx, cy }; g.n++; rings.set(key, g); }
+        let i = 0;
+        for (const g of rings.values()) {
+          const j = i++;
+          svLater(g.at, () => play('sv-glass-shatter', { vol: 0.55 + Math.min(0.35, g.n * 0.05), at: { x: g.cx, y: g.cy }, rate: 1 + j * 0.025, key: 'svglass:' + j, minGap: 0.2 }));
+        }
+        return;
+      }
+      m = /^svhead:(\d+)$/.exec(k);
+      if (m) { svLater((+msg.rise || 1.6) - 1.6, () => play('sv-head-rise', { vol: 0.85, at: svSpot(msg), key: 'svhead:' + m[1], minGap: 0.3 })); return; }   // (the recipe's head clears the floor 1.6 s in)
+      if (/^svbite:/.test(k)) { svLater(Math.max(0, (+msg.dur || 2.8) - 0.8 - 1.97), () => play('sv-bite', { vol: 0.6, at: svSpot(msg), key: 'svbite', minGap: 0.5 })); return; }   // (the bite lands 1.97 s in)
+      m = /^svcut:(\d+)$/.exec(k);
+      if (m) { play('sv-cut', { vol: 0.9, at: svSpot(msg), rate: 1 - ((+msg.order || 1) - 1) * 0.1, key: 'svcut:' + m[1], minGap: 0.3 }); return; }
+      if (/^svdive:/.test(k)) {
+        const d = +msg.at || 5.4, fly = +msg.fly || 1.4, boil = Array.isArray(msg.boil) ? msg.boil : [];
+        svLater(1.3, () => play('sv-dive-line', { vol: 0.8, key: 'svdline', minGap: 1 }));   // (the line is laid 1.3 s after the spot)
+        svLater(d - fly, () => play('sv-dive-fall', { vol: 1, key: 'svdfall', minGap: 1 }));   // (the recipe lands 1.4 s in)
+        if (boil.length) {
+          svLater(d + 1.0, () => play('sv-boil', { vol: 0.65, at: { x: boil[0][2], y: boil[0][3] }, key: 'svboil', minGap: 1 }));   // (the steam is laid then, and bursts 3.6 s after)
+          boil.forEach(([, , x, y], j) => svLater(d + 4.63 + j * 0.05, () => play('sv-steam-burst', { vol: 0.75, at: { x, y }, key: 'svsteam:' + j, minGap: 0.1 })));
+        }
+        return;
+      }
+      if (/^svfuse:/.test(k)) {
+        const p = msg.kx != null ? { x: msg.kx, y: msg.ky } : null;
+        play('bm-sovereign-knot', { vol: 0.85, at: p, key: 'svknot:' + k, minGap: 0.1 });
+        play('bm-sovereign-fuse', { vol: 0.7, at: p, key: 'svfuse:' + k, minGap: 0.1 });
+        return;
+      }
+      if (/^svshadow:/.test(k)) { const s = +msg.at || 0; svLater(s - 1.0, () => play('bm-sovereign-shadow', { vol: 0.9, key: 'svshadow', minGap: 0.5 })); return; }   // (the recipe's strike lands 1 s in)
+      m = /^svseed:(\d+)$/.exec(k);
+      if (m) {   // each seed beats on its carrier, quicker and higher toward the burst (placed nowhere: the carriers move); loud for yours, faint for the others
+        const at = +msg.at || 6, mine = typeof Net !== 'undefined' && Array.isArray(msg.ids) && msg.ids.includes(Net.id);
+        let t = 0.5, gap = 1.1;
+        while (t < at - 0.2) {
+          const rate = 0.9 + 0.45 * Math.min(1, t / at);
+          svLater(t, () => play('sv-seed-pulse', { vol: mine ? 0.8 : 0.3, rate, key: 'svseedp:' + (mine ? 'me' : 'o'), minGap: 0.12 }));
+          t += gap; gap = Math.max(0.3, gap * 0.82);
+        }
+        return;
+      }
+      m = /^svhole:(\d+)$/.exec(k);
+      if (m) {   // the floor burns through; then the town, faint, from below
+        const p = svPt(msg.x, msg.y);
+        play('sv-seed-burst', { vol: 0.95, at: p, key: 'svburst', minGap: 0.3 });
+        svLater(0.8, () => play('sv-hole-town', { vol: 0.5, at: p, key: 'svtown', minGap: 0.5 }));
+        return;
+      }
+      if (/^svfall:\d+$/.test(k)) {   // a hero stepping into a hole: the crumbling edge and the landing below, where they stand
+        play('sv-hole-fall', { vol: 0.9, at: svPt(msg.x, msg.y), key: 'svfall', minGap: 0.3 });
+        return;
+      }
+      m = /^svsapling:(\d+)$/.exec(k);
+      if (m) {   // a creak every step or two, placed where the sapling is by now (it waits 1.5 s, then walks straight at the Sovereign)
+        const n = +m[1], sp = +msg.speed || 24, x0 = +msg.x || 0, y0 = +msg.y || 0, tx = 0, ty = -60, D = Math.hypot(tx - x0, ty - y0) || 1;
+        svSapStop(n);
+        const rec = { go: Date.now() + 1500, end: Date.now() + (+msg.dur || 45) * 1000, timer: 0 };
+        const where = () => { const s = Math.max(0, Math.min(D - 90, sp * (Date.now() - rec.go) / 1000)); return { x: x0 + (tx - x0) / D * s, y: y0 + (ty - y0) / D * s }; };
+        rec.timer = setInterval(() => { if (Date.now() > rec.end) { svSapStop(n); return; } safe(() => play('sv-sapling-creak', { vol: 0.7, at: where(), key: 'svcreak', minGap: 0.45 })); }, 1600);
+        svSaps.set(n, rec);
+        svLater(0.3, () => play('sv-sapling-creak', { vol: 0.8, at: { x: x0, y: y0 }, rate: 0.8, key: 'svcreak', minGap: 0.45 }));   // (climbing out of the hole)
+        return;
+      }
+      m = /^svsapdie:(\d+)$/.exec(k);
+      if (m) { svSapStop(+m[1]); play('sv-sapling-die', { vol: 0.9, at: svPt(msg.x, msg.y), key: 'svsapdie', minGap: 0.2 }); return; }
+      m = /^svsaparr:(\d+)$/.exec(k);
+      if (m) { svSapStop(+m[1]); play('sv-sapling-arrive', { vol: 0.85, at: svPt(msg.x, msg.y), key: 'svsaparr', minGap: 0.3 }); return; }
+      if (/^svrecall:/.test(k)) {   // its flame takes on the halo, and that name's own sting sounds again, softer (a new echo's sting is lowered to match in svecho; a standing echo's is played here)
+        const who = String(msg.who || '');
+        play('sv-relight', { vol: 0.9, key: 'svrelight', minGap: 0.5 });
+        const rc = svRecall = { who, t: Date.now(), said: false };
+        if (SV_WHO.has(who)) setTimeout(() => safe(() => { if (!rc.said) play('sv-call-' + who, { vol: 0.42, key: 'svrecallsting', minGap: 0.5 }); }), 600);
+        return;
+      }
+    });
+  }
+  // a set piece begins (the host's 'setpiece' message: id): the descent, the burnback, Rebirth's choir, the kill's twelve bells
+  function sovereignSetPiece(id) {
+    const s = SV_SET[id];
+    if (!s || !has()) return;
+    safe(() => { play(s[0], { vol: s[1], key: 'svsp:' + id, minGap: 1 }); if (id === 'svburnback') Sound.music.duck(0.5, 4); else if (id === 'sveveryname') Sound.music.duck(0.55, 6); });   // (the peel and the pull-back: Act IV's track enters at 6.5 s, unducked)
+  }
+  // the Brand's burn ticking on you (pdmg kind svBurn): a short sear, very quiet
+  function sovereignBurn() { play('bm-sovereign-brand-sear', { vol: 0.6, key: 'svsear', minGap: 1 }); }
+
   // ---------------------------------------------------------------- music
   const music = (id, o) => { if (has()) safe(() => Sound.music.set(id, o)); };
   // the phase (course) where Normal crossfades into the boss's Hard track, late in the fight
@@ -228,7 +662,9 @@ const SoundHooks = (() => {
     if (has() && LAYER_AT[bossId] && n >= LAYER_AT[bossId] && !/-hard$/.test(String(Sound.music.current() || ''))) safe(() => Sound.music.layer('mus-' + bossId));
   }
   // the fight's track: 'mus-<boss>-hard' on Hard if that track exists, else 'mus-<boss>'
-  function bossTrack(bossId, mode) {
+  // act: for the Ultimate, the act in play (a practice start, a rejoin; absent or 0 is the first); other bosses ignore it
+  function bossTrack(bossId, mode, act) {
+    if (bossId === 'sovereign') { svClear(svMusT); svClear(svFxT); svMusOn = true; svAct = act >= 1 && act <= 4 ? Math.floor(act) : 1; svSlot = svAct; return (SV_MUS[svAct] || SV_MUS[1]).ids; }   // (the act the room is in: Act I on a normal pull; the chain, see SV_MUS)
     const hard = 'mus-' + bossId + '-hard';
     return mode === 'hard' && !TURN.has(bossId) && has() && Sound.music.has && Sound.music.has(hard) ? hard : 'mus-' + bossId;
   }
@@ -290,7 +726,7 @@ const SoundHooks = (() => {
       stackWas = cur;
     } catch (e) { /* never into the game loop */ }
   }
-  function stopBeds() { for (const h of [amb, hum, heart]) if (h) h.stop(0.3); amb = hum = heart = null; castEnd(0.1); }
+  function stopBeds() { for (const h of [amb, hum, heart]) if (h) h.stop(0.3); amb = hum = heart = null; svReset(); castEnd(0.1); }
 
   // ---------------------------------------------------------------- the interface
   // every button, slot and menu entry clicks; panels make a paper sound opening and closing
@@ -335,7 +771,7 @@ const SoundHooks = (() => {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUI); else wireUI();
   }
 
-  return { play, vo, ability, auto, hollow, thresher, tidecaller, lanternkeeper, kenseier, houndmaster, castStart, castEnd, stacks, telegraph, bossCast, impact, music, phase, bossTrack, tick, stopBeds, ground, TG };
+  return { sovereignRoom, sovereignSetPiece, sovereignBurn, play, vo, ability, auto, hollow, thresher, tidecaller, lanternkeeper, kenseier, houndmaster, castStart, castEnd, stacks, telegraph, bossCast, impact, music, phase, bossTrack, tick, stopBeds, ground, TG };
 })();
 
 if (typeof module !== 'undefined') module.exports = { SoundHooks };

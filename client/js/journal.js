@@ -36,16 +36,16 @@ const Journal = (() => {
   function newPages() { const n = fresh.filter(f => f.kind === 'learned').map(f => f.name); fresh = []; return n; }
 
   // ---------------------------------------------------------------- the book
-  let panel = null, heroId = null, bossId = null, opts = { bosses: [], open: () => true, heroes: [] };
+  let panel = null, heroId = null, bossId = null, opts = { bosses: [], open: () => true, heroes: [], lore: () => '' };
   function entryCount(cls, b) {
     const d = DATA()[b], j = Save.journal(cls), moves = (j.moves && j.moves[b]) || {};
-    if (!d) return [0, 0];
+    if (!d || !d.moves) return [0, 0];
     return [Object.keys(d.moves).filter(n => moves[n] && moves[n].pass > 0).length, Object.keys(d.moves).length];
   }
   function render() {
     const heroes = opts.heroes(), cls = heroId && heroes.find(h => h.id === heroId) ? heroId : (heroes[0] && heroes[0].id);
     heroId = cls;
-    const bosses = opts.bosses.filter(b => opts.open(b) && DATA()[b.id]);
+    const bosses = opts.bosses.filter(b => opts.open(b, cls) && DATA()[b.id] && DATA()[b.id].moves);   // (open(boss, hero): the Ultimate only shows for a hero who has met it)
     if (!bosses.some(b => b.id === bossId)) bossId = bosses[0] && bosses[0].id;
     const hero = heroes.find(h => h.id === cls);
     if (!hero) { panel.querySelector('.jr-book').innerHTML = '<p class="jr-empty">Pick a hero first: every hero keeps their own journal.</p>'; return; }
@@ -59,11 +59,12 @@ const Journal = (() => {
       const names = Object.keys(d.moves);
       const learned = names.filter(n => moves[n] && moves[n].pass > 0), seen = names.filter(n => moves[n] && !(moves[n].pass > 0));
       const icon = n => (typeof BossIcons !== 'undefined' ? `<i class="jr-ic" style="background-image:${BossIcons.css(bossId, n)}"></i>` : '');
-      pages = `<p class="jr-meet">${esc(d.meet[cls] || '')}</p>` +
+      const lore = opts.lore && opts.lore(bossId);   // (a fight's own lore line, for one that has no Raid Board page)
+      pages = (lore ? `<p class="jr-meet">${esc(lore)}</p>` : '') + `<p class="jr-meet">${esc((d.meet || {})[cls] || '')}</p>` +
         learned.map(n => `<div class="jr-entry${moves[n].pass >= MASTER ? ' seal' : ''}">${icon(n)}<div><h5>${esc(n)}${d.moves[n].hard ? '<em>Hard</em>' : ''}</h5><p>${esc((d.moves[n].learned || {})[cls] || '')}</p></div></div>`).join('') +
         seen.map(n => `<div class="jr-entry blank">${icon(n)}<div><h5>${esc(n)}</h5><p>Not figured out yet.</p></div></div>`).join('') +
         (names.length > learned.length + seen.length ? `<p class="jr-more">${names.length - learned.length - seen.length} more ${names.length - learned.length - seen.length === 1 ? 'page' : 'pages'} still blank.</p>` : '') +
-        (won ? `<p class="jr-win">${esc(d.win[cls] || '')}</p>` : '');
+        (won ? `<p class="jr-win">${esc((d.win || {})[cls] || '')}</p>` : '');
     }
     panel.querySelector('.jr-book').innerHTML = `<nav class="jr-nav">${heroTabs}${tabs}</nav><div class="jr-pages">${pages}</div>`;
     const sel = panel.querySelector('.jr-hero');

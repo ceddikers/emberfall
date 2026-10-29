@@ -171,9 +171,9 @@ const KITS = {
       },
       {
         id: 'warcry', name: 'War Cry', type: 'ogcd', target: 'self', cd: 90, anim: 'big',
-        desc: 'Roar: shields the whole party for {s:300} for 15s. Your next Crimson Drain in that time costs no Blood, and the party heals for a quarter of what it heals you.',
+        desc: 'Roar: shields the whole party for {s:300} for 15s, and the party takes 10% less damage for 12s. Your next Crimson Drain in that time costs no Blood, and the party heals for a quarter of what it heals you.',
         effect(k) {
-          k.shield('party', 300, 15, { ab: this }); if (k.perk('bloodreaver_a2')) k.healRaw('self', k.env.maxHp() * 0.1, { ab: this });
+          k.shield('party', 300, 15, { ab: this }); k.mitigate('party', 0.1, 12, { ab: this }); if (k.perk('bloodreaver_a2')) k.healRaw('self', k.env.maxHp() * 0.1, { ab: this });
           k.buff('roar', 15);
         },
         fx: { type: 'ring', color: '#ff9a7a', r: 160 },
@@ -222,7 +222,7 @@ const KITS = {
     ceiling: [
       'A Ward explodes when it ends. The more damage it absorbed, the bigger the blast, and a fully broken Ward refunds its Rune. Put Wards up right before tankbusters and raidwides.',
       'Ward or Glyph Burst? Every Rune is a choice between defence-that-becomes-damage and raw damage now.',
-      'Mirror Aegis reflects the next hit for a {d:1500} counter, and a reflected tankbuster carves a Rune. A mirrored buster barely touches your Ward, so that Ward won\'t refund: the mirror pays its Rune instead.',
+      'Mirror Aegis reflects the next tankbuster or big hit for a {d:1500} counter (autos and burn ticks pass through), and a reflected tankbuster carves a Rune. A mirrored buster barely touches your Ward, so that Ward won\'t refund: the mirror pays its Rune instead.',
       'Sanctum sanctifies the next Ward you raise: it keeps its Rune however little it soaks, and its blast heals the party. Spend it on the Ward a raidwide won\'t break all the way.',
       'Pool 3 Runes before Runic Overload; Wards also explode 50% harder during it, and one broken all the way gives an extra Rune.',
     ],
@@ -274,7 +274,7 @@ const KITS = {
       },
       {
         id: 'mirror', name: 'Mirror Aegis', type: 'ogcd', target: 'self', cd: 90, anim: 'big',
-        desc: 'For 3s, the next hit you take is reduced by 80% and reflected back for {d:1500}. A reflected tankbuster also carves a Rune.',
+        desc: 'For 3s, the next tankbuster or big hit you take (a fifth of your health or more) is reduced by 80% and reflected back for {d:1500}. A reflected tankbuster also carves a Rune.',
         glow: k => runeMirrorGlow(k),
         effect(k) { k.mitigate('self', 0.8, castHold(k, k.talent('runeguard_patient'), 3, 8), { kind: 'reflect', ab: this }); },
         fx: { type: 'shield', color: '#e0d4ff', dur: 2 },
@@ -641,11 +641,11 @@ const KITS = {
         fx: { type: 'zone', style: 'holy', color: '#ffe680', r: 160, range: 0, dur: 3 },
       },
       {
-        id: 'intervene', name: 'Intervention', type: 'gcd', target: 'ally', cd: 30, anim: 'big', allowDead: true,
+        id: 'intervene', name: 'Intervention', type: 'gcd', target: 'ally', cd: 15, anim: 'big', allowDead: true, cdSkip: k => clericRaising(k), usable: k => clericRaiseUsable(k),   // (the helpers sit with the Cleric's others, below the kit)
         cast: k => (targetDown(k, 'intervene') ? RAISE_CAST : 2.5),   // (every raise takes RAISE_CAST)
-        desc: '5s cast: bring a fallen ally back to life. They rise with Raise Sickness: 15% less damage and healing for 20s, more for every fall this pull. On a living one it is a 2.5s cast that heals them for {h:1200}.',
+        desc: 'A 2.5s cast that heals one ally for {h:1200}. Aimed at a fallen ally it is a 5s cast that brings them back to life instead, once every 30s, whatever the heal is doing. They rise with Raise Sickness: 15% less damage and healing for 20s, more for every fall this pull.',
         glow: k => targetDown(k, 'intervene'),
-        effect(k, t) { if (k.env.isDead(t)) k.raise(t, { ab: this }); else k.heal(t, 1200, { ab: this }); },
+        effect(k, t) { if (k.env.isDead(t)) clericRaise(k, this, t); else k.heal(t, 1200, { ab: this }); },
         fx: { type: 'zone', style: 'pillar', color: '#fff6c8', r: 50, range: 0, dur: 1.6, onTarget: true },
       },
       {
@@ -845,7 +845,7 @@ const KITS = {
           if (k.talent('chronomancer_phase') && k.g.stance === 'haste' && k.now >= (k.g.phaseAt || 0)) {   // the afterimage's free Bolt
             k.g.phaseAt = k.now + 10;
             const acc = k.def.spec === 'accelerant';
-            chronoBolt(k, k.abById('bolt'), 1, acc ? 0.71 : k.def.spec === 'echoist' ? 0.56 : 0.6, acc ? 1.14 : k.def.spec === 'echoist' ? 1.35 : 1.5); k.fx('echo');
+            chronoBolt(k, k.abById('bolt'), 1, acc ? 0.71 : k.def.spec === 'echoist' ? 0.85 : 0.6, acc ? 1.14 : k.def.spec === 'echoist' ? 1.35 : 1.5); k.fx('echo');
           }
         },
         fx: { type: 'aura', style: 'stasis', color: '#3fd0d0', r: 30, dur: 0.8 },
@@ -899,7 +899,7 @@ function targetDown(k, id) { const ab = abBase(k, id), t = ab && k.env.target(ab
 // a move that moves you (main.js kitMove): 'back' (away from the enemy), 'forward', 'ally' (toward ev.to), 'point' (x, y)
 function kitMove(k, where, o = {}) { k.env.emit(Object.assign({ type: 'teleport', where }, o)); }
 // a blink that goes back to a spot you left (Cinder Recall, Deja Vu) never takes you into a telegraph: not if one is about to land there
-const kitBackSafe = (k, x, y) => !(k.env.danger && k.env.danger(x, y, 4));
+const kitBackSafe = (k, x, y) => !(k.env.danger && k.env.danger(x, y, 4)) && !(k.env.hole && k.env.hole(x, y));   // (nor into a hole in the floor, the Sovereign's Act III and IV)
 
 // ----------------------------------------------------------------- Bastion
 function bastionGain(k, n) {
@@ -1086,10 +1086,10 @@ function reaverAfterDrain(k, ab, healed, tide) {
   if (k.talent('bloodreaver_second') && healed > mx * (k.def.spec === 'berserker' ? 0.06 : 0.09)) { reaverGain(k, 20); k.damage((k.g.drainPot || 0) / 3, { ab }); k.fx('secondHelping'); }
   if (k.talent('bloodreaver_hemorrhage')) { k.dot('hemorrhage', 55, 9, 3, { ab }); k.fx('hemorrhage'); }
   // the spec rows VI-VII: Scar Tissue (Berserker), Spill Over and Blood Font (Hemomancer)
-  if (k.def.spec === 'berserker') {   // (a Rampage guards you for a moment, better below half HP; thrown into a tankbuster's cast, that blow also lands 35% lighter)
+  if (k.def.spec === 'berserker') {   // (a Rampage guards you for a moment, better below half HP; thrown into a tankbuster's cast, that blow also lands 60% lighter)
     const low = hpOf(k) < 0.5, b = bossNow(k);
     k.mitigate('self', low ? 0.35 : 0.15, low ? 3 : 2, { ab });
-    if (b && b.casting && b.onMe) k.mitigate('self', 0.35, Math.min(6, b.castLeft + 0.5), { ab, kind: 'once' });
+    if (b && b.casting && b.onMe) k.mitigate('self', 0.6, Math.min(6, b.castLeft + 0.5), { ab, kind: 'once' });
   }
   if (k.talent('bloodreaver_scar')) { k.mitigate('party', hpOf(k) < 0.6 ? 0.15 : 0.1, 3, { ab }); k.healRaw('lowest', healed / 2, { ab, not: -1 }); k.fx('cauterize'); }   // (every Rampage guards the party, better thrown below 60% HP)
   if (k.talent('bloodreaver_spill')) { k.healRaw('lowest', healed * (hpOf(k) > 0.8 ? 1 / 3 : 1 / 5), { ab, not: -1 }); k.fx('secondHelping'); }   // (a fifth of what it healed you to the most hurt ally, a third when you are above 80% HP)
@@ -1473,6 +1473,12 @@ function clericBloom(k, n) {
 }
 // First Light (a talent): while Dawnstar is ready, Mend (Divine Barrier) casts instantly
 const clericFirstLight = k => k.talent('cleric_firstlight') && k.g.bloom >= 3;
+// The Cleric's raise rides on Intervention (and Bloom of Dawn) but has a lockout of its own, once every CLERIC_RAISE_CD s, as the other healers' raises do
+// (the move's own cooldown is for the heal on a living ally: engine cdSkip lets a fallen target past it, and a raise does not start it)
+const CLERIC_RAISE_CD = 30;
+const clericRaising = k => targetDown(k, 'intervene');
+const clericRaiseUsable = k => !clericRaising(k) || k.now >= (k.g.raiseAt || 0);
+function clericRaise(k, ab, t) { k.g.raiseAt = k.now + CLERIC_RAISE_CD; k.raise(t, { ab }); }
 const clericHeld = k => (k.talent('cleric_held') ? 1 + Math.min(0.36, 0.03 * Math.max(0, k.now - (k.g.dawnAt ?? k.now))) : 1);   // (Held Dawn: 3% a second held, up to 36% at 12s)
 // (Dawn Sanctum is a halo that follows you, so you are always in it while it lasts)
 function clericInSanctum(k) { const s = k.g.sanctum; return !!s && k.now <= s.end; }
@@ -1907,7 +1913,7 @@ ULTIMATES.runeguard = {
 const ALEMBIC = {
   FLIGHT: 0.4,      // seconds from the throw to the shatter
   GROW: 0.3,        // a fully ripe (or fully heated) vial is 30% stronger
-  RAISE_CD: 30,     // a Mending Draught raises a fallen ally it lands on, once every 30s
+  RAISE_CD: 15,     // a Mending Draught raises a fallen ally it lands on, once every 15s (an instant raise: heavy Raise Sickness)
   HURT: 0.7,        // an ally below this much health is hurt: Throw glows for a cure, and it charges Magnum Opus more
   KILN: 3,          // cure vials thrown before the Kiln is hot: the next Throw also launches a free Kiln Bomb
   BLEND: 1.5,       // a Grand Blend does each of its parts at this much of their strength
@@ -1918,7 +1924,7 @@ const ALEMBIC = {
   },
   // two-reagent recipes, keyed by their reagents in sorted order. kind: heal | bomb | ward | salve | quick
   recipes: {
-    DD: { name: 'Mending Draught', color: '#4fe0c0', glyph: 'plus', kind: 'heal', text: 'a {h:480} splash heal, 40% more on an ally with nobody else close. It raises a fallen ally it lands on (once every 30s). A raise this way is instant, so it leaves heavy Raise Sickness: 30% less damage and healing for 30s, more for every fall this pull.' },
+    DD: { name: 'Mending Draught', color: '#4fe0c0', glyph: 'plus', kind: 'heal', text: 'a {h:480} splash heal, 40% more on an ally with nobody else close. It raises a fallen ally it lands on (once every 15s). A raise this way is instant, so it leaves heavy Raise Sickness: 30% less damage and healing for 30s, more for every fall this pull.' },
     EE: { name: 'Fire Bomb', color: '#ff5a1a', glyph: 'flame', kind: 'bomb', text: 'flies at the enemy and hits for {d:360}.' },
     SS: { name: 'Salt Ward', color: '#f4ecd2', glyph: 'ward', kind: 'ward', text: 'a circle of salt: allies inside take 20% less damage for 6s.' },
     DE: { name: 'Steam', color: '#bfe8ec', glyph: 'cloud', kind: 'heal', text: 'a healing cloud: everyone inside heals {h:80} every 1.5s for 9s.' },
@@ -1926,15 +1932,15 @@ const ALEMBIC = {
     ES: { name: 'Quickpowder', color: '#ffd23a', glyph: 'bolt', kind: 'quick', text: 'the whole party acts 10% faster for 10s; allies it splashes heal {h:100} and shake off slows and roots, and the ally it lands on is Galvanized: 10% more damage dealt for 10s.' },
     // Quicksilver (a talent: it takes Salt's place)
     QQ: { name: 'Silver Mirror', color: '#dfe6f2', glyph: 'mirror', kind: 'ward', text: 'a pool of quicksilver: everyone inside keeps a {s:120} shield and takes 12% less damage for 6s.' },
-    DQ: { name: 'Silver Tonic', color: '#9fe8ff', glyph: 'plus', kind: 'heal', text: 'a {h:400} splash heal that is up to twice as strong on the badly hurt, and washes off Vulnerability and Damage Down. Like a Mending Draught it raises a fallen ally it lands on (the same once-every-30s limit, and the same heavy Raise Sickness).' },
+    DQ: { name: 'Silver Tonic', color: '#9fe8ff', glyph: 'plus', kind: 'heal', text: 'a {h:400} splash heal that is up to twice as strong on the badly hurt, and washes off Vulnerability and Damage Down. Like a Mending Draught it raises a fallen ally it lands on (the same once-every-15s limit, and the same heavy Raise Sickness).' },
     EQ: { name: 'Fulminate', color: '#ffe9a0', glyph: 'flame', kind: 'bomb', text: 'flies at the enemy and goes off twice, {d:260} each; the second blast hastes the party 10% for 6s.' },
   },
   // Volatile's Reactions: three reagents (Quicksilver counts as Salt). Sealed in the tooltips until you've brewed one.
   reactions: {
     EEE: { name: 'Dragon\'s Breath', color: '#ff3a10', glyph: 'flame', kind: 'bomb', text: 'a {d:560} fire bomb that leaves the enemy burning for {d:70} every 3s for 12s.' },
-    DDD: { name: 'Elixir of Life', color: '#6fffd0', glyph: 'plus', kind: 'heal', text: 'a {h:620} splash heal that lingers as a healing mist ({h:60} every 1.5s), and raises the fallen. A raise this way is instant, so it leaves heavy Raise Sickness: 30% less damage and healing for 30s, more for every fall this pull.' },
+    DDD: { name: 'Elixir of Life', color: '#6fffd0', glyph: 'plus', kind: 'heal', text: 'a {h:800} splash heal that lingers as a healing mist ({h:75} every 1.5s), and raises the fallen. A raise this way is instant, so it leaves heavy Raise Sickness: 30% less damage and healing for 30s, more for every fall this pull.' },
     SSS: { name: 'Bastion Salt', color: '#fff6dc', glyph: 'ward', kind: 'ward', text: 'a wide salt circle: allies inside take 25% less damage for 8s.' },
-    DES: { name: 'Philosopher\'s Draught', color: '#e6c8ff', glyph: 'star', kind: 'heal', text: 'heals the whole party for {h:300} and shields them for {s:180}, wherever they stand.' },
+    DES: { name: 'Philosopher\'s Draught', color: '#e6c8ff', glyph: 'star', kind: 'heal', text: 'heals the whole party for {h:380} and shields them for {s:180}, wherever they stand.' },
     DEE: { name: 'Brimstone', color: '#ff9a3a', glyph: 'cloud', kind: 'bomb', text: 'a {d:360} bomb on the enemy, and a healing cloud ({h:70} every 1.5s) at your heal target.' },
     DDS: { name: 'Living Salve', color: '#6ff0d0', glyph: 'drop', kind: 'salve', text: 'a {s:400} shield, a cleanse of everything it can wash off, and a short regen ({h:50} every 1.5s).' },
     EES: { name: 'Thunderpowder', color: '#fff070', glyph: 'bolt', kind: 'bomb', text: 'the party acts 15% faster for 12s, and it bursts on the enemy for {d:220}.' },
@@ -2117,9 +2123,9 @@ function alemRecipe(k, key, c, m) {
     case 'EQ': alemBomb(k, c, 260 * m, 0); if (!c.self && c.en) k.after(1, () => { k.damage(260 * m, { ab: alemAb(k) }); k.fx('ricochet', { en: c.en.id }); k.partyBuff('haste', 0.1, 6, { ab: alemAb(k) }); }); break;   // (the second blast hastes the party)
     // Reactions
     case 'EEE': alemBomb(k, c, 560 * m, 70 * m, 12); break;
-    case 'DDD': alemSplash(k, t, { r: 150, heal: 620 * m, pool: { r: 150, ticks: 4, interval: 1.5, heal: 60 * m } }); alemRaise(k, c); break;
+    case 'DDD': alemSplash(k, t, { r: 150, heal: 800 * m, pool: { r: 150, ticks: 4, interval: 1.5, heal: 75 * m } }); alemRaise(k, c); break;
     case 'SSS': alemSplash(k, t, { pool: { r: 160, ticks: 12, interval: 8 * m / 12, pct: 0.25 } }); break;
-    case 'DES': alemSplash(k, 'party', { heal: 300 * m, sh: 180 * m, chain: false }); break;
+    case 'DES': alemSplash(k, 'party', { heal: 380 * m, sh: 180 * m, chain: false }); break;
     case 'DEE': alemBomb(k, c, 360 * m, 0); alemSplash(k, t, { pool: { r: 130, ticks: 6, interval: 1.5, heal: 70 * m, fol: k.talent('alembist_cling') } }); break;
     case 'DDS': alemSplash(k, t, { r: 130, sh: 400 * m, cl: 3, pool: { r: 130, ticks: 4, interval: 1.5, heal: 50 * m } }); break;
     case 'EES': k.partyBuff('haste', 0.15, Math.min(15, 12 * m), { ab: alemAb(k) }); alemBomb(k, c, 220 * m, 0); break;
@@ -2333,6 +2339,23 @@ function kitSegDist(px, py, ax, ay, bx, by) {
   const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
   const q = L2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L2)) : 0;
   return Math.hypot(px - ax - dx * q, py - ay - dy * q);
+}
+
+// A kit move never LANDS a hero in a hole in the floor (the Sovereign's, Act III on): it stops short at the rim. inHole(x, y, pad) says whether a spot
+// lies within pad of a hole's edge (main.js holeNear for you, the room's holes for a bot). A dash or charge stops at the last clear step before the
+// first hole on its way (blink: a blink is a hop, so only where it LANDS counts, and it falls back along its line to the nearest clear spot). A hero who
+// starts inside a hole's rim keeps the move (they are rooted there anyway). Walking in on your own feet is untouched. Moves `dest` in place.
+function kitHoleClamp(from, dest, inHole, blink) {
+  if (typeof inHole !== 'function' || !dest) return dest;
+  if (inHole(from.x, from.y, 0)) return dest;
+  const pad = inHole(from.x, from.y, 16) ? 0 : 16;
+  const dx = dest.x - from.x, dy = dest.y - from.y, n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 12));
+  const at = i => inHole(from.x + dx * i / n, from.y + dy * i / n, pad);
+  let last = n;
+  if (blink) { while (last > 0 && at(last)) last--; }
+  else for (let i = 1; i <= n; i++) if (at(i)) { last = i - 1; break; }
+  if (last < n) { dest.x = from.x + dx * last / n; dest.y = from.y + dy * last / n; }
+  return dest;
 }
 
 // ---------------------------------------------------------------- Thermist: the dial
@@ -3192,12 +3215,12 @@ talentMoves('thermist', {
 // Cleric
 talentMoves('cleric', {
   cleric_bloom: {
-    id: 'dawnbloom', replaces: 'intervene', icon: 'intervene', name: 'Bloom of Dawn', type: 'gcd', target: 'ally', cd: 24, anim: 'big', allowDead: true, talent: true,
-    desc: 'Instant: spend all your Petals on one ally. A fallen ally rises at once, with heavy Raise Sickness (30% less damage and healing for 30s, more for every fall this pull); a living one is healed for {h:900} per Petal and left a regen of {h:90} per Petal every 3s for 9s. Every Petal counts toward Dawnstar.',
-    usable: k => k.g.petals >= 1,
+    id: 'dawnbloom', replaces: 'intervene', icon: 'intervene', name: 'Bloom of Dawn', type: 'gcd', target: 'ally', cd: 15, anim: 'big', allowDead: true, talent: true, cdSkip: clericRaising,
+    desc: 'Instant: spend all your Petals on one ally. A living one is healed for {h:900} per Petal and left a regen of {h:90} per Petal every 3s for 9s. A fallen ally rises at once instead, once every 30s, with heavy Raise Sickness (30% less damage and healing for 30s, more for every fall this pull). Every Petal counts toward Dawnstar.',
+    usable: k => k.g.petals >= 1 && clericRaiseUsable(k),
     effect(k, t) {
       const n = k.g.petals; k.g.petals = 0;
-      if (k.env.isDead(t)) k.raise(t, { ab: this }); else { k.heal(t, 900 * n, { ab: this }); k.hot(t, 90 * n, 3, 3, { ab: this, id: 'bloomregen' }); }
+      if (k.env.isDead(t)) clericRaise(k, this, t); else { k.heal(t, 900 * n, { ab: this }); k.hot(t, 90 * n, 3, 3, { ab: this, id: 'bloomregen' }); }
       clericBloom(k, n);
     },
     fx: { type: 'ring', color: '#ffe680', r: 50, onTarget: true },
@@ -3286,7 +3309,7 @@ TALENT_ABILITIES.alembist_quicksilver = { cls: 'alembist', ab: Object.assign(ale
     'A reagent (1s) that takes Salt\'s place. Quicksilver + Quicksilver is a Silver Mirror, Quicksilver + Dew a Silver Tonic, Quicksilver + Ember a Fulminate. It glows while a raidwide is on its way and you hold no Silver Mirror, Salt Ward or Salve.'),
   { replaces: 'salt', icon: 'salt', talent: true }) };
 
-if (typeof module !== 'undefined') Object.assign(module.exports, { kitMoveDest, kitSegDist, THERMIST, CORONA, thermCorona, thermSunset, thermSpell, thermMove, thermSettle, thermShock, thermBrink, thermMult, thermAt,
+if (typeof module !== 'undefined') Object.assign(module.exports, { kitMoveDest, kitSegDist, kitHoleClamp, THERMIST, CORONA, thermCorona, thermSunset, thermSpell, thermMove, thermSettle, thermShock, thermBrink, thermMult, thermAt,
   thermEdgeCast, thermEquil, thermUtility, thermInvert, thermPlan, thermTick, thermOverload, thermLatentTick, thermLatentReady, LATENT, DRIFT, DRIFT_BODY, DRIFT_NEAR, DRIFT_REACH, driftAdd, driftTick, driftPass, driftK, driftMax,
   driftSpend, driftHook, driftRiposte, driftLoop, TALENT_ABILITIES });
 
@@ -3509,7 +3532,7 @@ KITS.gorgemaw = {
       fx: { type: 'slash', color: '#ffb070', r: 50, span: 1.6 },
     },
     {
-      id: 'wide', name: 'Open Wide', type: 'ogcd', target: 'self', charges: 2, cd: 14, lock: 0.3, anim: 'big',
+      id: 'wide', name: 'Open Wide', type: 'ogcd', target: 'self', charges: 2, cd: 12, lock: 0.3, anim: 'big',
       desc: 'Unhinge your jaw for 1.5s. A boss attack that lands on you in that time is eaten: you take a quarter of it and keep a Morsel shaped like it (circle: Ring, line: Lance, cone: Fang, tankbuster: Spike). Step into a teammate\'s spread circle to eat it for them. Two charges.',
       glow: k => mawWideGlow(k),
       effect(k) { mawOpen(k, (k.talent('gorgemaw_widejaw') ? 2.2 : MAW.WINDOW) + (k.perk('gorgemaw_a2') ? 0.4 : 0)); },
@@ -3538,7 +3561,7 @@ KITS.gorgemaw = {
       fx: { color: '#ffd27a' },
     },
     {
-      id: 'iron', name: 'Iron Gut', type: 'ogcd', target: 'self', cd: 90, anim: 'big',
+      id: 'iron', name: 'Iron Gut', type: 'ogcd', target: 'self', cd: 75, anim: 'big',
       desc: 'Clench: 40% less damage for 8s. Your gut grinds while it lasts: Digest works in any moment, and every Morsel it digests counts twice.',
       effect(k) {
         k.mitigate('self', k.perk('gorgemaw_a4') ? 0.5 : 0.4, 8, { ab: this });
@@ -3548,7 +3571,7 @@ KITS.gorgemaw = {
       fx: { color: '#9fb0c6' },
     },
     {
-      id: 'bottomless', name: 'Bottomless', type: 'ogcd', target: 'self', cd: 120, anim: 'big',
+      id: 'bottomless', name: 'Bottomless', type: 'ogcd', target: 'self', cd: 90, anim: 'big',
       desc: 'For 4s you eat everything, raidwide attacks too: the whole party takes half from them, and every hit is a Morsel for you.',
       effect(k) {
         mawOpen(k, 4, { all: true });
@@ -3826,12 +3849,12 @@ KITS.oathbroker = {
       fx: { color: '#b8a8ff' },
     },
     {
-      id: 'writ', name: 'Writ of Protection', type: 'ogcd', target: 'self', cd: 90, anim: 'big',
+      id: 'writ', name: 'Writ of Protection', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
       desc: '30% less damage for 8s, and every entry written in that time is halved. A renegotiated entry that comes due in that time is billed to you at half.',
       effect(k) {
         k.mitigate('self', 0.3, 8, { ab: this });
         oathSend(k, { op: 'writ', dur: 8, mark: k.talent('oathbroker_garnishwrit') ? 1 / 2 : 0 });
-        if (k.talent('oathbroker_garnishwrit')) k.reduceCooldown(this.id, 50);   // Writ of Execution: back in 40s
+        if (k.talent('oathbroker_garnishwrit')) k.reduceCooldown(this.id, 20);   // Writ of Execution: back in 40s
       },
       fx: { color: '#e8e0c8' },
     },
@@ -3896,7 +3919,7 @@ TALENT_ABILITIES.gorgemaw_stonebelly = { cls: 'gorgemaw', ab: {
 } };
 // (the spec rows VII, SPEC_TALENTS in talents.js: the Glutton's Feeding Frenzy and the Gizzard's Banquet, both in Bottomless's place)
 TALENT_ABILITIES.gorgemaw_frenzy = { cls: 'gorgemaw', ab: {
-  id: 'feedingfrenzy', replaces: 'bottomless', icon: 'bottomless', name: 'Feeding Frenzy', type: 'ogcd', target: 'self', cd: 120, anim: 'big',
+  id: 'feedingfrenzy', replaces: 'bottomless', icon: 'bottomless', name: 'Feeding Frenzy', type: 'ogcd', target: 'self', cd: 90, anim: 'big',
   desc: 'For 4s you eat everything, raidwide attacks too: the whole party takes half from them, and every hit is a Morsel for you, twice over: a copy of it joins the Belly. When the jaw closes, the Belly is spat back at half strength.',
   effect(k) {
     const ab = this;
@@ -3908,7 +3931,7 @@ TALENT_ABILITIES.gorgemaw_frenzy = { cls: 'gorgemaw', ab: {
   fx: { color: '#ff6a3a' },
 } };
 TALENT_ABILITIES.gorgemaw_banquet = { cls: 'gorgemaw', ab: {
-  id: 'banquet', replaces: 'bottomless', icon: 'bottomless', name: 'Banquet', type: 'ogcd', target: 'self', cd: 120, anim: 'big',
+  id: 'banquet', replaces: 'bottomless', icon: 'bottomless', name: 'Banquet', type: 'ogcd', target: 'self', cd: 90, anim: 'big',
   desc: 'For 4s you eat everything, raidwide attacks too: the whole party takes half from them, and every hit is a Morsel for you. When the jaw closes, the whole Belly is digested at once, three times over, and the acid it leaves makes your next Spit hit harder.',
   effect(k) {
     const ab = this;
@@ -4000,7 +4023,7 @@ if (typeof module !== 'undefined') Object.assign(module.exports, { MAW, MAW_TYPE
 // starts the next string. A press made in the first moment after the recovery ends (pressed then, not buffered early)
 // is Crisp: harder and cheaper, so mashing works but rhythm wins. Breath refills slowly while you press, fast once you
 // stop for a moment. R Read is a parry stance (mitigate kind 'parry'): a hit caught in its first 0.4 s (fight.js
-// READ_WINDOW) lands at half strength and the kit hears 'read'; a caught tankbuster opens a free Thousand Palms.
+// READ_WINDOW) lands at half strength (a tankbuster at 40%) and the kit hears 'read'; a caught tankbuster opens a free Thousand Palms.
 const IRONPALM = {
   WINDOW: 0.8,       // after a press's recovery ends, the string waits this long for the next input
   JUGGLE: 1.3,       // ... after Rising Gate (the boss is in the air)
@@ -4019,6 +4042,7 @@ const IRONPALM = {
   FLOW_BREATH: 12, FLOW_LOW: 40,   // Flowing Palms with all three palms Crisp, finished under 40 Breath, gives 12 back
   TAP_REFILL: 0.75,  // winded and still tapping: Breath comes back at this share of the resting pace
   READ: { pct: 0.2, dur: 1.2, counter: 63 },
+  MEND: 60,          // every named move you finish heals you this much
   PERFECT: 1, PERFECT_REST: 6,   // Perfect Form (talent): a named move with every press Crisp echoes its finishing blow at this strength, at most once every 6s
   ECHO: 0.125, ECHO_AFTER: 0.3,   // Echoing Palm (talent): every named move echoes an eighth of its blows this long after
   LUNGS: 1.12,       // Deep Lungs (talent): Heavy and Kick presses hit this much harder while Breath is above half
@@ -4154,6 +4178,7 @@ function ipPress(k, ab) {
     g.flash = { id: mv.id, name: mv.name, at: now, keys: g.keys.slice(), open: st.open };
     k.stats.moves = (k.stats.moves || 0) + 1;
     k.ultGain(IRONPALM.ULT_MOVE);   // (Hundred Palms)
+    k.heal('self', IRONPALM.MEND, { ab: mv });   // (a finished move mends a little)
     if (mv.flurry) {
       const n = mv.flurry + (k.perk('ironpalm_w2') ? 1 : 0);
       for (let i = 0; i < n; i++) k.after(0.07 * (i + 1), () => k.damage(mv.bonus * bonusMult / mv.flurry * (i >= mv.flurry ? 0.3 : 1), { ab: mv, mult }));
@@ -4287,7 +4312,8 @@ KITS.ironpalm = {
     'There is no GCD. Breath is the limit: every press costs some, it creeps back while you fight and floods back once you stop for half a second. Below 18 you\'re winded until you\'re back to 45: every press is a weak tap at half strength, with no string. Stop and it floods back at the full resting pace; keep tapping and it comes back a quarter slower. Crane Step (K L), or Flowing Palms (L L L) pressed Crisp when you\'re low, gives Breath back without stopping.',
     'Iron Ox (H H H) throws the boss off balance: Read is ready again at once, and a blow you Read in the next 4s opens it up like a tankbuster. Ox, Read the next swing, Heavy: a free Thousand Palms.',
     'Rhythm: a press made just as the last one\'s recovery ends is Crisp, 10% harder for 40% less Breath. Mashing still works, because early presses are buffered, but only one pressed in the last quarter second of the recovery, or within 0.3s after it ends, is Crisp. The glowing key lights on that beat.',
-    'Read (R) in the last moment before a hit lands catches it: half the damage, a counter and Breath. Read a tankbuster and your next Heavy is a free, stronger Thousand Palms.',
+    'Every named move you finish mends you a little, so a long fight of clean strings keeps you standing between the heals.',
+    'Read (R) in the last moment before a hit lands catches it: half the damage (a tankbuster, 40%), a counter and Breath. Read a tankbuster and your next Heavy is a free, stronger Thousand Palms.',
   ],
   abilities: [
     ipInputAb('L', 'palm', 'An open-palm strike for {d:52}, quick to recover. Adds L to your string.'),
@@ -4295,7 +4321,7 @@ KITS.ironpalm = {
     ipInputAb('K', 'kick', 'A snapping kick for {d:68}. Adds K to your string.'),
     {
       id: 'read', name: 'Read', type: 'ogcd', target: 'self', cd: 6, lock: 0.25, anim: 'guard',
-      desc: 'Drop into a reading stance for 1.2s: 20% less damage. A hit that lands in its first 0.4s is read: it lands at half strength, you counter for {d:63}, and you get 15 Breath. Read a tankbuster (or any blow after Iron Ox) and your next Heavy is a free, Crisp Thousand Palms, 30% stronger. It doesn\'t break your string.',
+      desc: 'Drop into a reading stance for 1.2s: 20% less damage. A hit that lands in its first 0.4s is read: it lands at half strength (a tankbuster, 40%), you counter for {d:63}, and you get 15 Breath. Read a tankbuster (or any blow after Iron Ox) and your next Heavy is a free, Crisp Thousand Palms, 30% stronger. It doesn\'t break your string.',
       glow: k => { const b = bossNow(k); return !!(b && b.casting && b.onMe && b.castLeft < 0.55); },   // (a tankbuster about to land: lit late enough that pressing it as it lights catches the hit)
       effect(k) {
         ipParry(k, this); k.buff('read', IRONPALM.READ.dur);
@@ -4309,9 +4335,10 @@ KITS.ironpalm = {
     },
     {
       id: 'bell', name: 'Temple Bell', type: 'ogcd', target: 'self', cd: 60, lock: 0.5, anim: 'big',
-      desc: 'Strike your chest like a temple bell: the whole party takes 10% less damage for 8s, and you get Second Wind for 15s: Breath refills twice as fast and you deal 10% more damage.',
+      desc: 'Strike your chest like a temple bell: the whole party takes 15% less damage for 10s and you take 20% less on top of that, and you get Second Wind for 15s: Breath refills twice as fast and you deal 10% more damage.',
       effect(k) {
-        k.mitigate('party', 0.1, 8, { ab: this });
+        k.mitigate('party', 0.15, 10, { ab: this });
+        k.mitigate('self', 0.2, 10, { ab: this });
         k.buff('wind', k.perk('ironpalm_w3') ? 20 : 15);
         ipBellTail(k, this);
       },
@@ -4437,6 +4464,15 @@ function weaveHub(k, ab, t, extra) {
   if (extra != null) far.add(extra);
   for (const id of far) k.heal(id, 150, { ab });
   k.mitigate(t, 0.12, 5, { ab });
+}
+// The Threadweaver's raise rides on Mend Seam (or Embroider): aimed at a fallen ally it is the 5s cast that brings them back (instant under
+// Embroider, with the heavy Raise Sickness), once every WEAVE_RAISE_CD s, and the Spool is not touched
+const WEAVE_RAISE_CD = 30;
+const weaveRaiseUsable = k => !targetDown(k, 'mend') || k.now >= (k.g.raiseAt || 0);
+function weaveRaise(k, ab, t) {
+  if (typeof t !== 'number' || !k.env.isDead || !k.env.isDead(t)) return false;
+  k.g.raiseAt = k.now + WEAVE_RAISE_CD; k.raise(t, { ab }); k.ultGain(2);
+  return true;
 }
 function weaveTie(k, ab, t) {
   const g = k.g, now = k.now, held = weaveCount(k);
@@ -4598,11 +4634,12 @@ KITS.threadweaver = {
       fx: { color: '#cbb8ff' },
     },
     {
-      id: 'mend', name: 'Mend Seam', type: 'gcd', target: 'ally', anim: 'cast',
-      cast: k => (k.g.spool >= WEAVE.MEND_COST || k.has('ahead') ? 0 : 1.8),
-      desc: '1.8s cast: a {h:500} heal that runs down every Thread on your target at full strength. With 35 Spool it spends it, is instant and heals 35% more.',
-      glow: k => k.g.spool >= 70,
+      id: 'mend', name: 'Mend Seam', type: 'gcd', target: 'ally', anim: 'cast', allowDead: true, usable: weaveRaiseUsable,
+      cast: k => (targetDown(k, 'mend') ? RAISE_CAST : k.g.spool >= WEAVE.MEND_COST || k.has('ahead') ? 0 : 1.8),
+      desc: '1.8s cast: a {h:500} heal that runs down every Thread on your target at full strength. With 35 Spool it spends it, is instant and heals 35% more. Aimed at a fallen ally it is a 5s cast that brings them back instead (once every 30s), with Raise Sickness: 15% less damage and healing for 20s, more for every fall this pull.',
+      glow: k => k.g.spool >= 70 || targetDown(k, 'mend'),
       effect(k, t) {
+        if (weaveRaise(k, this, t)) return;
         // (Stitched Ahead: the readied heal costs no Spool and heals as if it had spent 35; Full Bobbin: a Mend Seam that spends Spool winds 10 back)
         const free = k.has('ahead'), sp = k.g.spool >= WEAVE.MEND_COST;
         if (free) k.consume('ahead'); else if (sp) k.spend('spool', WEAVE.MEND_COST);
@@ -5197,10 +5234,11 @@ KITS.marionettist = {
 // the moves the two classes' talents grant (rows III and V)
 talentMoves('threadweaver', {
   threadweaver_embroider: {
-    id: 'embroider', replaces: 'mend', icon: 'mend', name: 'Embroider', type: 'gcd', target: 'ally', anim: 'cast', talent: true,
-    desc: 'Instant: a {h:300} heal that runs down every Thread on your target at full strength, and on through their threads at 60%. With 20 Spool it spends them and heals {h:480} instead.',
-    glow: k => k.g.spool >= 20,
+    id: 'embroider', replaces: 'mend', icon: 'mend', name: 'Embroider', type: 'gcd', target: 'ally', anim: 'cast', talent: true, allowDead: true, usable: weaveRaiseUsable,
+    desc: 'Instant: a {h:300} heal that runs down every Thread on your target at full strength, and on through their threads at 60%. With 20 Spool it spends them and heals {h:480} instead. On a fallen ally it raises them at once (once every 30s), with heavy Raise Sickness: 30% less damage and healing for 30s, more for every fall this pull.',
+    glow: k => k.g.spool >= 20 || targetDown(k, 'mend'),
     effect(k, t) {
+      if (weaveRaise(k, this, t)) return;
       const free = k.has('ahead'), sp = k.g.spool >= 20;   // (always usable: the Spool is a bonus, never a gate. Stitched Ahead: no Spool spent, and 50% more)
       if (free) k.consume('ahead'); else if (sp) k.spend('spool', 20);
       const { amount, crit } = k.healAmount(free ? 300 * 1.5 : sp ? 480 * (k.perk('threadweaver_w2') ? 1.2 : 1) : 300, { ab: this });   // (Mend Seam's enhancement: it spends Spool)
@@ -5785,6 +5823,7 @@ KITS.gloomsworn = {
         if (k.talent('gloomsworn_interest') && (k.g.gloom || 0) >= 40) k.after(0.4, () => k.damage(pot * 0.4, { ab: this, extra: true }));
         const dur = sen ? 10 : 6;
         if (sen) k.shield('lowest', covered ? 220 : 110, dur, { ab: this });   // (a Sentinel's barrier chains on to the most hurt ally; if that is you, yours below replaces it)
+        else if (k.def.hollowEcho) k.shield('lowest', covered ? 160 : 80, dur + 2, { ab: this });   // (a Reaver of Dusk's chains on too, smaller: the same barrier, 80 for 8s)
         k.shield('self', k.perk('gloomsworn_a2') ? 225 : 150, dur, { ab: this });
       },
       fx: { type: 'slash', color: '#5a3a8a', r: 60, span: 1.3 },
@@ -5813,6 +5852,7 @@ KITS.gloomsworn = {
         gloomSpend(k, gloomPallCost(k));
         if (free) k.after(0.1, () => k.reduceCooldown(this.id, k.cdRemaining(this) / 2));
         k.mitigate('party', 0.25, (k.def.sentinel ? 8 : 6) + (k.perk('gloomsworn_w3') ? 2 : 0), { ab: this });
+        if (k.def.sentinel) k.mitigate('self', 0.15, 8 + (k.perk('gloomsworn_w3') ? 2 : 0), { ab: this });   // (the Sentinel stands in front of the pall it lays: 15% less again on itself)
         if (k.talent('gloomsworn_bearer')) gloomBearers(k, this);
         k.fx('black-pall');
       },
@@ -6623,7 +6663,14 @@ function tideDeep(k, ab, f, base, span) {
     k.after(8, ring);
   }
 }
+// The Tide's raise rides on its small heal (Sip, or Swell): aimed at a fallen ally it is the 5s cast that brings them back, once every
+// TIDE_RAISE_CD s, and the water is not touched (every other healer who raises gets a button of its own; this one has none to spare)
+const TIDE_RAISE_CD = 30;
+const tideRaiseCast = k => (targetDown(k, 'sip') ? RAISE_CAST : 0);
+const tideRaiseUsable = k => !targetDown(k, 'sip') || k.now >= (k.g.raiseAt || 0);
+function tideRaise(k, ab, t) { k.g.raiseAt = k.now + TIDE_RAISE_CD; k.raise(t, { ab }); k.ultGain(2); }
 function tideSip(k, ab, t, pot, cost) {
+  if (typeof t === 'number' && k.env.isDead && k.env.isDead(t)) { tideRaise(k, ab, t); return; }
   const free = !!k.g.lowWater, low = tideLow(k);
   k.g.lowWater = false;
   const af = k.env.allyHp && t != null && t !== true ? k.env.allyHp(t) : null;   // (an ally under half health: the sip heals 60% more)
@@ -6698,9 +6745,9 @@ KITS.tidecaller = {
       fx: { type: 'projectile', color: '#bff3ea', range: RANGED, speed: 850 },
     },
     {
-      id: 'sip', name: 'Sip', type: 'gcd', target: 'ally', anim: 'cast',
-      desc: 'Instant: heals one ally for {h:260}. Costs a small slice of the tide; at low water it heals 30% more, and on an ally under half health 80% more.',
-      glow(k) { return tideSipGlow(k, this); },
+      id: 'sip', name: 'Sip', type: 'gcd', target: 'ally', anim: 'cast', allowDead: true, cast: tideRaiseCast, usable: tideRaiseUsable,
+      desc: 'Instant: heals one ally for {h:260}. Costs a small slice of the tide; at low water it heals 30% more, and on an ally under half health 80% more. On a fallen ally it is a 5s cast that brings them back to life, once every 30s, with Raise Sickness: 15% less damage and healing for 20s, more for every fall this pull.',
+      glow(k) { return targetDown(k, 'sip') || tideSipGlow(k, this); },
       effect(k, t) { tideSip(k, this, t, 260, TIDE.SIP); },
       fx: { type: 'ring', color: '#d7f2ee', r: 36, onTarget: true },
     },
@@ -6802,7 +6849,7 @@ talentMoves('tidecaller', {
 TALENT_ABILITIES.tidecaller_bore.spec = { undertow: Object.assign({}, TALENT_ABILITIES.tidecaller_bore.ab, {
   desc: 'Instant: spend all the tide in a wave rolled out ahead of you. It heals the party from {h:190} at low water up to {h:480} at high water, leaves a {s:80} shield, breaks on the boss for {d:30} up to {d:100} and wraps you in a Deep Shield of {s:100} up to {s:250} for 8s.' }) };
 
-if (typeof module !== 'undefined') Object.assign(module.exports, { TIDE, tideF, tideFlood, tideFull, tideHigh, tideLow, tideWall, tideMarked, tideNextCrest, tideGain, tideSpend, tideSurge, tideUndertow, tideSip, tideSurgePot, tideSurgeGlow, tideSurgeCast, tideCurrent });
+if (typeof module !== 'undefined') Object.assign(module.exports, { TIDE, tideF, tideFlood, tideFull, tideHigh, tideLow, tideWall, tideMarked, tideNextCrest, tideGain, tideSpend, tideSurge, tideUndertow, tideSip, tideSurgePot, tideSurgeGlow, tideSurgeCast, tideCurrent, tideRaiseCast, tideRaiseUsable });
 
 // ===================================================================================================================
 // LANTERNKEEPER (healer, class 21; docs/plans/2026-10-new-classes-3.md): lanterns on the floor and on allies.
@@ -6981,6 +7028,11 @@ function lkFlare(k, ab, half) {
   k.fx('lk-flare', { n: g.lan.length, all: lkLight(k) ? 1 : 0, twin: half ? 1 : 0 });
 }
 const lkShieldAmt = (k, pot) => Math.round(pot * ENGINE.POT_SCALE * (1 + (k.def.healMod ? k.def.healMod(k, {}) : 0)) * (1 + (k.gear().power || 0)) * (1 + k.fxMod('heal')));
+// The Lanternkeeper's raise rides on the Hand Lantern (as the Tide's does on Sip): aimed at a fallen ally it is the 5s cast that brings them back,
+// once every LK_RAISE_CD s, for 1 Ember
+const LK_RAISE_CD = 30;
+const lkRaiseCast = k => (targetDown(k, 'hand') ? RAISE_CAST : 0);
+const lkHandUsable = k => k.g.emb >= 1 && (!targetDown(k, 'hand') || k.now >= (k.g.raiseAt || 0));
 function lkCarryReach(k) { const r = k.def.steadyGlow ? LANTERN.CALL_REACH : LANTERN.REACH; return k.talent('lanternkeeper_longtoss') ? r * 2 : r; }
 
 KITS.lanternkeeper = {
@@ -7039,11 +7091,11 @@ KITS.lanternkeeper = {
       fx: { type: 'ring', color: '#ffc46b', r: 40, onTarget: false },
     },
     {
-      id: 'hand', name: 'Hand Lantern', type: 'gcd', target: 'ally', cd: 8, anim: 'cast',
-      usable: k => k.g.emb >= 1,
-      desc: 'Instant, 1 Ember: hang a lantern on an ally for 12s. It heals them at once for {h:400}, then goes where they go and heals them and anyone close for {h:80} every second.',
-      glow: k => k.g.emb >= 1 && !k.g.lan.some(l => l.kind === 'hand'),
+      id: 'hand', name: 'Hand Lantern', type: 'gcd', target: 'ally', cd: 8, anim: 'cast', allowDead: true, cast: lkRaiseCast, usable: lkHandUsable,
+      desc: 'Instant, 1 Ember: hang a lantern on an ally for 12s. It heals them at once for {h:400}, then goes where they go and heals them and anyone close for {h:80} every second. Aimed at a fallen ally it is a 5s cast that kindles them back to life instead (once every 30s).',
+      glow: k => (k.g.emb >= 1 && !k.g.lan.some(l => l.kind === 'hand')) || targetDown(k, 'hand'),
       effect(k, t) {
+        if (typeof t === 'number' && k.env.isDead && k.env.isDead(t)) { k.g.emb -= 1; k.g.raiseAt = k.now + LK_RAISE_CD; k.raise(t, { ab: this }); k.ultGain(2); k.fx('lk-hang', { to: t }); return; }   // (the raise rides on the Hand Lantern, the one move aimed at an ally: it has no button of its own)
         k.g.emb -= 1;
         lkAdd(k, 'hand', { on: typeof t === 'number' ? t : 'self', r: LANTERN.HAND_R, pot: 80, end: k.now + LANTERN.HAND_LIFE + (k.perk('lanternkeeper_w2') ? 3 : 0), ox: 0, oy: -6 });
         // Last Light: a Hand Lantern hung on an ally under 20% health holds them up for 4s, as Relight's heal would. It goes out BEFORE the lantern's own heal, so the host judges their health as it was (fight.js 'mit', ev.last)

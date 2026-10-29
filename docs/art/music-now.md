@@ -244,6 +244,95 @@ vast bright epic fantasy finale boss theme, 88 BPM, F-sharp minor, the same melo
 
 ---
 
+## The Ultimate (the Cinder Sovereign)
+
+One theme runs through all six tracks: **the Sovereign's theme**, a slow five-note figure that climbs and then falls back a step. All six are in **D minor**, the key of the title screen, so the last fight of the game echoes the first thing a player hears. The acts change at set pieces that open on silence, so the tempos can differ.
+
+- **The order of the instruments:** they pile up as the party walks home, from the title screen's lute and cello, to a full orchestra, to a choir, to everything at once with the town's own fiddle, whistle and dulcimer.
+- **If your tool can take audio** (cover or extend from an uploaded file), use `mus-title` as the source for `mus-ult-1`, and `mus-town` for `mus-ult-4` and `mus-ult-end`. That carries the real melodies across. Otherwise the shared key, tempo and instruments carry the link.
+- **Keep the theme the same across tracks:** generate `mus-ult-1` first, then use it as the audio source for the other act tracks if you can.
+
+### The Kindling · `mus-ult-1` (Act I, about 2:30 loop)
+The first act, in a cold hall of four braziers deep under the town: the title screen's own sound turned dark and dangerous. A plucked lute figure and a solo cello carry the theme plainly, with low whistle answering, over a steady frame drum and low strings. Restrained and ominous, a folk tune at the bottom of a well. It must loop cleanly. If it turns into pop, add `no pop, no EDM`; if it is too gentle, add `menacing, driving frame drum, low brass swells`.
+```text
+dark folk fantasy boss theme, 84 BPM, D minor, plucked lute ostinato, solo cello melody, low whistle answers, steady frame drum, low string drone, slow menacing brass swells, ember and ash, restrained, ominous, instrumental, no lyrics
+```
+```text
+[Instrumental]
+[Kindle: a low string drone, the lute alone plays a five-note figure that climbs and falls back a step]
+[Theme: the solo cello takes the five-note theme over the lute, the frame drum enters steady, low whistle answers each phrase]
+[Gathering: low brass swells under the theme, the drum doubles, the strings rise a step]
+[Hush: only the lute figure and the drone, one held whistle note]
+[Theme: cello and whistle together in full, brass beneath, end on the lute figure so it loops]
+```
+
+### The Forge · `mus-ult-2` (Act II, about 2:30 loop)
+The second act, on a floor of cracked sheets with the high places burning round the room: the theme on a full orchestra, heavy and driving, with anvil strikes as the percussion. Forged and relentless. Same key; slightly faster. If it gets too busy, add `clear melody in front`; if the anvils vanish, add `prominent anvil strikes`.
+```text
+epic orchestral boss theme, 96 BPM, D minor, full orchestra, driving low strings ostinato, heavy brass melody, anvil and hammer strikes as percussion, taiko drums, forge, molten, relentless, cinematic, instrumental, no lyrics
+```
+```text
+[Instrumental]
+[Strike: a single anvil strike, then driving low strings, the five-note theme in the horns]
+[Forge: full brass carries the theme, anvils on every beat, taiko under it]
+[Quench: the orchestra drops away to low strings and a hiss of cymbal, the theme on a lone trumpet]
+[Hammer: everything returns heavier, the theme a step higher, anvils doubled]
+[Strike: end on the driving strings and one anvil strike, so it loops]
+```
+
+### The Heart · `mus-ult-heart` (the wall, about 0:30 loop)
+The Heart Remembers: a sealed boss and a party facing the heads they cut. Almost nothing: a deep heartbeat, a low drone and one held high string note. No melody, no build. It must loop seamlessly.
+```text
+dark ambient tension loop, 60 BPM, D minor, deep heartbeat drum, low sub drone, one sustained high violin note, silence between beats, no melody, instrumental, no vocals
+```
+```text
+[Instrumental]
+[Pulse: a deep heartbeat drum, a low drone, a single high violin note held]
+[Pulse: the same, the heartbeat slightly louder, end on the same beat so it loops]
+```
+
+### The Fall · `mus-ult-3` (Act III, about 2:30 loop)
+The second form under the relit meteor: the theme sung by a full wordless choir with glass, bells and the roar of the meteor beneath, vast and terrible. It starts at full weight with no intro, because it opens on the halo opening into a wheel of blades. Same key. If vocals form words, add `wordless choir only, no lyrics`; if it is too bright, add `dark, ominous, minor key`.
+```text
+vast dark choral fantasy boss theme, 88 BPM, D minor, full wordless choir carries the melody, orchestra, glass harmonica and tuned bells, deep roaring drone like a falling meteor, huge drums, single great blade strikes, immense, terrible, instrumental, no lyrics
+```
+```text
+[Instrumental]
+[Rebirth: a huge choir chord at full weight, a great blade strike, the meteor's roar beneath]
+[Theme: the choir sings the five-note theme over strings, drums on every other bar, bells falling like embers]
+[Dance: the choir answers itself one bar late, glass harmonica runs between phrases, blade strikes on the beat]
+[Hush: the roar alone, one held choir note, one glass note]
+[Theme: choir, orchestra and bells in full, a step higher at the end, close on the opening chord so it loops]
+```
+
+### Every Name · `mus-ult-4` (Act IV, about 3:00)
+The last act, in Emberfall's own square on fire: everything at once. The Sovereign's theme in choir and orchestra, *with* the town's own instruments (fiddle, tin whistle, hammered dulcimer) playing a warm village tune against it, so the town is fighting back. It grows section by section, four passes, each bigger than the last. If the folk instruments get lost, add `fiddle and whistle clearly in front`; if it turns cheerful, add `desperate, epic, minor key`.
+```text
+epic final boss theme, 92 BPM, D minor, full orchestra and wordless choir, folk fiddle, tin whistle and hammered dulcimer playing a warm village melody against the dark theme, huge drums, burning town, desperate, triumphant, cinematic, instrumental, no lyrics
+```
+```text
+[Instrumental]
+[Square: hammered dulcimer alone plays a warm village figure, then the choir crashes in with the five-note dark theme]
+[First Pass: orchestra and choir carry the theme, the fiddle answers with the village melody]
+[Second Pass: the tin whistle joins the fiddle, drums double, the two melodies trade phrases]
+[Third Pass: the village melody and the dark theme play at once, brass and choir at full]
+[Last Pass: everything a step higher, the fiddle and whistle soaring over the choir, the biggest moment of the game]
+```
+
+### Night in the Square · `mus-ult-end` (the kill, about 1:00, plays once)
+The fire has gone out and the party is standing in the real square at night. One tin whistle plays the town's warm village tune, slowly, alone. Then the hammered dulcimer joins softly for the second phrase, and it ends on a single held note. No drums, no orchestra, no choir. Quiet enough to hear the night.
+```text
+quiet solo tin whistle, 66 BPM, D major ending, a slow warm village melody played alone, then soft hammered dulcimer joins, night air, peaceful, tender, a long journey over, instrumental, no drums, no vocals
+```
+```text
+[Instrumental]
+[Night: a single tin whistle plays the warm village melody slowly and alone]
+[Home: the hammered dulcimer joins softly under the second phrase]
+[End: one held whistle note fading into silence]
+```
+
+---
+
 ## Short pieces
 
 ### Before the pull · `mus-pull` (40 to 60 s loop, quiet, no climax)
@@ -279,7 +368,7 @@ short somber fantasy sting, D minor, slow low strings sinking, a single bell, fa
 
 ---
 
-## Checklist (25 tracks)
+## Checklist (31 tracks)
 - [x] `mus-skitterra`
 - [x] `mus-skitterra-hard`
 - [x] `mus-volkar`
@@ -305,3 +394,9 @@ short somber fantasy sting, D minor, slow low strings sinking, a single bell, fa
 - [ ] `mus-pull`
 - [ ] `mus-victory`
 - [ ] `mus-wipe`
+- [ ] `mus-ult-1`
+- [ ] `mus-ult-2`
+- [ ] `mus-ult-heart`
+- [ ] `mus-ult-3`
+- [ ] `mus-ult-4`
+- [ ] `mus-ult-end`

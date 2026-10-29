@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Cinder Sovereign effects</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body { margin: 0; background: #0b0b0d; color: #cfc8bc; font: 13px/1.4 system-ui, sans-serif; }
+  header { padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; border-bottom: 1px solid #222; }
+  header b { font-size: 15px; color: #e8dcc4; margin-right: 6px; }
+  label { display: inline-flex; gap: 6px; align-items: center; }
+  button { background: #17171b; color: #cfc8bc; border: 1px solid #333; border-radius: 5px; padding: 4px 8px; font: inherit; cursor: pointer; }
+  main { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 10px; padding: 10px; }
+  figure { margin: 0; position: relative; }
+  figcaption { position: absolute; left: 10px; top: 8px; font-weight: 600; color: #e8dcc4; text-shadow: 0 1px 3px #000; pointer-events: none; }
+  figcaption small { display: block; font-weight: 400; color: #b8b0a2; }
+  canvas { width: 100%; height: auto; display: block; background: #000; border-radius: 6px; }
+  body.bare header, body.bare figcaption { display: none; } body.bare main { padding: 0; display: block; } body.bare canvas { width: auto; height: 100vh; max-width: 100vw; border-radius: 0; }
+  #err { color: #ff7a6a; padding: 8px 16px; white-space: pre-wrap; }
+</style></head>
+<body>
+<header>
+  <b>The Cinder Sovereign: Acts I to IV effects</b>
+  <label><input type="checkbox" id="low"> low effects</label>
+  <label><input type="checkbox" id="pause"> pause</label>
+  <label>speed <input id="speed" type="range" min="0.1" max="2" step="0.1" value="1"></label>
+  <span id="clock"></span><span id="fps"></span>
+  <span>?e=name shows one large (descent kindling brand sweep ember scatter turn flambe web emberash bell doom replay tithe burnback glass sunk heads dive twinmeet twinflee twinshift twinwalls heart shatter rebirth stance crescent lance pyre dance wheel wheelmiss wheelhold seeds holes holes4 sapling grace peel haze lastflame emberfall wipe wipeburnt act4); &amp;t=seconds starts there; &amp;freeze holds it; &amp;low=1 starts with low effects; &amp;bare hides the page's chrome for a screenshot</span>
+</header>
+<div id="err"></div>
+<main id="grid"></main>
+<script src="../../client/js/draw-util.js"></script>
+<script src="../../client/js/arena/shapes.js"></script>
+<script src="../../client/js/arena/arena-view.js"></script>
+<script src="../../client/js/set3-sky.js"></script>
+<script src="../../client/js/sovereign-rooms.js"></script>
+<script src="../../client/js/sovereign-art.js"></script>
+<script src="../../client/js/bosses.js"></script>
+<script src="../../client/js/hydra-art.js"></script>
+<script src="../../client/js/data.js"></script>
+<script src="../../client/js/arena/bosses/archmage.js"></script>
+<script src="../../client/js/archmage-art.js"></script>
+<script src="../../client/js/titan-art.js"></script>
+<script src="../../client/js/wyrm-art.js"></script>
+<script src="../../client/js/corvane-art.js"></script>
+<script src="../../client/js/brannoc-art.js"></script>
+<script src="../../client/js/morrowoak-art.js"></script>
+<script src="../../client/js/caelum-art.js"></script>
+<script src="../../client/js/ult-echo.js"></script>
+<script src="../../client/js/sovereign-fx.js"></script>
+<script>
+  const NOTES = {
+    descent: 'The way down: seams light with the halo, ash and cinder glimpses rise at the rim', kindling: 'Kindling: glyph, cinders drawn in, then the ring of fire out to the walls',
+    brand: 'Brand: heat gathers on the tank, the sear, the glyph (floor and chest) that pulses every 3 s', sweep: 'Ashen Sweep: the edge heats, the molten crescent crosses the red half, the slash scars the floor',
+    ember: 'Cupped Ember: cupped, thrown in an arc, a blue column', scatter: 'Scatter: sparks on every circle, then bursting off each hero',
+    turn: 'Halo Turn: beams sweep round from the lit sigils, lock on the lines, fire (three sigils are dark)', flambe: 'Flambe Service: rims fill in order, lids lift, blue-tipped flame runs plate to plate, the Mince',
+    web: 'Burning Web: threads and knots; one knot broken (fuse both ways); the other two go up whole with her shadow',
+    emberash: 'Ember and Ash: a flame (fire) or a curl of ash orbits each hero; faint lines join opposites as they drift together; the Surge bursts on the pairs',
+    bell: 'The Crier: the Hollow King (stand-in ghost) rings his bell: three rings of grave-green sound with embers shot through them',
+    doom: 'Royal Doom: skull sigil and burning-down ring under the doomed; the lantern flame flies from the halo, is carried over, and the cure breaks the sigil',
+    replay: 'The knights replay the sweep: grave runes and a ghost of the old slash while it winds up, then each knight cuts a fan of green and ember across the red half',
+    tithe: 'Royal Tithe: life lifted off each hero as green-gold motes to the Sovereign; then the Dirge tolls (faint tolls, then one heavy ring)',
+    glass: 'Glass Floor (Act II): the sheets glow red-hot, a crack front runs out sheet by sheet (the next ring in full, later ones faint), each shatters into glittering shards and sinks into black water',
+    sunk: 'The sunk sheets: black boiling water with an ember rim and sheen and steam wisps (a red circle laid over it to judge readability)',
+    heads: 'Heads of Flame: a sigil burns in, a fire serpent rises into the real head (ADD_ART hy-flame); it flickers, bites (glyph, lunge, fan of fire), and when cut folds into a burning stump',
+    dive: 'Cinder Dive: the scorched spot glows, embers ignite along the line, the comet with wings of flame dives, the landing slams, the Aftershock rolls out, steam bursts at the sunk sheets the line crossed',
+    twinmeet: 'Twin Brands, a meet (frost, the east wall): the brands burn on as frost glyphs and are linked by a thread of light, the wall grows ice along its rim, the two walk to the wall point and the blue blaze goes up where they meet',
+    twinflee: 'Twin Brands, a flee (fire, the north wall): fire brands, the wall burning along its rim, a red bloom at the wall point and a ring of fire round each bearer circle as they reach the far corners',
+    twinshift: 'Twin Brands, the shifted cast: the void is lit in the west for 2.8 s, then its light jumps across the room to the east (frost); the brands change element with it and the new wall paints in full',
+    twinwalls: 'The four walls and their brands in turn: fire (north), frost (east), lightning (south), the void (west); no telegraphs, to judge each element on its own',
+    heart: 'The Heart Remembers: the room darkens at its edges and beats; the Sovereign sealed in a bell of glass and embers; a pillar of fire from each stump on the beat, each with a crack out of the floor; the held breath; the blade and Kindling (telegraphs laid over it); then the seal shatters',
+    shatter: 'The seal breaking (a short run): the glass crazes white-gold, bursts into shards that streak out low and fast, and a white-gold ring runs across the whole floor',
+    rebirth: 'Rebirth (the set piece, 12 s): the blade is driven in, the room fire spirals into it, the room goes dark (party and halo lit), the halo opens to the rim in slow motion as blades of light, the sky splits and the floor becomes the crater, the choir tolls, the cast gathers, the raidwide tolls',
+    stance: "Corvane's stance (crane, comet, parting in turn; the grey dashed line is the blade the gleam runs along): a cold-blue gleam along his blade, an ember one answering on the Sovereign's, out of step at first and falling into step; a flare as the move begins",
+    crescent: "Crescent (crater floor): two wide fans, the Sovereign's ember and Corvane's with a cold edge, sweep out and cross; between the beats the leading edge sweeps to the turned fan; scars of rays are left. The safe wedge is never painted",
+    lance: "Lance: a needle charges at each origin, then a blade-thin streak runs the line (the Sovereign's, then Corvane's with a cold edge) to the wall; a burning line stays and the floor cracks where it struck",
+    pyre: "Pyre: numbered burning marks where the heroes stood (the next beat's brightest); the Sovereign cuts 1, 2, 3, 4 while Corvane cuts from the other end; each cut a streak of fire with a blink flash and a cooling line",
+    dance: "The Sovereign's Dance: silver-and-ember numbered afterimages, the next brightest; each cut a burning slash that hangs a moment, then falls as embers; on the last three beats Caelum's silver-white cuts land beside them",
+    wheel: "Sunwheel of Embers, caught: the wheel spins up in Brannoc's hand, rolls its painted path and clangs at each bounce; the walls of fire rise along the legs run; the catch flares blue-white and every wall is snuffed into smoke at once",
+    wheelmiss: "Sunwheel of Embers, missed: the wheel bursts on the room and the walls burn down slowly (embers and coals), then scorch",
+    wheelhold: 'The Grace holds the floor fire: the Grace lands (3 s) before the Sunwheel walls light, so they light only after the 8.6 s hold and then burn their time; no wall goes out while it can still hurt',
+    seeds: 'Seeds of Ash (crater floor): a dark seed pulses over each carrier head with a ring closing on it once a beat, the floor cracking under the circle with a ring counting down inside it; the burst eats a ragged hole through the floor with an edge of fire; the sapling climbs out and walks, leaving cinders',
+    holes: 'The holes (Act III, crater): each burns through in turn (a ragged edge of fire eating outward), then stays: a glowing rim, hot spots and small flames on it, embers lifting, and far below the stones of the town square burning',
+    holes4: 'The holes in the Act IV square: the same opening, but below it burning ground round a void (the portal ring of the square is open, from the set piece)',
+    sapling: 'The saplings: a burning crown on the walking tree and a trail of cinders (the grey tree is a stand-in for the add); one is killed (the crown flares and sinks in embers, ash and a scorch); the other reaches the Sovereign, flares at his feet and lifts into the halo as a comet, and a sigil is relit with a ring and a glint',
+    grace: 'Grace Withdrawn and Nightfall: a thread of light drawn from every hero to the Sovereign, snapping; the party left dim until healed (healed one by one); a dark falling over the room (heroes and halo lit), three tolls and one great toll ring as it lands',
+    peel: 'Every Name (set piece): the crater floor peels away in strips of burning paper (the portal strip first), the burning square under it; scraps and cinders in the air; the holes flare as the fire passes (burning through); the portal seal splits and light rises; the Hollow King (stand-in) climbs out and his lantern catches',
+    haze: 'Heat haze: a displaced patch of the canvas round the Sovereign and along his blade (a few pixels of shimmer under the telegraphs and units). Tick low effects on to compare; it is off under low effects',
+    lastflame: "The last flame (the kill, 24 s loop): the halo is dark and the Sovereign's ember gutters (the figure sinks and cools); the halo's last flame lets go, drifts down and goes out; the twelve rise from their floor sigils one at a time and are lowered to the ground, the Hollow King last, setting his lantern down; each fades to ash with embers lifting; the fire drains out of the square (the floor's flames sink, the grade ebbs), then the stones cool into the real square at night, with a faint cold ring from the party. Nothing bright",
+    emberfall: "Emberfall (the enrage, 8 s): every flagstone seam goes white-gold ring by ring from the fountain, the town ignites from below (flames out of the seams, a ring of fire at the rim), and the screen burns to ash from its edges in: char, a ragged line of ember eating inward, the middle clear. No flash",
+    wipe: "The wipe (enrage 0): the halo relights flame by flame in a fast ripple, a ring of fire runs out from the Sovereign and the square's fire flares, as if nothing was learned",
+    wipeburnt: "The wipe after Emberfall (enrage 1): the same, with every seam burning white-gold",
+    act4: "Act IV's reused effects together on the square with three holes: two plates and the flambe, the nine-pane glass patch (painted round the holes), the wheel bouncing off a hole's rim, Twin Brands read by charge (a ring and badge in each bearer's fire or ash, a thread in both), pass four's pillars at fresh places, and the lantern leaping to the next hero on a cure",
+    burnback: 'The road burns back (svact 2): braziers pulled into the halo, seams race across the floor, the floor settles in dust and embers (hall becomes forge)',
+  };
+  const q = new URLSearchParams(location.search), one = q.get('e');
+  if (q.has('bare')) document.body.classList.add('bare');
+  const names = one ? [one] : SV_FX.EFFECTS, grid = document.getElementById('grid'), cans = [];
+  for (const name of names) {
+    const f = document.createElement('figure'), c = document.createElement('canvas'), cap = document.createElement('figcaption');
+    c.width = c.height = one ? 1000 : 720; cap.innerHTML = name + '<small>' + (NOTES[name] || '') + '</small>'; f.append(c, cap); grid.append(f); cans.push({ name, c });
+  }
+  const pause = document.getElementById('pause'), speed = document.getElementById('speed'), low = document.getElementById('low');
+  if (q.get('low') === '1') low.checked = true;
+  if (q.has('freeze')) pause.checked = true;
+  let t = Number(q.get('t')) || 0, last = performance.now(), frames = 0, acc = 0;
+  function draw() { for (const r of cans) window.__svFxPreview(r.c, r.name, t, { loop: !q.has('noloop'), low: low.checked }); document.getElementById('clock').textContent = 't ' + t.toFixed(1); }
+  window.__svPage = { draw, setT: v => { t = v; draw(); }, cans };
+  function frame(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (!pause.checked) t += dt * Number(speed.value);
+    try { draw(); } catch (e) { document.getElementById('err').textContent = String(e.stack || e); throw e; }
+    frames++; acc += dt;
+    if (acc > 1) { document.getElementById('fps').textContent = Math.round(frames / acc) + ' fps'; frames = 0; acc = 0; }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+</script>
+</body></html>

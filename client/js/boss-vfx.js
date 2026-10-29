@@ -992,6 +992,7 @@ const BOSS_VFX = (() => {
     morrowoak: { def: '#a064ff', seed: '#a064ff', inhale: '#dcc4ff', bloom: '#d8e08a', lash: '#c8a070', tide: '#ffb020', saplings: '#b8d070', dark: '#a064ff', swallow: '#a064ff', unfold: '#dcc4ff',
       cleaver: '#ff8a2a', roots: '#b8ef5a', storm: '#7fe8ff', lantern: '#6dff9a', wing: '#ff6a2a', fist: '#8ad0ee', rune: '#3fe0c8', head: '#4ad8a0' },
     caelum: { def: '#cfd6f2', glint: '#e8ecff', wake: '#e8ecff', crown: '#cdbfff', thrust: '#cdbfff', grace: '#f4f7ff', night: '#8c70ff', starfall: '#cdbfff', ember: '#ff9a4a', summon: '#ffd36a', embers: '#ff9a4a', constellation: '#fff0b8', ascend: '#ffffff', horizon: '#ffd36a', coil: '#ffd36a' },
+    sovereign: { def: '#ff9a3c', call: '#ffd36a', kindling: '#ff7a2a', brand: '#ff5a2a', sweep: '#ff9a3c', ember: '#ffb86a', scatter: '#ff9a3c', haloturn: '#ffd36a', rebirth: '#fff0c8', enrage: '#fff0c8' },   // (sovereign-art.js; effects come with sovereign-fx.js)
   };
   // the wind-up while the boss casts: motes spiral in, a ring tightens, everything brightens near the end
   // Gorge: the whole kitchen is sucked into him: arms of fire and food spiralling in, tightening as he swallows
@@ -1850,6 +1851,8 @@ const BOSS_VFX = (() => {
     caelum: { glint: [['clGlint', 0.3]], wake: [['clWake', 0.3]], crown: [['clCrown', 0.4]], thrust: [['clThrust', 0.4]], grace: [['clGrace', 0.6]], night: [['clNight', 0.4]],
       starfall: [['clSummon', 0.4]], ember: [['clEmber', 0.4]], summon: [['clSummon', 1.2]], embers: [['clSummon', 0.5]], constellation: [['clSummon', 0.6]],
       ascend: [['clAscend', 0.3]], horizon: [['clHorizon', 0.5]], coil: [['clHorizon', 0.5]], enrage: [['clRage', 0.5]] },   // (caelum-art.js)
+    sovereign: { kindling: [['svKindling', 0.4]], brand: [['svBrand', 0.4]], sweep: [['svSweep', 0.4]], ember: [['svEmber', 0.4]], scatter: [['svScatter', 0.4]], haloturn: [['svHaloturn', 0.4]],
+      call: [['svCallPose', 0.5]], rebirth: [['svRebirth', 0.5]], dance: [['svDance', 0.4]], crescent: [['svCrescent', 0.4]], lance: [['svLance', 0.4]], pyre: [['svPyre', 0.4]], enrage: [['svEnrage', 0.5]] },   // (sovereign-art.js)
   };
   const castKey = (kind, anim, name) => {
     if (kind === 'grubnak' && anim === 'boil' && name === 'Flare-Up') return 'heave';

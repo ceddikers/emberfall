@@ -15,6 +15,7 @@
 //   post2: post1 + a set-2 Normal clear: eight pieces swapped for set-2 pieces of the same rarity (items.js SET2_STEP). SET 2 HARD
 //   post3: post2 + a set-2 Hard clear: two set-2 Mythics and more Legendaries. SET 3 NORMAL
 //   post4: post3 + a set-3 Normal clear: one set-3 Rare and two set-3 Legendaries swapped in (items.js SET3_STEP). SET 3 HARD
+//   post5: post4 + a set-3 Hard clear: two set-3 Mythics (Crown of Dead Leaves, The Sunwheel) and two more set-3 Legendaries (Halo Shard Pendant, Last Watch Medal) swapped in. THE ULTIMATE
 const BotGear = (() => {
   const I = typeof module !== 'undefined' ? require('./items.js') : null;   // (Node: the tools; the browser has items.js's globals)
   const items = () => (I ? I : { ITEMS, CLASS_MAIN, gearTotals, gearMods, sanitizeGear, gearSources, partyBonus });
@@ -50,11 +51,18 @@ const BotGear = (() => {
     {},
     { g_glaciereye: 'g_champlaurel' },                               // L10
   ];
-  const LEVELS = ['fresh', 'mid', 'full', 'post1', 'post2', 'post3', 'post4'];
+  const POST5 = [
+    {},                                                              // (the tank keeps its health and defence)
+    { g_arcanum: 'g_haloshard' },                                    // L7 to L12
+    { m_crown: 'm_leafcrown', g_ninthhead: 'g_lastwatch' },          // M4 to M11, L8 to L9
+    { m_broodeye: 'm_sunwheel' },                                    // M2 to M10
+  ];
+  const LEVELS = ['fresh', 'mid', 'full', 'post1', 'post2', 'post3', 'post4', 'post5'];
   // the gear a fight is tuned for (CLAUDE.md "Tuning gear"): each set's Normal and Hard
   const TUNED = { 1: { normal: 'fresh', hard: 'mid' }, 2: { normal: 'post1', hard: 'post2' }, 3: { normal: 'post3', hard: 'post4' } };
   function levelFor(bossId, mode) {
-    const b = typeof BOSSES !== 'undefined' ? BOSSES.find(x => x.id === bossId) : null;
+    if (bossId === 'sovereign') return 'post5';   // (the Ultimate: a party that cleared everything, set 3's Hard included)
+    const b =typeof BOSSES !== 'undefined' ? BOSSES.find(x => x.id === bossId) : null;
     const t = b && TUNED[b.set];
     return t ? t[mode === 'hard' ? 'hard' : 'normal'] : null;
   }
@@ -65,11 +73,12 @@ const BotGear = (() => {
     if (level === 'fresh') { const t = i + 1; return [w(t), GEN[t][2], GEN[t][3]]; }
     if (level === 'mid') { const tiers = [[1, 1, 1, 1], [1, 1, 1, 1], [2, 2, 3, 3], [4, 4, 4, 4]][i]; return [w(tiers[0]), GEN[tiers[1]][2], GEN[tiers[2]][3], GEN[tiers[3]][4]]; }
     if (level === 'full') return [`${cls}_w1`, 'm_deadcourt', 'm_broodeye', 'm_torc'];
-    if (!/^post[1-4]$/.test(level)) return null;
+    if (!/^post[1-5]$/.test(level)) return null;
     let keys = POST1[i].map(k => k.replace('{c}', cls));
     if (level !== 'post1') keys = keys.map((k, j) => POST2[i][POST1[i][j]] || k);
-    if (level === 'post3' || level === 'post4') keys = keys.map(k => POST3[i][k] || k);
-    if (level === 'post4') keys = keys.map(k => POST4[i][k] || k);
+    if (level === 'post3' || level === 'post4' || level === 'post5') keys = keys.map(k => POST3[i][k] || k);
+    if (level === 'post4' || level === 'post5') keys = keys.map(k => POST4[i][k] || k);
+    if (level === 'post5') keys = keys.map(k => POST5[i][k] || k);
     return keys;
   }
   // a hero's gear at a level: { cls, insts, totals, mods, host, src }, or null for no gear ('base' or an unknown level)
@@ -105,7 +114,7 @@ const BotGear = (() => {
     const want = role === 'tank' ? [0, 2, 3, 1] : role === 'healer' ? [1, 2, 3, 0] : [2, 3, 0, 1];
     return want.find(s => !taken.has(s)) ?? 0;
   }
-  return { LEVELS, TUNED, GEN, POST1, POST2, POST3, POST4, FEASTS, levelFor, keysFor, forHero, build, slotFor };
+  return { LEVELS, TUNED, GEN, POST1, POST2, POST3, POST4, POST5, FEASTS, levelFor, keysFor, forHero, build, slotFor };
 })();
 
 if (typeof module !== 'undefined') module.exports = { BotGear };

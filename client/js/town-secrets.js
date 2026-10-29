@@ -16,6 +16,13 @@ const TOWN_SECRETS = [
     lines: ['Letters are cut into the back of the first portal\'s ring, worn almost smooth: THE KING\'S ROAD.',
       'Below them, four words in a column: KITCHEN. SILVER. BEACON. BARROW.',
       'There were more words under those. The stone has been chipped away.'],
+    // after the first Ultimate clear the same spot can be read once more (pastimes.js: `whole`), and it reads the whole inscription
+    whole: { when: { beaten: ['sovereign'] }, name: 'The words on the back of the gate, whole',
+      lines: ['The stone round the chipped words has gone cold at last. With a finger in the cuts, the whole of it can be read.',
+        'THE KING\'S ROAD. KITCHEN. SILVER. BEACON. BARROW.',
+        'THEN THE WILD LAND AND THE PASS. BEYOND THEM THE CRATER, WHERE THE STAR LIES. GO NO FURTHER.',
+        'ONE COAL FELL SHORT OF THE STAR AND LIES BELOW THIS PLACE. LET THE ROAD CARRY EVERYONE FROM IT. LET NO ONE LOOK DOWN.',
+        'Under the last line, small and in a different hand: THE GROUND IS WARM HERE. PEOPLE WILL STAY.'] },
     reward: { lore: true }, set: 'read-kings-road' },
 
   { id: 'pip-stash', name: 'A hollow in the north-east trees', at: { x: 2285, y: 125 }, r: 24,

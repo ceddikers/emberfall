@@ -889,6 +889,7 @@ let HERO_SPEC = null;
 // afterimages are one image each, never a stack of see-through shapes.
 const HERO_BOX = 150;   // local units round a hero that its picture holds (room for a raised weapon or a staff)
 let _heroScratch = null;
+let SV_SCALE = 1;   // the scale drawHero is drawing at (SvRewards folds the wings at the arena's scale)
 const heroCanvas = () => (typeof document === 'undefined' ? null : document.createElement('canvas'));
 function heroMotion(st, x, y) {
   const t = st.t;
@@ -987,6 +988,102 @@ function waveHand(ctx, t, k) {
   for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(hx, hy, 6.5, -Math.PI / 2 + s * 0.6 - 0.35, -Math.PI / 2 + s * 0.6 + 0.35); ctx.stroke(); }
   ctx.restore();
 }
+// ---------------------------------------------------------------- the Ultimate's cosmetic rewards (the Cinder Sovereign's clear)
+// Earned per hero (Save: heroes[classId].svr = 1, set by Save.recordClear on a clear of raid id 'sovereign'): CINDER WINGS (twelve ember
+// feathers, one per fallen boss: six a side, drawn behind the body) and an EMBER GLOW along the weapon. Look: hot white-yellow core,
+// saturated orange mid, dark ink edges; a slow beat, embers drifting off the tips. In town the wings are fully spread; in a fight
+// they FOLD SMALL (tucked along the back, dim, nothing past the body's own size) so they never hide a telegraph or another hero.
+// Who wears them is opts.sv of drawHero/heroSprite/heroSnapshot:
+//    true            this account's own hero: wears them when Save says that hero earned them (the player, the hero page's preview)
+//    { wings, glow } an explicit answer for someone else's hero (a remote player: sync it with their join message, never read their class)
+//    absent          nobody (bots, townsfolk, other players), except under the test flag
+// opts.fold (0 spread .. 1 folded) overrides when to fold; absent, it folds when the hero is drawn at the arena's scale (1.85).
+// TEST FLAGS (local dev host only: localhost, 127.0.0.1 or a .localhost name; the live site ignores them): localStorage 'emberfall.svRewards' = '1' shows both
+// on EVERY hero drawn (and, with absent opts.fold, 'emberfall.svFold' = '1' folds them in town to preview the fight look). Nothing else reads these keys.
+const SvRewards = (() => {
+  const devHost = () => { try { const h = location.hostname; return h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h.endsWith('.localhost'); } catch (e) { return false; } };
+  const flag = k => { try { return devHost() && localStorage.getItem(k) === '1'; } catch (e) { return false; } };
+  const TEST = flag('emberfall.svRewards'), TEST_FOLD = flag('emberfall.svFold');
+  const ARENA_SCALE = 1.85;   // (main.js ARENA_HERO_SCALE: the fallback for knowing it's a fight)
+  const earned = id => typeof Save !== 'undefined' && Save.svRewards ? Save.svRewards(id) : false;
+  // what a hero wears: { wings, glow } or null
+  function wears(cls, opts) {
+    if (!cls) return null;
+    const sv = opts && opts.sv;
+    if (sv && typeof sv === 'object') return sv.wings || sv.glow ? sv : null;
+    if (TEST) return { wings: true, glow: true };
+    return sv === true && earned(cls.id) ? { wings: true, glow: true } : null;
+  }
+  const foldOf = (scale, opts) => (opts && opts.fold != null ? opts.fold : TEST_FOLD || Math.abs((scale || 1) - ARENA_SCALE) < 0.06 ? 1 : 0);
+  const K = { ink: '#2a0e0a', deep: '#a8280f', red: '#d9461a', ember: '#ff8a2a', gold: '#ffc15a', white: '#fff3c4' };
+  const rnd = (i, n) => { const x = Math.sin(i * 127.1 + n * 311.7) * 43758.5453; return x - Math.floor(x); };
+  // the wings, in the hero's local space, behind the body. fold 0 spread (town), 1 folded small (fight).
+  function wings(ctx, st, fold) {
+    const t = (st.t || 0) + (st.phase || 0), beat = Math.sin(t * 1.5), fl = 1 - fold;
+    const lift = (st.walkK || 0) * 0.04;   // (the wings lift a little when walking)
+    ctx.save();
+    ctx.globalAlpha *= 0.72 + 0.28 * fl;
+    glow(ctx, -8, 0, 15 + 9 * fl, K.ember, 0.18 + 0.12 * fl + 0.04 * beat);   // (a heat-haze at the back, no wider than the body when folded)
+    for (const s of [-1, 1]) {
+      for (let k = 0; k < 6; k++) {
+        // outermost first, so the inner feathers lie over it
+        const i = 5 - k, u = i / 5;
+        const th = (0.18 + 1.08 * u) * fl + (0.05 + 0.26 * u) * fold;                    // the angle off straight-back: spread wide, or tucked
+        const spread = th * (1 + (0.05 * beat + lift) * fl);
+        const L = (13 + 17 * Math.sin(u * 2.2 + 0.2) * 0.9 + 4 * u) * 0.88 * (0.52 + 0.48 * fl) * (1 + 0.025 * beat);   // the middle feathers longest
+        const a = Math.PI - s * spread;
+        const bx = -4 - 0.6 * u * fl, by = s * (8.5 - 1.5 * fold), dx = Math.cos(a), dy = Math.sin(a), px = -dy, py = dx;
+        const w = 2.3 + 0.35 * L * 0.2, mx = bx + dx * L * 0.46, my = by + dy * L * 0.46, nx = bx + dx * L * 0.82, ny = by + dy * L * 0.82;
+        const tx = bx + dx * L, ty = by + dy * L;
+        // ink edge and red-orange body, then the lit orange vane and the white-gold core down the quill
+        poly(ctx, [bx + px * 2, by + py * 2, mx + px * w, my + py * w, nx + px * w * 0.7, ny + py * w * 0.7, tx, ty, nx - px * w * 0.7, ny - py * w * 0.7, mx - px * w, my - py * w, bx - px * 2, by - py * 2], K.red, K.ink, 1.1);
+        poly(ctx, [bx + px * 1.2, by + py * 1.2, mx + px * w * 0.55, my + py * w * 0.55, nx + px * 0.6, ny + py * 0.6, bx + dx * L * 0.92, by + dy * L * 0.92, nx - px * 0.6, ny - py * 0.6, mx - px * w * 0.55, my - py * w * 0.55, bx - px * 1.2, by - py * 1.2], K.ember);
+        line(ctx, bx + dx * 1.5, by + dy * 1.5, bx + dx * L * 0.7, by + dy * L * 0.7, K.white, 0.9);
+        circle(ctx, tx, ty, 0.9, K.gold);
+        // embers lifting off the tip and drifting back
+        if (fl > 0.2 || i % 2 === 0) {
+          const q = (t * 0.42 + rnd(i, s + 3) + (s > 0 ? 0.5 : 0)) % 1, ex = tx + dx * q * 9 - q * 4, ey = ty + dy * q * 9 + (rnd(i, 7) - 0.5) * q * 6;
+          ctx.save(); ctx.globalCompositeOperation = 'lighter';
+          circle(ctx, ex, ey, 1.5 * (1 - q) + 0.4, rgba(q < 0.35 ? K.white : K.ember, 0.85 * (1 - q)));
+          ctx.restore();
+        }
+      }
+    }
+    ctx.restore();
+  }
+  // where each hero holds the weapon(s): [x, y, angle, length] in local space at rest (x forward, y to the hero's right; angle 0 points
+  // forward, a length of 8 or less is a point of light: an orb, a fist). Read off the art (heroes.js); a hero added later gets the default
+  // (a sword at the right hip) until it is listed here.
+  const WEAPON = {
+    bastion: [[7, 12, 0.35, 26]], bloodreaver: [[4, 7, 0.1, 30]], runeguard: [[8, 10, 0.15, 10]], ranger: [[15, -16, Math.PI / 2, 32]],
+    shadowblade: [[8, -10, 0.05, 14], [8, 10, -0.05, 14]], pyromancer: [[4, 9, 0, 10]], cleric: [[7, 12.5, 0, 15]], grovekeeper: [[7, 13, 0, 17]],
+    chronomancer: [[5, -26, Math.PI / 2, 8]], thermist: [[7, 9, 0.1, 7]], driftblade: [[9, 10, 0.25, 28]], alembist: [[8, 10, 0, 7]],
+    gorgemaw: [[4, 14, 0.5, 16]], oathbroker: [[7, 11, 0.35, 22]], ironpalm: [[8, -9, 0, 4], [8, 9, 0, 4]], threadweaver: [[12, 7.5, -0.05, 24]],
+    marionettist: [[13, -8, Math.PI / 2, 16]], gloomsworn: [[9, 11, 0.3, 28]], thresher: [[5, 10, 0.6, 26]], tidecaller: [[6, -10.5, 0, 10]],
+    lanternkeeper: [[7.5, 12.2, 0.3, 16]], kenseier: [[7, 10, 0.5, 24]], houndmaster: [[9, 10, 0.45, 26]],
+  };
+  const DEFAULT_WEAPON = [[7, 12, 0.35, 24]];
+  function glowAlong(ctx, cls, st, fold) {
+    const t = (st.t || 0) + (st.phase || 0);
+    const k = (1 - 0.55 * fold) * (1 - 0.6 * pulse(actP(st, 'attack'))) * (0.82 + 0.18 * Math.sin(t * 2.1));
+    if (k <= 0.02) return;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    for (const w of WEAPON[cls.id] || DEFAULT_WEAPON) {
+      const dx = Math.cos(w[2]), dy = Math.sin(w[2]), L = w[3];
+      if (L <= 8) { glow(ctx, w[0] + dx * L * 0.5, w[1] + dy * L * 0.5, 8, K.ember, 0.4 * k, 0.5 * k); }
+      else {
+        ctx.strokeStyle = rgba(K.ember, 0.5 * k); ctx.lineWidth = 3.2; ctx.beginPath(); ctx.moveTo(w[0], w[1]); ctx.lineTo(w[0] + dx * L, w[1] + dy * L); ctx.stroke();
+        ctx.strokeStyle = rgba(K.white, 0.5 * k); ctx.lineWidth = 1; ctx.stroke();
+        for (let j = 0; j < 3; j++) glow(ctx, w[0] + dx * L * (0.3 + 0.35 * j), w[1] + dy * L * (0.3 + 0.35 * j), 7 + j, K.ember, 0.2 * k);
+      }
+      const q = (t * 0.7 + w[0] * 0.13) % 1;   // one ember lifting off the end
+      circle(ctx, w[0] + dx * L + q * 3, w[1] + dy * L - q * 7, 1.2 * (1 - q) + 0.3, rgba(K.gold, 0.8 * (1 - q) * k));
+    }
+    ctx.restore();
+  }
+  return { wears, foldOf, wings, glowAlong, WEAPON, TEST };
+})();
+
 // the hero itself, in its local space (no shadow, ring or ground marks): what heroSprite takes a picture of
 function heroBody(ctx, cls, angle, st, opts, P) {
   HERO_SPEC = opts.spec || null;
@@ -997,8 +1094,11 @@ function heroBody(ctx, cls, angle, st, opts, P) {
   ctx.translate(body.lunge + P.fwd, 0); ctx.rotate(body.twist + P.tw);
   const br = (1 + Math.sin((st.t + (st.phase || 0)) * 2.5) * 0.02) * (1 + big * 0.06);
   ctx.scale(br * P.sx, br * P.sy);
+  const sv = SvRewards.wears(cls, opts), svFold = sv ? SvRewards.foldOf(SV_SCALE, opts) : 0;
+  if (sv && sv.wings) SvRewards.wings(ctx, st, svFold);   // (behind the body)
   (cls ? HERO_ART[cls.id] || HERO_ART.cleric : HERO_ART.wisp)(ctx, st);   // (a class not drawn yet borrows the Cleric's figure)
   if (cls && opts.spec && SPEC_ART[opts.spec]) SPEC_ART[opts.spec](ctx, st);
+  if (sv && sv.glow) SvRewards.glowAlong(ctx, cls, st, svFold);
   if (cls) drawChannelFocus(ctx, cls, st, cls ? channelP(st) : -1);
   if (P.wave > 0) waveHand(ctx, st.t, P.wave);
 }
@@ -1026,7 +1126,7 @@ function heroSnapshot(ctx, cls, angle, st, opts, into) {
 // cls may be null (wisp). opts: { ring, ringColor (the player's party colour; the role's without one), noShadow, lift, spec,
 // emote: { kind, t, k } (pastimes.js emoteLook) }
 function drawHero(ctx, cls, x, y, angle, st, scale = 1, opts = {}) {
-  HERO_SPEC = opts.spec || null;
+  HERO_SPEC = opts.spec || null; SV_SCALE = scale;
   heroMotion(st, x, y);
   const P = heroPose(st, opts.emote);
   ctx.save();

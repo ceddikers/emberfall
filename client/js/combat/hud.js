@@ -315,7 +315,7 @@ const Hud = {
       const icon = art(ab, i) ? `<i class="ab-icon ${ab.type}${ab.ult ? ' ult' : ''}" style="background-image:${art(ab, i)}"></i>` : '<i class="ab-icon dash">»</i>';
       if (ab.ult) {
         const meta = [ultMeta(ab), k.ultWin ? `${Math.ceil(k.ultLeft())}s left` : `${Math.floor(k.ultCharge())}%`];
-        return `<div class="tip-ab">${icon}<div><b>${name}</b><em>${meta.join(' · ')}</em></div></div>${ab.desc || ''}`;
+        return `<div class="tip-ab">${icon}<div><b>${name}</b><em>${meta.join(' · ')}</em></div></div>${ab.desc || ''}${this.held ? '<br><br><b>Immune</b>The boss cannot be hurt right now.' : ''}`;
       }
       const meta = [ab.meta || (ab.type === 'gcd' ? 'GCD' : 'oGCD')];   // (a paced kit's moves say what limits them instead)
       if (ab.ultOf) meta.unshift('Ultimate');
@@ -468,7 +468,8 @@ const Hud = {
       us.el.classList.toggle('active', !!win);
       // the last tenth before it's full: the ring brightens (anticipation, not yet the cue)
       us.el.classList.toggle('near', !win && !full && v >= 0.9);
-      us.blocked = !win && !full;
+      us.blocked = (!win && !full) || !!this.held;   // (held: a set piece's opening, main.js)
+      us.el.classList.toggle('dim', !!this.held);
       // one cue when it fills (the soft glow then stays: .full)
       if (full && this._ultFull === false) { us.el.classList.remove('cue'); void us.el.offsetWidth; us.el.classList.add('cue'); }
       this._ultFull = full;

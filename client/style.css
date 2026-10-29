@@ -1171,6 +1171,7 @@ body.placing-mark canvas { cursor: crosshair; }
 #lb-gauge .lb-bars i.full { border-color: #8a6a34; }
 #lb-gauge .lb-bars i.full b { background: linear-gradient(90deg, #c9973f, #f2d38a); }
 #lb-gauge kbd { font-size: 9px; line-height: 13px; padding: 0 4px; border: 1px solid #3a2a1c; border-radius: 2px; color: var(--muted); background: #0a0807; }
+#lb-gauge.held { filter: grayscale(.75) brightness(.6); }
 #lb-gauge.ready kbd { color: #f2d38a; border-color: #8a6a34; }
 /* the death recap, on the Down screen */
 #down-veil { grid-template-rows: auto auto auto; align-content: center; gap: 18px; }
@@ -2209,3 +2210,24 @@ body.in-pvp #boss-bar, body.in-pvp #boss-cast, body.in-pvp #lb-gauge, body.in-pv
 body.in-founding #hud-tl, body.in-founding #objective, body.in-founding #minimap, body.in-founding #party, body.in-founding #menu-chip,
 body.in-founding #meter-btn, body.in-founding #help, body.in-founding #target-frame, body.in-founding #focus-frame, body.in-founding #tutorial-btn,
 body.in-founding #combat-hud, body.in-founding #gold-hud, body.in-founding #bag-btn { display: none !important; }
+
+/* the fourth portal's card (sovereign-portal.js): the Practice Hall's style, with an ember edge */
+#svportal { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 20; width: 340px; max-width: calc(100vw - 24px); padding: 12px 14px 14px; background: #15100ef6; border: 1px solid #5a3a26; border-radius: 3px; box-shadow: 0 0 0 1px #000, 0 14px 34px #000c, 0 0 46px #d9461a1f; animation: ui-in .18s ease-out; }
+#svportal.hidden { display: none; }
+#svportal::before { content: ''; position: absolute; inset: 4px; pointer-events: none; border-radius: 2px; border: 1px solid #ff8a2a14; }
+#svportal header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+#svportal h3 { margin: 0; font-family: var(--fantasy); font-size: 13px; letter-spacing: .18em; text-transform: uppercase; color: #ffb066; }
+#svportal .close { width: 24px; height: 24px; padding: 0; display: grid; place-items: center; font-size: 16px; line-height: 1; color: var(--muted); background: none; border: 1px solid transparent; border-radius: 2px; cursor: pointer; }
+#svportal .close:hover { color: var(--gold-hi); border-color: var(--line); }
+#svportal .raid-roster { margin-bottom: 8px; }
+#svportal .sv-fill { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; font-size: 12.5px; color: var(--muted); }
+#svportal .sv-go { display: grid; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; text-align: left; background: #14100c; border: 1px solid #4a3220; border-radius: 2px; color: #e6dcc8; cursor: pointer; font: inherit; }
+#svportal .sv-go:hover { border-color: #e08a4a; background: #1f150d; }
+#svportal .sv-go[aria-disabled="true"] { opacity: .5; cursor: default; }
+#svportal .sv-start { margin-bottom: 8px; border-color: #7a4a28; background: #241709; }
+#svportal .sv-start b { font-family: var(--fantasy); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #ffd9a8; }
+#svportal .sv-acts { display: grid; gap: 4px; }
+#svportal .sv-act { display: grid; grid-template-columns: 30px 1fr; align-items: center; gap: 8px; }
+#svportal .sv-act i { font-style: normal; font-family: var(--fantasy); font-size: 11px; color: var(--muted); }
+#svportal .sv-act b { font-weight: 600; font-size: 12.5px; }
+#svportal .sv-act.off { padding: 8px 10px; background: #0f0c0a; border: 1px solid #2a1f16; border-radius: 2px; opacity: .55; min-height: 17px; }

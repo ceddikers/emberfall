@@ -5,7 +5,7 @@ const path = require('path'), vm = require('vm'), fs = require('fs');
 const client = p => path.join(__dirname, '../client/js', p);
 const { FEATS, FEAT_CATS } = require(client('feats-data.js'));
 const { FeatRules } = require(client('feat-rules.js'));
-const { CLASSES, BOSSES } = require(client('data.js'));
+const { CLASSES, BOSSES, ULTIMATE_BOSS } = require(client('data.js'));
 const { Scoring } = require(client('arena/scoring.js'));
 
 const probs = [];
@@ -15,7 +15,7 @@ const check = (ok, what) => { if (!ok) probs.push(what); };
 {
   const ids = new Set(), titles = new Set(), cats = new Set(FEAT_CATS.map(c => c[0]));
   const TYPES = new Set(['clear', 'clearAll', 'clearNoDeaths', 'clearUnder', 'pulls', 'practice', 'secrets', 'gifts', 'feasts', 'fish', 'journal', 'bounties', 'heroes', 'emotes', 'items', 'trial', 'mark', 'count', 'hardRole', 'hardRoles', 'hardClasses']);
-  const bossIds = new Set(BOSSES.map(b => b.id));
+  const bossIds = new Set(BOSSES.map(b => b.id).concat(ULTIMATE_BOSS ? [ULTIMATE_BOSS.id] : []));   // (the Ultimate is not on the Raid Board but has feats)
   for (const f of FEATS) {
     check(f.id && f.name && f.desc, `${f.id}: needs an id, a name and a description`);
     check(!ids.has(f.id), `${f.id}: duplicate id`); ids.add(f.id);

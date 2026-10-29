@@ -54,7 +54,8 @@ function townClamp(e, m = 40, from = e) {
 // the statues in the hall are a little smaller than the old terrace's: pedestal, plaque, trophy and statue all scale by this
 const PED_S = 0.9;
 TOWN.hall.rows.forEach(y => TOWN.hall.cols.forEach(x => TOWN.pedestals.push({ x, y })));
-// one portal per set, in a row on the terrace (the old statue row); the fourth is shrouded and does nothing yet (the ultimate raid)
+// one portal per set, in a row on the terrace (the old statue row); the fourth is shrouded until every boss has fallen on Hard (the ultimate raid;
+// sovereign-portal.js flips it with townOpenFourthPortal below)
 TOWN.portals = [
   { id: 'kings-road', set: 1, name: "The King's Road", x: 780, y: 658, r: 52 },
   { id: 'wild-realm', set: 2, name: 'The Wild Realm', x: 1020, y: 658, r: 52 },
@@ -69,6 +70,16 @@ const PORTAL_LOOK = {
 };
 
 const COLLIDERS = { rects: [], circles: [] };
+
+// The fourth portal's two states (sovereign-portal.js calls this): sealed (a shrouded, solid thing, set 0, no name) or open (set 4, walkable, the
+// ember look: drawPortalRing / drawSovereignPortal). The static town layer has to be rebuilt after a change (main.js).
+function townOpenFourthPortal(on) {
+  const P = TOWN.portals[3];
+  P.sealed = !on; P.set = on ? 4 : 0; P.name = on ? 'The Ember' : null;
+  if (!P.col) return;
+  const i = COLLIDERS.circles.indexOf(P.col);
+  if (on && i >= 0) COLLIDERS.circles.splice(i, 1); else if (!on && i < 0) COLLIDERS.circles.push(P.col);
+}
 
 // where the col-th of n heroes of a role waits on the deck: three spread out, more packed closer so they all fit
 function lineupSpot(roleIdx, col, n = 3) { const gap = n <= 3 ? 110 : Math.min(110, 330 / (n - 1)); return { x: 500 + (col - (n - 1) / 2) * gap, y: 870 + roleIdx * 90 }; }
@@ -111,7 +122,7 @@ function initTown() {
   COLLIDERS.rects.push({ x: HL.x, y: 0, w: HL.w, h: HL.y + 44 }, { x: HL.x, y: HL.y, w: 26, h: HL.h }, { x: hx1 - 26, y: HL.y, w: 26, h: HL.h },
     { x: HL.x, y: hy1 - 24, w: HL.w, h: 24 });
   COLLIDERS.circles.push({ x: dx0, y: hy1 - 12, r: 16 }, { x: dx1, y: hy1 - 12, r: 16 });
-  for (const p of TOWN.portals) if (p.sealed) COLLIDERS.circles.push({ x: p.x, y: p.y, r: p.r + 6 });   // (the shrouded one is solid)
+  for (const p of TOWN.portals) if (p.sealed) COLLIDERS.circles.push(p.col = { x: p.x, y: p.y, r: p.r + 6 });   // (the shrouded one is solid; it keeps its collider so townOpenFourthPortal can take it away)
   for (const l of TOWN.lamps) COLLIDERS.circles.push({ x: l.x, y: l.y, r: 8 });
   for (const d of TOWN.dummies) COLLIDERS.circles.push({ x: d.x, y: d.y, r: 16 });
   COLLIDERS.circles.push({ x: TOWN.fountain.x, y: TOWN.fountain.y, r: TOWN.fountain.r + 6 });
@@ -432,9 +443,9 @@ function drawChain(g, x1, y1, x2, y2, sag = 0) {
 // a portal's ring and the paved dais it stands on (drawn once; the swirl inside is drawn each frame by drawPortalDynamic)
 function drawPortalRing(g, P) {
   const { x, y, r } = P, set = P.set, rr = r + 16, ca = rng(P.x);
-  const dais = P.sealed ? '#6a665f' : set === 1 ? '#77718a' : set === 2 ? '#6f7c62' : '#6f7592';
+  const dais = P.sealed ? '#6a665f' : set === 1 ? '#77718a' : set === 2 ? '#6f7c62' : set === 4 ? '#6c6460' : '#6f7592';
   circle(g, x + 5, y + 9, 100, 'rgba(0,0,0,0.25)');
-  circle(g, x, y, 98, set === 1 ? '#4f4a5c' : set === 2 ? '#4a5444' : P.sealed ? '#4a4742' : '#444a60');
+  circle(g, x, y, 98, set === 1 ? '#4f4a5c' : set === 2 ? '#4a5444' : P.sealed ? '#4a4742' : set === 4 ? '#4a4340' : '#444a60');
   g.save(); g.beginPath(); g.arc(x, y, 92, 0, TAU); g.clip();
   g.fillStyle = dais; g.fillRect(x - 94, y - 94, 188, 188);
   flagstones(g, x - 94, y - 94, 188, 188, ca, dais, 26);
@@ -481,6 +492,20 @@ function drawPortalRing(g, P) {
     poly(g, [x + 56, y - rr + 10, x + 70, y - rr - 12, x + 68, y - rr + 12], '#a0b4e4', OUT, 1.3);
     poly(g, [x + 38, y - rr + 2, x + 46, y - rr - 22, x + 46, y - rr + 3], 'rgba(255,255,255,0.35)');
     poly(g, [x - 60, y + 56, x - 70, y + 40, x - 52, y + 50], '#6c82b8', OUT, 1.2);
+  } else if (set === 4) {
+    // the opened fourth portal: the shroud, chains and seal are gone; a dark ring of old stone that is never cold (a few cracks that still hold a little red,
+    // eight studs, a ring of ash on the dais where the snow never settles). The glow under the stones and the embers are drawn each frame (drawSovereignPortal)
+    circle(g, x, y, r + 40, null, 'rgba(24,14,12,0.16)', 14);
+    circle(g, x, y, rr, '#2a2326', OUT, 3);
+    circle(g, x, y, rr - 5, null, 'rgba(255,138,42,0.3)', 1.3);
+    for (let k = 0; k < 8; k++) {
+      const a = k * TAU / 8, sx = x + Math.cos(a) * (r + 8), sy = y + Math.sin(a) * (r + 8);
+      circle(g, sx, sy, 7, '#4a3f3c', OUT, 1.5); circle(g, sx, sy, 2.4, '#8c3a18');
+    }
+    for (const [a, b] of [[0.5, 0.75], [2.1, 2.3], [3.9, 4.15], [5.4, 5.55]]) {
+      g.strokeStyle = '#0c0707'; g.lineWidth = 3; g.beginPath(); g.moveTo(x + Math.cos(a) * (rr - 11), y + Math.sin(a) * (rr - 11)); g.lineTo(x + Math.cos((a + b) / 2) * (rr - 2) + 2, y + Math.sin((a + b) / 2) * (rr - 2) - 1); g.lineTo(x + Math.cos(b) * (rr + 5), y + Math.sin(b) * (rr + 5)); g.stroke();
+      g.strokeStyle = 'rgba(217,70,26,0.55)'; g.lineWidth = 1; g.stroke();
+    }
   } else {
     // the shrouded one: a dark iron ring, a stone seal over the opening, heavy cloth hung over the top and chains across it
     circle(g, x, y, rr, '#2c2a30', OUT, 3);
@@ -513,6 +538,7 @@ function drawPortalDynamic(ctx, P, t, open) {
     glow(ctx, x, y + 6, r * 1.2, '#7a64b0', 0.07 + Math.sin(t * 1.3) * 0.025);   // (a little light seeping out from under the cloth)
     return;
   }
+  if (P.set === 4) { drawSovereignPortal(ctx, P, t, open); return; }
   const L = PORTAL_LOOK[P.set];
   if (!open) {
     ctx.save(); ctx.beginPath(); ctx.arc(x, y, r - 4, 0, TAU); ctx.clip();
@@ -557,6 +583,41 @@ function drawPortalDynamic(ctx, P, t, open) {
   for (let i = 0; i < 12; i++) {
     const a = i * 2.4 + t * 0.5, q = (t * 0.4 + i * 0.13) % 1, rr = r * 1.4 * (1 - q);
     circle(ctx, x + Math.cos(a) * rr, y + Math.sin(a) * rr - q * 10, 2 * (1 - q) + 0.5, rgba(L.mote, 0.8 * q));
+  }
+}
+
+// The opened fourth portal. It does not swirl: it is a well. A dark pit, rings of black sliding slowly down it, one far-off red light at the bottom; the
+// stones round the ring glow faintly from below, and embers drift UP out of it and on past the ring. P.openAt (set by sovereign-portal.js when the town
+// moment plays) brightens everything for a few seconds, then it settles.
+function drawSovereignPortal(ctx, P, t, open) {
+  const { x, y, r } = P;
+  const k = P.openAt != null ? clamp((t - P.openAt) / 3.5, 0, 1) : 1, flare = 1 + (1 - k) * 1.6;
+  ctx.save(); ctx.beginPath(); ctx.arc(x, y, r - 4, 0, TAU); ctx.clip();
+  const gr = ctx.createRadialGradient(x, y, 0, x, y, r);
+  gr.addColorStop(0, '#1a0a07'); gr.addColorStop(0.55, '#0e0605'); gr.addColorStop(1, '#050303');
+  ctx.fillStyle = gr; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  for (let i = 0; i < 4; i++) {   // (rings sliding down into it: wide and faint at the lip, small and dark at the bottom)
+    const q = (t * 0.13 + i / 4) % 1, rr = (r - 6) * (1 - q);
+    circle(ctx, x, y + q * 4, rr, null, 'rgba(255,120,50,' + (0.10 * Math.sin(q * Math.PI) * flare).toFixed(3) + ')', 1.6);
+  }
+  glow(ctx, x, y + 3, r * 0.55, '#ff6a1a', Math.min(0.9, (0.16 + 0.05 * Math.sin(t * 1.1)) * flare));   // (the far-off light at the bottom)
+  ctx.restore();
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let s = 0; s < 8; s++) {   // (the stones, lit faintly from below)
+    const a = s * TAU / 8, sx = x + Math.cos(a) * (r + 8), sy = y + Math.sin(a) * (r + 8);
+    glow(ctx, sx, sy + 5, 21, '#ff7a2a', Math.min(0.8, (0.11 + 0.05 * Math.sin(t * 1.3 + s * 1.9)) * flare * k));
+  }
+  glow(ctx, x, y + 4, r * 1.55, '#ff6a1a', 0.06 * k * flare);
+  ctx.restore();
+  // embers rising: each leaves the pit at its own place and time, drifts up and a little sideways, and goes out above the ring
+  const n = 18 + Math.round((1 - k) * 14);
+  for (let i = 0; i < n; i++) {
+    const h1 = (Math.sin(i * 127.1) * 43758.5453) % 1, h2 = (Math.sin(i * 311.7 + 4.2) * 43758.5453) % 1;
+    const speed = 0.16 + Math.abs(h2) * 0.1, q = (t * speed + Math.abs(h1)) % 1, a0 = Math.abs(h1) * TAU * 3, d0 = Math.abs(h2) * (r - 14);
+    const px = x + Math.cos(a0) * d0 + Math.sin(t * 1.2 + i) * 7 * q, py = y + Math.sin(a0) * d0 * 0.7 - q * (r * 2.1 + 34);
+    const al = Math.sin(q * Math.PI) * (0.55 + 0.4 * Math.abs(h2)) * k;
+    if (al <= 0.02) continue;
+    circle(ctx, px, py, 2.1 * (1 - q * 0.6) + 0.5, rgba(q < 0.45 ? '#ffd27a' : '#ff7a2a', al));
   }
 }
 

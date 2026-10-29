@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cinder Sovereign art preview</title>
+<style>
+  /* A dev page: the Sovereign drawn by client/js/sovereign-art.js on plain canvases. Needs only draw-util.js and sovereign-art.js. */
+  :root { color-scheme: dark; --bg: #0e0c11; --card: #17141c; --line: #34303d; --ink: #e6dfd6; --dim: #a39cab; --ember: #ff8a3d; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, "Segoe UI", sans-serif; }
+  header { padding: 16px; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  header span { color: var(--dim); }
+  button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 4px 12px; cursor: pointer; font: inherit; }
+  h2 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--ember); margin: 22px 16px 8px; font-weight: 500; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; padding: 0 16px; }
+  figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  canvas { display: block; width: 100%; aspect-ratio: 1; }
+  figcaption { padding: 6px 10px; display: flex; justify-content: space-between; gap: 8px; color: var(--dim); border-top: 1px solid var(--line); }
+  figcaption b { color: var(--ink); font-weight: 500; }
+  #err { color: #ff7a6a; padding: 8px 16px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1>The Cinder Sovereign</h1>
+  <span>top-down, facing up; every cell animates (?cell=N shows one large, &amp;t=seconds starts there (&amp;freeze holds it), &amp;z=2 magnifies, &amp;bare fits it to the window)</span>
+  <button id="pause">Pause</button>
+  <label>speed <input id="speed" type="range" min="0.1" max="2" step="0.1" value="1"></label>
+</header>
+<div id="err"></div>
+<h2>The four stages, and the kill</h2>
+<div class="grid" id="stages"></div>
+<h2>Halo, hands, the call, the second form</h2>
+<div class="grid" id="states"></div>
+<h2>Poses (each loops: wind-up, blow, aftermath, rest)</h2>
+<div class="grid" id="poses"></div>
+<script src="../../client/js/draw-util.js"></script>
+<script src="../../client/js/sovereign-art.js"></script>
+<script>
+(function () {
+  const POSES = SV_ART.POSES, CYCLE = 5, ALL = 0xfff;
+  const cells = [];
+  const NAMES = ['Grubnak', 'Skitterra', 'Volkar', 'the Hollow King', 'Vhalgrath', 'Hrimgar', 'Azerath', 'the Hydra', 'Corvane', 'Brannoc', 'Morrow-Oak', 'Caelum Vey'];
+  // one cell: a canvas, a caption, and fn(t) returning the opts for __svArtPreview
+  function cell(host, title, note, fn, size) {
+    const fig = document.createElement('figure'), cv = document.createElement('canvas'), cap = document.createElement('figcaption');
+    cv.width = cv.height = size || 440; cap.innerHTML = '<b>' + title + '</b><span>' + note + '</span>';
+    fig.append(cv, cap); document.getElementById(host).append(fig); cells.push({ cv, fn });
+  }
+  const swing = (t, pose, hold) => { const ph = t % CYCLE, k = Math.floor(t / CYCLE) * CYCLE; return { pose: ph < (hold || 3.6) ? pose : '', action: { t0: k, dur: 2.4 } }; };
+
+  // stages
+  cell('stages', 'Act I: the hall', 'held back: short blade, small halo, hem smoulders', t => ({ t, form: 'hall', lit: ALL }));
+  cell('stages', 'Act II: the forge', 'slag plates, longer hotter blade, thicker smoke', t => ({ t, form: 'forge', lit: 0xfff & ~0x00f }));
+  cell('stages', 'Act III: the crater', 'wheel of blades, burnt to a molten core, white slit', t => ({ t, form: 'crater', wheel: 1, lit: 0x0f0 | 0x300 }));
+  cell('stages', 'Act IV: the square', 'white-gold, tatters, longest blade, bare core', t => ({ t, form: 'square', wheel: 1, lit: 0x401 }));
+  cell('stages', 'The kill: gutter', 'fire drains, core gutters, last flame drops', t => ({ t, form: 'square', wheel: 1, lit: 0x400, gutter: clamp((t % 9 - 1.5) / 5, 0, 1) }));
+  cell('stages', 'Evolving', 'forms change every 5 s, easing over about 2 s', t => { const f = ['hall', 'forge', 'crater', 'square'][Math.floor(t / 5) % 4]; return { t, form: f, wheel: f === 'crater' || f === 'square' ? 1 : 0, lit: ALL }; });
+
+  // states
+  cell('states', 'At rest, blade side swaps', 'right, then left every 4 s', t => ({ t, form: 'forge', side: Math.floor(t / 4) % 2 ? -1 : 1, lit: ALL }));
+  cell('states', 'Mid-call', 'the calling sigil pulses, a thread from the core', t => { const k = Math.floor(t / 6), u = t % 6; return { t, form: 'forge', pose: u > 0.4 && u < 4.5 ? 'call' : '', call: u < 5 ? k % 12 : -1, lit: ALL & ~(0x1 << ((k + 11) % 12)), }; });
+  cell('states', 'Halo, spent', 'dark sigils stay dark; a flame going out bursts', t => { const n = Math.floor(t / 1.2) % 14; return { t, form: 'forge', lit: n >= 12 ? ALL : ALL >> 0 & ~((1 << n) - 1) }; });
+  cell('states', 'Second form: wheel', 'the halo opens; dark blades stay dark', t => ({ t, form: 'crater', wheel: Math.floor(t / 6) % 2 ? 0 : 1, lit: 0x6b5 }));
+  cell('states', 'Facing 45 degrees', 'the halo does not turn with the heading', t => ({ t, form: 'forge', angle: -Math.PI / 4 + Math.sin(t * 0.5) * 0.6, lit: ALL }));
+  cell('states', 'Walking', 'smoke trails, glides', t => ({ t, form: 'hall', lit: ALL }));
+
+  // poses
+  for (const p of POSES) cell('poses', p, p === 'sweep' ? 'blade side shows the tell' : '', t => Object.assign({ t, form: 'forge', lit: ALL, call: p === 'call' ? 4 : -1 }, swing(t, p, p === 'rebirth' ? 4.6 : 3.6)), 360);
+  cell('poses', 'sweep, left hand', 'mirrored', t => Object.assign({ t, form: 'forge', side: -1, lit: ALL }, swing(t, 'sweep')), 360);
+  cell('poses', 'enrage, square', 'white-gold, wheel', t => Object.assign({ t, form: 'square', wheel: 1, lit: 0x401 }, swing(t, 'enrage', 3.6)), 360);
+
+  // ?cell=N shows only the Nth cell, large (and ?t=seconds freezes the clock there): for a close look
+  const qs = new URLSearchParams(location.search), only = qs.get('cell');
+  if (only != null) { cells.forEach((c, i) => { const f = c.cv.parentNode; if (i !== +only) f.style.display = 'none'; else { c.cv.width = c.cv.height = 900; c.cv.style.maxWidth = '900px'; f.style.gridColumn = '1 / -1'; } }); document.querySelectorAll('h2').forEach(h => h.style.display = 'none'); if (qs.has('bare')) { document.querySelector('header').style.display = 'none'; document.querySelectorAll('.grid').forEach(g => g.style.padding = '0'); const px = Math.min(innerWidth, innerHeight) - 4 + 'px'; document.querySelectorAll('canvas').forEach(c => { c.style.width = px; c.style.height = px; }); } }
+  const Z = +(qs.get('z') || 1);   // ?z=2 magnifies (to look closely at the body)
+  let paused = qs.has('freeze'), speed = 1, clock = +(qs.get('t') || 0), last = null;
+  document.getElementById('pause').onclick = e => { paused = !paused; e.target.textContent = paused ? 'Play' : 'Pause'; };
+  document.getElementById('speed').oninput = e => { speed = +e.target.value; };
+  function frame(ms) {
+    if (last != null && !paused) clock += Math.min(0.1, (ms - last) / 1000) * speed;
+    last = ms;
+    try {
+      for (const c of cells) {
+        const o = c.fn(clock);
+        __svArtPreview(c.cv, Object.assign({ clear: true, t: clock, zoom: c.cv.width / 560 * Z }, o, { t: clock }));
+      }
+    } catch (e) { document.getElementById('err').textContent = String(e && e.stack || e); return; }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

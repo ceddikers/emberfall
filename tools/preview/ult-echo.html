@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ultimate echoes: preview</title>
+<style>
+  body { margin: 0; background: #0d0b0a; color: #cdbfae; font: 13px Georgia, serif; }
+  header { padding: 10px 16px; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid #2a2320; }
+  header b { color: #ffb050; letter-spacing: .08em; }
+  button, select { background: #221c18; color: #e8d8c4; border: 1px solid #4a3a2c; padding: 3px 10px; font: inherit; cursor: pointer; }
+  #grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 8px; }
+  .cell { position: relative; background: #000; }
+  .cell canvas { width: 100%; display: block; }
+  .cell span { position: absolute; left: 8px; top: 6px; font-size: 12px; color: #c9b9a4; text-shadow: 0 0 4px #000; pointer-events: none; }
+  #big { display: none; padding: 8px; }
+  #big canvas { width: 100%; max-width: 1100px; display: block; margin: 0 auto; }
+  #err { color: #ff7a5a; padding: 6px 16px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<header>
+  <b>ECHOES</b>
+  <span>t = <span id="tv">0.0</span> s</span>
+  <button id="pp">Pause</button>
+  <button id="rs">Restart</button>
+  <label>speed <select id="sp"><option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option></select></label>
+  <label>life <select id="mode"><option value="full">call, kneel, pose, crumble</option><option value="lie">call, kneel, lie down</option></select></label>
+  <span>click an echo to enlarge it, click again to go back</span>
+</header>
+<div id="err"></div>
+<div id="grid"></div>
+<div id="big"><canvas id="bigc" width="1100" height="700"></canvas></div>
+<script>window.__errs = []; window.onerror = (m, s, l) => { window.__errs.push(m + ' (' + String(s).split('/').pop() + ':' + l + ')'); const e = document.getElementById('err'); if (e) e.textContent = window.__errs.join(' | '); };</script>
+<script src="../../client/js/draw-util.js"></script>
+<script src="../../client/js/data.js"></script>
+<script src="../../client/js/bosses.js"></script>
+<script src="../../client/js/hydra-art.js"></script>
+<script src="../../client/js/arena/shapes.js"></script>
+<script src="../../client/js/arena/boss-tells.js"></script>
+<script src="../../client/js/arena/arena-view.js"></script>
+<script src="../../client/js/arena/bosses/archmage.js"></script>
+<script src="../../client/js/archmage-art.js"></script>
+<script src="../../client/js/titan-art.js"></script>
+<script src="../../client/js/wyrm-art.js"></script>
+<script src="../../client/js/set3-sky.js"></script>
+<script src="../../client/js/corvane-art.js"></script>
+<script src="../../client/js/brannoc-art.js"></script>
+<script src="../../client/js/morrowoak-art.js"></script>
+<script src="../../client/js/caelum-art.js"></script>
+<script src="../../client/js/ult-echo.js"></script>
+<script>
+  const NAMES = { grubnak: 'Grubnak', skitterra: 'Skitterra', volkar: 'Volkar', hollowking: 'The Hollow King', wyrm: 'Vhalgrath', titan: 'Hrimgar', archmage: 'Azerath', hydra: 'The Hydra (one head)', corvane: 'Corvane', brannoc: 'Brannoc', morrowoak: 'Morrow-Oak', caelum: 'Caelum Vey' };
+  const POSE = { hollowking: 'bell', corvane: 'comet' };
+  const LOOP = 19;   // one pass: the call, the kneel, a pose, the crumble, the sigil fading
+  const grid = document.getElementById('grid'), cells = [];
+  for (const who of ULT_ECHO.WHO) {
+    const d = document.createElement('div'), c = document.createElement('canvas'), s = document.createElement('span');
+    d.className = 'cell'; c.width = 440; c.height = 340; s.textContent = NAMES[who]; d.append(c, s); grid.append(d);
+    d.onclick = () => { big = big === who ? null : who; };
+    cells.push({ who, c });
+  }
+  let big = null, T = 0, paused = false, last = performance.now();
+  const opts = who => {
+    const lie = document.getElementById('mode').value === 'lie';
+    const acts = lie ? [{ anim: 'liedown', at: 8 }] : [{ anim: POSE[who] || 'attack', at: 7, dur: 2.2 }];
+    return { fly: 1.5, rise: 2.4, dur: lie ? -1 : 14, kneel: who === 'hollowking' ? 0 : 1, acts, x: 70, y: 50, boss: { x: -240, y: -180 }, cam: { x: -50, y: -40 }, scale: 0.72 };
+  };
+  document.getElementById('pp').onclick = e => { paused = !paused; e.target.textContent = paused ? 'Play' : 'Pause'; };
+  document.getElementById('rs').onclick = () => { T = 0; };
+  document.getElementById('mode').onchange = () => { T = 0; };
+  function frame(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (!paused) T += dt * +document.getElementById('sp').value;
+    if (T > LOOP) T = 0;
+    document.getElementById('tv').textContent = T.toFixed(1);
+    const bigBox = document.getElementById('big'), bc = document.getElementById('bigc');
+    bigBox.style.display = big ? 'block' : 'none'; grid.style.display = big ? 'none' : 'grid';
+    try {
+      if (big) { const o = opts(big); o.scale = 1.5; o.cam = { x: -30, y: -60 }; ULT_ECHO.preview(bc, big, T, o); }
+      else for (const k of cells) ULT_ECHO.preview(k.c, k.who, T, opts(k.who));
+    } catch (e) { document.getElementById('err').textContent = e.stack; }
+    requestAnimationFrame(frame);
+  }
+  // a still: ?who=grubnak&t=5.5&scale=2.2&w=490&h=340&lie=1 draws one echo at one moment and stops (for screenshots and the review)
+  const Q = new URLSearchParams(location.search);
+  if (Q.get('who')) {
+    document.querySelector('header').style.display = 'none'; grid.style.display = 'none';
+    const bc = document.getElementById('bigc'); bc.width = +Q.get('w') || 490; bc.height = +Q.get('h') || 340; bc.style.maxWidth = bc.width + 'px';
+    document.getElementById('big').style.cssText = 'display:block;padding:0';
+    window.still = (who, t, sc) => { const o = opts(who); if (Q.get('lie')) { o.dur = -1; o.acts = [{ anim: 'liedown', at: 8 }]; } o.scale = sc || +Q.get('scale') || 2; o.cam = { x: 70, y: 30 }; ULT_ECHO.preview(bc, who, t, o); };
+    still(Q.get('who'), +Q.get('t') || 0, +Q.get('scale') || 2);
+  } else requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -10,9 +10,18 @@ A hundred years ago a king was carried down the road and wouldn't lie down: the 
 
 The town stayed: graves dug facing the Barrow, Hask counting who comes back, Osric planting bluebells for those who don't, Corwin leaving a coin behind the Tankard for every party that goes in. This autumn the bells began to toll loud enough to hear in the square, and the heroes came up the south road.
 
-It's open-ended: the Hollow King is the threat right now, not the end of the road. There's no epilogue.
+It's open-ended: the Hollow King is the threat right now, not the end of the road. There is one epilogue, after the Ultimate (the Cinder Sovereign, boss id `sovereign`): the Ember the town is named for fell short of the star and lies under the square, and the chipped words on the gate sent everyone away from it.
+
+**The Ultimate's story text** (all keyed on the account's first clear of `sovereign`, `beaten: ['sovereign']`):
+- Raid Board lore (`STORY.bossLore.sovereign`): the fourth portal has never opened, its stone is never cold, and it goes down.
+- Before it unlocks: Hask and Tobble get a line once every set 3 boss is cleared on Hard (`hardBeaten: ['corvane', 'brannoc', 'morrowoak', 'caelum']` plus `notBeaten: ['sovereign']`, a `when` key added to `town-life.js` `matches`). The sealed portal is warm underfoot.
+- Epilogue (`STORY.epilogue`, one page, "The night after"): shown once, the first time the town is visited after the clear (`pastimes.js` `storyCheck`, flag `story.epilogue`).
+- Hask counts four back in (`hask-four-told`), then a plain post-clear line ("Lately the number's been right.").
+- The words on the back of the gate, read whole: the kings-road secret has a `whole` block. After the clear it can be read once more (mark `whole:kings-road`, no new secret, so the count stays 14), or first-time with the full text if it was never found.
+- One-time lines after the clear: Osric (`osric-square-told`, bluebells round the fountain), Corwin (`corwin-coin-told`, the coin behind the Tankard), Gaspard (`gaspard-night-told`), Bram (`bram-pond-told`).
 
 - **Prologue** (4 pages, shown the first time a player enters town): The King's Road / The king who stayed / What moved in / Emberfall.
+- **Epilogue** (1 page, shown once after the first Ultimate clear): The night after.
 - **Boss lore** (Raid Board, under each blurb): how each boss came to hold its hall.
 
 ## Secrets (14)

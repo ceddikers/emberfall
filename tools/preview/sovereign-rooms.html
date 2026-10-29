@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Cinder Sovereign rooms</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #0b0b0d; color: #cfc8bc; font: 13px/1.4 system-ui, sans-serif; }
+  header { padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; border-bottom: 1px solid #222; }
+  header b { font-size: 15px; color: #e8dcc4; margin-right: 6px; }
+  label { display: inline-flex; gap: 6px; align-items: center; }
+  select, button { background: #17171b; color: #cfc8bc; border: 1px solid #333; border-radius: 5px; padding: 4px 8px; font: inherit; }
+  main { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 10px; padding: 10px; }
+  figure { margin: 0; position: relative; }
+  figcaption { position: absolute; left: 10px; top: 8px; font-weight: 600; color: #e8dcc4; text-shadow: 0 1px 3px #000; pointer-events: none; }
+  canvas { width: 100%; height: auto; display: block; background: #000; border-radius: 6px; }
+</style></head>
+<body>
+<header>
+  <b>The Cinder Sovereign: rooms</b>
+  <label>Grade and ash <select id="act"><option value="auto">each room's own act</option><option value="1">Act I</option><option value="2">Act II</option><option value="3">Act III</option><option value="4">Act IV</option><option value="night">Night</option></select></label>
+  <label><input type="checkbox" id="tells" checked> sample telegraphs</label>
+  <label><input type="checkbox" id="pause"> pause</label>
+  <span id="fps"></span>
+</header>
+<main id="grid"></main>
+<script src="../../client/js/draw-util.js"></script>
+<script src="../../client/js/arena/shapes.js"></script>
+<script src="../../client/js/arena/arena-view.js"></script>
+<script src="../../client/js/set3-sky.js"></script>
+<script src="../../client/js/sovereign-rooms.js"></script>
+<script>
+  const ROOMS = [['sovereign', 'The hall (Act I)', 1], ['sovereign:forge', 'The forge (Act II)', 2], ['sovereign:crater', 'The crater (Act III)', 3], ['sovereign:square', 'The square (Act IV)', 4], ['sovereign:night', 'The square at night', 'night']];
+  // ?room=0..4 shows one room large; ?t=seconds starts the clock there; ?act=1..4|night forces the grade
+  const q = new URLSearchParams(location.search), only = q.has('room') ? Number(q.get('room')) : -1;
+  const grid = document.getElementById('grid'), cans = [];
+  for (const [form, name, act] of ROOMS) {
+    if (only >= 0 && ROOMS[only][0] !== form) continue;
+    const f = document.createElement('figure'), c = document.createElement('canvas'), cap = document.createElement('figcaption');
+    c.width = c.height = only >= 0 ? 1000 : 720; cap.textContent = name; f.append(c, cap); grid.append(f); cans.push({ form, act, c });
+  }
+  const sel = document.getElementById('act'), tells = document.getElementById('tells'), pause = document.getElementById('pause');
+  if (q.has('act')) sel.value = q.get('act');
+  if (q.get('tells') === '0') document.getElementById('tells').checked = false;
+  let t = Number(q.get('t')) || 0, last = performance.now(), frames = 0, acc = 0;
+  function draw() {
+    for (const r of cans) window.__svRoomPreview(r.c, r.form, sel.value === 'auto' ? r.act : (sel.value === 'night' ? 'night' : Number(sel.value)), t, { tells: tells.checked });
+  }
+  window.__svPage = { draw, setT: v => { t = v; draw(); }, cans };
+  function frame(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (!pause.checked) t += dt;
+    draw(); frames++; acc += dt;
+    if (acc > 1) { document.getElementById('fps').textContent = Math.round(frames / acc) + ' fps'; frames = 0; acc = 0; }
+    requestAnimationFrame(frame);
+  }
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => requestAnimationFrame(frame));
+</script>
+</body></html>

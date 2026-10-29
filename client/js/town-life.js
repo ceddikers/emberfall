@@ -33,6 +33,7 @@ const TownLife = (() => {
     const s = state(), hero = deps.hero(), role = deps.role();
     if (w.beaten && !w.beaten.every(b => deps.beaten(b))) return false;
     if (w.notBeaten && w.notBeaten.some(b => deps.beaten(b))) return false;
+    if (w.hardBeaten && !w.hardBeaten.every(b => Save.hardBeaten(b))) return false;   // cleared on Hard by this account (the Ultimate's hints)
     if (w.flags && !w.flags.every(f => s.flags[f])) return false;
     if (w.notFlags && w.notFlags.some(f => s.flags[f])) return false;
     if (w.hero && w.hero !== hero) return false;
@@ -225,6 +226,37 @@ const TownLife = (() => {
       poly(ctx, [10, -14, 13, -7, 10, -1, 7, -7], '#dfe8f6', OUT, 1); poly(ctx, [-11, -10, -8, -4, -11, 1, -14, -4], '#c4d0e6', OUT, 1);   // two shards of the halo
       ellipse(ctx, 0, 0, 8, 11.5, 0, '#c9d2de', OUT, 1.6); ellipse(ctx, -2.4, -3, 2.8, 5.6, 0.2, 'rgba(255,255,255,0.6)');   // a smooth mask, no face on it
       line(ctx, 1.5, -9, 2, 8, 'rgba(110,122,150,0.55)', 0.8);
+    }
+    ctx.restore();
+  }
+  // The Cinder Sovereign's piece in the Trophy Hall (the Ultimate's, for the account): a plinth at the back of the runner, between the first
+  // row's two middle statues, and over it a halo of twelve dead sigils, dark glass with a last red crack, turning very slowly round a single
+  // cold ember. Shown once the Sovereign has fallen on this account (test flag: localStorage 'emberfall.svRewards' = '1', remove after testing).
+  function drawSovereignPlinth(ctx, now) {
+    const H = TOWN.hall, x = H.x + H.w / 2, y = H.rows[0] - 4, sc = PED_S;
+    ctx.save(); ctx.translate(x, y);
+    circle(ctx, 4, 5, 33 * sc, 'rgba(0,0,0,0.32)');
+    circle(ctx, 0, 0, 31 * sc, '#4a4650', '#2a2630', 3); circle(ctx, 0, 0, 24 * sc, '#38343e'); circle(ctx, 0, 0, 28 * sc, null, 'rgba(201,166,90,0.45)', 1.2);
+    // the ember at its heart: cold, nearly out, breathing once in a long while
+    const br = 0.5 + 0.5 * Math.sin(now * 0.8);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    glow(ctx, 0, 0, 20, '#ff8a2a', 0.16 + 0.12 * br, 0.3 + 0.3 * br);
+    ctx.restore();
+    circle(ctx, 0, 0, 3.2, '#d9461a', '#2a0e0a', 1); circle(ctx, 0, 0, 1.4, '#ffe08a');
+    // the twelve spent sigils
+    const R = 44 * sc, spin = now * 0.05, live = Math.floor(now / 3.2) % 12;
+    for (let i = 0; i < 12; i++) {
+      const a = spin + i / 12 * Math.PI * 2, sx = Math.cos(a) * R, sy = Math.sin(a) * R * 0.92;
+      ctx.save(); ctx.translate(sx, sy); ctx.rotate(a + Math.PI / 2); ctx.scale(1.3, 1.3);
+      poly(ctx, [0, -7, 4.6, 0, 0, 7, -4.6, 0], '#17121c', '#6a4a5a', 1.2);
+      const g = i % 4;   // each its own glyph
+      ctx.strokeStyle = 'rgba(160,100,110,0.55)'; ctx.lineWidth = 0.9; ctx.beginPath();
+      if (g === 0) { ctx.moveTo(0, -3.5); ctx.lineTo(0, 3.5); } else if (g === 1) { ctx.moveTo(-2.4, -2); ctx.lineTo(2.4, 2); ctx.moveTo(2.4, -2); ctx.lineTo(-2.4, 2); }
+      else if (g === 2) { ctx.arc(0, 0, 2.4, 0, Math.PI * 2); } else { ctx.moveTo(-2.6, 2.4); ctx.lineTo(0, -3.2); ctx.lineTo(2.6, 2.4); }
+      ctx.stroke();
+      // a last red crack that wakes in one sigil after another, and goes out again
+      if (i === live) { const f = 0.5 + 0.5 * Math.sin(now * 5); line(ctx, -1.2, -2.2, 1.4, 2.6, 'rgba(217,70,26,' + (0.35 + 0.4 * f).toFixed(2) + ')', 1.1); }
+      ctx.restore();
     }
     ctx.restore();
   }
@@ -492,6 +524,7 @@ const TownLife = (() => {
       const i = bossIds.indexOf(b);
       if (u.trophy && pedestals[i]) drawTrophy(ctx, u.trophy, pedestals[i].x + 52 * PED_S, pedestals[i].y + 18 * PED_S, now);
     }
+    if (deps.beaten('sovereign') || (typeof SvRewards !== 'undefined' && SvRewards.TEST)) drawSovereignPlinth(ctx, now);
     groundMeal(ctx, now);
   }
   function entities(scale) {

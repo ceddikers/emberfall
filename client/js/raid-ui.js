@@ -1,6 +1,12 @@
 // DOM parts of the raid: boss bar + cast bar, party frames, countdown, results screen, and the
 // training-dummy meter in town. main.js feeds it data every frame.
 
+// when a raid's enrage lands, from its pull: a practice start in a later act counts from that act (fight.js enrageAt, def.practiceCut)
+function raidEnrageAt(raid, mode) {
+  const e = raid.def.enrage && raid.def.enrage[mode || raid.mode], cut = raid.practice && raid.def.practiceCut ? raid.def.practiceCut[raid.practice] || 0 : 0;
+  return e && cut ? Math.max(30, e - cut) : e;
+}
+
 const RaidUI = (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -456,7 +462,7 @@ const RaidUI = (() => {
   // ---------------------------------------------------------------- Limit Break
   // the party's gauge under the frames: three bars, each lit as it fills (the effect is your role's: see limitTip)
   // (the fill eases toward the gauge's value over ~0.15s; a bar that fills lights once, and the key breathes while ready)
-  let lbKey = '', lbRole = 'dps', lbBars = 0, lbShown = 0, lbSegs = null, lbLevel = -1;
+  let lbHeld = false, lbKey = '', lbRole = 'dps', lbBars = 0, lbShown = 0, lbSegs = null, lbLevel = -1;
   function limitGauge(raid, myId, dt = 0) {
     const el = $('lb-gauge'), show = !raid.def.trial && (raid.state === 'live' || raid.state === 'prepull');
     const me = roster.find(r => r.id === myId); if (me) lbRole = me.role;
@@ -467,8 +473,10 @@ const RaidUI = (() => {
     // the ease: close to an exponential approach, snapped once within a hair (a spend drops at the same pace)
     lbShown = !show ? v : Math.abs(v - lbShown) < 0.3 ? v : lbShown + (v - lbShown) * (1 - Math.exp(-dt / 0.05));
     const key = show ? lbShown.toFixed(1) : '-';
-    if (key + kk + raise === lbKey) return;
-    lbKey = key + kk + raise;
+    const held = !!show && !!raid.held;   // (a set piece's opening: the Limit Break is held, main.js)
+    if (key + kk + raise + held === lbKey) return;
+    lbKey = key + kk + raise + held; lbHeld = held;
+    el.classList.toggle('held', held);
     el.classList.toggle('raise', raise);
     const sm = el.querySelector('small'); if (sm) sm.textContent = raise ? 'Raise' : 'Limit';
     el.classList.toggle('hidden', !show);
@@ -570,7 +578,7 @@ const RaidUI = (() => {
       : lbRole === 'healer' ? `<b>Rekindle</b>Heals the party for ${pct(L.HEAL)} of their health.`
       : `<b>Emberfall</b>One blow worth ${pct(L.DPS)} of the boss's health.`;
     const raise = '<br><br><b>Raise</b>With all three bars, a Limit Break from any role also raises every fallen ally, with no Raise Sickness.';
-    return `<b>Limit Break</b><em>${lbBars} of 3 bars · ${typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('limit')) : 'G'}</em>Every whole bar is spent at once, by whoever presses first. Filled by mechanics met cleanly and checks passed.<br><br>${what}${raise}`;
+    return `<b>Limit Break</b><em>${lbBars} of 3 bars · ${typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('limit')) : 'G'}</em>Every whole bar is spent at once, by whoever presses first. Filled by mechanics met cleanly and checks passed.<br><br>${what}${raise}${lbHeld ? '<br><br><b>Immune</b>The boss cannot be hurt right now.' : ''}`;
   }
 
   // ---------------------------------------------------------------- the live meter (M)
@@ -613,7 +621,7 @@ const RaidUI = (() => {
     const m = raid.meter, show = meterOn && !!m && (raid.state === 'live' || raid.state === 'clear' || raid.state === 'wipe');
     el.classList.toggle('hidden', !show);
     if (!show) return;
-    const ft = Math.max(1, m.ft || 0), b = raid.boss, enr = raid.def.enrage && raid.def.enrage[raid.mode];
+    const ft = Math.max(1, m.ft || 0), b = raid.boss, enr = raidEnrageAt(raid);
     // Score: the same function that picks the MVP, on the stats so far
     const scoreOn = meterMode === 'score';
     let sc = null;
@@ -850,9 +858,9 @@ const RaidUI = (() => {
             tip: `<b>Judgment</b><em>${val} charge${val === 1 ? '' : 's'} · ${secs}s${mine ? ' · yours' : ''}</em>Each hit from an ally bursts a charge in holy fire.` });
         }
       }
-      const enr = raid.def.enrage && raid.def.enrage[raid.mode];
+      const enr = raidEnrageAt(raid);
       if (enr) {
-        const left = Math.ceil(enr + 8 - (raid.fightTime || 0));   // the enrage is an 8s cast (fight.js enrage)
+        const left = Math.ceil(enr + 8 - ((raid.fightTime || 0) - (raid.fightPaused || 0)));   // the enrage is an 8s cast (fight.js enrage)
         if (left <= 60 && left > 0) items.push({ k: 'enrage', c: 'buff', glyph: GLYPH.enrage, n: left, tip: `<b>${esc(raid.def.enrageName || 'Enrage')}</b><em>${left}s</em>When this runs out, the fight is lost.` });
       }
       const k = marks.kit;
@@ -1151,7 +1159,7 @@ const RaidUI = (() => {
         return `<${c.go && pr ? 'button type="button" data-go="' + c.go + '"' : 'div'} class="rw"><b>${esc(c.n)}</b><span class="rw-pips">${pips}</span>${note}</${c.go && pr ? 'button' : 'div'}>`;
       }).join('')}</div>`;
     } else {
-      const enr = raid.def.enrage && raid.def.enrage[msg.mode || raid.mode];
+      const enr = raidEnrageAt(raid, msg.mode);
       body = `<p class="rw-none">${enr && dur >= enr ? `Nobody fell. ${esc(raid.def.enrageName || 'The enrage')} ended the pull.` : 'Nobody fell. The pull ended before the fight did.'}</p>`;
     }
     // this pull against the best (the "New best" line covers beating it, so the bar only shows when a better pull exists)

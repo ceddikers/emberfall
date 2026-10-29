@@ -80,6 +80,7 @@ class FightSim {
     // practice: start at this course (phase) number; the ones before it are passed over at the pull (course())
     this.skipTo = opts.practiceFrom > 1 ? Math.floor(opts.practiceFrom) : 0;
     this.recoverEnd = -99;
+    this.sp = null; this.spShift = 0; this.spHooks = [];   // a set piece (setPiece below): the one running or last run, the seconds the clock has been stopped in all, hooks for a script's own timers
     this.lb = 0; this.lbUsedAt = -99; this.avoidCount = 0;   // the Limit Break gauge (FIGHT.LB), and avoidable hits so far
     this.events = []; this.mechs = new Map(); this.nextMechId = 1; this.puddles = [];
     this.tethers = new Map(); this.adds = new Map(); this.zones = []; this.addsDirty = false;
@@ -294,6 +295,7 @@ class FightSim {
   // the upcoming-moves feed: [[name, seconds until], ...], about once a second and whenever the list changes
   broadcastNext(force) {
     const up = this.upcoming(3), key = up.map(e => e.name + '@' + e.t.toFixed(2)).join('|');
+    if (!force && this.sp && this.t < this.sp.end && this.t - this.lastNext < 1) return;   // (a set piece slides every step each tick, but the countdowns stand still: once a second will do)
     if (!force && key === this.nextKey && (!up.length || this.t - this.lastNext < 1)) return;
     this.nextKey = key; this.lastNext = this.t;
     // while a Time Stop holds the boss, its own steps don't count down: [name, secs, 1] (held till the stop ends)
@@ -384,6 +386,7 @@ class FightSim {
     }
     if (this.state !== 'live') return;
     this.t += dt;
+    if (this.sp && this.t - dt < this.sp.end) this.spTick(dt);   // (a set piece: the clocks stand still, setPiece below)
     while (this.events.length && this.events[0].t <= this.t) {
       const e = this.events.shift();
       if (e.phase === this.phase || e.keep) e.fn();
@@ -423,14 +426,20 @@ class FightSim {
     if (this.state !== 'countdown' && this.state !== 'prepull') return;
     this.state = 'live'; this.t = 0;
     this.def.script(this);
-    if (this.def.enrage) this.atKeep(this.def.enrage[this.mode], () => this.enrage(), this.def.enrageName || 'Enrage');
+    if (this.def.enrage) this.atKeep(this.enrageAt(), () => this.enrage(), this.def.enrageName || 'Enrage');
     this.emit({ t: 'fight', s: 'live' });
   }
 
+  // when the enrage begins, from the pull. A practice start in a later act (def.practiceCut: { act: seconds of the fight already behind it }) counts it from that act, so
+  // the act has about the time it would have left in a full pull (the closing passes ramp from the act's end, not from a pull that skipped the acts before it)
+  enrageAt() { const e = this.def.enrage[this.mode], cut = this.skipTo && this.def.practiceCut ? this.def.practiceCut[this.skipTo] || 0 : 0; return cut ? Math.max(30, e - cut) : e; }
   enrage() {
     this.cast(this.def.enrageName || 'Enrage', 8, 'enrage');
     this.after(8, () => { for (const p of this.alive()) this.damagePlayer(p, 9999999, { kind: 'enrage' }); });
   }
+
+  // the boss's health has run out. A script may play a death of its own first (f.onFell(f): the Sovereign's last flame; it ends the fight itself with end('clear')); otherwise the fight is won now
+  bossFell() { if (this.felled) return; if (this.onFell) { this.felled = true; this.onFell(this); return; } this.end('clear'); }
 
   end(result) {
     if (this.state !== 'live') return;
@@ -540,6 +549,7 @@ class FightSim {
     switch (ev.type) {
       case 'lb': {
         const lv = Math.floor(this.lb / FIGHT.LB.BAR);
+        if (this.sp && this.t < this.sp.invulEnd) break;   // (a set piece's opening: held, as the HUD holds it; the bars are not spent on a hit the Immune boss would drop)
         if (lv >= 1 && this.t - this.lbUsedAt >= 1) this.limitBreak(pid, s, lv);
         break;
       }
@@ -552,6 +562,7 @@ class FightSim {
           if (a) { this.damageAdd(pid, a, amt, this.threatMult(s, ev)); this.lastHit[pid] = this.t; if (ev.ub) st.burst++; }
           break;
         }
+        if (this.sp && this.t < this.sp.invulEnd) return;   // a set piece's opening: Immune (main.js shows it to the hitter)
         if (this.boss.untargetable) return;
         if (this.boss.exposedUntil > this.t) amt = Math.round(amt * (1 + (this.boss.exposed || 0)));   // staggered: takes more
         if (this.stageUntil > this.t) amt = Math.round(amt * (1 + DOLL_HOST.STAGE));   // standing on an Understudy's Stage (classes-c)
@@ -562,7 +573,7 @@ class FightSim {
         this.lastHit[pid] = this.t;
         if (ev.ub) st.burst++;   // (a hit of an Ultimate or its window)
         if (this.boss.hp <= this.boss.maxHp * 0.2) st.closer += amt;
-        if (this.boss.hp <= 0) this.end('clear');
+        if (this.boss.hp <= 0) this.bossFell();
         break;
       }
       case 'ult': st.ults++; break;   // (an Ultimate pressed: main.js kitFx, raid-host bots)
@@ -743,8 +754,9 @@ class FightSim {
     const b = this.boss, br = b.brand;
     if (!br || br.from === pid || br.end <= this.t || br.charges <= 0) return;
     br.charges--;
-    b.hp = Math.max(this.wallHp ?? 0, b.hp - br.amount);
-    const st = this.stats[br.from]; if (st) { st.damage += br.amount; this.tally(br.from, 0, br.amount, br.ab || 'brand'); }
+    const hp0 = b.hp; b.hp = Math.max(this.wallHp ?? 0, b.hp - br.amount);
+    const dealt = Math.max(0, Math.round(hp0 - b.hp));   // (credit what was dealt: a wall holds the boss's health)
+    const st = this.stats[br.from]; if (st && dealt > 0) { st.damage += dealt; this.tally(br.from, 0, dealt, br.ab || 'brand'); }
     this.emit({ t: 'fev', k: 'brandHit', id: br.from, left: br.charges });
     if (br.charges <= 0) b.brand = null;
   }
@@ -858,6 +870,8 @@ class FightSim {
   damagePlayer(p, raw, opts = {}) {
     const s = p.s || this.ps.get(p.id);
     if (!s || !s.alive) return 0;
+    // nothing the boss does lands during a set piece (a player's own cost to self, ledgers and the Limit Break still do)
+    if (this.sp && this.t < this.sp.end && !['self', 'ledger', 'settle', 'lb'].includes(opts.kind)) return 0;
     // Royal Doom running out, the enrage and falling off the edge are sentences, not hits: no invulnerability, shield,
     // mitigation or cheat-death saves you (only the mechanic's own answer does)
     // (Skitterra's and Volkar's survivable drops are 'fall' too: only the outright kills take this path)
@@ -891,8 +905,8 @@ class FightSim {
       if (m.kind === 'invuln') { invuln = true; break; }
       if (m.kind === 'living') continue;
       if (m.kind === 'brace' && this.t - m.start <= FIGHT.PERFECT_WINDOW && !perfect) { perfect = m; mult *= 0.4; continue; }
-      if (m.kind === 'parry' && !opts.raw && this.t - m.start <= FIGHT.READ_WINDOW && !read) { read = m; mult *= m.dfl && opts.kind !== 'buster' ? 0.25 : 0.5; continue; }
-      if (m.kind === 'reflect') { if (!reflect) { reflect = m; mult *= 0.2; } continue; }
+      if (m.kind === 'parry' && !opts.raw && this.t - m.start <= FIGHT.READ_WINDOW && !read) { read = m; mult *= opts.kind === 'buster' ? 0.4 : m.dfl ? 0.25 : 0.5; continue; }   // (a caught tankbuster lands at 40%, as a Perfect Block's does; Deflect: any other blow at a quarter)
+      if (m.kind === 'reflect') { if (!reflect && (opts.kind === 'buster' || amt >= s.maxHp * 0.2)) { reflect = m; mult *= 0.2; } continue; }   // (a Mirror Aegis lets autos and burn ticks pass: it waits for a tankbuster, or a hit of a fifth of your health or more)
       if (m.kind === 'once') { if (onceHit || amt < s.maxHp * 0.2) continue; onceHit = m; }   // (a Tidecaller's Riptide Mark: the next big hit, a fifth of their health or more, is cut and the cut is used up)
       mult *= 1 - m.pct;
     }
@@ -939,6 +953,7 @@ class FightSim {
       absorbed = Math.round(absorbed); this.shieldSync(s);
     }
     amt = Math.round(amt);
+    if (opts.kind === 'self' && amt >= s.hp) amt = Math.max(0, Math.ceil(s.hp) - 1);   // (a hero's own cost is never the killing blow: it floors at 1 HP, Grace Withdrawn's 1 HP most of all)
     // a Gloomsworn's Hollow (end of this file): a killing blow at full Gloom starts it, and while it runs every point is debt, not health
     if (amt > 0 && this.hollowHit && this.hollowHit(p, s, amt, opts)) st.taken += amt;
     else { s.hp -= amt; st.taken += amt; }
@@ -1047,9 +1062,10 @@ class FightSim {
   // the boss is out of reach, not within GUARD s of the last one, and not when the script says so (f.noPause: the
   // Hollow King's Royal Doom).
   pauseBlock(dur = BOSS_PAUSE.MAX) {
-    const b = this.boss, t = this.t, cur = this.curCourse, enr = this.def.enrage && this.def.enrage[this.mode];
+    const b = this.boss, t = this.t, cur = this.curCourse, enr = this.def.enrage && (this.enrageAt() + this.spShift);   // (the enrage clock is stopped during a set piece: setPiece)
     if (this.state !== 'live') return 'not live';
     if (b.pauseUntil > t || t < (this.pauseReady || 0)) return 'guard';
+    if (this.sp && t < this.sp.end) return 'set piece';
     if (!cur || cur.o.until == null || cur.done || this.phase !== cur.ph) return 'phase';
     if (t + dur >= cur.end) return 'soft enrage';
     if (enr && t + dur + 0.5 >= enr) return 'enrage';
@@ -1058,6 +1074,59 @@ class FightSim {
     if (this.noPause && this.noPause()) return 'script';
     return null;
   }
+
+  // A set piece (a script's turning point: the Sovereign's acts): f.setPiece({ id, dur, invul = 3, run(f) }), called as a course step
+  // ([delay, () => f.setPiece({...}), name]). For dur s the script's clocks stand still and pick up where they were: every step still
+  // to come (and the course's seams, the soft enrage's passes), the hard enrage, and what runs on the party (debuffs, Vulnerability,
+  // Damage Down, Raise Sickness, the Recovering window). A script's own timers (Doom, a burn) join in with onSetPiece(fn): fn(a) is
+  // called each tick with the seconds to push them back by. Cooldowns, Ultimate charge and dashes run on. Nothing the boss does lands
+  // on the party (damagePlayer). For the first invul s the boss takes no damage at all (onEventIn, so nothing crosses a gate; main.js
+  // shows Immune to the hitter) and bots hold their Ultimates and the Limit Break (setPieceInvul: the opening only, as the HUD holds a person's). A telegraph already on the floor
+  // still resolves, harmlessly, so start one where the floor is clear. run(f) is called at the start (the script's own visuals).
+  // The host sends { t: 'setpiece', id, dur, invul } once. A set piece started inside another one only adds what runs past it.
+  // False if it doesn't start (not live, no dur).
+  setPiece(o) {
+    const dur = Math.max(0, Number(o && o.dur) || 0);
+    if (!dur || this.state !== 'live') return false;
+    const t = this.t, old = this.sp && t < this.sp.end ? this.sp : null, invul = Math.max(0, Math.min(dur, o.invul ?? 3));
+    this.sp = { id: o.id, start: old ? old.start : t, end: Math.max(old ? old.end : 0, t + dur), invulEnd: Math.max(old ? old.invulEnd : 0, t + invul) };
+    this.emit({ t: 'setpiece', id: o.id, dur, invul });
+    this.broadcastNext(true);
+    if (o.run) o.run(this);
+    return true;
+  }
+  // one tick of a set piece: everything that counts down by the clock is pushed back by the part of this tick inside it
+  spTick(dt) {
+    const sp = this.sp, a = Math.min(this.t, sp.end) - Math.max(this.t - dt, sp.start);
+    if (!(a > 0)) return;
+    for (const e of this.events) e.t += a;
+    const cur = this.curCourse;
+    if (cur) { cur.seams = cur.seams.map(x => x + a); cur.end += a; }
+    this.pauseShift = (this.pauseShift || 0) + a; this.spShift += a;
+    this.boss.autoAt += a;
+    const t0 = this.t - a;   // (a timer that had already run out stays out)
+    for (const s of this.ps.values()) {
+      for (const k in s.debuffs) if (s.debuffs[k] > t0) s.debuffs[k] += a;
+      if (s.vulnEnd > t0) s.vulnEnd += a;
+      if (s.dmgDownEnd > t0) s.dmgDownEnd += a;
+      if (s.weakEnd > t0) s.weakEnd += a;
+    }
+    if (this.recoverEnd > t0) this.recoverEnd += a;
+    // what runs on the boss: a Break (the stagger and its extra damage), Judgment's brand and the party's Vulnerability on it
+    const bs = this.boss;
+    if (bs.exposedUntil > t0) bs.exposedUntil += a;
+    if (bs.post) { if (bs.post.until > t0) bs.post.until += a; if (bs.post.at > t0 - 50) bs.post.at += a; }
+    if (bs.brand && bs.brand.end > t0) bs.brand.end += a;
+    if (bs.vulnEnd > t0) bs.vulnEnd += a;
+    if (bs.vulnNext > t0) bs.vulnNext += a;
+    if (bs.vulns) for (const k in bs.vulns) if (bs.vulns[k].end > t0) bs.vulns[k].end += a;
+    for (const fn of this.spHooks) fn(a);
+  }
+  onSetPiece(fn) { this.spHooks.push(fn); }
+  // bots keep their Ultimates and the Limit Break through a set piece (its opening included)
+  setPieceHold() { const sp = this.sp; return !!sp && this.t < Math.max(sp.end, sp.invulEnd); }
+  // the opening alone, while the boss is Immune: what a person's Ultimate and Limit Break are held for (the HUD), and so a bot's. Past it the party may burst again (Emberfall has none: the last burn matters)
+  setPieceInvul() { const sp = this.sp; return !!sp && this.t < sp.invulEnd; }
 
   // Generic telegraph. opts: { shape, delay, dmg, type, follow, need, tag, onResolve, avoidable, ddown, failDmg }
   // ddown: true makes an avoidable hit of this move also give Damage Down (every avoidable hit gives Vulnerability; the
@@ -1548,7 +1617,7 @@ class FightSim {
     const dest = ARENA.clamp({ x: want.x, y: want.y }, 12);
     const prop = PROPS.clipMove(p, dest, this.props, 14);
     const short = dist - Math.hypot(dest.x - p.x, dest.y - p.y), slam = short > (opts.slamAt ?? 40);
-    this.emit({ t: 'kb', id: p.id, x: Math.round(fx), y: Math.round(fy), d: dist });
+    this.emit(Object.assign({ t: 'kb', id: p.id, x: Math.round(fx), y: Math.round(fy), d: dist }, opts.rescue ? { rescue: 1 } : null));   // (rescue: a throw out of trouble, the Sovereign's climb-out of a hole: an Ultimate's lock does not hold against it)
     if (slam && opts.slam != null) {
       this.damagePlayer(p, opts.slam, { kind: 'slam', avoidable: true, ddown: opts.ddown });
       this.debuff(p.id, 'rooted', opts.daze ?? 0.6);
@@ -1571,6 +1640,7 @@ class FightSim {
     const b = this.boss;
     this.emit({ t: 'fb', hp: b.hp, mx: b.maxHp, x: Math.round(b.x), y: Math.round(b.y), f: +b.facing.toFixed(2), tg: b.target,
       u: b.untargetable ? 1 : 0, v: this.liveVuln(), ft: Math.round(this.t * 10) / 10, ph: this.phase,
+      pz: this.spShift ? Math.round(this.spShift * 10) / 10 : undefined,   // the seconds the enrage clock has stood still in set pieces (main.js, raid-ui.js)
       na: +(b.autoAt - this.t).toFixed(2),  // time to the next auto-attack, so clients can show the wind-up
       c: +this.t.toFixed(3),                // the fight clock, so clients can space the boss's moves evenly (interp.js)
       bs: this.bossStatus(), po: this.postureOn ? this.kenPack() : undefined,                // what's on the boss, for the icons under the boss bar (raid-ui.js)
@@ -1731,11 +1801,12 @@ Object.assign(FightSim.prototype, {
   // the boss pays: damage credited to the Oathbroker
   ledgerStrike(pid, amt) {
     const s = this.ps.get(pid), b = this.boss;
-    if (!s || b.untargetable || this.state !== 'live' || !(amt > 0)) return;
+    if (!s || b.untargetable || this.state !== 'live' || !(amt > 0) || (this.sp && this.t < this.sp.invulEnd)) return;   // (not while a set piece's opening has the boss Immune)
     amt = Math.round(Math.min(amt, 15000));
-    b.hp = Math.max(this.wallHp ?? 0, b.hp - amt);
-    this.stats[pid].damage += amt; this.tally(pid, 0, amt, this.curMove || 'ledger');
-    if (b.hp <= 0) this.end('clear');
+    const hp0 = b.hp; b.hp = Math.max(this.wallHp ?? 0, b.hp - amt);
+    amt = Math.max(0, Math.round(hp0 - b.hp));   // (credit what was dealt: a wall holds the boss's health, and the Ledger's bill does not count past it)
+    if (amt > 0) { this.stats[pid].damage += amt; this.tally(pid, 0, amt, this.curMove || 'ledger'); }
+    if (b.hp <= 0) this.bossFell();
   },
   // the owner's copy of a Ledger (and every client's, for the stamps): on every change, and each second while it holds
   sendLedger(pid, force, bill) {
@@ -1849,7 +1920,7 @@ Object.assign(FightSim.prototype, {
 // Two Dolls and their owner make the Stage: with the boss's centre inside that triangle, it takes 10% more damage.
 // Bosses and bots never target a Doll; it's never in alive() or players().
 // ===================================================================================================================
-const WEAVE_HOST = { SNAP: 550, MAX: 5, SHARE: 0.6, DEEP: 0.3, CARRY_SECS: 5, NO_SPLIT: new Set(['enrage', 'fall', 'self', 'thread', 'ledger', 'settle']) };
+const WEAVE_HOST = { SNAP: 550, MAX: 5, SHARE: 0.6, DEEP: 0.3, CAP: 0.15, WINDOW: 1.5, CARRY_SECS: 5, NO_SPLIT: new Set(['enrage', 'fall', 'self', 'thread', 'ledger', 'settle']) };
 const DOLL_HOST = { STAGE: 0.10, STALE: 1.5, PAD: 12 };
 Object.assign(FightSim.prototype, {
   // ---------------------------------------------------------------- threads
@@ -1926,10 +1997,12 @@ Object.assign(FightSim.prototype, {
     if (ev.op !== 'gather') return;
     const r = num(ev.r, 0, 260, 220), dist = num(ev.dist, 0, 140, 120);
     for (const c of this.adds.values()) {
+      if (c.fixed) continue;   // (an add fixed in place, a knot or a head: its stored spot is what its effect reads, so a Thread cannot draw it off)
       const dx = x - c.x, dy = y - c.y, d = Math.hypot(dx, dy);
       if (d > r + c.r || d < 1) continue;
       const m = Math.min(dist, Math.max(0, d - 20));
       c.x += dx / d * m; c.y += dy / d * m;
+      ARENA.clamp(c, 12);   // (never drawn off the floor)
       if (ev.dur > 0) c.holdUntil = Math.max(c.holdUntil || 0, this.t + num(ev.dur, 0, 3, 0));   // (Gathering Threads: held where they gather)
       PROPS.collide(c, this.props, c.r * 0.8);
     }
@@ -1963,16 +2036,29 @@ Object.assign(FightSim.prototype, {
     const ids = tp ? null : this.partnersOf(p.id);
     const partners = this.alive().filter(q => q.id !== p.id && (tp || ids.has(q.id)));
     if (!partners.length) return amt;
-    const share = amt / (partners.length + 1);
+    const even = amt / (partners.length + 1);
     this.carryAcc = this.carryAcc || new Map();
+    let sent = 0;
     for (const q of partners) {
+      // a thread never pushes more than a slice of the far end's health through in a moment, and never a killing blow: a
+      // tankbuster or a stack landing on the whole party stays mostly with the ones it was aimed at, instead of piling
+      // onto a healer tied to them (the rest stays with the one hit)
+      const qs = q.s || this.ps.get(q.id);
+      let share = even;
+      if (qs && qs.maxHp > 0) {
+        const rec = qs.thrIn && this.t - qs.thrIn[0] < WEAVE_HOST.WINDOW ? qs.thrIn[1] : 0;
+        share = Math.max(0, Math.min(even, qs.maxHp * WEAVE_HOST.CAP - rec, qs.hp - 1));
+        qs.thrIn = [rec ? qs.thrIn[0] : this.t, rec + share];
+      }
+      sent += share;
+      if (!(share > 0)) continue;
       const th = (this.threads || []).find(t => (t.a === p.id && t.b === q.id) || (t.b === p.id && t.a === q.id));
       if (th) th.log.push([this.t, share]);
       const w = th ? th.from : tp.from;
       this.carryAcc.set(w, (this.carryAcc.get(w) || 0) + share);
       this.damagePlayer(q, share, { kind: 'thread', scaled: true, shared: true });
     }
-    return share;
+    return amt - sent;
   },
   // a heal on tid runs down its threads (60%; seam 1: all of it; Loomwright and seam 2: a link further)
   threadHeal(fromId, tid, amount, seam) {
@@ -2388,7 +2474,7 @@ Object.assign(FightSim.prototype, {
   // add Posture from pid (o.full: all of it). A Break begins if it fills (and the boss is not casting).
   kenAdd(pid, n, o = {}) {
     const b = this.boss;
-    if (b.untargetable || b.noStagger || this.state !== 'live') return;   // (noStagger: a script's window where nothing can stagger it, Skitterra on the ground)
+    if (b.untargetable || b.noStagger || this.state !== 'live' || (this.sp && this.t < this.sp.invulEnd)) return;   // (a set piece's opening has the boss Immune: nothing builds its Posture; noStagger: a script's window where nothing can stagger it, Skitterra on the ground)
     const r = KENSEI.add(this.kenPost(), o.full ? KENSEI.MAX : n, this.t, { secs: o.secs, keep: o.keep, by: pid, casting: this.kenCasting() });
     if (r === 'break') this.kenBreak(pid);
   },

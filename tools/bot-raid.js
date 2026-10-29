@@ -13,6 +13,8 @@
 //   TRACE=1 the boss's casts, walls, adds and props as they happen
 //   gear=fresh|mid|full|post1|post2|post3|post4 (or GEAR=...) gives every bot representative player gear (see buildGear below); FEAST=pie|stew|broth|tarts
 //   picks the meal for 'full', 'post1' and 'post2' (default pie, none at the other levels). SUMMARY=1 prints one machine-readable line only.
+//   until=N (with phase=N) ends the run as a clear once the fight passes act N's gate, so check.js can play one act of the Sovereign.
+//   phase=N starts at course (phase) N like a Practice Hall run (the boss starts at that act's health); the Sovereign has one per act.
 //   stop=clear stops after the first clear (only tools/check.js passes it, for its final yes-or-no; for data, play every run): the runs
 //   before it play exactly as without it, and the closing lines count the runs played.
 const path = require('path');
@@ -39,17 +41,21 @@ const { MORROWOAK } = load('arena/bosses/morrowoak.js');
 DEFS.morrowoak = MORROWOAK;   // (set 3, Boss XI)
 const { CAELUM } = load('arena/bosses/caelum.js');
 DEFS.caelum = CAELUM;   // (set 3, Boss XII, the finale)
+const { SOVEREIGN } = load('arena/bosses/sovereign.js');
+DEFS.sovereign = SOVEREIGN;   // (the Ultimate: not on the Raid Board; one difficulty, play it as normal)
 const { TRIALS, trialDef } = load('arena/trials.js');
 
 let gearLevel = process.env.GEAR || '';
 let humanWho = process.env.HUMAN || 'none';
 const BREAKDOWN = !!process.env.BREAKDOWN;
-let mode = 'normal', runs = 3, comp = 'bastion,cleric,ranger,pyromancer'.split(','), def = GRUBNAK, seed0 = 1000, first = 0, stopOnClear = false;
+let untilAct = 0, mode = 'normal', runs = 3, comp = 'bastion,cleric,ranger,pyromancer'.split(','), def = GRUBNAK, seed0 = 1000, first = 0, stopOnClear = false, practiceFrom = 0;
 for (const a of process.argv.slice(2)) {
   if (a === 'normal' || a === 'hard') mode = a;
   else if (/^seed=\d+$/.test(a)) seed0 = Number(a.slice(5));   // a different set of seeds (default 1000)
   else if (/^first=\d+$/.test(a)) first = Number(a.slice(6));
   else if (a === 'stop=clear') stopOnClear = true;
+  else if (/^phase=\d+$/.test(a)) practiceFrom = Number(a.slice(6));   // start at this course (act) number, as a practice run does (FightSim practiceFrom; the Sovereign's acts)
+  else if (/^until=\d+$/.test(a)) untilAct = Number(a.slice(6));   // an act-by-act run (the Sovereign, with phase=N): the run ends, counted as a clear, when the fight passes act N's gate
   else if (/^gear=\w+$/.test(a)) gearLevel = a.slice(5);
   else if (/^human=[\w,]+$/.test(a)) humanWho = a.slice(6);
   else if (/^\d+$/.test(a)) runs = Number(a);
@@ -76,7 +82,7 @@ const bdTot = {};   // BREAKDOWN=1: the sums over the runs, per player
 const hollowTot = { started: 0, saved: 0, failed: 0 };   // a Gloomsworn's Hollow (fight.js HOLLOW_HOST), over every run
 for (let r = first; r < first + runs; r++) {
   const casts = [];
-  const host = new RaidHost({ def, mode, humans: () => [], bots: comp, seed: seed0 + r * 77, bond: GEARSET ? GEARSET.bond : undefined, emit: msg => {
+  const host = new RaidHost({ def, mode, humans: () => [], bots: comp, seed: seed0 + r * 77, bond: GEARSET ? GEARSET.bond : undefined, practiceFrom, emit: msg => {
     if (msg.t === 'bcast') casts.push(msg.name);
     // TRACE=1: print the boss's casts, the walls, adds and props as they happen
     if (process.env.TRACE && (msg.t === 'bcast' || (msg.t === 'fev' && msg.k === 'wall') || (msg.t === 'addev' && msg.k !== 'bite') || msg.t === 'propfx')) console.log(`   ${host.sim.t.toFixed(1)} ${msg.t} ${msg.name || msg.k || ''} ${msg.label || msg.kind || ''}`);
@@ -109,16 +115,19 @@ for (let r = first; r < first + runs; r++) {
     }
     origEmit(msg);
   };
+  let gateHit = false;
   while (host.sim.state === 'countdown' || host.sim.state === 'live') {
     host.tick(0.05);
+    if (untilAct && host.sim.phase > untilAct) { gateHit = true; break; }
     if (bd) bd.sample(0.05);
     if (host.sim.t > 900) break;
   }
-  if (host.sim.state === 'clear') clears++;
+  const won = host.sim.state === 'clear' || gateHit;   // (gateHit: until=N, the act's gate was passed)
+  if (won) clears++;
   const st = host.sim.stats;
   const dur = host.sim.t;
-  totDeaths += deaths.length; if (host.sim.state === 'clear') totClearT += dur;
-  log(`run ${r + 1}: ${host.sim.state} at ${dur.toFixed(0)}s, boss ${(host.sim.boss.hp / host.sim.boss.maxHp * 100).toFixed(1)}%, phase ${host.sim.phase}, deaths: ${deaths.join(', ') || 'none'}${raises.length ? `, raised: ${raises.join(', ')}` : ''}`);
+  totDeaths += deaths.length; if (won) totClearT += dur;
+  log(`run ${r + 1}: ${won ? 'clear' : host.sim.state} at ${dur.toFixed(0)}s, boss ${(host.sim.boss.hp / host.sim.boss.maxHp * 100).toFixed(1)}%, phase ${host.sim.phase}, deaths: ${deaths.join(', ') || 'none'}${raises.length ? `, raised: ${raises.join(', ')}` : ''}`);
   log('   ' + Object.values(st).map(s => `${s.name}/${s.cls}: ${(s.damage / dur).toFixed(0)} dps, ${(s.healing / dur).toFixed(0)} hps, avoidable ${s.avoidable}, deaths ${s.deaths}${s.ults ? `, ults ${s.ults}` : ""}`).join('\n   '));
   if (bd) {
     const res = bd.result();
@@ -126,14 +135,14 @@ for (let r = first; r < first + runs; r++) {
     for (const [id, r] of Object.entries(res)) { const a = (bdTot[id] = bdTot[id] || { name: r.name, cls: r.cls, human: r.human, n: 0 }); a.n++; for (const k of ['damage', 'dead', 'out', 'moving', 'idle', 'interrupts', 'avoidable']) a[k] = (a[k] || 0) + r[k]; a.dur = (a.dur || 0) + dur; }
   }
   // contribution points (scoring.js): the MVP on a clear, and with SCORE=1 each player's points, raw tracking and the awards
-  const sc = Scoring.score(st, { time: dur }), mv = host.sim.state === 'clear' ? Scoring.mvp(st, sc) : null;
+  const sc = Scoring.score(st, { time: dur }), mv = host.sim.state === 'clear' && !gateHit ? Scoring.mvp(st, sc) : null;
   if (process.env.SCORE) log('   ' + Object.entries(st).map(([id, s]) => `${s.name}/${s.role} ${sc[id].total} pts ${JSON.stringify(Object.fromEntries(Object.entries(sc[id].pts).map(([k, v]) => [k, Math.round(v)])))} pen ${sc[id].pen.avoid}/${sc[id].pen.deaths} | ` +
     Scoring.KEYS.filter(k => !['avoidable', 'deaths'].includes(k)).map(k => `${k} ${s[k]}`).join(' ')).join('\n   '));
   if (mv != null) log(`   MVP: ${st[mv].name} (${st[mv].cls}) ${sc[mv].total} pts` + (process.env.SCORE ? '; awards ' + Scoring.awards(st, sc, { clear: true, time: dur }).map(a => `${a.name}: ${st[a.who].name}`).join(', ') : ''));
   if (hollow.started) log(`   Hollow: ${hollow.started} started, ${hollow.saved} saved, ${hollow.failed} fell`);
   for (const k of Object.keys(hollow)) hollowTot[k] += hollow[k];
   if (Object.keys(kinds).length) log('   failed: ' + Object.entries(kinds).map(([k, n]) => `${k} ${n}`).join(', '));
-  if (stopOnClear && host.sim.state === 'clear') { log(`stopped after the first clear (run ${r + 1})`); runs = r - first + 1; break; }
+  if (stopOnClear && won) { log(`stopped after the first clear (run ${r + 1})`); runs = r - first + 1; break; }
 }
 log(`cleared ${clears} of ${runs}`);
 if (BREAKDOWN && !SUMMARY) {
