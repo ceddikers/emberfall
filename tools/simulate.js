@@ -140,7 +140,7 @@ function runSim(classId, skill, seed, specId, talents) {
     state.mits = state.mits.filter(m => m.end > state.t);
     for (const m of state.mits) {
       if (m.kind === 'brace' && state.t - m.start <= 0.8) { perfect = true; mult *= 0.4; }
-      else if (m.kind === 'parry' && state.t - m.start <= 0.4 && !read) { read = m; mult *= m.dfl && kind !== 'buster' ? 0.25 : 0.5; }   // (Deflect: a blow that is not a tankbuster lands at a quarter)   // an Ironpalm's Read (fight.js READ_WINDOW)
+      else if (m.kind === 'parry' && state.t - m.start <= 0.4 && !read) { read = m; mult *= kind === 'buster' ? 0.4 : m.dfl ? 0.25 : 0.5; }   // (Deflect: a blow that is not a tankbuster lands at a quarter)   // an Ironpalm's Read (fight.js READ_WINDOW)
       else if (m.kind === 'reflect') { mult *= 0.2; }
       else if (m.kind !== 'living' && m.kind !== 'invuln') mult *= 1 - m.pct;
     }

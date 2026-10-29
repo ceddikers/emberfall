@@ -37,7 +37,7 @@ const SV_ROOMS = (() => {
   };
   const pack = g => ({ mul: hexToRgb(g.mul).slice(), add: hexToRgb(g.add).slice(), ashc: hexToRgb(g.ashc).slice(), n: [g.addA, g.ash, g.paper, g.wind] });
   const mixG = (a, b, q) => ({ mul: a.mul.map((v, i) => lerp(v, b.mul[i], q)), add: a.add.map((v, i) => lerp(v, b.add[i], q)), ashc: a.ashc.map((v, i) => lerp(v, b.ashc[i], q)), n: a.n.map((v, i) => lerp(v, b.n[i], q)) });
-  const fresh = act => ({ act, from: pack(GRADE[act]), to: pack(GRADE[act]), t0: -99, dur: 0.001, z: { from: 1, to: 1, t0: -99, dur: 1 }, holes: [], hole: {}, act4: null, peel: null, peelKeep: false, low: false, gut: null, cool: null, nightAt: null });
+  const fresh = act => ({ act, from: pack(GRADE[act]), to: pack(GRADE[act]), t0: -99, dur: 0.001, z: { from: 1, to: 1, t0: -99, dur: 1 }, holes: [], hole: {}, act4: null, peel: null, peelKeep: false, low: false, gut: null, cool: null, nightAt: null, room: null });
   let S = fresh(1);   // (the act and the camera: one fight at a time; the preview swaps its own)
   const gradeAt = t => mixG(S.from, S.to, sm01(clamp((t - S.t0) / S.dur, 0, 1)));
   function setAct(act, t, instant) {
@@ -51,7 +51,8 @@ const SV_ROOMS = (() => {
   const zoomAt = t => { const z = S.z; return lerp(z.from, z.to, sm01(clamp((t - z.t0) / Math.max(0.01, z.dur), 0, 1))); };
   function setZoom(zoom, dur, t) { S.z = { from: zoomAt(t), to: clamp(Number(zoom) || 1, 0.5, 1.2), t0: t, dur: dur > 0 ? dur : 1 }; }
   // the camera's extra zoom in this room (1 outside it): main.js multiplies camOut() by this
-  function camZoom(t) { const a = typeof ArenaView !== 'undefined' ? ArenaView.amb : null; return a && a.kind === 'sovereign' ? zoomAt(t) : 1; }
+  // (a zoom left by an earlier room, not this one's: 1, until this room's first event drops the old state)
+  function camZoom(t) { const a = typeof ArenaView !== 'undefined' ? ArenaView.amb : null, lr = typeof ArenaView !== 'undefined' ? ArenaView.liveRoom : null; return a && a.kind === 'sovereign' && !(lr && S.room && lr !== S.room) ? zoomAt(t) : 1; }
 
   // ------------------------------------------------------------------------------------------------------------------ small parts
   // a flame (drawn additive): three tongues, gold into white, or orange for the forge
@@ -571,7 +572,7 @@ const SV_ROOMS = (() => {
     holePath(c, h, age); c.fillStyle = '#05030a'; c.fill();
     c.save(); holePath(c, h, age); c.clip();
     const sp = belowSprite(mode);
-    if (sp) { c.globalAlpha = (mode === 'square' ? 0.8 : 0.5) + 0.25 * birth; c.drawImage(sp, x - R * 1.15 + Math.sin(t * 0.5 + seed) * 3, y - R * 1.15 + 3, R * 2.3, R * 2.3); c.globalAlpha = 1; }
+    if (sp) { const ga = c.globalAlpha; c.globalAlpha = ga * ((mode === 'square' ? 0.8 : 0.5) + 0.25 * birth); c.drawImage(sp, x - R * 1.15 + Math.sin(t * 0.5 + seed) * 3, y - R * 1.15 + 3, R * 2.3, R * 2.3); c.globalAlpha = ga; }   // (times the caller's alpha: the night's fade)
     const vg = c.createRadialGradient(x, y, R * 0.15, x, y, R * 1.05); vg.addColorStop(0, 'rgba(5,3,8,0)'); vg.addColorStop(0.55, 'rgba(5,3,8,0.28)'); vg.addColorStop(1, 'rgba(5,3,8,0.9)');   // (far down: the walls close in dark)
     c.fillStyle = vg; c.fillRect(x - R * 1.2, y - R * 1.2, R * 2.4, R * 2.4);
     c.globalCompositeOperation = 'lighter';
@@ -784,10 +785,20 @@ const SV_ROOMS = (() => {
     peelDraw(ctx, t); holesDraw(ctx, a, t); portalDraw(ctx, a, t);   // (FX5: the floor's own happenings, last, so they are not covered by the ash or the grade)
   }
 
-  const baseBuild = ArenaView.buildFloor, baseAmb = ArenaView.drawAmbient, baseEvent = ArenaView.roomEvent;
+  const baseBuild = ArenaView.buildFloor, baseAmb = ArenaView.drawAmbient, baseEvent = ArenaView.roomEvent, baseDraw = ArenaView.drawFloor;
+  // The fight's state is dropped when the fight is over or another begins: the camera back at 1 (an Act IV wipe left 0.72), and the big kept floors (the peel's and the cool's, each
+  // the size of a hall floor) handed back. The preview's own floors (PREV) and the floor now showing are never freed.
+  function dropState() {
+    for (const k of ['peel', 'cool']) {
+      const o = S[k]; if (!o || !o.cv || o.cv === ArenaView.floor) continue;
+      let mine = false; for (const f in PREV) if (PREV[f].floor === o.cv) mine = true;
+      if (!mine) o.cv.width = o.cv.height = 0;
+    }
+    S = fresh(1);
+  }
   ArenaView.buildFloor = function (bossId, scale) {
     const kind = FORMS[bossId], prevFloor = this.floor, prevBox = this.floorBox, prevForm = this.amb && this.amb.kind === 'sovereign' ? this.amb.form : null;
-    if (!kind) return baseBuild.call(this, bossId, scale);
+    if (!kind) { if (S.room || S.z.to !== 1 || S.peel || S.cool) dropState(); return baseBuild.call(this, bossId, scale); }   // (another boss's room: nothing of the Ultimate's stays)
     const R = ARENA.kind === 'circle' ? ARENA.full : 540, bx = Math.ceil(R + MARGIN[kind]), by = bx;
     const cv = document.createElement('canvas'); cv.width = cv.height = Math.ceil(bx * 2 * scale);
     const c = cv.getContext('2d'); c.scale(scale, scale); c.translate(bx, by);
@@ -795,7 +806,16 @@ const SV_ROOMS = (() => {
     this.floor = cv; this.floorFor = bossId + '@' + scale; this.floorBox = { bx, by }; this.amb = amb;
     if (kind === 'square' && prevForm === 'crater' && prevFloor && prevBox) S.peel = { cv: prevFloor, bx: prevBox.bx, by: prevBox.by };   // (Every Name: the crater's floor is kept to peel away over the square, so the swap is never seen)
     if (kind === 'night' && prevForm === 'square' && prevFloor && prevBox) S.cool = { cv: prevFloor, bx: prevBox.bx, by: prevBox.by, t0: null };   // (the kill: the burning square cools into the night)
-    if (kind === 'hall') S = fresh(1);   // (a fresh pull: Act I, the camera back where it was)
+    if (kind === 'hall') { const rm = S.room; dropState(); S.room = rm; }   // (a fresh pull: Act I, the camera back where it was)
+  };
+  // Act IV pulls the camera back to 0.72, which would carry the drawn scale across quarter steps and rebuild the ~2900 px floor each time: for a Sovereign floor the built
+  // scale is held while the asked one is no larger (a bigger floor drawn smaller is the same picture), and rebuilt only to go up.
+  ArenaView.drawFloor = function (ctx, bossId, scale) {
+    if (typeof bossId === 'string' && FORMS[bossId] && typeof this.floorFor === 'string') {
+      const i = this.floorFor.lastIndexOf('@');
+      if (i > 0 && this.floorFor.slice(0, i) === bossId) { const sb = +this.floorFor.slice(i + 1); if (sb > 0 && Math.ceil(scale * 4 - 1e-6) / 4 <= sb) scale = sb; }
+    }
+    return baseDraw.call(this, ctx, bossId, scale);
   };
   ArenaView.drawAmbient = function (ctx, t) {
     const a = this.amb;
@@ -803,6 +823,7 @@ const SV_ROOMS = (() => {
     return baseAmb.call(this, ctx, t);
   };
   ArenaView.roomEvent = function (room, msg, now, ...rest) {
+    if (room && S.room !== room) { dropState(); S.room = room; }   // (a new pull, or a resync, builds a new room object: its events start from a clean state)
     if (msg && msg.k === 'svact') { setAct(msg.act, now); if (msg.act === 4) S.act4 = now; }
     else if (msg && typeof msg.k === 'string' && msg.k.startsWith('svhole:')) { if (!S.hole[msg.id]) { S.hole[msg.id] = 1; S.holes.push({ id: msg.id, x: +msg.x || 0, y: +msg.y || 0, r: +msg.r || 80, t0: now }); } }
     else if (msg && msg.k === 'svcam') setZoom(msg.zoom, msg.dur, now);

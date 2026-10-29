@@ -1,6 +1,12 @@
 // DOM parts of the raid: boss bar + cast bar, party frames, countdown, results screen, and the
 // training-dummy meter in town. main.js feeds it data every frame.
 
+// when a raid's enrage lands, from its pull: a practice start in a later act counts from that act (fight.js enrageAt, def.practiceCut)
+function raidEnrageAt(raid, mode) {
+  const e = raid.def.enrage && raid.def.enrage[mode || raid.mode], cut = raid.practice && raid.def.practiceCut ? raid.def.practiceCut[raid.practice] || 0 : 0;
+  return e && cut ? Math.max(30, e - cut) : e;
+}
+
 const RaidUI = (() => {
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -615,7 +621,7 @@ const RaidUI = (() => {
     const m = raid.meter, show = meterOn && !!m && (raid.state === 'live' || raid.state === 'clear' || raid.state === 'wipe');
     el.classList.toggle('hidden', !show);
     if (!show) return;
-    const ft = Math.max(1, m.ft || 0), b = raid.boss, enr = raid.def.enrage && raid.def.enrage[raid.mode];
+    const ft = Math.max(1, m.ft || 0), b = raid.boss, enr = raidEnrageAt(raid);
     // Score: the same function that picks the MVP, on the stats so far
     const scoreOn = meterMode === 'score';
     let sc = null;
@@ -852,7 +858,7 @@ const RaidUI = (() => {
             tip: `<b>Judgment</b><em>${val} charge${val === 1 ? '' : 's'} · ${secs}s${mine ? ' · yours' : ''}</em>Each hit from an ally bursts a charge in holy fire.` });
         }
       }
-      const enr = raid.def.enrage && raid.def.enrage[raid.mode];
+      const enr = raidEnrageAt(raid);
       if (enr) {
         const left = Math.ceil(enr + 8 - ((raid.fightTime || 0) - (raid.fightPaused || 0)));   // the enrage is an 8s cast (fight.js enrage)
         if (left <= 60 && left > 0) items.push({ k: 'enrage', c: 'buff', glyph: GLYPH.enrage, n: left, tip: `<b>${esc(raid.def.enrageName || 'Enrage')}</b><em>${left}s</em>When this runs out, the fight is lost.` });
@@ -1153,7 +1159,7 @@ const RaidUI = (() => {
         return `<${c.go && pr ? 'button type="button" data-go="' + c.go + '"' : 'div'} class="rw"><b>${esc(c.n)}</b><span class="rw-pips">${pips}</span>${note}</${c.go && pr ? 'button' : 'div'}>`;
       }).join('')}</div>`;
     } else {
-      const enr = raid.def.enrage && raid.def.enrage[msg.mode || raid.mode];
+      const enr = raidEnrageAt(raid, msg.mode);
       body = `<p class="rw-none">${enr && dur >= enr ? `Nobody fell. ${esc(raid.def.enrageName || 'The enrage')} ended the pull.` : 'Nobody fell. The pull ended before the fight did.'}</p>`;
     }
     // this pull against the best (the "New best" line covers beating it, so the bar only shows when a better pull exists)

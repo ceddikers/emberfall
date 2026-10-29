@@ -31,6 +31,8 @@ const SV_FORETOLD = (() => {
   const cnt = n => (LOW ? Math.max(1, Math.ceil(n * 0.4)) : n);
   let warned = false;
   const warn = e => { if (!warned) { warned = true; if (typeof console !== 'undefined') console.warn('sv-foretold', e); } };
+  // exception-safe (sovereign-fx.js guarded: a throw is logged once and every canvas state it saved is restored)
+  const guard = (ctx, fn) => { if (typeof SV_FX !== 'undefined' && SV_FX.guarded) return SV_FX.guarded(ctx, fn); ctx.save(); try { fn(); } catch (e) { warn(e); } finally { ctx.restore(); } };
 
   // ---------------------------------------------------------------------------------------------------------------- the ghost's body
   // Each ghost is drawn once a frame into a small canvas of its own with the hero's own art, then washed cold silver-blue and laid on the floor translucent.
@@ -135,7 +137,7 @@ const SV_FORETOLD = (() => {
     }
     c.restore();
   }
-  function blades(c, ev, u) {   // as the fans land: a silver streak out along each fan's middle, and a few cinders
+  function blades(c, ev, u) {   // (drawn under the fills) as the fans land: a silver streak out along each fan's middle, and a few cinders
     const T = +ev.fan || 6.8, age = u - T; if (age < -0.05 || age > 0.8 || !ev.a) return;
     const ox = +ev.ox || 0, oy = +ev.oy || 0, R = 900, head = eo3(c01(age / 0.14)), tail = c01((age - 0.04) / 0.35), al = 1 - c01((age - 0.08) / 0.7);
     c.save(); c.lineCap = 'round';
@@ -168,6 +170,7 @@ const SV_FORETOLD = (() => {
       const u = t - ev.start; if (u < -0.1 || u > (+ev.dur || 10) + 0.5) return;
       ctx.save();
       rift(ctx, ev, u, t);
+      blades(ctx, ev, u);   // (the silver streaks lie UNDER the telegraph fills: over them they would hide the red fans as they land)
       // the bond between the two that share, under both
       const sh = ev.g.filter(G => G[3] === 0);
       if (sh.length === 2) {
@@ -184,7 +187,6 @@ const SV_FORETOLD = (() => {
     each(room, ev => {
       const u = t - ev.start; if (u < -0.1 || u > (+ev.dur || 10) + 0.5) return;
       ctx.save();
-      blades(ctx, ev, u);
       ev.g.forEach((G, i) => {
         const a = life(ev, u, i), kind = G[3];
         if (a > 0.05) { const hover = Math.sin(t * 2.1 + i * 1.7) * 3; MARK[kind] && MARK[kind](ctx, G[1], G[2] - 76 - hover, t, Math.min(1, a * 1.2), i * 1.9); }
@@ -199,12 +201,12 @@ const SV_FORETOLD = (() => {
     if (typeof ArenaView === 'undefined' || ArenaView.__svFore) return;
     const dt = ArenaView.drawTelegraphs, dro = ArenaView.drawRoomOver;
     ArenaView.drawTelegraphs = function (ctx, tgs, t, env) {
-      if (env && env.bossId === 'sovereign') { try { under(ctx, this.liveRoom || env.room, t, env); } catch (e) { warn(e); } }
+      if (env && env.bossId === 'sovereign') guard(ctx, () => under(ctx, this.liveRoom || env.room, t, env));
       return dt.apply(this, arguments);
     };
     ArenaView.drawRoomOver = function (ctx, room, t, env) {
       const res = dro.apply(this, arguments);
-      if (env && env.bossId === 'sovereign') { try { over(ctx, room, t, env); } catch (e) { warn(e); } }
+      if (env && env.bossId === 'sovereign') guard(ctx, () => over(ctx, room, t, env));
       return res;
     };
     ArenaView.__svFore = 1;

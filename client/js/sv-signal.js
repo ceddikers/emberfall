@@ -2,7 +2,7 @@
 // land on it, turned by the pass's fixed angle. The host sends roomev 'svsignal:<n>' { who, x, y, turn, at, dur } as that first echo is called: `at` is the second its sigil
 // flares (as the echo stands), `dur` how long the message lives. All this file does is the flare: a thin gold ring running out of the sigil, a four-pointed glint over it and a
 // few embers lifting. Nothing here is a telegraph and nothing paints safe ground; it is a pure function of the clients' clock and the event (a scrubbed clock draws the same).
-// Contract: docs/plans/2026-10-ultimate-build.md ("Built (First Signal)"). Hooked in the way sovereign-fx.js is (ArenaView.drawRoomOver, ours last); load it after that file.
+// Contract: docs/plans/2026-10-ultimate-build.md ("Built (First Signal)"). Hooked in under the telegraph fills (ArenaView.drawTelegraphs, as sovereign-fx.js does); load it after that file.
 
 const SV_SIGNAL = (() => {
   const GOLD = '#ffd05a', HOT = '#fff2b0', WHITE = '#fffdf0', AMBER = '#ffa83a';
@@ -11,6 +11,8 @@ const SV_SIGNAL = (() => {
   const hs = (i, n = 0) => { const x = Math.sin(i * 127.1 + n * 311.7) * 43758.5453; return x - Math.floor(x); };
   let warned = false;
   const warn = e => { if (!warned) { warned = true; if (typeof console !== 'undefined') console.warn('sv-signal', e); } };
+  // exception-safe (sovereign-fx.js guarded: a throw is logged once and every canvas state it saved is restored)
+  const guard = (ctx, fn) => { if (typeof SV_FX !== 'undefined' && SV_FX.guarded) return SV_FX.guarded(ctx, fn); ctx.save(); try { fn(); } catch (e) { warn(e); } finally { ctx.restore(); } };
   const glow = (c, x, y, r, col, a) => {
     if (a <= 0.01 || r < 1) return;
     const g = c.createRadialGradient(x, y, 0, x, y, r);
@@ -52,14 +54,15 @@ const SV_SIGNAL = (() => {
     for (const k in room.ev) if (k.charCodeAt(0) === 115 && k.startsWith('svsignal:')) flare(ctx, room.ev[k], t, !!(env && env.low));
   }
 
+  // Drawn UNDER the telegraph fills (ArenaView.drawTelegraphs is wrapped: ours first, then theirs): the glint and the gold ring are additive light, and drawn over a red
+  // telegraph that starts at that echo they would wash it out. Under, the fill and its rim stay whole on top.
   function hook() {
     if (typeof ArenaView === 'undefined' || ArenaView.__svSignal) return;
-    const dro = ArenaView.drawRoomOver;
-    if (typeof dro !== 'function') return;
-    ArenaView.drawRoomOver = function (ctx, room, t, env) {
-      const res = dro.apply(this, arguments);
-      if (env && env.bossId === 'sovereign') { try { over(ctx, room, t, env); } catch (e) { warn(e); } }
-      return res;
+    const dt = ArenaView.drawTelegraphs;
+    if (typeof dt !== 'function') return;
+    ArenaView.drawTelegraphs = function (ctx, tgs, t, env) {
+      if (env && env.bossId === 'sovereign') guard(ctx, () => over(ctx, this.liveRoom || env.room, t, env));
+      return dt.apply(this, arguments);
     };
     ArenaView.__svSignal = 1;
   }

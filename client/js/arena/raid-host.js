@@ -136,9 +136,11 @@ class RaidHost {
       case 'edge': S.delete('edgewarn'); break;
       // a room moment: the long ones (a standing room state) are replaced by the next of their kind, the short ones pile up
       case 'roomev': {
-        const long = (msg.dur || 0) >= 20;
+        const long = (msg.dur || 0) >= 20 || msg.dur < 0;   // (dur -1: an echo that stays until a message of its kind without a `who` ends it, the Sovereign's)
         if (msg.dur === 0) { S.delete('roomev:' + msg.k); break; }   // (an empty one clears its kind: the brood clock)
-        if (!(msg.dur > 0)) break;
+        // an echo ending (a svecho message with no `who`, any dur): the echo is no longer replayed, whatever it was set to stand for
+        if (typeof msg.k === 'string' && msg.k.startsWith('svecho:') && msg.who == null) { for (const k of [...S.keys()]) if (k === 'roomev:' + msg.k || k.startsWith('roomev:' + msg.k + ':')) S.delete(k); break; }
+        if (!(msg.dur > 0 || msg.dur < 0)) break;
         S.set('roomev:' + msg.k + (long ? '' : ':' + (this.seenN = (this.seenN || 0) + 1)), { msg: Object.assign({}, msg), at: t });
         break;
       }
@@ -161,7 +163,7 @@ class RaidHost {
       case 'sweep': return sim.sweeps.has(id);
       case 'post': return (sim.posts || []).some(c => c.id === id && c.end > t);
       case 'bcast': return !!sim.boss.cast && sim.boss.cast.name === m.name && t < rec.at + (m.dur || 0);
-      case 'husk': case 'eggs': case 'roomev': return t < rec.at + (m.dur || 0);
+      case 'husk': case 'eggs': case 'roomev': return m.dur < 0 || t < rec.at + (m.dur || 0);   // (a negative dur stands until its kind ends it: note())
       case 'lunge': return t < rec.at + (m.delay || 0) + (m.n || 0) * (m.step || 0) + 1;
       case 'edgewarn': return !!sim.edgeNext;
       case 'thr': case 'dolls': case 'hounds': case 'lamps': return Array.isArray(m.l) && m.l.length > 0;
@@ -196,6 +198,8 @@ class RaidHost {
     if (sim.state === 'live') add({ t: 'mtr', ft: +t.toFixed(1), d: Object.entries(sim.stats).map(([id, st]) => Scoring.pack(Number(id), st)) });
     if (this.pullAt != null && this.pullAt > 0) add({ t: 'pcd', n: this.pullAt });
     if (this.rc) add({ t: 'rc', by: this.rc.by, n: Math.max(0.5, this.rc.left), a: [...this.rc.ans].map(([id, r]) => [id, r ? 1 : 0]) });
+    // a set piece under way (fight.js setPiece): its Immune and the HUD's hold, through the same 'setpiece' message the client applies when it begins (el: how long ago it began)
+    if (sim.sp && t < sim.sp.end) add({ t: 'setpiece', id: sim.sp.id, dur: sim.sp.end - sim.sp.start, invul: Math.max(0, sim.sp.invulEnd - sim.sp.start) }, t - sim.sp.start);
     // what is on the floor and in the air, in the order it began
     this.pruneSeen();
     const live = [...this.seen].sort((a, b) => a[1].at - b[1].at);
@@ -350,7 +354,7 @@ class RaidHost {
   // tankbuster when the gauge is full; a healer saves a sinking party; any role with three bars raises a fallen ally (the raise is every role's).
   botLimit() {
     const sim = this.sim, L = FIGHT.LB, lv = Math.floor(sim.lb / L.BAR), t = sim.t;
-    if (lv < 1 || t - sim.lbUsedAt < 3 || sim.setPieceHold()) return;   // (a set piece: the Limit Break is held, FightSim.setPiece)
+    if (lv < 1 || t - sim.lbUsedAt < 3 || sim.setPieceInvul()) return;   // (a set piece's opening: the Limit Break is held, FightSim.setPiece; past it a bot may use it, as a person may)
     const ps = [...sim.ps.values()].filter(q => !q.left), alive = ps.filter(q => q.alive), dead = ps.length - alive.length;
     const low = alive.filter(q => q.hp / q.maxHp < 0.35).length;
     const busterSoon = [...sim.mechs.values()].some(m => m.type === 'buster' && m.resolveAt - t < 1.5);
@@ -433,7 +437,7 @@ class RaidHost {
       bot.actor.update();
       if (bot.actor.taunt) this.botTaunt(bot, view);
       // the Ultimate (T): BotAI.ult says when (the party's burst, a check, a buster, a raidwide)
-      if (bot.actor.kit.ult && !sim.setPieceHold() && BotAI.ult(bot, bot.actor.kit, view, ultCtx)) bot.actor.press(7);
+      if (bot.actor.kit.ult && !sim.setPieceInvul() && BotAI.ult(bot, bot.actor.kit, view, ultCtx)) bot.actor.press(7);
       if (this.sim.t >= bot.nextAct) {
         const i = BotAI.act(bot, bot.actor.kit, view);
         if (i !== null && i !== undefined) {
@@ -511,7 +515,7 @@ class RaidHost {
     }
     if (msg.t === 'kb') {
       const bot = this.bots.find(b => b.id === msg.id);
-      if (bot && !bot.actor.kit.ultSteady()) {   // (an Ultimate's animation lock can't be knocked out of)
+      if (bot && (!bot.actor.kit.ultSteady() || msg.rescue)) {   // (an Ultimate's animation lock can't be knocked out of; a rescue, the climb-out of a hole, still moves it)
         const a = Math.atan2(bot.y - msg.y, bot.x - msg.x);
         const to = ARENA.clamp({ x: bot.x + Math.cos(a) * msg.d, y: bot.y + Math.sin(a) * msg.d }, 12);  // the arena has a wall, same as for players
         PROPS.clipMove(bot, to, this.sim.props, 14);   // ... and a throw stops at a solid prop
@@ -524,6 +528,8 @@ class RaidHost {
         if (!bot || (vx === 0 && vy === 0) || bot.actor.kit.ultSteady()) continue;
         const to = ARENA.clamp({ x: bot.x + vx * msg.dt, y: bot.y + vy * msg.dt }, 12);
         PROPS.clipMove(bot, to, this.sim.props, 14);
+        const hs = this.sim.room && this.sim.room.holes, inH = (p, pad) => !!hs && hs.some(h => Math.hypot(p.x - h.x, p.y - h.y) < h.r + pad);
+        if (inH(to, -10) && !inH(bot, -10)) continue;   // (the pull never carries a hero into a hole: only their own step does)
         bot.x = to.x; bot.y = to.y;
       }
     }
@@ -638,6 +644,7 @@ class RaidHost {
       collide: (actor, o, r) => { ARENA.clamp(o, 16); if (host.sim.props.length) PROPS.collide(o, host.sim.props, r); },
       dolls: (actor, list) => host.sim.setDoll(bot.id, list),
       allies: () => host.sim.alive().map(p => ({ id: p.id, hp: p.s.hp / p.s.maxHp })),   // the living party (actor.js allies)
+      hole: (actor, x, y) => { const r = host.sim.room; return !!(r && r.safe && !r.safe(x, y, true)); },   // a bot's blink back keeps off the Sovereign's holes (kits.js kitBackSafe)
       lamps: (actor, list) => host.sim.setLamps(bot.id, list),   // a Lanternkeeper bot's lanterns go straight to the host
       // a Houndmaster bot's hounds go straight to the host; the boss's facing is where its hounds' sides are measured from; Shift is the bot's own say (bot.shift)
       hounds: (actor, list) => host.sim.setHounds(bot.id, list),
@@ -684,22 +691,26 @@ class RaidHost {
             break;
           case 'teleport': {
             const b = host.sim.boss, a = b.facing + Math.PI;
-            if (ev.where === 'point') { const to = ARENA.clamp({ x: Number(ev.x) || 0, y: Number(ev.y) || 0 }, 20); bot.x = to.x; bot.y = to.y; break; }   // a spot named by the kit (Swap)
+            const sps = host.sim.ps.get(bot.id);
+            if (sps && sps.debuffs.rooted > host.sim.t) break;   // (held where it stands: a blink or a step behind the boss waits, as for a player)
+            const hs = host.sim.room && host.sim.room.holes, holeP = hs ? (x, y, pad) => hs.some(h => Math.hypot(x - h.x, y - h.y) < h.r + pad) : null;
+            const land = (to, blink) => { if (holeP && typeof kitHoleClamp !== 'undefined') kitHoleClamp(bot, to, holeP, blink); bot.x = to.x; bot.y = to.y; };   // (never lands in a hole: kits.js kitHoleClamp)
+            if (ev.where === 'point') { land(ARENA.clamp({ x: Number(ev.x) || 0, y: Number(ev.y) || 0 }, 20), true); break; }   // a spot named by the kit (Swap)
             if (ev.where === 'ally') {   // toward an ally, up to ev.d, stopping short of them (Wings of Dawn; ev.safe: the bot only presses it to a clear landing, bots.js)
               const a = host.sim.players().find(p => p.id === ev.to); if (!a || a.id === bot.id) break;
               const dist = Math.hypot(a.x - bot.x, a.y - bot.y), k = Math.max(0, Math.min(ev.d || 140, dist - 40)) / (dist || 1);
-              const to = ARENA.clamp({ x: bot.x + (a.x - bot.x) * k, y: bot.y + (a.y - bot.y) * k }, 40); bot.x = to.x; bot.y = to.y;
+              land(ARENA.clamp({ x: bot.x + (a.x - bot.x) * k, y: bot.y + (a.y - bot.y) * k }, 40), true);
               break;
             }
             if (ev.where && ev.where !== 'behind' && typeof kitMoveDest !== 'undefined') {   // a kit move (kits.js): dash, swing round, charge through
               const en = bot.lastEnemy && bot.lastEnemy !== 'boss' ? host.sim.adds.get(bot.lastEnemy) : null;
               const tg = en || (b.untargetable ? null : b), tgt = tg ? { x: tg.x, y: tg.y } : null;
               const to = kitMoveDest(ev.where, bot, tgt, BotAI.isMelee(bot.cls) ? tgt : bot.plan, ev.d);
-              ARENA.clamp(to, 40); bot.x = to.x; bot.y = to.y;
+              ARENA.clamp(to, 40); land(to, false);
               break;
             }
-            bot.x = b.x + Math.cos(a) * (FIGHT.BOSS_R + 45); bot.y = b.y + Math.sin(a) * (FIGHT.BOSS_R + 45);
-            ARENA.clamp(bot, 40);   // (kept on the floor, as a hero's own step behind is: a boss by the wall has no room behind it)
+            const bh = ARENA.clamp({ x: b.x + Math.cos(a) * (FIGHT.BOSS_R + 45), y: b.y + Math.sin(a) * (FIGHT.BOSS_R + 45) }, 40);   // (kept on the floor, as a hero's own step behind is: a boss by the wall has no room behind it)
+            land(bh, true);
             break;
           }
           case 'heal': case 'hot': case 'shield': case 'mit': case 'raise': case 'rewind':

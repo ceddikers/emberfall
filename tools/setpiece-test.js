@@ -39,9 +39,9 @@ let probe = {};
 // what to do at which second (the sim ticks 0.05 s at a time)
 at(1, () => { check(sim.taunt(1, 'boss'), 'the tank should be able to taunt at 1 s'); });
 at(4, () => { const h = hp(); hit(); check(hp() === h - 1000, 'a hit before the set piece lands'); });
-at(6, () => { probe.hp6 = hp(); hit(); probe.hp6b = hp(); probe.hold6 = sim.setPieceHold(); probe.pb = sim.pauseBlock(); probe.dp = sim.damagePlayer(sim.players()[0], 500, { kind: 'cast' }); probe.self = sim.damagePlayer(sim.players()[0], 10, { kind: 'self', raw: true }); });
+at(6, () => { probe.hp6 = hp(); hit(); probe.hp6b = hp(); probe.hold6 = sim.setPieceHold(); probe.inv6 = sim.setPieceInvul(); probe.pb = sim.pauseBlock(); probe.dp = sim.damagePlayer(sim.players()[0], 500, { kind: 'cast' }); probe.self = sim.damagePlayer(sim.players()[0], 10, { kind: 'self', raw: true }); });
 at(7.9, () => { probe.hp79 = hp(); hit(); probe.hp79b = hp(); });
-at(9, () => { probe.hp9 = hp(); hit(); probe.hp9b = hp(); probe.taken9 = sent.filter(m => m.t === 'pdmg' && m.a > 0 && m.k !== 'self').length; });
+at(9, () => { probe.inv9 = sim.setPieceInvul(); probe.hold9 = sim.setPieceHold(); probe.hp9 = hp(); hit(); probe.hp9b = hp(); probe.taken9 = sent.filter(m => m.t === 'pdmg' && m.a > 0 && m.k !== 'self').length; });
 at(13, () => { probe.left13 = sim.ps.get(1).debuffs.burn - sim.t; probe.taunt13 = sim.taunt(1, 'boss'); probe.tauntLeft13 = sim.ps.get(1).tauntReady - sim.t; probe.hold13 = sim.setPieceHold(); });
 at(14, () => { probe.hold14 = sim.setPieceHold(); probe.pb14 = sim.pauseBlock(); });
 at(21, () => { probe.taunt21 = sim.taunt(1, 'boss'); });
@@ -77,7 +77,8 @@ check(probe.taken9 === 0, 'no hit reaches the party during a set piece');
 check(probe.taunt13 === false && near(probe.tauntLeft13, 7, 0.1), `the taunt cooldown (20 s from 1 s) should keep running through the set piece (${probe.tauntLeft13} left at 13 s)`);
 check(probe.taunt21 === true, 'the taunt should be ready again at 21 s');
 // bots and Time Stops
-check(probe.hold6 === true && probe.hold13 === true, 'bots hold their Ultimate and the Limit Break through the set piece');
+check(probe.hold6 === true && probe.inv6 === true, 'bots hold their Ultimate and the Limit Break through the Immune opening');
+check(probe.hold9 === true && probe.inv9 === false, 'past the opening bots may burst again, as a person may (the script still holds its own clocks)');
 check(probe.hold14 === false, 'bots may press them again afterwards');
 check(probe.pb === 'set piece', `no Time Stop in a set piece (${probe.pb})`);
 // and a set piece asked for when it can't start

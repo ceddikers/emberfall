@@ -260,8 +260,11 @@ const SV_ART = (() => {
 
   // ---------------------------------------------------------------------------------------------------------- the halo and the wheel
   // where sigil i is, relative to the boss, in game px and the world's frame (not its heading): E3 flies an echo's flame from here
-  function sigilPos(st, i) {
-    const w = st.svWh == null ? 0 : st.svWh, a = (st.svSpin || 0) + i * TAU / N - Math.PI / 2, R = lerp(R0 * (st.svHk || 1), R1, w) * S;
+  // `k` is the scale the body is drawn at: the raid draws the Sovereign at RAID_BOSS_SCALE (main.js), so the halo a player sees is that much wider than the art's own px;
+  // callers that place something on the drawn halo take the default (DRAW), the preview says its own zoom
+  const DRAW = 1.3;
+  function sigilPos(st, i, k) {
+    const w = st.svWh == null ? 0 : st.svWh, a = (st.svSpin || 0) + i * TAU / N - Math.PI / 2, R = lerp(R0 * (st.svHk || 1), R1, w) * S * (k > 0 ? k : DRAW);
     return { x: Math.cos(a) * R, y: Math.sin(a) * R, a, r: R };
   }
   // the ring, its inner ring, its marks and its floor shadow (drawn first, under the figure)
@@ -626,7 +629,7 @@ const SV_ART = (() => {
     ctx.restore();
   }
 
-  return { body, sigilPos, POSES, propOf };
+  return { body, sigilPos, POSES, propOf, DRAW };
 })();
 
 if (typeof BOSS_ART !== 'undefined') BOSS_ART.sovereign = SV_ART.body;

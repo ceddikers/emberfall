@@ -241,7 +241,7 @@ const SoundHooks = (() => {
   //   then a struck blade for each cut and a deeper second blade on the beats where Caelum cuts alongside;  svwheel:<n>   the Sunwheel of Embers: the throw, a hum while it rolls, a clang at
   //   each bounce, fire roaring up along each leg, and svwallout:<n> (a catch: the catch, then the walls snuffed); an uncaught wheel's fire burns itself out
   //   svseed:<n>   Seeds of Ash laid: each seed beats on its carrier (a throb that quickens and rises toward the burst, full for your own, faint for the rest);  svhole:<n>   a seed has
-  //   burst: the floor burns through (sv-seed-burst), and a moment later the town's sound faintly up through it (a far bell, wind);  svsapling:<n>   a sapling climbs out and walks toward the
+  //   burst: the floor burns through (sv-seed-burst), and a moment later the town's sound faintly up through it (a far bell, wind);  svfall:<n>   a hero fell into a hole (sv-hole-fall, where they stood);  svsapling:<n>   a sapling climbs out and walks toward the
   //   Sovereign, creaking as it goes (placed along its walk), until svsapdie:<n> (felled) or svsaparr:<n> (it arrived);  svrecall:<n>   its arrival relights a sigil: a flame catching on the halo,
   //   then that boss's own call sting again, softer (the echo's sting, if a new one rises, is brought down to match);  svecho of the Hollow King with dur -1   rising uncalled from the portal
   //   ring (the climb, no call sting);  the 'sveveryname' set piece   the crater peeling, the camera pulling back, a low swell (music ducked as in the burnback)
@@ -304,7 +304,12 @@ const SoundHooks = (() => {
     } else svPlayMusic(a, { fade: 0.6, bar: svBpm() });
   }
   const svEchoes = new Map();   // n -> { x, y, t } while the echo stands (the crumble's place, and its timer)
-  const svLater = (sec, fn) => { if (!(sec > 0)) safe(fn); else setTimeout(() => safe(fn), sec * 1000); };
+  const svLaterT = [], svLoops = new Set();   // the timers of the room's delayed sounds, and the loops it has running (both dropped when the fight is left: svReset)
+  const svLater = (sec, fn) => {
+    if (!(sec > 0)) { safe(fn); return; }
+    const id = setTimeout(() => { const i = svLaterT.indexOf(id); if (i >= 0) svLaterT.splice(i, 1); safe(fn); }, sec * 1000);
+    svLaterT.push(id);
+  };
   const svSpot = e => (e && e.x != null ? { x: e.x, y: e.y } : null);
   let svSunk = 0;   // how many sheets of the forge floor stand sunk (a new one is heard)
   const svTwinT = new Map();   // n -> the timer of Twin Brands' burst (dropped when a shifted cast changes the wall)
@@ -339,6 +344,22 @@ const SoundHooks = (() => {
       clearTimeout(svHumT);
       svHumT = setTimeout(() => { if (svHum) { svHum.stop(1.0); svHum = null; } }, 900);   // (the host sends it every 0.2 s while a charge exists)
     });
+  }
+  // leaving the fight (stopBeds): nothing the Ultimate's room had promised may sound in town: the pending music changes, the delayed sounds, the standing echoes,
+  // wheels, twins and saplings, the heartbeat, the drift hum and the wheel's loop
+  function svReset() {
+    svMusicReset(); svClear(svLaterT);
+    for (const r of svEchoes.values()) if (r.t) clearTimeout(r.t);
+    svEchoes.clear();
+    for (const r of svWheels.values()) if (r.out) clearTimeout(r.out);
+    svWheels.clear();
+    for (const t of svTwinT.values()) clearTimeout(t);
+    svTwinT.clear();
+    svSapAll(); svHeartStop(0.3);
+    clearTimeout(svHumT); if (svHum) { svHum.stop(0.3); svHum = null; }
+    for (const h of svLoops) safe(() => h.stop(0.3));
+    svLoops.clear();
+    svSunk = 0; svRecall = null;
   }
   function svSapStop(n) { const r = svSaps.get(n); if (r) { clearInterval(r.timer); svSaps.delete(n); } }
   function svSapAll() { for (const n of [...svSaps.keys()]) svSapStop(n); }
@@ -424,7 +445,7 @@ const SoundHooks = (() => {
         const rec = { c: Array.isArray(msg.c) && msg.c[0] ? msg.c[0] : pts[last], out: null };
         svWheels.set(n, rec);
         svLater(at - 0.2, () => play('sv-wheel-throw', { vol: 0.9, at: svPt(pts[0][0], pts[0][1]), key: 'svwthrow', minGap: 1 }));   // (the recipe lets go 0.2 s in)
-        svLater(at, () => { const h = Sound.loop('sv-wheel-loop', { vol: 0.7, fade: 0.15 }); setTimeout(() => safe(() => h && h.stop(0.25)), Math.max(0.3, tEnd) * 1000); });
+        svLater(at, () => { const h = Sound.loop('sv-wheel-loop', { vol: 0.7, fade: 0.15 }); if (h) svLoops.add(h); svLater(Math.max(0.3, tEnd), () => { if (h) { svLoops.delete(h); h.stop(0.25); } }); });
         for (let i = 1; i < last; i++) svLater(at + along[i] / sp, () => play('sv-wheel-clang', { vol: 0.9, at: svPt(pts[i][0], pts[i][1]), key: 'svwclang:' + i, minGap: 0.1 }));   // (a bounce)
         const fire = Array.isArray(msg.fire) ? msg.fire : [];
         fire.forEach((q, i) => svLater((+q[4] || 0) - 0.5, () => play('sv-wall-fire', { vol: 0.8, at: svPt((q[0] + q[2]) / 2, (q[1] + q[3]) / 2), key: 'svwfire:' + i, minGap: 0.1 })));   // (the fire takes 0.5 s in)
@@ -490,7 +511,7 @@ const SoundHooks = (() => {
       }
       if (k === 'svheart') {
         svHeartStop(0.2);
-        const ps = Array.isArray(msg.pillars) ? msg.pillars : [], sweep = +msg.sweep || 0, end = +msg.end || +msg.dur || 0;
+        const ps = Array.isArray(msg.pillars) ? msg.pillars : [], sweep = +msg.sweep || 0, end = +msg.sealAt || +msg.end || +msg.dur || 0;
         const lastAt = ps.reduce((a, q) => Math.max(a, +q[2] || 0), 0), breath = lastAt + 0.25, hold = Math.max(0.5, sweep - breath);
         const realHeart = Sound.music.has('mus-ult-heart'), h = svHeart = { loop: Sound.loop('sv-heart-loop', { vol: realHeart ? 0.45 : 0.9, fade: 1.2 }), timers: [] };   // (the track's own heartbeat carries it when it exists)
         const later = (sec, fn) => h.timers.push(setTimeout(() => safe(fn), Math.max(0, sec) * 1000));
@@ -592,6 +613,10 @@ const SoundHooks = (() => {
         svLater(0.8, () => play('sv-hole-town', { vol: 0.5, at: p, key: 'svtown', minGap: 0.5 }));
         return;
       }
+      if (/^svfall:\d+$/.test(k)) {   // a hero stepping into a hole: the crumbling edge and the landing below, where they stand
+        play('sv-hole-fall', { vol: 0.9, at: svPt(msg.x, msg.y), key: 'svfall', minGap: 0.3 });
+        return;
+      }
       m = /^svsapling:(\d+)$/.exec(k);
       if (m) {   // a creak every step or two, placed where the sapling is by now (it waits 1.5 s, then walks straight at the Sovereign)
         const n = +m[1], sp = +msg.speed || 24, x0 = +msg.x || 0, y0 = +msg.y || 0, tx = 0, ty = -60, D = Math.hypot(tx - x0, ty - y0) || 1;
@@ -637,8 +662,9 @@ const SoundHooks = (() => {
     if (has() && LAYER_AT[bossId] && n >= LAYER_AT[bossId] && !/-hard$/.test(String(Sound.music.current() || ''))) safe(() => Sound.music.layer('mus-' + bossId));
   }
   // the fight's track: 'mus-<boss>-hard' on Hard if that track exists, else 'mus-<boss>'
-  function bossTrack(bossId, mode) {
-    if (bossId === 'sovereign') { svClear(svMusT); svClear(svFxT); svMusOn = true; svSlot = svAct; return (SV_MUS[svAct] || SV_MUS[1]).ids; }   // (the act the room is in: Act I on a normal pull; the chain, see SV_MUS)
+  // act: for the Ultimate, the act in play (a practice start, a rejoin; absent or 0 is the first); other bosses ignore it
+  function bossTrack(bossId, mode, act) {
+    if (bossId === 'sovereign') { svClear(svMusT); svClear(svFxT); svMusOn = true; svAct = act >= 1 && act <= 4 ? Math.floor(act) : 1; svSlot = svAct; return (SV_MUS[svAct] || SV_MUS[1]).ids; }   // (the act the room is in: Act I on a normal pull; the chain, see SV_MUS)
     const hard = 'mus-' + bossId + '-hard';
     return mode === 'hard' && !TURN.has(bossId) && has() && Sound.music.has && Sound.music.has(hard) ? hard : 'mus-' + bossId;
   }
@@ -700,7 +726,7 @@ const SoundHooks = (() => {
       stackWas = cur;
     } catch (e) { /* never into the game loop */ }
   }
-  function stopBeds() { for (const h of [amb, hum, heart]) if (h) h.stop(0.3); amb = hum = heart = null; svHeartStop(0.3); svMusicReset(); castEnd(0.1); }
+  function stopBeds() { for (const h of [amb, hum, heart]) if (h) h.stop(0.3); amb = hum = heart = null; svReset(); castEnd(0.1); }
 
   // ---------------------------------------------------------------- the interface
   // every button, slot and menu entry clicks; panels make a paper sound opening and closing

@@ -19,6 +19,8 @@ const SV_ANVIL = (() => {
   const ent = (env, id) => (env && env.entById ? env.entById(id) : null) || (env && env.units ? env.units.find(u => u.id === id) : null);
   let warned = false;
   const warn = e => { if (!warned) { warned = true; if (typeof console !== 'undefined') console.warn('sv-anvil', e); } };
+  // exception-safe (sovereign-fx.js guarded: a throw is logged once and every canvas state it saved is restored)
+  const guard = (ctx, fn) => { if (typeof SV_FX !== 'undefined' && SV_FX.guarded) return SV_FX.guarded(ctx, fn); ctx.save(); try { fn(); } catch (e) { warn(e); } finally { ctx.restore(); } };
   const add = (c, fn) => { c.save(); c.globalCompositeOperation = 'lighter'; fn(); c.restore(); };
   const glw = (c, x, y, r, col, a) => { if (a > 0.01 && r > 0.5) glow(c, x, y, r, col, a); };
 
@@ -135,12 +137,12 @@ const SV_ANVIL = (() => {
     if (typeof ArenaView === 'undefined' || ArenaView.__svAnvil) return;
     const dt = ArenaView.drawTelegraphs, dro = ArenaView.drawRoomOver;
     ArenaView.drawTelegraphs = function (ctx, tgs, t, env) {
-      if (env && env.bossId === 'sovereign') { try { under(ctx, this.liveRoom || env.room, t, env); } catch (e) { warn(e); } }
+      if (env && env.bossId === 'sovereign') guard(ctx, () => under(ctx, this.liveRoom || env.room, t, env));
       return dt.apply(this, arguments);
     };
     ArenaView.drawRoomOver = function (ctx, room, t, env) {
       const res = dro.apply(this, arguments);
-      if (env && env.bossId === 'sovereign') { try { over(ctx, room, t, env); } catch (e) { warn(e); } }
+      if (env && env.bossId === 'sovereign') guard(ctx, () => over(ctx, room, t, env));
       return res;
     };
     ArenaView.__svAnvil = 1;

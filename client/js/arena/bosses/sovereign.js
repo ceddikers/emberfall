@@ -28,6 +28,7 @@ const SOVEREIGN = {
   autoDmg: { normal: 2400, hard: 2400 },   // (was 2600 at normalDmg 0.78)
   enrage: { normal: 1012, hard: 1012 },   // the cast starts here and lands 8 s later (17:00; the user, 2026-10-29: human parties need the time)
   enrageName: 'Emberfall',
+  practiceCut: { 2: 212, 3: 482, 4: 718 },   // (a practice start counts the enrage from its act: the design times its course starts at, so the act has the time it would have left in a full pull; fight.js enrageAt)
   vuln: 0.5,
   spawn: { x: 0, y: -60 },
   arena: { theme: 'hall' },
@@ -37,7 +38,7 @@ const SOVEREIGN = {
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
-      kindling: 12000, brand: 17700, burn: 650, sweep: 67900, ember: 20000, scatter: 11000, line: 48950, wedge: 6000, burst: 6500,   // (Halo Procession's wedges and a ring's burst)
+      kindling: 12000, brand: 17700, burn: 650, sweep: 67900, ember: 20000, scatter: 11000, line: 48950, wedge: 6000, ringBurst: 3440,   // (Halo Procession's wedges and a ring's burst: both scaled by ACT_DMG; `burst` below is the Sunwheel's own, unscaled)
       plate: 7000, plateFail: 39500, flambe: 45850, mince: 53750,
       sting: 5400, fuse: 36300, whole: 55300, knotHp: 16000,
       surgeAlone: 25200, surgeSame: 56850, surgePair: 5050, dirge: 8000,
@@ -51,6 +52,11 @@ const SOVEREIGN = {
 
     // --- the Sovereign's state: the halo, the blade's hand, the echoes --------------------------------------------------------
     const sv = f.sv = { lit: 0, call: -1, side: 1, echoN: 0, echoes: new Set(), wheel: 0, sealed: false, quiet: false, busy: 0 };
+    // An act belongs to what it lays: every afterKeep the script makes is tagged with the era it was made in and does nothing once an act has turned (cutAct, below), so Act III's Grace
+    // cannot land in Act IV nor Halo Procession's wedges in Act II. (The courses' own steps and the enrage are laid by fight.js with atKeep/at, and are untouched.)
+    let era = 1;
+    const afterKeep0 = f.afterKeep.bind(f);
+    f.afterKeep = (dt, fn, name) => { const mine = era, w = () => { if (era === mine) fn(); }; w.era = mine; afterKeep0(dt, w, name); };
     f.room = {};   // (the bots read f.room.threads while the web stands, and Act III's holes: f.room.holes and f.room.safe)
     Object.assign(sv, { dark: [], relit: new Set(), echoSig: new Map(), graceUntil: 0, seedLast: -1, holes: [], pushed: false, fallen: null });   // (S3b: the order sigils went dark, the ones relit by a sapling, echo number -> sigil, Grace's window, the last seed carrier, Act III's holes, the push, the first hero to fall)
     const halo = () => f.emit({ t: 'roomev', k: 'svhalo', lit: sv.lit, call: sv.call, wheel: sv.wheel ? 1 : 0, dur: 9999 });
@@ -76,7 +82,8 @@ const SOVEREIGN = {
     };
     // the echo goes: it crumbles at once (a svecho message with no `who`)
     const endEcho = (n, delay) => f.afterKeep(Math.max(0.01, delay), () => { sv.echoes.delete(n); f.emit({ t: 'roomev', k: 'svecho:' + n, dur: 0.1 }); });
-    const busy = d => { sv.busy = Math.max(sv.busy || 0, f.t + d); };   // (a move on the floor until then: the wall waits for it)
+    // a move on the floor until then. The wall (heartRun) waits for what plays out whole (busyPlay); the moves the wall cuts (the Anvil Count, Twin Brands: cut = true) do not hold it
+    const busy = (d, cut) => { sv.busy = Math.max(sv.busy || 0, f.t + d); if (!cut) sv.busyPlay = Math.max(sv.busyPlay || 0, f.t + d); };
 
     // the echo's own move: once the echo stands, a short cast under its move's name (the journal keys its pages on cast names)
     const answer = (name, d = 1.6) => f.cast(name, d, 'call');
@@ -193,7 +200,7 @@ const SOVEREIGN = {
       // the rings: the red circle goes down on the hero a beat before the ring closes and follows them until just before it bursts
       ids.forEach((id, i) => f.afterKeep(at[i] - P.burstLead, () => {
         const p = live(id); if (f.state !== 'live' || !p) return;
-        f.mech({ type: 'aoe', shape: { kind: 'circle', x: p.x, y: p.y, r: P.burstR }, delay: P.burstLead, dmg: dmg.burst, follow: id, lockAt: 0.7, group: new Set([id]), tag: 'svBurst', from: 'Halo Procession' });
+        f.mech({ type: 'aoe', shape: { kind: 'circle', x: p.x, y: p.y, r: P.burstR }, delay: P.burstLead, dmg: dmg.ringBurst, follow: id, lockAt: 0.7, group: new Set([id]), tag: 'svBurst', from: 'Halo Procession' });
       }));
       f.afterKeep(P.emberAt, ember);
     };
@@ -276,7 +283,7 @@ const SOVEREIGN = {
       f.room.threads = list.map(w => {
         const th = Object.assign({ cut: false, burning: false, last: {} }, w);
         th.fl = f.addFloor({ kind: 'thread', x: Math.round((w.x1 + w.x2) / 2), y: Math.round((w.y1 + w.y2) / 2), r: Math.round(w.len / 2), x1: w.x1, y1: w.y1, x2: w.x2, y2: w.y2 });
-        th.knot = f.spawnAdd({ kind: 'knot', x: w.kx, y: w.ky, hp: dmg.knotHp, r: 24, inert: true, prio: 6, onDeath: () => fuse(th) });
+        th.knot = f.spawnAdd({ kind: 'knot', x: w.kx, y: w.ky, hp: dmg.knotHp, r: 24, inert: true, fixed: true, prio: 6, onDeath: () => fuse(th) });
         return th;
       });
       f.emit({ t: 'roomev', k: 'svweb:' + (++webN), l: list.map(w => [w.x1, w.y1, w.x2, w.y2, w.kx, w.ky]), dur: 9999 });
@@ -485,7 +492,7 @@ const SOVEREIGN = {
           if (!s || s.mits.some(m => m.kind === 'invuln')) continue;
           const a = Math.round(s.hp - s.maxHp * 0.33);
           if (a <= 0) continue;
-          s.hp -= a; f.stats[p.id].taken += a;
+          s.hp -= a; f.stats[p.id].taken += a; s.hist = [];   // (hist: the health a Rewind reaches back to: the Tithe is a set number, not damage to undo)
           f.emit({ t: 'pdmg', id: p.id, a, k: 'tithe', hp: Math.round(s.hp), dd: 0 });
         }
       });
@@ -500,12 +507,29 @@ const SOVEREIGN = {
     // --- The road burns back (78%, into Act II) -------------------------------------------------------------------------------
     // Set piece 'svburnback' (8 s, the Sovereign immune for the first 3): the act turns, the room becomes the forge, and what Act I held is let go (the
     // charges, a Doom, the lantern, the knights, an echo still standing). The halo keeps its four dark sigils.
-    const burnback = () => f.setPiece({ id: 'svburnback', dur: 8, invul: 3, run: () => {
+    // cutAct: an act turns (here, the rebirth and Every Name), and what the act before it still had in flight is cut at once, not let to land in the next one: the script's own
+    // afterKeeps of the old era (they are dropped, and would do nothing anyway), the telegraphs on the floor, the threads with their floors and knots, the charges, every echo still
+    // standing and the moves' own marks. (A set piece stops the clocks, so without this an Act I move laid with a long delay would land 8 s late in Act II.)
+    const cutAct = () => {
+      era++;
+      f.events = f.events.filter(e => !(e.keep && e.fn && e.fn.era !== undefined && e.fn.era < era));
+      f.mechs.clear(); f.emit({ t: 'tgclear' }); f.emit({ t: 'roomev', k: 'svactcut' });   // (the client drops the cut moves' own timelines: main.js SV_CUT)
+      f.puddles = []; f.tethers.clear();
+      for (const th of threads().slice()) dropThread(th);
+      delete f.room.threads;
       clearCharges();
+      for (const n of sv.echoes) f.emit({ t: 'roomev', k: 'svecho:' + n, dur: 0.1 });
+      sv.echoes.clear(); sv.call = -1;
+      sv.webN = 0; sv.webEnded = false; sv.volkarN = 0; sv.hkN = 0; sv.hkEnded = true; sv.busy = 0; sv.busyPlay = 0;
+      B.lockFacing = false; B.holdUntil = 0; B.moveTo = null;
+      f.runePair = null;
+    };
+    const burnback = () => f.setPiece({ id: 'svburnback', dur: 8, invul: 3, run: () => {
+      cutAct();
       for (const id of f.doomed.keys()) { const s = f.ps.get(id); if (s) delete s.debuffs.doom; f.emit({ t: 'cure', id, l: 0 }); }
       f.doomed.clear(); f.lanterns = []; sendLanterns();
       f.knights = []; f.echoPlan = []; sendKnights();
-      if (sv.hkN && !sv.hkEnded) { sv.hkEnded = true; endEcho(sv.hkN, 0.1); }
+      sv.lit = 0xff0; sv.dark = [0, 1, 2, 3];   // (the four dark sigils of set 1, whatever calls the party cut short)
       sv.act = 2;
       f.emit({ t: 'roomev', k: 'svact', act: 2, dur: 9999 });
       f.setForm('forge');
@@ -647,7 +671,7 @@ const SOVEREIGN = {
       f.emit({ t: 'roomev', k: 'svhead:' + (k + 1), x: at.x, y: at.y, rise, dur: 9999 });
       f.afterKeep(rise, () => {
         if (f.state !== 'live' || sv.quiet) return;   // (the wall seals the Sovereign: a head that has not risen by then never does)
-        const a = f.spawnAdd({ kind: 'hy-flame', x: at.x, y: at.y, hp: dmg.headHp, r: 36, inert: true, prio: 5 });
+        const a = f.spawnAdd({ kind: 'hy-flame', x: at.x, y: at.y, hp: dmg.headHp, r: 36, inert: true, fixed: true, prio: 5 });
         a.facing = Math.atan2(at.y, at.x);
         const h = { k, add: a, x: at.x, y: at.y, nextBite: f.t + 3 + k * 1.2, dead: false };
         heads.push(h);
@@ -772,7 +796,8 @@ const SOVEREIGN = {
     const twinBrands = (o = {}) => {
       const c = call(6, 40, o.fly ?? FLY);
       const first = o.to ? 2.8 : 0, last = o.to ? 5.0 : 7.0;
-      busy(c.d + first + last + 1.2);
+      busy(c.d + first + last + 1.2, true);   // (the wall cuts it, heartRun)
+      sv.twinEcho = c.n;
       f.afterKeep(c.d, () => {
         if (f.state !== 'live' || sv.quiet) return;
         answer('Twin Brands');
@@ -788,7 +813,7 @@ const SOVEREIGN = {
         if (o.to) {
           // the first wall is only lit (the brands are on, the wall glows; nothing is laid for it); the bots head for it all the same
           setTwin(ids, o.el); msg(o.el, first + last, false);
-          f.afterKeep(first, () => { if (f.state !== 'live') return; layTwin(ids, o.to, last); msg(o.to, last, true, o.el); });
+          f.afterKeep(first, () => { if (f.state !== 'live' || sv.quiet) return; layTwin(ids, o.to, last); msg(o.to, last, true, o.el); });
         } else { layTwin(ids, o.el, last); msg(o.el, last, false); }
         f.afterKeep(first + last + 0.15, () => { f.runePair = null; });
         endEcho(c.n, first + last + 0.5);
@@ -815,6 +840,15 @@ const SOVEREIGN = {
     const ANVIL = { cast: 3.6, first: 5.4, gap: 7.4, lead: 5.2, r: 85, rim: 380, hold: 1.2, wet: 400 };
     let anvilN = 0;
     sv.anvil = { done: 0, bad: 0, skip: 0 };
+    // a tower whose hero falls before it can be soaked is taken off the floor at once (nobody is left to soak it: it is no raidwide; the bots' plan skips it too)
+    const anvilLive = [];
+    f.ticker(() => {
+      for (let i = anvilLive.length - 1; i >= 0; i--) {
+        const e = anvilLive[i];
+        if (!f.mechs.has(e.m.id)) anvilLive.splice(i, 1);
+        else if (!live(e.id)) { f.cancel(e.m); sv.anvil.skip++; anvilLive.splice(i, 1); }
+      }
+    });
     // who has which pip: a shuffle, then the healer moved off the last place (2 or 3 of 4; the middle of 3; first of 2)
     const anvilOrder = al => {
       const ord = al.slice();
@@ -849,7 +883,7 @@ const SOVEREIGN = {
       const ord = anvilOrder(al), n = ord.length, d = f.ct(ANVIL.cast), N = ++anvilN, used = [], R = k => d + ANVIL.first + k * ANVIL.gap, total = R(n - 1) + ANVIL.hold;
       const slots = ord.map(p => f.slotOf(p.id));
       f.cast('The Anvil Count', d, 'call');
-      hold(total); busy(total + 0.5);
+      hold(total); busy(total + 0.5, true);   // (the wall cuts it, heartRun)
       biteGate = Math.max(biteGate, f.t + total + 0.5);
       for (const h of heads) h.nextBite = Math.max(h.nextBite, f.t + total + 2.0);
       f.emit({ t: 'roomev', k: 'svanvil:' + N, ids: ord.map(p => p.id), slots, at: ord.map((_, k) => +R(k).toFixed(2)), r: ANVIL.r, dur: +(total + 0.6).toFixed(2) });
@@ -862,13 +896,14 @@ const SOVEREIGN = {
           const at = anvilSpot(q, used), delay = ANVIL.lead;
           used.push(at);
           f.emit({ t: 'roomev', k: 'svanvilt:' + (N * 10 + k), x: at.x, y: at.y, id: p.id, slot: slots[k], pips: k + 1, at: +delay.toFixed(2), dur: +(delay + 2.4).toFixed(2) });
-          f.mech({ type: 'tower', shape: { kind: 'circle', x: at.x, y: at.y, r: ANVIL.r }, delay, dmg: dmg.anvil, failDmg: dmg.anvilFail, need: 1, tag: 'svAnvil', from: 'The Anvil Count', anvilFor: p.id,
+          const m = f.mech({ type: 'tower', shape: { kind: 'circle', x: at.x, y: at.y, r: ANVIL.r }, delay, dmg: dmg.anvil, failDmg: dmg.anvilFail, need: 1, tag: 'svAnvil', from: 'The Anvil Count', anvilFor: p.id,
             onResolve: inside => {
               if (inside.some(o => o.id === p.id)) { sv.anvil.done++; return; }
               sv.anvil.bad++;
               // nobody inside: the engine has already hit everyone for failDmg. Someone else inside: the raidwide is laid here.
               if (inside.length) for (const o of f.alive()) f.damagePlayer(o, dmg.anvilFail, { kind: 'tower-fail', avoidable: false, n: 'The Anvil Count' });
             } });
+          anvilLive.push({ m, id: p.id });
         });
       });
       return total;
@@ -878,17 +913,19 @@ const SOVEREIGN = {
     // Not a set piece: the clocks keep running. The Sovereign is sealed (fight.js wall). The heads the party cut answer again from their stumps as PILLARS of fire, in the
     // order they were cut (f.sv.cutOrder), each painted 2.2 s before it erupts, 2.7 s apart (only the next is in full: the tag fades the later ones); a head still alive
     // erupts last from its own sigil and is gone. After the last, a held breath, then the blade sweeps (Ashen Sweep), and Kindling lands as the seal breaks. A move that was
-    // on the floor when the seal came (up to 7 s) plays out first.
+    // on the floor when the seal came (a dive, a wave: up to 7 s) plays out first; the Anvil Count and Twin Brands are cut at once (their telegraphs come off the floor, Azerath's echo goes).
     const PIL = { r: 150, lead: 2.2, gap: 2.7, first: 4.0, breath: 1.0 };
     let pillarN = 0;
     const burnOut = h => { if (h && h.add && f.adds.has(h.add.id)) { h.dead = true; f.adds.delete(h.add.id); f.addsDirty = true; f.emit({ t: 'roomev', k: 'svcut:' + (h.k + 1), x: h.x, y: h.y, order: 0, burnt: 1, dur: 9999 }); f.emit({ t: 'addev', k: 'gone', id: h.add.id }); } };
     const heartRun = () => {
-      const lag = Math.min(7, Math.max(0, sv.busy - f.t));
+      const lag = Math.min(7, Math.max(0, (sv.busyPlay || 0) - f.t));   // (what plays out whole: a dive, a wave on the floor. The Anvil Count and Twin Brands do not: they are cut here, with Azerath's echo)
       sv.sealed = true; sv.quiet = true; B.lockFacing = false; f.runePair = null;
+      for (const m of [...f.mechs.values()]) if (m.from === 'The Anvil Count' || m.from === 'Twin Brands') f.cancel(m);
+      if (sv.twinEcho) { endEcho(sv.twinEcho, 0.1); sv.twinEcho = 0; }
       const list = sv.cutOrder.map(k => ({ k, live: false })).concat(heads.filter(h => !h.dead && f.adds.has(h.add.id)).sort((a, b) => a.k - b.k).map(h => ({ k: h.k, live: true, h })));
       const n = list.length, tLast = lag + PIL.first + PIL.gap * Math.max(0, n - 1);
       const tSweep = tLast + PIL.breath, tKind = tSweep + f.ct(3.6) + 0.8, tEnd = tKind + f.ct(3.4) + 0.1;
-      f.emit({ t: 'roomev', k: 'svheart', n, pillars: list.map((e, i) => [HEAD_AT[e.k].x, HEAD_AT[e.k].y, +(lag + PIL.first + i * PIL.gap).toFixed(2), e.live ? 1 : 0]), sweep: +tSweep.toFixed(2), kindling: +tKind.toFixed(2), end: +tEnd.toFixed(2), r: PIL.r, dur: +(tEnd + 1).toFixed(2) });
+      f.emit({ t: 'roomev', k: 'svheart', n, pillars: list.map((e, i) => [HEAD_AT[e.k].x, HEAD_AT[e.k].y, +(lag + PIL.first + i * PIL.gap).toFixed(2), e.live ? 1 : 0]), sweep: +tSweep.toFixed(2), kindling: +tKind.toFixed(2), sealAt: +tEnd.toFixed(2), r: PIL.r, dur: +(tEnd + 1).toFixed(2) });
       f.afterKeep(lag, () => { if (f.state === 'live') f.cast('The Heart Remembers', 3.0, 'call'); });
       list.forEach((e, i) => {
         const at = HEAD_AT[e.k], erupt = lag + PIL.first + i * PIL.gap;
@@ -911,12 +948,13 @@ const SOVEREIGN = {
     f.onSetPiece(a => {
       if (!rb.on) return;
       rb.acc += a;
-      if (rb.step === 0 && rb.acc >= 4.0) { rb.step = 1; sv.wheel = 1; halo(); }
+      if (rb.step === 0 && rb.acc >= 4.0) { rb.step = 1; sv.wheel = 1; sv.lit = 0xf00; halo(); }   // (eight sigils dark: set 1 and set 2's four)
       if (rb.step === 1 && rb.acc >= 5.0) { rb.step = 2; sv.act = 3; f.emit({ t: 'roomev', k: 'svact', act: 3, dur: 9999 }); f.setForm('crater'); }
       if (rb.step === 2 && rb.acc >= 8.6) { rb.step = 3; f.cast('Rebirth', 3.4, 'rebirth'); }
       if (rb.acc >= 12) rb.on = false;
     });
     const rebirth = () => f.setPiece({ id: 'svrebirth', dur: 12, invul: 3, run: () => {
+      cutAct();
       sv.sealed = false; sv.quiet = true; f.runePair = null;
       mendSheets();
       for (const s of sv.stumps) if (s.z) s.z.end = f.t;
@@ -1123,7 +1161,8 @@ const SOVEREIGN = {
         sv.graceUntil = f.t + gap + 0.6; holdFire(gap + 0.6);
         if (!f.cleanRun) for (const p of f.alive()) {
           const s = p.s, lost = Math.max(0, s.hp - 1);
-          s.hp = 1; f.clearShields(s);
+          for (const e of (s.shields || []).slice()) f.endShieldEntry(p.id, s, e);   // (every shield ends the normal way, so its caster's kit hears it: a Ward's blast and Rune, the petal and scab give-backs)
+          s.hp = 1; s.hist = [];   // (hist: nothing before Grace's 1 HP for a Rewind to restore)
           f.emit({ t: 'pdmg', id: p.id, a: Math.round(lost), k: 'svGrace', hp: 1, dd: 0, n: 'Grace Withdrawn' });
         }
         f.emit({ t: 'roomev', k: 'svgrace', dur: gap });
@@ -1152,25 +1191,28 @@ const SOVEREIGN = {
       }
       return null;
     };
-    const fellAt = {};
+    const fellAt = {}, climbing = new Set();
     let fallN = 0;
     const fall = (p, h) => {
-      fellAt[p.id] = f.t;
+      fellAt[p.id] = f.t; climbing.add(p.id);
       f.damagePlayer(p, dmg.fall, { kind: 'svFall', avoidable: true, noVuln: true, n: 'The Hunger' });
       f.debuff(p.id, 'rooted', 2.6);
       f.emit({ t: 'roomev', k: 'svfall:' + (++fallN), id: p.id, x: Math.round(p.x), y: Math.round(p.y), hx: h.x, hy: h.y, dur: 3 });
-      f.afterKeep(2.7, () => {
+      // (the climb-out rides afterKeep0, not the era-tagged f.afterKeep: an act turning right after the fall (the push into Act IV) must not cut it, or the hero is left in the hole
+      // when the set piece ends and falls again. The set piece holds it still with the root, so both run out together.)
+      afterKeep0(2.7, () => {
+        climbing.delete(p.id); fellAt[p.id] = f.t;
         const q = f.alive().find(o => o.id === p.id); if (!q) return;
         const at = inHole(q.x, q.y, -6) || h, e = climbOut(at); if (!e) return;
         const dd = Math.hypot(e.x - q.x, e.y - q.y) || 1;
-        f.knock(q, q.x - (e.x - q.x) / dd, q.y - (e.y - q.y) / dd, dd);
+        f.knock(q, q.x - (e.x - q.x) / dd, q.y - (e.y - q.y) / dd, dd, { rescue: true });
       });
     };
     f.ticker(() => {
       if (!holes.length || f.state !== 'live' || f.setPieceHold()) return;
       for (const p of f.alive()) {
         const h = inHole(p.x, p.y, 10);
-        if (h && f.t - (fellAt[p.id] ?? -9) >= 3.5) fall(p, h);
+        if (h && !(climbing.has(p.id) && f.t - (fellAt[p.id] ?? -9) < 60) && f.t - (fellAt[p.id] ?? -9) >= 3.5) fall(p, h);
       }
     });
     // the first hero to fall this pull (the Sovereign's second line in Act IV names them)
@@ -1200,7 +1242,8 @@ const SOVEREIGN = {
           if (f.t < s.wait) return;
           const dx = B.x - s.x, dy = B.y - s.y, D = Math.hypot(dx, dy) || 1;
           if (D < SAP.arrive) { s.onDeath = null; dropSap(s); f.emit({ t: 'roomev', k: 'svsaparr:' + n, x: Math.round(s.x), y: Math.round(s.y), dur: 3 }); recall(); return; }
-          s.x += dx / D * SAP.speed * dt; s.y += dy / D * SAP.speed * dt; s.facing = Math.atan2(dy, dx);
+          const sp = SAP.speed * dt * f.addSpeedMult(s);   // (a Reaper's Bind holds it and Shade Step slows it, as for any add)
+          s.x += dx / D * sp; s.y += dy / D * sp; s.facing = Math.atan2(dy, dx);
         },
         onDeath: s => f.emit({ t: 'roomev', k: 'svsapdie:' + n, x: Math.round(s.x), y: Math.round(s.y), dur: 2 }) });
       f.emit({ t: 'roomev', k: 'svsapling:' + n, id: a.id, x: h.x, y: h.y, hole: holes.indexOf(h) + 1, speed: SAP.speed, dur: 45 });
@@ -1209,12 +1252,21 @@ const SOVEREIGN = {
     const burst = (x, y) => {
       if (f.state !== 'live') return;
       const h = digHole(x, y);
+      // a lantern nobody carries that stands where it opens is set down on the nearest floor with room (Act IV's last lantern: a hole must never take the cure)
+      if (f.lanterns.some(l => l.carrier == null && Math.hypot(l.x - h.x, l.y - h.y) < h.r + 30)) {
+        for (const l of f.lanterns) {
+          if (l.carrier != null || Math.hypot(l.x - h.x, l.y - h.y) >= h.r + 30) continue;
+          const near = [...ring(300, 12), ...ring(190, 8, 0.3), ...ring(100, 6, 0.5)].sort((p, q) => Math.hypot(p.x - l.x, p.y - l.y) - Math.hypot(q.x - l.x, q.y - l.y)), q = pickFree(near, 75);
+          if (q) { l.x = q.x; l.y = q.y; }
+        }
+        sendLanterns();
+      }
       // whoever stands where it opens is thrown clear to the rim (the seed's own blow is their price; they do not fall: only a step into a hole later does)
       for (const p of f.alive()) {
         const dd = Math.hypot(p.x - h.x, p.y - h.y);
         if (dd >= h.r + 6) continue;
         fellAt[p.id] = f.t - 2.3;
-        f.knock(p, dd < 2 ? h.x - 1 : h.x, h.y, h.r + 30 - dd);
+        f.knock(p, dd < 2 ? h.x - 1 : h.x, h.y, h.r + 30 - dd, { rescue: true });
       }
       f.afterKeep(0.4, () => sprout(h));
     };
@@ -1283,12 +1335,24 @@ const SOVEREIGN = {
         out.push({ p: seedP, kind: 2, a: A[2], r: 255 });
         return out.map(o => Object.assign(o, at(o.a, o.r)));
       };
-      let a0 = base, lay = spots(base), best = Infinity;
+      let a0 = base, lay = spots(base), best = Infinity, spare = Infinity;
+      // (a turn's clearance: the least of every ghost's gap to the holes' rims (70 wanted), to the Sovereign (110) and to the rim of the room (80); a turn that fits has none below zero)
+      const gapOf = L => L.reduce((m, o) => Math.min(m, ...holes.map(h => Math.hypot(o.x - h.x, o.y - h.y) - h.r - 70), Math.hypot(o.x - B.x, o.y - B.y) - 110, -ARENA.sd(o.x, o.y) - 80), Infinity);
+      const holeGap = L => L.reduce((m, o) => Math.min(m, ...holes.map(h => Math.hypot(o.x - h.x, o.y - h.y) - h.r)), Infinity);
       for (let k = 0; k < 24; k++) {   // (of the turns that fit, the one that keeps everybody nearest the Sovereign, the tank most of all: nobody is out of reach for long)
-        const t0 = base + k * 15 * Math.PI / 180, L = spots(t0);
-        if (!L.every(o => !holes.some(h => Math.hypot(o.x - h.x, o.y - h.y) < h.r + 70) && Math.hypot(o.x - B.x, o.y - B.y) > 110 && ARENA.sd(o.x, o.y) < -80)) continue;
+        const t0 = base + k * 15 * Math.PI / 180, L = spots(t0), gap = gapOf(L);
         const cost = L.reduce((sum, o) => sum + Math.hypot(o.x - B.x, o.y - B.y) * (o.p.role === 'tank' ? 2 : 1), 0);
+        if (gap < 0) {   // (none fits yet: the fallback is a turn that still keeps every ghost 20 clear of the holes, then the cheapest one once each shortfall is paid for)
+          const hg = holeGap(L), sc = (hg >= 20 ? 0 : 1e5 + (20 - hg) * 1000) + cost - gap * 15;
+          if (best === Infinity && sc < spare) { spare = sc; a0 = t0; lay = L; }
+          continue;
+        }
         if (cost < best - 1) { best = cost; a0 = t0; lay = L; }
+      }
+      // (if even the fallback has a ghost within a hole's reach, it is moved off it: never left inside)
+      if (best === Infinity) for (const o of lay) for (const h of holes) {
+        const d = Math.hypot(o.x - h.x, o.y - h.y);
+        if (d < h.r + 36) { const q = ARENA.clamp({ x: h.x + (o.x - h.x) / (d || 1) * (h.r + 36), y: h.y + (o.y - h.y) / (d || 1) * (h.r + 36) }, 40); o.x = Math.round(q.x); o.y = Math.round(q.y); }
       }
       const n = ++foreN, fanA = [0, 1, 2].map(i => a0 + FORE.span / 3 * i + FORE.gap / 2 + arc / 2);   // (the fans' middles: halfway between one gap and the next)
       fore.n = n; busy(F + lag + 2.0); hold(F + lag + 0.6);
@@ -1368,7 +1432,8 @@ const SOVEREIGN = {
       if (en.acc >= 10) en.on = false;
     });
     const everyName = () => f.setPiece({ id: 'sveveryname', dur: 10, invul: 3, run: () => {
-      sv.pushed = true; sv.act = 4; sv.quiet = true; sv.sealed = false;
+      cutAct();   // (Grace, a dance's cuts, the seeds, an unleashing: whatever Act III had in flight is cut, so none of it lands in Act IV)
+      sv.pushed = true; sv.act = 4; sv.quiet = true; sv.sealed = false; sv.graceUntil = 0;
       B.lockFacing = false; B.moveTo = null; B.x = 0; B.y = -60;
       f.runePair = null;
       for (const n of sv.echoes) f.emit({ t: 'roomev', k: 'svecho:' + n, dur: 0.1 });
@@ -1400,8 +1465,7 @@ const SOVEREIGN = {
 
     // the lantern and Doom, throughout the act: one lantern (the last one: it passes to whoever it cures), Doom hopping from hero to hero in a fixed order (the tank only if nobody else is left),
     // the next one's sigil glowing 6.5 s ahead (roomev doomnext, the Hollow King's own). A carrier is never the next doomed unless the party is too small. The clocks stand still in a set piece.
-    const DOOM_IV = 11, GLOW = 6.5, dm = { k: 0, next: [], glowEnd: 0 };
-    f.onSetPiece(a => { dm.glowEnd += a; });
+    const DOOM_IV = 11, GLOW = 6.5, dm = { k: 0, next: [] };
     const relayOrder = () => { const al = f.alive().map(p => p.id).sort((x, y) => x - y), tank = f.tank(), non = al.filter(id => !tank || id !== tank.id); return non.length >= 2 ? non : al; };
     const pickNext = (n = 1) => {   // (n 2: the Hollow King's last Doom, on two at once)
       const order = relayOrder(), carrying = new Set(f.lanterns.map(l => l.carrier).filter(c => c != null)), out = [];
@@ -1415,12 +1479,12 @@ const SOVEREIGN = {
     const doomGlow = (n = 1) => {
       if (f.state !== 'live') return;
       dm.next = pickNext(typeof n === 'number' ? n : 1);
-      if (dm.next.length) { dm.glowEnd = f.t + GLOW; f.emit({ t: 'roomev', k: 'doomnext', ids: dm.next, dur: GLOW }); }
+      if (dm.next.length) f.emit({ t: 'roomev', k: 'doomnext', ids: dm.next, dur: GLOW + 1.5 });   // (the sigil stays until the Doom lands, a cast's second after the glow's own 6.5 s included: doomLand ends it)
     };
     const doomLand = () => {
       if (f.state !== 'live') return;
-      let ids = dm.next.filter(id => live(id) && !f.doomed.has(id));
-      if (!ids.length) ids = pickNext();
+      const ids = dm.next.filter(id => live(id) && !f.doomed.has(id));   // (only who was glowed: a Doom is always announced first, so if every glowed hero has fallen it does not land)
+      if (dm.next.length) f.emit({ t: 'roomev', k: 'doomnext', ids: [], dur: 0.1 });
       dm.next = [];
       for (const id of ids) { f.doomed.set(id, f.t + DOOM_IV); f.debuff(id, 'doom', DOOM_IV); }
       if (ids.length) f.emit({ t: 'doomed', ids, dur: DOOM_IV });

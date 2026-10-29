@@ -21,7 +21,7 @@ const ULT_ECHO = (() => {
   const C = { ink: '#0a0605', char: '#1a0e08', ember: '#ff7a22', emberHi: '#ffb050', hot: '#ffe9a0', white: '#fff8e8', red: '#b02a0c', redDk: '#4a1006', ash: '#7a726a', ashLt: '#a89f96' };
   const mixHex = (a, b, q) => { const pa = hexToRgb(a), pb = hexToRgb(b); return '#' + pa.map((v, i) => Math.round(v + (pb[i] - v) * q).toString(16).padStart(2, '0')).join(''); };
   // the timings that do not come in the message
-  const KNEEL = 2.2, CRUMBLE = 2.6, LINGER = 1.9, SIGIL_FADE = 3.5, LIE = 3.2, LIE_HOLD = 0.8, LIE_ASH = 3.4, HALO_R = 118;
+  const KNEEL = 2.2, CRUMBLE = 2.6, LINGER = 1.9, SIGIL_FADE = 3.5, LIE = 3.2, LIE_HOLD = 0.8, LIE_ASH = 3.4, HALO_R = 195;   // (the halo as the raid draws it: 150 px in the art, times RAID_BOSS_SCALE 1.3)
   // lying down (the kill): a slow lowering to the ground (LIE), a held breath (LIE_HOLD), then a soft fade to ash that rises as embers and flakes (LIE_ASH). Never the crumble's wind.
   const lieOf = rec => { const a = rec.acts.find(x => x.anim === 'liedown'); return a ? { s: a.start, d: a.start + LIE, a0: a.start + LIE + LIE_HOLD, a1: a.start + LIE + LIE_HOLD + LIE_ASH } : null; };
   // the wind that takes the flakes (screen right and a little up)
@@ -78,7 +78,7 @@ const ULT_ECHO = (() => {
   }
 
   // ---------------------------------------------------------------- the burnt bodies
-  const S = { echoes: new Map(), spr: new Map(), frame: -1e9, warned: false };
+  const S = { echoes: new Map(), spr: new Map(), sprPx: 0, tick: 0, frame: -1e9, warned: false };
   const mk = n => { const c = document.createElement('canvas'); c.width = c.height = n; return c; };
   const artOf = who => (who === 'hydra' ? (typeof ADD_ART !== 'undefined' ? ADD_ART['hy-flame'] : null) : (typeof BOSS_ART !== 'undefined' ? BOSS_ART[who] : null));
   // the boss in the state its art draws as standing at rest, or in the pose a 'svechoact' asks for
@@ -176,11 +176,22 @@ const ULT_ECHO = (() => {
     }
     return sp;
   }
+  // Sprites are costly (a canvas pass and a getImageData of up to 760 px square each), so a posed echo is cut coarsely (twelve facings, and a new cut a sixth of a second at most; see
+  // pid in the caller) and the cache is an LRU with a pixel budget: the least recently used cut goes first (and gives its canvases back), never one used this frame.
+  const SPR_PX = 6.5e6;   // (px of both kept canvases summed: about eighteen 600 px cuts, some 50 MB)
   function spriteOf(who, face, pose, pid) {
-    const qf = Math.round((((face % TAU) + TAU) % TAU) / TAU * 24) % 24, key = who + '|' + qf + '|' + (pose ? pid : 'rest');
-    let sp = S.spr.get(key); if (sp !== undefined) return sp;
-    if (S.spr.size > 70) S.spr.clear();
-    sp = makeSprite(who, qf * TAU / 24, pose); S.spr.set(key, sp); return sp;
+    const nf = pose ? 12 : 24, qf = Math.round((((face % TAU) + TAU) % TAU) / TAU * nf) % nf, key = who + '|' + nf + '|' + qf + '|' + (pose ? pid : 'rest');
+    let sp = S.spr.get(key);
+    if (sp !== undefined) { S.spr.delete(key); S.spr.set(key, sp); if (sp) sp.used = S.tick; return sp; }   // (a hit moves to the back of the line)
+    sp = makeSprite(who, qf * TAU / nf, pose);
+    if (sp) { sp.used = S.tick; sp.px = sp.N * sp.N; S.sprPx += sp.px; }
+    S.spr.set(key, sp);
+    for (const [k, o] of S.spr) {
+      if (S.sprPx <= SPR_PX && S.spr.size <= 60) break;
+      if (!o || o.used === S.tick) { if (!o) S.spr.delete(k); continue; }
+      S.spr.delete(k); S.sprPx -= o.px; if (o.B) o.B.width = o.B.height = 0; if (o.K) o.K.width = o.K.height = 0;
+    }
+    return sp;
   }
 
   // ---------------------------------------------------------------- where the halo and the Sovereign are (the art can replace these)
@@ -323,7 +334,7 @@ const ULT_ECHO = (() => {
     if (lt && t > lt.a1 + 0.5) return;
     if (cq > 1 + LINGER / CRUMBLE) return;
     const wasPose = pose && pose.anim !== 'kneel', cornKneel = rec.who === 'corvane' && kneelK > 0.4;
-    const pid = cornKneel ? 'kneel' : pose ? pose.anim + Math.floor(pose.u * 9) : '';
+    const pid = cornKneel ? 'kneel' : pose ? pose.anim + Math.floor(pose.u * 6) : '';   // (pose.u is seconds: a new cut a sixth of a second, not nine a second; twelve facings, see spriteOf)
     const sp = spriteOf(rec.who, rec.face, cornKneel ? { anim: 'kneel', u: 0.4, dur: 1 } : wasPose ? pose : null, pid);
     if (!sp) return;
     const bb = sp.bb, seed = rec.n * 3.7 + WHO.indexOf(rec.who);
@@ -465,7 +476,7 @@ const ULT_ECHO = (() => {
   }
   // the hook: everything is under the telegraphs
   function floor(ctx, room, t) {
-    if (t === S.frame) return; S.frame = t;
+    if (t === S.frame) return; S.frame = t; S.tick++;
     sync(room, t);
     if (!S.echoes.size) return;
     for (const rec of S.echoes.values()) { if (t > lifeEnd(rec) && (rec.crumbleAt !== Infinity || lieOf(rec))) continue; if (t < rec.T0) continue; draw(ctx, rec, t); }

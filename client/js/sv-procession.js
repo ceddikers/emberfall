@@ -22,11 +22,14 @@ const SV_PROC = (() => {
   let S = { recs: [], seen: new WeakSet(), last: -1e9 };
   let warned = false;
   const warn = e => { if (!warned) { warned = true; if (typeof console !== 'undefined') console.warn('sv-procession', e); } };
+  // exception-safe (sovereign-fx.js guarded: a throw is logged once and every canvas state it saved is restored)
+  const guard = (ctx, fn) => { if (typeof SV_FX !== 'undefined' && SV_FX.guarded) return SV_FX.guarded(ctx, fn); ctx.save(); try { fn(); } catch (e) { warn(e); } finally { ctx.restore(); } };
   const add = (c, fn) => { c.save(); c.globalCompositeOperation = 'lighter'; fn(); c.restore(); };
   const clipRoom = c => { ARENA.trace(c, 3); c.clip(); };
   const haloR = env => {
     const st = env.boss && env.boss.st;
-    return st && typeof SV_ART !== 'undefined' && SV_ART.sigilPos ? SV_ART.sigilPos(st, 0).r : 118;
+    const k = env.bossScale > 0 ? env.bossScale : (typeof SV_ART !== 'undefined' && SV_ART.DRAW) || 1.3;   // (the halo as drawn: the raid draws the Sovereign at 1.3)
+    return st && typeof SV_ART !== 'undefined' && SV_ART.sigilPos ? SV_ART.sigilPos(st, 0, k).r : 150 * k;
   };
 
   // where the procession stands at clock t: its slices landed (< kLand), laid (<= kLay)
@@ -94,8 +97,8 @@ const SV_PROC = (() => {
   }
 
   // the burst: remembered the first time its red circle is seen, so its landing still plays after the telegraph is gone
-  function scan(env, t) {
-    if (t < S.last - 1) S = { recs: [], seen: new WeakSet(), last: t };
+  function scan(env, t, room) {
+    if (t < S.last - 1 || (room && S.rr !== room)) S = { recs: [], seen: new WeakSet(), last: t, rr: room };   // (a new pull is a new room object: the clock never rewinds on a retry)
     S.last = t;
     if (env.tgs) for (const tg of env.tgs.values()) {
       if (tg.tag !== 'svBurst' || S.seen.has(tg)) continue;
@@ -174,7 +177,7 @@ const SV_PROC = (() => {
   const live = (ev, t) => { const u = t - ev.start; return u > -0.1 && u < (+ev.dur || 30) + 2; };
 
   function under(ctx, room, t, env) {
-    scan(env, t);
+    scan(env, t, room);
     for (const ev of eventsOf(room)) { if (!live(ev, t)) continue; scorch(ctx, ev, state(ev, t), t); }
     for (const r of S.recs) gather(ctx, r, t);
   }
@@ -191,14 +194,14 @@ const SV_PROC = (() => {
     const dt = ArenaView.drawTelegraphs, dro = ArenaView.drawRoomOver;
     ArenaView.drawTelegraphs = function (ctx, tgs, t, env) {
       const room = env && env.bossId === 'sovereign' ? (this.liveRoom || env.room) : null;
-      if (room && room.ev) { ctx.save(); try { under(ctx, room, t, env); } catch (e) { warn(e); } ctx.restore(); }
+      if (room && room.ev) guard(ctx, () => under(ctx, room, t, env));
       const res = dt.apply(this, arguments);
-      if (room && room.ev) { ctx.save(); try { post(ctx, room, t, env); } catch (e) { warn(e); } ctx.restore(); }
+      if (room && room.ev) guard(ctx, () => post(ctx, room, t, env));
       return res;
     };
     ArenaView.drawRoomOver = function (ctx, room, t, env) {
       const res = dro.apply(this, arguments);
-      if (env && env.bossId === 'sovereign' && room && room.ev) { ctx.save(); try { over(ctx, room, t, env); } catch (e) { warn(e); } ctx.restore(); }
+      if (env && env.bossId === 'sovereign' && room && room.ev) guard(ctx, () => over(ctx, room, t, env));
       return res;
     };
     ArenaView.__svProc = 1;

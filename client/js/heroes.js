@@ -998,10 +998,11 @@ function waveHand(ctx, t, k) {
 //    { wings, glow } an explicit answer for someone else's hero (a remote player: sync it with their join message, never read their class)
 //    absent          nobody (bots, townsfolk, other players), except under the test flag
 // opts.fold (0 spread .. 1 folded) overrides when to fold; absent, it folds when the hero is drawn at the arena's scale (1.85).
-// TEST FLAG (remove after testing): localStorage 'emberfall.svRewards' = '1' shows both on EVERY hero drawn (and, with absent opts.fold,
-// 'emberfall.svFold' = '1' folds them in town to preview the fight look). Nothing else reads these keys.
+// TEST FLAGS (local dev host only: localhost, 127.0.0.1 or a .localhost name; the live site ignores them): localStorage 'emberfall.svRewards' = '1' shows both
+// on EVERY hero drawn (and, with absent opts.fold, 'emberfall.svFold' = '1' folds them in town to preview the fight look). Nothing else reads these keys.
 const SvRewards = (() => {
-  const flag = k => { try { return localStorage.getItem(k) === '1'; } catch (e) { return false; } };
+  const devHost = () => { try { const h = location.hostname; return h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h.endsWith('.localhost'); } catch (e) { return false; } };
+  const flag = k => { try { return devHost() && localStorage.getItem(k) === '1'; } catch (e) { return false; } };
   const TEST = flag('emberfall.svRewards'), TEST_FOLD = flag('emberfall.svFold');
   const ARENA_SCALE = 1.85;   // (main.js ARENA_HERO_SCALE: the fallback for knowing it's a fight)
   const earned = id => typeof Save !== 'undefined' && Save.svRewards ? Save.svRewards(id) : false;

@@ -149,8 +149,8 @@ const Pastimes = (() => {
       if (!d.deaths) { const f = s.flawless[d.boss] = s.flawless[d.boss] || {}; f[d.mode] = 1; }
       if (d.secs > 0 && d.secs < (s.best[d.boss] || Infinity)) s.best[d.boss] = d.secs;
       if (typeof FeatRules !== 'undefined') {
-        const b = typeof BOSSES !== 'undefined' ? BOSSES.find(x => x.id === d.boss) : null;
-        for (const m of FeatRules.clear(d, { set: b ? (b.set || 1) : 1, wipes: s.wipeRun[d.boss] | 0, score: typeof Scoring !== 'undefined' ? Scoring : null })) s.marks[m] = 1;
+        const b = typeof BOSSES !== 'undefined' ? BOSSES.find(x => x.id === d.boss) || (typeof ULTIMATE_BOSS !== 'undefined' && d.boss === ULTIMATE_BOSS.id ? ULTIMATE_BOSS : null) : null;   // (the Ultimate is set 4: no set-1 mark may count it)
+        for (const m of FeatRules.clear(d, { set: b ? (b.set || 1) : 0, wipes: s.wipeRun[d.boss] | 0, score: typeof Scoring !== 'undefined' ? Scoring : null })) s.marks[m] = 1;
       }
       delete s.wipeRun[d.boss];
       commit();
@@ -497,8 +497,10 @@ const Pastimes = (() => {
   // the Feats tab: the title you wear, then every feat by section. A feat tied to a boss you haven't reached, or hidden by
   // design, shows as ??? with a vague line, so the road stays a surprise.
   const featGate = f => f.needs || (f.check && f.check.boss) || null;
+  // a feat of the Ultimate is not even named, listed or counted until the fourth portal is open (deps.svUnlocked) or it has been earned
+  const ultimateHidden = (f, s) => !!f.ultimate && !s.feats[f.id] && !(deps && deps.svUnlocked && deps.svUnlocked());
   function featsHtml(s) {
-    const fs = FEATS_(), cats = typeof FEAT_CATS !== 'undefined' ? FEAT_CATS : [['all', 'Feats']];
+    const fs = FEATS_().filter(f => !ultimateHidden(f, s)), cats = typeof FEAT_CATS !== 'undefined' ? FEAT_CATS : [['all', 'Feats']];
     const got = fs.filter(f => s.feats[f.id]).length, titles = fs.filter(f => f.title && s.feats[f.id]);
     const wearing = title();
     const picker = `<div class="pt-title"><label>Title</label><div class="pt-titles"><button type="button" data-title=""${wearing ? '' : ' class="on"'}>None</button>${titles.map(f => `<button type="button" data-title="${f.id}" class="${s.title === f.id && wearing ? 'on' : ''}" data-tip="${esc(f.name)}">${esc(f.title)}</button>`).join('')}</div><small>${got} of ${fs.length} feats</small></div>`;
@@ -534,7 +536,7 @@ const Pastimes = (() => {
   function fightsHtml() {
     const list = Array.isArray(st().fights) ? st().fights : [];
     if (!list.length) return '<p class="pt-note">Your last fights will be written here, with what everyone contributed: points for damage, healing, holding the boss, soaking mechanics, raising the fallen, and more.</p>';
-    const bossName = id => { const b = typeof BOSSES !== 'undefined' ? BOSSES.find(x => x.id === id) : null; return b ? b.name : 'A fight'; };
+    const bossName = id => { const b = typeof BOSSES !== 'undefined' ? BOSSES.find(x => x.id === id) || (typeof ULTIMATE_BOSS !== 'undefined' && id === ULTIMATE_BOSS.id ? ULTIMATE_BOSS : null) : null; return b ? b.name : 'A fight'; };
     const crown = '<i class="crown"><svg viewBox="0 0 16 12" aria-hidden="true"><path d="M1.5 10.5 0.8 3.2 4.6 6.4 8 1.5 11.4 6.4 15.2 3.2 14.5 10.5Z" fill="currentColor"/></svg></i>';
     const mmss = t => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
     const label = Scoring.LABEL;

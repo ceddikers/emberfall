@@ -505,7 +505,7 @@ Object.assign(TALENTS, {
     ],
     [
       { id: 'oathbroker_receivership', name: 'Receivership', ab: 'default', text: 'Default now also shields the whole party for half of what it tore up (at most 20% of your HP) and gives them 25% less damage for 8s.', spec: { collector: 'Foreclose now also shields the whole party for half of what it tore up (at most 20% of your HP) and gives them 25% less damage for 8s.' } },
-      { id: 'oathbroker_garnishwrit', name: 'Writ of Execution', ab: 'writ', text: 'Entries written during Writ of Protection are now half paid by the boss when they come due, and Writ of Protection is back in 40s instead of 90s. Blanket Surety and Warrant, in its place, get the same: entries written in them are half paid by the boss, and they are back in 40s instead of 60s.' },
+      { id: 'oathbroker_garnishwrit', name: 'Writ of Execution', ab: 'writ', text: 'Entries written during Writ of Protection are now half paid by the boss when they come due, and Writ of Protection is back in 40s instead of 60s. Blanket Surety and Warrant, in its place, get the same: entries written in them are half paid by the boss, and they are back in 40s.' },
       { id: 'oathbroker_slate', name: 'Clean Slate', ab: 'default', text: 'Default now also brings Renegotiate, Settle, Lien and Writ of Protection straight back, and your credit freezes for 6s instead of 10s.', spec: { guarantor: 'Default now also brings Renegotiate, Settle, Co-Sign and Writ of Protection straight back, and your credit freezes for 6s instead of 10s.', collector: 'Foreclose now also brings Renegotiate, Settle, Lien and your Writ of Protection (or Warrant) straight back, and your credit freezes for 6s instead of 10s.' } },
     ],
     [

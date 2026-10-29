@@ -423,7 +423,7 @@ const SPECS = {
             },
           },
           growth: {
-            id: 'moonwell', replaces: 'growth', name: 'Moonwell', type: 'ogcd', target: 'ally', cd: 45, anim: 'big',
+            id: 'moonwell', replaces: 'growth', name: 'Moonwell', type: 'ogcd', target: 'ally', cd: 40, anim: 'big',
             desc: 'A pool of moonlight at an ally\'s feet for 12s: everyone standing in it heals {h:80} every 1.5s, and your heals are 25% stronger while it lasts.',
             effect(k, t) {
               const { amount } = k.healAmount(80, { ab: this });
@@ -435,7 +435,7 @@ const SPECS = {
               }
               if (k.talent('grovekeeper_tide')) { k.g.tideUntil = k.now + 8; k.g.tideEnd = k.cd[this.id]; k.cd[this.id] = k.now; }
               k.buff('moonlit', 12);
-              k.env.emit({ type: 'pool', target: t, r: 150, amount, ticks: 8, interval: 1.5, ab: this });
+              k.env.emit({ type: 'pool', target: t, r: 150, amount: k.healAmount(80, { ab: this }).amount, ticks: 8, interval: 1.5, ab: this });   // (worked out with Moonlit on: the pool's own ticks are among the heals it makes 25% stronger)
               // Argent Veil (spec row VI): set down as the boss begins a cast, it also shields everyone inside
               if (k.talent('grovekeeper_veil') && bossCasting(k)) k.env.emit({ type: 'splash', target: t, r: 150, sh: Math.round(350 * ENGINE.POT_SCALE * (1 + (k.def.healMod ? k.def.healMod(k, { ab: this }) : 0)) * (1 + (k.gear().power || 0))), dur: 10, ab: this });
               // Afterglow (spec row VII): when it ends, it rises again at your own feet
@@ -1195,7 +1195,7 @@ SPECS.ironpalm = [
       potMult: base.potMult * 1.02,   // balance knob (tools/simulate.js)
       stillWater: true,
       abilities: {
-        read: { charges: 2, desc: 'Drop into a reading stance for 1.2s: 20% less damage. A hit that lands in its first 0.4s is read: it lands at half strength, you counter for {d:63}, and your Breath fills to the top. Read a tankbuster (or any blow after Iron Ox) and your next Heavy is a free, Crisp Thousand Palms, 30% stronger. Two charges.' },
+        read: { charges: 2, desc: 'Drop into a reading stance for 1.2s: 20% less damage. A hit that lands in its first 0.4s is read: it lands at half strength (a tankbuster, 40%), you counter for {d:63}, and your Breath fills to the top. Read a tankbuster (or any blow after Iron Ox) and your next Heavy is a free, Crisp Thousand Palms, 30% stronger. Two charges.' },
         skin: {
           id: 'pond', replaces: 'skin', name: 'Still Pond', type: 'ogcd', target: 'self', cd: 90, lock: 0.5, anim: 'big',
           desc: 'Settle like still water for 8s: 25% less damage, and Read comes back 0.8s after you use it. Read every blow.',
@@ -1216,9 +1216,10 @@ SPECS.ironpalm = [
       abilities: {
         bell: {
           id: 'slide', replaces: 'bell', name: 'Landslide', type: 'ogcd', target: 'self', cd: 60, lock: 0.5, anim: 'big',
-          desc: 'Plant your feet like a mountain coming down: the whole party takes 10% less damage for 8s, and for 15s your strings can\'t drop, a broken one doesn\'t stagger you, and your Momentum fills and holds.',
+          desc: 'Plant your feet like a mountain coming down: the whole party takes 15% less damage for 10s and you take 30% less on top of that, and for 15s your strings can\'t drop, a broken one doesn\'t stagger you, and your Momentum fills and holds.',
           effect(k) {
-            k.mitigate('party', 0.1, 8, { ab: this });
+            k.mitigate('party', 0.15, 10, { ab: this });
+            k.mitigate('self', 0.3, 10, { ab: this });
             const dur = k.perk('ironpalm_w3') ? 20 : 15;
             k.buff('slide', dur); k.buff('rush', dur, {}, IRONPALM.RUSH_MAX, IRONPALM.RUSH_MAX);
             ipBellTail(k, this);
@@ -1318,13 +1319,15 @@ SPECS.gloomsworn = [
     gaugeTip: 'Every hit you land fills 8 Gloom and every hit you take 6. Gloom Strike spends 40, Black Pall 30, Last Rite all of it. Out of combat the vessel drains, but only 1 a second. Full Gloom when a blow would kill you makes you Hollow: the whole party takes 15% less damage while you are, and your healer has 6s after it to pay the debt instead of 4s. A full vessel also hardens you (10% less damage taken), and a Hollow leaves 40 Gloom of dregs with both Gloom Strikes back and echoing.',
     blurb: 'A wall that lasts. The dark keeps its watch over the others too.',
     focus: 'Protecting the party. Your barriers last longer and chain on to the ally who needs one, and when you go Hollow the whole party is covered and your healer has longer to pay.',
-    passive: { name: 'Long Vigil', desc: 'Gloom Strike\'s barrier lasts 10s instead of 6s and a second barrier ({s:110}) falls on the most hurt ally. Black Pall lasts 8s. Gloom drains 1 a second out of combat instead of 2.5. While you are Hollow the whole party takes 15% less damage, and your healer has 6s after it ends to pay the debt instead of 4s.' },
+    passive: { name: 'Long Vigil', desc: 'Gloom Strike\'s barrier lasts 10s instead of 6s and a second barrier ({s:110}) falls on the most hurt ally. Black Pall lasts 8s and takes 15% more off you. Black Mantle comes back in 40s instead of 60s, and Last Rite in 90s instead of 120s. Gloom drains 1 a second out of combat instead of 2.5. While you are Hollow the whole party takes 15% less damage, and your healer has 6s after it ends to pay the debt instead of 4s.' },
     build: base => ({
       potMult: base.potMult * 0.995,   // balance knob (tools/simulate.js)
       sentinel: true, slowDecay: true,
       abilities: {
         strike: { desc: 'Spend 40 Gloom: a heavy blow for {d:760} that wraps you in a barrier of {s:150} for 10s, and the ally who is hurt most in one of {s:110}. Two charges. Needs 40 Gloom.' },
-        pall: { desc: 'Spend 30 Gloom: a pall falls over the whole party, 25% less damage taken for 8s.' },
+        pall: { desc: 'Spend 30 Gloom: a pall falls over the whole party, 25% less damage taken for 8s, and 15% less again for you.' },
+        mantle: { cd: 40 },    // (a Sentinel's Mantle is back in 40s, not 60s; Warden's Mantle, a talent, keeps its 45s but lasts 12s and lays barriers)
+        rite: { cd: 90 },      // (and Last Rite in 90s, not 120s)
       },
     }),
   },
@@ -1411,9 +1414,9 @@ SPECS.tidecaller = [
       abilities: {
         surge: { desc: '1.5s cast: spend all the tide in a wave that heals the whole party, from {h:220} at low water up to {h:560} at high water. At full high water it heals 30% more and leaves a shield of {s:100} on everyone.' },
         sip: {
-          id: 'swell', replaces: 'sip', name: 'Swell', type: 'gcd', target: 'ally', anim: 'cast',
-          desc: 'Instant: heals one ally for {h:200}, 80% more on an ally under half health, and raises the tide instead of spending it.',
-          glow: k => !!k.g.lowWater,
+          id: 'swell', replaces: 'sip', name: 'Swell', type: 'gcd', target: 'ally', anim: 'cast', allowDead: true, cast: tideRaiseCast, usable: tideRaiseUsable,
+          desc: 'Instant: heals one ally for {h:200}, 80% more on an ally under half health, and raises the tide instead of spending it. On a fallen ally it is a 5s cast that brings them back to life, once every 30s, with Raise Sickness: 15% less damage and healing for 20s, more for every fall this pull.',
+          glow: k => !!k.g.lowWater || targetDown(k, 'sip'),
           effect(k, t) { tideSip(k, this, t, 200, -8); },
           fx: { type: 'ring', color: '#d7f2ee', r: 36, onTarget: true },
         },

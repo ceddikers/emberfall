@@ -294,8 +294,8 @@ function fxData(m, name) { const e = m.st.emits.find(x => x.type === 'fx' && x.n
   const def = { id: 'grubnak', name: 'test', hp: { normal: 1e9 }, autoDmg: { normal: 0 }, script() {} };
   const sim = new FightSim(def, 'normal', () => ps, () => {}, 7);
   sim.state = 'live'; sim.t = 100; sim.boss.autoAt = 1e9;
-  const a = sim.spawnAdd({ x: 600, y: 600, hp: 1e6, speed: 100, bite: 0 }), b = sim.spawnAdd({ x: 900, y: 600, hp: 1e6, speed: 100, bite: 0 });
-  const free = sim.spawnAdd({ x: 600, y: 900, hp: 1e6, speed: 100, bite: 0 });
+  const a = sim.spawnAdd({ x: 300, y: 300, hp: 1e6, speed: 100, bite: 0 }), b = sim.spawnAdd({ x: 400, y: 250, hp: 1e6, speed: 100, bite: 0 });   // (all on the floor: a gather keeps an add inside the arena)
+  const free = sim.spawnAdd({ x: -300, y: 300, hp: 1e6, speed: 100, bite: 0 });
   sim.onEvent(1, { type: 'reaper', op: 'hold', tgt: a.id, dur: 2 });
   const ax = a.x, ay = a.y, fx0 = free.x, fy0 = free.y;
   for (let i = 0; i < 20; i++) sim.tick(0.05);
@@ -306,12 +306,13 @@ function fxData(m, name) { const e = m.st.emits.find(x => x.type === 'fx' && x.n
   check(sim.boss.holdUntil === undefined, 'a hold on the boss does nothing');
   for (let i = 0; i < 60; i++) sim.tick(0.05);
   const before = { x: b.x, y: b.y };
-  sim.onEvent(1, { type: 'reaper', op: 'gather', x: 700, y: 600, r: 260, dist: 120 });
-  check(Math.hypot(b.x - 700, b.y - 600) < Math.hypot(before.x - 700, before.y - 600) - 50, 'a gather draws an add toward the spot');
+  const spot = { x: Math.round(before.x + 110), y: Math.round(before.y + 40) };
+  sim.onEvent(1, { type: 'reaper', op: 'gather', x: spot.x, y: spot.y, r: 260, dist: 120 });
+  check(Math.hypot(b.x - spot.x, b.y - spot.y) < Math.hypot(before.x - spot.x, before.y - spot.y) - 50, 'a gather draws an add toward the spot');
   check(Math.hypot(b.x - before.x, b.y - before.y) <= 125, 'by no more than the distance it asks (' + Math.round(Math.hypot(b.x - before.x, b.y - before.y)) + ')');
   sim.onEvent(1, { type: 'reaper', op: 'gather', x: 1e9, y: -1e9, r: 1e9, dist: 1e9 });
   check(Math.hypot(b.x, b.y) < 5000, 'wild numbers are clamped');
-  sim.onEvent(1, { type: 'reaper', op: 'field', x: 600, y: 900, r: 90, dur: 5 });
+  sim.onEvent(1, { type: 'reaper', op: 'field', x: -300, y: 300, r: 90, dur: 5 });
   sim.onEvent(1, { type: 'reaper', op: 'field', x: Math.round(free.x), y: Math.round(free.y), r: 90, dur: 5 });
   check(sim.addSpeedMult(free) === 0.5, 'a field slows an add inside it to half pace');
   check(sim.addSpeedMult(a) === 1 || sim.addSpeedMult(a) === 0.5, 'and one that is held or not inside is read right');

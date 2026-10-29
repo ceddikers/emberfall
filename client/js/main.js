@@ -86,7 +86,8 @@
     hard: id => (hostRoad ? !!hostRoad[id] && hostRoad[id][1] > 0 : Save.hardBeaten(id)),
   };
   const townBeaten = id => unlockAll || (Save.bossBeaten(id) && road.beaten(id));
-  const myRoad = () => { const o = {}; for (const b of BOSSES) { const n = Save.normalBeaten(b.id), h = Save.hardBeaten(b.id); if (n || h) o[b.id] = [n ? 1 : 0, h ? 1 : 0]; } return o; };
+  const ROAD_BOSSES = [...BOSSES, ULTIMATE_BOSS];   // (the road carries the Ultimate too: its town lines, the epilogue, the Trophy Hall plinth and the whole-inscription secret read townBeaten)
+  const myRoad = () => { const o = {}; for (const b of ROAD_BOSSES) { const n = Save.normalBeaten(b.id), h = Save.hardBeaten(b.id); if (n || h) o[b.id] = [n ? 1 : 0, h ? 1 : 0]; } return o; };
   function bossOpen(boss, beaten = road.beaten) { const i = BOSSES.indexOf(boss); return unlockAll || i <= 0 || beaten(BOSSES[i - 1].id); }
   // Hard, set by set (data.js BOSSES[].set): locked until every playable boss of the set has fallen on Normal, then it opens a boss at a
   // time, starting with the set's first (Grubnak; Vhalgrath for set 2)
@@ -210,6 +211,9 @@
     return out;
   }
 
+  // is a spot within pad of a hole in the floor (the Sovereign's, Act III on)? A kit move stops short of one (kits.js kitHoleClamp); walking in still works
+  const holeNear = (x, y, pad = 0) => inArena() && !!raid.room && (raid.room.floor || []).some(fl => fl.kind === 'hole' && Math.hypot(fl.x - x, fl.y - y) < fl.r + pad);
+
   const world = {
     now: () => now,
     moving: () => player.st.moving,
@@ -308,6 +312,7 @@
     // a telegraph about to land on a spot (a circle, cone, spread or cleave due within `within` s): Pirouette glows for its Doll
     danger: (a, x, y, within) => inArena() && [...raid.tgs.values()].some(tg => tg.gone == null && !tg.hidden && ['aoe', 'spread', 'buster'].includes(tg.type) &&
       tg.start + tg.dur - now <= within && SHAPES.contains(tg.live || tg.shape, x, y, 12)),
+    hole: (a, x, y) => holeNear(x, y, 30),   // a hole in the floor (kits.js kitBackSafe)
     // a tank pressed its taunt carrier (kits.js TAUNT_CARRY; CombatActor checked the taunt is ready): taunt the move's
     // enemy (or the one you face) unless it is already on you. The host applies it and shows everyone ('fev' taunt).
     taunt: (a, tg0) => {
@@ -967,11 +972,13 @@
   }
 
   function teleportBehind() {
+    if (amDead() || player.kb || myDebuff('rooted')) return;   // (held where you stand, thrown or dead: a step behind the boss waits like every other move)
     FX.add({ type: 'ring', x: player.x, y: player.y, r: 32, color: '#9b5fd0', style: 'implode', dur: 0.4 });
     if (inArena()) {
-      const b = raid.boss, a = b.f + Math.PI;
+      const b = raid.boss, a = b.f + Math.PI, sx = player.x, sy = player.y;
       player.x = b.x + Math.cos(a) * (FIGHT.BOSS_R + 45); player.y = b.y + Math.sin(a) * (FIGHT.BOSS_R + 45);
       clampArena(player);
+      kitHoleClamp({ x: sx, y: sy }, player, holeNear, true);   // (never lands in a hole: it stays on the clear side of the line)
       player.angle = Math.atan2(b.y - player.y, b.x - player.x);
     } else {
       const d = lastEnemy && lastEnemy.dummy ? lastEnemy.dummy : enemyPos();
@@ -996,7 +1003,7 @@
       else if (Number.isFinite(ev.x) && Number.isFinite(ev.y)) { dest.x = ev.x; dest.y = ev.y; }
       else return;
     } else dest = kitMoveDest(ev.where, player, tgt, player.target || mouseWorld(), ev.d);
-    if (inArena()) clampArena(dest); else townClamp(dest, 40, player);
+    if (inArena()) { clampArena(dest); kitHoleClamp(player, dest, holeNear, ev.where === 'point' || ev.where === 'ally'); } else townClamp(dest, 40, player);   // (a kit move never lands in a hole: it stops at the rim)
     if (ev.safe && inArena()) {   // (ev.safe: never onto a marked floor, e.g. Wings of Dawn: the hop shortens to the last clear spot, or stays put)
       const marked = (x, y) => [...raid.tgs.values()].some(tg => tg.gone == null && !tg.hidden && ['aoe', 'spread', 'buster', 'line', 'cone'].includes(tg.type) && SHAPES.contains(tg.live || tg.shape, x, y, 12));
       const sx = player.x, sy = player.y, fr = [1, 0.75, 0.5, 0.25].find(q => !marked(sx + (dest.x - sx) * q, sy + (dest.y - sy) * q));
@@ -1058,7 +1065,7 @@
     let a = Math.atan2(to.y - player.y, to.x - player.x);
     if (Math.hypot(to.x - player.x, to.y - player.y) < 4) a = player.angle;
     const dest = { x: player.x + Math.cos(a) * DASH_DIST, y: player.y + Math.sin(a) * DASH_DIST };
-    if (inArena()) clampArena(dest); else townClamp(dest, 40, player);
+    if (inArena()) { clampArena(dest); kitHoleClamp(player, dest, holeNear, !!actor.kit.def.blink); } else townClamp(dest, 40, player);   // (a dash stops at a hole's rim; a Blink only has to land clear)
     // (a Reaper's Blink hears where it went from and to, and whether it crossed a telegraph: kits.js reapBlink)
     const through = inArena() && [0, 0.34, 0.67, 1].some(f => world.danger(actor, player.x + (dest.x - player.x) * f, player.y + (dest.y - player.y) * f, 99));
     if (!actor.useDash(now, { from: { x: player.x, y: player.y }, to: { x: dest.x, y: dest.y }, through })) return;
@@ -1103,7 +1110,7 @@
     ULT_ECHO.hooks.halo = (i, t) => {
       const bd = raid && raid.bossDraw;
       if (!bd || !bd.st || !Number.isFinite(bd.x)) return dflt(i, t);
-      const p = SV_ART.sigilPos(bd.st, i);
+      const p = SV_ART.sigilPos(bd.st, i, RAID_BOSS_SCALE);   // (the halo as drawn: the raid draws him at RAID_BOSS_SCALE)
       return { x: bd.x + p.x, y: bd.y + p.y };
     };
   }
@@ -1159,6 +1166,7 @@
   }
 
   function startRaid(mode, fill, bossId = lastRaidOpts.boss, practiceFrom = 0) {
+    if (bossId === 'sovereign' && !SvPortal.mayStart()) return;   // (the Ultimate starts only once it is unlocked, or on a local dev host for testing: pulls of it grant rewards)
     Loot.hostClose();   // a chest from the last pull is settled first
     if (!Net.isHost || !player.cls) return;
     if (mode === 'hard' && !hardOpen(BOSSES.find(b => b.id === bossId) || BOSSES[0])) mode = 'normal';   // (Hard stays locked)
@@ -1753,6 +1761,7 @@
   function leaveRaid(byMe) {
     if (byMe && Net.isHost) Loot.hostClose();   // (settled first, so the host's own salvage still lands)
     resetRaidInput();
+    if (SH && SH.stopBeds) SH.stopBeds();   // (the fight's loops and pending music changes end with it: the Ultimate's promised tracks must not start in town; the town's own beds and tune come back next frame)
     focusEnemy = null;
     if (byMe) {
       if (Net.isHost) { Loot.hostClose(); Net.broadcastAll({ t: 'raidend' }); return; }  // the host leaving ends it for everyone
@@ -2006,10 +2015,12 @@
       return;
     }
     const wasSH = SH, t0 = now;
+    let enteredHere = false;
     SH = null;
     try {
       // not in this run yet (it began, or began again, while we were away): join it first
       if ((!raid || raid.rid !== msg.rid) && msg.enter && msg.enter.t === 'raid') {
+        enteredHere = true;
         enterArena(msg.enter);
         if (msg.me == null && msg.enter.spawns && msg.enter.spawns[Net.id]) { /* enterArena put us at our spawn */ }
       }
@@ -2054,6 +2065,8 @@
       now = t0; SH = wasSH;
       FX.muted = document.hidden; VFX.mute(document.hidden);
     }
+    // a rejoin into the Ultimate: the replay was silent, so its music starts from the standing act (a resync keeps the track it has)
+    if (SH && (msg.me || enteredHere) && raid && !raid.pvp && raid.def.id === 'sovereign' && raid.state === 'live' && !raid.result && raid.svActNow !== 'night') SH.music(SH.bossTrack('sovereign', raid.mode, raid.svActNow || raid.practice || 1), { fade: 1.5 });
     if (resyncAsked && performance.now() - resyncAsked < 8000) { resyncAsked = 0; toast('In step with the host.'); }
   }
   Net.on('rsnap', applySnapshot);
@@ -2080,7 +2093,7 @@
       Journal.fightStart();
       if (player.cls && !raid.def.trial && !raid.practice) Journal.met(player.cls.id, raid.def.id);
       if (!raid.def.trial) Pastimes.event('pull', { boss: raid.def.id, practice: !!raid.practice });
-      if (SH) { SH.play('pull-go', { vol: 1 }); SH.music(SH.bossTrack(raid.def.id, raid.mode), { fade: 0.8 }); SH.phase(raid.def.id, raid.ph || 1); SH.vo('pull', { bossId: raid.def.id }); }
+      if (SH) { SH.play('pull-go', { vol: 1 }); SH.music(SH.bossTrack(raid.def.id, raid.mode, raid.practice || 1), { fade: 0.8 }); SH.phase(raid.def.id, raid.ph || 1); SH.vo('pull', { bossId: raid.def.id }); }   // (bossTrack's third argument: the Ultimate's practice start plays the act it begins in)
       return;
     }
     if (msg.stats) raid.meter = { ft: msg.time, d: Object.entries(msg.stats).map(([id, st]) => Scoring.pack(Number(id), st)) };   // (the meter ends on the final tally)
@@ -2178,6 +2191,7 @@
   Net.on('setpiece', msg => {
     if (!raid || !(msg.dur > 0)) return;
     raid.setpiece = { id: String(msg.id || ''), until: now + msg.dur, invulUntil: now + Math.max(0, Math.min(msg.dur, +msg.invul || 0)) };
+    if (typeof SV_FX !== 'undefined' && SV_FX.setPiece) SV_FX.setPiece(now, msg.dur);   // (the Brand glyph's burn clock stands still through it, as the host's does)
     if (SH && SH.sovereignSetPiece) SH.sovereignSetPiece(raid.setpiece.id);   // the Ultimate's set-piece sounds
   });
   // the boss's next moves, from the host about once a second: [[name, seconds until], ...] (drawn under the cast bar)
@@ -2491,8 +2505,12 @@
   // the room: props and floor state (the whole list), a prop chipped / broken / slammed into, and room moments
   Net.on('props', msg => { if (raid) ArenaView.roomProps(raid.room, msg, now); });
   Net.on('propfx', msg => { if (raid) BOSS_VFX.propFx(msg, raid.room, entById, raid.def.id); });
+  const SV_CUT = /^sv(proc|flambe|web|fuse|shadow|glass|dive|twin|anvil|anvilt|pillar|bite|head|crescent|lance|pyre|dance|wheel|wallout|turn|fore|seed|recall|signal|echoact|grace|cut):/;
   Net.on('roomev', msg => {
     if (!raid) return;
+    // (an act turned early: the moves it cut stop drawing their timelines; the room's standing state, the echoes and the holes stay)
+    if (raid.def.id === 'sovereign' && msg.k === 'svactcut') { for (const k in raid.room.ev) if (SV_CUT.test(k)) delete raid.room.ev[k]; return; }
+    if (raid.def.id === 'sovereign' && msg.k === 'svact') raid.svActNow = msg.act;   // (the act in play, kept even while a snapshot is replayed silently: a rejoiner's music starts from it)
     if (raid.def.id === 'sovereign' && SH && SH.sovereignRoom) SH.sovereignRoom(msg);   // the Ultimate's echoes and moves (sound-hooks.js)
     if (raid.def.id === 'sovereign' && raid.state === 'live' && player.cls && !raid.practice && typeof msg.k === 'string' && msg.k.startsWith('svsignal:')) Journal.castStart(player.cls.id, 'sovereign', String(msg.name), 3, now);   // (the First Signal: not a cast, so its journal page is told by this roomev)
     if (raid.def.id === 'sovereign' && msg.k === 'svact' && !raid.practice) SvPortal.reached(msg.act);   // (the furthest act of a real pull: the fourth portal's Reach card)
@@ -2548,7 +2566,7 @@
     if (!raid) return;
     for (const id of msg.ids || []) { raid.doom.set(id, { start: now, end: now + (msg.dur || 14) }); const e = entById(id); if (e) BOSS_VFX.doomed(e); }
   });
-  Net.on('cure', msg => { if (!raid) return; raid.doom.delete(msg.id); const e = entById(msg.id); if (e) BOSS_VFX.cure(e); if (SH && e) SH.play('cleanse', { vol: 0.7, remote: msg.id !== Net.id, at: e }); });
+  Net.on('cure', msg => { if (!raid) return; if (typeof SV_FX !== 'undefined' && SV_FX.cure) SV_FX.cure(msg.id, now); raid.doom.delete(msg.id); const e = entById(msg.id); if (e) BOSS_VFX.cure(e); if (SH && e) SH.play('cleanse', { vol: 0.7, remote: msg.id !== Net.id, at: e }); });
   Net.on('gazed', msg => { const e = raid && entById(msg.id); if (e) BOSS_VFX.gazed(e, raid.bossDraw); });
   // the Echo Knights: where they stand; one remembering a swing; one raising its blade to replay it
   Net.on('knights', msg => {
@@ -2570,7 +2588,7 @@
   Net.on('night', msg => { if (!raid) return; raid.night = !!msg.on; if (raid.night) BOSS_VFX.nightFall(); });
 
   Net.on('kb', msg => {
-    if (!raid || msg.id !== Net.id || (actor && actor.kit.ultSteady())) return;   // (an Ultimate's lock: engine.js ultSteady)
+    if (!raid || msg.id !== Net.id || (actor && actor.kit.ultSteady() && !msg.rescue)) return;   // (an Ultimate's lock: engine.js ultSteady; a rescue, the climb-out of a hole, goes through it)
     const a = Math.atan2(player.y - msg.y, player.x - msg.x);
     const dest = { x: player.x + Math.cos(a) * msg.d, y: player.y + Math.sin(a) * msg.d };
     clampArena(dest);
@@ -2831,6 +2849,7 @@
     rebuild: () => { if (!townLayer) return; townLayer = buildTownLayer(layerScale); if (minimapBase) minimapBase.getContext('2d').drawImage(townLayer, 0, 0, MW * 2, MH * 2); },
     party: fill => { const humans = raidHumans(); return { humans, bots: fill ? pickBots(humans) : [] }; },
     isHost: () => Net.isHost, hasHero: () => !!player.cls, toast: msg => toast(msg),
+    hard: id => road.hard(id), visiting: () => !!hostRoad,   // (the road: in a friend's game it is the host's)
     start: (fill, from) => startRaid('normal', fill, 'sovereign', from),
   });
   Inventory.setExtra(clsId => TownLife.feastTotals(clsId));
@@ -2875,7 +2894,7 @@
   }
   Pastimes.init({
     player, toast: m => toast(m), addGold: n => Inventory.addGold(n), giveGift, matches: whenOk,
-    bossOpen: id => bossOpen(BOSSES.find(b => b.id === id) || BOSSES[0], townBeaten), beaten: townBeaten,
+    bossOpen: id => bossOpen(BOSSES.find(b => b.id === id) || BOSSES[0], townBeaten), beaten: townBeaten, svUnlocked: () => SvPortal.unlocked(),
     items: () => Inventory.items(), iconURL: key => Inventory.iconURL({ key }),
     onTitle: t => sendTitle(t), later: (s2, fn) => later(s2, fn),
   });
@@ -2893,7 +2912,9 @@
   player.title = Pastimes.title();
   // the journal shows the heroes you've played (the current one first)
   Journal.setOpener(() => ({
-    bosses: BOSSES, open: bossOpen, hero: player.cls ? player.cls.id : null, boss: raid && !raid.def.trial ? raid.def.id : null,
+    bosses: [...BOSSES, ULTIMATE_BOSS], open: (b, hero) => (b.id === ULTIMATE_BOSS.id ? !!(hero && Save.journal(hero).met[b.id]) : bossOpen(b)),   // (the Ultimate is not in BOSSES: its page shows once this hero has met it)
+    lore: id => (id === ULTIMATE_BOSS.id && typeof STORY !== 'undefined' && STORY.bossLore ? STORY.bossLore[id] || '' : ''),
+    hero: player.cls ? player.cls.id : null, boss: raid && !raid.def.trial ? raid.def.id : null,
     heroes: () => CLASSES.filter(c => (player.cls && c.id === player.cls.id) || Object.keys(Save.journal(c.id).met).length).sort((a, b) => (player.cls && b.id === player.cls.id) - (player.cls && a.id === player.cls.id)),
   }));
   // the Tutorial (Raid Board): the lessons, and the briefing for each boss that's open
@@ -3109,7 +3130,11 @@
     }
     // the Sovereign's charges pull on you a little (svdrift): not while you are thrown or dashing
     const dr = inArena() ? raid.drift : null;
-    if (dr && now < dr.until && !player.dashMove && !player.kb && !myDebuff('rooted')) { player.x += dr.vx * dt; player.y += dr.vy * dt; clampArena(player); }
+    if (dr && now < dr.until && !player.dashMove && !player.kb && !myDebuff('rooted')) {
+      const px = player.x, py = player.y;
+      player.x += dr.vx * dt; player.y += dr.vy * dt; clampArena(player);
+      if (holeNear(player.x, player.y, -10) && !holeNear(px, py, -10)) { player.x = px; player.y = py; }   // (the pull never carries you into a hole: only your own step does)
+    }
     // a Silk Reel drags you toward her (you can only struggle slowly against it; a dash snaps it)
     const rl = inArena() ? player.reel : null;
     if (rl && now > rl.end) player.reel = null;
@@ -3840,7 +3865,7 @@
         for (const pr of raid.room.props) if (pr.kind === 'brazier' && pr.state === 1) lights.push({ x: pr.x, y: pr.y, r: 200 });
         ArenaView.drawNight(ctx, lights, raid.nightK, { W, H, DPR, zoom, cam });
       }
-      ArenaView.drawMoon(ctx, raid.def.enrage ? ((raid.fightTime || 0) - (raid.fightPaused || 0)) / raid.def.enrage[raid.mode] : 0, now);
+      ArenaView.drawMoon(ctx, raid.def.enrage ? ((raid.fightTime || 0) - (raid.fightPaused || 0)) / raidEnrageAt(raid) : 0, now);
     }
     drawWaymarks(ctx);
     ArenaView.drawZones(ctx, raid.zones, now);
@@ -4185,7 +4210,7 @@
   const sel = $('select'), selGrid = $('sel-grid'), selDetail = $('sel-detail');
   let preview = null;
   const selOpen = () => !sel.classList.contains('hidden');
-  const panelOpen = () => !overlay.classList.contains('hidden') || selOpen() || Inventory.isOpen() || TalentPanel.isOpen() || Forge.isOpen();
+  const panelOpen = () => !overlay.classList.contains('hidden') || selOpen() || Inventory.isOpen() || TalentPanel.isOpen() || Forge.isOpen() || barrowOpen() || SvPortal.isShown();   // (the Barrow Gate's card and the fourth portal's card are panels too: no walking or hotkeys under them)
   function closePanels() {
     Tutorial.close();
     overlay.classList.add('hidden'); bossPanel.classList.add('hidden');
@@ -4817,8 +4842,9 @@
   Net.on('road', m => {
     if (Net.isHost || !m || !m.b || typeof m.b !== 'object') return;
     const o = {};
-    for (const b of BOSSES) { const v = m.b[b.id]; if (Array.isArray(v)) o[b.id] = [v[0] ? 1 : 0, v[1] ? 1 : 0]; }
+    for (const b of ROAD_BOSSES) { const v = m.b[b.id]; if (Array.isArray(v)) o[b.id] = [v[0] ? 1 : 0, v[1] ? 1 : 0]; }
     hostRoad = o;
+    SvPortal.sync();   // (the fourth portal follows the host's road)
     if (scene !== 'arena') townObjective();
   });
   Net.on('leave', msg => {
@@ -4964,7 +4990,7 @@
     started = false;
     hideLink();
     joinErr.textContent = 'Lost connection to the host.';
-    hostRoad = null;
+    hostRoad = null; SvPortal.sync();
     hostBtn.disabled = joinBtn.disabled = soloBtn.disabled = false;
     for (const b of [hostBtn, joinBtn, soloBtn]) b.textContent = b.dataset.label;
     $('join').classList.remove('hidden');
@@ -5000,7 +5026,7 @@
     }
     $('join').classList.add('hidden');
     Title.hide();
-    if (Net.isHost) hostRoad = null;   // (your own game: your own road)
+    if (Net.isHost) { hostRoad = null; SvPortal.sync(); }   // (your own game: your own road)
     started = true;
     Inventory.showGoldHud(scene !== 'arena');
     if (!player.cls) { const lh = rememberedHero(); if (lh) chooseHero(lh.cls, lh.spec); else openSelect(null); }   // (no remembered hero: the first time, hero select as ever)

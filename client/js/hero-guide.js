@@ -188,6 +188,7 @@ HERO_GUIDE.threadweaver = {
     { keys: ['w', 'w', 'd'], text: 'Fill the web, then Shuttle: {d:120} for every thread you hold.' },
     { keys: ['r', 'q'], text: 'Any snap makes your next Needle instant: Snap before you have to move, then Needle on the run.' },
     { keys: ['f'], text: 'Tapestry on the hit that would kill someone: for 8s it is split four ways.' },
+    { keys: ['e'], text: 'Someone fell? Mend Seam on them is the raise: a 5s cast, once every 30s. Stand still for it.' },
     { keys: ['w', 'w', 't'], text: 'Fill the web, then Grand Loom: every thread heals the party and strikes the boss, and the web re-forms as a Tapestry.' },
   ],
 };
@@ -259,6 +260,7 @@ HERO_GUIDE.lanternkeeper = {
   passive: { name: 'Lanterns', icon: 'set', desc: 'Your lanterns heal everyone in their glow every second, {h:55} from a floor lantern and {h:80} from a Hand Lantern, and half that once the wick burns down to a stub. Embers light them: one comes back every 5s, and every third Trim the Wick gives one more.' },
   combos: [
     { keys: ['w', 'e', 'q', 'q', 'q'], text: 'Light the ground the party is about to stand on, hang a Hand Lantern on the knight, then Trim the Wick in the gaps. Each bolt tops up the nearest wick, and every third gives an Ember back.' },
+    { keys: ['e'], text: 'Hand Lantern on a fallen ally is a 5s cast that kindles them back to life, once every 30s. Begin it where nothing is about to land.' },
     { keys: ['w', 'd'], text: 'Set a lantern where the fight is going to be, then Carry the Flame to bring the old one after you. A moved lantern keeps its wick, so a good pull of the light costs nothing.' },
     { keys: ['r'], text: 'Flare when the boss starts a blast that reaches everyone and two allies stand in glows: it lights up when they do. Glows that overlap stack, so draw the party in where two meet.' },
     { keys: ['f'], text: 'Relight when two wicks are down to stubs: every wick back to full and the most hurt ally heals {h:320}. Do not spend it on gold wicks.' },

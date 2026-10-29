@@ -62,6 +62,7 @@ class CombatActor {
       bossFace: enemy => (world.bossFace ? world.bossFace(actor, enemy) : Math.PI / 2),   // the facing of the enemy a Houndmaster works (its hounds' left and right are the boss's own)
       shift: () => (world.shift ? !!world.shift(actor) : false),   // Shift held at the press (Whistle: Flank sends the other hound)
       danger: (x, y, within) => (world.danger ? world.danger(actor, x, y, within) : false),   // a telegraph landing on a spot within `within` s (Pirouette's glow)
+      hole: (x, y) => (world.hole ? !!world.hole(actor, x, y) : false),   // a spot inside a hole in the floor (the Sovereign's, Act III on): a blink back never lands there (kits.js kitBackSafe)
       // a tank pressed its taunt carrier (kits.js TAUNT_CARRY): the world taunts if the taunt is ready and the enemy
       // (the move's target, or the one you face) is on someone else
       taunt: tg => (actor.taunt && actor.tauntReady(world.now()) && world.taunt ? world.taunt(actor, tg) : false),

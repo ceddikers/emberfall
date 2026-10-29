@@ -6,8 +6,9 @@
 // An act is offered once a real pull has reached it: main.js hands every roomev `svact` of a non-practice run to SvPortal.reached(act), and
 // Save.recordSvReach keeps the furthest per account. Party, bot fill and the ready check are the raid's own (startRaid).
 //
-// TEST FLAG (remove after testing): localStorage 'emberfall.svUnlock' = '1' opens the portal at once (no twelve Hard clears, and its town moment
-// does not play) and enables all four acts on the Reach card. Nothing else reads this key. Remove it with localStorage.removeItem('emberfall.svUnlock').
+// TEST FLAG (local dev host only: localhost, 127.0.0.1 or a .localhost name; the live site ignores it): localStorage 'emberfall.svUnlock' = '1' opens the
+// portal at once (no twelve Hard clears, and its town moment does not play) and enables all four acts on the Reach card. Nothing else reads this key.
+// Remove it with localStorage.removeItem('emberfall.svUnlock').
 
 const SvPortal = (() => {
   const FLAG = 'emberfall.svUnlock';
@@ -17,15 +18,22 @@ const SvPortal = (() => {
   const NUMERALS = ['I', 'II', 'III', 'IV'];
   const SHOW_UNREACHED_NAMES = false;   // (an act not yet reached shows only its numeral: the later acts stay a surprise)
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-  const flag = () => { try { return localStorage.getItem(FLAG) === '1'; } catch (e) { return false; } };
+  const devHost = () => { try { const h = location.hostname; return h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h.endsWith('.localhost'); } catch (e) { return false; } };
+  const flag = () => { try { return devHost() && localStorage.getItem(FLAG) === '1'; } catch (e) { return false; } };
   const portal = () => TOWN.portals[3];
 
-  let deps = null;   // { now(), busy(), focus(pt), rebuild(), sound(), party(fill), isHost(), hasHero(), start(fill, fromAct), toast(msg) } from main
+  let deps = null;   // { busy(), focus(pt), rebuild(), sound(), party(fill), isHost(), hasHero(), start(fill, fromAct), toast(msg), hard(bossId), visiting() } from main (hard: the town's road, so in a friend's game the host's clears)
   let shown = false, quietSince = null, panel = null, fill = true;
 
-  // every boss of sets 1-3 beaten on Hard on this account
-  const earned = () => typeof BOSSES !== 'undefined' && BOSSES.length > 0 && BOSSES.every(b => Save.hardBeaten(b.id));
+  // every boss of sets 1-3 beaten on Hard on this account (mine), and on the town's road (the host's, while you are in a friend's game: main.js road.hard)
+  const hardOf = id => (deps && deps.hard ? deps.hard(id) : Save.hardBeaten(id));
+  const sets = () => typeof BOSSES !== 'undefined' && BOSSES.length > 0;
+  const earnedMine = () => sets() && BOSSES.every(b => Save.hardBeaten(b.id));
+  const earned = () => sets() && BOSSES.every(b => hardOf(b.id));
+  const visiting = () => !!(deps && deps.visiting && deps.visiting());
   const unlocked = () => flag() || earned();
+  // starting a pull from the console or a test (main.js startRaid): the unlock, or a local dev host
+  const mayStart = () => devHost() || unlocked();
   const book = () => {
     let s = Save.get('town');
     if (!s || typeof s !== 'object') { s = {}; Save.set('town', s); }
@@ -34,6 +42,14 @@ const SvPortal = (() => {
   };
   // the portal is open (enterable, in its ember look): unlocked AND its reveal has been played (or the test flag)
   const isOpen = () => shown;
+  // the portal follows the road: open once earned and its reveal has played (in a friend's game: once the host has earned it, with no reveal of mine spent)
+  function sync() {
+    if (!deps) return;
+    const want = flag() || (earned() && (visiting() || !!book().seen[SEEN]));
+    if (want === shown) return;
+    setLook(want);
+    const P = portal(); if (want && P) P.openAt = null;
+  }
   const reach = () => (flag() ? 4 : Save.svReach());
 
   function setLook(on) {
@@ -46,13 +62,13 @@ const SvPortal = (() => {
   // main.js: before the first frame (so the static town layer is built with the right look); the portal is open at once for a reveal already seen
   function init(d) {
     deps = d;
-    if (flag() || (earned() && book().seen[SEEN])) { setLook(true); const P = portal(); if (P) P.openAt = null; }
+    sync();
   }
 
   // each frame in town: the reveal, once, when the unlock is earned and nothing else is going on in town
   function update(dt, now, inTown) {
     if (!deps || shown) return;
-    if (!earned()) { quietSince = null; return; }
+    if (visiting() || !earnedMine() || !earned()) { quietSince = null; return; }   // (the reveal is a town moment of my own: only in my own game, once I have earned it)
     if (!inTown || deps.busy() || (Save.trialsOpen() && !book().seen.barrowgate)) { quietSince = null; return; }   // (the Barrow Gate's own moment, if due, goes first)
     if (quietSince == null) quietSince = now;
     if (now - quietSince < QUIET) return;
@@ -112,5 +128,5 @@ const SvPortal = (() => {
   function close() { if (panel) panel.classList.add('hidden'); }
   const isShown = () => !!panel && !panel.classList.contains('hidden');
 
-  return { init, update, show, close, isOpen, isShown, reached, reach, unlocked, FLAG };
+  return { init, sync, update, show, close, isOpen, isShown, reached, reach, unlocked, mayStart, FLAG };
 })();

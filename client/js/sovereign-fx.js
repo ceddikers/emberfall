@@ -26,6 +26,7 @@
 //   Crescent, Lance, Pyre (svcrescent:n svlance:n svpyre:n)   two crossing fans of flame, then turned; blade-thin streaks that leave a burning line and a cracked impact at the wall;
 //                                      numbered burning marks and blink-cuts from both ends
 //   The Sovereign's Dance (svdance:n)   silver-and-ember numbered afterimages, burning slashes that hang in the air and fall as embers, Caelum's cuts silver-white
+//   Into the hole   (svfall:n)     a ring of fire along the floor and a tongue of the fire below where a hero stepped in, a spray of embers thrown up and falling back
 //   Sunwheel of Embers (svwheel:n, svwallout:n, tag svCatch)   a bronze wheel with a blazing rim rolling its path and clanging at each bounce, the walls of fire (the svWall zones are
 //                                      drawn here; the default zone wash is kept off them), the blue catch ring and flash, every wall snuffed into smoke on a catch, burning down on a miss
 // Layers (all hooked in from this file; no other file changes): everything that lies on the floor is drawn UNDER the telegraph fills (ArenaView.drawTelegraphs is
@@ -54,7 +55,7 @@ const SV_FX = (() => {
   const readLow = () => { try { return !!((typeof Save !== 'undefined' && Save.setting && Save.setting('lowFx', false)) || (CALM && CALM.matches)); } catch (e) { return false; } };
   const cnt = n => (LOW ? Math.max(1, Math.ceil(n * 0.4)) : n);
   const stp = () => (LOW ? 2 : 1);
-  const newState = () => ({ recs: [], seen: new WeakSet(), last: -1e9, hk: {}, doom: new Map(), cures: [], lant: new Map(), sunk: new Map(), room: null, cv: {}, wo: {}, gr: [], sap: {}, hk4: null, lcar: new Map(), pass: [] });
+  const newState = () => ({ recs: [], seen: new WeakSet(), seenId: new Set(), rref: null, cm: new Map(), last: -1e9, hk: {}, doom: new Map(), cures: [], lant: new Map(), sunk: new Map(), room: null, cv: {}, wo: {}, gr: [], sap: {}, hk4: null, lcar: new Map(), pass: [] });
   let S = newState();   // (the fight's; the preview swaps its own in per canvas)
   let warned = false;
   const warn = e => { if (!warned) { warned = true; if (typeof console !== 'undefined') console.warn('sovereign-fx', e); } };
@@ -280,6 +281,15 @@ const SV_FX = (() => {
   // Brand: the heat of the blade gathers on the tank (a ring of embers closing in), a sear slash lands, and a brand glyph burns on the floor under the tank and
   // over its chest until the burn runs out (BURN is 90 s, ticking every 3 s: the glyph flares on each tick)
   const BURN = 90;
+  // The host's burn clock stands still through a set piece (sovereign.js: burn.until += a), so the glyph's own clock does too: main.js hands every 'setpiece' message to
+  // SV_FX.setPiece, which keeps the stopped spans on the room, and a brand's age is its age on the client clock less the time stopped since it landed.
+  const spOf = env => { const rm = (env && env.room) || S.room; return rm && rm.svsp; };
+  const paused = (sp, a, b) => { let s = 0; if (sp) for (const x of sp) { const lo = Math.max(a, x[0]), hi = Math.min(b, x[1]); if (hi > lo) s += hi - lo; } return s; };
+  function setPiece(at, dur) {
+    const rm = typeof ArenaView !== 'undefined' ? ArenaView.liveRoom : null; if (!rm || !(dur > 0)) return;
+    const sp = rm.svsp || (rm.svsp = []), last = sp[sp.length - 1];
+    if (last && at < last[1]) last[1] = Math.max(last[1], at + dur); else sp.push([at, at + dur]);   // (a set piece started inside another only adds what runs past it)
+  }
   const brandLive = (r, t) => { for (const o of S.recs) if (o !== r && o.tag === 'svBrand' && o.target === r.target && o.land > r.land && o.land <= t) return false; return true; };
   TELL.svBrand = {
     under(c, r, t, env) {
@@ -298,18 +308,19 @@ const SV_FX = (() => {
         });
         return;
       }
-      if (age > BURN + 2 || !brandLive(r, t) || r.cancel) return;
-      const fade = 1 - c01((age - 2) / (BURN - 2)), tick = age > 3 ? Math.exp(-((age - 3) % 3) * 4) : 0, k = (0.25 + 0.75 * fade) * c01(age / 0.4);
+      const ba = age - paused(spOf(env), r.land, t);   // (the burn's age: its clock stands still in a set piece)
+      if (ba > BURN + 2 || !brandLive(r, t) || r.cancel) return;
+      const fade = 1 - c01((ba - 2) / (BURN - 2)), tick = ba > 3 ? Math.exp(-((ba - 3) % 3) * 4) : 0, k = (0.25 + 0.75 * fade) * c01(ba / 0.4);
       const g = brandGlyph(); if (!g) return;
       c.save(); c.translate(x, y + 6); c.rotate(t * 0.25); c.scale(1, 1);
       c.globalAlpha = (0.5 + 0.4 * tick) * k; c.drawImage(g, -50, -50, 100, 100);
       c.globalCompositeOperation = 'lighter'; c.globalAlpha = (0.2 + 0.5 * tick) * k; c.drawImage(g, -50, -50, 100, 100);
       c.restore();
       add(c, () => glow(c, x, y, 70, K.ember, (0.1 + 0.25 * tick) * k));
-      if (age < 6) scorch(c, x, y, 120, 0.7 * (1 - age / 6), 1 - age / 3, r.sd, K.ember);
+      if (ba < 6) scorch(c, x, y, 120, 0.7 * (1 - ba / 6), 1 - ba / 3, r.sd, K.ember);
     },
     over(c, r, t, env) {
-      const age = t - r.land; if (age < 0 || age > BURN + 2 || r.cancel) return;
+      const age = t - r.land, ba = age - paused(spOf(env), r.land, t); if (age < 0 || ba > BURN + 2 || r.cancel) return;
       const e = r.target != null && env.entById ? env.entById(r.target) : null, x = e ? e.x : r.s.x, y = e ? e.y - (e.lift || 0) : r.s.y, b = bossAt(env);
       if (age < 0.85) {   // the sear: a slash across the tank, sparks, a ring
         const q = c01(age / 0.85), ang = Math.atan2(y - b.y, x - b.x) + 1.15, L = 190 * eo3(c01(age / 0.14)), a = (1 - ei(c01((age - 0.1) / 0.75)));
@@ -322,7 +333,7 @@ const SV_FX = (() => {
         c.restore();
       }
       if (age > 0.3 && brandLive(r, t)) {   // (the glyph over the chest, small, with embers coming off it)
-        const fade = 1 - c01((age - 2) / (BURN - 2)), tick = age > 3 ? Math.exp(-((age - 3) % 3) * 4) : 0, k = (0.3 + 0.7 * fade) * c01((age - 0.3) / 0.5), g = brandGlyph();
+        const fade = 1 - c01((ba - 2) / (BURN - 2)), tick = ba > 3 ? Math.exp(-((ba - 3) % 3) * 4) : 0, k = (0.3 + 0.7 * fade) * c01((ba - 0.3) / 0.5), g = brandGlyph();
         if (g) { c.save(); c.translate(x, y - 56); c.scale(1, 0.92); c.globalAlpha = (0.55 + 0.35 * tick) * k; c.drawImage(g, -17, -17, 34, 34); c.globalCompositeOperation = 'lighter'; c.globalAlpha = (0.25 + 0.5 * tick) * k; c.drawImage(g, -17, -17, 34, 34); c.restore(); }
         rise(c, x, y - 40, { n: 5, t, per: 1.8, rise: 46, spread: 24, size: 2.2, a: 0.7 * k, seed: 17 });
       }
@@ -522,7 +533,7 @@ const SV_FX = (() => {
       if (!(lit & (1 << i))) continue;
       const fin = a0 + i * TAU / 12, ang = fin - sweep * (1 - e), ca = Math.cos(ang), sa = Math.sin(ang);
       if (u < d) {
-        const locked = c01((u - lockT) / (d - lockT)), rb = lerp(118, 150, q);
+        const locked = c01((u - lockT) / (d - lockT)), rb = haloR(env);   // (the halo's real radius as drawn)
         add(c, () => {
           turnBeam(c, b, ang, rb, 40 * (1 - 0.45 * locked), (0.7 + 0.3 * q) * ka * (1 - 0.1 * locked));
           turnBeam(c, b, ang, rb, 10, 0.9 * ka * (0.7 + 0.3 * locked));
@@ -794,13 +805,15 @@ const SV_FX = (() => {
   // the host's own state (the Doom, the lanterns, the knights live on `raid`, which tellEnv does not carry): env first (the preview, or a main.js that adds them), else the debug handle
   const feed = (env, k) => { if (env[k] !== undefined) return env[k]; const R = rawRaid(); return R ? R[k] : undefined; };
   const stOf = env => (env.boss && env.boss.st) || (rawRaid() && rawRaid().bossDraw && rawRaid().bossDraw.st) || null;
-  const haloR = env => { const st = stOf(env); return st && typeof SV_ART !== 'undefined' && SV_ART.sigilPos ? SV_ART.sigilPos(st, 0).r : 118; };
+  // The halo as DRAWN: the raid draws the Sovereign at RAID_BOSS_SCALE (SV_ART.DRAW, 1.3), so every radius is the art's px times that (the preview says its own, env.bossScale)
+  const drawK = env => (env && env.bossScale > 0 ? env.bossScale : (typeof SV_ART !== 'undefined' && SV_ART.DRAW) || 1.3);
+  const haloR = env => { const st = stOf(env); return st && typeof SV_ART !== 'undefined' && SV_ART.sigilPos ? SV_ART.sigilPos(st, 0, drawK(env)).r : 150 * drawK(env); };
   const haloPt = (env, i) => {
     const b = bossAt(env), st = stOf(env);
-    if (st && typeof SV_ART !== 'undefined' && SV_ART.sigilPos) { const p = SV_ART.sigilPos(st, i); return { x: b.x + p.x, y: b.y + p.y }; }
-    const a = i * TAU / 12 - Math.PI / 2; return { x: b.x + Math.cos(a) * 118, y: b.y + Math.sin(a) * 118 };
+    if (st && typeof SV_ART !== 'undefined' && SV_ART.sigilPos) { const p = SV_ART.sigilPos(st, i, drawK(env)); return { x: b.x + p.x, y: b.y + p.y }; }
+    const a = i * TAU / 12 - Math.PI / 2, R = 150 * drawK(env); return { x: b.x + Math.cos(a) * R, y: b.y + Math.sin(a) * R };
   };
-  const resetState = s => { s.recs.length = 0; s.seen = new WeakSet(); s.hk = {}; s.doom.clear(); s.cures.length = 0; s.lant.clear(); s.sunk.clear(); s.cv = {}; s.wo = {}; s.gr.length = 0; s.sap = {}; s.hk4 = null; s.lcar.clear(); s.pass.length = 0; };
+  const resetState = s => { s.recs.length = 0; s.seen = new WeakSet(); s.seenId = new Set(); s.cm.clear(); s.last = -1e9; s.hk = {}; s.doom.clear(); s.cures.length = 0; s.lant.clear(); s.sunk.clear(); s.cv = {}; s.wo = {}; s.gr.length = 0; s.sap = {}; s.hk4 = null; s.lcar.clear(); s.pass.length = 0; };
   // a layered ring (ink edge, saturated mid, bright, hot core) of width w at radius r: the shape of a toll or a bell's ring
   function bandRing(c, x, y, r, w, a, pal) {
     c.beginPath(); c.arc(x, y, r, 0, TAU);
@@ -828,7 +841,8 @@ const SV_FX = (() => {
       const key = a.id < best.id ? a.id + ':' + best.id : best.id + ':' + a.id; if (seen.has(key)) continue; seen.add(key);
       const f = a.s > 0 ? a : best, g = a.s > 0 ? best : a;   // (f the fire end, g the ash end)
       const near = 1 - c01((bd - 70) / (PULL - 70)), k = (0.2 + 0.45 * near) * (bd < 76 ? 0.55 : 1) * (sk < 0 ? 1 : 1 + 1.4 * sk);
-      const mx = (f.x + g.x) / 2, my = (f.y + g.y) / 2, nx = -(g.y - f.y) / bd, ny = (g.x - f.x) / bd, bow = Math.sin(t * 1.1 + f.id) * Math.min(26, bd * 0.08), cx = mx + nx * bow, cy = my + ny * bow;
+      const mx = (f.x + g.x) / 2, my = (f.y + g.y) / 2, nx = -(g.y - f.y) / (bd || 1), ny = (g.x - f.x) / (bd || 1),   // (two bearers on one spot: no divide by nothing)
+      bow = Math.sin(t * 1.1 + f.id) * Math.min(26, bd * 0.08), cx = mx + nx * bow, cy = my + ny * bow;
       const grad = c.createLinearGradient(f.x, f.y, g.x, g.y); grad.addColorStop(0, rgba(K.ember, k)); grad.addColorStop(0.5, rgba(K.gold, k * 0.5)); grad.addColorStop(1, rgba(K.ash, k));
       add(c, () => {
         c.beginPath(); c.moveTo(f.x, f.y); c.quadraticCurveTo(cx, cy, g.x, g.y); c.lineCap = 'round'; c.strokeStyle = grad;
@@ -958,15 +972,19 @@ const SV_FX = (() => {
     g.strokeStyle = rgba(K.ink, 0.9); g.lineWidth = 2; g.beginPath(); for (const x of [-7, 0, 7]) { g.moveTo(x, 14); g.lineTo(x, 25); } g.stroke();
     g.beginPath(); g.moveTo(-3, -26); g.lineTo(2, -17); g.lineTo(-2, -12); g.strokeStyle = K.ember; g.lineWidth = 2.2; g.stroke();
   });
+  // main.js hands every 'cure' message here: Doom that vanishes from the party's list is only a cure (and only bursts) if the host said so (not a death, not the
+  // fight ending, not a wipe's clear)
+  function cure(id, at) { if (id != null && Number.isFinite(at)) S.cm.set(id, at); }
   function trackDoom(env, t) {
-    const D = feed(env, 'doom') || new Map(), R = rawRaid();
+    const D = feed(env, 'doom') || new Map();
     for (const [id, d] of D) { const e = env.entById && env.entById(id); S.doom.set(id, { start: d.start, end: d.end, x: e ? e.x : 0, y: e ? e.y : 0 }); }
     for (const [id, d] of S.doom) {
       if (D.has(id)) continue;
       S.doom.delete(id);
-      const st = R && R.party && R.party.get ? R.party.get(id) : null;
-      if (!(st && st.alive === false) && t < d.end - 0.35) S.cures.push({ id, at: t, x: d.x, y: d.y });   // (gone before it ran out and not dead: a cure)
+      const at = S.cm.get(id); S.cm.delete(id);
+      if (at != null && t - at < 2 && t >= at - 0.5) S.cures.push({ id, at: t, x: d.x, y: d.y });   // (a cure message came for it: a living hero, cured)
     }
+    for (const [id, at] of S.cm) if (t > at + 3) S.cm.delete(id);
     for (let i = S.cures.length - 1; i >= 0; i--) if (t > S.cures[i].at + 2 || t < S.cures[i].at - 1) S.cures.splice(i, 1);
   }
   function doomSigil(c, env, t) {
@@ -2068,7 +2086,7 @@ const SV_FX = (() => {
   };
 
   // ---------------------------------------------------------------------------------------------------------------- FX3: The Heart Remembers (svheart, svpillar:n, svseal)
-  // The wall. svheart is the clock (pillars [x, y, seconds to the eruption, live], sweep, kindling, end); svpillar:n paints each pillar 2.2 s before it erupts;
+  // The wall. svheart is the clock (pillars [x, y, seconds to the eruption, live], sweep, kindling, sealAt); svpillar:n paints each pillar 2.2 s before it erupts;
   // svseal is the glass breaking. The heart beats on the sound's own grid (a lub 0.02 s into each 1.25 s, a dub at 0.4) until the held breath after the last pillar
   // (the sound stops it 0.25 s after that pillar); the effects' own clock stands still through the breath. A dark vignette (a canvas, drawn FIRST in the floor
   // layer, so everything else lies over it) closes in on the room's edge, pulsing with the beat; the pillars and the seal are drawn under the telegraph fills
@@ -2093,9 +2111,9 @@ const SV_FX = (() => {
   function heartOf(room, t) {
     const ev = room.ev.svheart; if (!ev) return null;
     const u = t - ev.start, ps = Array.isArray(ev.pillars) ? ev.pillars : [], seal = room.ev.svseal, done = seal ? t - seal.start : -1;
-    if (u < -0.1 || done > 5 || (!seal && u > (+ev.end || 0) + 3)) return null;
+    if (u < -0.1 || done > 5 || (!seal && u > (+ev.sealAt || 0) + 3)) return null;
     let last = 0; for (const p of ps) last = Math.max(last, +p[2] || 0);
-    const b0 = last + 0.25, b1 = Math.max(+ev.sweep || 0, b0 + 0.75), end = +ev.end || b1 + 8;
+    const b0 = last + 0.25, b1 = Math.max(+ev.sweep || 0, b0 + 0.75), end = +ev.sealAt || b1 + 8;   // (sealAt: seconds from the message to the seal's end; `end` is taken by ArenaView.roomEvent, which sets it to now + dur)
     let B = 0; if (u >= 0.02 && u < b0) { const ph = (((u - 0.02) % HP) + HP) % HP; B = Math.max(Math.exp(-ph * 9), ph >= 0.38 ? 0.65 * Math.exp(-(ph - 0.38) * 9) : 0) * c01(u / 1.2); }
     let th = 0; for (const p of ps) { const a = u - (+p[2] || 0); if (a >= 0 && a < 1.5) th = Math.max(th, Math.exp(-a * 5)); }
     return { ev, u, ps, last, b0, b1, end, B, th, held: u >= b0 && u < b1, done, ht: u < b0 ? u : u < b1 ? b0 : u - (b1 - b0) };
@@ -2515,7 +2533,7 @@ const SV_FX = (() => {
   // out of step at first and falling into step: the two agree. A faint thread joins the tips; a shared flare as the move begins.
   const STANCE_LEN = { crane: 92, comet: 114, parting: 64 };
   function bladesOf(env, cv, anim) {
-    const b = bossAt(env), st = stOf(env), sg = st && st.props && st.props.svBladeSide === -1 ? -1 : 1, fs = Number.isFinite(b.facing) ? b.facing : Math.atan2(cv.y - b.y, cv.x - b.x);
+    const b = bossAt(env), st = stOf(env), sg = st && st.props && st.props.svBladeSide === -1 ? -1 : 1, fs = Number.isFinite(b.f) ? b.f : Number.isFinite(b.facing) ? b.facing : Math.atan2(cv.y - b.y, cv.x - b.x);
     const hs0 = rot2(fs, 16, 30 * sg), ds = fs + Math.atan2(0.52 * sg, 0.85), Ls = anim === 'parting' ? 70 : anim === 'comet' ? 104 : 90;
     const S0 = { x: b.x + hs0[0], y: b.y + hs0[1] }, S1 = { x: S0.x + Math.cos(ds) * Ls, y: S0.y + Math.sin(ds) * Ls };
     const hc = rot2(cv.face, 8, -18), dc = cv.face - 0.4, Lc = STANCE_LEN[anim] || 90;
@@ -2973,6 +2991,7 @@ const SV_FX = (() => {
         const n = k.slice(10), s = S.sap[n] || (S.sap[n] = { trail: [], pos: null, lastT: t });
         const done = room.ev['svsapdie:' + n] || room.ev['svsaparr:' + n], u = t - ev.start;
         let p = env.entById && ev.id != null ? env.entById(ev.id) : null;
+        if (!p && ev.id != null) { const A = feed(env, 'adds'), a = A && A.get ? A.get(ev.id) : null; if (a && Number.isFinite(a.x) && Number.isFinite(a.y)) p = a; }   // (ev.id is the add's id: its real place is in the adds the client holds)
         if (!p) { const b = bossAt(env), dx = b.x - ev.x, dy = b.y - ev.y, D = Math.hypot(dx, dy) || 1, d = Math.max(0, u - 1.5) * (+ev.speed || 24); p = { x: ev.x + dx / D * d, y: ev.y + dy / D * d }; }
         s.pos = { x: p.x, y: p.y };
         if (!done && u > 1.4 && u < (ev.dur || 45)) {
@@ -3324,6 +3343,29 @@ const SV_FX = (() => {
     }
     return (SEAM6 = { R6, R, paths, pts });
   }
+  // ---- svfall:n { id, x, y, hx, hy, dur }: a hero stepped into a hole (the script roots them 2.6 s and then pushes them out). Under the fills: the edge going, a ring of fire
+  // thrown out along the floor where they stood and a tongue of the fire below licking up; over: a spray of embers thrown up out of the hole and falling back, gone in about two seconds.
+  function fallUnder(c, ev, t) {
+    const u = t - ev.start; if (u < -0.05 || u > 2.6) return;
+    const x = +ev.x || 0, y = +ev.y || 0, hx = Number.isFinite(+ev.hx) ? +ev.hx : x, hy = Number.isFinite(+ev.hy) ? +ev.hy : y, q = c01(u / 0.5), a = 1 - c01((u - 0.15) / 1.4), r = 14 + 46 * eo3(q);
+    add(c, () => {
+      c.beginPath(); c.ellipse(x, y + 6, r, r * 0.55, 0, 0, TAU); c.lineWidth = 4 * (1 - q) + 1; c.strokeStyle = rgba(K.amber, 0.8 * (1 - q)); c.stroke();
+      glow(c, x, y + 4, 60 - 30 * q + 20, K.ember, 0.5 * (1 - q));
+      glow(c, hx, hy, 90, K.red, 0.22 * a);
+    });
+    const k = c01(u / 0.15) * (1 - c01((u - 0.3) / 0.9)); if (k > 0.03) tongue(c, x, y + 4, UP, 62 * k, 26, t * 2, FIRE, 0.9 * k);
+  }
+  function fallOver(c, ev, t) {
+    const u = t - ev.start; if (u < 0 || u > 2.2) return;
+    const x = +ev.x || 0, y = +ev.y || 0, n = cnt(16);
+    add(c, () => {
+      for (let i = 0; i < n; i++) {
+        const sp = 90 + 150 * hs(i, 301), an = UP + (hs(i, 302) - 0.5) * 1.9, px = x + Math.cos(an) * sp * u, py = y - 8 + Math.sin(an) * sp * u + 165 * u * u, al = 1 - c01(u / (0.9 + 0.9 * hs(i, 303)));
+        if (al <= 0.02) continue;
+        glow(c, px, py, 3.2 + 2.2 * hs(i, 304), u < 0.35 ? K.hot : K.ember, al * 0.9);
+      }
+    });
+  }
   const holes6 = room => { const o = []; for (const k in room.ev) if (k.startsWith('svhole:')) { const e = room.ev[k]; o.push([+e.x || 0, +e.y || 0, +e.r || 80]); } return o; };
   const partyMid = env => { const U = env.units; if (!U || !U.length) return { x: 0, y: 0 }; let x = 0, y = 0; for (const u of U) { x += u.x; y += u.y; } return { x: x / U.length, y: y / U.length }; };
   const chargeOf = (env, id) => { const P = env.pol !== undefined ? env.pol : rawRaid() && rawRaid().pol; const v = P && P.get ? P.get(id) : 0; return v > 0 ? 1 : v < 0 ? -1 : 0; };
@@ -3528,13 +3570,16 @@ const SV_FX = (() => {
     S.last = t;
     if (env.tgs) for (const tg of env.tgs.values()) {
       if (!tg.tag || tg.tag.charCodeAt(0) !== 115 || tg.tag.charCodeAt(1) !== 118 || S.seen.has(tg)) continue;   // ('sv')
+      // (keyed by the host's id too: a resync rebuilds every telegraph object, and the landing must not draw twice)
+      const sid = tg.id != null ? tg.tag + '#' + tg.id : null;
+      if (sid != null) { if (S.seenId.has(sid)) { S.seen.add(tg); for (const o of S.recs) if (o.tg && o.tg.id === tg.id && o.tag === tg.tag) o.tg = tg; continue; } S.seenId.add(sid); }
       S.seen.add(tg); S.recs.push({ tg, tag: tg.tag, start: tg.start, dur: tg.dur, target: tg.target != null ? tg.target : tg.follow, sd: (+tg.id || S.recs.length) % 97, s: tg.live || tg.shape, land: tg.start + tg.dur, cancel: false });
     }
     for (let i = S.recs.length - 1; i >= 0; i--) {
       const r = S.recs[i], tg = r.tg;
       r.s = tg.live || tg.shape || r.s;
       if (tg.gone != null) { r.cancel = tg.gone < tg.start + tg.dur - 0.45; r.land = tg.gone; } else r.land = tg.start + tg.dur;
-      if (t > r.land + (r.tag === 'svBrand' ? BURN + 4 : 9) || r.cancel && t > r.land + 0.3) S.recs.splice(i, 1);
+      if (t > r.land + (r.tag === 'svBrand' ? BURN + 4 + paused(spOf(env), r.land, t) : 9) || r.cancel && t > r.land + 0.3) S.recs.splice(i, 1);
     }
   }
   const frameLow = env => { LOW = env && env.low != null ? !!env.low : readLow(); };
@@ -3562,6 +3607,7 @@ const SV_FX = (() => {
       else if (k.startsWith('svpyre:')) pyreUnder(ctx, ev, t);
       else if (k.startsWith('svdance:')) danceUnder(ctx, ev, t);
       else if (k.startsWith('svwheel:')) wheelUnder(ctx, ev, k.slice(8), t);
+      else if (k.startsWith('svfall:')) fallUnder(ctx, ev, t);
     }
     twinFrame(ctx, room, t, env, false); heartUnder(ctx, room, t, env, H); rebirthUnder(ctx, room, t, env); fx5Under(ctx, room, t, env); fx6Under(ctx, room, t, env);
     for (const r of S.recs) { const f = TELL[r.tag]; if (f && f.under && t > r.start - 0.1) f.under(ctx, r, t, env); }
@@ -3588,6 +3634,7 @@ const SV_FX = (() => {
       else if (k.startsWith('svpyre:')) pyreOver(ctx, ev, t);
       else if (k.startsWith('svdance:')) danceOver(ctx, ev, t);
       else if (k.startsWith('svwheel:')) wheelOver(ctx, ev, k.slice(8), t);
+      else if (k.startsWith('svfall:')) fallOver(ctx, ev, t);
     }
     twinFrame(ctx, room, t, env, true); heartOver(ctx, room, t, env, heartOf(room, t)); rebirthOver(ctx, room, t, env); fx5Over(ctx, room, t, env); fx6Over(ctx, room, t, env);
     for (const r of S.recs) { const f = TELL[r.tag]; if (f && f.over && t > r.start - 0.1) f.over(ctx, r, t, env); }
@@ -3596,16 +3643,26 @@ const SV_FX = (() => {
 
   // ---------------------------------------------------------------------------------------------------------------- hooks
   // drawTelegraphs: ours first (so the fills and rims go on top); drawRoomOver: ours last
+  // A new pull (or a resync, which also builds a new room object) is a new room: every per-pull memory goes (the room's own events, the Sunwheel's catches, brand
+  // glyphs, lantern pools, sunk sheets). The clock never rewinds on a retry, so the room object is what tells us.
+  const pull = room => { if (room && S.rref !== room) { resetState(S); S.rref = room; } };
+  // Runs one of our layers exception-safe: a throw is logged once and every canvas state it had saved is restored (save and restore are counted for the call).
+  function guarded(ctx, fn) {
+    const sv = ctx.save, rs = ctx.restore; let d = 0;
+    ctx.save = function () { d++; return sv.call(this); };
+    ctx.restore = function () { d--; return rs.call(this); };
+    try { fn(); } catch (e) { warn(e); } finally { delete ctx.save; delete ctx.restore; while (d-- > 0) rs.call(ctx); }
+  }
   function hook() {
     if (typeof ArenaView === 'undefined' || ArenaView.__svFx) return;
     const dt = ArenaView.drawTelegraphs, dro = ArenaView.drawRoomOver;
     ArenaView.drawTelegraphs = function (ctx, tgs, t, env) {
-      if (env && env.bossId === 'sovereign') { try { under(ctx, this.liveRoom || env.room, t, env); } catch (e) { warn(e); } }
+      if (env && env.bossId === 'sovereign') { const room = this.liveRoom || env.room; guarded(ctx, () => { pull(room); under(ctx, room, t, env); }); }
       return dt.apply(this, arguments);
     };
     ArenaView.drawRoomOver = function (ctx, room, t, env) {
       const res = dro.apply(this, arguments);
-      if (env && env.bossId === 'sovereign') { try { over(ctx, room, t, env); } catch (e) { warn(e); } }
+      if (env && env.bossId === 'sovereign') guarded(ctx, () => { pull(room); over(ctx, room, t, env); });
       return res;
     };
     ArenaView.__svFx = 1;
@@ -3752,7 +3809,7 @@ const SV_FX = (() => {
   const HEADS = [[240, -240], [-240, -240], [-340, 0]];
   const heartScen = full => {
     const first = full ? 4.0 : 0.5, gap = 2.7, ps = full ? HEADS.map((h, i) => [h[0], h[1], +(first + i * gap).toFixed(2), 0]) : [[HEADS[0][0], HEADS[0][1], first, 0]], last = ps[ps.length - 1][2], sweep = last + 1.0, kind = sweep + 3.6 + 0.8, end = kind + 3.4 + 0.1, s0 = 0.4;
-    const ev = { svact: { act: 2, start: -30, dur: 9999 }, svheart: { n: ps.length, pillars: ps, sweep, kindling: kind, end, r: 150, dur: end + 1, start: s0 }, svseal: { broken: 1, dur: 3, start: s0 + end } }, tgs = [];
+    const ev = { svact: { act: 2, start: -30, dur: 9999 }, svheart: { n: ps.length, pillars: ps, sweep, kindling: kind, sealAt: end, r: 150, dur: end + 1, start: s0 }, svseal: { broken: 1, dur: 3, start: s0 + end } }, tgs = [];
     ps.forEach((p, i) => { const st = s0 + p[2] - 2.2; ev['svpillar:' + (i + 1)] = { head: i + 1, x: p[0], y: p[1], order: i + 1, live: 0, r: 150, at: 2.2, dur: 3.4, start: st }; ev['svcut:' + (i + 1)] = { x: p[0], y: p[1], order: i + 1, dur: 9999, start: 0.05 }; tgs.push({ tag: 'svPillar', type: 'aoe', start: st, dur: 2.2, ghost: 1, shape: { kind: 'circle', x: p[0], y: p[1], r: 150 } }); });
     tgs.push({ tag: 'svSweep', type: 'aoe', start: s0 + sweep, dur: 3.6, shape: { kind: 'rect', x: BOSS0.x, y: BOSS0.y, angle: 0.4, len: 1300, w: 2600 } });
     tgs.push({ tag: 'svKindling', type: 'raidwide', start: s0 + kind, dur: 3.4, shape: { kind: 'circle', x: 0, y: 0, r: 0 } });
@@ -3958,7 +4015,7 @@ const SV_FX = (() => {
       if (tt >= g.start && (g.gone == null || tt <= g.gone + 0.25)) tgs.set(g.id, g);
     }
     const xs = sc.extraEnt ? sc.extraEnt(tt) : {};
-    const env = Object.assign({ tgs, boss: sc.facing != null ? Object.assign({ facing: sc.facing }, BOSS0) : BOSS0, bossId: 'sovereign', entById: id => units[id] || xs[id] || null, roomS: SV_ROOMS.stateFor ? SV_ROOMS.stateFor(rform) : undefined, room, units, low: !!o.low, pol: new Map(), doom: new Map(), lanterns: [], knights: new Map() }, sc.extra ? sc.extra(tt) : {});
+    const env = Object.assign({ tgs, boss: sc.facing != null ? Object.assign({ facing: sc.facing }, BOSS0) : BOSS0, bossId: 'sovereign', entById: id => units[id] || xs[id] || null, roomS: SV_ROOMS.stateFor ? SV_ROOMS.stateFor(rform) : undefined, room, units, bossScale: 1.2, low: !!o.low, pol: new Map(), doom: new Map(), lanterns: [], knights: new Map() }, sc.extra ? sc.extra(tt) : {});
     if (sc.lit != null) env.lit = sc.lit;
     // the Sovereign on its own layer, then laid in
     let bl = cv.__svBoss; if (!bl || bl.width !== W) { bl = cv.__svBoss = document.createElement('canvas'); bl.width = W; bl.height = H; }
@@ -3971,6 +4028,7 @@ const SV_FX = (() => {
       ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(s, s);
       // the telegraph fills (what boss-tells.js would paint over our floor effects), under: our floor effects first
       if (sc.echoes && typeof ULT_ECHO !== 'undefined') { ULT_ECHO.hooks.boss = () => BOSS0; ULT_ECHO.S.frame = -1e9; ULT_ECHO.floor(ctx, room, tt); }
+      if (env.doom) for (const [id, d] of S.doom) if (!env.doom.has(id) && tt < d.end - 0.35) S.cm.set(id, tt);   // (the preview's Doom that ends early is a cure: the host's message in the game)
       const m0 = performance.now(); under(ctx, room, tt, env); cv.__svMs = (cv.__svMs || 0) + performance.now() - m0;   // (cv.__svMs: the ms our floor effects took, summed: for timing)
       for (const g of tgs.values()) { const [f, rim] = tgFill(g, tt); const p = c01((tt - g.start) / g.dur), land = g.gone != null, fa = (land ? 1 - c01((tt - g.gone) / 0.25) : 1) * (g.ghost && !land && g.dur - nextDur > 0.05 ? 0.3 : 1); ctx.save(); ctx.beginPath(); ARENA.trace(ctx, 4); ctx.clip(); SHAPES.trace(ctx, g.live); ctx.fillStyle = f.replace('0.24', String(0.1 + 0.18 * p)); ctx.globalAlpha = fa; ctx.fill(); ctx.strokeStyle = rim; ctx.lineWidth = 2.5; ctx.stroke(); ctx.restore(); }
       ctx.restore();
@@ -3988,5 +4046,5 @@ const SV_FX = (() => {
   }
   if (typeof window !== 'undefined') window.__svFxPreview = preview;
 
-  return { under, over, preview, EFFECTS: Object.keys(SCEN), SCEN, slowK, slow: SLOW };
+  return { under, over, preview, setPiece, cure, guarded, EFFECTS: Object.keys(SCEN), SCEN, slowK, slow: SLOW };
 })();

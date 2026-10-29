@@ -5,7 +5,8 @@
 //   (a boss that must be open before this feat shows its name; check.boss counts too), check.
 // Check types the engine supports (pastimes.js met): clear, clearAll, clearNoDeaths, clearUnder, pulls, practice, secrets,
 // gifts, feasts, fish, journal, bounties, heroes, emotes, items, trial, mark (a mark from feat-rules.js), count (a counter),
-// hardRole, hardRoles, hardClasses. A check may carry `set` (1 or 2) to mean "any boss of that set".
+// hardRole, hardRoles, hardClasses. A check may carry `set` (1 or 2) to mean "any boss of that set". `ultimate: true` marks a feat of the Ultimate: it is left out of
+// the Logbook entirely (list and every count) until the fourth portal is open, unless it is already earned (pastimes.js featsHtml).
 // No feat's text describes a mechanic: the wording stays on who was in the party and what the result looked like.
 // Overview: docs/plans/story.md.
 
@@ -37,7 +38,7 @@ const FEATS = [
   { id: 'second-road', cat: 'road', name: 'The Second Road', desc: 'Defeat all four of the bosses beyond the Barrow.', title: 'Walker of the Second Road', hidden: false, needs: 'wyrm',
     check: { type: 'clearAll', mode: 'normal', set: 2 } },
 
-  { id: 'who-walked-home', cat: 'road', name: 'The Last Door', desc: 'Defeat the Cinder Sovereign.', title: 'Who Walked Home', hidden: true, hint: 'Something in town is still sealed.', needs: 'sovereign',
+  { id: 'who-walked-home', cat: 'road', name: 'The Last Door', desc: 'Defeat the Cinder Sovereign.', title: 'Who Walked Home', hidden: true, hint: 'Something in town is still sealed.', needs: 'sovereign', ultimate: true,
     check: { type: 'clear', boss: 'sovereign' } },
 
   // ---------------------------------------------------------------- hard
@@ -75,7 +76,7 @@ const FEATS = [
     check: { type: 'mark', k: 'me:spotless' } },
   { id: 'not-a-mark', cat: 'clean', name: 'Not a Mark on Us', desc: 'Defeat a boss on Hard with nobody dying and nobody taking an avoidable hit.', title: 'The Immaculate', hidden: false,
     check: { type: 'mark', k: 'party:spotlessHard' } },
-  { id: 'nobody-left-in-ash', cat: 'clean', name: 'Nobody Left in the Ash', desc: 'Defeat the Cinder Sovereign without anyone dying.', title: 'Unburnt', hidden: true, hint: 'Not everyone has to stay behind.', needs: 'sovereign',
+  { id: 'nobody-left-in-ash', cat: 'clean', name: 'Nobody Left in the Ash', desc: 'Defeat the Cinder Sovereign without anyone dying.', title: 'Unburnt', hidden: true, hint: 'Not everyone has to stay behind.', needs: 'sovereign', ultimate: true,
     check: { type: 'clearNoDeaths', boss: 'sovereign' } },
   { id: 'express-service', cat: 'clean', name: 'Express Service', desc: 'Defeat Grubnak in under 7 minutes.', title: null, hidden: false,
     check: { type: 'clearUnder', boss: 'grubnak', secs: 420 } },
