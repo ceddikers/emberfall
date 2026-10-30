@@ -21,7 +21,7 @@ const path = require('path');
 const load = (p) => require(path.join(__dirname, '../client/js', p));
 Object.assign(global, load('arena/shapes.js'), load('data.js'), load('combat/engine.js'), load('combat/kits.js'), load('combat/specs.js'),
   load('combat/actor.js'), load('arena/fight.js'), load('arena/bots.js'));
-Object.assign(global, load('arena/scoring.js'), load('arena/raid-host.js'));
+Object.assign(global, load('arena/scoring.js'), load('arena/raid-host.js'), load('hardplus.js'));   // (hardplus.js: the Hard+ modifiers, played with mods=all or MODS=shortfuse,heavyhands,... on a Hard run)
 const { GRUBNAK } = load('arena/bosses/grubnak.js');
 const { SKITTERRA } = load('arena/bosses/skitterra.js');
 const { VOLKAR } = load('arena/bosses/volkar.js');
@@ -45,7 +45,7 @@ const { SOVEREIGN } = load('arena/bosses/sovereign.js');
 DEFS.sovereign = SOVEREIGN;   // (the Ultimate: not on the Raid Board; one difficulty, play it as normal)
 const { TRIALS, trialDef } = load('arena/trials.js');
 
-let gearLevel = process.env.GEAR || '';
+let gearLevel = process.env.GEAR || '', modsArg = process.env.MODS || '';
 let humanWho = process.env.HUMAN || 'none';
 const BREAKDOWN = !!process.env.BREAKDOWN;
 let untilAct = 0, mode = 'normal', runs = 3, comp = 'bastion,cleric,ranger,pyromancer'.split(','), def = GRUBNAK, seed0 = 1000, first = 0, stopOnClear = false, practiceFrom = 0;
@@ -58,6 +58,7 @@ for (const a of process.argv.slice(2)) {
   else if (/^until=\d+$/.test(a)) untilAct = Number(a.slice(6));   // an act-by-act run (the Sovereign, with phase=N): the run ends, counted as a clear, when the fight passes act N's gate
   else if (/^gear=\w+$/.test(a)) gearLevel = a.slice(5);
   else if (/^human=[\w,]+$/.test(a)) humanWho = a.slice(6);
+  else if (/^mods=[\w,]+$/.test(a)) modsArg = a.slice(5);   // Hard+ modifiers (hardplus.js ids or aliases, or 'all'); only a Hard run takes them
   else if (/^\d+$/.test(a)) runs = Number(a);
   else if (DEFS[a]) def = DEFS[a];
   // trial:<spec> runs that spec's trial, with a bot taking it (or 'trial:<spec>:base' to try it with the base kit)
@@ -75,14 +76,16 @@ if (GEARSET) {
   RaidHost.prototype.allPlayers = function () { return orig.call(this).map(p => (p.bot ? Object.assign(p, { gear: GEARSET.sets[p.id - 1000].host }) : p)); };
   log(`gear ${gearLevel}: bond ${JSON.stringify(GEARSET.bond.active.map(a => a.name + ' x' + a.n))}; ` + GEARSET.sets.map(g => `${g.cls} hp${g.host.hp} def${g.host.def} main+${(g.mods.power * 1000).toFixed(0)} crit${g.mods.crit} haste${g.mods.haste}`).join(' | '));
 }
+const MODSET = mode === 'hard' ? HARDPLUS.clean(modsArg) : {};
 log(`${def.name}, ${mode}, ${comp.join('/')}`);
+if (HARDPLUS.heat(MODSET)) log(`Hard+ heat ${HARDPLUS.heat(MODSET)}: ${HARDPLUS.ids(MODSET).join(', ')}`);
 
 let clears = 0, totDeaths = 0, totClearT = 0;
 const bdTot = {};   // BREAKDOWN=1: the sums over the runs, per player
 const hollowTot = { started: 0, saved: 0, failed: 0 };   // a Gloomsworn's Hollow (fight.js HOLLOW_HOST), over every run
 for (let r = first; r < first + runs; r++) {
   const casts = [];
-  const host = new RaidHost({ def, mode, humans: () => [], bots: comp, seed: seed0 + r * 77, bond: GEARSET ? GEARSET.bond : undefined, practiceFrom, emit: msg => {
+  const host = new RaidHost({ def, mode, humans: () => [], bots: comp, mods: MODSET, seed: seed0 + r * 77, bond: GEARSET ? GEARSET.bond : undefined, practiceFrom, emit: msg => {
     if (msg.t === 'bcast') casts.push(msg.name);
     // TRACE=1: print the boss's casts, the walls, adds and props as they happen
     if (process.env.TRACE && (msg.t === 'bcast' || (msg.t === 'fev' && msg.k === 'wall') || (msg.t === 'addev' && msg.k !== 'bite') || msg.t === 'propfx')) console.log(`   ${host.sim.t.toFixed(1)} ${msg.t} ${msg.name || msg.k || ''} ${msg.label || msg.kind || ''}`);
@@ -150,4 +153,4 @@ if (BREAKDOWN && !SUMMARY) {
   for (const a of Object.values(bdTot)) log(`   ${a.name}/${a.cls}${a.human ? '*' : ''}: ${(a.damage / a.dur).toFixed(0)} dps | dead ${(a.dead / a.n).toFixed(0)}s, out of reach ${(a.out / a.n).toFixed(0)}s, moving ${(a.moving / a.n).toFixed(0)}s, gcd idle ${(a.idle / a.n).toFixed(0)}s, casts cancelled ${(a.interrupts / a.n).toFixed(1)}, avoidable hits ${(a.avoidable / a.n).toFixed(1)}`);
 }
 if (hollowTot.started) log(`Hollow over ${runs} runs: ${hollowTot.started} started, ${hollowTot.saved} saved, ${hollowTot.failed} fell`);
-if (SUMMARY) console.log(JSON.stringify({ boss: def.id, mode, gear: gearLevel || 'base', runs, clears, deathsPerRun: +(totDeaths / runs).toFixed(2), meanClearT: clears ? Math.round(totClearT / clears) : null, hollow: hollowTot.started ? hollowTot : undefined }));
+if (SUMMARY) console.log(JSON.stringify({ boss: def.id, mode, heat: HARDPLUS.heat(MODSET) || undefined, gear: gearLevel || 'base', runs, clears, deathsPerRun: +(totDeaths / runs).toFixed(2), meanClearT: clears ? Math.round(totClearT / clears) : null, hollow: hollowTot.started ? hollowTot : undefined }));

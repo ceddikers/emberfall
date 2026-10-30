@@ -383,7 +383,7 @@ const CORVANE = {
       if (whet.busy || whet.n < MAX || f.wall || f.state !== 'live') return;
       if (B.cast && f.t < B.cast.end) return;
       if (f.t < quietAt) return;
-      if (f.def.enrage && f.t > f.def.enrage[f.mode] - 25) return;
+      if (f.def.enrage && f.t > f.enrageAt() - 25) return;
       const len = unleash(choose());
       slide(len + 1);
     });

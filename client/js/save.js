@@ -81,8 +81,9 @@ const Save = (() => {
   };
 
   function read() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
-  let failed = false;
+  let failed = false, frozen = false;   // (frozen: an import has replaced the stored save and the page is about to reload; nothing may write over it)
   function write() {
+    if (frozen) return;
     try { localStorage.setItem(KEY, JSON.stringify(data)); failed = false; }
     catch (e) { if (!failed && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('emberfall-save-failed')); failed = true; }   // storage unavailable or full
   }
@@ -117,8 +118,82 @@ const Save = (() => {
   const { d: data, upgraded } = load();
   if (upgraded || upgradedFree) write();
 
+  // ---- export and import (Options > Data). A file is { game: 'emberfall', format, version, exportedAt, save, extras }: `save` is
+  // this save, `extras` every other `emberfall.*` record this browser keeps (progress, key binds, layout; EXTRA_SKIP names the test flags left out).
+  const EXPORT_FORMAT = 1, EXTRA_PREFIX = 'emberfall.', EXTRA_MAX = 240, EXTRA_BYTES = 1500000, FILE_BYTES = 8000000;
+  // test flags and a remembered tab are not progress: never exported, never replaced by an import
+  const EXTRA_SKIP = new Set(['emberfall.unlockAll', 'emberfall.svUnlock', 'emberfall.svRewards', 'emberfall.svFold', 'emberfall.optionsTab']);
+  const extraKey = k => typeof k === 'string' && k.startsWith(EXTRA_PREFIX) && k.length < 80 && !EXTRA_SKIP.has(k);
+  function extraKeys() {
+    const out = [];
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (extraKey(k)) out.push(k); } } catch (e) { /* storage unavailable */ }
+    return out;
+  }
+  const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  function exportData() {
+    const extras = {};
+    for (const k of extraKeys()) { try { const v = localStorage.getItem(k); if (typeof v === 'string') extras[k] = v; } catch (e) { /* skipped */ } }
+    return { game: 'emberfall', format: EXPORT_FORMAT, version: VERSION, exportedAt: new Date().toISOString(), save: JSON.parse(JSON.stringify(data)), extras };
+  }
+  // text of a file -> { ok: true, doc, info } or { ok: false, error }. Nothing is written here.
+  function parseImport(text) {
+    const bad = error => ({ ok: false, error });
+    if (typeof text !== 'string' || !text.trim()) return bad('That file is empty.');
+    if (text.length > FILE_BYTES) return bad('That file is too large to be a save.');
+    let doc;
+    try { doc = JSON.parse(text); } catch (e) { return bad("That file isn't a save: it can't be read as JSON."); }
+    if (!isObj(doc) || doc.game !== 'emberfall' || !isObj(doc.save)) return bad("That file isn't an Emberfall save.");
+    if (!Number.isInteger(doc.format) || doc.format < 1) return bad("That file isn't an Emberfall save.");
+    if (doc.format > EXPORT_FORMAT) return bad('That save was made by a newer version of the game. Update first.');
+    const sv = doc.save;
+    if (!Number.isInteger(sv.v) || sv.v < 1) return bad('That save has no usable version.');
+    if (sv.v > VERSION) return bad('That save was made by a newer version of the game. Update first.');
+    if (!isObj(sv.inv) || !Array.isArray(sv.inv.items) || sv.inv.items.some(i => !isObj(i))) return bad("That save's bags are damaged.");
+    if (sv.heroes !== undefined && !isObj(sv.heroes)) return bad("That save's heroes are damaged.");
+    if (sv.settings !== undefined && !isObj(sv.settings)) return bad("That save's settings are damaged.");
+    if (sv.name !== undefined && typeof sv.name !== 'string') return bad("That save's name is damaged.");
+    if (sv.gold !== undefined && !(Number.isFinite(sv.gold) && sv.gold >= 0)) return bad("That save's gold is damaged.");
+    const extras = doc.extras === undefined ? {} : doc.extras;
+    if (!isObj(extras)) return bad("That save's progress records are damaged.");
+    const keys = Object.keys(extras);
+    if (keys.length > EXTRA_MAX) return bad("That save's progress records are damaged.");
+    let bytes = 0;
+    for (const k of keys) {
+      if (!extraKey(k) || typeof extras[k] !== 'string') return bad("That save's progress records are damaged.");
+      bytes += extras[k].length;
+    }
+    if (bytes > EXTRA_BYTES) return bad("That save's progress records are too large.");
+    return { ok: true, doc: { game: 'emberfall', format: doc.format, version: sv.v, exportedAt: typeof doc.exportedAt === 'string' ? doc.exportedAt : '', save: sv, extras },
+      info: { name: sv.name || '', gold: Math.floor(sv.gold || 0), heroes: Object.keys(sv.heroes || {}).length, items: sv.inv.items.length, version: sv.v, exportedAt: typeof doc.exportedAt === 'string' ? doc.exportedAt : '' } };
+  }
+  // replace this browser's save with a parsed file. The current save is first copied to `emberfall-save-backup-import` (its
+  // other progress records to `...-backup-import-extras`); if anything fails the old records are put back. The caller reloads.
+  function applyImport(doc) {
+    const prev = {}, was = (() => { try { return localStorage.getItem(KEY); } catch (e) { return null; } })();
+    try {
+      for (const k of extraKeys()) prev[k] = localStorage.getItem(k);
+      if (was !== null) localStorage.setItem(`${KEY}-backup-import`, was);
+      localStorage.setItem(`${KEY}-backup-import-extras`, JSON.stringify(prev));
+    } catch (e) { return { ok: false, error: "Couldn't back up your current save (this browser's storage is full), so nothing was changed." }; }
+    try {
+      for (const k of Object.keys(prev)) localStorage.removeItem(k);
+      for (const [k, v] of Object.entries(doc.extras || {})) localStorage.setItem(k, v);
+      localStorage.setItem(KEY, JSON.stringify(doc.save));
+    } catch (e) {
+      try {
+        for (const k of extraKeys()) localStorage.removeItem(k);
+        for (const [k, v] of Object.entries(prev)) localStorage.setItem(k, v);
+        if (was !== null) localStorage.setItem(KEY, was);
+      } catch (e2) { /* the backups are still there */ }
+      return { ok: false, error: "Couldn't write the imported save (this browser's storage is full). Your old save is back as it was." };
+    }
+    frozen = true;
+    return { ok: true };
+  }
+
   return {
     VERSION,
+    exportData, parseImport, applyImport,
     get: k => data[k],
     set(k, v) { data[k] = v; write(); },
     commit: write,

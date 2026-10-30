@@ -84,7 +84,19 @@ body.in-founding #tip small { font-size: 13px; }
 
 /* ================================================================ 3. the HUD */
 /* top bar */
-#fd-top { left: 50%; top: 10px; transform: translateX(-50%); padding: 6px 20px 6px 16px; display: flex; align-items: center; gap: 14px; white-space: nowrap; }
+#fd-top { left: 50%; top: 10px; transform: translateX(-50%); padding: 6px 20px 6px 16px; display: flex; flex-direction: column; align-items: stretch; white-space: nowrap; }
+#fd-top .fd-row { display: flex; align-items: center; gap: 14px; }
+/* the next wave, a row under the bar: a silhouette and a count for each kind (elites rimmed in gold); the boss and target frames sit lower while it shows */
+#fd-top .fd-fore { display: flex; align-items: center; gap: 7px; margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--fd-line-soft); }
+#fd-top .fd-fore .fl { margin-right: 4px; font: 600 12px/1 var(--fd-fantasy); letter-spacing: .1em; text-transform: uppercase; color: var(--fd-gold); cursor: help; }
+#fd-top .fd-fore .fl em { font: 500 11px/1 var(--fd-body); font-style: normal; letter-spacing: .08em; color: var(--fd-muted); margin-left: 7px; }
+#fd-top .fd-fore .fc { display: flex; align-items: center; gap: 3px; padding: 1px 6px 1px 1px; background: #0e0c09; border: 1px solid var(--fd-line); border-radius: 11px; cursor: help; }
+#fd-top .fd-fore .fc img { width: 20px; height: 20px; border-radius: 50%; display: block; }
+#fd-top .fd-fore .fc b { font: 700 12px/1 var(--fd-body); color: var(--fd-ink2); }
+#fd-top .fd-fore .fc.el { border-color: var(--fd-gold-dim); } #fd-top .fd-fore .fc.el b { color: var(--fd-gold-hi); }
+#fd-top .fd-fore .fc.bs { border-color: #8a3a2a; } #fd-top .fd-fore .fc.bs b { color: #e8a090; letter-spacing: .04em; }
+#fd-top.fore ~ #fd-boss, #fd-top.fore ~ #fd-tframe { top: 92px; }
+#fd-top.fore ~ #fd-tframe.lower { top: 182px; } #fd-top.fore ~ #fd-boss:has(#fd-bosscast:not([style*="none"])) ~ #fd-tframe.lower { top: 206px; }
 #fd-top .fd-div { align-self: stretch; width: 1px; margin: 1px 0; background: linear-gradient(transparent, var(--fd-gold-dim) 25%, var(--fd-gold-dim) 75%, transparent); }
 #fd-top .fd-wave { font: 600 18px/1.1 var(--fd-fantasy); letter-spacing: .08em; color: var(--fd-gold-hi); min-width: 140px; } #fd-top .fd-wave span { text-shadow: 0 1px 0 #000, 0 0 10px #c9a45c33; }
 #fd-top .fd-wave small { display: block; font: 500 11px/1.2 var(--fd-body); letter-spacing: .12em; text-transform: uppercase; color: var(--fd-muted); margin-top: 2px; }
@@ -105,12 +117,42 @@ body.in-founding #tip small { font-size: 13px; }
 #fd-tframe { left: 50%; top: 64px; margin-left: -110px; width: 220px; padding: 7px 10px 8px; }
 #fd-tframe.lower { top: 154px; } #fd-boss:has(#fd-bosscast:not([style*="none"])) ~ #fd-tframe.lower { top: 178px; } #fd-tframe b { display: block; font: 600 14px/1.2 var(--fd-body); margin-bottom: 3px; } #fd-tframe .fd-bar i { background: linear-gradient(#d65a46, #a63b2c); }
 /* the party */
-#fd-party { left: 12px; top: 12px; width: 196px; padding: 8px 10px 10px; }
-#fd-party .al { cursor: pointer; border: 1px solid transparent; padding: 3px 4px; border-radius: 3px; margin-top: 4px; transition: background .12s, border-color .12s; }
+#fd-left { position: absolute; left: 12px; top: 12px; width: 214px; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+#fd-root #fd-left .fd-pn { position: relative; }
+#fd-party { padding: 8px 10px 8px; }
+#fd-party .al { display: flex; gap: 8px; align-items: center; cursor: pointer; border: 1px solid transparent; padding: 3px 4px; border-radius: 3px; margin-top: 4px; transition: background .12s, border-color .12s; }
 #fd-party .al:hover { background: #ffffff08; } #fd-party .al.sel { border-color: #6fd08c88; background: #6fd08c0c; }
-#fd-party .al > div:first-child { font-size: 13px; display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
-#fd-party .al em { font-style: normal; color: var(--fd-muted); font-size: 12px; } #fd-party .al > div:first-child .v { font-size: 12px; color: var(--fd-muted); }
-#fd-party .al.dead > div:first-child { color: var(--fd-red); } #fd-party .fd-bar { height: 8px; } #fd-party .al i { background: linear-gradient(#78afe0, #4f84b4); }
+#fd-party .pt { width: 40px; height: 40px; flex: none; border: 1px solid var(--fd-gold-dim); border-radius: 3px; box-shadow: inset 0 0 0 1px #000; }
+#fd-party .bd { flex: 1; min-width: 0; }
+#fd-party .nl { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; font-size: 13px; margin-bottom: 2px; }
+#fd-party .nl span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#fd-party .nl em { font-style: normal; color: var(--fd-muted); font-size: 11.5px; } #fd-party .nl .lv { font-style: normal; font-size: 11.5px; color: var(--fd-gold-hi); flex: none; }
+#fd-party .al.dead .nl { color: var(--fd-red); } #fd-party .fd-bar { height: 11px; } #fd-party .fd-bar i { background: linear-gradient(#78afe0, #4f84b4); } #fd-party .fd-bar span { font-size: 10px; line-height: 10px; }
+#fd-party .rd { display: flex; gap: 3px; margin-top: 3px; }
+#fd-party .rd u { text-decoration: none; width: 18px; height: 13px; text-align: center; font: 700 9px/12px var(--fd-body); letter-spacing: .02em; color: #6e6452; background: #0e0c09; border: 1px solid var(--fd-line-soft); border-radius: 2px; }
+#fd-party .rd u.on { color: #1a1409; background: var(--fd-gold); border-color: var(--fd-gold-hi); box-shadow: 0 0 5px #e6c98a66; }
+#fd-party .al.dead .rd u { opacity: .5; }
+/* the live damage meter: the raid meter's look (tabs, a row and a thin bar per hero, a sum line) */
+#fd-meter { padding: 4px 7px 5px; background: linear-gradient(90deg, #15120fe8, #100e0cdc); --md: #c9824a; --mh: #5fbf84; }
+#fd-meter::before { display: none; }
+#fd-meter .mt-h { display: flex; gap: 1px; margin: 0 0 3px; }
+#fd-meter .mt-h button { flex: 1; min-width: 0; padding: 2px 0 3px; font: 600 9.5px var(--fd-fantasy); letter-spacing: .04em; text-transform: uppercase; color: var(--fd-muted); background: none; border: 0; border-bottom: 1px solid var(--fd-line-soft); cursor: pointer; }
+#fd-meter .mt-h button:hover { color: #e6dcc8; } #fd-meter .mt-h button.on { color: var(--fd-gold-hi); border-bottom-color: var(--fd-gold-dim); }
+#fd-meter .mt-row { display: grid; grid-template-columns: 9px minmax(0, 1fr) auto; align-items: center; column-gap: 5px; padding: 2px 3px; border-left: 2px solid var(--rc, transparent); }
+#fd-meter .mt-row.me { background: #ffffff08; }
+#fd-meter .mt-row small { font-size: 9px; color: var(--fd-muted); text-align: right; }
+#fd-meter .mt-row span { font-size: 12px; color: #d8cdb8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; } #fd-meter .mt-row.me span { color: var(--fd-gold-hi); }
+#fd-meter .mt-row b { font-size: 12px; font-weight: 600; color: #e6dcc8; } #fd-meter .mt-row b u { margin-left: 4px; font-size: 10px; text-decoration: none; font-weight: 400; color: var(--fd-muted); }
+#fd-meter .mt-bar { position: relative; grid-column: 2 / -1; height: 3px; margin-top: 2px; background: #00000080; }
+#fd-meter .mt-bar i { position: absolute; inset: 0 auto 0 0; display: block; transition: width .35s; } #fd-meter .mt-bar .d { background: var(--md); } #fd-meter .mt-bar .h { background: var(--mh); }
+#fd-meter .mt-sum { display: flex; justify-content: space-between; gap: 6px; margin-top: 4px; padding-top: 3px; border-top: 1px solid var(--fd-line-soft); font-size: 11px; color: var(--fd-muted); }
+#fd-meter .mt-sum b { font-weight: 600; color: #e6dcc8; } #fd-meter .mt-sum u { text-decoration: none; font-weight: 400; color: var(--fd-muted); }
+/* the solo pause */
+#fd-pause { position: absolute; inset: 0; z-index: 15; display: flex; align-items: center; justify-content: center; pointer-events: auto; background: radial-gradient(ellipse at 50% 45%, #0b090766, #060504cc 80%); animation: fdfade .18s ease-out; }
+#fd-pause .fd-pn { position: relative; width: 300px; padding: 20px 24px 16px; text-align: center; }
+#fd-pause .fd-title.sm { text-align: center; padding-left: 0; font-size: 20px; letter-spacing: .3em; padding-left: .3em; }
+#fd-pause p { margin: 10px 0 16px; color: var(--fd-ink2); font-size: 14px; line-height: 1.4; }
+#fd-pause small { display: block; margin-top: 10px; font-size: 12px; color: var(--fd-muted); } #fd-pause small b { font: 700 11px var(--fd-body); color: var(--fd-gold-hi); background: #241d14; border: 1px solid #4a3d2c; border-bottom-width: 2px; border-radius: 3px; padding: 0 5px; }
 /* the minimap and the quest tracker */
 #fd-right { position: absolute; right: 12px; top: 12px; width: 252px; }
 #fd-mini { display: block; width: 216px; height: 162px; margin-left: auto; border: 2px solid var(--fd-gold-dim); border-radius: 4px; box-shadow: 0 6px 18px #000a, 0 0 0 1px #000; cursor: crosshair; pointer-events: auto; background: #1b2416; }

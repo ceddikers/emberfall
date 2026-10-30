@@ -253,6 +253,13 @@ const FOUNDING_DATA = (() => {
   rebuildWaves();
   const LAST_WAVE = WAVES.length;
   const waveStartAt = n => WAVE_T0 + (n - 1) * WAVE_GAP;   // run seconds when wave n arrives
+  // the next-wave preview (ui.js): what wave n brings from the fixed line-ups, counted by kind over both lanes, ordinary kinds first, elites after. A boss wave
+  // only says boss: true. The boss's name is never in it (the story names a boss when it arrives), and nothing a feature module adds to a run is counted.
+  const forecast = n => {
+    const w = WAVES[n - 1]; if (!w) return null;
+    const by = {}; for (const g of w.groups) { const e = ENEMIES[g.kind]; if (!e || e.boss) continue; const k = by[g.kind] || (by[g.kind] = { kind: g.kind, n: 0, el: !!(e.elite || g.el) }); k.n += g.n; }
+    return { n, night: isNightWave(n), boss: !!w.boss, last: n === WAVES.length, kinds: Object.values(by).sort((a, b) => (a.el ? 1 : 0) - (b.el ? 1 : 0) || b.n - a.n) };
+  };
   // how dark it is, 0..1 (the sim multiplies by a peak): dusk into wave 6, dawn into 11, dusk into 16, dawn into 21, dusk into 26
   const nightFrac = t => {
     const ramp = (a, b) => Math.max(0, Math.min(1, (t - a) / (b - a))), w6 = waveStartAt(6), w11 = waveStartAt(11), w16 = waveStartAt(16), w21 = waveStartAt(21), w26 = waveStartAt(26);
@@ -471,7 +478,7 @@ const FOUNDING_DATA = (() => {
   const payout = (survivedWaves, questsDone, held, chain) => { const p = payoutParts(survivedWaves, questsDone, held, chain); return p.waves + p.quests + p.hold + p.chain; };
   const TUNE = { nightPeak: 1, nightPeakLit: 0.82, siegeEnrage: 420, fountainR: 150, trickle: 3, full: 22, respawn: 8, respawnPer: 4, respawnMax: 30 };
 
-  return { addEnemy, addItem, addQuest, passiveKeys, itemsFor, SLOTS, KITS, HERO_IDS, UPGRADES, UP_PRICE, UP_PRICE_R, upgradePrice, ENEMIES, ENEMY_IDS, WAVES, LAST_WAVE, PARTS, partOf, isNightWave, TIER_AT, tierOf, LANES, laneMods, stepKind, BOSS_WAVES, WAVE_TUNE, rebuildWaves, waveStartAt, nightFrac, WAVE_T0, WAVE_GAP, hpScale, HPS, campHp, CAMP_TAKE, bossHpMul, BOSS_BASE, LOG_BASE, BOSS_SIZE, logHpMul, xpMul, dmgScale, SOLO_DMG, SOLO_CAMP, NO_DPS_DMG, PARTY_DMG, SOLO_CLEAVE,
+  return { addEnemy, addItem, addQuest, passiveKeys, itemsFor, SLOTS, KITS, HERO_IDS, UPGRADES, UP_PRICE, UP_PRICE_R, upgradePrice, ENEMIES, ENEMY_IDS, WAVES, LAST_WAVE, PARTS, partOf, isNightWave, TIER_AT, tierOf, LANES, laneMods, stepKind, BOSS_WAVES, WAVE_TUNE, rebuildWaves, waveStartAt, forecast, nightFrac, WAVE_T0, WAVE_GAP, hpScale, HPS, campHp, CAMP_TAKE, bossHpMul, BOSS_BASE, LOG_BASE, BOSS_SIZE, logHpMul, xpMul, dmgScale, SOLO_DMG, SOLO_CAMP, NO_DPS_DMG, PARTY_DMG, SOLO_CLEAVE,
     QUESTS, QUEST_ORDER, QUEST_TUNE, BOONS, RARITIES, RARITY_COLORS, ITEMS, ITEM, ITEM_SLOTS, HYPER_CHANCE, FORGE_MIN, canForge, canSell, sellPrice, forgeTargetRarity, dropWeights, LEVELS, GOLD, payout, payoutParts, TUNE, rk };
 })();
 

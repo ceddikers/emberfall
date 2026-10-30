@@ -4,7 +4,8 @@
 // opts: { def, mode, humans: () => [{ id, name, cls, role, x, y, a }], bots: [classId...], emit(msg), seed,
 //         bond: partyBonus() result (items.js), the gear party bonus for this fight,
 //         waitPull: the fight starts on the first blow on the boss instead of after a countdown,
-//         practiceFrom: a practice run starting at this phase (course) number }
+//         practiceFrom: a practice run starting at this phase (course) number,
+//         px: the Practice Hall's toggles { noEnrage, cantDie, slow, loop } (practice.js; slow and loop are acted on by main.js's host loop) }
 // emit() should broadcast to every player (including the host's own client code).
 
 const BOT_NAMES = ['Brom', 'Ilsa', 'Tamsin', 'Oswin', 'Mira', 'Corvin'];
@@ -66,9 +67,13 @@ class RaidHost {
     this.bots = (opts.bots || []).map((cid, i) => this.makeBot(cid, i));
     this.pull = new PullLog();   // (the pull review: PullLog above)
     this.seen = new Map();       // what the sim has told the clients that still stands (note() below), for a rejoining or resyncing player's snapshot
-    this.sim = new FightSim(this.def, this.mode, () => this.allPlayers(), msg => this.onSimMsg(msg), rngSeed, { hpPct: this.bond.hp, waitPull: !!opts.waitPull, practiceFrom: opts.practiceFrom || 0 });
+    this.px = opts.practiceFrom && opts.px ? opts.px : null; this.practiceFrom = opts.practiceFrom || 0;
+    this.sim = new FightSim(this.def, this.mode, () => this.allPlayers(), msg => this.onSimMsg(msg), rngSeed, { hpPct: this.bond.hp, waitPull: !!opts.waitPull, practiceFrom: opts.practiceFrom || 0, noEnrage: !!(this.px && this.px.noEnrage), cantDie: !!(this.px && this.px.cantDie), mods: opts.mods });   // (mods: Hard+, hardplus.js)
     this.lastBotBroadcast = -1;
   }
+
+  // a "loop this phase" practice run has moved past the phase it started from (main.js restarts it: the Practice Hall)
+  passedPhase() { return !!(this.px && this.px.loop && this.sim.state === 'live' && (this.sim.phase || 1) > this.practiceFrom); }
 
   // entry: a class id, or 'class:spec' ('class:base' for the plain kit). Without one, a bot plays the base kit or
   // either specialization, a third of the time each.
@@ -218,6 +223,7 @@ class RaidHost {
     if (sim.doomed && sim.doomed.size) for (const [id, end] of sim.doomed) add({ t: 'doomed', ids: [id], dur: Math.max(0.5, end - t) });
     if (sim.knights && sim.knights.length) add({ t: 'knights', k: sim.knights.map(k => [k.id, k.x, k.y, +k.f.toFixed(2)]) });
     if (sim.night) add({ t: 'night', on: 1 });
+    for (const m of this.botBuffRows()) add(m);   // (the bots' buffs for the frames)
     // the bots, where they stand now
     if (this.bots.length) add({ t: 'bots', b: this.bots.map(b => [b.id, Math.round(b.x), Math.round(b.y), +b.a.toFixed(2), b.moving ? 1 : 0]), c: +this.t.toFixed(3) });
     return { live: sim.state === 'live', state: sim.state, msgs, ar: ARENA.kind === 'circle' ? ARENA.r : null, result: sim.state === 'clear' || sim.state === 'wipe' ? this.lastFight || null : null };
@@ -287,6 +293,8 @@ class RaidHost {
     this.partyBuffs = this.partyBuffs.filter(b => b.end > this.sim.t);
     if (this.allyBuffs.length) this.allyBuffs = this.allyBuffs.filter(b => b.end > this.sim.t);
     if (this.sim.state === 'live') this.tickBots(dt);
+    this.partyCds();
+    this.botBuffs();
     if (this.t - this.lastBotBroadcast >= 0.1 && this.bots.length) {
       this.lastBotBroadcast = Math.max(this.lastBotBroadcast + 0.1, this.t - 0.05);   // steady 10/s (see fight.js)
       this.emit({ t: 'bots', b: this.bots.map(b => [b.id, Math.round(b.x), Math.round(b.y), +b.a.toFixed(2), b.moving ? 1 : 0]), c: +this.t.toFixed(3) });
@@ -299,7 +307,7 @@ class RaidHost {
       const s = sim.ps.get(p.id) || {};
       // a Gloomsworn's Hollow, for the healer bots (BotAI.hollowNeed): the debt, what has been healed back, and the seconds left
       const hl = s.hollow, t = sim.t;
-      return { id: p.id, x: p.x, y: p.y, role: p.role, alive: !!s.alive, hp: s.hp || 0, maxHp: s.maxHp || 1, left: s.left,
+      return { id: p.id, x: p.x, y: p.y, role: p.role, alive: !!s.alive, hp: s.hp || 0, maxHp: s.maxHp || 1, left: s.left || (sim.mods.nosecondchances && !s.alive),   // (Hard+ No Second Chances: the fallen are gone for good, so bots stop looking to raise them)
         hollow: !!hl, debt: hl ? hl.debt : 0, healed: hl ? hl.heal : 0, hollowLeft: hl ? Math.max(0, hl.until - t) : 0, graceLeft: hl ? Math.max(0, hl.graceUntil - t) : 0 };
     });
     const b = sim.boss, lamps = sim.liveLamps ? sim.liveLamps() : [];
@@ -354,7 +362,7 @@ class RaidHost {
   // tankbuster when the gauge is full; a healer saves a sinking party; any role with three bars raises a fallen ally (the raise is every role's).
   botLimit() {
     const sim = this.sim, L = FIGHT.LB, lv = Math.floor(sim.lb / L.BAR), t = sim.t;
-    if (lv < 1 || t - sim.lbUsedAt < 3 || sim.setPieceInvul()) return;   // (a set piece's opening: the Limit Break is held, FightSim.setPiece; past it a bot may use it, as a person may)
+    if (lv < 1 || t - sim.lbUsedAt < 3 || sim.setPieceInvul() || sim.mods.barehands) return;   // (a set piece's opening: the Limit Break is held, FightSim.setPiece; past it a bot may use it, as a person may)
     const ps = [...sim.ps.values()].filter(q => !q.left), alive = ps.filter(q => q.alive), dead = ps.length - alive.length;
     const low = alive.filter(q => q.hp / q.maxHp < 0.35).length;
     const busterSoon = [...sim.mechs.values()].some(m => m.type === 'buster' && m.resolveAt - t < 1.5);
@@ -372,6 +380,34 @@ class RaidHost {
       sim.onEvent(bot.id, { type: 'lb' });
       return;
     }
+  }
+
+  // the bots' party cooldowns for the frames (party-cd.js): sent only when one starts or is cut, and every so often to catch a late tab up
+  partyCds() {
+    if (typeof PartyCd === 'undefined') return;
+    for (const bot of this.bots) {
+      const c = PartyCd.scan(bot.actor.kit, bot.actor.cls.id, bot.pcd || (bot.pcd = {}), this.t);
+      if (c) this.emit({ t: 'kfx', id: bot.id, k: 'pcd', s: 1, d: { c } });
+    }
+  }
+
+  // the bots' buffs for the frames (party-buffs.js): the same row model a person's client builds from their kit, sent on a change and every few seconds
+  botBuffs() {
+    if (typeof PartyBuffs === 'undefined') return;
+    for (const bot of this.bots) {
+      const m = PartyBuffs.scan(bot.actor.kit, bot.actor.cls.id, bot.pbf || (bot.pbf = {}), this.t);
+      if (m) { m.t = 'pbf'; m.id = bot.id; this.emit(m); }
+    }
+  }
+  // someone rejoined or resynced: every bot's row in full, tooltips and all (a fresh state: the bots' own are not touched)
+  botBuffRows() {
+    const out = [];
+    if (typeof PartyBuffs === 'undefined') return out;
+    for (const bot of this.bots) {
+      const m = PartyBuffs.scan(bot.actor.kit, bot.actor.cls.id, {}, this.t);
+      if (m) { m.t = 'pbf'; m.id = bot.id; out.push(m); }
+    }
+    return out;
   }
 
   tickBots(dt) {
@@ -437,7 +473,7 @@ class RaidHost {
       bot.actor.update();
       if (bot.actor.taunt) this.botTaunt(bot, view);
       // the Ultimate (T): BotAI.ult says when (the party's burst, a check, a buster, a raidwide)
-      if (bot.actor.kit.ult && !sim.setPieceInvul() && BotAI.ult(bot, bot.actor.kit, view, ultCtx)) bot.actor.press(7);
+      if (bot.actor.kit.ult && !sim.setPieceInvul() && !sim.mods.barehands && BotAI.ult(bot, bot.actor.kit, view, ultCtx)) bot.actor.press(7);
       if (this.sim.t >= bot.nextAct) {
         const i = BotAI.act(bot, bot.actor.kit, view);
         if (i !== null && i !== undefined) {

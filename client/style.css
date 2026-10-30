@@ -826,6 +826,17 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 /* party frames: a tiny pip when that player's Ultimate is full */
 .pf-ult { display: none; flex: none; width: 6px; height: 6px; transform: rotate(45deg); background: #ffe2a0; box-shadow: 0 0 5px #ffd070; }
 .pf.ult .pf-ult { display: block; }
+/* party frames: a teammate's party cooldowns (party-cd.js, raid-ui.js partyCds): gold-edged when ready, dimmed under a shrinking sweep while they recover */
+.pf-cd { display: flex; flex: none; gap: 2px; margin-left: auto; }
+.pf-cd + small { margin-left: 5px; }
+.pcd { position: relative; flex: none; display: grid; place-items: center; box-sizing: border-box; width: 15px; height: 15px; border-radius: 2px; overflow: hidden;
+  background: #0a0807 center / cover no-repeat; border: 1px solid #c9a45cb0; color: #e8d6a8; }
+.pcd.off { display: none; }
+.pcd.raise { background: #1a1410; }
+.pcd.raise svg { width: 11px; height: 11px; }
+.pcd.cool { border-color: #ffffff24; color: #8a8070; }
+.pcd.cool::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: conic-gradient(#060504d0 calc(var(--cf, 1) * 1turn), #06050480 0); }
 @media (min-width: 761px) { #sel-keys:has(> :nth-child(8)) { grid-template-columns: repeat(8, 1fr); } }
 
 /* the player's own cast bar */
@@ -1251,15 +1262,29 @@ body.link-lost #combat-hud { opacity: .55; }
 #practice header { display: flex; align-items: center; justify-content: space-between; }
 #practice h3 { margin: 0; font-family: var(--fantasy); font-size: 13px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); }
 #practice .close { background: none; border: 0; color: var(--muted); font-size: 18px; cursor: pointer; }
-#practice .pr-note { margin: 4px 0 10px; font-size: 11.5px; color: var(--muted); }
-#practice .pr-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
-#practice .pr-row .btn2 { padding: 4px 10px; font-size: 11.5px; }
-#practice .pr-row .btn2.on { border-color: #c89a5a; color: #fff3e0; background: #2a1e12; }
-#practice .pr-phases { display: grid; gap: 4px; margin-top: 4px; }
-#practice .pr-ph { display: grid; grid-template-columns: 30px 1fr; align-items: center; gap: 8px; padding: 7px 10px; text-align: left; background: #14100c; border: 1px solid #3a2a1c; border-radius: 2px; color: #e6dcc8; cursor: pointer; font: inherit; }
-#practice .pr-ph:hover { border-color: #c89a5a; background: #1c150e; }
-#practice .pr-ph i { font-style: normal; font-family: var(--fantasy); font-size: 11px; color: var(--muted); }
-#practice .pr-ph b { font-weight: 600; font-size: 12.5px; }
+#practice .px-note { margin: 4px 0 10px; font-size: 11.5px; color: var(--muted); }
+#practice .px-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-bottom: 8px; }
+#practice .px-row .btn2 { padding: 4px 10px; font-size: 11.5px; }
+#practice .px-row .btn2.on { border-color: #c89a5a; color: #fff3e0; background: #2a1e12; }
+#practice .px-speed { display: inline-flex; align-items: center; gap: 3px; margin-left: 4px; padding-left: 9px; border-left: 1px solid #3a2a1c; font-size: 11px; color: var(--muted); }
+#practice .px-speed .btn2 { padding: 4px 7px; }
+#practice .px-phases { display: grid; gap: 4px; margin-top: 4px; }
+#practice .px-ph { display: grid; grid-template-columns: 30px 1fr; align-items: center; gap: 8px; padding: 7px 10px; text-align: left; background: #14100c; border: 1px solid #3a2a1c; border-radius: 2px; color: #e6dcc8; cursor: pointer; font: inherit; }
+#practice .px-ph.off { padding: 8px 10px; background: #0f0c0a; border-color: #2a1f16; opacity: .55; min-height: 17px; cursor: default; }
+#practice .px-ph:not(.off):hover { border-color: #c89a5a; background: #1c150e; }
+#practice .px-ph i { font-style: normal; font-family: var(--fantasy); font-size: 11px; color: var(--muted); }
+#practice .px-ph b { font-weight: 600; font-size: 12.5px; }
+/* a guest's request on the host, and the tag while aids are on */
+#px-ask { position: fixed; left: 50%; top: 74px; transform: translateX(-50%); z-index: 21; width: 340px; padding: 9px 12px 10px; background: #0d0b0af4; border: 1px solid #3a2a1c; border-left: 2px solid var(--gold); border-radius: 3px; box-shadow: 0 0 0 1px #000, 0 10px 26px #000b; animation: ui-in .18s ease-out; }
+#px-ask p { margin: 0 0 7px; font-size: 12px; color: #e6dcc8; }
+#px-ask p b { color: var(--gold-hi); font-weight: 600; }
+#px-ask div { display: flex; align-items: center; justify-content: space-between; }
+#px-ask span { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+#px-ask .btn2 { padding: 3px 12px; font-size: 11.5px; }
+#px-tag { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: 5; display: flex; gap: 8px; align-items: baseline; padding: 2px 10px; background: #0d0b0acc; border: 1px solid #3a2a1c; border-radius: 2px; pointer-events: none; font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+#px-tag.hidden { display: none; }
+#px-tag b { font-family: var(--fantasy); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-dim); }
+#px-tag .px-restart { color: var(--gold-hi, #ffe9a8); }
 /* the boss's title card as the room loads */
 #boss-intro { position: fixed; left: 50%; top: 34%; transform: translate(-50%, -50%); z-index: 6; display: grid; justify-items: center; gap: 4px; pointer-events: none; text-align: center; opacity: 0; }
 #boss-intro.hidden { display: none; }
@@ -1690,7 +1715,6 @@ body:has(#raid-ui.pf-strip:not(.hidden)) #toast { bottom: calc(var(--hud-top, 15
 #tutorial .tu-nav.on, #journal .jr-boss.on { border-color: var(--gold-dim); }
 #journal .jr-boss:hover { border-color: var(--gold-dim); }
 #practice h4 { margin: 8px 0 4px; font-family: var(--fantasy); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-#practice .pr-ph[aria-disabled="true"] { opacity: .5; cursor: default; }
 .mode-pick button:hover:not(.on) { border-color: var(--gold-dim); background: #15120f; }
 #dialogue .dl-choices button:hover { background: #1c150e; }
 .btn2.armed { border-color: #c0503a; color: #ffd0c0; }
@@ -1722,6 +1746,11 @@ ul.mech .mech-dot { flex: none; width: 6px; height: 6px; margin-top: 6px; transf
 #options .kb-scale label { font-size: 12px; color: #e6dcc8; }
 #options .kb-scale input { flex: 1; accent-color: var(--gold); }
 #options .kb-scale b { width: 40px; text-align: right; font-size: 12px; color: var(--gold-hi); font-variant-numeric: tabular-nums; }
+#options .kb-quality label { min-width: 110px; font-size: 12px; color: #e6dcc8; }
+#options .kb-quality select { padding: 4px 8px; font: inherit; font-size: 12.5px; color: #f2e6c8; background: var(--panel-2); border: 1px solid var(--line); border-radius: 2px; }
+#options .kb-io-msg.bad { color: #ff9a8a; }
+#options .kb-io-ask { display: grid; gap: 2px; padding: 8px 10px; background: #14100c; border: 1px solid #3a2a1c; border-radius: 2px; }
+#options .kb-io-ask .kb-note { color: #d8ccb4; font-size: 11.5px; line-height: 1.4; }
 
 /* ================================================================ pastimes */
 /* a feat, a catch, a bounty done: a card rising at the right */
@@ -1987,6 +2016,18 @@ body:has(#raid-ui.pf-strip:not(.hidden)) #captions { bottom: calc(var(--hud-top,
 .pt-fight .pf-aw { margin: 6px 0 0; font-size: 11px; color: var(--muted); }
 .pt-fight .pf-aw span { margin-right: 14px; white-space: nowrap; }
 .pt-fight .pf-aw span b { margin-left: 5px; font-weight: 600; color: #d8cdb8; }
+/* the Logbook's Bests tab */
+.pt-modes { margin-bottom: 4px; }
+.pt-bests { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.pt-bests th { padding: 3px 8px; text-align: right; font: 600 9.5px/1.4 var(--fantasy); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line-soft); }
+.pt-bests th:first-child, .pt-bests td:first-child { text-align: left; }
+.pt-bests td { padding: 4px 8px; text-align: right; color: #cfc4ae; border-bottom: 1px solid #ffffff08; }
+.pt-bests tr:last-child td { border-bottom: 0; }
+.pt-bests td:first-child { color: #e6dcc8; }
+.pt-bests td:first-child i { display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; }
+.pt-bests td.none { color: var(--muted); opacity: .6; }
+.pt-bests td.top { color: var(--gold-hi); font-weight: 600; }
+.pt-bests tbody tr:hover td { background: #ffffff06; }
 
 /* a Gloomsworn's Hollow (class 18): its chip on the party frame, debt against what has been healed back */
 .chip.hollow { background: #1a1226; border-color: #9a7ad8; color: #efe6ff; gap: 3px; }
@@ -2231,3 +2272,28 @@ body.in-founding #combat-hud, body.in-founding #gold-hud, body.in-founding #bag-
 #svportal .sv-act i { font-style: normal; font-family: var(--fantasy); font-size: 11px; color: var(--muted); }
 #svportal .sv-act b { font-weight: 600; font-size: 12.5px; }
 #svportal .sv-act.off { padding: 8px 10px; background: #0f0c0a; border: 1px solid #2a1f16; border-radius: 2px; opacity: .55; min-height: 17px; }
+
+/* party frames: a hero's buffs, the same chips as their own row, smaller (party-buffs.js, raid-ui.js partyBuffs): the icon, its seconds along the
+   bottom, stacks at the corner; harmful ones red, gear bonds gold; ones someone else put on them dimmed */
+.pf-bf { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 3px; }
+.pf-bf:empty { display: none; }
+.pb { position: relative; flex: none; width: 18px; height: 18px; cursor: default; color: #dfffd2; }
+.pb .bf-icon { position: relative; overflow: hidden; display: grid; place-items: center; box-sizing: border-box; width: 18px; height: 18px; border-radius: 2px; text-decoration: none;
+  background: #16201a center / cover no-repeat; border: 1px solid #5fbf4a; box-shadow: 0 0 0 1px #000; }
+.pb .bf-icon svg { width: 11px; height: 11px; }
+.pb .bf-icon em { font-style: normal; font-family: var(--fantasy); font-weight: 700; font-size: 11px; }
+.pb.bad { color: #ffd6d0; }
+.pb.bad .bf-icon { background-color: #2a1412; border-color: #ff5a4f; }
+.pb.bond { color: #f6e6c0; }
+.pb.bond .bf-icon { background-color: #241c10; border-color: #d8b45a; }
+.pb i { position: absolute; left: 1px; right: 1px; bottom: 1px; padding: 1px 0 0; text-align: center; font-style: normal; font-size: 8px; font-weight: 700; line-height: 8px; letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums; color: #f0f8ea; background: #0a0807c4; border-radius: 1px; text-shadow: 0 1px 1px #000; pointer-events: none; }
+.pb i:empty, .pb s:empty { display: none; }
+.pb s { position: absolute; right: -2px; top: -3px; text-decoration: none; font-size: 9px; font-weight: 700; line-height: 1; color: #fff; text-shadow: 0 0 2px #000, 0 1px 2px #000; pointer-events: none; }
+.pb.theirs { opacity: .62; }
+.pb.gain .bf-icon { animation: bf-gain .26s ease-out; }
+.pb.exp .bf-icon { animation: bf-exp .5s ease-in-out infinite alternate; }
+.pb.rest { display: grid; transform: none; margin: 0; width: 18px; height: 18px; place-items: center; box-sizing: border-box; border: 1px solid #8a7a5a; border-radius: 2px; background: #14110e; box-shadow: 0 0 0 1px #000; color: #e8d6a8; }
+.pb.rest i { position: static; padding: 0; background: none; font-size: 9px; line-height: 1; color: inherit; }
+.pf.cleanse .pb.bad .bf-icon { border-color: #4fd8c8; }
+@media (prefers-reduced-motion: reduce) { .pb.gain .bf-icon, .pb.exp .bf-icon { animation: none; } }

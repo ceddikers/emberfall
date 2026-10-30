@@ -117,6 +117,7 @@ const FoundingSim = (() => {
     // ================================================================ intents
     intent(pid, m) {
       const p = this.players.find(q => q.id === pid); if (!p || !m || typeof m.k !== 'string') return;
+      if (this.paused && this.isPaused()) return;   // (held: the host's tab sends nothing, and a stray intent changes nothing)
       if (this.st === 'live' && this.hmap[pid] && this.hook('intent', this.hmap[pid], m)) return;
       if (this.st === 'camp') {
         if (m.k === 'pick') { if (D.HERO_IDS.includes(m.hero) && !this.players.some(q => q !== p && q.hero === m.hero)) { p.hero = m.hero; p.ready = false; this.lobby(); } }
@@ -227,7 +228,15 @@ const FoundingSim = (() => {
     }
 
     // ================================================================ tick
+    // Solo pause (the host's tab only): with one human in the run the sim can be held; every clock in it is sim.time, so holding the ticks
+    // holds the wave timer, quest deadlines, respawns, set-piece timers and the chain's gaps. Returns whether the hold is on.
+    setPaused(on) {
+      if (on && (this.st !== 'live' || this.over || this.players.length !== 1 || (this.introActive && this.introActive()))) return false;
+      this.paused = !!on; return this.paused;
+    }
+    isPaused() { if (this.paused && (this.st !== 'live' || this.players.length !== 1)) this.paused = false; return !!this.paused; }
     tick(dt) {
+      if (this.isPaused()) return;
       if (this.st === 'live') {
         this.time += dt; this.tickN++;
         this.runWaves(dt); this.updateNight(dt);
@@ -1450,15 +1459,18 @@ const FoundingSim = (() => {
 
     // ================================================================ messages
     sendSnapshot() { this.emit(this.snapshot(false)); }
+    // which of a hero's Q W E R can be pressed right now (bit 0 Q .. bit 3 R): learned, the R's level reached, a charge in hand; the team strip shows it
+    readyMask(h) { let m = 0; if (h.dead) return 0; for (let i = 0; i < 4; i++) if (h.ranks[i] > 0 && h.ch[i] >= 1 && !(i === 3 && h.level < D.LEVELS.rLevel)) m |= 1 << i; return m; }
     snapshot(full = true) {
       const s = { t: 'fds', st: this.st, tm: r1(this.time), wave: this.wave, next: this.st === 'live' && this.wave < D.LAST_WAVE ? Math.max(0, Math.round(this.nextWaveAt - this.time)) : -1, camp: [Math.round(this.camp.hp), this.camp.max], h: [], e: [], q: [], z: [] };
-      for (const h of this.heroes) s.h.push([h.id, Math.round(h.x), Math.round(h.y), r2(h.face), Math.round(h.hp), h.max, this.heroFlags(h), h.cast ? h.cast.slot : -1, h.cast ? r2(h.cast.t / h.cast.wind) : 0, h.level, h.hk, CARRY_CODE[h.carry] || 0]);
+      for (const h of this.heroes) s.h.push([h.id, Math.round(h.x), Math.round(h.y), r2(h.face), Math.round(h.hp), h.max, this.heroFlags(h), h.cast ? h.cast.slot : -1, h.cast ? r2(h.cast.t / h.cast.wind) : 0, h.level, h.hk, CARRY_CODE[h.carry] || 0, this.readyMask(h)]);
       const L = this.lights();
       for (const e of this.enemies) if (!e.dead) s.e.push([e.id, e.type, Math.round(e.x), Math.round(e.y), r2(e.face), Math.max(1, Math.round(e.hp / e.max * 100)), this.enemyFlags(e, L), e.tier || 0]);
       for (const id of D.QUEST_ORDER) { const q = this.q[id]; s.q.push([id, q.st, Math.round(q.prog * 100), D.QUESTS[id].deadlineWave]); }
       for (const z of this.zones) if (!z.dead) s.z.push([z.id, z.kind, Math.round(z.x), Math.round(z.y), Math.round(z.a), r2(z.b), r1(Math.max(0, z.t)), z.kind === ZONE.WALL ? Math.round(z.hp / z.max * 100) : z.c]);
       s.part = D.partOf(Math.max(1, this.wave)); s.tier = this.tier; s.bs = this.enemies.filter(e => !e.dead && e.def.boss).map(e => this.bossInfo(e));
       if (this.st === 'camp' || full) s.pl = this.plist();
+      if (this.st === 'live' && (full || this.tickN % 20 < 2)) s.dm = this.heroes.map(h => { const t = this.stats[h.id] || {}; return [h.id, Math.round(t.dmg || 0), Math.round(t.heal || 0)]; });   // the damage meter: each hero's run total, once a second
       this.hook('snapshot', s);
       const props = this.buildProps(), js = JSON.stringify(props);
       if (full || js !== this.lastProps) { s.props = props; this.lastProps = js; }

@@ -439,7 +439,7 @@ function sectionPerf() {
   check(ms / ticks < 3, 'a tick with 90+ enemies at night is cheap (' + (ms / ticks).toFixed(2) + ' ms)'); check(s.log.maxEnemies >= 80, 'the perf test reached 80 enemies (' + s.log.maxEnemies + ')');
   // message shapes
   const snap = s.snapshot(); const h = snap.h[0], e = snap.e[0];
-  check(snap.t === 'fds' && snap.h.length === 4 && h.length === 12 && e && e.length === 8 && Array.isArray(snap.camp) && snap.q.length === D.QUEST_ORDER.length && snap.q[0].length === 4 && Array.isArray(snap.bs) && typeof snap.part === 'number' && typeof snap.tier === 'number', 'fds has the contract shape');
+  check(snap.t === 'fds' && snap.h.length === 4 && h.length === 13 && e && e.length === 8 && Array.isArray(snap.camp) && snap.q.length === D.QUEST_ORDER.length && snap.q[0].length === 4 && Array.isArray(snap.bs) && typeof snap.part === 'number' && typeof snap.tier === 'number', 'fds has the contract shape');
   const fdp = s.log.fdpLast.p0; check(fdp && fdp.t === 'fdp' && Array.isArray(fdp.rk) && fdp.cd.length === 4 && typeof fdp.gold === 'number' && typeof fdp.br === 'number' && typeof fdp.cr === 'number' && Array.isArray(fdp.pg), 'fdp carries the player sheet');
   const s2 = makeSim(2, 52); s2.tick(DT); check(s2.log.fds >= 1, 'the camp sends snapshots'); const late = s2.snapshot(); check(late.props && late.pl && late.pl.length === 2, 'snapshot() gives a late joiner the full picture');
   for (const k of ['night', 'beacon', 'jars', 'posts', 'postsOff', 'postSlots', 'graves', 'roof', 'capstone', 'carved', 'shut', 'glint', 'qo', 'qd', 'gate', 'gateHp']) check(late.props && k in late.props, 'props carries ' + k);
@@ -870,9 +870,61 @@ function sectionValley() {
   check(M.SOLIDS.length < 3200, 'the art stands a sparse valley (' + M.SOLIDS.length + ' solids)');
 }
 
+// the solo pause, the readiness bits, the damage meter and the next-wave preview
+function sectionHold() {
+  console.log('Solo pause, readiness bits, meter, next-wave preview:');
+  // one human can hold the sim; every clock in it stands still, and resuming goes on from the same moment
+  const s = makeSim(1, 61); runFor(s, 3);
+  s.heroes[0].hp = 5; s.killHero(s.heroes[0]);
+  const snapA = { time: s.time, next: s.nextWaveAt, resp: s.heroes[0].respT, tickN: s.tickN, fds: s.log.fds };
+  const timerFired = []; s.timers.push({ t: s.time + 1, fn: () => timerFired.push(s.time) });
+  check(s.setPaused(true) === true && s.isPaused(), 'a lone human can hold the sim');
+  runFor(s, 60);   // (runFor stops only if the run ends)
+  for (let i = 0; i < 1200; i++) s.tick(DT);
+  check(s.time === snapA.time && s.nextWaveAt === snapA.next && s.heroes[0].respT === snapA.resp && s.tickN === snapA.tickN, 'a held sim keeps its time, wave clock, respawn and tick count');
+  check(timerFired.length === 0 && s.log.fds === snapA.fds, 'a held sim fires no timer and sends no snapshot');
+  s.intent('p0', { k: 'move', x: 3000, y: 3000 }); check(!s.heroes[0].path, 'an intent while held changes nothing');
+  check(s.setPaused(false) === false && !s.isPaused(), 'the hold lifts');
+  for (let i = 0; i < 22; i++) s.tick(DT);
+  check(Math.abs(s.time - (snapA.time + 1.1)) < 1e-6 && s.heroes[0].respT < snapA.resp, 'resuming goes on from the same moment');
+  check(timerFired.length === 1 && timerFired[0] >= snapA.time + 1 - 1e-6, 'a held timer fires on time after the resume');
+  // two humans cannot hold; a pair that drops to one can; a hold ends the moment a second human is in the run again
+  const s2 = makeSim(2, 62); runFor(s2, 1);
+  check(s2.setPaused(true) === false && !s2.isPaused(), 'two humans cannot hold the sim');
+  s2.removePlayer('p1'); check(s2.setPaused(true) === true, 'when one of two leaves, the other can hold it');
+  const t2 = s2.time; s2.tick(DT); check(s2.time === t2, 'and it is held');
+  s2.players.push({ id: 'p9', name: 'Back', hero: 'cleric', ready: true }); s2.tick(DT);
+  check(!s2.isPaused() && s2.time > t2, 'a second human in the run ends the hold');
+  // not before the run, not after it
+  const s3 = makeSim(1, 63); check(s3.setPaused(true) === true, 'held in a live run'); s3.setPaused(false); s3.finish(false); check(s3.setPaused(true) === false, 'a finished run cannot be held');
+  // the readiness bits (hero row [12]): learned, charged and level-gated
+  const r = makeSim(2, 64, { heroes: ['pyromancer', 'cleric'] }); runFor(r, 1);
+  const row = id => r.snapshot().h.find(x => x[0] === id), h0 = r.hmap.p0;
+  h0.ranks = [1, 0, 2, 1]; h0.level = D.LEVELS.rLevel - 1; h0.ch = [1, 1, 1, 1]; h0.chMax = [1, 1, 1, 1];
+  check(row('p0')[12] === 0b0101, 'learned and charged: Q and E ready; the unlearned W and the R below its level are not (' + row('p0')[12] + ')');
+  h0.level = D.LEVELS.rLevel; check(row('p0')[12] === 0b1101, 'the R is ready at its level');
+  h0.ch[0] = 0; check(row('p0')[12] === 0b1100, 'a cooling skill is not ready');
+  r.killHero(h0); check(row('p0')[12] === 0, 'a fallen hero has none ready');
+  // the meter: a total of damage and healing per hero, about once a second and on a full snapshot
+  const m = makeSim(2, 65); runFor(m, 2);
+  m.stats.p0.dmg = 1234; m.stats.p1.heal = 567;
+  const dm = m.snapshot(true).dm; check(Array.isArray(dm) && dm.length === 2 && dm.find(x => x[0] === 'p0')[1] === 1234 && dm.find(x => x[0] === 'p1')[2] === 567, 'a full snapshot carries each hero\'s damage and healing totals');
+  let withDm = 0, snaps = 0; const keep = m.emit; m.emit = x => { if (x.t === 'fds') { snaps++; if (x.dm) withDm++; } keep(x); }; runFor(m, 10);
+  check(snaps >= 40 && withDm >= 8 && withDm <= snaps / 3, 'the totals ride on about one snapshot in ten (' + withDm + ' of ' + snaps + ')');
+  // the next-wave preview: fixed counts by kind, never a boss's name, never anything a module adds
+  for (let n = 1; n <= D.LAST_WAVE; n++) {
+    const f = D.forecast(n), w = D.WAVES[n - 1]; let sum = 0; for (const k of f.kinds) sum += k.n;
+    check(sum === w.groups.reduce((a, g) => a + (D.ENEMIES[g.kind].boss ? 0 : g.n), 0), 'wave ' + n + ' preview counts every ordinary enemy');
+    check(f.boss === !!D.BOSS_WAVES[n] && f.last === (n === D.LAST_WAVE) && f.night === D.isNightWave(n), 'wave ' + n + ' preview flags boss, siege and night');
+    check(!f.kinds.some(k => D.ENEMIES[k.kind].boss || D.ENEMIES[k.kind].inert), 'wave ' + n + ' preview lists no boss and no dam log');
+    check(!JSON.stringify(f).match(/tunnelmaw|wickeater|mirebull|oldgnaw/), 'wave ' + n + ' preview never names a boss');
+  }
+  check(D.forecast(0) === null && D.forecast(D.LAST_WAVE + 1) === null, 'no preview past either end');
+}
+
 if (process.env.FT_EXPORT) { module.exports = { play, makeSim, botStep, makeBot, quiet }; return; }
 const T0 = Date.now();
-const SECTIONS = [sectionValley, sectionQuests, sectionEconomy, sectionLevels, sectionSkills, sectionBoss, sectionBeaconRoad, sectionGravesGate, sectionNight, sectionBosses, sectionSiege, sectionPayout, sectionBoons, sectionPass2, sectionGnawWander, sectionPerf, sectionRuns];
+const SECTIONS = [sectionHold, sectionValley, sectionQuests, sectionEconomy, sectionLevels, sectionSkills, sectionBoss, sectionBeaconRoad, sectionGravesGate, sectionNight, sectionBosses, sectionSiege, sectionPayout, sectionBoons, sectionPass2, sectionGnawWander, sectionPerf, sectionRuns];
 try {
   for (const f of SECTIONS) { const t = Date.now(); f(); if (VERBOSE) console.log(`  (${f.name}: ${((Date.now() - t) / 1000).toFixed(1)} s)`); }
 } catch (e) { failures++; console.log('EXCEPTION: ' + e.stack); }

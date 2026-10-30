@@ -208,8 +208,8 @@ const FX = {
   },
 
   draw(ctx, ground) {
-    // the camera's zoom in screen pixels (the canvas is scaled by its pixel ratio, capped at 2 as in main.js)
-    if (!ground) { const a = ctx.getTransform ? ctx.getTransform().a : 1; this._z = clamp(a / Math.min((typeof window !== 'undefined' && window.devicePixelRatio) || 1, 2), 0.3, 3); }
+    // the camera's zoom in screen pixels (the canvas is scaled by its pixel ratio, capped by the render quality: FX.dpr())
+    if (!ground) { const a = ctx.getTransform ? ctx.getTransform().a : 1; this._z = clamp(a / this.dpr(), 0.3, 3); }
     for (const f of this.list) if (this.GROUND.has(f.type) === ground) this.drawOne(ctx, f);
   },
 
@@ -471,3 +471,52 @@ const FX = {
     }
   },
 };
+
+// ---- Comfort (Options > Interface): screen shake, flashes and render quality. They live in the save's settings (so
+// the Data tab's export carries them): shake 0..1, reduceFlashes, quality. First run only: the system's "reduce motion"
+// starts shake at 30% and reduce-flashes on; after that only the player's own choice counts.
+// Reduce flashes scales the bright full-screen washes (FX.flashK); telegraphs, rings and ground markings are never touched.
+// Light quality also raises the older 'lowFx' setting, which the Sovereign's rooms and the Ultimate echoes already read.
+FX.QUALITY = { full: { dpr: 2, name: 'Full' }, balanced: { dpr: 1.5, name: 'Balanced' }, light: { dpr: 1, name: 'Light' } };
+FX.shakeK = 1; FX.flashK = 1; FX.flashLow = 0.25; FX.quality = 'full';
+FX.onQuality = null;   // (main.js sets it: the canvases are resized when the quality changes)
+// the canvas pixel ratio: the screen's, capped by the quality
+FX.dpr = function () { return Math.min((typeof window !== 'undefined' && window.devicePixelRatio) || 1, FX.QUALITY[FX.quality].dpr); };
+// the strength of a full-screen wash: 1, or the reduced share when it is bright (a 'screen'/'lighter' blend or a pale colour)
+FX.washK = function (color, op) {
+  if (FX.flashK >= 1) return 1;
+  if (op === 'screen' || op === 'lighter') return FX.flashK;
+  const m = /^#([0-9a-f]{6})$/i.exec(color || '');
+  if (!m) return 1;
+  const n = parseInt(m[1], 16);
+  return ((n >> 16 & 255) * 0.299 + (n >> 8 & 255) * 0.587 + (n & 255) * 0.114) > 150 ? FX.flashK : 1;
+};
+FX.comfort = (() => {
+  const S = typeof Save !== 'undefined' && Save.setting && Save.setSetting ? Save : null;
+  const calm = () => { try { return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+  const apply = () => {
+    const sh = S ? Number(S.setting('shake', 1)) : 1;
+    FX.shakeK = Number.isFinite(sh) ? Math.max(0, Math.min(1, sh)) : 1;
+    FX.flashK = S && S.setting('reduceFlashes', false) === true ? FX.flashLow : 1;
+    const q = S ? S.setting('quality', 'full') : 'full';
+    FX.quality = FX.QUALITY[q] ? q : 'full';
+  };
+  if (S && !S.setting('comfortSet', false)) {
+    if (calm()) { S.setSetting('shake', 0.3); S.setSetting('reduceFlashes', true); }
+    S.setSetting('comfortSet', true);
+  }
+  apply();
+  return {
+    get: () => ({ shake: FX.shakeK, reduceFlashes: FX.flashK < 1, quality: FX.quality }),
+    set(k, v) {
+      if (!S) return;
+      if (k === 'shake') S.setSetting('shake', Math.max(0, Math.min(1, Number(v) || 0)));
+      else if (k === 'reduceFlashes') S.setSetting('reduceFlashes', !!v);
+      else if (k === 'quality' && FX.QUALITY[v]) { S.setSetting('quality', v); S.setSetting('lowFx', v === 'light'); }
+      else return;
+      const was = FX.quality;
+      apply();
+      if (k === 'quality' && was !== FX.quality && typeof FX.onQuality === 'function') FX.onQuality();
+    },
+  };
+})();

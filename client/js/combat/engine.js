@@ -429,7 +429,9 @@ class Kit {
   // item buffs for the buff row
   itemBuffs() {
     const out = [];
-    if (this.fxBuffs) for (const [id, b] of this.fxBuffs) if (b.end > this.now) out.push({ id: 'fx-' + id, name: b.name, left: b.end - this.now, stacks: b.stacks });
+    // (the tip is the item's own effect text: an id is 'itemKey:effectIndex')
+    const tipOf = id => { const it = typeof ITEMS !== 'undefined' ? ITEMS[String(id).split(':')[0]] : null; return it && it.fxText || ''; };
+    if (this.fxBuffs) for (const [id, b] of this.fxBuffs) if (b.end > this.now) out.push({ id: 'fx-' + id, name: b.name, left: b.end - this.now, stacks: b.stacks, tip: tipOf(id) });
     return out;
   }
   castTime(ab) {
@@ -488,6 +490,7 @@ class Kit {
       return false;
     }
     const target = this.needsTarget(ab) ? this.env.target(ab) : null;
+    if (ab.target === 'ally' && typeof target === 'number' && this.env.noRaise && this.env.noRaise() && this.env.isDead(target)) { this.env.emit({ type: 'fail', reason: 'noraise', ab }); return false; }   // (Hard+ No Second Chances: nothing to raise with, so the press is refused whole, no cast, no cooldown)
     if (this.stats.start === null && (ab.target === 'enemy' || ab.startsCombat)) this.stats.start = this.now;
     if (ab.target === 'enemy') this.engagedAt = this.now;
     const ct = this.castTime(ab);
@@ -734,7 +737,7 @@ class Kit {
   debuffTarget(kind, value, dur, opts = {}) { this.env.emit({ type: 'targetDebuff', kind, value, dur, ab: opts.ab, tag: opts.tag }); }   // (tag: a weakness of its own that stacks with the holder's others, fight.js)
   selfDamage(pctMaxHp, opts = {}) { this.env.emit({ type: 'selfDamage', pct: pctMaxHp, ab: opts.ab }); }
   // instant: not at the end of a cast (a talent, a seed, a Draught), which leaves the heavier raise sickness (fight.js FIGHT.SICK)
-  raise(target, opts = {}) { this.env.emit({ type: 'raise', target, ab: opts.ab, instant: !this._fromCast }); }
+  raise(target, opts = {}) { if (this.env.noRaise && this.env.noRaise()) return; this.env.emit({ type: 'raise', target, ab: opts.ab, instant: !this._fromCast }); }
   rewind(target, secs, opts = {}) { this.env.emit({ type: 'rewind', target, secs, ab: opts.ab }); }
   // where: 'behind' (the target's back), or a kit move: 'dash' (d px toward where you're heading), 'around' (to the far
   // side of the target), 'through' (a charge through the target, d px past it). The world moves you (kitMoveDest).

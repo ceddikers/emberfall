@@ -1,5 +1,7 @@
 # Class balance report, October 2026
 
+*Dated snapshot: measured with 19 classes on sets 1 and 2 (Normal only). Classes, set 3, Hard and the Ultimate came later and are not in these numbers.*
+
 A measuring pass only: no game code was changed. Tier list for every DPS class and spec, then tank and healer outliers, then suggested nudges (direction only).
 
 ## How this was measured

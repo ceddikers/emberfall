@@ -1230,6 +1230,7 @@ const ArenaView = {
       if (k <= 0) continue;
       const r = p.r * (0.7 + 0.3 * life);
       if (p.tag === 'venom') { this.venomPool(ctx, p, r, k, t); continue; }
+      if (p.tag === 'scorch') { HARDPLUS.puddle(ctx, p, r, k, t); continue; }   // (Hard+ Scorched Earth: hardplus.js)
       if (p.tag === 'scales') { if (typeof SK_MOTH !== 'undefined') SK_MOTH.puddle(ctx, p, r, k, t); continue; }   // (the Moth Queen's dust, Moonlight: skitterra-moth.js)
       if (p.tag === 'bloom' || p.tag === 'mire') { this.hydraPool(ctx, p, r, k, t); continue; }
       if (p.tag === 'ember') { if (this.floorFor && this.floorFor.startsWith('hydra@')) this.hydraEmber(ctx, p, r, k, t); else this.emberPool(ctx, p, r, k, t); continue; }

@@ -25,7 +25,7 @@ const Keybinds = (() => {
     { id: 'fdTent', def: 't', name: 'Supply tent', mode: 'founding' }, { id: 'fdRecall', def: 'b', name: 'Recall to the camp', mode: 'founding' }, { id: 'fdForge', def: 'f', name: 'Forge', mode: 'founding' }, { id: 'fdBuild', def: 'h', name: "Builder's board", mode: 'founding' },
     { id: 'fdFlask', def: 'v', name: 'Drink the flask', mode: 'founding' }, { id: 'fdUse', def: 'g', name: 'Pick up or dig', mode: 'founding' },
     { id: 'fdDrop', def: 'x', name: 'Put down', mode: 'founding' }, { id: 'fdCenter', def: ' ', name: 'Centre on your hero', mode: 'founding' },
-    { id: 'fdPassive', def: 'd', name: 'Learn the passive', mode: 'founding' },
+    { id: 'fdPassive', def: 'd', name: 'Learn the passive', mode: 'founding' }, { id: 'fdMeter', def: 'm', name: 'Damage meter', mode: 'founding' },
     ...[1, 2, 3, 4, 5, 6].map(i => ({ id: 'fdItem' + i, def: String(i), name: `Use item ${i}`, mode: 'founding' })),
   ];
   const CLASS_KEYS = { alembist: { name: 'Alembist', note: 'Number keys mark a vial for Throw; the party moves to F1-F4.' },
@@ -196,6 +196,43 @@ const Keybinds = (() => {
       if (b) { b.textContent = `${label(k)} is kept`; setTimeout(() => { if (capturing === id && b.isConnected) b.textContent = 'Press a key…'; }, 1500); }
     }
   }
+  // ---- the Data tab: a save file out and in (save.js exportData / parseImport / applyImport)
+  let pendingImport = null;
+  const ioNote = (text, bad) => { const el = panel && panel.querySelector('.kb-io-msg'); if (el) { el.textContent = text; el.classList.toggle('bad', !!bad); } };
+  function exportSave() {
+    try {
+      const doc = Save.exportData(), d = new Date(), pad = n => String(n).padStart(2, '0');
+      const blob = new Blob([JSON.stringify(doc, null, 1)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = `emberfall-save-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      ioNote('Save exported. Keep the file somewhere safe.');
+    } catch (e) { ioNote("Couldn't export the save.", true); }
+  }
+  function readImport(file) {
+    pendingImport = null; panel.querySelector('.kb-io-ask').classList.add('hidden');
+    if (file.size > 8000000) { ioNote('That file is too large to be a save.', true); return; }
+    const r = new FileReader();
+    r.onerror = () => ioNote("Couldn't read that file.", true);
+    r.onload = () => {
+      const res = Save.parseImport(String(r.result));
+      if (!res.ok) { ioNote(res.error, true); return; }
+      pendingImport = res.doc;
+      const i = res.info, when = i.exportedAt ? new Date(i.exportedAt) : null;
+      panel.querySelector('.kb-io-what').textContent = `Replace this browser's save with ${file.name}${when && !isNaN(when) ? `, exported ${when.toLocaleDateString()}` : ''}? It holds ${i.heroes} hero${i.heroes === 1 ? '' : 'es'}, ${i.items} item${i.items === 1 ? '' : 's'} and ${i.gold} gold${i.name ? ` for ${i.name}` : ''}. Your current save is kept as a backup first, and the game reloads (a game you host will close).`;
+      panel.querySelector('.kb-io-ask').classList.remove('hidden');
+      ioNote('Check it over, then confirm.');
+    };
+    r.readAsText(file);
+  }
+  function applyPendingImport() {
+    if (!pendingImport) return;
+    const res = Save.applyImport(pendingImport);
+    if (!res.ok) { ioNote(res.error, true); panel.querySelector('.kb-io-ask').classList.add('hidden'); pendingImport = null; return; }
+    window.__leaving = true;   // (no "leave this page?" prompt: main.js)
+    location.reload();
+  }
   function openPanel(opts = {}) {
     heroCls = opts.cls !== undefined ? opts.cls : heroCls; namer = opts.namer || namer; onChange = opts.onChange || onChange; prefs = opts.prefs || prefs; resync = opts.resync || resync; canResync = opts.canResync || canResync; callouts = opts.callouts || callouts; inRaid = opts.inRaid || inRaid;
     if (!panel) {
@@ -213,6 +250,9 @@ const Keybinds = (() => {
           </section>
           <section data-page="ui">
             <div class="kb-foot kb-scale"><label for="kb-scale">Interface size</label><input id="kb-scale" type="range" min="80" max="140" step="5"><b class="kb-scale-v"></b></div>
+            <div class="kb-foot kb-scale" data-tip="How hard the screen shakes in a fight. 0% holds it still."><label for="kb-shake">Screen shake</label><input id="kb-shake" type="range" min="0" max="100" step="5"><b class="kb-shake-v"></b></div>
+            <div class="kb-foot"><label class="kb-check" data-tip="Bright full-screen flashes (a wall breaking, an Ultimate, a kill) are softened to a quarter. Warnings on the ground are never touched."><input type="checkbox" id="kb-flashes"> Reduce flashes</label></div>
+            <div class="kb-foot kb-quality"><label for="kb-quality">Render quality</label><select id="kb-quality" data-tip="Full draws at your screen's full sharpness. Balanced and Light draw fewer pixels and drop some glow: smoother on a slow machine."><option value="full">Full</option><option value="balanced">Balanced</option><option value="light">Light</option></select></div>
             <div class="kb-foot"><button type="button" class="btn2 kb-arrange">Arrange the HUD</button><button type="button" class="btn2 kb-callouts" data-tip="Edit the pings and callouts you send to your party.">Callouts…</button></div>
             <div class="kb-foot kb-resync-row"><button type="button" class="btn2 kb-resync" data-tip="If what you see in a raid looks off, this asks the host for the fight as it stands and redraws it, without leaving. A key can be set for it under Keys.">Resync with the host</button></div>
             <div class="kb-foot kb-pref"><label for="kb-frames">Party frames</label><select id="kb-frames"><option value="left">In the corner</option><option value="strip">Above your skills</option></select><span class="kb-note kb-frames-note"></span></div>
@@ -226,6 +266,9 @@ const Keybinds = (() => {
             <div class="kb-foot"><label class="kb-check" data-tip="Your browser's own voice reads lines that have no recording. It sounds robotic."><input type="checkbox" id="kb-speech"> Device speech for missing voices</label></div>
           </section>
           <section data-page="data">
+            <div class="kb-foot"><button type="button" class="btn2 kb-export" data-tip="Saves everything this browser keeps (heroes, gear, gold, progress, settings and key binds) to a file you can keep or move to another browser.">Export save</button><button type="button" class="btn2 kb-import" data-tip="Replaces this browser's save with a file you exported. The current one is kept as a backup first.">Import save</button><input type="file" class="kb-file hidden" accept=".json,application/json"></div>
+            <p class="kb-note kb-io-msg" aria-live="polite">A save file holds your heroes, gear, gold, progress and settings.</p>
+            <div class="kb-io-ask hidden"><p class="kb-note kb-io-what"></p><div class="kb-foot"><button type="button" class="btn2 danger kb-io-yes">Replace my save</button><button type="button" class="btn2 kb-io-no">Cancel</button></div></div>
             <div class="kb-foot"><button type="button" class="btn2 kb-wipe">Delete all data</button></div>
             <p class="kb-note">Heroes, gear, gold, journals, progress and settings in this browser. It can't be undone.</p>
           </section>
@@ -243,6 +286,10 @@ const Keybinds = (() => {
         if (t.classList.contains('kb-arrange')) { closePanel(); arrange(true); return; }
         if (t.classList.contains('kb-callouts')) { closePanel(); if (callouts) callouts(); return; }
         if (t.classList.contains('kb-resync')) { if (resync) resync(); return; }
+        if (t.classList.contains('kb-export')) { exportSave(); return; }
+        if (t.classList.contains('kb-import')) { const f = panel.querySelector('.kb-file'); f.value = ''; f.click(); return; }
+        if (t.classList.contains('kb-io-no')) { pendingImport = null; panel.querySelector('.kb-io-ask').classList.add('hidden'); ioNote('Nothing was changed.'); return; }
+        if (t.classList.contains('kb-io-yes')) { applyPendingImport(); return; }
         if (t.classList.contains('kb-wipe')) {
           // two presses, the second within five seconds (the button disarms itself after that)
           if (!t.dataset.armed) {
@@ -251,6 +298,7 @@ const Keybinds = (() => {
             return;
           }
           try { for (const k of Object.keys(localStorage)) if (k.startsWith('emberfall')) localStorage.removeItem(k); } catch (e) { /* storage unavailable */ }
+          window.__leaving = true;   // (no "leave this page?" prompt: main.js)
           location.reload();
           return;
         }
@@ -264,6 +312,12 @@ const Keybinds = (() => {
       panel.querySelector('#kb-frames').addEventListener('change', e => { if (prefs) prefs.set('frames', e.target.value); });
       panel.querySelector('#kb-mouseover').addEventListener('change', e => { if (prefs) prefs.set('mouseover', e.target.checked); });
       panel.querySelector('#kb-selfbar').addEventListener('change', e => { if (prefs) prefs.set('selfbar', e.target.checked); });
+      // comfort (fx.js FX.comfort): applied at once and kept in the save
+      const shk = panel.querySelector('#kb-shake');
+      shk.addEventListener('input', () => { if (typeof FX !== 'undefined') FX.comfort.set('shake', Number(shk.value) / 100); panel.querySelector('.kb-shake-v').textContent = shk.value + '%'; });
+      panel.querySelector('#kb-flashes').addEventListener('change', e => { if (typeof FX !== 'undefined') FX.comfort.set('reduceFlashes', e.target.checked); });
+      panel.querySelector('#kb-quality').addEventListener('change', e => { if (typeof FX !== 'undefined') FX.comfort.set('quality', e.target.value); });
+      panel.querySelector('.kb-file').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) readImport(f); });
       // sound (audio.js): every change applies at once and is saved with the game
       panel.querySelectorAll('[data-vol]').forEach(el => el.addEventListener('input', () => {
         if (typeof Sound !== 'undefined') Sound.set(el.dataset.vol, Number(el.value) / 100);
@@ -285,6 +339,12 @@ const Keybinds = (() => {
       panel.querySelector('#kb-mute').checked = !!Sound.get('mute');
       panel.querySelector('#kb-captions').checked = !!Sound.get('captions');
       panel.querySelector('#kb-speech').checked = !!Sound.get('speech');
+    }
+    if (typeof FX !== 'undefined' && FX.comfort) {
+      const cv = FX.comfort.get();
+      panel.querySelector('#kb-shake').value = Math.round(cv.shake * 100); panel.querySelector('.kb-shake-v').textContent = Math.round(cv.shake * 100) + '%';
+      panel.querySelector('#kb-flashes').checked = cv.reduceFlashes;
+      panel.querySelector('#kb-quality').value = cv.quality;
     }
     panel.querySelector('.kb-resync-row').classList.toggle('hidden', !canResync());
     panel.querySelector('.kb-arrange').dataset.tip = inRaid() ? 'Drag any piece of the HUD where you like it.' : 'Drag any piece of the HUD where you like it. The boss bar, meter and markers only show in a raid.';

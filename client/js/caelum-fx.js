@@ -480,7 +480,7 @@ const CL_FX = (() => {
     // he lifts the blade and the sky comes loose: a ring of gold goes out across the floor, the room shakes and the light flares once
     if (T >= 0.2 && T < 3 && once('sumboom' + sum.start)) {
       shakeNow(7); cam(0.08, 0.03, 0.6, 0); VFX.shock(0, 0, { r: 560, color: C.gold, w: 10, dur: 1.1, flat: 1 }); VFX.shock(0, 0, { r: 320, color: '#ffffff', w: 5, dur: 0.8, flat: 1, delay: 0.12 });
-      screenFx(1.1, (c, W, Hh, tt, p, e) => { c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.22 * Math.pow(1 - clamp(tt / 1.0, 0, 1), 2) * e.a; c.fillStyle = '#ffeebb'; c.fillRect(0, 0, W, Hh); });
+      screenFx(1.1, (c, W, Hh, tt, p, e) => { c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.22 * Math.pow(1 - clamp(tt / 1.0, 0, 1), 2) * e.a * FK(); c.fillStyle = '#ffeebb'; c.fillRect(0, 0, W, Hh); });
     }
     const fade = clamp(T / 1.2, 0, 1), gather = easeIn(clamp(T / 3.4, 0, 1)) * 0.78;
     const nodes = [], r = wy ? ringOf(wy) : null, sp = wy ? wy.sp || 470 : 470;
@@ -585,6 +585,8 @@ const CL_FX = (() => {
 
   // ---------------------------------------------------------------- Grace Withdrawn (roomev 'clgrace') and Ascendant (roomev 'clascend')
   // a whole-screen layer: fn(c, W, H, t) each frame (screen space), over everything on the arena canvas
+  // Options > reduce flashes: the strength left in a bright full-screen flash (1 when off)
+  const FK = () => (typeof FX !== 'undefined' && FX.flashK) || 1;
   function screenFx(dur, fn) {
     return VFX.fx({ dur, layer: 'air', draw: (c, p, t, e) => { c.save(); c.setTransform(1, 0, 0, 1, 0, 0); fn(c, c.canvas.width, c.canvas.height, t, p, e); c.restore(); } });
   }
@@ -682,7 +684,7 @@ const CL_FX = (() => {
     }
     if (T >= 2.95 && once('asc-flash' + ev.start)) {
       // the floor is gone: white, and the cloud under their feet
-      screenFx(1.6, (c, W, H, tt, p, e) => { c.globalCompositeOperation = 'screen'; c.globalAlpha = Math.min(1, (1 - clamp((tt - 0.2) / 1.3, 0, 1)) * e.a); c.fillStyle = '#fff4dc'; c.fillRect(0, 0, W, H); });
+      screenFx(1.6, (c, W, H, tt, p, e) => { c.globalCompositeOperation = 'screen'; c.globalAlpha = Math.min(1, (1 - clamp((tt - 0.2) / 1.3, 0, 1)) * e.a * FK()); c.fillStyle = '#fff4dc'; c.fillRect(0, 0, W, H); });
       cam(0.12, 0.04, 0.6, 0); shakeNow(10);
       // the cloud rushing up past them: long streaks of white and fire, rising faster and faster, thinning as they settle
       screenFx(3.1, (c, W, H, tt, p, e) => {
@@ -692,14 +694,14 @@ const CL_FX = (() => {
           const x = hash(i, 81) * W, v = (900 + 1800 * hash(i, 82)) * sc * (1 - 0.5 * clamp(tt / 3, 0, 1)), len = (120 + 360 * hash(i, 83)) * sc, y = H + len - ((hash(i, 84) * H * 2 + tt * v) % (H + len * 2));
           c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + len); c.strokeStyle = rgba(i % 3 ? '#ffffff' : '#ffb870', (0.1 + 0.3 * hash(i, 85)) * k); c.lineWidth = (2 + 6 * hash(i, 86)) * sc; c.stroke();
         }
-        c.globalCompositeOperation = 'screen'; c.fillStyle = rgba('#ffe9c8', 0.18 * k); c.fillRect(0, 0, W, H);
+        c.globalCompositeOperation = 'screen'; c.fillStyle = rgba('#ffe9c8', 0.18 * k * FK()); c.fillRect(0, 0, W, H);
       });
     }
     if (T >= 5.95 && once('asc-halo' + ev.start) && b) {
       // his halo opens: a ring of light, then the blades of the wheel thrown out and settling round him
       cam(0.1, 0.04, 0.6, 0); shakeNow(9);
       for (let i = 0; i < 3; i++) VFX.shock(b.x, b.y, { r: 700, color: i % 2 ? '#ffffff' : C.gold, w: 12 - i * 3, dur: 0.9 + i * 0.12, flat: 0.8, delay: i * 0.1 });
-      screenFx(1.4, (c, W, H, tt, p, e) => { c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.5 * Math.pow(1 - clamp(tt / 1.2, 0, 1), 2) * e.a; c.fillStyle = '#fff4cc'; c.fillRect(0, 0, W, H); });
+      screenFx(1.4, (c, W, H, tt, p, e) => { c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.5 * Math.pow(1 - clamp(tt / 1.2, 0, 1), 2) * e.a * FK(); c.fillStyle = '#fff4cc'; c.fillRect(0, 0, W, H); });
       VFX.fx({ dur: 1.5, layer: 'air', draw: (c, p, tt, e) => {
         const q = easeOut(clamp(p / 0.5, 0, 1)), k = e.a * (1 - clamp((p - 0.4) / 0.6, 0, 1));
         c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
@@ -1369,9 +1371,9 @@ const CL_FX = (() => {
       const q = clamp(t / dur, 0, 1), k = e.a * easeOut(clamp(t / 1.5, 0, 1)) * (1 - clamp((t - dur) / 2.5, 0, 1)), W = c.canvas.width, Hh = c.canvas.height;
       c.save(); c.setTransform(1, 0, 0, 1, 0, 0);
       // the underside of the meteor, coming down over the top of the room
-      const g = c.createLinearGradient(0, 0, 0, Hh * (0.35 + 0.5 * q)); g.addColorStop(0, rgba('#ffd890', (0.3 + 0.7 * q) * k)); g.addColorStop(0.4, rgba('#ff7a2a', (0.18 + 0.5 * q) * k)); g.addColorStop(1, rgba('#ff3a0a', 0));
+      const kb = k * FK(), g = c.createLinearGradient(0, 0, 0, Hh * (0.35 + 0.5 * q)); g.addColorStop(0, rgba('#ffd890', (0.3 + 0.7 * q) * kb)); g.addColorStop(0.4, rgba('#ff7a2a', (0.18 + 0.5 * q) * kb)); g.addColorStop(1, rgba('#ff3a0a', 0));
       c.globalCompositeOperation = 'screen'; c.fillStyle = g; c.fillRect(0, 0, W, Hh);
-      const rg = c.createRadialGradient(W / 2, -Hh * 0.1, 10, W / 2, -Hh * 0.1, Hh * (0.35 + 0.6 * q)); rg.addColorStop(0, rgba('#ffffff', (0.2 + 0.8 * q * q) * k)); rg.addColorStop(1, rgba('#ff9a4a', 0));
+      const rg = c.createRadialGradient(W / 2, -Hh * 0.1, 10, W / 2, -Hh * 0.1, Hh * (0.35 + 0.6 * q)); rg.addColorStop(0, rgba('#ffffff', (0.2 + 0.8 * q * q) * kb)); rg.addColorStop(1, rgba('#ff9a4a', 0));
       c.fillStyle = rg; c.fillRect(0, 0, W, Hh);
       // the edges of the room reddening
       c.globalCompositeOperation = 'source-over'; vig(c, W, Hh, 0.55 * q * k, 0.28, '60,8,0');
@@ -1392,7 +1394,7 @@ const CL_FX = (() => {
     // the meteor lands: the whole room goes white, and the white is let go of slowly
     VFX.fx({ dur: 2.8, layer: 'air', draw: (c, p, t, e) => {
       const a = e.a * (p < 0.1 ? 1 : 1 - easeOut(clamp((p - 0.1) / 0.9, 0, 1)) * 0.98);
-      c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = Math.min(1, a); c.fillStyle = '#fffaf0'; c.fillRect(0, 0, c.canvas.width, c.canvas.height); c.restore();
+      c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = Math.min(1, a * FK()); c.fillStyle = '#fffaf0'; c.fillRect(0, 0, c.canvas.width, c.canvas.height); c.restore();
     } });
     for (let i = 0; i < 5; i++) H.shockAt(0, 0, { r: H.AR * (1.7 - i * 0.2), color: i % 2 ? '#ffd890' : '#ffffff', w: 20 - i * 3, dur: 1.0 + i * 0.1, flat: 1, delay: i * 0.1 });
     H.roomTint('#ffffff', 0.7, 1.6);
@@ -1454,7 +1456,7 @@ const CL_FX = (() => {
         c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
         const k = e.a * (1 - clamp((t - 4) / 1.2, 0, 1)), sc = Hh / 900;
         // the meteor's glow overhead, breaking up
-        const gl = c.createRadialGradient(W / 2, -Hh * 0.05, 10, W / 2, -Hh * 0.05, Hh * 0.7); gl.addColorStop(0, rgba('#ffd890', 0.5 * k * (1 - clamp(t / 3, 0, 1)))); gl.addColorStop(1, rgba('#ff7a2a', 0));
+        const gl = c.createRadialGradient(W / 2, -Hh * 0.05, 10, W / 2, -Hh * 0.05, Hh * 0.7); gl.addColorStop(0, rgba('#ffd890', 0.5 * k * FK() * (1 - clamp(t / 3, 0, 1)))); gl.addColorStop(1, rgba('#ff7a2a', 0));
         c.fillStyle = gl; c.fillRect(0, 0, W, Hh);
         for (const s of seeds) {
           const u = (t - s.at) / (1.6 / s.sp); if (u < 0 || u > 1) continue;

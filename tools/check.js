@@ -138,7 +138,7 @@ let into = results;   // where pass() and fail() write: the stage being read (se
 const pass = (name, detail = '') => into.push({ ok: true, name, detail });
 const fail = (name, detail = '') => into.push({ ok: false, name, detail });
 // each stage's results go in a bucket of their own, and the buckets print in this order (children finish in any order)
-const BUCKETS = ['syntax', 'core', 'hollow', 'kenseier', 'houndmaster', 'rejoin', 'stamps', 'journal', 'reaper', 'feats', 'founding', 'pvp', 'heavy'];
+const BUCKETS = ['syntax', 'core', 'hollow', 'kenseier', 'houndmaster', 'rejoin', 'stamps', 'journal', 'reaper', 'feats', 'practice', 'founding', 'pvp', 'heavy'];
 const buckets = {};
 const stage = (name, fn) => { const prev = into; into = buckets[name] || (buckets[name] = []); try { return fn(); } finally { into = prev; } };
 
@@ -754,6 +754,24 @@ function rejoinCheck(r) {
   else fail('Rejoin: held slot, stand-in, snapshot', out.slice(-900));
 }
 
+// ---------------------------------------------------------------- 3j. the Practice Hall's aids (tools/practice-test.js)
+// Enrage off, can't-die (falls counted), the loop's phase test, slow time's client clock, the request checks and the Logbook's Bests.
+function practiceCheck(r) {
+  const out = r.out;
+  const name = "Practice Hall: enrage off, can't-die, loop, slow time, requests, Bests";
+  if (r.code === 0 && /Practice OK/.test(out)) pass(name, out.trim().split(/\r?\n/).pop());
+  else fail(name, out.slice(-900));
+}
+
+// ---------------------------------------------------------------- 3j2. the buffs on the party frames (tools/party-buffs-test.js)
+// A hero's frame shows what that hero's own buff row shows (ids, order, stacks, timers, tooltips): people over the net, bots from the host; a rejoiner is restored; the message rate stays modest.
+function partyBuffsCheck(r) {
+  const out = r.out;
+  const name = 'Party frame buffs: match the own buff row, people and bots, rejoin, message rate';
+  if (r.code === 0 && /Party buffs OK/.test(out)) pass(name, out.trim().split(/\r?\n/).pop());
+  else fail(name, out.slice(-900));
+}
+
 // ---------------------------------------------------------------- 3h. cache-busting stamps (tools/stamp.js)
 // Every local script and stylesheet in client/index.html carries ?v=<hash of the file>, so a deploy never mixes fresh files
 // with cached ones. The check brings the stamps up to date itself (index.html then goes in with the commit) and fails only
@@ -843,6 +861,12 @@ function featsCheck(r) {
   else fail('Feats: data sound, party and result rules, earning and titles', out.slice(-900));
 }
 
+function hardPlusCheck(r) {
+  const out = r.out;
+  if (r.code === 0 && /Hard\+ OK/.test(out)) pass('Hard+: each modifier does what it says', out.trim().split(/\r?\n/).pop());
+  else fail('Hard+: each modifier does what it says', out.slice(-900));
+}
+
 // ---------------------------------------------------------------- 5. the runs: everything goes into one pool
 // Every heavy piece of work (bot raids, the balance sim, talents, the test scripts) is a child process in one pool of POOL at a time, the
 // longest first, so the machine stays full from the first second to the last. A long job is cut into pieces that play exactly what
@@ -885,6 +909,9 @@ const TESTS = [
   ['journal', 'journal-lint.js', journalCheck, 'Journals checked', 1],
   ['reaper', 'reaper-test.js', reaperCheck, 'Reaper checked', 2],
   ['feats', 'feats-test.js', featsCheck, 'Feats checked', 1],
+  ['feats', 'hardplus-test.js', hardPlusCheck, 'Hard+ checked', 2],
+  ['practice', 'practice-test.js', practiceCheck, 'Practice checked', 6],
+  ['practice', 'party-buffs-test.js', partyBuffsCheck, 'Party frame buffs checked', 3],
   ['founding', 'founding-test.js', foundingCheck, 'Founding checked', 4],
   ['founding', 'founding-quests-test.js', foundingQuestsCheck, 'Quests checked', 1],
   ['founding', 'founding-trials-test.js', foundingTrialsCheck, 'Trials checked', 1],
@@ -910,6 +937,7 @@ async function heavy() {
     ...RAIDS.map(([, boss, ...rest]) => raidJob('normal', +((rest.find(a => /^runs=/.test(a)) || '').slice(5) || RAID_RUNS), boss, rest.filter(a => !/^(gear|runs|phase|until)=/.test(a)).join(','), rest.filter(a => /^(gear|phase|until)=/.test(a)), 'bot raids', true)),
     ...trialIds.map(id => raidJob('normal', 2, 'trial:' + id, '', [], 'spec trials')),
     ...HARD_BOSSES.map(([, boss, gear]) => raidJob('hard', 3, boss, HARD_COMP, gear ? [gear] : [], 'hard smoke')),
+    raidJob('hard', 1, 'grubnak', HARD_COMP, ['mods=all'], 'hard smoke'),   // (Hard+: every modifier on, one run; client/js/hardplus.js)
   ]);
   const hards = raids.splice(RAIDS.length + trialIds.length);
   const trials = raids.splice(RAIDS.length);
@@ -982,6 +1010,14 @@ function verdicts(sim, tal, raids, trials, hards, trialIds, specOf) {
     if (r.code === 0 && m && +m[2] >= HARD_MIN) pass(name, `${m[1]} at ${m[2]}s`);
     else fail(name, m ? `${m[1]} at ${m[2]}s (want ${HARD_MIN}s or more)` : r.out.slice(-800));
   });
+
+  // Hard+ smoke: one Hard pull with all seven modifiers on runs to its end without a crash (bots are not expected to win it)
+  {
+    const r = hards[HARD_BOSSES.length], name = 'Hard+ (all modifiers) runs clean';
+    const m = r.out.match(/^run \d+: (\w+) at (\d+)s/m);
+    if (r.code === 0 && m && /Hard\+ heat 15/.test(r.out)) pass(name, `${m[1]} at ${m[2]}s`);
+    else fail(name, r.out.slice(-800));
+  }
 
   // spec trials: a bot playing the spec can pass each one (a bot isn't a careful player, so one clear of two is enough)
   const stuck = trialIds.filter((id, i) => { const m = trials[i].out.match(/cleared (\d+) of/); return trials[i].code !== 0 || !m || +m[1] < 1; });

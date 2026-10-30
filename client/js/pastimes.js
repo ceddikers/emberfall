@@ -24,7 +24,7 @@ const Pastimes = (() => {
     let s = Save.get('pastimes');
     if (!s || typeof s !== 'object') { s = {}; Save.set('pastimes', s); }
     s.feats = s.feats || {}; s.secrets = s.secrets || {}; s.stats = s.stats || {}; s.creel = s.creel || {};
-    s.seenItems = s.seenItems || {}; s.flawless = s.flawless || {}; s.best = s.best || {}; s.story = s.story || {};
+    s.seenItems = s.seenItems || {}; s.flawless = s.flawless || {}; s.best = s.best || {}; s.bests = s.bests || {}; s.story = s.story || {};
     s.bounty = s.bounty || { week: -1, prog: {}, done: {} };
     s.marks = s.marks || {}; s.wipeRun = s.wipeRun || {};   // (marks: what fights and bouts said about you, feat-rules.js; wipeRun: wipes on a boss since you last beat it)
     return s;
@@ -102,6 +102,7 @@ const Pastimes = (() => {
       case 'items': return maxRarity() >= c.rarity;
       case 'practice': return stat('practice') >= c.n;
       case 'trial': return trialCount() >= c.n;
+      case 'hplusSet': return typeof HARDPLUS !== 'undefined' && HARDPLUS.setDone(c.set, c.heat);   // (Hard+: every boss of a set cleared at this heat or more, hardplus.js)
       default: return false;
     }
   }
@@ -141,6 +142,25 @@ const Pastimes = (() => {
   function title() { const s = st(), f = s.title && FEATS_().find(x => x.id === s.title && x.title); return f && s.feats[f.id] ? f.title : null; }
   function setTitle(id) { st().title = id || null; commit(); deps.onTitle(title()); }
 
+  // ---------------------------------------------------------------- personal bests (the Logbook's Bests tab)
+  // Per boss, difficulty and hero: the fastest clear, the best damage per second and the best healing per second, from real pulls only (a trial, a
+  // practice run and a bout record nothing: main.js sends this only for a real pull). Damage and healing count from a pull of a minute or more, clear or wipe.
+  // s.bests['boss:mode'][classId] = { t: seconds, ta: when, d: damage/s, da: when, h: healing/s, ha: when }
+  const BEST_MIN_SECS = 60;
+  function recordBest(d) {
+    const secs = Number(d.secs);
+    if (!d.boss || !d.cls || !(secs > 0)) return;
+    const s = st(), key = d.boss + ':' + (d.mode === 'hard' ? 'hard' : 'normal'), at = Date.now();
+    const grp = s.bests[key] = s.bests[key] || {}, b = grp[d.cls] = grp[d.cls] || {};
+    if (d.clear && (!b.t || secs < b.t)) { b.t = Math.round(secs * 10) / 10; b.ta = at; }
+    if (secs >= BEST_MIN_SECS) {
+      const dps = Math.round(Number(d.damage) / secs), hps = Math.round(Number(d.healing) / secs);
+      if (dps > (b.d || 0)) { b.d = dps; b.da = at; }
+      if (hps > (b.h || 0)) { b.h = hps; b.ha = at; }
+    }
+    commit();
+  }
+
   // ---------------------------------------------------------------- events from the game
   function event(type, d = {}) {
     const s = st();
@@ -156,6 +176,7 @@ const Pastimes = (() => {
       commit();
       progress('clear', d);
     }
+    if (type === 'best' && !d.practice) recordBest(d);
     if (type === 'feast') { bump('feasts'); progress('feast', d); }
     if (type === 'fish') { bump('fish'); bump('fish:' + d.id); progress('fish', d); }
     if (type === 'emote') { bump('emotes'); if (d.k) bump('emote:' + d.k); }
@@ -470,7 +491,7 @@ const Pastimes = (() => {
     const el = document.getElementById('pt-book');
     if (!el || el.classList.contains('hidden')) return;
     const s = st();
-    const tabs = [['feats', 'Feats'], ['secrets', 'Secrets'], ['armory', 'Armory'], ['catch', 'Catch'], ['fights', 'Fights']];
+    const tabs = [['feats', 'Feats'], ['secrets', 'Secrets'], ['armory', 'Armory'], ['catch', 'Catch'], ['fights', 'Fights'], ['bests', 'Bests']];
     let body = '';
     if (bookTab === 'feats') {
       body = featsHtml(s);
@@ -484,6 +505,8 @@ const Pastimes = (() => {
         return `<h4 class="pt-cat">Tier ${t}<small>${ks.filter(k => seen.has(k)).length} of ${ks.length}</small></h4><div class="pt-armory">${ks.map(k => { const it = ITEMS[k], on = seen.has(k); return `<i class="${on ? 'on' : ''}" style="--rc:${RARITY[it.rarity].color}${on ? `;background-image:url(${deps.iconURL(k)})` : ''}" data-tip="${on ? esc(it.name) : '???'}"></i>`; }).join('')}</div>`; }).join('')}`;
     } else if (bookTab === 'fights') {
       body = fightsHtml();
+    } else if (bookTab === 'bests') {
+      body = bestsHtml();
     } else {
       const fish = FISH_();
       body = `<p class="pt-note">Caught ${stat('fish')} in all. Sell your catch to the angler by the pond.</p><div class="pt-feats">${fish.map(f => { const n = s.stats['fish:' + f.id] || 0; return n ? `<div class="pt-feat got r${f.rarity | 0}"><b>${esc(f.name)}</b><span>${esc(f.desc)}</span><em>Caught ${n}</em></div>` : `<div class="pt-feat"><b>???</b><span>${['Common', 'Uncommon', 'Rare', 'Legendary'][f.rarity | 0]}</span></div>`; }).join('')}</div>`;
@@ -492,6 +515,31 @@ const Pastimes = (() => {
     el.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { bookTab = b.dataset.tab; renderBook(); }));
     el.querySelectorAll('.pt-fight').forEach(d => d.addEventListener('toggle', () => { if (d.open) openFight = d.dataset.at; else if (openFight === d.dataset.at) openFight = null; }));
     el.querySelectorAll('[data-title]').forEach(b => b.addEventListener('click', () => { setTitle(b.dataset.title); renderBook(); }));
+    el.querySelectorAll('[data-bmode]').forEach(b => b.addEventListener('click', () => { bestMode = b.dataset.bmode; renderBook(); }));
+  }
+
+  // the Bests tab: for the chosen difficulty, a table per boss you have pulled, one row per hero you have pulled it with. The best of each column
+  // in a boss is lit. Bosses you have not met are not there (a record only exists once a pull has been made).
+  let bestMode = 'normal';
+  function bestsHtml() {
+    const s = st(), mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`, num = n => Math.round(n).toLocaleString('en-US');
+    const day = at => (at ? new Date(at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
+    const all = typeof BOSSES !== 'undefined' ? [...BOSSES, ...(typeof ULTIMATE_BOSS !== 'undefined' ? [ULTIMATE_BOSS] : [])] : [];
+    const classes = typeof CLASSES !== 'undefined' ? CLASSES : [];
+    const seen = m => all.filter(b => s.bests[b.id + ':' + m] && Object.keys(s.bests[b.id + ':' + m]).length);
+    const toggle = `<nav class="pt-tabs pt-modes">${['normal', 'hard'].map(m => `<button type="button" data-bmode="${m}" class="${bestMode === m ? 'on' : ''}">${m === 'hard' ? 'Hard' : 'Normal'}</button>`).join('')}</nav>`;
+    if (!seen('normal').length && !seen('hard').length) return '<p class="pt-note">Your fastest clears and your best damage and healing per second will be kept here, per boss and per hero. Only real pulls count: practice runs, trials and bouts are not written down.</p>';
+    const bosses = seen(bestMode);
+    if (!bosses.length) return toggle + `<p class="pt-note">Nothing on ${bestMode === 'hard' ? 'Hard' : 'Normal'} yet.</p>`;
+    const cell = (v, at, what, fmt, top) => (v ? `<td class="${top ? 'top' : ''}" data-tip="${esc(what)}: ${esc(fmt(v))}${at ? ' · ' + esc(day(at)) : ''}">${fmt(v)}</td>` : '<td class="none">-</td>');
+    return toggle + `<p class="pt-note">Real pulls only. A hero's damage and healing per second count from a pull of a minute or more.</p>` + bosses.map(b => {
+      const grp = s.bests[b.id + ':' + bestMode], ids = classes.filter(c => grp[c.id]);
+      const col = k => Math.max(0, ...ids.map(c => grp[c.id][k] || 0)), fast = Math.min(Infinity, ...ids.map(c => grp[c.id].t || Infinity));
+      const bd = col('d'), bh = col('h');
+      return `<h4 class="pt-cat">${esc(b.name)}<small>${ids.length} ${ids.length === 1 ? 'hero' : 'heroes'}</small></h4>
+        <table class="pt-bests"><thead><tr><th>Hero</th><th>Fastest clear</th><th>Damage/s</th><th>Healing/s</th></tr></thead><tbody>${ids.map(c => { const r = grp[c.id]; return `<tr>
+          <td><i style="background:${typeof ROLES !== 'undefined' && ROLES[c.role] ? ROLES[c.role].color : '#999'}"></i>${esc(c.name)}</td>${cell(r.t, r.ta, 'Fastest clear', mmss, r.t && r.t === fast)}${cell(r.d, r.da, 'Best damage per second', num, r.d && r.d === bd)}${cell(r.h, r.ha, 'Best healing per second', num, r.h && r.h === bh)}</tr>`; }).join('')}</tbody></table>`;
+    }).join('');
   }
 
   // the Feats tab: the title you wear, then every feat by section. A feat tied to a boss you haven't reached, or hidden by

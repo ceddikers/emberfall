@@ -30,6 +30,7 @@
     const present = () => sim.players.filter(p => sim.hmap[p.id]);
     const needed = () => Math.floor(present().length / 2) + 1;
     const hostId = () => (sim.players[0] ? sim.players[0].id : null);
+    sim.introActive = () => !!(I && !I.done);   // (the solo pause is refused while the scene runs: Esc is the skip then)
 
     function end(skipped) {
       if (!I || I.done) return;

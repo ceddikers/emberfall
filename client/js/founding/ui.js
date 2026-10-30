@@ -149,6 +149,21 @@ const FoundingIcons = (() => {
     heal: bloom,
   };
 
+  // ---- the enemy kinds as small silhouettes (the next-wave preview): a dark disc in the kind's colour, a gold rim for an elite
+  const FOE_COL = { ashling: '#a8552e', streak: '#c2562f', slagback: '#7a6c5e', spitter: '#a87a2e', brute: '#8a3a2a', stalker: '#3f4a6a', cartburner: '#c97a2a', husk: '#6b5a48', wickshade: '#4a3f6a', boss: '#7a2a22' };
+  const FOE = {
+    ashling(c) { poly(c, [[20, 50], [22, 30], [32, 20], [42, 30], [44, 50]], '#4a3a30'); circ(c, 32, 22, 8, '#5a4538'); circ(c, 29, 21, 1.8, FLAME, null); circ(c, 35, 21, 1.8, FLAME, null); ln(c, 22, 32, 16, 44, '#4a3a30', 4); ln(c, 42, 32, 48, 44, '#4a3a30', 4); },
+    streak(c) { poly(c, [[14, 46], [26, 24], [34, 22], [50, 44], [40, 46], [30, 34], [24, 46]], '#5a3a2c'); circ(c, 36, 22, 6, '#6a4636'); circ(c, 38, 21, 1.6, FLAME, null); for (const y of [30, 38, 46]) ln(c, 8, y, 20, y - 2, '#e8a060', 1.6); },
+    slagback(c) { ell(c, 32, 40, 17, 13, '#5a5048'); poly(c, [[18, 38], [24, 24], [40, 24], [46, 38]], '#7a6c5e'); for (const x of [24, 32, 40]) ln(c, x, 26, x, 38, '#3a322c', 1.6); circ(c, 32, 22, 6, '#4a4038'); },
+    spitter(c) { poly(c, [[24, 52], [26, 34], [38, 34], [40, 52]], '#5a4a38'); circ(c, 32, 28, 7, '#6a5440'); circ(c, 32, 15, 5, '#ffb048'); circ(c, 32, 15, 2.4, '#fff0c0', null); ln(c, 32, 20, 32, 25, '#ffb048', 1.6); },
+    brute(c) { poly(c, [[14, 52], [16, 32], [26, 22], [38, 22], [48, 32], [50, 52]], '#5a3a30'); circ(c, 32, 20, 9, '#6a463a'); poly(c, [[24, 14], [20, 6], [27, 12]], '#d8cdb4', null, 0); poly(c, [[40, 14], [44, 6], [37, 12]], '#d8cdb4', null, 0); circ(c, 29, 19, 1.8, FLAME, null); circ(c, 35, 19, 1.8, FLAME, null); ln(c, 16, 36, 10, 50, '#5a3a30', 6); ln(c, 48, 36, 54, 50, '#5a3a30', 6); },
+    stalker(c) { c.save(); c.setLineDash([3, 3]); circ(c, 32, 34, 18, null, '#8c9ac8', 1.6); c.restore(); circ(c, 25, 32, 3, '#d6e2ff', null); circ(c, 39, 32, 3, '#d6e2ff', null); circ(c, 25, 32, 1.2, OUT, null); circ(c, 39, 32, 1.2, OUT, null); poly(c, [[24, 44], [32, 48], [40, 44], [36, 52], [28, 52]], '#2a3250', null, 0); },
+    cartburner(c) { c.beginPath(); c.moveTo(32, 8); c.bezierCurveTo(44, 22, 48, 32, 42, 44); c.bezierCurveTo(38, 52, 26, 52, 22, 44); c.bezierCurveTo(16, 34, 22, 28, 24, 22); c.bezierCurveTo(28, 26, 28, 18, 32, 8); c.closePath(); c.fillStyle = '#ff9a2a'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 2; c.stroke(); ell(c, 32, 42, 6, 8, '#ffe08a', null); ln(c, 18, 56, 46, 56, WOOD, 3); },
+    husk(c) { ell(c, 32, 34, 17, 21, '#5a4c3e'); ln(c, 32, 14, 28, 28, '#2a2018', 2); ln(c, 28, 28, 36, 38, '#2a2018', 2); ln(c, 36, 38, 31, 52, '#2a2018', 2); for (const y of [26, 36, 46]) ln(c, 20, y, 26, y + 3, '#8a7458', 2); circ(c, 32, 20, 2, FLAME, null); poly(c, [[18, 22], [10, 20], [16, 30]], '#6b5a48'); poly(c, [[46, 22], [54, 20], [48, 30]], '#6b5a48'); },
+    wickshade(c) { c.beginPath(); c.moveTo(32, 10); c.bezierCurveTo(48, 12, 50, 36, 46, 54); c.lineTo(40, 48); c.lineTo(34, 56); c.lineTo(28, 48); c.lineTo(22, 54); c.bezierCurveTo(14, 36, 16, 12, 32, 10); c.closePath(); c.fillStyle = '#41375e'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 2; c.stroke(); circ(c, 26, 28, 2.6, '#e8e0ff', null); circ(c, 38, 28, 2.6, '#e8e0ff', null); circ(c, 32, 42, 3, FLAME, null); },
+    boss(c) { poly(c, [[12, 46], [16, 22], [26, 34], [32, 14], [38, 34], [48, 22], [52, 46]], '#6a2a22'); ln(c, 12, 49, 52, 49, '#d8b45a', 3); circ(c, 28, 38, 1.8, FLAME, null); circ(c, 36, 38, 1.8, FLAME, null); },
+    generic(c) { circ(c, 32, 32, 12, '#5a4a3e'); circ(c, 28, 30, 2, FLAME, null); circ(c, 36, 30, 2, FLAME, null); },
+  };
   function make(key, fn) { if (cache.has(key)) return cache.get(key); const cv = document.createElement('canvas'); cv.width = cv.height = 96; const c = cv.getContext('2d'); c.scale(1.5, 1.5); try { fn(c); } catch (e) { /* a broken painter leaves a plain tile */ } const u = cv.toDataURL('image/png'); cache.set(key, u); return u; }
   const painted = key => (manifest.has(key) ? 'founding/icons/' + key + '.png' : null);
   const small = (c, fn) => { c.save(); c.translate(32, 32); c.scale(0.9, 0.9); c.translate(-32, -32); fn(c); c.restore(); };
@@ -158,6 +173,7 @@ const FoundingIcons = (() => {
     item(id, d) { const k = 'item-' + id; return painted(k) || make(k + '/' + (d ? d.rar : 0), c => paintItem(c, id, d)); },
     quest(id) { const k = 'quest-' + id; return painted(k) || make(k, c => { disc(c, QCOL[id] || '#6a5a48', null); (QGLYPH[id] || QGLYPH.gate)(c); }); },
     boon(id, quest, n) { const k = 'boon-' + id; return painted(k) || make(k, c => { disc(c, QCOL[quest] || '#6a5a48', null); c.save(); c.translate(32, 30); c.scale(0.86, 0.86); c.translate(-32, -32); (QGLYPH[quest] || QGLYPH.gate)(c); c.restore(); for (let i = 0; i <= (n | 0); i++) circ(c, 32 + (i - (n | 0) / 2) * 7, 58, 2.2, '#f2e6c8', OUT, 1); }); },
+    foe(kind, elite) { const k = 'foe-' + kind + (elite ? '-e' : ''); return make(k, c => { disc(c, FOE_COL[kind] || '#6a5a48', elite ? '#d8b45a' : null); c.save(); c.translate(32, 32); c.scale(0.92, 0.92); c.translate(-32, -32); (FOE[kind] || FOE.generic)(c); c.restore(); }); },
     hud(name) { const k = 'hud-' + name; return painted(k) || make(k, c => { disc(c, name === 'gold' ? '#6a5018' : '#5a4a34', null); small(c, HUD[name] || HUD.gold); }); },
     build(id) { const k = 'build-' + id; return painted(k) || make(k, c => { disc(c, '#7a6a48', null); small(c, HUD[id] || HUD.arm); }); },
     skill(hero, slot) { return painted('skill-' + hero + '-' + slot); },
@@ -186,7 +202,7 @@ const FoundingUI = (() => {
   function helpLine() {
     const KB = typeof Keybinds !== 'undefined' ? Keybinds : null, L = id => esc(KB ? KB.label(KB.keyFor(id)) || '—' : id);
     const skills = ['s0', 's1', 's2', 's3'].map(L).join(' ');
-    return `<b>Right-click</b> move or attack &middot; <b>${skills}</b> skills (aim, then click) &middot; <b>Shift</b> + skill rank up &middot; <b>${L('fdPassive')}</b> passive rank up<br><b>${L('cycle')}</b> target &middot; <b>${L('fdItem1')}-${L('fdItem6')}</b> items &middot; <b>${L('fdTent')}</b> tent &middot; <b>${L('fdForge')}</b> forge &middot; <b>${L('fdRecall')}</b> recall &middot; <b>Alt</b> + click ping &middot; <b>${L('fdFlask')}</b> flask &middot; <b>${L('fdUse')}</b> pick up, plant, relight, light a brand at a camp fire &middot; <b>${L('fdDrop')}</b> put down &middot; <b>${L('fdCenter')}</b> centre &middot; <b>Esc</b> cancel`;
+    return `<b>Right-click</b> move or attack &middot; <b>${skills}</b> skills (aim, then click) &middot; <b>Shift</b> + skill rank up &middot; <b>${L('fdPassive')}</b> passive rank up<br><b>${L('cycle')}</b> target &middot; <b>${L('fdItem1')}-${L('fdItem6')}</b> items &middot; <b>${L('fdTent')}</b> tent &middot; <b>${L('fdForge')}</b> forge &middot; <b>${L('fdRecall')}</b> recall &middot; <b>Alt</b> + click ping &middot; <b>${L('fdFlask')}</b> flask &middot; <b>${L('fdUse')}</b> pick up, plant, relight, light a brand at a camp fire &middot; <b>${L('fdDrop')}</b> put down &middot; <b>${L('fdCenter')}</b> centre &middot; <b>${L('fdMeter')}</b> meter &middot; <b>Esc</b> cancel${(A.state() && A.state().players.length === 1) ? ', or pause' : ''}`;
   }
   function setH(id, v) { if (cache[id] !== v) { cache[id] = v; $(id).innerHTML = v; } }
   function setW(id, f) { const v = clamp(f, 0, 1).toFixed(3); if (cache[id] !== v) { cache[id] = v; $(id).style.transform = `scaleX(${v})`; } }
@@ -212,10 +228,10 @@ const FoundingUI = (() => {
     unmount();
     root = document.createElement('div'); root.id = 'fd-root';
     root.innerHTML = `
-      <div id="fd-top" class="fd-pn"><div class="fd-wave"><span id="fd-wave">PREPARE</span><small id="fd-part"></small></div><i class="fd-div"></i><div class="fd-camp"><img class="ico" id="fd-campico" alt=""><div class="cw"><small>CAMP</small><div class="fd-bar"><i id="fd-campbar"></i><span id="fd-camptxt"></span></div></div></div><i class="fd-div"></i><div class="fd-next" id="fd-next"></div><i class="fd-div"></i><div class="fd-gold" id="fd-gold"><b></b><img class="fcoin" id="fd-coin" alt=""></div></div>
+      <div id="fd-top" class="fd-pn"><div class="fd-row"><div class="fd-wave"><span id="fd-wave">PREPARE</span><small id="fd-part"></small></div><i class="fd-div"></i><div class="fd-camp"><img class="ico" id="fd-campico" alt=""><div class="cw"><small>CAMP</small><div class="fd-bar"><i id="fd-campbar"></i><span id="fd-camptxt"></span></div></div></div><i class="fd-div"></i><div class="fd-next" id="fd-next"></div><i class="fd-div"></i><div class="fd-gold" id="fd-gold"><b></b><img class="fcoin" id="fd-coin" alt=""></div></div><div class="fd-fore" id="fd-fore" style="display:none"></div></div>
       <div id="fd-boss" class="fd-pn" style="display:none"><b id="fd-bossname"></b><small id="fd-bosssub"></small><div class="fd-bar big"><i id="fd-bossbar"></i><span id="fd-bosstxt"></span></div><div class="fd-bar cast" id="fd-bosscast" style="display:none"><i id="fd-bosscasti"></i><span id="fd-bosscastt"></span></div></div>
       <div id="fd-tframe" class="fd-pn" style="display:none"><b id="fd-tfname"></b><div class="fd-bar"><i id="fd-tfbar"></i><span id="fd-tftxt"></span></div></div>
-      <div id="fd-party" class="fd-pn" style="display:none"></div>
+      <div id="fd-left"><div id="fd-party" class="fd-pn" style="display:none"></div><div id="fd-meter" class="fd-pn" style="display:none"></div></div>
       <div id="fd-right"><canvas id="fd-mini" width="216" height="162"></canvas><div id="fd-quests" class="fd-pn" style="display:none"></div></div>
       <div id="fd-hero" class="fd-pn"><canvas id="fd-portrait" width="144" height="144"></canvas>
         <div class="info"><div class="nm"><span id="fd-hname"></span><i class="rl" id="fd-hrole"></i></div><div class="sub"><span id="fd-hlvl"></span><span class="pts" id="fd-hpts"></span></div>
@@ -229,11 +245,12 @@ const FoundingUI = (() => {
       <div id="fd-tent" class="fd-panel fd-pn" style="display:none"></div>
       <div id="fd-forge" class="fd-panel fd-pn" style="display:none"></div>
       <div id="fd-reveal" style="display:none"></div>
+      <div id="fd-pause" style="display:none"><div class="fd-pn"><div class="fd-title sm">PAUSED</div><p>The valley waits for you. Nothing moves until you go on.</p><button class="fd-btn gold" id="fd-resume" type="button">Resume</button><small><b>Esc</b> goes on</small></div></div>
       <div id="fd-lobby" style="display:none"></div>
       <div id="fd-titlecard"><div class="t"></div><div class="s"></div></div>
       <div id="fd-end" style="display:none"></div>`;
     document.body.appendChild(root);
-    for (const id of ['fd-top', 'fd-boss', 'fd-tframe', 'fd-party', 'fd-hero', 'fd-skills', 'fd-help', 'fd-boons', 'fd-tent', 'fd-forge', 'fd-lobby', 'fd-end', 'fd-quests', 'fd-reveal']) root.querySelector('#' + id).addEventListener('contextmenu', e => e.preventDefault());
+    for (const id of ['fd-top', 'fd-boss', 'fd-tframe', 'fd-party', 'fd-hero', 'fd-skills', 'fd-help', 'fd-boons', 'fd-tent', 'fd-forge', 'fd-lobby', 'fd-end', 'fd-quests', 'fd-reveal', 'fd-meter', 'fd-pause']) root.querySelector('#' + id).addEventListener('contextmenu', e => e.preventDefault());
     // minimap: left-drag moves the camera, right-click sends the hero
     const mini = $('fd-mini'), at = e => { const r = mini.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
     mini.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); const [x, y] = at(e); if (e.altKey && e.button === 0) { A.miniTo(x, y, false, true); return; } A.miniTo(x, y, e.button === 2); mini._drag = e.button === 0; });
@@ -248,6 +265,8 @@ const FoundingUI = (() => {
     const rc = $('fd-rcchip'); rc.addEventListener('mousedown', e => e.stopPropagation()); rc.addEventListener('click', () => A.tryRecall());
     tip(rc, () => { const KB = typeof Keybinds !== 'undefined' ? Keybinds : null, k = esc(KB ? KB.label(KB.keyFor('fdRecall')) || '?' : 'B'); return `<b>Recall</b><em>${k}</em>Hold still for four seconds and you are back at the spring. A blow, a step or a cast breaks it. It needs a rest before the next.`; });
     tip($('fd-mini'), () => { const KB = typeof Keybinds !== 'undefined' ? Keybinds : null, k = esc(KB ? KB.label(KB.keyFor('fdCenter')) || '?' : 'Space'); return `<b>The valley</b>Drag to look elsewhere (${k} brings you back). Right-click sends your hero. <b>Alt</b> + click points a spot out to your party. Ground you have not walked is dark; only what your party sees shows enemies.`; });
+    $('fd-meter').addEventListener('click', e => { const t = e.target.closest('[data-m]'); if (t) { meterLoad(); meterMode = t.dataset.m === 'heal' ? 'heal' : 'dmg'; meterSave(); drawMeter(S()); } });
+    $('fd-resume').addEventListener('click', () => A.pause(false));
     tip($('fd-top').querySelector('.fd-camp'), () => '<b>The camp</b>If its health runs out, the run is lost. It mends slowly while no enemy stands near the Hearth.');
     tip($('fd-gold'), () => '<b>Gold</b>Spend it at the supply tent. It stays in the run; your purse is paid when the run ends.');
   }
@@ -392,6 +411,7 @@ const FoundingUI = (() => {
     setT('fd-wave', s.wave > 0 ? `WAVE ${s.wave} / ${D.LAST_WAVE}` : 'PREPARE'); setT('fd-part', s.wave > 0 ? (D.PARTS[s.part] || D.PARTS[D.partOf(s.wave)])[2] : 'Day one');
     setW('fd-campbar', s.camp[0] / s.camp[1]); setT('fd-camptxt', Math.ceil(s.camp[0]) + ' / ' + s.camp[1]);
     setH('fd-next', !live ? `<b class="t">${s.st === 'won' ? 'Emberfall' : s.st === 'lost' ? 'The camp is lost' : ''}</b>` : s.next >= 0 ? '<small>NEXT WAVE</small><b>' + fmtT(s.nextAt - T) + '</b>' : `<b class="t">${s.q.some(q => q[1] === 1) ? 'Finish the quests' : 'Last wave'}</b>`);
+    updateFore(s, live);
     $('fd-gold').firstChild.textContent = sh ? sh.gold : 0; cache.goldv = 1;
     if (!sh) { updateMsg(s, dt); return; }
     // the hero frame
@@ -447,19 +467,25 @@ const FoundingUI = (() => {
     const fl = its[6]; const fv = (sh.bn.indexOf('carriedwater') >= 0) ? (sh.fl ? 2 : 1) : 0; if (cache.fl !== fv) { cache.fl = fv; fl.style.display = fv ? '' : 'none'; fl.classList.toggle('empty', fv === 1); }
     // help line fades after a while
     setShow('fd-help', T < 40 || s.helpOn);
-    // party
+    // the team strip: the other humans, with a portrait, health, level and which of their Q W E R can be pressed (the host sends a bit per skill). Only with two or more humans.
     const others = []; for (const u of s.units.values()) if (u.kind === 'h' && u.id !== s.myId) others.push(u);
     const pk = others.map(u => u.id + ':' + u.hero).join(',');
     if (cache.pk !== pk) {
       cache.pk = pk; const P = $('fd-party'); P.style.display = others.length ? '' : 'none';
-      P.innerHTML = '<div class="fd-h">PARTY</div>' + others.map(u => `<div class="al" data-id="${u.id}"><div><span>${esc(u.name)} <em>${esc(D.KITS[u.hero].name)}</em></span><span class="v"></span></div><div class="fd-bar"><i></i></div></div>`).join('');
-      P.querySelectorAll('.al').forEach(a => a.addEventListener('click', () => { s.tgtAlly = isNaN(+a.dataset.id) ? a.dataset.id : +a.dataset.id; }));
+      P.innerHTML = '<div class="fd-h">PARTY</div>' + others.map(u => `<div class="al" data-id="${u.id}"><canvas class="pt" width="44" height="44"></canvas><div class="bd"><div class="nl"><span>${esc(u.name)} <em>${esc(D.KITS[u.hero].name)}</em></span><i class="lv"></i></div><div class="fd-bar"><i></i><span></span></div><div class="rd">${['q', 'w', 'e', 'r'].map(k => `<u>${slotKeyLabel(k)}</u>`).join('')}</div></div></div>`).join('');
+      P.querySelectorAll('.al').forEach((a, i) => {
+        const u = others[i]; paintPortrait(a.querySelector('.pt'), u.hero, 44);
+        a.addEventListener('click', () => { s.tgtAlly = isNaN(+a.dataset.id) ? a.dataset.id : +a.dataset.id; });
+        tip(a, () => `<b>${esc(u.name)}</b><em>${esc(D.KITS[u.hero].name)}, level ${u.lv || 1}</em>Click to pick them as your ally target. The four marks under the bar are their skills: lit when ready, dark while cooling down or not yet learned.`);
+      });
     }
     $('fd-party').querySelectorAll('.al').forEach(a => {
-      const u = s.units.get('h' + a.dataset.id); if (!u) return; const dead = u.f & FLAG.DEAD;
-      a.classList.toggle('dead', !!dead); a.classList.toggle('sel', String(s.tgtAlly) === a.dataset.id);
-      const v = dead ? 'Fallen' : Math.ceil(u.hp) + '/' + u.max; const sp = a.querySelector('.v'); if (sp.textContent !== v) sp.textContent = v;
-      a.querySelector('i').style.transform = `scaleX(${clamp(u.hp / u.max, 0, 1)})`;
+      const u = s.units.get('h' + a.dataset.id); if (!u) return; const dead = !!(u.f & FLAG.DEAD);
+      a.classList.toggle('dead', dead); a.classList.toggle('sel', String(s.tgtAlly) === a.dataset.id);
+      const bar = a.querySelector('.fd-bar'), v = dead ? 'Fallen' : Math.ceil(u.hp) + ' / ' + u.max, sp = bar.querySelector('span'); if (sp.textContent !== v) sp.textContent = v;
+      bar.firstChild.style.transform = `scaleX(${clamp(u.hp / u.max, 0, 1)})`;
+      const lv = 'Lv ' + (u.lv || 1), l = a.querySelector('.lv'); if (l.textContent !== lv) l.textContent = lv;
+      const rd = dead ? 0 : (u.rd | 0); if (a._rd !== rd) { a._rd = rd; a.querySelectorAll('.rd u').forEach((x, i) => x.classList.toggle('on', !!((rd >> i) & 1))); }
     });
     // target and boss
     const tg = s.tgt != null ? s.units.get('e' + s.tgt) : null;
@@ -477,8 +503,57 @@ const FoundingUI = (() => {
     const me = A.me();
     if (panels.tent && me && Math.hypot(me.x - M.P.shop[0], me.y - M.P.shop[1]) > 340) closePanel('tent');
     if (panels.forge && me && Math.hypot(me.x - M.P.forge[0], me.y - M.P.forge[1]) > 300) closePanel('forge');
+    meterT += dt; if (meterT > 0.5) { meterT = 0; drawMeter(s); }
     hudT += dt; if (hudT > 0.12) { hudT = 0; if (panels.tent) refreshTent(false); if (panels.forge) refreshForge(false); A.drawMini($('fd-mini')); }
   }
+  // the portrait of a hero, as on the hero frame (a square canvas of any size)
+  function paintPortrait(cv, hero, size) {
+    const c = cv.getContext('2d'), k = size / 144; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, size, size); c.fillStyle = '#14110d'; c.fillRect(0, 0, size, size);
+    try { drawHero(c, A.clsOf(hero), 72 * k, 80 * k, 0.55, { t: 0, moving: false, action: null }, 2.3 * k, { ring: false, noShadow: true }); } catch (e) { /* a plain tile */ }
+  }
+
+  // ================================================================ the next wave, from the fixed line-ups (data.js forecast). It never names a boss and shows nothing a feature module adds.
+  const FOE_TRAIT = d => [d.runner ? 'Fast.' : '', d.shield ? 'Shielded from the front.' : '', d.ranged ? 'Strikes from a distance.' : '', d.hide ? 'Seen only in light.' : '', d.elite ? 'Tougher than the rest.' : ''].filter(Boolean).join(' ');
+  function updateFore(s, live) {
+    const n = s.wave + 1, show = live && s.next >= 0 && n <= D.LAST_WAVE && !(s.__intro && s.__intro.on), f = show ? D.forecast(n) : null, key = f ? n : 0;
+    if (cache.fore === key) return; cache.fore = key;
+    const F = $('fd-fore'), T = $('fd-top');
+    if (!f) { F.style.display = 'none'; T.classList.remove('fore'); return; }
+    F.innerHTML = `<span class="fl">${f.last ? 'The siege' : 'Wave ' + n}<em>${f.night ? 'night' : 'day'}</em></span>` + f.kinds.map(k => `<span class="fc${k.el ? ' el' : ''}" data-k="${k.kind}"><img alt="" draggable="false" src="${FI.foe(k.kind, k.el)}"><b>${k.n}</b></span>`).join('') +
+      (f.boss ? `<span class="fc bs"><img alt="" draggable="false" src="${FI.foe('boss', true)}"><b>Boss</b></span>` : '');
+    F.style.display = ''; T.classList.add('fore');
+    tip(F.querySelector('.fl'), () => `<b>${f.last ? 'The siege' : 'Wave ' + n}</b><em>${f.night ? 'Night' : 'Day'}</em>What the next wave sends down the two roads, by kind.`);
+    F.querySelectorAll('.fc[data-k]').forEach(c => { const k = f.kinds.find(x => x.kind === c.dataset.k), d = D.ENEMIES[k.kind]; tip(c, () => `<b>${esc(d.name)}</b><em>${k.el ? 'Elite &middot; ' : ''}${k.n} in wave ${n}</em>${esc(FOE_TRAIT(d))}`); });
+    const bs = F.querySelector('.fc.bs'); if (bs) tip(bs, () => '<b>Boss wave</b>Something large comes down a road with this wave.');
+  }
+
+  // ================================================================ the live damage meter: the look of the raid's (key: Damage meter, M; on and the view are saved)
+  let meterOn = null, meterMode = 'dmg', meterKey = '', meterT = 0;
+  function meterLoad() {
+    if (meterOn !== null) return; meterOn = true;
+    try { const v = typeof Save !== 'undefined' ? Save.setting('fdMeter', null) : null; if (v && typeof v === 'object') { meterOn = v.on !== false; if (v.mode === 'heal') meterMode = 'heal'; } } catch (e) { /* the defaults */ }
+  }
+  function meterSave() { meterKey = ''; try { if (typeof Save !== 'undefined') Save.setSetting('fdMeter', { on: meterOn, mode: meterMode }); } catch (e) { /* not remembered */ } }
+  function toggleMeter() { meterLoad(); meterOn = !meterOn; meterSave(); drawMeter(S()); }
+  const nf = n => (n >= 100000 ? Math.round(n / 1000) + 'k' : n >= 10000 ? (n / 1000).toFixed(1) + 'k' : String(Math.round(n)));
+  function drawMeter(s) {
+    meterLoad(); const M = $('fd-meter'); if (!M) return;
+    const rows = s && s.phase === 'live' ? A.meterRows() : [];
+    if (!meterOn || !rows.length) { if (cache.mtShow !== 0) { cache.mtShow = 0; M.style.display = 'none'; meterKey = ''; } return; }
+    const heal = meterMode === 'heal', val = r => (heal ? r.heal : r.dmg), rate = r => (heal ? r.hps : r.dps);
+    const who = r => { const p = s.players.find(x => x[0] === r.id), u = s.units.get('h' + r.id); return { name: p ? p[1] : 'Hero', hero: (u && u.hero) || (p && p[2]) || 'bastion' }; };
+    rows.sort((a, b) => val(b) - val(a) || a.id - b.id);
+    const key = [meterMode, s.myId, rows.map(r => r.id + ':' + Math.round(val(r)) + ':' + Math.round(rate(r))).join('|')].join(';');
+    if (cache.mtShow === 1 && key === meterKey) return;
+    cache.mtShow = 1; meterKey = key; M.style.display = '';
+    const top = Math.max(1, val(rows[0])), tot = rows.reduce((n, r) => n + val(r), 0), totRate = rows.reduce((n, r) => n + rate(r), 0);
+    M.innerHTML = `<div class="mt-h"><button type="button" data-m="dmg" class="${heal ? '' : 'on'}">Damage</button><button type="button" data-m="heal" class="${heal ? 'on' : ''}">Healing</button></div>` +
+      rows.map((r, i) => { const w = who(r); return `<div class="mt-row${r.id === s.myId ? ' me' : ''}" data-i="${i}" style="--rc:${A.roleColor(w.hero)}"><small>${i + 1}</small><span>${esc(w.name)}</span><b>${nf(val(r))}<u>${rate(r) >= 1 ? nf(rate(r)) + '/s' : ''}</u></b><div class="mt-bar"><i class="${heal ? 'h' : 'd'}" style="width:${(val(r) / top * 100).toFixed(1)}%"></i></div></div>`; }).join('') +
+      `<div class="mt-sum"><span>Party</span><b>${nf(tot)}${totRate >= 1 ? ' <u>' + nf(totRate) + '/s</u>' : ''}</b></div>`;
+    M.querySelectorAll('.mt-row').forEach(n => { const r = rows[+n.dataset.i], w = who(r); tip(n, () => `<b>${esc(w.name)}</b><em>${esc(D.KITS[w.hero].name)}</em>Damage ${Math.round(r.dmg).toLocaleString('en-US')} (${nf(r.dps)}/s)<br>Healing ${Math.round(r.heal).toLocaleString('en-US')} (${nf(r.hps)}/s)<div class="fd-t-c">The rate is over the last half minute. Totals are for this run.</div>`); });
+  }
+  function showPause(on) { if (!root) return; $('fd-pause').style.display = on ? '' : 'none'; if (typeof Tip !== 'undefined' && Tip.hide) Tip.hide(); }
+
   function updateMsg(s, dt) { const m = $('fd-msg'); const on = s.msg.t > 0; if (cache.msgtxt !== s.msg.txt) { cache.msgtxt = s.msg.txt; m.textContent = s.msg.txt; } const o = on ? '1' : '0'; if (cache.msgo !== o) { cache.msgo = o; m.style.opacity = o; } }
   function updateBanner(dt) {
     const b = $('fd-banner');
@@ -757,5 +832,5 @@ const FoundingUI = (() => {
     if (typeof Tip !== 'undefined' && Tip.hide) Tip.hide();
   }
 
-  return { mount, unmount, update, showLobby, onLobby, onStart, onSheet, waveBanner, stepBanner, partBanner, titleCard, banner, questEvent, bossAppears, forgeResult, showEnd, openTent, openForge, closeTop, isOpen, blocking, icons: FI, itemIcon, itemDetail, coinImg, keyOf };
+  return { mount, unmount, update, showLobby, onLobby, onStart, onSheet, waveBanner, stepBanner, partBanner, titleCard, banner, questEvent, bossAppears, forgeResult, showEnd, openTent, openForge, closeTop, isOpen, blocking, showPause, toggleMeter, icons: FI, itemIcon, itemDetail, coinImg, keyOf };
 })();

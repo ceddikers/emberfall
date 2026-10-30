@@ -178,6 +178,11 @@ const Net = (() => {
         if (!p.cls || !/^[A-Za-z-]{1,20}$/.test(msg.k)) return;
         broadcast({ t: 'kfx', id: p.id, k: msg.k, s: msg.s ? 1 : 0, d: fxData(msg.d) }, p.id);
         break;
+      case 'pbf': {   // a hero's buffs for the party frames (party-buffs.js): cleaned here, then on to the others
+        const m = p.cls ? pbfData(msg) : null;
+        if (m) broadcast(Object.assign({ t: 'pbf', id: p.id }, m), p.id);
+        break;
+      }
       case 'chat': {
         const text = String(msg.text || '').trim().slice(0, 120);
         if (text) broadcast({ t: 'chat', id: p.id, text }, p.id);
@@ -415,6 +420,25 @@ const Net = (() => {
 
 // a class moment's few parameters (a Thermal Shock's size and side, an Alembist vial's recipe and target...): small numbers,
 // short words and short lists only
+// A 'pbf' message from a player (party-buffs.js): { b: [[id, seconds left, stacks, flags, name?], ...], tp?: { id: text } }, kept to its shape and size.
+function pbfData(msg) {
+  if (!msg || !Array.isArray(msg.b)) return null;
+  const idOk = v => typeof v === 'string' && /^[A-Za-z0-9_:.-]{1,32}$/.test(v), int = (v, lo, hi) => (Number.isFinite(v) ? Math.max(lo, Math.min(hi, Math.round(v))) : lo);
+  const b = [];
+  for (const r of msg.b.slice(0, 24)) {
+    if (!Array.isArray(r) || !idOk(r[0]) || !Number.isFinite(r[1])) continue;
+    const e = [r[0], Math.max(-1, Math.min(9999, Math.round(r[1] * 10) / 10)), int(r[2], 1, 99), int(r[3], 0, 7)];
+    if (typeof r[4] === 'string' && r[4]) e.push(r[4].replace(/[^\w \-'.:%+]/g, '').slice(0, 24));
+    b.push(e);
+  }
+  const out = { b };
+  if (msg.tp && typeof msg.tp === 'object') {
+    const tp = {};
+    for (const k of Object.keys(msg.tp).slice(0, 24)) if (idOk(k) && typeof msg.tp[k] === 'string') tp[k] = msg.tp[k].replace(/[<>]/g, '').slice(0, 360);
+    if (Object.keys(tp).length) out.tp = tp;
+  }
+  return out;
+}
 function fxData(d) {
   if (!d || typeof d !== 'object') return undefined;
   const o = {};

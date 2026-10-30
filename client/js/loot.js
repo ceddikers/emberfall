@@ -28,13 +28,13 @@ const Loot = (() => {
   // ---------------------------------------------------------------- host
   let hc = null, seq = 0, nseq = 0;
   // run: the raid run's id (main.js raidRid), so a chest id is scoped to its run
-  function hostOpen(boss, mode, humans, at, run = 0) {
+  function hostOpen(boss, mode, humans, at, run = 0, heat = 0) {
     if (hc) hostClose();
     const classes = [...new Set(humans.map(h => h[1]))];
     const keys = rollChest(boss, mode, classes, Math.random);
     const id = ((Date.now() / 1000) | 0) % 100000 * 100 + (++seq % 100);
     hc = { id, boss, who: new Map(humans), items: keys.map(key => [++nseq, key, 0]), acked: new Set(), rolls: new Map(), gone: new Set(),
-      msg: { t: 'chest', id, run, boss, mode, who: humans, gold: clearGold(boss, mode), at: at ? [Math.round(at.x), Math.round(at.y)] : null } };
+      msg: { t: 'chest', id, run, boss, mode, who: humans, gold: Math.round(clearGold(boss, mode) * (typeof HARDPLUS !== 'undefined' ? HARDPLUS.goldMult(heat) : 1)), at: at ? [Math.round(at.x), Math.round(at.y)] : null } };
     deps.broadcast(Object.assign({ items: hc.items, rolls: [] }, hc.msg));
   }
   // a piece's rolls: { r: [[pid, v]] in the order rolled, passed: Set, t0: first roll's time }. The holder is the highest

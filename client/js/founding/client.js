@@ -95,6 +95,7 @@ const Founding = (() => {
     if (m.st !== 'camp' && S.phase === 'camp') { S.phase = 'live'; if (FoundingUI) FoundingUI.onStart(); }
     S.tm = m.tm; S.wave = m.wave; S.next = m.next; S.nextAt = S.T + m.next; S.camp = m.camp; S.q = m.q || [];
     if (m.pl) { S.players = m.pl; }
+    if (m.dm) meterIn(m.dm, m.tm);
     S.part = m.part | 0; S.tier = m.tier | 0; S.bs = m.bs || []; S.bsBy = {}; for (const r of S.bs) S.bsBy[r[0]] = r;
     if (m.props) { const prev = S.props; S.props = m.props; S.propsSeen = true; propsChanged(prev, m.props); }
     const seen = new Set();
@@ -103,7 +104,7 @@ const Founding = (() => {
       let u = S.units.get(key);
       if (!u) { u = newUnit(key, 'h', r[0], r[1], r[2], r[3]); S.units.set(key, u); u.hero = D.HERO_IDS[r[10]] || 'bastion'; u.cls = clsOf(u.hero); }
       u.tr.push(t, r[1], r[2], r[3]);
-      u.q.push({ t, hp: r[4], max: r[5], f: r[6], cs: r[7], cp: r[8], lv: r[9] }); if (u.q.length > 14) u.q.shift();
+      u.q.push({ t, hp: r[4], max: r[5], f: r[6], cs: r[7], cp: r[8], lv: r[9], rd: r[12] | 0 }); if (u.q.length > 14) u.q.shift();
       u.hero = D.HERO_IDS[r[10]] || u.hero; u.name = (S.players.find(p => p[0] === r[0]) || [0, 'Hero'])[1]; u.carry = r[11] | 0;
     }
     S.bossU = null;
@@ -172,17 +173,77 @@ const Founding = (() => {
     let last = performance.now(), acc = 0;
     stopTick = Net.steadyInterval(() => {
       if (!sim) return;
-      const t = performance.now(); acc = Math.min(0.25, acc + (t - last) / 1000); last = t;
+      const t = performance.now();
+      if (sim.isPaused()) { last = t; acc = 0; return; }   // (the solo pause: nothing ticks, and the time spent held is not caught up)
+      acc = Math.min(0.25, acc + (t - last) / 1000); last = t;
       while (acc >= 0.05) { sim.tick(0.05); acc -= 0.05; }
     }, 33);
     Net.broadcastAll({ t: 'fdgo', seed, players: players.map(p => ({ id: p.id, name: p.name })) });
   }
   function stopHost() {
+    paused = false;
     if (stopTick) { stopTick(); stopTick = null; }
     if (sim && dep && dep.Net && dep.Net.onHost) dep.Net.onHost('fdi', () => {});
     sim = null;
   }
   function playerLeft(id) { if (sim) sim.removePlayer(id); }
+
+  // ================================================================ the solo pause
+  // Only the host's tab can hold the sim, and only with one human in the run (a second player's tab has nothing to hold). Esc pauses and resumes; the sim then ticks
+  // nothing, so every clock in it (the wave timer, quest deadlines, respawns, set pieces, the chain's gaps) stands still, and this tab stops its own frame update too.
+  let paused = false;
+  const canPause = () => !!(sim && S && !S.ended && !S.end && S.phase === 'live' && S.st === 'live' && !(S.__intro && S.__intro.on) && sim.players.length === 1);
+  function setPause(on) {
+    if (!S) return false;
+    on = !!on;
+    if (on === paused) return paused;
+    if (on && !canPause()) return false;
+    paused = on; if (sim) sim.setPaused(on);
+    S.rDown = false; S.pan = null; S.keys = null;
+    if (FoundingUI) FoundingUI.showPause(on);
+    snd('ui-open');
+    return paused;
+  }
+
+  // ================================================================ the live damage meter (the data; ui.js draws it)
+  // The host sends each hero's run total of damage and healing about once a second (fds.dm = [[id, damage, healing]]); a rate is the gain over the last 30 seconds of those.
+  function meterIn(rows, tm) {
+    const Mt = S.meter || (S.meter = { hist: [], rows: [], tm: 0 });
+    Mt.rows = rows; Mt.tm = tm; Mt.hist.push({ tm, rows }); while (Mt.hist.length > 2 && tm - Mt.hist[0].tm > 32) Mt.hist.shift();
+  }
+  function meterRows() {
+    const Mt = S && S.meter; if (!Mt || !Mt.rows.length) return [];
+    const old = Mt.hist[0], span = Math.max(1, Mt.tm - old.tm), by = {}; for (const r of old.rows) by[r[0]] = r;
+    return Mt.rows.map(r => { const o = by[r[0]] || r; return { id: r[0], dmg: r[1], heal: r[2], dps: Math.max(0, r[1] - o[1]) / span, hps: Math.max(0, r[2] - o[2]) / span }; });
+  }
+
+  // ================================================================ music
+  // The tracks come later (docs/art/music-prompts.md, The Founding): FoundingMusic slots opening, day, dusk, night, boss, siege, victory, defeat map to mus-fd-<slot> in
+  // sound-hooks.js, which does nothing until that file is in the audio manifest, so what plays now (the town's tune) goes on. A slot is chosen from what the run shows.
+  const MAIN_BOSS = new Set(Object.keys(D.BOSS_WAVES).map(w => D.BOSS_WAVES[w][0]));
+  function mus(slot, o) { try { const sh = dep.Sound && dep.Sound(); return !!(sh && sh.foundingMusic && sh.foundingMusic(slot, o)); } catch (e) { return false; } }
+  function musicUpdate(dt) {
+    const Mu = S.mus || (S.mus = { slot: '', want: '', wantT: 0, chkT: 0, n: 0, rising: false });
+    let want;
+    if (S.ended && lastResult && !lastResult.won) want = 'defeat';
+    else if (S.end && S.end.step >= 2) want = 'victory';
+    else if (S.phase !== 'live' || S.end) return;   // (the camp keeps the town's tune; the gate shutting keeps the siege's until the town is named)
+    else if (S.__intro && S.__intro.on) want = 'opening';
+    else {
+      Mu.chkT -= dt;
+      if (Mu.chkT <= 0) { Mu.chkT = 1; const n = +(S.props && S.props.night) || 0; if (n > Mu.n + 0.01) Mu.rising = true; else if (n < Mu.n - 0.01) Mu.rising = false; Mu.n = n; }
+      if (S.wave >= D.LAST_WAVE) want = 'siege';
+      else if (S.boss && MAIN_BOSS.has(S.boss.eid)) want = 'boss';
+      else if (Mu.n >= 0.5) want = 'night';
+      else if (Mu.n > 0.06 && Mu.rising) want = 'dusk';
+      else want = 'day';
+    }
+    if (want === Mu.slot) { Mu.want = ''; return; }
+    const instant = want === 'defeat' || want === 'victory' || want === 'opening' || want === 'siege' || want === 'boss';
+    if (!instant) { if (Mu.want !== want) { Mu.want = want; Mu.wantT = 0; } Mu.wantT += dt; if (Mu.wantT < 2) return; }   // (day, dusk and night must hold two seconds: a flicker changes nothing)
+    Mu.slot = want; Mu.want = '';
+    mus(want, { fade: want === 'victory' || want === 'defeat' ? 0.8 : instant ? 1.2 : 3 });
+  }
   // host: someone joined the town while a run is on. A hero kept under their name goes straight back in; anyone else is told quietly.
   function guestJoined(id, name) {
     if (!sim || !active || !S || S.phase !== 'live' || !dep) return 0;
@@ -199,6 +260,7 @@ const Founding = (() => {
   // ================================================================ enter / leave
   function enter(msg) {
     if (!inited || active) return;
+    paused = false;
     FoundingArt.build();
     S = freshState(msg); goldPaid = false; lastResult = null;
     active = true;
@@ -214,6 +276,7 @@ const Founding = (() => {
     const res = lastResult;
     // gold from the end screen is added once when fdend arrived; a run left early pays nothing
     active = false;
+    paused = false;
     unbindInput();
     stopHost();
     FoundingUI.unmount();
@@ -245,7 +308,8 @@ const Founding = (() => {
   }
   const circ = (c, x, y, r, fill, stroke, lw) => ell(c, x, y, r, r, 0, fill, stroke, lw);
   function ftxt(x, y, txt, color, size = 12, life = 0.9) { if (S.texts.length > 70) S.texts.shift(); S.texts.push({ x: x + rnd(-4, 4), y, txt, color, size, t: 0, life }); }
-  function shake(m, d = 0.25) { if (m >= S.shk || S.shkT <= 0) { S.shk = m; S.shkT = d; S.shkD = d; } }
+  // (Options > Interface > Screen shake and Reduce flashes apply here too: FX.shakeK, FX.flashK)
+  function shake(m, d = 0.25) { if (typeof FX !== 'undefined' && FX.shakeK < 1) m *= FX.shakeK; if (m > 0.05 && (m >= S.shk || S.shkT <= 0)) { S.shk = m; S.shkT = d; S.shkD = d; } }
   function fxAdd(o) { if (S.fx.length > 160) S.fx.shift(); S.fx.push(Object.assign({ t: 0, layer: 1 }, o)); }
   function fxRing(x, y, r0, r1, dur, rgb, lw, layer) { fxAdd({ dur, layer, draw(c) { const k = eo(this.t / dur), r = lerp(r0, r1, k); ell(c, x, y, r, r * 0.92, 0, null, `rgba(${rgb},${(1 - k) * 0.9})`, lw * (1 - k * 0.6) + 0.5); } }); }
   function fxBlast(x, y, R, rgb, scorch) {
@@ -297,7 +361,7 @@ const Founding = (() => {
   const LAYERS = [];
   function addLayer(o) { LAYERS.push(o); if (o.init) o.init(kit()); return o; }
   function lay(name, a, b, c) { let r; for (const L of LAYERS) if (L[name]) { try { const v = L[name](a, b, c); if (v) r = v; } catch (err) { if (!L._err) { L._err = 1; console.error('Founding layer', name, err); } } } return r; }
-  function kit() { return { get S() { return S; }, D, M, FLAG, ZONE, send, snd, ell, glowAt, burst, fxRing, fxAdd, fxBlast, ftxt, shake, say: (t) => say(t), visAt, U: (k) => U(k), qfocus: () => S.qf || [], qhover: () => S.qhover || null, me: () => me(), W, H, dep, toast: (t) => dep.toast && dep.toast(t), clamp, lerp, eo, TAU, PI }; }
+  function kit() { return { get S() { return S; }, D, M, FLAG, ZONE, send, snd, ell, glowAt, burst, fxRing, fxAdd, fxBlast, ftxt, shake, say: (t) => say(t), visAt, U: (k) => U(k), qfocus: () => S.qf || [], qhover: () => S.qhover || null, me: () => me(), W, H, dep, mus: (slot, o) => mus(slot, o), toast: (t) => dep.toast && dep.toast(t), clamp, lerp, eo, TAU, PI }; }
   function doEv(ev) {
     const tag = ev[0];
     if (LAYERS.length && lay('event', ev)) return;
@@ -812,7 +876,7 @@ const Founding = (() => {
     const v = dt > 0 ? Math.hypot(u.x - px, u.y - py) / dt : 0; u.spd += (Math.min(v, 900) - u.spd) * Math.min(1, dt * 10);
     let s = u.q[0]; for (const q of u.q) { if (q.t <= rt) s = q; else break; }
     u.pf = u.f;
-    if (s) { u.f = s.f; if (u.kind === 'h') { u.hp = s.hp; u.max = s.max; u.lv = s.lv; u.cs = s.cs; u.cp = s.cp; } else u.pct = s.pct; }
+    if (s) { u.f = s.f; if (u.kind === 'h') { u.hp = s.hp; u.max = s.max; u.lv = s.lv; u.cs = s.cs; u.cp = s.cp; u.rd = s.rd | 0; } else u.pct = s.pct; }
     const F = u.f, P = u.pf;
     if (u.kind === 'e') {
       u.vis += ((((F & FLAG.HIDDEN) || u.fogT === 0) ? 0 : 1) - u.vis) * Math.min(1, dt * 7);
@@ -847,7 +911,7 @@ const Founding = (() => {
     // boss
     let boss = null; for (const u of S.units.values()) if (u.kind === 'e' && (u.f & FLAG.BOSS)) boss = u; S.boss = boss;
     const my = me();
-    fogUpdate(dt); stepUpdate(); recallUpdate(dt);
+    fogUpdate(dt); stepUpdate(); recallUpdate(dt); musicUpdate(dt);
     // camera
     const cam = S.cam, z = cam.zoom;
     cam.zoom += (cam.tz - cam.zoom) * Math.min(1, dt * (S.endCam ? 1.6 : 10));
@@ -1338,7 +1402,7 @@ const Founding = (() => {
   function drawScreenFx(ctx) {
     if (!S.flash && !S.cold && !S.tipTxt) return;
     const k = ctx.canvas.width / W(); ctx.save(); ctx.setTransform(k, 0, 0, k, 0, 0);
-    if (S.flash) { const f = S.flash; ctx.fillStyle = `rgba(${f.c},${f.a * (1 - f.t / f.dur)})`; ctx.fillRect(0, 0, W(), H()); }
+    if (S.flash) { const f = S.flash; ctx.fillStyle = `rgba(${f.c},${f.a * (typeof FX !== 'undefined' ? FX.flashK : 1) * (1 - f.t / f.dur)})`; ctx.fillRect(0, 0, W(), H()); }
     if (S.cold) {
       const cd = S.cold, p = (S.T - cd.t0) / cd.dur, a = p < 1 ? 0.32 * p * p : 0.5 * Math.max(0, 1 - (p - 1) * cd.dur / 1.2);
       if (a > 0.01) { const g = ctx.createRadialGradient(W() / 2, H() / 2, H() * 0.3, W() / 2, H() / 2, H() * 0.85); g.addColorStop(0, 'rgba(150,200,255,0)'); g.addColorStop(1, `rgba(170,215,255,${a})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W(), H()); }
@@ -1915,7 +1979,7 @@ const Founding = (() => {
   function onMouseDown(ev) {
     if (!active || !S || ev.target !== dep.canvas) return;
     ev.preventDefault(); ev.stopImmediatePropagation(); mouseXY(ev);
-    if (S.phase !== 'live' || S.ended || S.end) return;
+    if (paused || S.phase !== 'live' || S.ended || S.end) return;
     if (LAYERS.length && !ev.altKey && lay('click', S.mouse.wx, S.mouse.wy, ev.button)) return;
     if (ev.button === 0) { if (ev.altKey) sendPing(S.mouse.wx, S.mouse.wy); else leftClick(); } else if (ev.button === 2) rightClick(); else if (ev.button === 1) S.pan = { x: ev.clientX, y: ev.clientY };
   }
@@ -1951,13 +2015,17 @@ const Founding = (() => {
     if (ev.key === 'Alt') { ev.preventDefault(); return; }   // (Alt + click pings: a bare Alt must not pull focus to the browser's menu)
     const k = ev.code; let used = true;
     if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (paused) {   // held: only Esc does anything (it resumes); the rest of the keys are eaten so nothing reaches the town behind
+      if (k === 'Escape') { if (!ev.repeat) setPause(false); }
+      ev.preventDefault(); ev.stopImmediatePropagation(); return;
+    }
     // the keys are the player's own (keybinds.js: the hotbar's first four, Next enemy, and The Founding's section)
     const KB = typeof Keybinds !== 'undefined' && Keybinds.modeAction ? Keybinds : null;
     const act = KB ? KB.modeAction(KB.keyOf(ev), 'founding') : ({ KeyQ: 's0', KeyW: 's1', KeyE: 's2', KeyR: 's3', Tab: 'cycle', KeyT: 'fdTent', KeyB: 'fdRecall', KeyF: 'fdForge', KeyV: 'fdFlask', KeyG: 'fdUse', KeyX: 'fdDrop', Space: 'fdCenter', KeyD: 'fdPassive' })[k] || (/^Digit[1-6]$/.test(k) ? 'fdItem' + k.slice(5) : null);
     const slotMap = { s0: 'q', s1: 'w', s2: 'e', s3: 'r' };
     if (S.phase !== 'live') { if (k === 'Escape') used = FoundingUI.closeTop(); else used = false; }
     else if (S.ended || S.end) { used = false; }
-    else if (k === 'Escape') { if (FoundingUI.closeTop()) { /* closed a panel */ } else if (S.aim) S.aim = null; else used = false; }
+    else if (k === 'Escape') { if (FoundingUI.closeTop()) { /* closed a panel */ } else if (S.aim) S.aim = null; else if (canPause()) { if (!ev.repeat) setPause(true); } else used = false; }
     else if (LAYERS.length && lay('key', act, ev)) { /* a feature layer took it */ }
     else if (slotMap[act]) { if (!ev.repeat) { if (ev.shiftKey) learn(slotMap[act]); else pressSkill(slotMap[act]); } }
     else if (act === 'cycle') cycleTarget(ev.shiftKey ? -1 : 1);
@@ -1969,6 +2037,7 @@ const Founding = (() => {
     else if (act === 'fdUse') { if (!ev.repeat) send({ k: 'carry' }); }
     else if (act === 'fdDrop') { if (!ev.repeat) send({ k: 'drop' }); }
     else if (act === 'fdPassive') { if (!ev.repeat) learn('p'); }
+    else if (act === 'fdMeter') { if (!ev.repeat) FoundingUI.toggleMeter(); }
     else if (act === 'fdCenter') { S.cam.free = false; const m = me(); if (m) { S.cam.x = m.x; S.cam.y = m.y; } }
     else if (k.startsWith('Arrow')) { (S.keys || (S.keys = {}))[k] = true; }
     else used = false;
@@ -1994,17 +2063,18 @@ const Founding = (() => {
     if (!active || !S) return;
     if (rawDt > 0.4) for (const u of S.units.values()) u.tr.settle();
     const dt = clamp(rawDt, 0, 0.1);
-    try { update(dt); render(); FoundingUI.update(dt); } catch (e) { console.error(e); }
+    if (paused && !(sim && sim.isPaused())) setPause(false);   // (a second player came back in: the hold is over)
+    try { if (paused) render(); else { update(dt); render(); FoundingUI.update(dt); } } catch (e) { console.error(e); }
   }
 
   // what ui.js may read and call
   const api = {
     D, M, FLAG, SKILL_ICON, state: () => S, me, send, say, snd, clsOf, roleColor, heroIdx, leave, drawMini, miniTo, pressSkill, learn, canLearn, keyLabel, cdLeft, charges, hasUp, myStat, tryRecall, rcLeft, pingAt: sendPing, isRecalling: () => !!S && S.rc.has(S.myId), hoverQuest: id => { if (S) S.qhover = id || null; },
-    get dep() { return dep; }, get sim() { return sim; }, result: () => lastResult, isActive: () => active, tryShop, tryForge,
+    get dep() { return dep; }, get sim() { return sim; }, pause: setPause, canPause, isPaused: () => paused, meterRows, result: () => lastResult, isActive: () => active, tryShop, tryForge,
   };
 
   return {
-    init, enterAsHost, enter, leave, active: () => active, frame, playerLeft, guestJoined, practice: false, api, addLayer,
+    init, enterAsHost, enter, leave, active: () => active, frame, playerLeft, __pause: setPause, __paused: () => paused, guestJoined, practice: false, api, addLayer,
     // for tests and the browser pane, where the frame loop is unreliable
     __step(dt, n) { n = n || 1; for (let i = 0; i < n; i++) { if (sim) { sim.tick(0.05); } frame(dt); } },
     __fog(on) { if (S) S.noFog = !on; }, get __state() { return S; }, get __sim() { return sim; },

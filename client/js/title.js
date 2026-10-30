@@ -28,7 +28,7 @@ const Title = (() => {
   const embers = Array.from({ length: 70 }, () => ({ x: rnd(), y: rnd(), s: rnd() * 1.8 + 0.6, v: rnd() * 0.03 + 0.012, w: rnd() * 6 }));
 
   function resize() {
-    dpr = Math.min(2, window.devicePixelRatio || 1);
+    dpr = typeof FX !== 'undefined' && FX.dpr ? FX.dpr() : Math.min(2, window.devicePixelRatio || 1);   // (capped by the render quality in Options)
     W = innerWidth; H = innerHeight;
     cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px';
   }
@@ -51,7 +51,7 @@ const Title = (() => {
     // the far peak, and the storm that lives over it (a flicker now and then)
     const px = W * 0.7 + mx * 0.15, py = H * 0.4;
     const flash = Math.max(0, Math.sin(t * 0.9) * Math.sin(t * 2.7 + 1) - 0.82) * 5;
-    if (flash > 0) { const g = ctx.createRadialGradient(px, py - H * 0.06, 0, px, py - H * 0.06, H * 0.3); g.addColorStop(0, `rgba(170,210,255,${0.35 * flash})`); g.addColorStop(1, 'rgba(170,210,255,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+    if (flash > 0) { const g = ctx.createRadialGradient(px, py - H * 0.06, 0, px, py - H * 0.06, H * 0.3); g.addColorStop(0, `rgba(170,210,255,${0.35 * flash * (typeof FX !== 'undefined' ? FX.flashK : 1)})`); g.addColorStop(1, 'rgba(170,210,255,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
     ctx.beginPath(); ctx.moveTo(px - W * 0.24, H * 0.72); ctx.lineTo(px - W * 0.04, py + H * 0.02); ctx.lineTo(px, py); ctx.lineTo(px + W * 0.03, py + H * 0.03); ctx.lineTo(px + W * 0.26, H * 0.72); ctx.closePath();
     ctx.fillStyle = '#1c1420'; ctx.fill();
     ctx.fillStyle = 'rgba(16,12,20,0.9)';   // the storm cloud over it
@@ -93,7 +93,7 @@ const Title = (() => {
     if (opened) return;
     opened = true;
     el.classList.add('opened');
-    if (typeof Sound !== 'undefined') { Sound._unlock(); Sound.play('title-sting', { bus: 'ui', vol: 0.9 }); }
+    try { if (typeof Sound !== 'undefined') { Sound._unlock(); Sound.play('title-sting', { bus: 'ui', vol: 0.9 }); } } catch (e) { /* (opened by an invite link before any key: the sound waits for the next click) */ }
     const join = document.getElementById('join');
     if (join) join.classList.add('over-title');
     setTimeout(() => { const n = document.getElementById('name-input'); if (n && !n.value) n.focus(); }, 500);

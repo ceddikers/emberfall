@@ -1,0 +1,40 @@
+/* Hard+ (client/js/hardplus.js): the modifier picker in the raid setup, and the modifier icons by the boss bar. */
+.hp-box { display: grid; gap: 7px; padding: 8px 10px 9px; border: 1px solid var(--line-soft); border-top-color: #6a3a24; border-radius: 3px; background: #0f0d0b80; }
+.hp-box.off { opacity: .6; }
+.hp-head { display: flex; align-items: baseline; gap: 10px; }
+.hp-head b { font-family: var(--fantasy); font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #f0a070; }
+.hp-head span { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hp-head .hp-heat { color: #e6dcc8; }
+.hp-reset { margin-left: auto; padding: 0 6px; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; }
+.hp-reset:hover { color: var(--gold-hi); border-bottom-color: var(--gold-dim); }
+.hp-mods { display: flex; flex-wrap: wrap; gap: 5px; }
+.hp-mod { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px 0 0; background: #0a0807; border: 1px solid var(--line); border-radius: 2px; color: #cfc6b2; font: inherit; font-size: 12px; cursor: pointer; }
+.hp-mod u { display: grid; place-items: center; width: 24px; height: 24px; border-right: 1px solid #000; color: #8f8470; text-decoration: none; }
+.hp-mod u svg { width: 14px; height: 14px; }
+.hp-mod i { font-style: normal; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.hp-mod:hover { border-color: #6a3a24; color: #fff3d8; }
+.hp-mod.on { border-color: #c9602f; background: #3a1a0e66; color: #ffe2c8; box-shadow: inset 0 0 0 1px #c9602f55; }
+.hp-mod.on u { color: #ff9a5c; }
+.hp-mod.on i { color: #ffb88a; }
+.hp-best { margin: 0; font-size: 11px; color: var(--muted); }
+.bb-mods { display: inline-flex; gap: 3px; margin-left: 2px; pointer-events: auto; }
+.bb-mods:empty { display: none; }
+.hp-chip { display: grid; place-items: center; width: 18px; height: 18px; background: #0a0807; border: 1px solid #6a3a24; border-radius: 2px; color: #ff9a5c; }
+.hp-chip svg { width: 12px; height: 12px; }
+.hp-chip:hover { border-color: #c9602f; }
+
+/* the folded Hard+ entry in the raid setup (Normal chosen, or still locked): one quiet line */
+.hp-fold { gap: 0; padding: 6px 10px; }
+button.hp-fold { width: 100%; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+button.hp-fold:hover { border-color: #6a3a24; background: #1a100a80; }
+.hp-fold .hp-head { width: 100%; }
+.hp-fold .hp-head i { margin-left: auto; font-style: normal; font-size: 11px; color: #c98a60; border-bottom: 1px solid #6a3a2488; }
+button.hp-fold:hover .hp-head i { color: #ffb88a; }
+.hp-fold.off { opacity: .55; }
+
+/* the Hard+ line on the results card (a Hard+ clear) */
+.res-hp { display: flex; align-items: baseline; gap: 10px; margin: -8px 0 12px; font-size: 12px; color: #cfc6b2; font-variant-numeric: tabular-nums; }
+.res-hp b { font-family: var(--fantasy); font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #f0a070; }
+.res-hp em { font-style: normal; color: #ffd8b0; }
+.res-hp .res-hp-new { color: #ffe27a; letter-spacing: .04em; }
+.res-hp .res-hp-gold { margin-left: auto; color: var(--gold-hi, #ffe9a8); }

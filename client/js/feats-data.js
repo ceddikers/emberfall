@@ -56,6 +56,13 @@ const FEATS = [
     check: { type: 'clear', boss: 'wyrm', mode: 'hard' } },
   { id: 'hard-road', cat: 'hard', name: 'The Hard Road', desc: 'Defeat all four bosses beyond the Barrow on Hard.', title: 'Ironheart', hidden: false, needs: 'wyrm',
     check: { type: 'clearAll', mode: 'hard', set: 2 } },
+  // Hard+ (hardplus.js): every boss of a set cleared with modifiers on, ten heat or more each
+  { id: 'kindled', cat: 'hard', name: 'Kindled', desc: 'Defeat every boss of the first set on Hard+ at heat 10 or more.', title: 'Kindled', hidden: false,
+    check: { type: 'hplusSet', set: 1, heat: 10 } },
+  { id: 'stoked', cat: 'hard', name: 'Stoked', desc: 'Defeat every boss beyond the Barrow on Hard+ at heat 10 or more.', title: 'Stoked', hidden: false, needs: 'wyrm',
+    check: { type: 'hplusSet', set: 2, heat: 10 } },
+  { id: 'white-hot', cat: 'hard', name: 'White-Hot', desc: 'Defeat every boss of the third set on Hard+ at heat 10 or more.', title: 'White-Hot', hidden: false, needs: 'corvane',
+    check: { type: 'hplusSet', set: 3, heat: 10 } },
 
   // ---------------------------------------------------------------- clean clears
   { id: 'nobody-carried', cat: 'clean', name: 'Nobody Carried Out', desc: 'Defeat any boss without anyone dying.', title: null, hidden: false,

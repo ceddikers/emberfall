@@ -70,6 +70,7 @@ class FightSim {
   // opts: { hpPct } extra max HP for everyone (the gear party bonus, items.js)
   constructor(def, mode, getPlayers, emit, seed = Date.now(), opts = {}) {
     this.def = def; this.mode = mode; this.hard = mode === 'hard';
+    this.mods = this.hard && !def.trial && typeof HARDPLUS !== 'undefined' ? HARDPLUS.clean(opts.mods) : {};   // (Hard+ modifiers, { id: true }: client/js/hardplus.js)
     this.hpPct = Math.max(0, Math.min(0.1, opts.hpPct || 0));
     ARENA.use(def.id);
     FIGHT.BOSS_R = FIGHT.BOSS_R0;   // (a form that swelled the boss last fight has gone)
@@ -79,6 +80,8 @@ class FightSim {
     this.t = 0; this.state = opts.waitPull ? 'prepull' : 'countdown'; this.countdown = 8;
     // practice: start at this course (phase) number; the ones before it are passed over at the pull (course())
     this.skipTo = opts.practiceFrom > 1 ? Math.floor(opts.practiceFrom) : 0;
+    // Practice Hall toggles (main.js startRaid, practice.js): the boss never enrages; nobody dies (each fall that would have been counted: this.falls)
+    this.noEnrage = !!opts.noEnrage; this.cantDie = !!opts.cantDie; this.falls = 0;
     this.recoverEnd = -99;
     this.sp = null; this.spShift = 0; this.spHooks = [];   // a set piece (setPiece below): the one running or last run, the seconds the clock has been stopped in all, hooks for a script's own timers
     this.lb = 0; this.lbUsedAt = -99; this.avoidCount = 0;   // the Limit Break gauge (FIGHT.LB), and avoidable hits so far
@@ -119,7 +122,7 @@ class FightSim {
   pick(arr) { return arr[Math.floor(this.rng() * arr.length)]; }
   shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   // casts are faster on Hard
-  ct(sec) { return this.hard ? sec * 0.85 : sec; }
+  ct(sec) { const s = this.hard ? sec * 0.85 : sec; return this.mods.quickcasts ? HARDPLUS.quick(s, this.mods) : s; }   // (Hard+ Quick Casts: hardplus.js)
 
   addPlayer(p) {
     if (this.ps.has(p.id)) return;
@@ -214,7 +217,7 @@ class FightSim {
         this.layPhase = ph; this.layStep = true;
         const sh0 = this.pauseShift || 0;
         cur.seams.push(start + closing[0][0]);
-        const ramp = o.ramp ?? 0.1;
+        const ramp = this.noEnrage ? 0 : o.ramp ?? 0.1;
         if (ramp) this.at(start + closing[0][0] - 0.01, () => { this.boss.dmgUp += ramp; this.emit({ t: 'fev', k: 'behind', n: k }); });
         const len = this.seq(closing, start) - (start - this.t);
         this.at(Math.max(start, start + len - 20), () => pass(start + len + (this.pauseShift || 0) - sh0, k + 1));
@@ -426,14 +429,15 @@ class FightSim {
     if (this.state !== 'countdown' && this.state !== 'prepull') return;
     this.state = 'live'; this.t = 0;
     this.def.script(this);
-    if (this.def.enrage) this.atKeep(this.enrageAt(), () => this.enrage(), this.def.enrageName || 'Enrage');
+    if (this.def.enrage && !this.noEnrage) this.atKeep(this.enrageAt(), () => this.enrage(), this.def.enrageName || 'Enrage');
     this.emit({ t: 'fight', s: 'live' });
   }
 
   // when the enrage begins, from the pull. A practice start in a later act (def.practiceCut: { act: seconds of the fight already behind it }) counts it from that act, so
   // the act has about the time it would have left in a full pull (the closing passes ramp from the act's end, not from a pull that skipped the acts before it)
-  enrageAt() { const e = this.def.enrage[this.mode], cut = this.skipTo && this.def.practiceCut ? this.def.practiceCut[this.skipTo] || 0 : 0; return cut ? Math.max(30, e - cut) : e; }
+  enrageAt() { const e = this.mods.shortfuse ? HARDPLUS.enrage(this.def.enrage[this.mode], this.mods) : this.def.enrage[this.mode], cut = this.skipTo && this.def.practiceCut ? this.def.practiceCut[this.skipTo] || 0 : 0; return cut ? Math.max(30, e - cut) : e; }
   enrage() {
+    if (this.noEnrage) return;   // (a failed check can call it too: Skitterra)
     this.cast(this.def.enrageName || 'Enrage', 8, 'enrage');
     this.after(8, () => { for (const p of this.alive()) this.damagePlayer(p, 9999999, { kind: 'enrage' }); });
   }
@@ -453,7 +457,7 @@ class FightSim {
     this.broadcastAdds();
     this.broadcastParty();
     for (const st of Object.values(this.stats)) { st.aggro = Math.round(st.aggro * 10) / 10; st.up = Math.round(st.up * 10) / 10; for (const k of VALUE_KEYS) if (st[k]) st[k] = Math.round(st[k] * 10) / 10; }
-    this.emit({ t: 'fight', s: result, time: Math.round(this.t * 10) / 10, stats: this.stats, mv: this.moveReport(), hp: this.boss.hp, maxHp: this.boss.maxHp, mode: this.mode, ph: this.phase || 1 });
+    this.emit({ t: 'fight', s: result, time: Math.round(this.t * 10) / 10, stats: this.stats, mv: this.moveReport(), hp: this.boss.hp, maxHp: this.boss.maxHp, mode: this.mode, ph: this.phase || 1, falls: this.cantDie ? this.falls : undefined });
   }
 
   updateBoss(dt) {
@@ -548,6 +552,7 @@ class FightSim {
     const targetsOf = target => (target === 'party' ? this.alive().map(p => p.id) : [this.resolveTarget(pid, target, ev.not)]);
     switch (ev.type) {
       case 'lb': {
+        if (this.mods.barehands) break;   // (Hard+ Bare Hands: the Limit Break is off; a person's Ultimate is refused on their own client, bots hold theirs)
         const lv = Math.floor(this.lb / FIGHT.LB.BAR);
         if (this.sp && this.t < this.sp.invulEnd) break;   // (a set piece's opening: held, as the HUD holds it; the bars are not spent on a hit the Immune boss would drop)
         if (lv >= 1 && this.t - this.lbUsedAt >= 1) this.limitBreak(pid, s, lv);
@@ -769,6 +774,7 @@ class FightSim {
   }
   // kind: 'cast' or 'instant' (raise sickness, FIGHT.SICK) or 'none' (the Limit Break)
   revive(tid, ts, frac, by, kind = 'cast') {
+    if (this.mods.nosecondchances) return;   // (Hard+ No Second Chances: no raise, no Limit Break raise, nothing brings the fallen back)
     const rs = this.stats[by]; if (rs && by !== tid) rs.raises++;
     ts.alive = true; ts.hollow = null; ts.hp = Math.round(ts.maxHp * Math.max(0.1, Math.min(1, frac)));
     const sick = kind === 'none' ? null : this.sickness(kind);
@@ -879,6 +885,7 @@ class FightSim {
       // (the whole sentence lands on health, past any shield: certain death for a real hero, while the tools' test
       // parties with huge health still run on to the end of the script)
       const amt = Math.min(raw, Math.max(1, Math.round(s.hp)));
+      if (this.cantDie) { this.fallen(p.id, s); this.emit({ t: 'pdmg', id: p.id, a: 0, k: opts.kind, hp: 1, dd: 0 }); return 0; }   // (practice, can't die: the sentence is counted and not carried out)
       s.hp -= raw;
       this.stats[p.id].taken += amt;
       const pd = { t: 'pdmg', id: p.id, a: amt, k: opts.kind, hp: Math.max(0, s.hp), dd: 0 };
@@ -892,10 +899,11 @@ class FightSim {
       return amt;
     }
     // (opts.scaled: already in small numbers, e.g. a share passed along a thread, but still mitigated as usual)
-    let amt = opts.raw || opts.scaled ? raw : raw * this.scale.dmg * (this.hard ? this.def.hardDmg ?? 1.25 : this.def.normalDmg ?? 1) * (1 + this.boss.dmgUp);   // (def.hardDmg / def.normalDmg: a boss's own multiplier on each difficulty)
+    let amt = opts.raw || opts.scaled ? raw : raw * this.scale.dmg * (this.hard ? this.def.hardDmg ?? 1.25 : this.def.normalDmg ?? 1) * (1 + this.boss.dmgUp) * (this.mods.heavyhands ? 1 + HARDPLUS.T.HANDS : 1);   // (Hard+ Heavy Hands.) (def.hardDmg / def.normalDmg: a boss's own multiplier on each difficulty)
     if (this.recoverEnd > this.t && !opts.raw) amt *= 1 - FIGHT.REC.CUT;   // recovering after a death (Hard)
     if (!opts.shared) amt = this.threadSplit(p, s, amt, opts);   // threads split the hit evenly along them (classes-c)
     if (s.vulnEnd > this.t && !opts.raw) amt *= 1 + s.vuln;
+    if (s.brittle && s.debuffs.brittle > this.t && !opts.raw) amt *= 1 + s.brittle * HARDPLUS.T.BRITTLE.PER;   // (Hard+ Brittle: a stack per avoidable hit, hardplus.js)
     if (s.def && !opts.raw) amt *= 1 - s.def;
     let mult = 1, perfect = null, reflect = null, invuln = false, read = null, onceHit = null;
     const ap = []; let pm = null, pv = 1;   // (value counters: [mit, damage it took off], in the order they were applied)
@@ -957,6 +965,7 @@ class FightSim {
     // a Gloomsworn's Hollow (end of this file): a killing blow at full Gloom starts it, and while it runs every point is debt, not health
     if (amt > 0 && this.hollowHit && this.hollowHit(p, s, amt, opts)) st.taken += amt;
     else { s.hp -= amt; st.taken += amt; }
+    if (s.hp <= 0 && this.cantDie) this.fallen(p.id, s);   // (practice, can't die: it would have killed; they stay on 1 HP)
     const dead0 = s.hp <= 0;
     if (opts.avoidable) {
       st.avoidable++; this.avoidCount++;
@@ -964,6 +973,7 @@ class FightSim {
       if (opts.ddown) s.dmgDownEnd = this.t + FIGHT.DMG_DOWN_DUR;   // (Damage Down only where the move opts in: ddown)
       // lingering ground ticks don't stack Vulnerability (it would snowball per tick)
       if (!opts.noVuln) { s.vuln = Math.min(1, (s.vulnEnd > this.t ? s.vuln : 0) + this.vulnStep); s.vulnEnd = this.t + FIGHT.VULN_DUR; }
+      if (this.mods.brittle && !opts.noVuln && amt > 0) { const B = HARDPLUS.T.BRITTLE; s.brittle = Math.min(B.MAX, (s.debuffs.brittle > this.t ? s.brittle || 0 : 0) + 1); s.debuffs.brittle = this.t + B.DUR; }   // (Hard+ Brittle)
     }
     if (s.hp <= 0 && s.mits.some(m => m.kind === 'living') && opts.kind !== 'enrage' && opts.kind !== 'fall') s.hp = 1;
     this.saveCredit(p, s, ap, before, hp0, shFrom0, absorbed, dead0);
@@ -983,6 +993,9 @@ class FightSim {
     }
     return amt;
   }
+
+  // practice, can't die: a hero who would have fallen stays on 1 HP, and it is counted (this.falls, their stats.falls; the results card)
+  fallen(pid, s) { s.hp = 1; this.falls++; const st = this.stats[pid]; if (st) st.falls = (st.falls || 0) + 1; }
 
   // ---------------------------------------------------------------- primitives for boss scripts
   cast(name, dur, anim = 'cast', extra = {}) {
@@ -1268,6 +1281,7 @@ class FightSim {
     // answered cleanly (nobody caught by something they could avoid, nothing failed): the gauge fills a little
     if (!fail && this.avoidCount === av0 && m.type !== 'raidwide' && m.type !== 'knockback' && m.type !== 'safe' && m.type !== 'drop' && !(m.group && m.group.lb)) this.lbGain(FIGHT.LB.CLEAN);
     if (m.group) m.group.lb = true;   // (a group of circles fills the gauge once)
+    if (this.mods.scorchedearth) this.scorch(m);   // (Hard+ Scorched Earth)
     this.dollMech(m, cov);   // a Marionettist's Doll caught in it (classes-c)
     this.houndMech(m, cov);   // a Houndmaster's hound caught in it (HOUNDS, the end of this file)
     if (cov) for (const pr of cov.chip) this.hitProp(pr, 1, m.tag);
@@ -1309,6 +1323,16 @@ class FightSim {
         pd.last[p.id] = this.t;
         this.damagePlayer(p, pd.dmg, { kind: pd.tag, avoidable: true, noVuln: true, ddown: pd.ddown });
       }
+    }
+  }
+  // Hard+ Scorched Earth: a ground hit that has landed (a plain area or a line) leaves red patches for a few seconds (puddle(), tag 'scorch'; hardplus.js patches)
+  scorch(m) {
+    if ((m.type !== 'aoe' && m.type !== 'bait') || m.avoidable === false || m.hidden) return;
+    const C = HARDPLUS.T.SCORCH;
+    for (const q of HARDPLUS.patches(m.shape)) {
+      if (this.puddles.filter(pd => pd.tag === 'scorch').length >= C.MAX || this.puddles.some(pd => pd.tag === 'scorch' && Math.hypot(pd.x - q.x, pd.y - q.y) < 36)) continue;
+      const pd = this.puddle(q.x, q.y, q.r, C.DUR, C.DMG, C.EVERY, 'scorch');
+      for (const p of this.alive()) pd.last[p.id] = this.t;   // (whoever stands in it as it lands gets a moment to step out: the blow they took is the hit)
     }
   }
   clearPuddles() { this.puddles = []; this.emit({ t: 'pud', clear: true }); }
@@ -1671,7 +1695,7 @@ class FightSim {
     for (const [id, s] of this.ps) {
       if (s.left) continue;
       const mit = s.mits.reduce((m, x) => m * (1 - (x.kind === 'invuln' ? 1 : x.kind === 'living' ? 0 : x.pct)), 1);
-      const debuffs = Object.keys(s.debuffs).filter(k => s.debuffs[k] > this.t).map(k => [k, Math.ceil(s.debuffs[k] - this.t)]);
+      const debuffs = Object.keys(s.debuffs).filter(k => s.debuffs[k] > this.t).map(k => (k === 'brittle' ? [k, Math.ceil(s.debuffs[k] - this.t), s.brittle | 0] : [k, Math.ceil(s.debuffs[k] - this.t)]));   // (Brittle carries its stacks)
       // heals over time on this player, for the party frames: [id, seconds left, caster]
       const hots = s.hots.map(h => [h.id, Math.max(1, Math.ceil((h.ticks - 1) * h.interval + h.next - this.t)), h.from]);
       const shs = (s.shields || []).map(e => [Math.round(e.amt), e.from]);
@@ -1891,6 +1915,7 @@ Object.assign(FightSim.prototype, {
   // the debt was not paid: the knight falls the way a hit would have felled it
   hollowKill(pid, s, short) {
     const p = this.players().find(q => q.id === pid), st = this.stats[pid];
+    if (this.cantDie) { this.fallen(pid, s); this.emit({ t: 'pdmg', id: pid, a: 0, k: 'hollow', hp: 1, dd: 0, n: 'Hollow debt' }); return; }
     this.emit({ t: 'pdmg', id: pid, a: Math.max(1, short), k: 'hollow', hp: 0, dd: 0, n: 'Hollow debt' });
     s.hp = 0; s.alive = false; this.clearShields(s); s.mits = []; s.hots = []; s.diedAt = this.t; this.dropThreat(pid);
     if (this.classDeath) this.classDeath(p || { id: pid }, s);

@@ -19,10 +19,12 @@ const TRACK = {
 // Puts a sender's timestamps on our clock. The offset is the quickest delivery (arrival minus sent) among the last
 // 20 updates, about two seconds' worth: quick ones show the true travel time, and a short memory means a stall
 // (a frozen tab, a slow patch of network, clock drift) is forgotten within a couple of seconds.
+// (scale: the sender's clock runs at this speed against real time, a Practice Hall run at 50% time: its stamps are put back on real time first)
 class SendClock {
-  constructor() { this.recent = []; }
+  constructor(scale = 1) { this.recent = []; this.k = scale > 0 ? scale : 1; }
   map(sent, arrived) {
     if (!Number.isFinite(sent)) return arrived;
+    sent /= this.k;
     const r = this.recent;
     r.push(arrived - sent);
     if (r.length > 20) r.shift();

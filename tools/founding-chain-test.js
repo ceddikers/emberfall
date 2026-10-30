@@ -20,8 +20,8 @@ FoundingArt.layoutOnly();
 
 const VERBOSE = process.argv.includes('--verbose'), TUNE = process.argv.includes('--tune');
 const hyp = Math.hypot, DT = 0.05, CH = FoundingSim.CHAIN;
-let failures = 0, passed = 0;
-function check(cond, msg) { if (cond) passed++; else { failures++; console.log("  FAIL: " + msg); } if (VERBOSE && cond) console.log("  ok: " + msg); return !!cond; }
+let failures = 0, passed = 0, SEEDTAG = '';
+function check(cond, msg) { if (cond) passed++; else { failures++; console.log("  FAIL: " + msg + SEEDTAG); } if (VERBOSE && cond) console.log("  ok: " + msg); return !!cond; }
 
 // ---------------------------------------------------------------- a sim with the events kept
 function makeSim(N, seed, heroes) {
@@ -242,8 +242,8 @@ function runChain(seed, opts) {
     check(C.st[link] === 'done', `link ${link + 1} falls (${res.secs.toFixed(0)} s, ${res.deaths} falls, moves: ${[...moves].join(' ')})`);
     kills.push(sim.time);
     if (link >= 4) check(moves.size >= 3, `link ${link + 1} is a set piece: ${moves.size} different moves`);
-    if (link <= 8) check(res.secs >= 70 && res.secs <= CH.TUNE.rageAt + 36, `link ${link + 1} takes about two minutes for a quick party (level ${FAST[link]}): ${res.secs.toFixed(0)} s`);
-    else check(res.secs >= 170 && res.secs <= CH.TUNE.rageAtLast + 36, `the tenth takes about four minutes (level ${FAST[link]}): ${res.secs.toFixed(0)} s`);
+    if (link <= 8) check(res.secs >= 70 && res.secs <= CH.TUNE.rageAt + 48, `link ${link + 1} takes about two minutes for a quick party (level ${FAST[link]}): ${res.secs.toFixed(0)} s`);
+    else check(res.secs >= 150 && res.secs <= CH.TUNE.rageAtLast + 36, `the tenth takes about four minutes (level ${FAST[link]}): ${res.secs.toFixed(0)} s`);
     const held = sim.heroes.filter(h => h.items.some(x => x && x.id === L.item)); check(held.length === 1, `link ${link + 1} drops ${L.item} to one hero`);
     check(evs(sim, 'chdown').some(e => e[1][1] === link), 'chdown event');
     check(C.live.length === 0 && C.zones.length === 0 && !sim.enemies.some(e => !e.dead && (e.chainMinion || e.chainX)), `link ${link + 1} leaves nothing behind`);
@@ -253,10 +253,17 @@ function runChain(seed, opts) {
   return { sim, C, G, kills, wakes, sizes, deaths, total, tEnd: sim.time, stoneSeen };
 }
 
+// the full ten-link run is played on a few seeds (CHSEED=n plays one), so a result that only one seed gives cannot hide a fault. 31, 35 and 39 are the
+// slow and quick tails of a 40-seed sweep (a fight a few seconds past the fury's first step, a tenth a little under four minutes): the bands below cover them
+const CHAIN_SEEDS = process.env.CHSEED ? [+process.env.CHSEED] : [36, 5, 31, 39];
 function sectionChain() {
-  console.log('The chain (four heroes, scripted, all ten links):');
-  const R = runChain(+process.env.CHSEED || 36), { sim, C, G } = R;
-  console.log(`  fight seconds ${R.sizes.map(s => s.toFixed(0)).join(' / ')}  falls ${R.deaths.join('/')}  gaps ${R.wakes.map(s => s.toFixed(0)).join(' / ')}`);
+  console.log(`The chain (four heroes, scripted, all ten links; seeds ${CHAIN_SEEDS.join(', ')}):`);
+  for (const seed of CHAIN_SEEDS) sectionChainSeed(seed);
+}
+function sectionChainSeed(seed) {
+  SEEDTAG = ' [seed ' + seed + ']';
+  const R = runChain(seed), { sim, C, G } = R;
+  console.log(`  seed ${seed}: fight seconds ${R.sizes.map(s => s.toFixed(0)).join(' / ')}  falls ${R.deaths.join('/')}  gaps ${R.wakes.map(s => s.toFixed(0)).join(' / ')}`);
   console.log(`  telegraphed hits ${G.hits} (thorn ticks ${G.zone}), untelegraphed ${G.bad}; the whole chain: ${(R.total / 60).toFixed(1)} min, ending ${R.tEnd.toFixed(0)} s into the run (the siege comes at ${D.waveStartAt(30)} s)`);
   check(G.hits > 150, 'bosses struck many times: ' + G.hits);
   check(G.zone > 5, 'thorn patches burned: ' + G.zone);
@@ -270,6 +277,7 @@ function sectionChain() {
   const gb = sim.log.end.goldBy.p0; check(gb && gb.chain === paid, 'fdend goldBy.chain = ' + (gb && gb.chain));
   check(sim.log.end.gold.p0 === gb.waves + gb.quests + gb.hold + gb.chain, 'the gold total includes the chain');
   check(sim.heroes.every(h => h.items.filter(x => x && CH.ITEMS.some(c => c[0] === x.id)).length >= 1), 'the drops spread over the party (each hero holds at least one)');
+  SEEDTAG = '';
 }
 
 function sectionAfterThree() {

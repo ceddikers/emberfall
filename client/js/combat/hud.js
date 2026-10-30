@@ -315,7 +315,7 @@ const Hud = {
       const icon = art(ab, i) ? `<i class="ab-icon ${ab.type}${ab.ult ? ' ult' : ''}" style="background-image:${art(ab, i)}"></i>` : '<i class="ab-icon dash">»</i>';
       if (ab.ult) {
         const meta = [ultMeta(ab), k.ultWin ? `${Math.ceil(k.ultLeft())}s left` : `${Math.floor(k.ultCharge())}%`];
-        return `<div class="tip-ab">${icon}<div><b>${name}</b><em>${meta.join(' · ')}</em></div></div>${ab.desc || ''}${this.held ? '<br><br><b>Immune</b>The boss cannot be hurt right now.' : ''}`;
+        return `<div class="tip-ab">${icon}<div><b>${name}</b><em>${meta.join(' · ')}</em></div></div>${ab.desc || ''}${this.bare ? '<br><br><b>Bare Hands</b>Ultimates and the Limit Break are off for this pull.' : this.held ? '<br><br><b>Immune</b>The boss cannot be hurt right now.' : ''}`;
       }
       const meta = [ab.meta || (ab.type === 'gcd' ? 'GCD' : 'oGCD')];   // (a paced kit's moves say what limits them instead)
       if (ab.ultOf) meta.unshift('Ultimate');
@@ -468,8 +468,8 @@ const Hud = {
       us.el.classList.toggle('active', !!win);
       // the last tenth before it's full: the ring brightens (anticipation, not yet the cue)
       us.el.classList.toggle('near', !win && !full && v >= 0.9);
-      us.blocked = (!win && !full) || !!this.held;   // (held: a set piece's opening, main.js)
-      us.el.classList.toggle('dim', !!this.held);
+      us.blocked = (!win && !full) || !!this.held || !!this.bare;   // (held: a set piece's opening, main.js)
+      us.el.classList.toggle('dim', !!this.held || !!this.bare);
       // one cue when it fills (the soft glow then stays: .full)
       if (full && this._ultFull === false) { us.el.classList.remove('cue'); void us.el.offsetWidth; us.el.classList.add('cue'); }
       this._ultFull = full;
@@ -515,26 +515,20 @@ const Hud = {
     const pool = this._bPool || (this._bPool = []);
     let n = 0;
     for (const [id, b] of k.buffs) {
-      const own = buffOwn(a.cls.id, id);   // (an id two classes use for different things: this class's own name, icon and tip, BUFF_OWN)
-      if (!(b.end > now && (own || BUFF_NAMES[id])) || (BUFF_HIDDEN_BY[id] && k.has(BUFF_HIDDEN_BY[id]))) continue;
-      this._bput(pool, n++, id, own ? own.name : BUFF_NAMES[id], BUFF_UNTIMED.has(id) ? undefined : b.end - now, b.stacks, BAD_BUFFS.has(id), false, '', '', '', true);
+      const nm = kitBuffName(k, a.cls.id, id, b, now);   // (the same test the party frames use for a teammate's buffs: party-buffs.js)
+      if (!nm) continue;
+      this._bput(pool, n++, id, nm, BUFF_UNTIMED.has(id) ? undefined : b.end - now, b.stacks, BAD_BUFFS.has(id), false, '', '', '', true);
     }
-    for (const x of this.extra()) this._bput(pool, n++, x.id, x.name, x.left, x.stacks, !!x.bad, !!x.bond, x.label || '', x.img || '', x.tip || '', false);
+    for (const x of this.extra()) this._bput(pool, n++, x.id, x.name, x.left, x.stacks, !!x.bad, !!x.bond, x.label || '', x.img || '', x.tip || '', false, x.from);
     for (const x of k.itemBuffs()) this._bput(pool, n++, x.id, x.name, x.left, x.stacks, !!x.bad, !!x.bond, x.label || '', x.img || '', x.tip || '', false);   // buffs from item effects
+    this._bN = n;
     const R = this._bR || [];
     let rebuild = n !== R.length || this._bCls !== a.cls.id;
     for (let i = 0; i < n && !rebuild; i++) { const r = R[i], b = pool[i]; if (r.id !== b.id || r.bad !== b.bad || r.bond !== b.bond || r.img !== b.img) rebuild = true; }
     if (rebuild) {
       const had = new Set(R.map(r => r.id)), first = !this._bR;
       this._bCls = a.cls.id;
-      const icon = b => {
-        if (b.img) return `<u class="bf-icon" style="background-image:url(${b.img})"></u>`;   // (another class's art: an ally's buff on you)
-        const ow = buffOwn(a.cls.id, b.id), ic = ow ? ow.icon : BUFF_ICON[b.id];
-        if (ic) return `<u class="bf-icon" style="background-image:url(${abilityIcon(a.cls.id, ic)})"></u>`;
-        // the shared status icons (status-icons.js): painted once its file is in, a drawn glyph until then
-        const sid = String(b.id), st = STATUS_GLYPH[sid] ? sid : sid.startsWith('d-') ? sid.slice(2) : b.bond ? 'bond' : sid.startsWith('fx-') ? 'fx' : '';
-        return `<u class="bf-icon g">${st ? statusIcon(st) : `<em>${(b.name || '?')[0]}</em>`}</u>`;
-      };
+      const icon = b => buffIconHtml(a.cls.id, b);   // (shared with the party frames)
       const live = pool.slice(0, n);
       this.buffRow.innerHTML = live.map(b => `<span class="buff${b.bad ? ' bad' : ''}${b.bond ? ' bond' : ''}${!first && !had.has(b.id) ? ' gain' : ''}">${icon(b)}<s></s><i></i></span>`).join('');
       // the name lives in the tooltip (bound once per chip, read live on hover)
@@ -558,9 +552,9 @@ const Hud = {
       if (exp !== r.exp) { r.exp = exp; r.el.classList.toggle('exp', exp); }
     }
   },
-  _bput(pool, i, id, name, left, stacks, bad, bond, label, img, tip, own) {
+  _bput(pool, i, id, name, left, stacks, bad, bond, label, img, tip, own, from) {
     const b = pool[i] || (pool[i] = {});
-    b.id = id; b.name = name; b.left = left; b.stacks = stacks || 1; b.bad = bad; b.bond = bond; b.label = label; b.img = img; b.tip = tip; b.own = own;
+    b.from = from; b.id = id; b.name = name; b.left = left; b.stacks = stacks || 1; b.bad = bad; b.bond = bond; b.label = label; b.img = img; b.tip = tip; b.own = own;
   },
   // a buff's tooltip, from what's up right now (an ability's name as this hero has it: a spec may rename it)
   _buffTip(id) {
@@ -568,18 +562,49 @@ const Hud = {
     let b = null;
     for (let i = 0; i < R.length; i++) if (pool[i] && pool[i].id === id) { b = pool[i]; break; }
     if (!b) return '';
-    const ow = b.own && this.actor ? buffOwn(this.actor.cls.id, id) : null, tipFn = ow ? ow.tip : BUFF_TIPS[id];
-    if (b.own && tipFn && k) {
-      const nm = base => { const ab = k.abilities.find(x => (x.replaces || x.id) === base); return ab ? ab.name : base; };
-      return `<b>${ow ? ow.name : BUFF_NAMES[id]}${b.stacks > 1 ? ` ×${b.stacks}` : ''}</b>${b.left != null ? `<em>${Math.ceil(b.left)}s</em>` : ''}${tipFn(nm, k)}`;
-    }
-    const head = `<b>${b.name}${b.stacks > 1 ? ` ×${b.stacks}` : ''}</b>${b.left != null ? `<em>${Math.ceil(b.left)}s</em>` : b.label ? `<em>${b.label}</em>` : ''}`;
-    return head + (b.tip ? tipAttr(b.tip) : '');
+    return buffTipHtml(b.name, b.stacks, b.left, b.label, buffBody(this.actor ? this.actor.cls.id : '', id, k, b.own, b.tip));
   },
+  // the row as it stands this frame (the party frame of this hero reads it: raid-ui.js), n pooled items
+  rowModel() { return this._bPool ? this._bPool.slice(0, this._bN || 0) : []; },
 };
 // the borrowed buff each talent move hides while its own is up (BUFF_HIDES, the other way round)
 const BUFF_HIDDEN_BY = {};
 for (const [own, base] of Object.entries(BUFF_HIDES)) BUFF_HIDDEN_BY[base] = own;
+
+// ---------------------------------------------------------------- the buff row's pieces, shared with the party frames
+// A hero's frame shows what that hero's own row shows (raid-ui.js, party-buffs.js): the same names, icons and tips,
+// built here once. clsId is always the hero's own class (a teammate's buffs wear that class's art and names).
+// The name a kit buff goes by in the row, or '' when the row does not show it right now.
+function kitBuffName(k, clsId, id, b, now) {
+  const own = buffOwn(clsId, id);   // (an id two classes use for different things: this class's own name, icon and tip, BUFF_OWN)
+  if (!(b.end > now && (own || BUFF_NAMES[id])) || (BUFF_HIDDEN_BY[id] && k.has(BUFF_HIDDEN_BY[id]))) return '';
+  return own ? own.name : BUFF_NAMES[id];
+}
+// A chip's icon: b is { id, name, img?, bond? }.
+function buffIconHtml(clsId, b) {
+  if (b.img) return `<u class="bf-icon" style="background-image:url(${b.img})"></u>`;   // (another class's art: an ally's buff on you)
+  const ow = buffOwn(clsId, b.id), ic = ow ? ow.icon : BUFF_ICON[b.id];
+  if (ic) return `<u class="bf-icon" style="background-image:url(${abilityIcon(clsId, ic)})"></u>`;
+  // the shared status icons (status-icons.js): painted once its file is in, a drawn glyph until then
+  const sid = String(b.id), st = STATUS_GLYPH[sid] ? sid : sid.startsWith('d-') ? sid.slice(2) : b.bond ? 'bond' : sid.startsWith('fx-') ? 'fx' : '';
+  return `<u class="bf-icon g">${st ? statusIcon(st) : `<em>${(b.name || '?')[0]}</em>`}</u>`;
+}
+// What a buff does, for its tooltip: a kit buff reads the hero's kit (talents, specs, the move names it has); anything else
+// carries its own text. Plain text, safe to send to the others as it is.
+function buffBody(clsId, id, k, own, tip) {
+  if (own && k) {
+    const ow = buffOwn(clsId, id), fn = ow ? ow.tip : BUFF_TIPS[id];
+    if (fn) {
+      const nm = base => { const ab = k.abilities.find(x => (x.replaces || x.id) === base); return ab ? ab.name : base; };
+      return fn(nm, k);
+    }
+  }
+  return tip ? tipAttr(tip) : '';
+}
+// The tooltip: name (and stacks), the seconds left or a short label, then the body.
+function buffTipHtml(name, stacks, left, label, body) {
+  return `<b>${name}${stacks > 1 ? ` ×${stacks}` : ''}</b>${left != null ? `<em>${Math.ceil(left)}s</em>` : label ? `<em>${label}</em>` : ''}${body || ''}`;
+}
 
 // ---------------------------------------------------------------- drawn ability icons (classes without painted icons yet)
 // A dark tile in the class accent with a simple glyph per move. Cached as data URLs; null for classes that have art.

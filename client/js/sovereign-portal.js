@@ -128,5 +128,5 @@ const SvPortal = (() => {
   function close() { if (panel) panel.classList.add('hidden'); }
   const isShown = () => !!panel && !panel.classList.contains('hidden');
 
-  return { init, sync, update, show, close, isOpen, isShown, reached, reach, unlocked, mayStart, FLAG };
+  return { init, sync, update, show, close, isOpen, isShown, reached, reach, unlocked, mayStart, ACTS, FLAG };
 })();

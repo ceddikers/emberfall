@@ -1812,6 +1812,7 @@ const BOSS_VFX = (() => {
   }
   function wash(c, col, a, op = 'source-over') {
     if (!(a > 0.004)) return;
+    if (typeof FX !== 'undefined' && FX.washK) a *= FX.washK(col, op);   // (Options: reduce flashes softens the bright washes only)
     c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = op; c.globalAlpha = Math.min(1, a); c.fillStyle = col; c.fillRect(0, 0, c.canvas.width, c.canvas.height); c.restore();
   }
   // one soft flash over the screen (a single fade, never repeated: no strobing)

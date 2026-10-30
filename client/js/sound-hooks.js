@@ -652,6 +652,16 @@ const SoundHooks = (() => {
 
   // ---------------------------------------------------------------- music
   const music = (id, o) => { if (has()) safe(() => Sound.music.set(id, o)); };
+  // The Founding's music (founding/client.js picks the slot from what the run shows; the prompts are in docs/art/music-prompts.md). A slot is the track mus-fd-<slot>. Until that
+  // file is in the audio manifest the call does nothing at all (audio.js would fade the playing tune out for a missing id), so the town's tune goes on; the day a file is
+  // dropped in, its slot plays from the next load. The victory and defeat stings play once. Returns whether a track took the slot.
+  const FD_STING = new Set(['victory', 'defeat']);
+  function foundingMusic(slot, o) {
+    const id = /^(opening|day|dusk|night|boss|siege|victory|defeat)$/.test(slot) ? 'mus-fd-' + slot : null;
+    if (!id || !has() || !Sound.music.has || !Sound.music.has(id)) return false;
+    safe(() => Sound.music.set(id, { fade: o && Number.isFinite(o.fade) ? o.fade : 2, loop: !FD_STING.has(slot) }));
+    return true;
+  }
   // the phase (course) where Normal crossfades into the boss's Hard track, late in the fight
   const LAYER_AT = { grubnak: 3, skitterra: 3, volkar: 3, hollowking: 5, wyrm: 4, titan: 3, archmage: 4, hydra: 4, corvane: 3, brannoc: 3, morrowoak: 3, caelum: 3 };
   // a boss whose second track is its second form's music, not a harder take of the first: both difficulties start on the
@@ -771,7 +781,7 @@ const SoundHooks = (() => {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUI); else wireUI();
   }
 
-  return { sovereignRoom, sovereignSetPiece, sovereignBurn, play, vo, ability, auto, hollow, thresher, tidecaller, lanternkeeper, kenseier, houndmaster, castStart, castEnd, stacks, telegraph, bossCast, impact, music, phase, bossTrack, tick, stopBeds, ground, TG };
+  return { sovereignRoom, sovereignSetPiece, sovereignBurn, play, vo, ability, auto, hollow, thresher, tidecaller, lanternkeeper, kenseier, houndmaster, castStart, castEnd, stacks, telegraph, bossCast, impact, music, foundingMusic, phase, bossTrack, tick, stopBeds, ground, TG };
 })();
 
 if (typeof module !== 'undefined') module.exports = { SoundHooks };

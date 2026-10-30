@@ -523,6 +523,7 @@ const TownLife = (() => {
       if (u.decor) drawDecor(ctx, u.decor, now);
       const i = bossIds.indexOf(b);
       if (u.trophy && pedestals[i]) drawTrophy(ctx, u.trophy, pedestals[i].x + 52 * PED_S, pedestals[i].y + 18 * PED_S, now);
+      if (u.trophy && pedestals[i] && deps.heat && typeof HARDPLUS !== 'undefined') HARDPLUS.flame(ctx, pedestals[i].x + 52 * PED_S, pedestals[i].y + 8 * PED_S, deps.heat(b), now, PED_S);   // (Hard+: a flame over the trophy, bigger with the best heat cleared)
     }
     if (deps.beaten('sovereign') || (typeof SvRewards !== 'undefined' && SvRewards.TEST)) drawSovereignPlinth(ctx, now);
     groundMeal(ctx, now);

@@ -14,7 +14,7 @@ const check = (ok, what) => { if (!ok) probs.push(what); };
 // ---------------------------------------------------------------- 1. the data
 {
   const ids = new Set(), titles = new Set(), cats = new Set(FEAT_CATS.map(c => c[0]));
-  const TYPES = new Set(['clear', 'clearAll', 'clearNoDeaths', 'clearUnder', 'pulls', 'practice', 'secrets', 'gifts', 'feasts', 'fish', 'journal', 'bounties', 'heroes', 'emotes', 'items', 'trial', 'mark', 'count', 'hardRole', 'hardRoles', 'hardClasses']);
+  const TYPES = new Set(['clear', 'clearAll', 'clearNoDeaths', 'clearUnder', 'pulls', 'practice', 'secrets', 'gifts', 'feasts', 'fish', 'journal', 'bounties', 'heroes', 'emotes', 'items', 'trial', 'mark', 'count', 'hardRole', 'hardRoles', 'hardClasses', 'hplusSet']);
   const bossIds = new Set(BOSSES.map(b => b.id).concat(ULTIMATE_BOSS ? [ULTIMATE_BOSS.id] : []));   // (the Ultimate is not on the Raid Board but has feats)
   for (const f of FEATS) {
     check(f.id && f.name && f.desc, `${f.id}: needs an id, a name and a description`);

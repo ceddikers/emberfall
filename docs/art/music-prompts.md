@@ -401,6 +401,136 @@ If a take of either half turns into pop, anime rock or EDM, add `no pop, no EDM,
 
 ---
 
+## 6j. The Founding (hero defence, eight pieces: `mus-fd-opening`, `mus-fd-day`, `mus-fd-dusk`, `mus-fd-night`, `mus-fd-boss`, `mus-fd-siege`, `mus-fd-victory`, `mus-fd-defeat`)
+
+**What it is:** a hold-the-camp run of about an hour. A caravan of four founders and four wardens comes down an empty road at dusk, finds warmth in the ground where the Hearth will stand, and makes a camp. Then thirty waves come down two roads, day and night in turn (day one, night one, day two, night two, day three, the last night), while the camp grows into a town named Emberfall. The voice of it is plain, warm and stubborn: *a fire fell here, and we stayed*. One family of themes carries the whole run (a small, hopeful folk melody on a low whistle, the camp's own tune), and the pieces differ by how much the dark has taken of it. Dusky and human, never grim for its own sake; the warmth should always be there underneath, even in the worst of it.
+
+**How the game uses them:** the host's tab picks the slot from what the run shows, and a piece that has no file yet is skipped (the town tune plays on). `opening` plays under the opening scene. `day` takes over when control starts and returns each dawn. `dusk` plays while the light is draining before a night part. `night` plays while it is dark. `boss` plays whenever one of the three mid-run bosses is on the field and the run is not in its last wave (big, slow, ground-shaking things). `siege` plays from the last wave to the end (the gate, the last night). `victory` and `defeat` are one-shot stings. All six looping pieces share one key and the same slow pulse, so a crossfade at any moment never clashes: keep them all in **D minor (F major relative), 72 BPM** or a clean double or half of it. The main loops want 2:00 to 3:00 and a clean loop point (see the notes at the top); the opening wants about 1:00 and does not need to loop.
+
+### The opening (`mus-fd-opening`, about 58 seconds, one pass)
+
+**Mood:** the end of a long road. A wagon creaking down an empty valley at dusk; the first warmth found in the ground; a fire, a tent, four people who have nobody else; a distant stir far up the road; then one quiet sentence. Wonder and tiredness in equal parts. It should not feel like an epic trailer.
+
+**Style (short):** `cinematic folk fantasy, low whistle, solo cello, soft hand percussion, warm pad, slow, wistful, dusk, instrumental, no vocals`
+
+**Structure block:**
+```
+[Instrumental]
+[Intro: one low drone and slow wooden footsteps on a frame drum, a few creaks, 4 bars]
+[Theme: a low whistle plays the camp's simple melody, cello under it, sparse, 8 bars]
+[Discovery: the pad opens warm and bright for two bars as the ground gives off its warmth, a soft bell, 4 bars]
+[Camp: lute arpeggios join, the melody passes to the cello, gentle and settled, 8 bars]
+[Stir: the drone drops a step, one low string note and a single distant horn, unresolved, 4 bars]
+[Close: the whistle states the first four notes alone and stops on the open fifth, 2 bars]
+```
+
+**Full prompt:** Slow, wistful instrumental fantasy folk for the opening scene of a hold-the-camp game, around 72 BPM in D minor, about one minute long. A low drone and slow footsteps on a wooden frame drum, a low whistle playing a simple, hopeful melody over a warm solo cello, a soft bell and an opening pad as something warm is found in the ground, fingerpicked lute settling in as a camp is made, then one distant low horn and a held string note that does not resolve. Tired and tender, a small group of people alone in a big valley at dusk. No big drums, no vocals, no electronic sounds. Ends on the open fifth, quietly, and does not need to loop.
+
+### Day, building the camp (`mus-fd-day`)
+
+**Mood:** calm, working, a little proud. Axes, hammers, water drawn; the sound of a place being made between the waves. Safe enough to plan under, never sleepy. It is the loop heard most, so it must not tire: gentle movement, a melody that comes and goes. 2:30 to 3:00 loop.
+
+**Style (short):** `warm folk fantasy, plucked lute, hand percussion, low whistle, fiddle, light and steady, calm, working, instrumental, no vocals`
+
+**Structure block:**
+```
+[Instrumental]
+[Intro: lute and a soft shaker pulse over a low drone, 4 bars]
+[Theme: low whistle carries the camp's melody, lute and light frame drum underneath, 16 bars]
+[Second voice: a fiddle answers the whistle in thirds, a gentle walking bass, 16 bars]
+[Open: only lute and a held pad, the melody hinted, room to breathe, 8 bars]
+[Return: the whistle again, fiddle gone, back to the opening pulse and drone, 8 bars]
+```
+
+**Full prompt:** Calm, warm, steady instrumental fantasy folk for the daytime of a camp-building game, around 72 BPM, in F major leaning on D minor. Plucked lute and a soft shaker on a slow walking pulse, a light frame drum, a low whistle playing a small, hopeful melody, and a fiddle answering in thirds in the second half. Industrious and a little proud, like a settlement being raised plank by plank, never sleepy and never urgent. Gentle movement so it does not tire on repeat, with a quiet open section in the middle. No heavy drums, no cymbals, no vocals, no electronics. Starts and ends on the same drone and pulse so it loops.
+
+### Dusk, tension building (`mus-fd-dusk`)
+
+**Mood:** the light draining and the first thing moving at the edge of it. The day's melody is still there but thinning, and a low pulse is coming up under it. Nothing has happened yet; everyone knows it is about to. 1:30 to 2:00 loop.
+
+**Style (short):** `tense dark folk fantasy, low cello ostinato, muted frame drum, fading whistle, rising strings, dusk, building suspense, instrumental, no vocals`
+
+**Structure block:**
+```
+[Instrumental]
+[Intro: the day's melody on a lone whistle, slower and thinner, over a low drone, 4 bars]
+[Build 1: a low cello ostinato starts, muted frame drum heartbeat, 8 bars]
+[Build 2: strings hold rising long notes, the melody moves to a bowed low register, the drum grows by one layer, 8 bars]
+[Hold: the ostinato continues alone and drops quiet, one high harmonic, 4 bars]
+[Return: back to the drone and the thinned whistle, ready to loop, 4 bars]
+```
+
+**Full prompt:** A tense, slow-building instrumental loop for dusk in a hold-the-camp fantasy game, around 72 BPM in D minor. A thinned, wistful low-whistle melody over a drone, a low cello ostinato and a muted frame drum heartbeat coming in, long rising string notes layered over it, a single high harmonic at the top, and a quiet held section before it returns to the start. The warmth of the day is still audible but fading. Suspense without a climax. No loud drums, no cymbal wash, no vocals, no electronics. Starts and ends on the same drone so it loops.
+
+### Night, the waves (`mus-fd-night`)
+
+**Mood:** dark, steady and relentless, with the camp's tune kept alive as a small flame against it. Many things in the dark, light as the only safety. Driving but not frantic, because it plays for minutes at a time while the player works. Leave space in the mid-range for the telegraph sounds. 2:00 to 2:30 loop.
+
+**Style (short):** `dark folk fantasy action, driving low strings, war drums, low brass pedals, tremolo violins, lone whistle melody as a flame, night siege, instrumental, no vocals`
+
+**Structure block:**
+```
+[Instrumental]
+[Intro: a deep drum pulse and low string ostinato, 4 bars]
+[Verse: the ostinato drives, war drums on the beat, low brass pedal notes, 16 bars]
+[Flame: the whistle plays the camp's melody quietly on top, tremolo violins behind, the drums drop to a heartbeat, 8 bars]
+[Surge: full strings and low brass, the drums return, the melody low in the cellos, 16 bars]
+[Return: ostinato and pulse only, ready to loop, 4 bars]
+```
+
+**Full prompt:** Dark, steady, relentless instrumental for the night waves of a hold-the-camp fantasy game, around 72 BPM in D minor (it can feel like 144 in the drums). A deep drum pulse and war drums on the beat, a driving low string ostinato, low brass pedal notes, tremolo violins, and, quietly on top in the middle section, a single low whistle playing a small hopeful melody like a lantern in the dark. Heavier and darker than the daytime piece but never a wall of sound, with room in the mid-range for sound effects. No cymbal wash, no vocals, no electric guitar, no electronics. Starts and ends on the same pulse so it loops.
+
+### A main boss (`mus-fd-boss`)
+
+**Mood:** something huge and old at the edge of the camp: slow, heavy, close. The piece is about weight and patience, not speed; the player is dodging and holding positions for a long time. Menacing and a little awed. The camp's tune appears once, low and stubborn, as an answer. 2:00 to 3:00 loop.
+
+**Style (short):** `slow heavy dark fantasy boss, huge low drums, deep brass, bowed bass, ground-shaking, grinding rhythm, instrumental, no vocals`
+
+**Structure block:**
+```
+[Instrumental]
+[Intro: a single huge drum hit, a held low brass note, silence between, 4 bars]
+[Verse: slow grinding rhythm on low drums and bowed double basses, 16 bars]
+[Chorus: deep brass states a heavy, descending theme, cellos double it, 16 bars]
+[Answer: a lone low whistle plays the camp's melody over only a drone, then the drums return under it, 8 bars]
+[Return to Verse, ending on the same single drum hit, 8 bars]
+```
+
+**Full prompt:** A slow, heavy, menacing instrumental for a boss fight against an enormous ancient creature at the edge of a camp, around 72 BPM in D minor. Huge low drums on a grinding rhythm, bowed double basses, deep brass stating a heavy descending theme, silences between the big hits so the ground seems to shake, and, in the middle, a lone low whistle answering with a small stubborn melody over a drone before the drums come back under it. Weight and patience rather than speed. No vocals, no choir, no cymbal wash, no electronics. Starts and ends on the same drum hit and drone so it loops.
+
+### The final siege (`mus-fd-siege`)
+
+**Mood:** the last wave and the last night. Everything the run has been, at full weight: the camp's tune is no longer a small flame; it is carried by the whole orchestra, stubborn and defiant, over a relentless siege. Epic but human: this is a stand, not a conquest. It plays for several minutes, so it has to move and rise in stages. 3:00 to 3:30 loop.
+
+**Style (short):** `epic dark folk fantasy finale, full orchestra, driving war drums, soaring strings, brass fanfare, defiant, last stand, the folk melody in full, instrumental, no vocals`
+
+**Structure block:**
+```
+[Instrumental]
+[Intro: a pulse of war drums and a rising string drone, 4 bars]
+[Verse: relentless ostinato in low strings and drums, brass pedal notes, 16 bars]
+[Theme: horns and strings state the camp's melody in full, defiant, over the driving ostinato, 16 bars]
+[Break: everything drops but a single low whistle and one drum, the melody quiet, 8 bars]
+[Climb: the whole orchestra rebuilds, the melody an octave higher, strings soaring, 16 bars]
+[Return: ostinato and drum pulse, ending as the intro did, 4 bars]
+```
+
+**Full prompt:** An epic, defiant instrumental for the final siege of a hold-the-camp fantasy game, around 72 BPM in D minor (it can feel like 144 in the drums). Relentless war drums and low string ostinato, brass pedal notes, then horns and strings stating a simple, folk-like melody in full for the first time, stubborn and proud rather than triumphant, a sudden quiet break with just a low whistle and one drum, then the whole orchestra climbing back with the melody an octave higher and strings soaring. A last stand by a handful of people who have nowhere else to go. Epic but human, dark but warm underneath. No vocals, no choir, no electric guitar, no electronics. Starts and ends on the same drum pulse so it loops.
+
+### Stings (`mus-fd-victory`, `mus-fd-defeat`)
+
+**Victory (`mus-fd-victory`, 20 to 30 seconds, plays once while the town is named; the town music returns afterwards):**
+Style: `warm hopeful fantasy resolution, low whistle, strings, soft brass, bells, gentle triumph, instrumental, no vocals`
+Full prompt: A warm, quietly triumphant instrumental of 20 to 30 seconds, around 72 BPM in F major, in which the camp's small folk melody is played in full by a low whistle and then taken up by strings and soft brass, ending with a few bells and a long clean final chord that fades into a soft hold. Relief and belonging rather than a fanfare: a town has just been named. No drums beyond a soft frame drum, no vocals.
+
+**Defeat (`mus-fd-defeat`, 8 to 12 seconds, plays once):**
+Style: `somber short fantasy sting, low strings, solo whistle, fading ember, instrumental, no vocals`
+Full prompt: A short, low, sorrowful instrumental sting of 8 to 12 seconds in D minor, slow low strings sinking under the first four notes of the camp's melody played quietly on a lone whistle that breaks off before it finishes, a single low bell, fading to silence like a fire going out. Sad but not cruel. No vocals.
+
+**File names and wiring:** `mus-fd-opening`, `mus-fd-day`, `mus-fd-dusk`, `mus-fd-night`, `mus-fd-boss`, `mus-fd-siege`, `mus-fd-victory`, `mus-fd-defeat`, exported like the others (`.ogg`, stereo, 44.1 kHz). Add each to the audio manifest once it exists; the game plays it from the next load (`SoundHooks.foundingMusic`, called from founding/client.js), and a piece that is missing is simply skipped.
+
+---
+
 ## 7. Stings and the town return (short pieces)
 
 **Victory (`mus-victory`, 10 to 20 seconds, then the town music returns):**
