@@ -4,6 +4,9 @@
 //   FOUNDING_STORY.FOUNDERS            the four founders: id -> { name, col }
 //   FOUNDING_STORY.line(kind, a, b)    a founder's line for a moment -> { by, name, col, t } or null.
 //        ('q', questId, 0|2|3) a quest offered / done / missed, ('part', partIdx), ('boss', enemyId), ('end', 0|1|2), ('start')
+//   FOUNDING_STORY.thread(kind, a, b, ctx)   the lines to speak for a moment, in order: for a quest, the pickup on an offer, or the giver's word and
+//        a hand-off to the next job on done / missed. ctx = { st: { questId: 0|1|2|3 }, wave, led: {} } (client-trials.js builds it). Other kinds: [line(...)].
+//   FOUNDING_STORY.nextAfter(id, ctx)  the next quest still to do after id -> { id, timing: 'near' | 'far' } or null
 //   FOUNDING_STORY.pageOf(n)           the founders' book page n -> { n, title, by, text }; a page nobody wrote a text for still reads
 //   FOUNDING_STORY.PAGES               pages 1..PAGE_COUNT
 //   FOUNDING_STORY.TRIALS              the Founder's Trials: { id, name, text, title, feat }
@@ -32,9 +35,14 @@ const FOUNDING_STORY = (() => {
     graves: ['We lost some in the night. They get the meadow, and flowers, if I have to carry the seed in my teeth.', 'Bluebells. They will come up every spring after we are gone. I will see to it.', 'No flowers this year. I am sorry for it.'],
     stonegate: ['Words on the gate. Whoever comes through should know what we meant by it.', 'Cut deep. Let the weather try.', 'Bare stone. We will have to mean it without saying it.'],
     roof: ['A hall. Four walls, a roof, and the first thing in the valley that is not a tent.', 'The roof is on. It leaks in one corner, which makes it a proper building.', 'No roof yet. The rain gets in, and so do the tired.'],
+    stakes: ['The ground needs edges. Walk with me, and I will drive the stakes one by one.', 'Every stake holds. Now the camp has an edge, and a wanderer can know it.', 'No bounds, then. I will keep the edge in my head and call out when it is crossed.'],
+    mill: ['The wind on the west plain never tires. I mean to make it grind. Hold the frame with me.', 'It turns. Flour by the sack, and a little coin for everyone.', 'No sails, then. The wind will keep, and so will I.'],
+    larder: ['Winter will make the ground hard. Roots and grain, laid by, while we can still dig.', 'Full, and dry. We will not go hungry before spring.', 'Thin shelves. We will stretch what we have.'],
+    choice: ['One stone, two wishes. Carry it to the one you choose, and that one stands.', 'It is raised. Whichever it is, it was chosen by those who carried it.', 'Neither stands, then. The quarry will wait for us to agree.'],
+    watchfires: ['Fires on the far rises, so I see the dark before it sees us. Carry a brand to each.', 'Every rise burns. Nothing crosses the valley now without being counted.', 'Dark rises, then. I will count the shadows myself.'],
     cover: ['Now the Hearth. We cover it, and we do not look in. Not today. Not ever.', 'It is covered. Let it be a floor. Let the floor be a town.', 'Open to the sky, then. Stand close to it.'],
   };
-  const QBY = { spring: 'digger', gate: 'steward', fire: 'smith', beacon: 'steward', road: 'steward', graves: 'digger', stonegate: 'steward', roof: 'smith', cover: 'steward' };
+  const QBY = { spring: 'digger', gate: 'steward', fire: 'smith', beacon: 'steward', stakes: 'warden', road: 'steward', graves: 'digger', mill: 'smith', stonegate: 'steward', roof: 'smith', larder: 'digger', choice: 'steward', watchfires: 'warden', cover: 'steward' };
   // for a quest nobody wrote a line for: the giver's own way of saying it
   const GENERIC = {
     steward: ['One thing more, and then another. That is how a place gets built.', 'Good. Another stone laid.', 'We will manage without it.'],
@@ -63,6 +71,109 @@ const FOUNDING_STORY = (() => {
   ];
   const START = ['steward', 'The ember fell short of the hills. The valley is ours to hold, and nobody else is coming.'];
 
+  // ---------------------------------------------------------------- the thread between quests
+  // A quest is offered, then done or missed; each of those moments can carry the camp's story on to the next job.
+  //   OFFER[id]   the giver picks up from the quest before it in D.QUEST_ORDER: [it was done, it was missed, it is still open]
+  //   REACT[id]   when a quest ends, another founder answers it: { done: [by, text], missed: [by, text] } (never the giver; a missed quest is never scolded)
+  //   LEAD[id]    the hand-off to the quest that comes next: { near, far }. 'near' = it is open, or offered within a wave; 'far' only hints at it.
+  //               {S} is "The Steward" (whoever owns that job) when another founder says it, and "I" when the owner says it themselves,
+  //               so lead lines keep to the past tense and to "will", which fit both.
+  const OFFER = {
+    gate: ['Water in the camp, and now a door for the road. The stone is on its way up the hill.', 'A dry camp, then, and all the more reason for a door. The stone is on its way up the hill.', 'The Digger is still at the dig. Meanwhile the road wants a door, and the stone is on its way.'],
+    fire: ['A gate to hold, and now something to hold it with. Give me a quiet hour and a bed of coals.', 'No gate, so we need good iron more than ever. Give me a quiet hour and a bed of coals.', 'The stone is still climbing. I will light the forge while it does, if someone stands by me.'],
+    beacon: ['The forge is lit, and we have iron. Now a light for the hill, so the dark has something to look at.', 'No forge yet, and no matter. A light on the hill wants oil, not iron.', 'The Smith is still coaxing her coals. The hill wants a light meanwhile. Oil, up the slope.'],
+    stakes: ['The hill is lit, and now we can see how much ground we hold. I mean to mark where it ends.', 'The hill stays dark. Then I will mark the ground by hand, and count whatever stands inside it.', 'Oil is still going up the hill. Meanwhile I will walk the edge of the camp and drive stakes. Walk with me.'],
+    road: ['The bounds are marked. Now we make the road lead them away from the warmth, post by post.', 'Unmarked ground, then. All the more reason to give them a road that leads away from us.', 'The Warden is still driving stakes. I will have lanterns along the road, to lead them away from the warmth.'],
+    graves: ['The road bought us a quiet night, mostly. We lost some of us anyway. They get the meadow, and flowers.', 'They came straight at us, and we lost some in the night. They get the meadow, and flowers.', 'The lanterns are still going up. We lost some in the night, and they get the meadow, and flowers.'],
+    mill: ['The meadow is in bloom, so now to feed the living. The wind never stops on the west plain. A mill, then.', 'No flowers, and the camp is hungry anyway. The wind never stops on the west plain; I mean to put a mill there.', 'The bluebells are going in. Hands wanted anyway: the west plain wants a mill, and a mill wants builders.'],
+    stonegate: ['The mill turns, and the camp eats. Now the gate gets what it was owed: the Words, cut deep.', 'No flour, and thin porridge. The gate still wants its Words.', 'Whatever the mill does, the gate must have its Words. The dressed stone is waiting at the quarry.'],
+    roof: ['Words on the gate. Words do not keep rain off, though. Timber from past the ford, and a roof.', 'Bare stone, then. Words or no words, we need a roof. Timber from past the ford.', 'While the Steward carves, I will see to timber. A roof wants hauling from past the ford.'],
+    larder: ['A roof over us. Now something in the cupboard: roots, grain and dried fruit, before the long dark.', 'No roof, so we will eat damp. Let us at least have a full larder before the long dark.', 'The roof goes up slowly, and winter will not wait. Roots and grain, laid by, before the long dark.'],
+    choice: ['The larder is full. One stone is left in the quarry: a bell or a ward, not both. The Warden and the Smith are arguing it.', 'A lean winter, and one stone left. A bell or a ward, not both. The Warden and the Smith are already arguing.', 'Gather what you can. The last stone is spoken for twice: a bell, or a ward. Carry it, and the argument settles.'],
+    watchfires: ['The stone is raised. Good. Now I want fires on every far rise, so I see what is coming before it arrives.', 'The stone lies unused. Fine. We will see the dark coming by fire. Carry a brand to each far rise.', 'While the stone is argued over, I want fires on the far rises. Light them from the camp, and keep them lit.'],
+    cover: ['The far fires burn, and we can see the dark coming. Now the Hearth. Stand close while we lay the capstone.', 'The rises stay dark; we will trust our ears. Now the Hearth. Stand close while we lay the capstone.', 'Keep the fires burning, but come in when you can. The capstone is ready for the Hearth.'],
+  };
+  const REACT = {
+    spring: { done: ['smith', 'Water I can quench in. Good.'], missed: ['warden', 'A trickle still fills a cup. I will ration it.'] },
+    gate: { done: ['warden', 'Now there is a door to count people through.'], missed: ['digger', 'Open road. I have dug in worse places.'] },
+    fire: { done: ['warden', 'Sparks by the river. Every eye in the valley will see them.'], missed: ['digger', 'Cold iron keeps. The anvil will have its turn.'] },
+    beacon: { done: ['smith', 'A light is a promise. I hope we can keep it.'], missed: ['digger', 'The dark has kept this ground a long time. We will manage.'] },
+    stakes: { done: ['smith', 'Stakes in the ground. Now they know where our fire ends.'], missed: ['digger', 'Unmarked ground is still ground. We know where it ends.'] },
+    road: { done: ['smith', 'A road that leads them wrong. I would pay to see their faces.'], missed: ['warden', 'They will come straight. I will count the gate twice.'] },
+    graves: { done: ['steward', 'Bluebells in the meadow. We will remember who they were.'], missed: ['warden', 'I counted them anyway. I will keep counting.'] },
+    mill: { done: ['digger', 'Flour. A mill, and soon a town. Somebody will bake.'], missed: ['warden', 'No mill. We will eat what we can carry.'] },
+    stonegate: { done: ['digger', 'Words in stone. I hope we meant them.'], missed: ['warden', 'Bare stone. The Steward will carve it another day.'] },
+    roof: { done: ['warden', 'A roof. I will count heads from a dry bed.'], missed: ['steward', 'No roof. We will let the sky be our ceiling a while.'] },
+    larder: { done: ['smith', 'Full sacks. A hammer swings better on a full belly.'], missed: ['warden', 'A lean larder. Small portions, and no complaint.'] },
+    choice: { done: ['digger', 'A stone raised, whichever it is. The camp is standing.'], missed: ['smith', 'Neither bell nor ward. Then I will keep the hammer close.'] },
+    watchfires: { done: ['smith', 'Fires on every rise. Let the dark see us from afar.'], missed: ['digger', 'Dark rises. The dark has kept us company before.'] },
+    cover: { done: ['warden', 'The Hearth is covered, and the camp is standing. I counted.'], missed: ['smith', 'Uncovered, then. Mind the heat, and keep your head.'] },
+  };
+  const LEAD = {
+    gate: { near: '{S} could use hands for the gate stone.', far: '{S} was out on the North Road again, measuring it for a door.' },
+    fire: { near: '{S} would be glad of a guard at the first forge.', far: '{S} kept looking at the river bank, and at the coals.' },
+    beacon: { near: '{S} will want oil carried up the hill.', far: '{S} was up on the hill, looking at all that dark.' },
+    stakes: { near: '{S} meant to mark the edge of the camp, and wanted company.', far: '{S} was pacing the edge of the camp, counting steps.' },
+    road: { near: '{S} will be asking for lanterns along the North Road.', far: '{S} was drawing a road in the dirt that bent away from the Hearth.' },
+    graves: { near: '{S} could use a hand in the meadow.', far: '{S} was looking at the meadow, and at the bluebell seed.' },
+    mill: { near: '{S} would be glad of builders on the west plain.', far: '{S} was watching the west wind as if it owed a debt.' },
+    stonegate: { near: '{S} will need the dressed stone hauled to the gate.', far: '{S} was standing at the gate with a chisel and a long face.' },
+    roof: { near: '{S} could use timber from past the ford.', far: '{S} was eyeing the trees past the ford.' },
+    larder: { near: '{S} will be asking for sacks gathered from the far corners.', far: '{S} was counting sacks again, and not liking the count.' },
+    choice: { near: '{S} will want stone carried, and a choice made.', far: '{S} was down at the quarry, looking at the last of the stone.' },
+    watchfires: { near: '{S} would be glad of fires on the far rises.', far: '{S} was looking at the far rises as if they were already lit.' },
+    cover: { near: '{S} will want everyone at the Hearth.', far: '{S} was standing over the Hearth, saying nothing.' },
+  };
+  const LEAD_ANY = { near: '{S} will want a hand with the next job.', far: '{S} was looking over what is left to build.' };
+
+  const dataOf = () => { try { if (typeof FOUNDING_DATA !== 'undefined') return FOUNDING_DATA; if (typeof require !== 'undefined') return require('./data.js').FOUNDING_DATA; } catch (e) { /* no data: no thread */ } return null; };
+  const giverOf = id => { const D = dataOf(), def = D && D.QUESTS && D.QUESTS[id]; return QBY[id] || byGiver(def ? def.giver : null); };
+  const mk = (by, t, p, tag) => { const f = FOUNDERS[by] || FOUNDERS.steward; return { by, name: f.name, col: f.col, t, p, tag }; };
+
+  // the next quest still to be done after `id`, and how close it is: ctx = { st: { id: 0 unseen | 1 open | 2 done | 3 missed }, wave }
+  function nextAfter(id, ctx) {
+    const D = dataOf(); if (!D) return null;
+    const order = D.QUEST_ORDER, i = order.indexOf(id), st = (ctx && ctx.st) || {}, wave = (ctx && ctx.wave) | 0;
+    if (i < 0) return null;
+    for (let k = i + 1; k < order.length; k++) {
+      const n = order[k], s = st[n] | 0; if (s >= 2) continue;
+      return { id: n, timing: s === 1 || D.QUESTS[n].offerWave - wave <= 1 ? 'near' : 'far' };
+    }
+    return null;
+  }
+  // a quest is offered: its giver picks up from the quest before it
+  function pickup(id, ctx) {
+    const D = dataOf(), order = D ? D.QUEST_ORDER : [], i = order.indexOf(id), by = giverOf(id);
+    if (i > 0 && OFFER[id]) {
+      const ps = ((ctx && ctx.st) || {})[order[i - 1]] | 0;
+      return mk(by, OFFER[id][ps === 2 ? 0 : ps === 3 ? 1 : 2], 3, 'offer');
+    }
+    const l = line('q', id, 0); return l ? Object.assign(l, { tag: 'offer' }) : null;
+  }
+  // a quest ends: another founder answers it and points at the next job. The same lead is not spoken twice (ctx.led remembers it).
+  function handoff(id, outcome, ctx) {
+    const n = nextAfter(id, ctx), r = REACT[id] && REACT[id][outcome === 2 ? 'done' : 'missed'];
+    let lead = null, key = null, who = r ? r[0] : null;
+    if (n) {
+      key = n.id + ':' + n.timing;
+      if (!(ctx && ctx.led && ctx.led[key])) lead = (LEAD[n.id] || LEAD_ANY)[n.timing];
+      if (!who) who = giverOf(n.id);
+    }
+    if (!r && !lead) return null;
+    if (lead && ctx && ctx.led) ctx.led[key] = 1;
+    const nb = n ? giverOf(n.id) : null;
+    const text = [r ? r[1] : null, lead ? lead.replace('{S}', nb === who ? 'I' : (FOUNDERS[nb] || FOUNDERS.steward).name) : null].filter(Boolean).join(' ');
+    return mk(who, text, 3, 'hand');
+  }
+  // every line for a moment, in the order to speak them. ('q', id, 0|2|3, ctx) = the pickup / the giver's own word, then the hand-off; other kinds as line()
+  function thread(kind, a, b, ctx) {
+    if (kind !== 'q') { const l = line(kind, a, b); return l ? [l] : []; }
+    if (b === 0) { const l = pickup(a, ctx); return l ? [l] : []; }
+    if (b === 2 || b === 3) { const out = [], g = line('q', a, b), h = handoff(a, b, ctx); if (g) out.push(g); if (h) out.push(h); return out; }
+    return [];
+  }
+
+  const PRIO = { q: 3, part: 1, boss: 4, end: 5, start: 4 };   // which line the voice keeps when it is crowded
   function line(kind, a, b) {
     let by = null, t = null;
     if (kind === 'q') {
@@ -77,7 +188,7 @@ const FOUNDING_STORY = (() => {
     else if (kind === 'start') { by = START[0]; t = START[1]; }
     if (!t) return null;
     const f = FOUNDERS[by] || FOUNDERS.steward;
-    return { by, name: f.name, col: f.col, t };
+    return { by, name: f.name, col: f.col, t, p: PRIO[kind] | 0 };
   }
 
   // ---------------------------------------------------------------- the founders' book
@@ -155,7 +266,7 @@ const FOUNDING_STORY = (() => {
     return out;
   }
 
-  return { freshProgress, fixProgress, addPages, record, FOUNDERS, line, PAGES, PAGE_COUNT, pageOf, TRIALS, TRIAL, validTrials, TUNE, byGiver };
+  return { freshProgress, fixProgress, addPages, record, FOUNDERS, line, thread, nextAfter, THREAD: { OFFER, REACT, LEAD }, PAGES, PAGE_COUNT, pageOf, TRIALS, TRIAL, validTrials, TUNE, byGiver };
 })();
 
 if (typeof module !== 'undefined') module.exports = { FOUNDING_STORY };

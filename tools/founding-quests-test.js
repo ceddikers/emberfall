@@ -82,8 +82,8 @@ const dFoot = (x, y) => Math.min(...Object.values(M.FOOT).map(f => M.near(f, x, 
 const avoid = [];
 for (const c of FoundingSim.WILD.CAMPS) avoid.push([c.x, c.y, 255, 'wild camp ' + c.id]);
 for (const L of FoundingSim.CHAIN.LINKS) avoid.push([L.place[0], L.place[1], Math.max(L.home || 200, 150) + 100, 'chain ' + L.id]);
-for (const p of [[1700, 1310], [2880, 1370], [1070, 1090], [1290, 1010], [1510, 1120], [1230, 2050], [1820, 2150], [2020, 2150], [2160, 2310], [1735, 258], [2955, 322]]) avoid.push([p[0], p[1], 170, 'chain act']);
-{ const s = makeSim(1, 1); run(s, 0.2); for (const sc of s.secrets) avoid.push([sc.x, sc.y, 130, 'secret ' + sc.n]); for (const p of [[2563, 1163], [300, 2192], [752, 936], [1330, 876]]) avoid.push([p[0], p[1], 150, 'secret']); }
+for (const p of [[3550, 2500], [5760, 2740], [2360, 2330], [2570, 2250], [2790, 2360], [2340, 4140], [3830, 4530], [4030, 4440], [4170, 4600], [3470, 516], [5910, 644]]) avoid.push([p[0], p[1], 170, 'chain act']);
+{ const s = makeSim(1, 1); run(s, 0.2); for (const sc of s.secrets) avoid.push([sc.x, sc.y, 130, 'secret ' + sc.n]); for (const p of [[5126, 2326], [600, 4384], [1504, 1872], [2660, 1716]]) avoid.push([p[0], p[1], 150, 'secret']); }
 { const QT = D.QUEST_TUNE; for (const id in QT.haul) { avoid.push([...QT.haul[id].from, 120, id + ' pick-up']); avoid.push([...QT.haul[id].to, 120, id + ' put-down']); } avoid.push([...QT.carve, 120, 'carve'], [...QT.cover, 120, 'cover']); for (const f of QT.fires) avoid.push([...f, 130, 'camp fire']); }
 for (const k of ['spring', 'shop', 'steward', 'gate', 'forge', 'beacon', 'meadow', 'woods', 'ford']) avoid.push([...M.P[k], 100, k]);
 const spots = [['Warden\'s start', X.START], ...X.STAKES.map((p, i) => ['stake ' + (i + 1), p]), ['mill', X.MILL], ['shed', X.SHED], ...X.LARDER.map((p, i) => ['sack ' + (i + 1), p]), ['quarry', X.PILE], ['bell site', X.BELL], ['ward site', X.WARD], ...X.FIRES.map((p, i) => ['watch-fire ' + (i + 1), p])];
@@ -118,7 +118,7 @@ console.log('The Bounds:');
   check(snap.q.find(r => r[0] === 'stakes') && snap.q.find(r => r[0] === 'stakes')[3] === 11, 'the quest row carries its deadline wave (11)');
   const W = () => { const st = s.snapshot().qx.st; return st; };
   // no hero near: she waits where she stands
-  const w0 = W(); put(s.heroes[0], 1500, 1900); put(s.heroes[1], 1500, 1920); run(s, 8); const w1 = W();
+  const w0 = W(); put(s.heroes[0], 3000, 3800); put(s.heroes[1], 3000, 3840); run(s, 8); const w1 = W();
   check(w1[1] === w0[1] && w1[2] === w0[2] && w1[0] === 0, 'the Warden waits while nobody stands beside her');
   // heroes walk beside her: she goes to the first stake, a raid comes, the stake goes in
   let sawRaid = 0, hist = [];
@@ -147,10 +147,11 @@ console.log('The Bounds:');
   // the Warden falls: missed at once
   s = makeSim(2, 13); run(s, 0.2); jump(s, 7); run(s, 0.3); const sq = s.snapshot().qx.st;
   put(s.heroes[0], sq[1] + 30, sq[2]); put(s.heroes[1], sq[1] - 30, sq[2]);
-  run(s, 25, () => { put(s.heroes[0], sq[1] + 30, sq[2]); put(s.heroes[1], sq[1] - 30, sq[2]); });
-  for (const h of s.heroes) put(h, 1600, 2000);
+  // (stay beside her until she is driving the first stake with its raid on the way: the walk to it takes longer or shorter as the camp changes)
+  for (let k = 0; k < 40 / DT && !(s.snapshot().qx.st[5] === 1 && s.enemies.some(e => !e.dead && e.qr)); k++) { put(s.heroes[0], sq[1] + 30, sq[2]); put(s.heroes[1], sq[1] - 30, sq[2]); s.tick(DT); }
+  for (const h of s.heroes) put(h, 3200, 4000);
   const ww = s.snapshot().qx.st; check(ww[5] === 1 || ww[0] >= 0, 'she reached the first stake');
-  for (let k = 0; k < 400 && s.q.stakes.st === 1; k++) { s.tick(DT); for (const h of s.heroes) put(h, 1600, 2000); }
+  for (let k = 0; k < 400 && s.q.stakes.st === 1; k++) { s.tick(DT); for (const h of s.heroes) put(h, 3200, 4000); }
   check(s.q.stakes.st === 3, 'left alone against her raid she falls and the quest is missed (state ' + s.q.stakes.st + ')');
 }
 function h0xp(s) { return s.heroes[0].xp > 0 || s.heroes[0].level > 1; }
@@ -161,7 +162,7 @@ console.log('The First Mill:');
   let s = makeSim(2, 21); run(s, 0.2); for (const h of s.heroes) tank(h);
   jump(s, 13); run(s, 0.3);
   check(s.q.mill.st === 1 && s.snapshot().qx.ml[2] === T.mill.hp[1], 'offered at wave 13 with a work site (' + s.snapshot().qx.ml[2] + ' hp)');
-  run(s, 15, () => { put(s.heroes[0], 1500, 1900); put(s.heroes[1], 1500, 1920); });
+  run(s, 15, () => { put(s.heroes[0], 3000, 3800); put(s.heroes[1], 3000, 3840); });
   check(s.snapshot().qx.ml[0] === 0, 'the sails do not go up while nobody is there');
   put(s.heroes[0], X.MILL[0] + 100, X.MILL[1]); put(s.heroes[1], X.MILL[0] + 140, X.MILL[1] + 20); run(s, 5, () => { put(s.heroes[0], X.MILL[0] + 100, X.MILL[1]); put(s.heroes[1], X.MILL[0] + 140, X.MILL[1] + 20); });
   const p5 = s.snapshot().qx.ml[0]; check(p5 > 0.04 && p5 < 0.09, 'work goes on with a hero near (' + p5 + ' after five seconds)');
@@ -177,7 +178,7 @@ console.log('The First Mill:');
   s = makeSim(1, 22); run(s, 0.2); jump(s, 13); run(s, 0.3);
   const hh = s.heroes[0]; tank(hh); put(hh, X.MILL[0] + 100, X.MILL[1]); run(s, 25, () => { put(hh, X.MILL[0] + 100, X.MILL[1]); hh.dmgMul = 0.0001; });
   check(s.enemies.some(e => !e.dead && e.qr && e.qr.qid === 'mill'), 'a surge comes at the frame');
-  put(hh, 1600, 2000); for (let k = 0; k < 600 && s.q.mill.st === 1; k++) { s.tick(DT); put(hh, 1600, 2000); }
+  put(hh, 3200, 4000); for (let k = 0; k < 600 && s.q.mill.st === 1; k++) { s.tick(DT); put(hh, 3200, 4000); }
   check(s.q.mill.st === 3, 'with nobody to hold it the frame is broken and the quest missed'); check(![...s.enemies].some(e => !e.dead && e.qr), 'its raiders are gone with it');
   // missed by time
   s = makeSim(2, 23); run(s, 0.2); jump(s, 13); jump(s, 17); run(s, 1); check(s.q.mill.st === 3, 'missed at the deadline (wave 17)');
@@ -260,9 +261,9 @@ console.log('The Watch-Fires:');
   check(s.extraVis.some(v => v[0] === X.FIRES[0][0] && v[1] === X.FIRES[0][1]), 'a lit fire lets the party see round it');
   s.night = 0.9; s._lt = -1; check(s.isLit(X.FIRES[0][0] + 100, X.FIRES[0][1]) && !s.isLit(X.FIRES[1][0], X.FIRES[1][1] + 600), 'a lit fire is a light the sim sees (stalkers show in it)');
   // the dark comes for it
-  run(s, 20, () => { put(h, 1600, 2000); h.dmgMul = 0.0001; });
+  run(s, 20, () => { put(h, 3200, 4000); h.dmgMul = 0.0001; });
   check(evs(s, 'qxr').some(e => e[1] === 2) && s.enemies.some(e => !e.dead && e.qr && e.qr.qid === 'watchfires'), 'a few seconds later a raid comes for it');
-  for (let k = 0; k < 800 && s.snapshot().qx.wf[0][0] === 1 && s.q.watchfires.st === 1; k++) { s.tick(DT); put(h, 1600, 2000); }
+  for (let k = 0; k < 800 && s.snapshot().qx.wf[0][0] === 1 && s.q.watchfires.st === 1; k++) { s.tick(DT); put(h, 3200, 4000); }
   check(s.snapshot().qx.wf[0][0] === 0 && evs(s, 'qxf').some(e => e[1] === 0 && e[2] === 0), 'left alone, it is snuffed (qxf 0)');
   check(s.q.watchfires.st === 1, 'but the quest is still open: it can be lit again');
   slay(s, h);
@@ -273,8 +274,8 @@ console.log('The Watch-Fires:');
   check(s.q.watchfires.st === 2, 'all three burning at once finishes it (state ' + s.q.watchfires.st + ')');
   check(s.heroes.every(x => x.offers && x.offers.length === 3 && x.offers.every(id => D.QUESTS.watchfires.boons.includes(id))), 'three Watch-Fire boons offered'); slay(s, h);
   h.hp = 50; put(h, X.FIRES[2][0] + 30, X.FIRES[2][1]); run(s, 5); check(h.hp > 50 + 5 * (T.fires.mend - 1), 'standing by a fire mends (' + Math.round(h.hp) + ')');
-  put(h, 1700, 2100); h.hp = 50; run(s, 2); check(h.hp < 52 + 2 * (h.S.reg || 0) + 1, 'and far from it does not');
-  run(s, 60, () => put(h, 1700, 2100)); check(s.snapshot().qx.wf.every(f => f[0] === 1) && !s.enemies.some(e => !e.dead && e.qr), 'the fires stay lit for good and no raiders are left');
+  put(h, 3400, 4200); h.hp = 50; run(s, 2); check(h.hp < 52 + 2 * (h.S.reg || 0) + 1, 'and far from it does not');
+  run(s, 60, () => put(h, 3400, 4200)); check(s.snapshot().qx.wf.every(f => f[0] === 1) && !s.enemies.some(e => !e.dead && e.qr), 'the fires stay lit for good and no raiders are left');
   s = makeSim(2, 51); run(s, 0.2); jump(s, 24); jump(s, 28); run(s, 1); check(s.q.watchfires.st === 3, 'missed at the deadline (wave 28)');
   check(s.snapshot().qx.wf.every(f => f[0] === 0), 'and the far rises stay dark');
 }
@@ -289,12 +290,12 @@ console.log('The boons:');
     a.hp = a.max; b.boons.countin = 1; put(b, a.x + 60, a.y); const withIt = s.hurtHero(a, 100, null); check(withIt < base && Math.abs(withIt / base - 0.92) < 0.03, 'Count Them In: an ally close beside you takes 8% less (' + base + ' to ' + withIt + ')');
     a.hp = a.max; put(b, a.x + 900, a.y); const far = s.hurtHero(a, 100, null); check(far === base, 'and only when close (' + far + ')'); }
   // Fence-Post, Headcount, Grindstone, Night-Eyes (damage the hero deals)
-  { const s = mk(4, 'fencepost', 'headcount', 'grindstone'); const h = s.heroes[0]; for (const o of s.heroes) put(o, 1600, 1700); const e = dummy(s, 1650, 1700);
+  { const s = mk(4, 'fencepost', 'headcount', 'grindstone'); const h = s.heroes[0]; for (const o of s.heroes) put(o, 3200, 3400); const e = dummy(s, 3300, 3400);
     h.stillT = 0; h.boons = {}; h.dmgMul = 1; const base = s.dmgE(e, 100, h, {});
     h.boons = { fencepost: 1 }; h.stillT = 2; const fp = s.dmgE(e, 100, h, {}); check(Math.abs(fp / base - 1.12) < 0.03, 'Fence-Post: still for a moment, +12% (' + base + ' to ' + fp + ')');
     h.stillT = 0.5; check(s.dmgE(e, 100, h, {}) === base, 'and not before');
     h.boons = { headcount: 1 }; const hc = s.dmgE(e, 100, h, {}); check(Math.abs(hc / base - 1.09) < 0.03, 'Headcount: three allies close, +9% (' + hc + ')');
-    for (const o of s.heroes) if (o !== h) put(o, 1600, 2300); const hc1 = s.dmgE(e, 100, h, {}); check(hc1 === base, 'and none when alone');
+    for (const o of s.heroes) if (o !== h) put(o, 3200, 4600); const hc1 = s.dmgE(e, 100, h, {}); check(hc1 === base, 'and none when alone');
     h.boons = { grindstone: 1 }; e.stun = 1; const gs = s.dmgE(e, 100, h, {}); check(Math.abs(gs / base - 1.12) < 0.03, 'Grindstone: a stunned enemy takes +12% (' + gs + ')'); e.stun = 0; e.slowT = 1; check(s.dmgE(e, 100, h, {}) > base, 'a slowed one too'); e.slowT = 0; e.rootT = 1; check(s.dmgE(e, 100, h, {}) > base, 'and a rooted one'); e.rootT = 0; check(s.dmgE(e, 100, h, {}) === base, 'a free one does not');
     const st = s.spawnEnemy('stalker', 0); st.x = h.x + 200; st.y = h.y; st.hp = st.max = 1e7; h.boons = {}; const sb = s.dmgE(st, 100, h, {}); h.boons = { nighteyes: 1 }; const sn = s.dmgE(st, 100, h, {}); check(Math.abs(sn / sb - 1.15) < 0.03, 'Night-Eyes: what hides in the dark takes +15% (' + sb + ' to ' + sn + ')');
     s.night = 1; st.reveal = 0; s.tick(DT); check(st.reveal > s.time, 'Night-Eyes: a stalker near you is shown to you'); }
@@ -319,7 +320,7 @@ console.log('The boons:');
   // Iron Roots, Unshaken
   { const s = mk(2); const h = s.heroes[0]; h.boons = {}; h.stun = 1; run(s, 0.5); const plain = h.stun; h.boons = { ironroots: 1 }; h.stun = 1; h.rootT = 1; run(s, 0.5); check(plain > 0.45 && h.stun < 0.05 && h.rootT < 0.05, 'Iron Roots: stuns and roots wear off twice as fast (' + plain.toFixed(2) + ' vs ' + h.stun.toFixed(2) + ')'); }
   { const s = mk(2); const h = s.heroes[0]; h.boons = { unshaken: 1 }; put(h, M.P.hearth[0] + 50, M.P.hearth[1] + 50); h.stun = 3; h.slowT = 3; h.rootT = 3; run(s, 0.1); check(h.stun <= 0 && h.slowT <= 0 && h.rootT <= 0, 'Unshaken: in the Hearth\'s glow nothing holds you');
-    put(h, 900, 1400); h.stun = 3; h.slowT = 3; h.rootT = 3; s.tick(DT); check(h.stun > 0 || h.slowT > 0 || h.rootT > 0, 'in the dark it does not help');
+    put(h, 1800, 2800); h.stun = 3; h.slowT = 3; h.rootT = 3; s.tick(DT); check(h.stun > 0 || h.slowT > 0 || h.rootT > 0, 'in the dark it does not help');
     h.brand = 40; h.stun = 3; s.tick(DT); check(h.stun <= 0, 'with a brand in hand it does again'); }
   // Ember Ward
   { const s = mk(2); const h = s.heroes[0]; h.boons = { emberward: 1 }; const e = dummy(s, h.x + 70, h.y), far = dummy(s, h.x + 600, h.y); s.buildHash(); s.hurtHero(h, 20, null); check(e.burn && e.burnT > 0 && !far.burn, 'Ember Ward: a blow on you sets fire to what stands close, not far off'); e.burn = null; e.burnT = 0; s.hurtHero(h, 20, null); check(!e.burn, 'but not again at once'); run(s, 4.2); s.buildHash(); s.hurtHero(h, 20, null); check(!!e.burn, 'it comes back after a few seconds'); }
@@ -348,7 +349,7 @@ console.log('A whole run with the quests open and nobody working them:');
   const s = makeSim(2, 130, { noSpawn: false }); run(s, 0.2); const hs = s.heroes;
   for (const h of hs) tank(h);
   run(s, 1700, () => {
-    for (const h of hs) { put(h, 1615, 1700); h.hp = h.max; h.dmgMul = 6; h.stun = 0; }
+    for (const h of hs) { put(h, 3230, 3400); h.hp = h.max; h.dmgMul = 6; h.stun = 0; }
     s.camp.hp = s.camp.max;
   });
   check(s.wave >= 16, 'the run goes on through the middle waves (wave ' + s.wave + ')');

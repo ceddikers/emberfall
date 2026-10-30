@@ -57,24 +57,31 @@ const FoundingArt = (() => {
 
   // ---------- where things stand (shared by the solids, the painters and the marks)
   const TENTS = [   // x, y, w, h, rot, colour, stripe, solid radius
-    [1790, 1790, 130, 96, -.2, '#7f4338', 'rgba(220,196,140,.25)', 58], [1470, 1705, 92, 66, .3, '#a58f62', null, 42], [1925, 1945, 100, 72, -.5, '#7e8a56', null, 46],
-    [1700, 2250, 96, 70, .2, '#9a8a6a', null, 44], [1330, 2170, 96, 70, -.3, '#8a7650', null, 44], [1940, 2110, 82, 62, .6, '#6f7f8c', null, 40], [1235, 1690, 80, 60, -.4, '#a78d5c', null, 38],
+    [3580, 3580, 130, 96, -.2, '#7f4338', 'rgba(220,196,140,.25)', 58], [2940, 3410, 92, 66, .3, '#a58f62', null, 42], [3850, 3890, 100, 72, -.5, '#7e8a56', null, 46],
+    [3400, 4500, 96, 70, .2, '#9a8a6a', null, 44], [2660, 4340, 96, 70, -.3, '#8a7650', null, 44], [3880, 4220, 82, 62, .6, '#6f7f8c', null, 40], [2470, 3380, 80, 60, -.4, '#a78d5c', null, 38],
   ];
-  const CARTS = [[1985, 1800, .25, 'stone', 38], [1250, 1765, -.2, 'timber', 36], [1940, 2215, -.4, 'broken', 36]];
-  const PITS = [[1880, 1882, 17], [1700, 2150, 15]];
+  const CARTS = [[3970, 3600, .25, 'stone', 38], [2500, 3530, -.2, 'timber', 36], [3880, 4430, -.4, 'broken', 36]];
+  const PITS = [[3760, 3764, 17], [3400, 4300, 15]];
   const SHOP_AT = [P.shop[0], P.shop[1], -.1];
   const SIGNS = [   // id, x, y, text, icon
-    ['spring', 1368, 2030, 'THE SPRING', 'drop'], ['shop', 1800, 2182, 'SUPPLIES', 'coin'], ['forge', 1975, 1927, 'THE FORGE', 'anvil'], ['hall', 1342, 1786, 'THE HALL SITE', 'roof'],
-    ['gate', 1262, 912, 'THE GATE', 'gate'], ['beacon', 766, 806, 'BEACON HILL', 'flame'], ['meadow', 872, 1992, 'THE MEADOW', 'flower'], ['woods', 2752, 604, 'TIMBER WOODS', 'axe'],
-    ['ford', 2652, 1186, 'THE EAST FORD', 'ford'],
+    ['spring', 2736, 4060, 'THE SPRING', 'drop'], ['shop', 3600, 4364, 'SUPPLIES', 'coin'], ['forge', 3950, 3854, 'THE FORGE', 'anvil'], ['hall', 2684, 3572, 'THE HALL SITE', 'roof'],
+    ['gate', 2524, 1824, 'THE GATE', 'gate'], ['beacon', 1532, 1612, 'BEACON HILL', 'flame'], ['meadow', 1744, 3984, 'THE MEADOW', 'flower'], ['woods', 5504, 1208, 'TIMBER WOODS', 'axe'],
+    ['ford', 5304, 2372, 'THE EAST FORD', 'ford'],
   ];
   const PLOTS = [   // survey plots for the town to come: cx, cy, w, h, rot, footing
-    [2070, 2052, 120, 90, .08, 1], [2086, 2186, 92, 70, -.1, 0], [1100, 1862, 104, 82, 0, 1], [1118, 2128, 110, 84, -.05, 0], [1030, 2230, 96, 74, .1, 0], [1530, 2336, 110, 80, 0, 1], [1850, 2344, 100, 78, .06, 0],
+    [4140, 4104, 120, 90, .08, 1], [4172, 4372, 92, 70, -.1, 0], [2200, 3724, 104, 82, 0, 1], [2236, 4256, 110, 84, -.05, 0], [2060, 4460, 96, 74, .1, 0], [3060, 4672, 110, 80, 0, 1], [3700, 4688, 100, 78, .06, 0],
   ];
   const POST_SLOTS = [];   // lantern post slots along the North Road (camp end first)
-  { const tot = L1[L1.length - 1][2]; let k = 0; for (let s = tot - 100; s > 280; s -= 118, k++) { let i = L1.length - 1; while (i > 0 && L1[i][2] > s) i--; const p = L1[i], side = k % 2 ? -1 : 1; POST_SLOTS.push([Math.round(p[0] - p[4] * side * 84), Math.round(p[1] + p[3] * side * 84), side]); } }
-  const SPOTS = [[2938, 565], [752, 936], [1396, 2121], [2563, 1163], [1905, 1850], [300, 2192], [P.gate[0], P.gate[1] + 36], [1478, 2284]];
-  const QUEST_SPOTS = { spring: [1405, 2040, 'Dig'], gate: [1250, 940, 'Stone'], fire: [2000, 1880, 'Forge'], beacon: [790, 700, 'Beacon'], road: [1600, 1400, 'Road'], grave: [740, 1950, 'Graves'], roof: [2860, 520, 'Timber'], cover: [1600, 1830, 'Cover'] };
+  { const tot = L1[L1.length - 1][2]; let k = 0; for (let s = tot - 180; s > 560; s -= 236, k++) { let i = L1.length - 1; while (i > 0 && L1[i][2] > s) i--; const p = L1[i], side = k % 2 ? -1 : 1; POST_SLOTS.push([Math.round(p[0] - p[4] * side * 84), Math.round(p[1] + p[3] * side * 84), side]); } }
+  // the old ruins on the west plain: a broken ring wall with two gaps and the stump of a watchtower (a landmark); the Grey Stones,
+  // a ring of standing stones on the Greyback. Both are solids (the sim walks round them).
+  const RUINS = [];
+  for (let i = 0; i < 20; i++) { if (i === 4 || i === 5 || i === 14 || i === 15) continue; const a = i / 20 * TAU, rad = 235 + (hash(i, 77) - .5) * 20; RUINS.push({ x: Math.round(P.ruins[0] + Math.cos(a) * rad), y: Math.round(P.ruins[1] + Math.sin(a) * rad * .9), r: 24 + Math.round(hash(i, 78) * 6), a, k: hash(i, 79) }); }
+  RUINS.push({ x: P.ruins[0] + 150, y: P.ruins[1] - 175, r: 46, tower: true, k: .5 });
+  const STONES = [];
+  for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + .3; STONES.push([Math.round(P.stones[0] + Math.cos(a) * 92), Math.round(P.stones[1] + Math.sin(a) * 78), i]); }
+  const SPOTS = [[5876, 1130], [1504, 1872], [2792, 4242], [5126, 2326], [3810, 3700], [600, 4384], [P.gate[0], P.gate[1] + 36], [2956, 4568]];
+  const QUEST_SPOTS = { spring: [2810, 4080, 'Dig'], gate: [2500, 1880, 'Stone'], fire: [4000, 3760, 'Forge'], beacon: [1580, 1400, 'Beacon'], road: [3200, 2800, 'Road'], grave: [1480, 3900, 'Graves'], roof: [5720, 1040, 'Timber'], cover: [3200, 3660, 'Cover'] };
 
   // ---------- distance fields (cheap lane / footpath tests for the forest layout)
   function makeField(paths, cell, cap) {
@@ -89,7 +96,8 @@ const FoundingArt = (() => {
 
   // ---------- the seeded layout: mountains, trees, rocks; and the solids the sim shares
   let LAY = null, built = false;
-  const EXCL = [[1600, 1960, 430], [700, 700, 270], [1330, 850, 360], [2090, 1860, 190], [650, 1960, 330], [2860, 520, 120], [P.spawn1[0], P.spawn1[1], 130], [3130, 1010, 130], [1450, 2085, 120], [2040, 1620, 110]];
+  const EXCL = [[3200, 3880, 780], [1400, 1400, 340], [2660, 1700, 380], [4180, 3720, 240], [1300, 3920, 420], [5720, 1040, 200], [P.ruins[0], P.ruins[1], 330], [P.stones[0], P.stones[1], 170], [P.spawn1[0], P.spawn1[1], 130], [6260, 2020, 130], [2900, 4170, 140], [4080, 3240, 110]];
+  for (const k of FM.KEEP) EXCL.push([k[0], k[1], 230]);
   for (const p of PLOTS) EXCL.push([p[0], p[1], Math.max(p[2], p[3]) * .8 + 30]);
   for (const t of TENTS) EXCL.push([t[0], t[1], 95]);
   for (const c of CARTS) EXCL.push([c[0], c[1], 95]);
@@ -100,12 +108,13 @@ const FoundingArt = (() => {
     const h = FM.heightAt(x, y);
     if (h === 2) return .03;      // the high shelf is bare rock and thin grass
     let d = .07;
-    if (x > 2700 && h === 0) d = Math.max(d, .4);
-    if (x < 330) d = Math.max(d, .45);
-    if (y > 2240) d = Math.max(d, .6);
-    if (y < 420 && (x < 1250 || x > 1700) && h === 0) d = Math.max(d, .4);
-    if (x > 2400 && y > 1300) d = Math.max(d, .5);
-    if (h === 1) d = Math.min(d, .16);   // the high ground is open, with only a few old trees
+    if (x > 5600 && y > 2300 && h === 0) d = Math.max(d, .3);   // the Ashwood's fringe
+    if (x < 560) d = Math.max(d, .45);
+    if (y > 4500) d = Math.max(d, .6);
+    if (y < 840 && (x < 2500 || x > 3400) && h === 0) d = Math.max(d, .35);
+    if (h === 1) d = Math.min(d, .1);   // the high ground is open, with only a few old trees (sightlines)
+    if (FM.waterAt(x, y)) d = 0;
+    if (h === 0 && d < .2) d = .025;   // open ground stays calm: a lone tree here and there   // the high ground is open, with only a few old trees
     d *= .6 + .8 * fbm(x / 260, y / 260);
     return clamp(d, 0, .95);
   }
@@ -122,22 +131,22 @@ const FoundingArt = (() => {
   function layout() {
     const LR = mulberry(20261029), rr2 = (a, b) => a + (b - a) * LR();
     const lay = { peaks: [], hills: [], rubble: [], trees: [], bushes: [], rocks: [] };
-    const passClear = (x, rad, m) => Math.abs(x - 1490) < m + rad * .85;
+    const passClear = (x, rad, m) => Math.abs(x - 2980) < m + rad * .85;
     const list = [];
-    for (let x = -60; x < W + 100; x += 82) { const base = 70 + 55 * fbm(x / 300, 1.5), rad = rr2(88, 140), jx = rr2(-24, 24), jy = rr2(-30, 30); if (!passClear(x, rad, 120)) list.push([x + jx, base + jy, rad, true]); }
-    for (const side of [-1, 1]) for (let k = 0; k < 3; k++) { const rad = rr2(62, 84); list.push([side < 0 ? 1378 - rad * .8 - k * 40 : 1604 + rad * .8 + k * 40, 6 + rr2(0, 34) + k * 10, rad, true]); }
-    for (let x = -20; x < W + 80; x += 160) { const rad = rr2(130, 190), jx = rr2(-40, 40), jy = rr2(-10, 40); if (!passClear(x, rad, 150)) list.push([x + jx, -30 + jy, rad, true]); }
-    for (let x = 20; x < W; x += 120) { const jx = rr2(-30, 30), jy = rr2(-10, 30), rad = rr2(60, 95); if (x > 1300 && x < 1700) continue; if (FM.heightAt(x + jx, 230 + jy) || FM.cliffAt(x + jx, 230 + jy)) continue; list.push([x + jx, 230 + 40 * fbm(x / 200, 8) + jy, rad, false]); }
-    for (let y = 250; y < H - 120; y += 120) { const a = rr2(-20, 40), b = rr2(-20, 20), c = rr2(60, 95); if (y > 880 && y < 1170) continue; list.push([a, y + b, c, false]); }
-    for (let y = 250; y < H - 120; y += 120) { const a = rr2(-20, 40), b = rr2(-20, 20), c = rr2(60, 95); if (y > 860 && y < 1170) continue; list.push([W - a, y + b, c, false]); }
+    for (let x = -60; x < W + 100; x += 120) { const base = 140 + 100 * fbm(x / 500, 1.5), rad = rr2(130, 200), jx = rr2(-24, 24), jy = rr2(-30, 30); if (!passClear(x, rad, 120)) list.push([x + jx, base + jy, rad, true]); }
+    for (const side of [-1, 1]) for (let k = 0; k < 3; k++) { const rad = rr2(80, 110); list.push([side < 0 ? 2756 - rad * .8 - k * 60 : 3208 + rad * .8 + k * 60, 12 + rr2(0, 60) + k * 20, rad, true]); }
+    for (let x = -20; x < W + 80; x += 220) { const rad = rr2(180, 260), jx = rr2(-50, 50), jy = rr2(-10, 60); if (!passClear(x, rad, 150)) list.push([x + jx, -40 + jy, rad, true]); }
+    for (let x = 20; x < W; x += 170) { const jx = rr2(-40, 40), jy = rr2(-10, 40), rad = rr2(80, 130); if (x > 2600 && x < 3400) continue; if (FM.heightAt(x + jx, 400 + jy) || FM.cliffAt(x + jx, 400 + jy)) continue; list.push([x + jx, 400 + 60 * fbm(x / 200, 8) + jy, rad, false]); }
+    for (let y = 500; y < H - 160; y += 170) { const a = rr2(-20, 50), b = rr2(-30, 30), c = rr2(80, 130); if (y > 1760 && y < 2340) continue; list.push([a, y + b, c, false]); }
+    for (let y = 500; y < H - 160; y += 170) { const a = rr2(-20, 50), b = rr2(-30, 30), c = rr2(80, 130); if (y > 1760 && y < 2340) continue; list.push([W - a, y + b, c, false]); }
     list.sort((a, b) => a[1] - b[1]);
-    list.forEach((p, i) => lay.peaks.push({ x: p[0], y: p[1], r: p[2], seed: i * 7 + 3, snow: p[3] && p[1] < 150 }));
+    list.forEach((p, i) => lay.peaks.push({ x: p[0], y: p[1], r: p[2], seed: i * 7 + 3, snow: p[3] && p[1] < 300 }));
     // the two hills that pinch the valley at the gate
-    [[955, 840, GATE.x0 - 40, 850], [1735, 864, GATE.x1 + 30, 868]].forEach(([cx, cy, ax, ay], j) => {
+    [[GATE.x - 375, GATE.y, GATE.x0 - 40, GATE.y + 10], [GATE.x + 405, GATE.y + 24, GATE.x1 + 30, GATE.y + 28]].forEach(([cx, cy, ax, ay], j) => {
       for (let i = 0; i < 12; i++) { const a = rr2(0, TAU), d = Math.sqrt(rr2(0, 1)) * 94; lay.hills.push({ x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d * .8, r: rr2(40, 62), seed: 1200 + i + j * 20 }); }
       lay.hills.push({ x: ax, y: ay, r: 58, seed: 1290 + j });
     });
-    for (let i = 0; i < 40; i++) lay.rubble.push({ x: 960 + (i % 2) * 740 + rr2(-150, 150), y: 835 + rr2(-80, 110), r: rr2(5, 12), seed: 1500 + i });
+    for (let i = 0; i < 40; i++) lay.rubble.push({ x: GATE.x - 370 + (i % 2) * 740 + rr2(-150, 150), y: GATE.y - 5 + rr2(-80, 110), r: rr2(5, 12), seed: 1500 + i });
     // forest
     const grid = new Map(), key = (x, y) => Math.floor(x / 56) + ',' + Math.floor(y / 56);
     const near = (x, y, d) => { for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const a = grid.get((Math.floor(x / 56) + i) + ',' + (Math.floor(y / 56) + j)); if (a) for (const t of a) if (Math.hypot(t.x - x, t.y - y) < d) return true; } return false; };
@@ -145,22 +154,30 @@ const FoundingArt = (() => {
     const tryTree = (x, y) => {
       const d = forestDensity(x, y), q = LR();
       if (q > d) return;
-      if (y < 200 && !(x > 1300 && x < 1700)) return;
+      if (y < 400 && !(x > 2600 && x < 3400)) return;
       if (!clearOf(x, y, 12)) return;
       const dense = d > .5, wz = FM.woodAt(x, y), sp = wz === 1 ? 50 : dense ? 46 : 74;   // (thick woods leave room to squeeze between trunks; the edge forest does not)
       if (near(x, y, sp)) return;
-      const t = { x, y, type: hash(x | 0, y | 0) < (x > 2500 && y < 900 ? .45 : FM.heightAt(x, y) ? .5 : .75) ? 'oak' : 'pine', s: rr2(30, 52) * (wz === 1 ? 1.1 : dense ? .92 : 1), seed: Math.floor(rr2(0, 1000)) };
+      const t = { x, y, type: hash(x | 0, y | 0) < (x > 5000 && y < 1800 ? .45 : x > 5000 && y > 2400 ? .2 : FM.heightAt(x, y) ? .5 : .75) ? 'oak' : 'pine', s: rr2(30, 52) * (wz === 1 ? 1.1 : dense ? .92 : 1), seed: Math.floor(rr2(0, 1000)) };
       all.push(t); const k = key(x, y); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(t);
     };
-    for (let a = 0; a < 16000; a++) { const x = rr2(10, W - 10), y = rr2(10, H - 10); tryTree(x, y); }
+    for (let a = 0; a < 30000; a++) { const x = rr2(10, W - 10), y = rr2(10, H - 10); tryTree(x, y); }
     // the thick woods get extra tries so they fill in
     for (const z of FM.WOODS) for (let a = 0, n = Math.floor(Math.PI * z.rx * z.ry / 380); a < n; a++) { const x = rr2(Math.max(10, z.x - z.rx), Math.min(W - 10, z.x + z.rx)), y = rr2(Math.max(10, z.y - z.ry), Math.min(H - 10, z.y + z.ry)); tryTree(x, y); }
-    for (let a = 0; a < 700; a++) {
-      const x = rr2(10, W - 10), y = rr2(260, H - 10);
+    for (let a = 0; a < 420; a++) {
+      const x = rr2(10, W - 10), y = rr2(520, H - 10);
       if (!clearOf(x, y, 8) || near(x, y, 30)) continue;
       if (LR() > .35 + forestDensity(x, y) * .4) continue;
       if (LR() < .5) lay.bushes.push({ x, y, s: rr2(12, 20), seed: Math.floor(rr2(0, 1000)) }); else lay.rocks.push({ x, y, s: rr2(8, 17), seed: Math.floor(rr2(0, 1000)) });
     }
+    // a fringe of scattered trees stepping out of each wood: for the eye only (no solids, its own random stream, so the sim and every other tree stay as they were)
+    { const FR = mulberry(7731), fr = (a, b) => a + (b - a) * FR();
+      for (const z of FM.WOODS) for (let a = 0, n = Math.floor(Math.PI * z.rx * z.ry / 5200); a < n; a++) {
+        const th = fr(0, TAU), q = fr(1.02, 1.34), x = z.x + Math.cos(th) * q * z.rx, y = z.y + Math.sin(th) * q * z.ry;
+        if (x < 10 || y < 400 || x > W - 10 || y > H - 10 || FM.woodAt(x, y) || FM.heightAt(x, y) !== 0 || fr(0, 1) > (1.34 - q) / .32 * (.4 + fbm(x / 140 + 3, y / 140 + 3)) * .6) continue;
+        if (!clearOf(x, y, 12) || near(x, y, 64)) continue;
+        const t = { x, y, type: hash(x | 0, y | 0) < .6 ? 'oak' : 'pine', s: fr(26, 44), seed: Math.floor(fr(0, 1000)), deco: true }; all.push(t); const k = key(x, y); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(t);
+      } }
     all.sort((a, b) => a.y - b.y); lay.trees = all;
     lay.bushes.sort((a, b) => a.y - b.y); lay.rocks.sort((a, b) => a.y - b.y);
     return lay;
@@ -169,8 +186,10 @@ const FoundingArt = (() => {
     const s = FM.addSolid;
     for (const p of LAY.peaks) if (p.y + p.r * .8 > FM.MOUNTAIN_Y + 4) s(p.x, p.y, p.r * .8);
     for (const p of LAY.hills) s(p.x, p.y, p.r * .85);
-    s(920, 840, 70); s(1770, 866, 70);
-    for (const t of LAY.trees) s(t.x, t.y, 7);
+    s(GATE.x - 410, GATE.y, 70); s(GATE.x + 440, GATE.y + 26, 70);
+    for (const r of RUINS) s(r.x, r.y, r.r);
+    for (const r of STONES) s(r[0], r[1], 16);
+    for (const t of LAY.trees) if (!t.deco) s(t.x, t.y, 7);
     for (const r of LAY.rocks) s(r.x, r.y, r.s * .8);
     s(P.hearth[0], P.hearth[1], 108);
     for (const t of TENTS) s(t[0], t[1], t[7]);
@@ -180,7 +199,7 @@ const FoundingArt = (() => {
     s(P.spring[0], P.spring[1], 58);
     s(P.forge[0] - 30, P.forge[1], 36); s(P.forge[0], P.forge[1], 36); s(P.forge[0] + 32, P.forge[1], 32);
     s(P.beacon[0], P.beacon[1], 34);
-    s(2910, 480, 42);
+    s(5820, 960, 42);
   }
 
   // ====================================================================== shapes (browser only below this line)
@@ -421,7 +440,7 @@ const FoundingArt = (() => {
     for (let i = 0; i < 60; i++) { const a = hash(i, 11) * TAU, d = 124 + hash(i, 12) * 26; ell(g, x + Math.cos(a) * d, y + Math.sin(a) * d, 5, 2.4, 'rgba(34,26,18,.24)', a + 1.5); }
   }
   function campFence(g) {
-    const [hx, hy] = hearthXY, n = 56, pts = [];
+    const [hx, hy] = hearthXY, n = 100, pts = [];
     for (let i = 0; i < n; i++) {
       const a = i / n * TAU, x = hx + Math.cos(a) * CAMP_R, y = hy + Math.sin(a) * CAMP_R;
       let ok = y < H - 24 && laneD(x, y) > LANE_HW + 18 && footD(x, y) > 34;
@@ -444,11 +463,11 @@ const FoundingArt = (() => {
     }
     // the threshold where the roads come in: two stout posts, a bunting rope, a row of flat white stones across the road
     const gy = hy - Math.sqrt(CAMP_R * CAMP_R - 84 * 84);
-    if (vis(1600, gy, 120)) {
-      for (const s of [-1, 1]) { const x = 1600 + s * 84; circ(g, x + 3, gy + 5, 8, 'rgba(0,0,0,.32)'); circ(g, x, gy, 7.4, '#4a3622'); circ(g, x, gy, 5, '#7d5f3d'); line(g, x, gy, x, gy - 44, '#4a3622', 3.4); circ(g, x, gy - 45, 3.4, '#c9a45c'); }
-      g.strokeStyle = '#cdbb8e'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(1516, gy - 40); g.quadraticCurveTo(1600, gy - 18, 1684, gy - 40); g.stroke();
-      for (let i = 0; i < 8; i++) { const t = (i + .5) / 8, x = lerp(1516, 1684, t), y = gy - 40 + Math.sin(t * Math.PI) * 20 + 5; g.fillStyle = i % 2 ? '#e6dcc0' : '#c9a45c'; g.beginPath(); g.moveTo(x - 5, y - 4); g.lineTo(x + 5, y - 4); g.lineTo(x, y + 9); g.fill(); }
-      for (let i = 0; i < 11; i++) { const x = 1600 + (i - 5) * 13.5, y = hy - Math.sqrt(CAMP_R * CAMP_R - (x - hx) * (x - hx)) + 3; ell(g, x, y, 6.4, 3.8, '#dcd6c6', (i - 5) * .07); ell(g, x - 1, y - 1, 4, 2, 'rgba(255,255,250,.45)'); g.strokeStyle = 'rgba(60,54,44,.5)'; g.lineWidth = .8; g.beginPath(); g.ellipse(x, y, 6.4, 3.8, (i - 5) * .07, 0, TAU); g.stroke(); }
+    if (vis(hx, gy, 120)) {
+      for (const s of [-1, 1]) { const x = hx + s * 84; circ(g, x + 3, gy + 5, 8, 'rgba(0,0,0,.32)'); circ(g, x, gy, 7.4, '#4a3622'); circ(g, x, gy, 5, '#7d5f3d'); line(g, x, gy, x, gy - 44, '#4a3622', 3.4); circ(g, x, gy - 45, 3.4, '#c9a45c'); }
+      g.strokeStyle = '#cdbb8e'; g.lineWidth = 1.4; g.beginPath(); g.moveTo((hx - 84), gy - 40); g.quadraticCurveTo(hx, gy - 18, (hx + 84), gy - 40); g.stroke();
+      for (let i = 0; i < 8; i++) { const t = (i + .5) / 8, x = lerp((hx - 84), (hx + 84), t), y = gy - 40 + Math.sin(t * Math.PI) * 20 + 5; g.fillStyle = i % 2 ? '#e6dcc0' : '#c9a45c'; g.beginPath(); g.moveTo(x - 5, y - 4); g.lineTo(x + 5, y - 4); g.lineTo(x, y + 9); g.fill(); }
+      for (let i = 0; i < 11; i++) { const x = hx + (i - 5) * 13.5, y = hy - Math.sqrt(CAMP_R * CAMP_R - (x - hx) * (x - hx)) + 3; ell(g, x, y, 6.4, 3.8, '#dcd6c6', (i - 5) * .07); ell(g, x - 1, y - 1, 4, 2, 'rgba(255,255,250,.45)'); g.strokeStyle = 'rgba(60,54,44,.5)'; g.lineWidth = .8; g.beginPath(); g.ellipse(x, y, 6.4, 3.8, (i - 5) * .07, 0, TAU); g.stroke(); }
     }
   }
 
@@ -465,14 +484,14 @@ const FoundingArt = (() => {
   function groundDetail(g) {
     const bl = (x, y, r, c, a) => { if (vis(x, y, r)) blob(g, x, y, r, c, a); };
     seedR(111);
-    for (let i = 0; i < 760; i++) {
-      const x = rr(-50, W + 50), y = rr(-50, H + 50), r = rr(46, 160), n = fbm(x / 360 + 5, y / 360 + 2), a = rr(.09, .2);
+    for (let i = 0; i < 2400; i++) {
+      const x = rr(-50, W + 50), y = rr(-50, H + 50), r = rr(60, 200), n = fbm(x / 360 + 5, y / 360 + 2), a = rr(.09, .2);
       if (n > .64) bl(x, y, r, [118, 98, 62], a);            // bare, dry earth
       else if (n > .54) bl(x, y, r * .8, [152, 150, 84], a * .6);   // sun-dried grass
       else if (n < .3) bl(x, y, r, [34, 70, 44], a * .5);   // lush and damp
     }
     // stones, lying about in small groups
-    for (let i = 0; i < 230; i++) {
+    for (let i = 0; i < 260; i++) {
       const x = hash(i, 901) * W, y = hash(i, 902) * H, cnt = 3 + Math.floor(hash(i, 903) * 5);
       if (!vis(x, y, 40) || !clearOf(x, y, 4)) continue;
       for (let k = 0; k < cnt; k++) {
@@ -512,6 +531,10 @@ const FoundingArt = (() => {
       for (let i = 0; i < n; i++) { const a = R() * TAU, d = Math.sqrt(R()); pts.push([z.x + Math.cos(a) * d * z.rx * 1.05, z.y + Math.sin(a) * d * z.ry * 1.05, rr(40, 90), R(), R()]); }
       if (z.x + z.rx < VX0 - 100 || z.x - z.rx > VX1 + 100 || z.y + z.ry < VY0 - 100 || z.y - z.ry > VY1 + 100) continue;
       for (const p of pts) { if (!vis(p[0], p[1], p[2]) || !FM.woodAt(p[0], p[1])) continue; blob(g, p[0], p[1], p[2], z.solid ? [8, 20, 14] : [14, 34, 22], .2 + p[3] * .13); }
+      for (let i = 0, nf = Math.floor(Math.PI * z.rx * z.ry / 9000); i < nf; i++) {   // the edge: undergrowth shading out into the open, no hard line
+        const a = R() * TAU, d = 1 + R() * .3 + .08 * Math.sin(a * 5 + z.x), x = z.x + Math.cos(a) * d * z.rx, y = z.y + Math.sin(a) * d * z.ry, r = rr(36, 74), k = R();
+        if (!vis(x, y, r) || FM.woodAt(x, y) || FM.waterAt(x, y)) continue; blob(g, x, y, r, z.solid ? [10, 24, 16] : [22, 46, 28], .06 + .08 * (1.3 - d) / .3 * k);
+      }
       for (const p of pts) { if (p[4] > .45 || !vis(p[0], p[1], 30) || !FM.woodAt(p[0], p[1])) continue; blob(g, p[0] + 10, p[1] - 8, 16 + p[3] * 14, [150, 176, 84], .06); }   // sun that gets through
       // ferns
       for (const p of pts) { if (p[3] > .5 || !vis(p[0], p[1], 14) || !FM.woodAt(p[0], p[1])) continue; g.strokeStyle = 'rgba(96,138,64,.55)'; g.lineWidth = 1.2; for (let k = 0; k < 4; k++) { const a = -Math.PI / 2 + (k - 1.5) * .6; g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(p[0] + Math.cos(a) * 9, p[1] + Math.sin(a) * 9); g.stroke(); } }
@@ -642,7 +665,7 @@ const FoundingArt = (() => {
   const dFordOf = p => Math.hypot(p[0] - P.ford[0], p[1] - P.ford[1]);
   const deepW = p => { const d = dFordOf(p); return d <= FM.FORD_R ? 0 : Math.max(0, p[5] - FM.deepIn(d, p[5])); };
   function riverArt(g) {
-    if (VX1 < 2000 || VX0 > 2850) return;
+    if (VX1 < 4100 || VX0 > 5400) return;
     const nz = (i, k) => noise(i * .35 + k, 5) - .5;
     g.lineJoin = 'round';
     g.fillStyle = 'rgba(122,104,70,.26)'; ribbon(g, (p, i) => p[5] + 32 + nz(i, 1) * 16, 2); g.fill();
@@ -664,20 +687,26 @@ const FoundingArt = (() => {
       if (shoal) circ(g, x, y, 1.2 + hash(i, 1503) * 2.4, hash(i, 1504) < .5 ? 'rgba(206,194,156,.55)' : 'rgba(112,110,98,.5)');
     }
   }
-  function pondRadius(a, T) {   // distance from the pond's centre to where its norm reaches T, along angle a (the same formula as the map's)
-    const Pd = FM.POND; let lo = 0, hi = 1.8;
+  function pondR(a, T, Pd) {   // distance from the pond's centre to where its norm reaches T, along angle a (the same formula as the map's)
+    let lo = 0, hi = 1.8;
     for (let k = 0; k < 14; k++) { const m = (lo + hi) / 2, px = Pd.x + Math.cos(a) * m * Pd.rx, py = Pd.y + Math.sin(a) * m * Pd.ry, nn = Math.hypot((px - Pd.x) / Pd.rx, (py - Pd.y) / Pd.ry) + (FM.fbm(px / 60, py / 60) - .5) * .3; if (nn < T) lo = m; else hi = m; }
     return lo;
   }
   function pondArt(g) {
-    const Pd = FM.POND; if (Pd.x + Pd.rx * 2 < VX0 || Pd.x - Pd.rx * 2 > VX1 || Pd.y + Pd.ry * 2 < VY0 || Pd.y - Pd.ry * 2 > VY1) return;
+    for (const Pd of [FM.POND].concat(FM.POOLS)) {
+      if (vis(Pd.x, Pd.y, Math.max(Pd.rx, Pd.ry) * 1.8)) for (let i = 0, n = 14; i < n; i++) { const a = i / n * TAU + hash(i, Pd.x | 0) * .4, k = 1.15 + .35 * hash(i, 77); blob(g, Pd.x + Math.cos(a) * Pd.rx * k, Pd.y + Math.sin(a) * Pd.ry * k, Math.max(Pd.rx, Pd.ry) * (.35 + .25 * hash(i, 78)), [92, 84, 56], .16); }   // wet mud grading out from the water
+      poolArt(g, Pd);
+    }
+  }
+  function poolArt(g, Pd) {
+    const deep = Pd === FM.POND || Pd.deep, pondRadius = (a, T) => pondR(a, T, Pd);
+    if (Pd.x + Pd.rx * 2 < VX0 || Pd.x - Pd.rx * 2 > VX1 || Pd.y + Pd.ry * 2 < VY0 || Pd.y - Pd.ry * 2 > VY1) return;
     const blobPath = (T, grow) => { g.beginPath(); const n = 40; for (let i = 0; i <= n; i++) { const a = i / n * TAU, m = pondRadius(a, T) + grow / Pd.rx, x = Pd.x + Math.cos(a) * m * Pd.rx, y = Pd.y + Math.sin(a) * m * Pd.ry; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); };
     g.fillStyle = 'rgba(112,96,64,.35)'; blobPath(1, .22); g.fill();
     g.fillStyle = 'rgba(96,84,58,.6)'; blobPath(1, .09); g.fill();
     g.fillStyle = '#76a198'; blobPath(1, 0); g.fill();
-    g.fillStyle = '#4f8f9a'; blobPath(.78, 0); g.fill();
-    g.fillStyle = '#2f6a80'; blobPath(.5, 0); g.fill();
-    g.fillStyle = '#245a70'; blobPath(.3, 0); g.fill();
+    g.fillStyle = deep ? '#4f8f9a' : '#6a9c90'; blobPath(.78, 0); g.fill();
+    if (deep) { g.fillStyle = '#2f6a80'; blobPath(Pd === FM.POND ? .5 : .4, 0); g.fill(); g.fillStyle = '#245a70'; blobPath(.3, 0); g.fill(); }
     g.strokeStyle = 'rgba(240,248,242,.4)'; g.lineWidth = 1.4; g.setLineDash([8, 12]); blobPath(.98, 0); g.stroke(); g.setLineDash([]);
     // reeds and a lily pad or two round the shore
     for (let i = 0; i < 46; i++) {
@@ -698,12 +727,14 @@ const FoundingArt = (() => {
     // ---- ground: grass in patches, tufts, wildflowers
     g.fillStyle = '#4b6636'; g.fillRect(VX0, VY0, TS, TS);
     seedR(101);
-    for (let i = 0; i < 2300; i++) { const x = rr(-50, W + 50), y = rr(-50, H + 50), r = rr(60, 230), n = fbm(x / 520, y / 520), a = rr(.07, .14); bl(x, y, r, n > .56 ? [104, 132, 66] : n > .42 ? [72, 102, 50] : [50, 76, 42], a); }
-    for (let i = 0; i < 380; i++) { const a = R() * TAU, d = Math.sqrt(R()), r = rr(50, 130); bl(650 + Math.cos(a) * d * 430, 1990 + Math.sin(a) * d * 330, r, [140, 160, 76], .1); }
-    for (let i = 0; i < 380; i++) { const a = R() * TAU, d = Math.sqrt(R()), r = rr(50, 120); bl(2880 + Math.cos(a) * d * 380, 480 + Math.sin(a) * d * 440, r, [28, 48, 32], .12); }
+    for (let i = 0; i < 5200; i++) { const x = rr(-50, W + 50), y = rr(-50, H + 50), r = rr(80, 300), n = fbm(x / 900, y / 900), a = rr(.07, .14); bl(x, y, r, n > .56 ? [104, 132, 66] : n > .42 ? [72, 102, 50] : [50, 76, 42], a); }
+    // broad swathes of drier and lusher ground (soft, large, seeded), so no stretch of the valley sits on one flat green
+    for (let i = 0; i < 1500; i++) { const x = rr(-50, W + 50), y = rr(-50, H + 50), r = rr(220, 460), n = fbm(x / 2200 + 40, y / 2200 + 40); if (!vis(x, y, r)) continue; if (n > .58) bl(x, y, r, [150, 150, 78], rr(.05, .1)); else if (n < .4) bl(x, y, r, [40, 92, 58], rr(.05, .1)); else if (R() < .25) bl(x, y, r, [96, 118, 64], .05); }
+    for (let i = 0; i < 1000; i++) { const a = R() * TAU, d = Math.sqrt(R()), r = rr(50, 130); bl(P.meadow[0] + Math.cos(a) * d * 860, P.meadow[1] + 60 + Math.sin(a) * d * 660, r, [140, 160, 76], .1); }
+    for (let i = 0; i < 1000; i++) { const a = R() * TAU, d = Math.sqrt(R()), r = rr(50, 120); bl(5760 + Math.cos(a) * d * 760, 960 + Math.sin(a) * d * 880, r, [28, 48, 32], .12); }
     {
       const pa = [new Path2D(), new Path2D(), new Path2D()];
-      for (let i = 0; i < 12000; i++) {
+      for (let i = 0; i < 32000; i++) {
         const x = rr(0, W), y = rr(0, H), k = R(), a = rr(-2, 2), b = rr(3, 7), c = rr(-2, 2), d = rr(2, 5);
         if (!vis(x, y, 10)) continue;
         const p = pa[k < .4 ? 0 : k < .75 ? 1 : 2]; p.moveTo(x, y); p.lineTo(x + a, y - b); p.moveTo(x + 3, y + 1); p.lineTo(x + 3 + c, y - d);
@@ -711,15 +742,15 @@ const FoundingArt = (() => {
       g.lineWidth = 1.2; g.lineCap = 'butt';
       g.strokeStyle = 'rgba(130,170,84,.38)'; g.stroke(pa[0]); g.strokeStyle = 'rgba(36,60,32,.35)'; g.stroke(pa[1]); g.strokeStyle = 'rgba(168,160,86,.3)'; g.stroke(pa[2]);
     }
-    for (let i = 0; i < 1100; i++) {
-      const a = R() * TAU, d = Math.sqrt(R()), x = 650 + Math.cos(a) * d * 430, y = 1990 + Math.sin(a) * d * 330, k = R(), r = rr(1.6, 2.8);
-      if (Math.hypot(x - 1500, y - 1950) < 330 || laneD(x, y) < 60) continue;
+    for (let i = 0; i < 2600; i++) {
+      const a = R() * TAU, d = Math.sqrt(R()), x = P.meadow[0] + Math.cos(a) * d * 860, y = P.meadow[1] + 60 + Math.sin(a) * d * 660, k = R(), r = rr(1.6, 2.8);
+      if (Math.hypot(x - P.meadow[0] - 200, y - P.meadow[1]) < 380 || laneD(x, y) < 60) continue;
       cc(x, y, r, k < .35 ? 'rgba(244,240,226,.85)' : k < .6 ? 'rgba(240,206,80,.85)' : k < .8 ? 'rgba(220,150,170,.8)' : 'rgba(180,150,220,.75)');
     }
     // high ground, dressed ground, woods; the beacon hill's stones
     {
       groundDetail(g); plateauTops(g); woodFloor(g);
-      for (let i = 0; i < 40; i++) { const a = R() * TAU, d = rr(.5, 1); rk(700 + Math.cos(a) * 180 * d, 690 + Math.sin(a) * 150 * d, rr(5, 11), i + 300); }
+      for (let i = 0; i < 40; i++) { const a = R() * TAU, d = rr(.5, 1); rk(P.beacon[0] + Math.cos(a) * 300 * d, P.beacon[1] + Math.sin(a) * 250 * d, rr(5, 11), i + 300); }
     }
 
     // ---- cliffs and the ramps through them
@@ -727,6 +758,18 @@ const FoundingArt = (() => {
 
     // ---- roads and footpaths
     seedR(202);
+    // worn verges: a dusty fringe of trodden grass on both sides of every road and path, thinning outward, so they grow out of the grass
+    for (const [pl, hw] of [[L1, 62], [L2, 56], [FOOT.beacon, 15], [FOOT.meadow, 17], [FOOT.forge, 22], [FOOT.woods, 15], [FOOT.gate, 15]]) {
+      let next = 0;
+      for (let i = 0; i < pl.length; i++) {
+        const q = pl[i]; if (q[2] < next || !vis(q[0], q[1], hw + 90)) continue; next = q[2] + (hw > 30 ? 30 : 22);
+        for (const sd of [-1, 1]) {
+          const o = sd * (hw + rr(0, hw > 30 ? 30 : 12)), x = q[0] - q[4] * o, y = q[1] + q[3] * o;
+          bl(x, y, rr(hw > 30 ? 34 : 20, hw > 30 ? 62 : 34), [126, 104, 64], rr(.06, .11));
+          if (R() < .5) { const o2 = sd * (hw + rr(26, hw > 30 ? 80 : 46)); bl(q[0] - q[4] * o2, q[1] + q[3] * o2, rr(18, 38), [104, 128, 62], rr(.05, .09)); }
+        }
+      }
+    }
     pathStrip(g, L1, 62, '#8a6f48', 'rgba(88,72,44,.5)', true, vis);
     pathStrip(g, L2, 56, '#8a6f48', 'rgba(88,72,44,.5)', true, vis);
     pathStrip(g, FOOT.beacon, 15, 'rgba(150,126,84,.8)', 'rgba(110,100,60,.4)', false, vis);
@@ -738,28 +781,35 @@ const FoundingArt = (() => {
     // chevrons pressed into the earth: the way the hungry things walk
     for (const pl of [L1, L2]) {
       const tot = pl[pl.length - 1][2]; let i = 0;
-      for (let s = 80; s < tot - 160; s += (s < 760 ? 150 : 390)) {
+      for (let s = 80; s < tot - 160; s += (s < 1520 ? 220 : 780)) {
         while (i < pl.length - 1 && pl[i][2] < s) i++;
-        const p = pl[i]; if (pl === L2 && p[1] > 1500 && p[0] < 1760) continue;
-        if (vis(p[0], p[1], 24)) chevron(g, p[0], p[1], Math.atan2(p[4], p[3]), 1.05, s < 760 ? .42 : .3);
+        const p = pl[i]; if (pl === L2 && p[1] > 3000 && p[0] < 3520) continue;
+        if (vis(p[0], p[1], 24)) chevron(g, p[0], p[1], Math.atan2(p[4], p[3]), 1.05, s < 1520 ? .42 : .3);
       }
     }
     // soil patches at the work sites
     seedR(303);
-    [[P.gate[0] - 20, P.gate[1] + 20, 190], [P.forge[0], P.forge[1], 120], [P.woods[0], P.woods[1], 150], [700, 810, 90]].forEach(([x, y, r], j) => {
+    [[P.gate[0] - 20, P.gate[1] + 20, 190], [P.forge[0], P.forge[1], 120], [P.woods[0], P.woods[1], 150], [1400, 1620, 90]].forEach(([x, y, r], j) => {
       for (let i = 0; i < 40; i++) { const a = R() * TAU, d = Math.sqrt(R()) * r, rad = rr(24, 50), al = rr(.18, .3); bl(x + Math.cos(a) * d, y + Math.sin(a) * d * .8, rad, j === 2 ? [104, 84, 56] : [118, 96, 62], al); }
     });
 
     // ---- the camp's trodden ground
     seedR(404);
-    { const CX = 1600, CY = 1990;
-      for (let k = 0; k < 3; k++) for (let i = 0; i < 90; i++) {
-        const a = i / 90 * TAU, rad = (300 + 60 * fbm(Math.cos(a) * 1.2 + 4, Math.sin(a) * 1.2 + 4) + 40 * Math.sin(a * 3)) * (k === 0 ? 1.12 : k === 1 ? 1 : .8);
-        for (let j = 0; j < 4; j++) { const rrr = rad * (.55 + j * .15), r = rr(60, 100); bl(CX + Math.cos(a) * rrr * 1.06, CY + Math.sin(a) * rrr * .9, r, k === 0 ? [96, 84, 52] : k === 1 ? [92, 72, 48] : [82, 62, 42], k === 0 ? .1 : .16); }
+    { const CX = P.hearth[0], CY = P.hearth[1] + 50;
+      for (let k = 0; k < 3; k++) for (let i = 0; i < 150; i++) {
+        const a = i / 150 * TAU, rad = (540 + 80 * fbm(Math.cos(a) * 1.2 + 4, Math.sin(a) * 1.2 + 4) + 60 * Math.sin(a * 3)) * (k === 0 ? 1.12 : k === 1 ? 1 : .8);
+        for (let j = 0; j < 4; j++) { const rrr = rad * (.55 + j * .15), r = rr(90, 150); bl(CX + Math.cos(a) * rrr * 1.06, CY + Math.sin(a) * rrr * .9, r, k === 0 ? [96, 84, 52] : k === 1 ? [92, 72, 48] : [82, 62, 42], k === 0 ? .1 : .16); }
       }
-      for (let i = 0; i < 28; i++) { const a = R() * TAU, d = Math.sqrt(R()) * 270, x = CX + Math.cos(a) * d, y = CY + Math.sin(a) * d * .85, rx = rr(14, 30), ry = rr(7, 14), rot = R() * 3, rx2 = rr(10, 22), ry2 = rr(4, 10), rot2 = R() * 3; ee(x, y, rx, ry, 'rgba(40,30,22,.5)', rot); ee(x - 1, y - 1, rx2, ry2, 'rgba(122,148,164,.5)', rot2); }
-      { const pa = new Path2D(); for (let i = 0; i < 260; i++) { const a = R() * TAU, d = Math.sqrt(R()) * 290, x = CX + Math.cos(a) * d, y = CY + Math.sin(a) * d * .85, u = rr(-6, 6), v = rr(-3, 3); if (vis(x, y, 8)) { pa.moveTo(x, y); pa.lineTo(x + u, y + v); } } g.strokeStyle = 'rgba(200,170,90,.35)'; g.lineWidth = 1; g.stroke(pa); }
-      for (let i = 0; i < 400; i++) { const a = R() * TAU, d = Math.sqrt(R()) * 300, rot = R() * 3; ee(CX + Math.cos(a) * d, CY + Math.sin(a) * d * .85, 2.2, 3.4, 'rgba(40,30,22,.28)', rot); }
+      // worn dents and puddles: a few small groups where people gather (round the fires, the supply tent, the first tents), not strewn over the ground
+      { const spots = [...PITS.map(p => [p[0], p[1], p[2] + 40]), [SHOP_AT[0], SHOP_AT[1] + 70, 60], ...TENTS.slice(0, 4).map(t => [t[0], t[1] + 50, 40])];
+        for (const [sx, sy, sr] of spots) for (let i = 0; i < 3; i++) { const a = R() * TAU, d = sr * (.6 + R() * .6), x = sx + Math.cos(a) * d, y = sy + Math.sin(a) * d * .8, rx = rr(12, 22), ry = rr(6, 10), rot = R() * 3; ee(x, y, rx, ry, 'rgba(40,30,22,.4)', rot); if (i === 0) ee(x - 1, y - 1, rx * .6, ry * .5, 'rgba(122,148,164,.35)', rot); } }
+      { const pa = new Path2D(); for (let i = 0; i < 600; i++) { const a = R() * TAU, d = Math.sqrt(R()) * 540, x = CX + Math.cos(a) * d, y = CY + Math.sin(a) * d * .85, u = rr(-6, 6), v = rr(-3, 3); if (vis(x, y, 8)) { pa.moveTo(x, y); pa.lineTo(x + u, y + v); } } g.strokeStyle = 'rgba(200,170,90,.35)'; g.lineWidth = 1; g.stroke(pa); }
+      for (let i = 0; i < 300; i++) {   // the fringe: dirt that creeps out in tongues where the ground is worn, and grass that pokes in where it is not
+        const a = R() * TAU, n = fbm(Math.cos(a) * 1.6 + 9, Math.sin(a) * 1.6 + 9), d = 500 + 170 * n + 100 * R();
+        if (R() < .35) continue; bl(CX + Math.cos(a) * d * 1.06, CY + Math.sin(a) * d * .9, rr(34, 90), [98, 82, 52], rr(.05, .1));
+        if (R() < .3) bl(CX + Math.cos(a) * (d - 90) * 1.06, CY + Math.sin(a) * (d - 90) * .9, rr(26, 50), [72, 104, 52], .09);
+      }
+      for (let i = 0; i < 380; i++) { const a = R() * TAU, d = Math.sqrt(R()) * 560, rot = R() * 3; ee(CX + Math.cos(a) * d, CY + Math.sin(a) * d * .85, 2.2, 3.4, 'rgba(40,30,22,.28)', rot); }
       for (const side of [-1, 1]) if (vis(1700, 1880, 220)) { g.strokeStyle = 'rgba(40,30,20,.3)'; g.lineWidth = 4; g.beginPath(); g.moveTo(1560 + side * 22, 1780); g.quadraticCurveTo(1590 + side * 24, 1900, 1900, 1970 + side * 18); g.stroke(); }
     }
 
@@ -771,20 +821,20 @@ const FoundingArt = (() => {
       g.lineWidth = 2; g.lineCap = 'round'; g.strokeStyle = 'rgba(190,226,230,.3)'; g.stroke(pa[0]); g.strokeStyle = 'rgba(20,50,64,.3)'; g.stroke(pa[1]); }
     for (const side of [-1, 1]) RV.forEach((p, i) => { if (i % 2) return; const o = side * (p[5] + 2 + noise(i * .3, side) * 8), x = p[0] - p[4] * o, y = p[1] + p[3] * o, k = R(), r = rr(2, 5); if (k < .6) cc(x, y, r, 'rgba(235,242,240,.35)'); });
     for (let i = 0; i < 90; i++) {
-      const p = RV[Math.floor(R() * RV.length)]; if (Math.abs(p[1] - 1110) < 160) continue;
+      const p = RV[Math.floor(R() * RV.length)]; if (Math.abs(p[1] - P.ford[1]) < 220) continue;
       const side = R() < .5 ? -1 : 1, o = side * (p[5] + rr(8, 26)), x = p[0] - p[4] * o, y = p[1] + p[3] * o;
       if (laneD(x, y) < 90 || Math.hypot(x - P.forge[0], y - P.forge[1]) < 110) continue;
       for (let k = 0; k < 7; k++) { const rx = x + rr(-10, 10), ry = y + rr(-8, 8), a = rr(-4, 4), b = rr(10, 20); if (!vis(rx, ry, 24)) continue; line(g, rx, ry, rx + a, ry - b, '#4e7338', 1.6); if (k % 3 === 0) line(g, rx, ry - 14, rx + 1, ry - 22, '#6b4a2b', 3); }
     }
-    { const fi = RV.filter(p => Math.abs(p[1] - 1110) < 85);
-      ee(2540, 1112, 118, 62, 'rgba(120,180,170,.22)'); ee(2540, 1112, 100, 46, 'rgba(150,205,185,.28)'); ee(2540, 1112, 80, 30, 'rgba(176,205,170,.25)');
-      if (vis(2540, 1112, 140)) for (let i = 0; i < 40; i++) { const sx = 2430 + i * 6; line(g, sx, 1100 + Math.sin(i) * 4, sx + 5, 1126 + Math.cos(i) * 4, 'rgba(190,176,140,.3)', 2, 'butt'); }
+    { const fi = RV.filter(p => Math.abs(p[1] - P.ford[1]) < 120);
+      ee(5080, 2222, 118, 62, 'rgba(120,180,170,.22)'); ee(5080, 2222, 100, 46, 'rgba(150,205,185,.28)'); ee(5080, 2222, 80, 30, 'rgba(176,205,170,.25)');
+      if (vis(5080, 2222, 140)) for (let i = 0; i < 40; i++) { const sx = 4970 + i * 6; line(g, sx, 2210 + Math.sin(i) * 4, sx + 5, 2236 + Math.cos(i) * 4, 'rgba(190,176,140,.3)', 2, 'butt'); }
       for (let i = 0; i < 150; i++) { const p = fi[Math.floor(R() * fi.length)], x = p[0] + rr(-90, 90), y = p[1] + rr(-30, 30), r = rr(1.5, 4), k = R(); cc(x, y, r, k < .5 ? 'rgba(190,176,140,.75)' : 'rgba(110,104,90,.7)'); }
-      ee(2500, 1075, 30, 11, 'rgba(180,164,128,.5)'); ee(2610, 1150, 38, 12, 'rgba(180,164,128,.5)');
-      for (let i = 0; i < 12; i++) { const x = 2420 + i * 20 + rr(-3, 3), y = 1112 + Math.sin(i * 1.1) * 9; if (!vis(x, y, 16)) continue; ell(g, x + 2, y + 3, 11, 8, 'rgba(0,0,0,.25)'); ell(g, x, y, 10, 7, i % 2 ? '#8a877d' : '#9a968a'); ell(g, x - 2, y - 2, 5, 3, 'rgba(255,255,240,.18)'); }
-      for (let i = 0; i < 16; i++) { const p = fi[Math.floor(R() * fi.length)], x = p[0] + rr(-100, 100), y = p[1] + rr(-50, 50), r = rr(4, 8); if (Math.abs(y - 1112) < 20) continue; rk(x, y, r, 500 + i); }
+      ee(5040, 2185, 30, 11, 'rgba(180,164,128,.5)'); ee(5150, 2260, 38, 12, 'rgba(180,164,128,.5)');
+      for (let i = 0; i < 12; i++) { const x = 4960 + i * 20 + rr(-3, 3), y = 2222 + Math.sin(i * 1.1) * 9; if (!vis(x, y, 16)) continue; ell(g, x + 2, y + 3, 11, 8, 'rgba(0,0,0,.25)'); ell(g, x, y, 10, 7, i % 2 ? '#8a877d' : '#9a968a'); ell(g, x - 2, y - 2, 5, 3, 'rgba(255,255,240,.18)'); }
+      for (let i = 0; i < 16; i++) { const p = fi[Math.floor(R() * fi.length)], x = p[0] + rr(-100, 100), y = p[1] + rr(-50, 50), r = rr(4, 8); if (Math.abs(y - 2222) < 20) continue; rk(x, y, r, 500 + i); }
       // a child's paper boat, sailed into the reeds at the ford's edge
-      if (vis(2470, 1158, 20)) { g.save(); g.translate(2470, 1158); g.rotate(-.5); g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(1, 2, 9, 3.4, 0, 0, TAU); g.fill(); g.fillStyle = '#e6dcc0'; g.beginPath(); g.moveTo(-9, -1); g.lineTo(9, -1); g.lineTo(5, 3); g.lineTo(-5, 3); g.fill(); g.fillStyle = '#d3c8a8'; g.beginPath(); g.moveTo(0, -1); g.lineTo(0, -9); g.lineTo(5, -1); g.fill(); g.restore(); }
+      if (vis(5010, 2268, 20)) { g.save(); g.translate(5010, 2268); g.rotate(-.5); g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(1, 2, 9, 3.4, 0, 0, TAU); g.fill(); g.fillStyle = '#e6dcc0'; g.beginPath(); g.moveTo(-9, -1); g.lineTo(9, -1); g.lineTo(5, 3); g.lineTo(-5, 3); g.fill(); g.fillStyle = '#d3c8a8'; g.beginPath(); g.moveTo(0, -1); g.lineTo(0, -9); g.lineTo(5, -1); g.fill(); g.restore(); }
     }
 
     // ---- the beacon's hearth-stones
@@ -798,8 +848,8 @@ const FoundingArt = (() => {
     // ---- mountains and the two gates of the dark
     for (const p of LAY.peaks) if (vis(p.x, p.y, p.r * 1.4)) peak(g, p.x, p.y, p.r, p.seed, p.snow);
     seedR(707);
-    for (let i = 0; i < 160; i++) { const x = rr(0, W), y = rr(210, 300), r = rr(4, 9); if (x > 1300 && x < 1700) continue; rk(x, y, r, 800 + i); }
-    if (vis(1500, 70, 200)) { const fg = g.createLinearGradient(1380, 0, 1380, 140); fg.addColorStop(0, 'rgba(210,218,226,.4)'); fg.addColorStop(1, 'rgba(210,218,226,0)'); g.fillStyle = fg; g.fillRect(1330, 0, 320, 140); }
+    for (let i = 0; i < 160; i++) { const x = rr(0, W), y = rr(420, 600), r = rr(4, 9); if (x > 2600 && x < 3400) continue; rk(x, y, r, 800 + i); }
+    if (vis(2980, 140, 300)) { const fg = g.createLinearGradient(2760, 0, 2760, 280); fg.addColorStop(0, 'rgba(210,218,226,.4)'); fg.addColorStop(1, 'rgba(210,218,226,0)'); g.fillStyle = fg; g.fillRect(2660, 0, 640, 280); }
     [P.spawn1, P.spawn2].forEach((sp, k) => {
       const [x, y] = sp; if (!vis(x, y, 180)) return;
       const q = mulberry(9000 + k), qr = (a, b) => a + (b - a) * q();
@@ -816,7 +866,7 @@ const FoundingArt = (() => {
     hearthBase(g);
     for (const t of TENTS) if (vis(t[0], t[1], 90)) tent(g, t[0], t[1], t[2], t[3], t[4], t[5], t[6]);
     if (vis(SHOP_AT[0], SHOP_AT[1], 120)) shopTent(g);
-    if (vis(1800, 2040, 140)) { barrel(g, 1720, 2000); barrel(g, 1740, 2012); crate(g, 1735, 1985, 18, .3); crate(g, 1872, 2028, 20, .1); crate(g, 1890, 2044, 18, -.2); barrel(g, 1862, 2108); }
+    if (vis(3600, 4080, 140)) { g.save(); g.translate(1800, 2040); barrel(g, 1720, 2000); barrel(g, 1740, 2012); crate(g, 1735, 1985, 18, .3); crate(g, 1872, 2028, 20, .1); crate(g, 1890, 2044, 18, -.2); barrel(g, 1862, 2108); g.restore(); }
     for (const c of CARTS) if (vis(c[0], c[1], 90)) {
       if (c[3] === 'broken') {   // a cart that lost a wheel on the road: propped on a log, the wheel leaning against it
         cart(g, c[0], c[1], c[2], 'broken'); g.save(); g.translate(c[0], c[1]); g.rotate(c[2]); g.fillStyle = '#6d5236'; g.fillRect(14, 20, 24, 8); circ(g, 38, 24, 4, '#c9a77a'); wheel(g, 56, 44, 11, .5); line(g, 40, 30, 42, 46, '#4a3622', 2); g.restore();
@@ -829,24 +879,25 @@ const FoundingArt = (() => {
     }
     // survey stakes round the Hearth: where the square will be
     for (let i = 0; i < 12; i++) {
-      const a = i / 12 * TAU + .15, x = hearthXY[0] + Math.cos(a) * 158, y = hearthXY[1] + Math.sin(a) * 158;
+      const a = i / 12 * TAU + .15, x = hearthXY[0] + Math.cos(a) * 300, y = hearthXY[1] + Math.sin(a) * 280;
       if (!vis(x, y, 20) || laneD(x, y) < LANE_HW + 8) continue; let hit = false; for (const t of TENTS) if (Math.hypot(t[0] - x, t[1] - y) < t[7] + 14) hit = true; if (Math.hypot(x - SHOP_AT[0], y - SHOP_AT[1]) < 100 || Math.hypot(x - P.spring[0], y - P.spring[1]) < 80) hit = true;
       if (!hit) stake(g, x, y, i % 2 ? '#e6dcc0' : '#c9a45c', (i % 3 - 1) * 1.4);
     }
     campFence(g);
     // stacked timber and stone, laid out by the work still to do
-    if (vis(1480, 1840, 60)) { logPile(g, 1470, 1836, .3, 5, 56); logPile(g, 1452, 1868, .12, 4, 50); }
-    if (vis(1700, 1740, 80)) { rect(g, 1688, 1678, 4, 26, '#5d4329'); rect(g, 1736, 1678, 4, 26, '#5d4329'); rect(g, 1682, 1664, 64, 20, '#8a6a45', '#3d2c1b', 1.2); [[1688, 1668, '#e6dcc0'], [1704, 1670, '#d3c8a8'], [1720, 1667, '#e6dcc0']].forEach(([x, y, c]) => { rect(g, x, y, 11, 14, c); line(g, x + 2, y + 4, x + 9, y + 4, 'rgba(60,40,20,.5)', 1, 'butt'); line(g, x + 2, y + 8, x + 8, y + 8, 'rgba(60,40,20,.5)', 1, 'butt'); }); }
-    if (vis(1355, 1654, 100)) laundry(g, 1290, 1650, 1420, 1658, 7);
-    if (vis(1995, 2030, 80)) laundry(g, 1993, 1996, 2004, 2072, 3);
-    if (vis(1262, 1735, 40)) { stickHorse(g, 1268, 1736, .35); ell(g, 1290, 1750, 8, 8, 'rgba(0,0,0,0)'); g.strokeStyle = '#8a6a45'; g.lineWidth = 1.6; g.beginPath(); g.ellipse(1296, 1752, 9, 9, 0, 0, TAU); g.stroke(); line(g, 1308, 1750, 1322, 1740, '#6a4d2f', 1.8); }
-    if (vis(1880, 1700, 80)) { hopscotch(g, 1884, 1712, .1); circ(g, 1850, 1742, 5, 'rgba(0,0,0,.2)'); ell(g, 1850, 1741, 5.4, 6.4, '#b9a58a'); circ(g, 1850, 1735, 3.4, '#e2bd96'); circ(g, 1850, 1734, 3.6, '#7a5a38'); }
-    if (vis(2150, 1990, 80)) {   // fish drying beside the river
+    if (vis(2960, 3680, 60)) { g.save(); g.translate(1480, 1840); logPile(g, 1470, 1836, .3, 5, 56); logPile(g, 1452, 1868, .12, 4, 50); g.restore(); }
+    if (vis(3400, 3480, 80)) { g.save(); g.translate(1700, 1740); rect(g, 1688, 1678, 4, 26, '#5d4329'); rect(g, 1736, 1678, 4, 26, '#5d4329'); rect(g, 1682, 1664, 64, 20, '#8a6a45', '#3d2c1b', 1.2); [[1688, 1668, '#e6dcc0'], [1704, 1670, '#d3c8a8'], [1720, 1667, '#e6dcc0']].forEach(([x, y, c]) => { rect(g, x, y, 11, 14, c); line(g, x + 2, y + 4, x + 9, y + 4, 'rgba(60,40,20,.5)', 1, 'butt'); line(g, x + 2, y + 8, x + 8, y + 8, 'rgba(60,40,20,.5)', 1, 'butt'); }); g.restore(); }
+    if (vis(2710, 3308, 100)) laundry(g, 2645, 3304, 2775, 3312, 7);
+    if (vis(3990, 4060, 80)) laundry(g, 3988, 4026, 3999, 4102, 3);
+    if (vis(2524, 3470, 40)) { g.save(); g.translate(1262, 1735); stickHorse(g, 1268, 1736, .35); ell(g, 1290, 1750, 8, 8, 'rgba(0,0,0,0)'); g.strokeStyle = '#8a6a45'; g.lineWidth = 1.6; g.beginPath(); g.ellipse(1296, 1752, 9, 9, 0, 0, TAU); g.stroke(); line(g, 1308, 1750, 1322, 1740, '#6a4d2f', 1.8); g.restore(); }
+    if (vis(3760, 3400, 80)) { g.save(); g.translate(1880, 1700); hopscotch(g, 1884, 1712, .1); circ(g, 1850, 1742, 5, 'rgba(0,0,0,.2)'); ell(g, 1850, 1741, 5.4, 6.4, '#b9a58a'); circ(g, 1850, 1735, 3.4, '#e2bd96'); circ(g, 1850, 1734, 3.6, '#7a5a38'); g.restore(); }
+    if (vis(4300, 3980, 80)) { g.save(); g.translate(2150, 1990);   // fish drying beside the river
       for (const x of [2128, 2178]) { line(g, x, 2000, x, 1978, '#5d4329', 3); } line(g, 2126, 1982, 2180, 1982, '#6a4d2f', 2.4);
       for (let i = 0; i < 4; i++) { ell(g, 2138 + i * 12, 1992, 3, 8, '#aab4b6', .1); line(g, 2138 + i * 12, 1982, 2138 + i * 12, 1986, '#6a4d2f', 1); }
+      g.restore();
     }
-    if (vis(2175, 2094, 40)) {   // a rowboat hauled up on the bank
-      g.save(); g.translate(2166, 2096); g.rotate(1.35); g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(3, 4, 32, 11, 0, 0, TAU); g.fill();
+    if (vis(4350, 4188, 40)) {   // a rowboat hauled up on the bank
+      g.save(); g.translate(4332, 4192); g.rotate(1.35); g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(3, 4, 32, 11, 0, 0, TAU); g.fill();
       g.fillStyle = '#6d5236'; g.beginPath(); g.moveTo(-30, 0); g.quadraticCurveTo(0, -14, 32, 0); g.quadraticCurveTo(0, 14, -30, 0); g.fill(); g.fillStyle = '#4a3622'; g.beginPath(); g.moveTo(-24, 0); g.quadraticCurveTo(0, -9, 26, 0); g.quadraticCurveTo(0, 9, -24, 0); g.fill();
       line(g, -8, -8, -8, 8, '#8a6a45', 2.6); line(g, 8, -8, 8, 8, '#8a6a45', 2.6); line(g, -4, 2, 30, 14, '#a58a5c', 1.8); g.restore();
     }
@@ -867,7 +918,7 @@ const FoundingArt = (() => {
     }
     { const wd = P.woods; seedR(1001);
       for (let i = 0; i < 9; i++) { const x = wd[0] + rr(-120, 120), y = wd[1] + rr(-100, 100), r = rr(9, 15); if (vis(x, y, r + 4)) stump(g, x, y, r); }
-      if (vis(2905, 548, 40)) stump(g, 2905, 548, 14);
+      if (vis(5810, 1096, 40)) stump(g, 5810, 1096, 14);
       for (let i = 0; i < 4; i++) if (vis(wd[0], wd[1] + 80, 80)) logPile(g, wd[0] - 60 + i * 4, wd[1] + 70 + i * 8 - 3 * 7 * 0, .15, 5, 90);
       if (vis(wd[0] + 50, wd[1] - 40, 80)) {
         g.save(); g.translate(wd[0] + 50, wd[1] - 40); g.rotate(-.25); g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-52, -14, 108, 36); g.fillStyle = '#6a4d2f'; g.fillRect(-50, -12, 104, 32); g.fillStyle = '#3a2a1c'; g.fillRect(-50, -2, 104, 8); g.strokeStyle = '#3a2a1c'; g.lineWidth = 1; for (let i = 0; i < 7; i++) { g.beginPath(); g.moveTo(-44 + i * 15, -12); g.lineTo(-44 + i * 15, 20); g.stroke(); } g.restore();
@@ -879,12 +930,26 @@ const FoundingArt = (() => {
       }
     }
     // the meadow's plots, pegged out before anyone has needed them
-    [[560, 1925], [610, 1935], [660, 1945], [712, 1932], [580, 1990], [636, 2000], [690, 1992]].forEach(([x, y], i) => { if (vis(x, y, 30)) { g.strokeStyle = 'rgba(232,224,196,.4)'; g.lineWidth = 1; g.strokeRect(x - 20, y - 10, 40, 22); stake(g, x - 20, y + 12, '#e6dcc0', 0); stake(g, x + 20, y - 10, '#e6dcc0', 0); } });
-    if (vis(640, 1860, 160)) { for (let i = 0; i < 5; i++) { const x = 560 + i * 40; line(g, x, 1868, x, 1850, '#5d4329', 3); } line(g, 556, 1856, 724, 1856, '#6a4d2f', 2); line(g, 556, 1862, 724, 1862, '#6a4d2f', 2); }
+    [[1200, 3885], [1250, 3895], [1300, 3905], [1352, 3892], [1220, 3950], [1276, 3960], [1330, 3952]].forEach(([x, y], i) => { if (vis(x, y, 30)) { g.strokeStyle = 'rgba(232,224,196,.4)'; g.lineWidth = 1; g.strokeRect(x - 20, y - 10, 40, 22); stake(g, x - 20, y + 12, '#e6dcc0', 0); stake(g, x + 20, y - 10, '#e6dcc0', 0); } });
+    if (vis(1280, 3720, 160)) { g.save(); g.translate(640, 1860); for (let i = 0; i < 5; i++) { const x = 560 + i * 40; line(g, x, 1868, x, 1850, '#5d4329', 3); } line(g, 556, 1856, 724, 1856, '#6a4d2f', 2); line(g, 556, 1862, 724, 1862, '#6a4d2f', 2); g.restore(); }
     // mountain rubble and the stone the gate will be built from
     for (const p of LAY.hills) if (vis(p.x, p.y, p.r * 1.4)) peak(g, p.x, p.y, p.r, p.seed, false);
     for (const p of LAY.rubble) if (vis(p.x, p.y, 20)) rock(g, p.x, p.y, p.r, p.seed);
-    [[300, 2210], [330, 2250]].forEach(([x, y], i) => { if (vis(x + i * 40, y, 24)) rock(g, x + i * 40, y, 14, 1700 + i); });
+    [[600, 4420], [630, 4460]].forEach(([x, y], i) => { if (vis(x + i * 40, y, 24)) rock(g, x + i * 40, y, 14, 1700 + i); });
+    // the old ruins: worn flagstones inside a broken ring wall, and the stump of the watchtower
+    if (vis(P.ruins[0], P.ruins[1], 320)) {
+      const [rx0, ry0] = P.ruins; seedR(1777);
+      ell(g, rx0, ry0, 230, 200, 'rgba(120,112,92,.18)');
+      for (let i = 0; i < 70; i++) { const a = R() * TAU, d = Math.sqrt(R()) * 200, x = rx0 + Math.cos(a) * d, y = ry0 + Math.sin(a) * d * .88, w = rr(18, 34), h = rr(12, 22); g.save(); g.translate(x, y); g.rotate(rr(-.2, .2)); g.fillStyle = R() < .5 ? 'rgba(150,144,128,.5)' : 'rgba(126,120,106,.45)'; g.fillRect(-w / 2, -h / 2, w, h); g.strokeStyle = 'rgba(40,36,30,.25)'; g.lineWidth = 1; g.strokeRect(-w / 2, -h / 2, w, h); g.restore(); }
+      for (const r of RUINS) {
+        if (r.tower) { ell(g, r.x + 10, r.y + 14, r.r + 10, r.r * .8, 'rgba(0,0,0,.32)'); circ(g, r.x, r.y, r.r + 4, '#5e594f'); circ(g, r.x, r.y, r.r, '#8f8a7c'); circ(g, r.x, r.y, r.r - 12, '#3d3a33'); for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; if (hash(i, 31) < .3) continue; stoneBlock(g, r.x + Math.cos(a) * (r.r - 5), r.y + Math.sin(a) * (r.r - 5), 16, 12, i); } continue; }
+        g.save(); g.translate(r.x, r.y); g.rotate(r.a + Math.PI / 2); g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-r.r - 4, -6, r.r * 2 + 12, 22);
+        const n = 3 + Math.floor(r.k * 3); for (let i = 0; i < n; i++) stoneBlock(g, -r.r + 8 + i * (r.r * 2 - 10) / Math.max(1, n - 1), -2 + (i % 2) * 2, 22, 16, i + Math.floor(r.k * 9));
+        g.restore(); if (r.k > .6) rock(g, r.x + 26 * Math.cos(r.a + 1), r.y + 26 * Math.sin(r.a + 1), 7, 1800 + Math.floor(r.k * 99));
+      }
+    }
+    // the Grey Stones on the Greyback
+    for (const s of STONES) if (vis(s[0], s[1], 40)) { ell(g, s[0] + 9, s[1] + 12, 18, 9, 'rgba(0,0,0,.32)'); ell(g, s[0], s[1], 14, 18, '#6f6c64'); ell(g, s[0] - 2, s[1] - 4, 10, 13, '#9a968a'); ell(g, s[0] - 4, s[1] - 9, 4, 5, 'rgba(255,250,235,.25)'); }
 
     // ---- forest floor: shadows of every tree, bushes, boulders
     for (const t of LAY.trees) if (vis(t.x, t.y, 70)) ell(g, t.x + t.s * .3, t.y + t.s * .4, t.s * (t.type === 'oak' ? 1.0 : .8), t.s * (t.type === 'oak' ? .6 : .5), t.type === 'oak' ? 'rgba(0,0,0,.26)' : 'rgba(0,0,0,.28)');
@@ -933,8 +998,9 @@ const FoundingArt = (() => {
     s = { c, w: c.width / sc, h: c.height / sc, ox: c.width / sc / 2, oy: c.height / sc / 2, ok, tw }; TXT.set(key, s); return s;
   }
   const LABELS = [
-    ['THE NORTH ROAD', 1618, 1250, -Math.PI / 2 + .08, 30], ['THE EAST FORD', 2835, 1084, .08, 30], ['THE FOUNDERS\' CAMP', 1600, 2358, 0, 32], ['BEACON HILL', 700, 500, 0, 28],
-    ['THE MEADOW', 640, 1760, 0, 28], ['TIMBER WOODS', 2900, 310, 0, 28], ['THE RIVER', 2640, 1560, -1.0, 26], ['THE MOUNTAIN PASS', 1500, 172, 0, 24], ['EAST BLUFF', 2080, 790, 0, 24], ['THE HIGH SHELF', 480, 372, 0, 24],
+    ['THE NORTH ROAD', 3236, 2500, -Math.PI / 2 + .08, 30], ['THE EAST FORD', 5670, 2168, .08, 30], ['THE FOUNDERS\' CAMP', 3200, 4560, 0, 32], ['BEACON HILL', 1400, 1000, 0, 28],
+    ['THE MEADOW', 1560, 3780, 0, 28], ['TIMBER WOODS', 5800, 620, 0, 28], ['THE RIVER', 4760, 3200, -1.1, 26], ['THE MOUNTAIN PASS', 2980, 344, 0, 24], ['EAST BLUFF', 4160, 1580, 0, 24], ['THE HIGH SHELF', 960, 744, 0, 24],
+    ['THE GREYBACK', 1060, 2290, 0, 26], ['THE NARROWS', 1990, 1660, 1.2, 20], ['THE OLD RUINS', 1060, 3520, 0, 26], ['THE SEDGE FEN', 720, 3760, 0, 26], ['THE DELTA', 4950, 4300, 0, 24], ['THE ASHWOOD', 5860, 2860, 0, 26],
   ];
 
   // ---------- small icons for the sign boards and nothing else
@@ -1186,22 +1252,40 @@ const FoundingArt = (() => {
   // ====================================================================== tiles, state, view
   const TILES = []; let ready = false, layoutDone = false;
   function ensureLayout() { if (layoutDone) return; LAY = layout(); addSolids(); layoutDone = true; built = true; }
-  function initScale() { const d = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1; sc = d > 1.25 ? 1.5 : 1; try { if (document.fonts && document.fonts.load) document.fonts.load('600 16px Cinzel'); } catch (e) { /* the fallback serif is fine */ } }
+  function initScale() { const d = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1; sc = d > 1.25 ? 1.1 : 1; /* (tiles are painted on demand and capped near TILE_BUDGET, so this only sets their sharpness) */ try { if (document.fonts && document.fonts.load) document.fonts.load('600 16px Cinzel'); } catch (e) { /* the fallback serif is fine */ } }
+  // The ground is painted a tile at a time, when the camera first needs it (at most two a frame, nearest the camera first, the ring just
+  // beyond the view as a head start), and tiles far from the camera are let go once the cache passes TILE_BUDGET. Until a tile is ready its
+  // place shows the plain grass colour. The minimap keeps a small overview that each tile is stamped onto as it is painted.
+  const TILE_BUDGET = 40 * 1024 * 1024, GRASS = '#4b6636', OVW = 1024, OVH = Math.round(OVW * H / W);
+  let tileStamp = 0, tileCount = 0, ovC = null, ovVer = 0;
+  const tileBytes = () => TS * sc * TS * sc * 4;
   function paintOne(tx, ty) {
     const i = ty * NTX + tx; if (TILES[i]) return;
     const c = mk(TS * sc, TS * sc), g = c.getContext('2d'); g.setTransform(sc, 0, 0, sc, -tx * TS * sc, -ty * TS * sc);
-    paintTile(g, tx, ty); TILES[i] = { c, x: tx * TS, y: ty * TS };
+    paintTile(g, tx, ty); TILES[i] = { c, x: tx * TS, y: ty * TS, used: tileStamp }; tileCount++;
+    if (!ovC) { ovC = mk(OVW, OVH); const og = ovC.getContext('2d'); og.fillStyle = GRASS; og.fillRect(0, 0, OVW, OVH); }
+    ovC.getContext('2d').drawImage(c, tx * TS * OVW / W, ty * TS * OVH / H, TS * OVW / W + 1, TS * OVH / H + 1); ovVer++;
   }
-  function build() {
-    ensureLayout(); if (typeof document === 'undefined') return;
-    initScale(); for (let ty = 0; ty < NTY; ty++) for (let tx = 0; tx < NTX; tx++) paintOne(tx, ty);
-    ready = true;
+  function dropTile(i) { const t = TILES[i]; if (!t) return; t.c.width = t.c.height = 1; TILES[i] = undefined; tileCount--; }
+  // paint what the view needs (everything at once on the very first frame), then the ring beyond it; let go of the far tiles
+  function tilesFor(cam) {
+    const stamp = ++tileStamp, x0 = Math.max(0, Math.floor(VW.x0 / TS)), x1 = Math.min(NTX - 1, Math.floor(VW.x1 / TS)), y0 = Math.max(0, Math.floor(VW.y0 / TS)), y1 = Math.min(NTY - 1, Math.floor(VW.y1 / TS));
+    const need = [], ring = [], cx = cam.x, cy = cam.y;
+    for (let ty = Math.max(0, y0 - 1); ty <= Math.min(NTY - 1, y1 + 1); ty++) for (let tx = Math.max(0, x0 - 1); tx <= Math.min(NTX - 1, x1 + 1); tx++) {
+      const i = ty * NTX + tx, inView = tx >= x0 && tx <= x1 && ty >= y0 && ty <= y1, t = TILES[i];
+      if (t) t.used = stamp; else (inView ? need : ring).push([Math.hypot((tx + .5) * TS - cx, (ty + .5) * TS - cy), tx, ty]);
+    }
+    const first = tileCount === 0; need.sort((a, b) => a[0] - b[0]); ring.sort((a, b) => a[0] - b[0]);
+    const t0 = typeof performance !== 'undefined' ? performance.now() : 0; let n = 0;
+    for (const [, tx, ty] of need) { if (!first && n >= 2) break; if (!first && n >= 1 && t0 && performance.now() - t0 > 14) break; paintOne(tx, ty); n++; }
+    if (!n && !need.length) for (const [, tx, ty] of ring) { if (tileCount * tileBytes() + tileBytes() > TILE_BUDGET) break; paintOne(tx, ty); break; }   // (one head-start tile a frame, only while there is room)
+    // over budget: the tile least recently in sight goes (never one of this frame's)
+    while (tileCount * tileBytes() > TILE_BUDGET) { let w = -1, wu = stamp; for (let i = 0; i < TILES.length; i++) { const t = TILES[i]; if (t && t.used < wu) { wu = t.used; w = i; } } if (w < 0) break; dropTile(w); }
   }
-  function buildAsync() {
-    ensureLayout(); if (typeof document === 'undefined') return Promise.resolve();
-    initScale();
-    return new Promise(res => { let n = 0; const step = () => { if (n >= NTX * NTY) { ready = true; res(); return; } paintOne(n % NTX, Math.floor(n / NTX)); n++; (typeof requestAnimationFrame === 'function' ? requestAnimationFrame : setTimeout)(step); }; step(); });
-  }
+  function build() { ensureLayout(); if (typeof document === 'undefined') return; initScale(); ready = true; }
+  // (for tools and screenshots: stamp every tile onto the overview, keeping none of them beyond the budget)
+  function paintOverview() { build(); for (let ty = 0; ty < NTY; ty++) for (let tx = 0; tx < NTX; tx++) { const i = ty * NTX + tx, had = !!TILES[i]; paintOne(tx, ty); if (!had && tileCount * tileBytes() > TILE_BUDGET) dropTile(i); } }
+  function buildAsync() { build(); return Promise.resolve(); }
 
   const EMPTY = [];
   const S = { units: EMPTY, quests: EMPTY, spring: 'trickle', fountainR: FOUNTAIN_R, gate: 'none', gateHp: 1, shut: false, carved: 0, forge: false, smith: false, carts: EMPTY, night: 0, beacon: false, jars: 0, postsN: 0, postsArr: null, postsOff: EMPTY, lights: EMPTY, nLights: 0, postSlots: false, graves: 0, roof: 0, cap: 0, founders: null, found: 0, glint: false, prints: false, labels: true };
@@ -1240,10 +1324,10 @@ const FoundingArt = (() => {
   }
   const lanePt = (pl, s) => { let i = 0; while (i < pl.length - 1 && pl[i][2] < s) i++; return pl[i]; };
   const PRINTS = (() => {
-    const tr = FM.spline([[1928, 1846], [2010, 1700], [2150, 1500], [2290, 1370], [2400, 1250], [2470, 1170], [2550, 1135], [2650, 1030], [2760, 820], [2890, 600], [3010, 380], [3060, 270]], 8), tot = tr[tr.length - 1][2], out = [];
+    const tr = FM.spline([[3856, 3692], [4020, 3400], [4300, 3000], [4580, 2740], [4800, 2500], [4940, 2340], [5100, 2270], [5300, 2060], [5520, 1640], [5780, 1200], [6020, 760], [6120, 540]], 8), tot = tr[tr.length - 1][2], out = [];
     for (let s = 20, k = 0; s < tot - 20; s += 30, k++) {
       let i = 1; while (i < tr.length - 1 && tr[i][2] < s) i++; const p = tr[i], o = (k % 2 ? 1 : -1) * 5, x = p[0] - p[4] * o, y = p[1] + p[3] * o;
-      if (FM.inRiver(x, y, -4) && !(y > 1075 && y < 1160)) continue;
+      if (FM.inRiver(x, y, -4) && !(y > 2150 && y < 2320)) continue;
       out.push([x, y, Math.atan2(p[4], p[3]) + Math.PI / 2, clamp(Math.min(s, tot - s) / 150, 0, 1)]);
     }
     return out;
@@ -1252,34 +1336,34 @@ const FoundingArt = (() => {
   // ====================================================================== the ground pass
   function drawSpot(g, t) {
     const f = S.found;
-    if (inV(2938, 565, 30)) {
-      if (!(f & 1)) { ell(g, 2939, 565, 14, 8.5, 'rgba(120,150,84,.22)', -.2); line(g, 2928, 566, 2951, 560, 'rgba(30,50,24,.28)', 1, 'butt'); }
-      else { ell(g, 2939, 566, 13, 8, 'rgba(60,44,30,.5)', -.2); ell(g, 2947, 560, 9, 5, 'rgba(110,138,78,.5)', -.5); }
+    if (inV(5876, 1130, 30)) {
+      if (!(f & 1)) { ell(g, 5877, 1130, 14, 8.5, 'rgba(120,150,84,.22)', -.2); line(g, 5866, 1131, 5889, 1125, 'rgba(30,50,24,.28)', 1, 'butt'); }
+      else { ell(g, 5877, 1131, 13, 8, 'rgba(60,44,30,.5)', -.2); ell(g, 5885, 1125, 9, 5, 'rgba(110,138,78,.5)', -.5); }
     }
-    if (inV(752, 936, 40)) {
-      g.save(); g.translate(752 + ((f & 2) ? 16 : 0), 936); g.rotate(-.18); g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(-24, -15, 54, 38); g.fillStyle = '#6f7266'; g.fillRect(-27, -17, 54, 34); g.fillStyle = 'rgba(88,128,64,.5)'; g.fillRect(-27, -17, 54, 7); g.fillRect(-27, 6, 14, 11); g.strokeStyle = 'rgba(30,30,26,.55)'; g.lineWidth = 1; g.strokeRect(-27, -17, 54, 34);
+    if (inV(1504, 1872, 40)) {
+      g.save(); g.translate(1504 + ((f & 2) ? 16 : 0), 1872); g.rotate(-.18); g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(-24, -15, 54, 38); g.fillStyle = '#6f7266'; g.fillRect(-27, -17, 54, 34); g.fillStyle = 'rgba(88,128,64,.5)'; g.fillRect(-27, -17, 54, 7); g.fillRect(-27, 6, 14, 11); g.strokeStyle = 'rgba(30,30,26,.55)'; g.lineWidth = 1; g.strokeRect(-27, -17, 54, 34);
       if (S.beacon) { const k = .5 + .5 * Math.sin(t * 2.2); g.fillStyle = `rgba(210,222,235,${.14 + .1 * k})`; g.fillRect(-26, -16, 52, 32); g.strokeStyle = `rgba(235,244,255,${.5 + .3 * k})`; g.lineWidth = 1.4; g.beginPath(); g.moveTo(-12, -5); g.lineTo(18, -9); g.stroke(); const sx = 10 + 6 * Math.sin(t * 1.3); g.strokeStyle = `rgba(255,255,255,${.6 * k})`; g.beginPath(); g.moveTo(sx - 5, 0); g.lineTo(sx + 5, 0); g.moveTo(sx, -5); g.lineTo(sx, 5); g.stroke(); }
       g.restore();
     }
-    if (S.spring === 'well' && inV(1396, 2121, 30)) {
-      ell(g, 1396, 2121, 10, 6, '#357886'); ell(g, 1395, 2121, 7, 4, '#4d8a3a'); circ(g, 1397, 2119.5, 2.2, '#5fa04a');
-      const ph = (t * .09) % 1; if (ph < .12) { g.strokeStyle = `rgba(210,240,240,${.5 * (1 - ph / .12)})`; g.lineWidth = 1.2; g.beginPath(); g.ellipse(1396, 2121, 5 + ph * 110, 3 + ph * 60, 0, 0, TAU); g.stroke(); }
-      if (((t * .13) % 1) < .06) { ell(g, 1394, 2117, 3, 2, '#5f8a3e'); circ(g, 1392.6, 2115.8, .9, '#1c2a14'); }
+    if (S.spring === 'well' && inV(2792, 4242, 30)) {
+      ell(g, 2792, 4242, 10, 6, '#357886'); ell(g, 2791, 4242, 7, 4, '#4d8a3a'); circ(g, 2793, 4240.5, 2.2, '#5fa04a');
+      const ph = (t * .09) % 1; if (ph < .12) { g.strokeStyle = `rgba(210,240,240,${.5 * (1 - ph / .12)})`; g.lineWidth = 1.2; g.beginPath(); g.ellipse(2792, 4242, 5 + ph * 110, 3 + ph * 60, 0, 0, TAU); g.stroke(); }
+      if (((t * .13) % 1) < .06) { ell(g, 2790, 4238, 3, 2, '#5f8a3e'); circ(g, 2788.6, 4236.8, .9, '#1c2a14'); }
     }
-    if (S.glint && !(f & 8) && inV(2563, 1163, 20)) { const k = .5 + .5 * Math.sin(t * 3); circ(g, 2563, 1163, 2.2, `rgba(235,244,255,${.18 + .3 * k})`); g.strokeStyle = `rgba(245,250,255,${.25 + .5 * k})`; g.lineWidth = 1.2; g.beginPath(); g.moveTo(2556, 1163); g.lineTo(2570, 1163); g.moveTo(2563, 1156); g.lineTo(2563, 1170); g.stroke(); }
+    if (S.glint && !(f & 8) && inV(5126, 2326, 20)) { const k = .5 + .5 * Math.sin(t * 3); circ(g, 5126, 2326, 2.2, `rgba(235,244,255,${.18 + .3 * k})`); g.strokeStyle = `rgba(245,250,255,${.25 + .5 * k})`; g.lineWidth = 1.2; g.beginPath(); g.moveTo(5119, 2326); g.lineTo(5133, 2326); g.moveTo(5126, 2319); g.lineTo(5126, 2333); g.stroke(); }
     if (S.prints && !(f & 16)) for (const p of PRINTS) {
       if (!inV(p[0], p[1], 8)) continue; g.save(); g.translate(p[0], p[1]); g.rotate(p[2]); g.fillStyle = `rgba(36,26,18,${p[3] * .24})`; g.beginPath(); g.ellipse(0, 0, 2.2, 3.6, 0, 0, TAU); g.fill(); g.beginPath(); g.ellipse(0, 4.5, 1.5, 1.8, 0, 0, TAU); g.fill(); g.restore();
     }
-    if (S.graves > 0 && inV(300, 2192, 30)) { g.save(); g.translate(300, 2192); g.rotate(.2); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(-12, -2, 30, 24); g.fillStyle = '#7b7d70'; g.beginPath(); g.moveTo(-12, 16); g.lineTo(-10, -8); g.quadraticCurveTo(2, -16, 14, -8); g.lineTo(16, 16); g.fill(); g.fillStyle = 'rgba(70,104,50,.55)'; g.fillRect(-12, 8, 28, 8); g.fillStyle = 'rgba(40,52,36,.5)'; g.fillRect(-14, 12, 34, 6); g.restore(); }
-    if (!(f & 128) && inV(1478, 2284, 40)) { const px = 1478, py = 2284; ell(g, px + 1, py + 1.5, 5, 3.5, 'rgba(0,0,0,.3)'); ell(g, px, py, 5, 3.5, '#9a7a5c'); ell(g, px - 1, py - 1, 2.6, 1.6, 'rgba(255,170,100,.4)'); }
+    if (S.graves > 0 && inV(600, 4384, 30)) { g.save(); g.translate(600, 4384); g.rotate(.2); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(-12, -2, 30, 24); g.fillStyle = '#7b7d70'; g.beginPath(); g.moveTo(-12, 16); g.lineTo(-10, -8); g.quadraticCurveTo(2, -16, 14, -8); g.lineTo(16, 16); g.fill(); g.fillStyle = 'rgba(70,104,50,.55)'; g.fillRect(-12, 8, 28, 8); g.fillStyle = 'rgba(40,52,36,.5)'; g.fillRect(-14, 12, 34, 6); g.restore(); }
+    if (!(f & 128) && inV(2956, 4568, 40)) { const px = 2956, py = 4568; ell(g, px + 1, py + 1.5, 5, 3.5, 'rgba(0,0,0,.3)'); ell(g, px, py, 5, 3.5, '#9a7a5c'); ell(g, px - 1, py - 1, 2.6, 1.6, 'rgba(255,170,100,.4)'); }
   }
   function drawFounder(g, f, t) {
     let pos = S.founders && S.founders[f.id], act = false;
     if (!pos) {
-      if (f.id === 'steward') pos = [1850, 1850, Math.PI];
-      else if (f.id === 'smith') { pos = [2080, 1917, -1.3]; act = S.smith; }
-      else if (f.id === 'digger') { if (S.spring === 'trickle') { pos = [1405, 2040, .3]; act = true; } else if (S.graves > 0 && S.graves < 7) { pos = [715, 1925, 0]; act = true; } else pos = [1405, 2040, 0]; }
-      else pos = [1498, 985, Math.PI];
+      if (f.id === 'steward') pos = [3700, 3700, Math.PI];
+      else if (f.id === 'smith') { pos = [4160, 3834, -1.3]; act = S.smith; }
+      else if (f.id === 'digger') { if (S.spring === 'trickle') { pos = [2810, 4080, .3]; act = true; } else if (S.graves > 0 && S.graves < 7) { pos = [1430, 3850, 0]; act = true; } else pos = [2810, 4080, 0]; }
+      else pos = [2996, 1970, Math.PI];
     } else act = pos[3];
     if (!inV(pos[0], pos[1], 40)) return;
     person(g, pos[0], pos[1], pos[2] || Math.PI / 2, f, t, false, 1.08, act);
@@ -1288,15 +1372,16 @@ const FoundingArt = (() => {
   const questLive = st => !(st === 'done' || st === 'failed' || st === 'missed' || st === 'locked' || st === 'complete' || st === 'completed' || st === 0 || st == null || st === false);
 
   function drawGround(ctx, cam, state, t) {
-    if (!layoutDone || !ready) { if (!layoutDone) build(); }
+    if (!layoutDone || !ready) build();
     norm(state);
     const k = begin(ctx, cam), g = ctx, z = VW.z;
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#0d0b09'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.setTransform(k * z, 0, 0, k * z, k * (cam.w / 2 - cam.x * z), k * (cam.h / 2 - cam.y * z));
+    if (ready) tilesFor(cam);
     for (let ty = Math.max(0, Math.floor(VW.y0 / TS)); ty <= Math.min(NTY - 1, Math.floor(VW.y1 / TS)); ty++) for (let tx = Math.max(0, Math.floor(VW.x0 / TS)); tx <= Math.min(NTX - 1, Math.floor(VW.x1 / TS)); tx++) {
-      const tl = TILES[ty * NTX + tx]; if (tl) g.drawImage(tl.c, tl.x, tl.y, TS + 1, TS + 1);
+      const tl = TILES[ty * NTX + tx]; if (tl) g.drawImage(tl.c, tl.x, tl.y, TS + 1, TS + 1); else { g.fillStyle = GRASS; g.fillRect(tx * TS, ty * TS, TS + 1, TS + 1); }
     }
-    if (!ready && !TILES.length) { ctx.restore(); return; }
+    if (!ready && !tileCount) { ctx.restore(); return; }
     // the river runs
     for (let i = 0; i < RV.length; i += 3) {
       const p = RV[i]; if (!inV(p[0], p[1], 140)) continue;
@@ -1334,7 +1419,7 @@ const FoundingArt = (() => {
         for (let i = 0; i < 260; i++) { const a = hash(i, 1) * TAU, d = Math.sqrt(hash(i, 2)) * 150, x = 20 + Math.cos(a) * d * 1.15, y = Math.sin(a) * d * .65; h.strokeStyle = '#47723a'; h.lineWidth = 1.2; h.beginPath(); h.moveTo(x, y); h.lineTo(x + 1, y - 6); h.stroke(); circ(h, x + 1, y - 7, 2.3, i % 3 ? '#8a93d6' : '#a3a9e6'); circ(h, x + 3, y - 5, 1.7, '#7880c2'); }
       });
       put(g, gs, P.meadow[0], P.meadow[1], clamp(S.graves / 3, .25, 1));
-      const mounds = [[560, 1925], [610, 1935], [660, 1945], [712, 1932], [580, 1990], [636, 2000], [690, 1992]];
+      const mounds = [[1200, 3885], [1250, 3895], [1300, 3905], [1352, 3892], [1220, 3950], [1276, 3960], [1330, 3952]];
       for (let i = 0; i < S.graves; i++) {
         const [x, y] = mounds[i], ms = spr('grave:' + i, 90, 70, 45, 40, h => { mound(h, 0, 0); marker(h, 0, 0, i % 2); for (let q = 0; q < 8; q++) { const a = q / 8 * TAU; circ(h, Math.cos(a) * 17 + 3, Math.sin(a) * 8, 2.1, q % 2 ? '#8a93d6' : '#a3a9e6'); } });
         put(g, ms, x, y);
@@ -1344,14 +1429,14 @@ const FoundingArt = (() => {
     const gx = P.gate[0], gy = P.gate[1];
     if (inV(gx, gy, 420)) {
       put(g, gateSpr(S.gate, S.gate === 'none' ? 4 : gateHpb(), S.shut), gx, gy);
-      if (S.gate !== 'stone') put(g, spr('gatepiles', 120, 80, 60, 40, h => { stoneStack(h, -14, -8, -.2, 4, 3); stoneStack(h, 16, 12, .15, 3, 7); }), 1230, 915);
-      if (S.gate === 'none') put(g, spr('gatetimber', 120, 60, 60, 30, h => { logPile(h, 0, -14, -.1, 5, 90); }), 1170, 890);
+      if (S.gate !== 'stone') put(g, spr('gatepiles', 120, 80, 60, 40, h => { stoneStack(h, -14, -8, -.2, 4, 3); stoneStack(h, 16, 12, .15, 3, 7); }), GATE.x - 100, GATE.y + 75);
+      if (S.gate === 'none') put(g, spr('gatetimber', 120, 60, 60, 30, h => { logPile(h, 0, -14, -.1, 5, 90); }), GATE.x - 160, GATE.y + 50);
     }
     for (const c of S.carts) if (c && inV(c.x, c.y, 90)) putRot(g, cartSpr('stone'), c.x, c.y, (c.a == null ? -Math.PI / 2 : c.a) + Math.PI);
     // the hall site
     if (inV(HALL.x, HALL.y, 160)) put(g, hallSpr(S.roof >= 1 ? 2 : S.roof > 0 ? 1 : 0), HALL.x, HALL.y);
     // the oil jars waiting in camp, the empty ones at the hill
-    if (S.jars > 0 && inV(1905, 2010, 40)) for (let i = 0; i < Math.min(8, S.jars); i++) jar(g, 1894 + (i % 3) * 14 + (i > 2 ? 7 : 0), 1996 + Math.floor(i / 3) * 12, 1);
+    if (S.jars > 0 && inV(3810, 4020, 40)) for (let i = 0; i < Math.min(8, S.jars); i++) jar(g, 3799 + (i % 3) * 14 + (i > 2 ? 7 : 0), 4006 + Math.floor(i / 3) * 12, 1);
     // lantern posts
     const tot = POST_SLOTS.length;
     for (let i = 0; i < tot; i++) {
@@ -1410,24 +1495,20 @@ const FoundingArt = (() => {
       flame(g, p[0], p[1] + 4, 9, t, (i + 1) * 3);
       g.globalCompositeOperation = 'lighter'; glowAt(g, 'warm', p[0], p[1], 64, .3 + .06 * Math.sin(t * 9 + i)); g.globalCompositeOperation = 'source-over';
     });
-    if (inV(1808, 1784, 40)) { g.save(); g.translate(1808, 1784); line(g, 0, 0, 0, -34, '#4a3622', 2); const w = Math.sin(t * 3) * 3; g.fillStyle = '#b8503a'; g.beginPath(); g.moveTo(0, -34); g.quadraticCurveTo(10, -32 + w, 22, -28); g.quadraticCurveTo(10, -26 - w, 0, -20); g.fill(); g.restore(); }
-    if (inV(1890, 2125, 50)) {
-      g.save(); g.translate(1890, 2130); circ(g, 2, 3, 3.6, 'rgba(0,0,0,.3)'); line(g, 0, 0, 0, -30, '#4a3622', 3); line(g, 0, -30, -16, -30, '#4a3622', 2.4);
+    if (inV(3616, 3568, 40)) { g.save(); g.translate(3616, 3568); line(g, 0, 0, 0, -34, '#4a3622', 2); const w = Math.sin(t * 3) * 3; g.fillStyle = '#b8503a'; g.beginPath(); g.moveTo(0, -34); g.quadraticCurveTo(10, -32 + w, 22, -28); g.quadraticCurveTo(10, -26 - w, 0, -20); g.fill(); g.restore(); }
+    if (inV(3780, 4250, 50)) {
+      g.save(); g.translate(3780, 4255); circ(g, 2, 3, 3.6, 'rgba(0,0,0,.3)'); line(g, 0, 0, 0, -30, '#4a3622', 3); line(g, 0, -30, -16, -30, '#4a3622', 2.4);
       g.translate(-16, -30); g.rotate(Math.sin(t * 1.6) * .1); line(g, 0, 0, 0, 5, '#8a6a45', 1.4);
       circ(g, 0, 15, 11, '#6a4a14'); circ(g, 0, 15, 9.6, '#e0b84e'); circ(g, 0, 15, 7.4, '#f1d27a'); g.strokeStyle = '#a07a22'; g.lineWidth = 1.2; g.beginPath(); g.arc(0, 15, 7.4, 0, TAU); g.stroke(); line(g, 0, 10, 0, 20, '#a07a22', 1.8); line(g, -3.4, 12, 3.4, 12, '#a07a22', 1.4); line(g, -3.4, 18, 3.4, 18, '#a07a22', 1.4); circ(g, -3, 11, 2, 'rgba(255,255,255,.4)');
       g.restore();
     }
     // the Warden's tally post at the head of the road
-    if (inV(1536, 996, 40)) { line(g, 1536, 1006, 1536, 970, '#3d2c1b', 5.6, 'butt'); line(g, 1535, 1006, 1535, 970, '#6a4d2f', 2.6, 'butt'); g.strokeStyle = 'rgba(232,222,190,.7)'; g.lineWidth = 1; for (let i = 0; i < 12; i++) { const y = 975 + (i % 4) * 5, x0 = 1532 + Math.floor(i / 4) * 0; g.beginPath(); g.moveTo(1534, y); g.lineTo(1538, y); g.stroke(); void x0; } }
-    // quest places: a gold ring that breathes
-    for (let i = 0; i < S.quests.length; i++) {
-      const q = S.quests[i], key = q && questKey(q[0]); if (!key || !questLive(q[1])) continue;
-      const sp = QUEST_SPOTS[key], pul = (t * .8) % 1; if (!inV(sp[0], sp[1], 80)) continue;
-      g.strokeStyle = `rgba(240,214,140,${(1 - pul) * .5})`; g.lineWidth = 2; g.beginPath(); g.ellipse(sp[0], sp[1] + 6, 20 + pul * 36, 9 + pul * 16, 0, 0, TAU); g.stroke();
-      g.strokeStyle = 'rgba(240,214,140,.35)'; g.lineWidth = 1.4; g.beginPath(); g.ellipse(sp[0], sp[1] + 6, 20, 9, 0, 0, TAU); g.stroke();
-    }
+    if (inV(3072, 1992, 40)) { line(g, 3072, 2002, 3072, 1966, '#3d2c1b', 5.6, 'butt'); line(g, 3071, 2002, 3071, 1966, '#6a4d2f', 2.6, 'butt'); g.strokeStyle = 'rgba(232,222,190,.7)'; g.lineWidth = 1; for (let i = 0; i < 12; i++) { const y = 1971 + (i % 4) * 5, x0 = 3068 + Math.floor(i / 4) * 0; g.beginPath(); g.moveTo(3070, y); g.lineTo(3074, y); g.stroke(); void x0; } }
+    // (the quest places are no longer ringed here: the client marks only each quest's current step, quietly)
     drawSpot(g, t);
-    for (const sg of SIGNS) if (inV(sg[1], sg[2], 90)) put(g, signSpr(sg), sg[1], sg[2]);
+    // a sign names a place only once it is there: the dug spring, the forge, the hall's roof, the gate, the lit beacon, the first grave. The supply tent, the timber woods and the ford are there from the start.
+    const built = { spring: S.spring === 'well', forge: S.forge, hall: S.roof > 0, gate: S.gate !== 'none', beacon: S.beacon, meadow: S.graves > 0 };
+    for (const sg of SIGNS) if (inV(sg[1], sg[2], 90) && (built[sg[0]] === undefined || built[sg[0]])) put(g, signSpr(sg), sg[1], sg[2]);
     if (S.labels) {
       g.save(); for (const lb of LABELS) { if (!inV(lb[1], lb[2], lb[4] * 14)) continue; const ts = textSpr('lab:' + lb[0], lb[0], lb[4], 'rgba(244,230,190,.5)', { ls: 8, shadow: 'rgba(0,0,0,.8)' }); putRot(g, ts, lb[1], lb[2], lb[3]); } g.restore();
     }
@@ -1468,9 +1549,9 @@ const FoundingArt = (() => {
       put(g, gateRoofSpr(gateHpb(), S.carved), P.gate[0], P.gate[1], FADE.gate);
     }
     // the derrick that lifts the capstone
-    if (S.cap > 0 && S.cap < 1 && inV(1690, 1920, 130)) {
-      FADE.derrick += ((unitIn(1620, 1840, 1780, 2000) ? .35 : 1) - FADE.derrick) * kd; g.globalAlpha = FADE.derrick;
-      const top = [1700, 1895], legs = [[1650, 1815], [1760, 1830], [1715, 1985]];
+    if (S.cap > 0 && S.cap < 1 && inV(3290, 3860, 130)) {
+      FADE.derrick += ((unitIn(3220, 3780, 3380, 3940) ? .35 : 1) - FADE.derrick) * kd; g.globalAlpha = FADE.derrick;
+      const top = [3300, 3835], legs = [[3250, 3755], [3360, 3770], [3315, 3925]];
       for (const l of legs) { line(g, l[0] + 4, l[1] + 6, top[0] + 4, top[1] + 6, 'rgba(0,0,0,.25)', 5); line(g, l[0], l[1], top[0], top[1] - 8, '#5d4329', 5); circ(g, l[0], l[1], 4, '#3d2c1b'); }
       circ(g, top[0], top[1] - 8, 6, '#3d2c1b'); circ(g, top[0], top[1] - 8, 3.6, '#8c8f94'); line(g, top[0], top[1] - 8, top[0] - 36, top[1] + 12, '#b9a276', 1.4);
       g.fillStyle = '#a39e90'; g.fillRect(top[0] - 50, top[1] + 8, 28, 18); g.strokeStyle = '#4c473f'; g.lineWidth = 1.2; g.strokeRect(top[0] - 50, top[1] + 8, 28, 18);
@@ -1503,7 +1584,7 @@ const FoundingArt = (() => {
     const hf = 1 + .08 * Math.sin(t * 7) + .05 * Math.sin(t * 17.3);
     addL(P.hearth[0], P.hearth[1], S.cap >= 1 ? 330 : 400, .95 * hf);
     PITS.forEach((p, i) => addL(p[0], p[1], 230, .8 + .1 * Math.sin(t * 9 + i)));
-    addL(1890, 2112, 150, .55);
+    addL(3780, 4242, 150, .55);
     addL(P.spring[0], P.spring[1], 120, S.spring === 'well' ? .35 : .15, true);
     if (S.forge) addL(P.forge[0], P.forge[1], 340, .9 * (1 + .12 * Math.sin(t * 12)));
     if (S.beacon) addL(P.beacon[0], P.beacon[1], 620, 1 + .12 * Math.sin(t * 11));
@@ -1511,7 +1592,7 @@ const FoundingArt = (() => {
     if (S.roof >= 1) { addL(HALL.x + 130, HALL.y, 230, .75); addL(HALL.x, HALL.y, 260, .35); }
     if (S.gate === 'stone') { addL(P.gate[0] - 130, P.gate[1] + 56, 200, .7); addL(P.gate[0] + 130, P.gate[1] + 56, 200, .7); }
     addL(P.spawn1[0], P.spawn1[1], 130, .22); addL(P.spawn2[0], P.spawn2[1], 130, .22);
-    if (!(S.found & 128)) addL(1478, 2284, 48, .25);
+    if (!(S.found & 128)) addL(2956, 4568, 48, .25);
     for (const u of S.units) if (u.hero) addL(u.x, u.y, 190, .6);
     for (let i = 0; i < S.nLights; i++) { const l = S.lights[i]; addL(l.x, l.y, l.r, l.k, l.cool); }
     const kk = k * z * .5, ox = (cam.w / 2 - cam.x * z) * k * .5, oy = (cam.h / 2 - cam.y * z) * k * .5;
@@ -1544,10 +1625,10 @@ const FoundingArt = (() => {
   }
   const MM = {};
   function minimap(w, h) {
-    const key = w + 'x' + h; if (MM[key] && MM[key].ready === ready) return MM[key].c;
+    const key = w + 'x' + h; if (MM[key] && MM[key].ready === ovVer) return MM[key].c;
     const c = mk(w, h), g = c.getContext('2d'), kx = w / W, ky = h / H;
     g.fillStyle = '#26301f'; g.fillRect(0, 0, w, h); g.imageSmoothingEnabled = true;
-    for (const tl of TILES) if (tl) g.drawImage(tl.c, tl.x * kx, tl.y * ky, TS * kx + 1, TS * ky + 1);
+    if (ovC) g.drawImage(ovC, 0, 0, w, h);   // (the overview: every tile painted so far, kept after the tile itself is let go)
     g.lineCap = 'round'; g.lineJoin = 'round';
     for (const L of LANES) { g.strokeStyle = 'rgba(214,92,64,.8)'; g.lineWidth = Math.max(1.4, w / 190); g.setLineDash([w / 90, w / 120]); g.beginPath(); L.path.forEach((p, i) => i ? g.lineTo(p[0] * kx, p[1] * ky) : g.moveTo(p[0] * kx, p[1] * ky)); g.stroke(); }
     g.setLineDash([]);
@@ -1555,11 +1636,11 @@ const FoundingArt = (() => {
     g.strokeStyle = 'rgba(230,201,138,.55)'; g.lineWidth = 1; g.setLineDash([3, 3]); g.beginPath(); g.ellipse(P.hearth[0] * kx, P.hearth[1] * ky, CAMP_R * kx, CAMP_R * ky, 0, 0, TAU); g.stroke(); g.setLineDash([]);
     g.fillStyle = '#ff9a3c'; g.beginPath(); g.arc(P.hearth[0] * kx, P.hearth[1] * ky, Math.max(2.6, w / 80), 0, TAU); g.fill(); g.fillStyle = '#ffe6a8'; g.beginPath(); g.arc(P.hearth[0] * kx, P.hearth[1] * ky, Math.max(1.2, w / 180), 0, TAU); g.fill();
     g.strokeStyle = 'rgba(190,240,246,.7)'; g.lineWidth = 1; g.beginPath(); g.arc(P.spring[0] * kx, P.spring[1] * ky, Math.max(2, w / 110), 0, TAU); g.stroke();
-    MM[key] = { c, ready }; return c;
+    MM[key] = { c, ready: ovVer }; return c;
   }
 
-  const api = { build, buildAsync, drawGround, drawOver, drawLight, marks, minimap, FOUNTAIN_R, GATE, HALL, POST_SLOTS, SPOTS, LABELS, SIGNS,
-    get ready() { return ready; }, get solidsAdded() { return built; }, get layout() { ensureLayout(); return LAY; }, layoutOnly: ensureLayout };
+  const api = { build, buildAsync, paintOverview, drawGround, drawOver, drawLight, marks, minimap, FOUNTAIN_R, GATE, HALL, POST_SLOTS, SPOTS, LABELS, SIGNS,
+    get ready() { return ready; }, get tileInfo() { return { tiles: tileCount, mb: Math.round(tileCount * tileBytes() / 1048576), budgetMb: Math.round(TILE_BUDGET / 1048576), of: NTX * NTY }; }, get solidsAdded() { return built; }, get layout() { ensureLayout(); return LAY; }, layoutOnly: ensureLayout };
   return api;
 })();
 

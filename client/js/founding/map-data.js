@@ -12,7 +12,7 @@
 //   SIGHT                 default vision radii
 
 const FoundingMap = (() => {
-  const W = 3200, H = 2400;
+  const W = 6400, H = 4800;
   const lerp = (a, b, t) => a + (b - a) * t;
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   function hash(x, y) { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
@@ -51,33 +51,48 @@ const FoundingMap = (() => {
 
   // the places (the camp is the heart to defend; the Hearth sits in it)
   const P = {
-    hearth: [1600, 1940], spring: [1450, 2085], shop: [1795, 2070], hall: [1330, 1870], steward: [1790, 1810],
-    gate: [1330, 840], forge: [2090, 1860], beacon: [700, 690], meadow: [640, 1960], woods: [2860, 520],
-    ford: [2540, 1110], junction: [1600, 1590], spawn1: [1480, 70], spawn2: [3130, 1010],
+    hearth: [3200, 3880], spring: [2900, 4170], shop: [3590, 4140], hall: [2660, 3740], steward: [3580, 3620],
+    gate: [2660, 1680], forge: [4180, 3720], beacon: [1400, 1380], meadow: [1280, 3920], woods: [5720, 1040],
+    ford: [5080, 2220], junction: [3200, 3180], spawn1: [2960, 140], spawn2: [6260, 2020],
+    // the landmarks of the bigger valley (2026-10-30): the ruins on the west plain, the standing stones on the Greyback, the Narrows
+    // between the Greyback and Beacon Hill, the Sedge Fen, the river delta, the Ashwood
+    ruins: [1060, 3220], stones: [1050, 2150], narrows: [1990, 1640], fen: [700, 4060], delta: [4900, 4420], ashwood: [5860, 3300],
   };
-  const CAMP_R = 300;   // the camp ring round the Hearth: an enemy that reaches it strikes the camp
+  // ground the map art keeps free of trees and rocks: the wild camps (founding/sim-wild.js CAMPS) and the chain's places
+  // (founding/sim-chain.js LINKS). Keep these in step when a camp or a link moves (tools/founding-test.js checks it).
+  // the seven waystones (founding/sim-world.js names them): on clear, flat, walkable ground off every lane and path, ground the art keeps free too
+  const WAYS = [[3340, 3220], [2660, 1960], [4830, 2470], [1260, 1380], [1180, 3220], [5840, 1040], [5020, 4420]];
+  const KEEP = [
+    ...WAYS,
+    [720, 1180], [1080, 2580], [1640, 2920], [740, 3560], [4320, 1560], [3660, 1120], [5800, 3780], [4760, 3980], [4880, 3320], [5300, 4460], [1060, 3220], [1050, 2150], [820, 3980], [5750, 4400], [6100, 1560], [6100, 3400],
+    [3680, 524], [4210, 3270], [5910, 744], [1400, 492], [3700, 2380], [5760, 2740], [2560, 2480], [1900, 4180], [4020, 4580], [1600, 980],
+    // and the quest objects of founding/sim-quests.js (FoundingSim.QUESTX)
+    [2640, 3600], [2701, 3505], [2364, 3274], [2050, 3412], [1880, 3600], [1520, 3420], [3060, 4380], [5172, 1112], [2990, 1058], [472, 1728], [612, 2942], [2120, 1840],
+    [4770, 1910], [4420, 840], [2380, 4560], [1140, 4376], [2260, 3580], [2840, 3580], [3080, 1400], [1720, 2330], [4642, 802],
+  ];
+  const CAMP_R = 560;   // the camp ring round the Hearth: an enemy that reaches it strikes the camp
   // the two lanes, each from its spawn to the camp
   const LANES = [
-    { id: 'north', name: 'The North Road', path: spline([[1480, 10], [1500, 250], [1380, 460], [1300, 650], [1330, 840], [1430, 1030], [1530, 1230], [1590, 1400], [1600, 1580], [1600, 1780]], 8) },
-    { id: 'east', name: 'The East Ford', path: spline([[3200, 1010], [2900, 1040], [2700, 1090], [2540, 1110], [2380, 1185], [2150, 1300], [1900, 1440], [1700, 1530], [1600, 1585], [1600, 1780]], 8) },
+    { id: 'north', name: 'The North Road', path: spline([[2960, 20], [3000, 500], [2760, 920], [2600, 1300], [2660, 1680], [2860, 2060], [3060, 2460], [3180, 2800], [3200, 3160], [3200, 3560]], 8) },
+    { id: 'east', name: 'The East Ford', path: spline([[6400, 2020], [5800, 2080], [5400, 2180], [5080, 2220], [4760, 2370], [4300, 2600], [3800, 2880], [3400, 3060], [3200, 3170], [3200, 3560]], 8) },
   ];
   const LANE_HW = 66;   // a lane's half-width (worn earth); enemies walk inside it
   // the river, with its half-width at each sample (wider at the ford, where it runs shallow)
-  const RIVER = spline([[2440, -60], [2470, 200], [2420, 420], [2500, 640], [2570, 860], [2540, 1110], [2470, 1330], [2330, 1520], [2260, 1720], [2250, 1900], [2290, 2080], [2210, 2250], [2240, 2470]], 8);
-  RIVER.forEach((p, i) => { p.push(72 + 12 * Math.sin(i * 0.045) + 10 * noise(i * 0.05, 3) + 16 * Math.exp(-Math.pow((p[1] - 1110) / 90, 2))); });
-  const FORD_R = 140;   // within this of P.ford the river can be waded
+  const RIVER = spline([[4880, -120], [4940, 400], [4840, 840], [5000, 1280], [5140, 1720], [5080, 2220], [4940, 2660], [4660, 3040], [4520, 3440], [4500, 3800], [4580, 4160], [4420, 4500], [4480, 4940]], 8);
+  RIVER.forEach((p, i) => { p.push(96 + 16 * Math.sin(i * 0.03) + 14 * noise(i * 0.03, 3) + 26 * Math.exp(-Math.pow((p[1] - 2220) / 150, 2))); });
+  const FORD_R = 200;   // within this of P.ford the river can be waded
   // footpaths from the lanes and the camp to the sites off the lanes
   const FOOT = {
-    beacon: spline([[1296, 690], [1100, 720], [920, 700], [790, 690]], 8),
-    meadow: spline([[1480, 1960], [1250, 2010], [1020, 1990], [830, 1960]], 8),
-    forge: spline([[1900, 1860], [1990, 1870], [2050, 1860]], 8),
-    woods: spline([[2610, 1080], [2680, 960], [2760, 760], [2830, 620], [2860, 540]], 8),
-    gate: spline([[1500, 1100], [1380, 950], [1290, 890]], 8),
+    beacon: spline([[2592, 1380], [2200, 1440], [1840, 1400], [1580, 1380]], 8),
+    meadow: spline([[2960, 3920], [2500, 4020], [2040, 3980], [1660, 3920]], 8),
+    forge: spline([[3800, 3720], [3980, 3740], [4100, 3720]], 8),
+    woods: spline([[5220, 2160], [5360, 1920], [5520, 1520], [5660, 1240], [5720, 1080]], 8),
+    gate: spline([[3000, 2200], [2760, 1900], [2580, 1780]], 8),
   };
-  const MOUNTAIN_Y = 120;   // the mountains along the top: nothing walks above this except down the pass
-  const PASS = [1380, 1600];   // x range of the pass through the mountains
+  const MOUNTAIN_Y = 240;   // the mountains along the top: nothing walks above this except down the pass
+  const PASS = [2760, 3200];   // x range of the pass through the mountains
 
-  const inRiver = (x, y, pad = 0) => { for (let i = 0; i < RIVER.length; i += 2) { const p = RIVER[i]; if (Math.abs(p[0] - x) < 260 && Math.hypot(p[0] - x, p[1] - y) < p[5] + pad) return true; } return false; };
+  const inRiver = (x, y, pad = 0) => { for (let i = 0; i < RIVER.length; i += 2) { const p = RIVER[i]; if (Math.abs(p[0] - x) < 320 && Math.hypot(p[0] - x, p[1] - y) < p[5] + pad) return true; } return false; };
 
   // ====================================================================== terrain
   const TC = 10, TCOLS = Math.ceil(W / TC), TROWS = Math.ceil(H / TC), NCELL = TCOLS * TROWS;
@@ -89,16 +104,23 @@ const FoundingMap = (() => {
   // ---- high ground. Outlines are drawn loose and smoothed; the art uses the very same smoothed outline (poly).
   const PLATEAU_DEFS = [
     // the pass terrace: the North Road comes down off it by a long ramp; the spawn sits up here
-    { id: 'terrace', name: 'The High Pass', level: 1, pts: [[1120, -100], [2080, -100], [2075, 200], [2060, 335], [1980, 405], [1850, 432], [1700, 418], [1560, 440], [1420, 424], [1290, 446], [1190, 410], [1135, 330], [1122, 200]] },
+    { id: 'terrace', name: 'The High Pass', level: 1, pts: [[2240, -200], [4160, -200], [4150, 400], [4120, 670], [3960, 810], [3700, 864], [3400, 836], [3120, 880], [2840, 848], [2580, 892], [2380, 820], [2270, 660], [2244, 400]] },
     // the ledge above the pass, reached by a goat track from the terrace
-    { id: 'ledge', name: 'The Ledge', level: 2, pts: [[1700, 190], [1830, 170], [1940, 205], [1978, 272], [1925, 330], [1805, 346], [1715, 312], [1685, 245]] },
+    { id: 'ledge', name: 'The Ledge', level: 2, pts: [[3400, 380], [3660, 340], [3880, 410], [3956, 544], [3850, 660], [3610, 692], [3430, 624], [3370, 490]] },
     // the north-west mountain side: Beacon Hill at its foot, the high shelf above it
-    { id: 'mountainside', name: 'Beacon Hill', level: 1, pts: [[150, 230], [380, 185], [640, 175], [860, 215], [935, 330], [940, 470], [945, 610], [925, 700], [875, 760], [800, 800], [690, 826], [580, 806], [500, 748], [370, 705], [220, 640], [130, 500], [110, 350]] },
-    { id: 'shelf', name: 'The High Shelf', level: 2, pts: [[290, 290], [470, 268], [650, 290], [700, 360], [640, 425], [470, 450], [320, 425], [260, 350]] },
+    { id: 'mountainside', name: 'Beacon Hill', level: 1, pts: [[300, 460], [760, 370], [1280, 350], [1720, 430], [1870, 660], [1880, 940], [1890, 1220], [1850, 1400], [1750, 1520], [1600, 1600], [1380, 1652], [1160, 1612], [1000, 1496], [740, 1410], [440, 1280], [260, 1000], [220, 700]] },
+    { id: 'shelf', name: 'The High Shelf', level: 2, pts: [[580, 580], [940, 536], [1300, 580], [1400, 720], [1280, 850], [940, 900], [640, 850], [520, 700]] },
     // the timber plateau north-east of the ford
-    { id: 'timber', name: 'The Timber Heights', level: 1, pts: [[2690, -100], [3320, -100], [3320, 885], [3200, 888], [3080, 872], [2960, 892], [2860, 868], [2790, 890], [2735, 866], [2722, 770], [2730, 600], [2705, 420], [2695, 200]] },
+    { id: 'timber', name: 'The Timber Heights', level: 1, pts: [[5380, -200], [6640, -200], [6640, 1770], [6400, 1776], [6160, 1744], [5920, 1784], [5720, 1736], [5580, 1780], [5470, 1732], [5444, 1540], [5460, 1200], [5410, 840], [5390, 400]] },
     // the bluff between the North Road and the river, a lookout over the gate and the ford
-    { id: 'bluff', name: 'The East Bluff', level: 1, pts: [[1990, 570], [2150, 530], [2300, 590], [2370, 720], [2360, 880], [2280, 980], [2120, 1010], [1990, 950], [1930, 830], [1940, 680]] },
+    { id: 'bluff', name: 'The East Bluff', level: 1, pts: [[3980, 1140], [4300, 1060], [4600, 1180], [4740, 1440], [4720, 1760], [4560, 1960], [4240, 2020], [3980, 1900], [3860, 1660], [3880, 1360]] },
+    // the gate spurs: two rocky ridges either side of the gate that make the gate a chokepoint. Between the west spur and Beacon Hill
+    // runs the Narrows (a hero's way round the gate); the east spur meets the Bluff.
+    { id: 'westspur', name: 'The West Spur', level: 1, pts: [[2110, 1640], [2200, 1600], [2300, 1615], [2345, 1670], [2300, 1730], [2190, 1745], [2110, 1715]] },
+    { id: 'eastspur', name: 'The East Spur', level: 1, pts: [[3040, 1690], [3200, 1640], [3450, 1630], [3700, 1620], [3900, 1600], [3930, 1700], [3700, 1745], [3450, 1760], [3200, 1770], [3060, 1760]] },
+    // the Greyback: a long bare ridge on the west plain. Between it and Beacon Hill runs the Narrows, the one easy way from the west
+    // plain to the hill country; a ramp climbs it from the south to the Grey Stones on top
+    { id: 'greyback', name: 'The Greyback', level: 1, pts: [[580, 1990], [900, 1940], [1250, 1965], [1520, 2040], [1610, 2180], [1510, 2330], [1200, 2405], [860, 2395], [610, 2325], [530, 2160]] },
   ];
   const PLATEAUS = PLATEAU_DEFS.map(def => {
     let pts = closedSpline(def.pts, 14), a = 0;
@@ -141,12 +163,13 @@ const FoundingMap = (() => {
   const lanePts = (pl, ya, yb, every) => pl.filter(p => p[1] >= ya && p[1] <= yb).filter((p, i) => i % every === 0).map(p => [p[0], p[1]]);
   const footPts = (pl, ia, ib, every) => pl.filter((p, i) => i >= ia && i <= ib && (i - ia) % every === 0).map(p => [p[0], p[1]]);
   const RAMPS = [
-    { id: 'pass-road', kind: 'road', lo: 0, hi: 1, hw: 128, pts: lanePts(LANES[0].path, 330, 560, 4).reverse() },
-    { id: 'ledge-track', kind: 'track', lo: 1, hi: 2, hw: 46, pts: [[1640, 340], [1700, 300], [1770, 262]] },
-    { id: 'beacon-path', kind: 'path', lo: 0, hi: 1, hw: 80, pts: [[1060, 720], [990, 712], [920, 702], [850, 694]] },
-    { id: 'shelf-track', kind: 'track', lo: 1, hi: 2, hw: 46, pts: [[615, 545], [585, 480], [565, 420], [555, 350]] },
-    { id: 'timber-path', kind: 'path', lo: 0, hi: 1, hw: 80, pts: [[2668, 990], [2692, 930], [2722, 860], [2745, 800]] },
-    { id: 'bluff-path', kind: 'path', lo: 0, hi: 1, hw: 74, pts: [[2125, 1090], [2133, 1020], [2140, 950], [2142, 890]] },
+    { id: 'pass-road', kind: 'road', lo: 0, hi: 1, hw: 128, pts: lanePts(LANES[0].path, 660, 1120, 4).reverse() },
+    { id: 'ledge-track', kind: 'track', lo: 1, hi: 2, hw: 46, pts: [[3280, 680], [3400, 600], [3540, 524]] },
+    { id: 'beacon-path', kind: 'path', lo: 0, hi: 1, hw: 80, pts: [[2120, 1440], [1980, 1424], [1840, 1404], [1700, 1388]] },
+    { id: 'shelf-track', kind: 'track', lo: 1, hi: 2, hw: 46, pts: [[1230, 1090], [1170, 960], [1130, 840], [1110, 700]] },
+    { id: 'timber-path', kind: 'path', lo: 0, hi: 1, hw: 80, pts: [[5336, 1980], [5384, 1860], [5444, 1720], [5490, 1600]] },
+    { id: 'bluff-path', kind: 'path', lo: 0, hi: 1, hw: 74, pts: [[4250, 2180], [4266, 2040], [4280, 1900], [4284, 1780]] },
+    { id: 'greyback-path', kind: 'path', lo: 0, hi: 1, hw: 80, pts: [[1060, 2560], [1060, 2470], [1055, 2380], [1050, 2300]] },
   ];
   function stampRamp(R) {
     const pts = R.pts, seg = [];
@@ -176,7 +199,13 @@ const FoundingMap = (() => {
   // ---- water: the river's channel is deep (blocked) with shallows along both banks; the ford is shallow all across and the deep
   // channel tapers out into it. A pond lies west of the river, south of the ford.
   const deepIn = (dFord, hw) => 30 + (1 - clamp((dFord - FORD_R) / 90, 0, 1)) * hw;   // how far into the water a cell must be to be deep
-  const POND = { x: 2105, y: 1635, rx: 80, ry: 54 };
+  const POND = { x: 4210, y: 3270, rx: 80, ry: 54 };
+  // open pools: the Sedge Fen in the south-west and the delta where the river spreads before the south woods (shallow, slow; a
+  // deep pool has a deep heart)
+  const POOLS = [
+    { x: 640, y: 3990, rx: 150, ry: 90 }, { x: 900, y: 4190, rx: 120, ry: 80, deep: true }, { x: 860, y: 3810, rx: 90, ry: 60 }, { x: 470, y: 4180, rx: 80, ry: 60 },
+    { x: 4770, y: 4420, rx: 200, ry: 90, deep: true }, { x: 5080, y: 4570, rx: 160, ry: 70 }, { x: 5010, y: 4260, rx: 110, ry: 60 },
+  ];
   {
     const WD = new Float32Array(NCELL).fill(-1), WH = new Float32Array(NCELL);
     for (const p of RIVER) {
@@ -188,9 +217,9 @@ const FoundingMap = (() => {
       const px = (k % TCOLS) * TC + TC / 2, py = Math.floor(k / TCOLS) * TC + TC / 2, dF = Math.hypot(px - P.ford[0], py - P.ford[1]);
       FL[k] |= dF <= FORD_R ? F_SHALLOW : WD[k] > deepIn(dF, WH[k]) ? F_DEEP : F_SHALLOW;
     }
-    for (let cy = Math.floor((POND.y - POND.ry * 1.5) / TC); cy <= Math.ceil((POND.y + POND.ry * 1.5) / TC); cy++) for (let cx = Math.floor((POND.x - POND.rx * 1.5) / TC); cx <= Math.ceil((POND.x + POND.rx * 1.5) / TC); cx++) {
-      const px = cx * TC + TC / 2, py = cy * TC + TC / 2, nn = Math.hypot((px - POND.x) / POND.rx, (py - POND.y) / POND.ry) + (fbm(px / 60, py / 60) - .5) * .3;
-      if (nn < 1) FL[cy * TCOLS + cx] |= nn < .5 ? F_DEEP : F_SHALLOW;
+    for (const Q of [POND].concat(POOLS)) for (let cy = Math.max(0, Math.floor((Q.y - Q.ry * 1.5) / TC)); cy <= Math.min(TROWS - 1, Math.ceil((Q.y + Q.ry * 1.5) / TC)); cy++) for (let cx = Math.max(0, Math.floor((Q.x - Q.rx * 1.5) / TC)); cx <= Math.min(TCOLS - 1, Math.ceil((Q.x + Q.rx * 1.5) / TC)); cx++) {
+      const px = cx * TC + TC / 2, py = cy * TC + TC / 2, nn = Math.hypot((px - Q.x) / Q.rx, (py - Q.y) / Q.ry) + (fbm(px / 60, py / 60) - .5) * .3;
+      if (nn < 1) FL[cy * TCOLS + cx] |= nn < (Q === POND ? .5 : Q.deep ? .4 : -1) ? F_DEEP : F_SHALLOW;
     }
     // (a deep cell is never also shallow)
     for (let k = 0; k < NCELL; k++) if (FL[k] & F_DEEP) FL[k] &= ~F_SHALLOW;
@@ -199,18 +228,18 @@ const FoundingMap = (() => {
   // ---- thick woods: slow, and they block sight. Trunks (the map art's solids) stand in them with room to squeeze between; a SOLID
   // wood is the dense forest at the world's edge (trunks too close to pass). Woods keep off the lanes, the footpaths and the sites.
   const WOODS = [
-    { x: 2935, y: 480, rx: 300, ry: 275, lvl: 1 },                    // the timber heights
-    { x: 2235, y: 735, rx: 150, ry: 235, lvl: 1 },                    // the bluff's far half
-    { x: 1030, y: 470, rx: 235, ry: 190, lvl: 0 },                    // the gully between the shelf and the terrace
-    { x: 1600, y: 2450, rx: 1100, ry: 135, lvl: 0, solid: true },     // behind the camp
-    { x: 55, y: 1400, rx: 205, ry: 800, lvl: 0, solid: true },        // the west edge
-    { x: 2850, y: 1800, rx: 430, ry: 560, lvl: 0 },                   // across the river, south-east
-    { x: 910, y: 1390, rx: 150, ry: 105, lvl: 0 },                    // copses on open ground: cover, not walls
-    { x: 1230, y: 1500, rx: 125, ry: 95, lvl: 0 },
-    { x: 1045, y: 1125, rx: 135, ry: 105, lvl: 0 },
-    { x: 2790, y: 1275, rx: 160, ry: 110, lvl: 0 },
+    { x: 5870, y: 960, rx: 600, ry: 550, lvl: 1 },                    // the timber heights
+    { x: 4470, y: 1470, rx: 300, ry: 470, lvl: 1 },                    // the bluff's far half
+    { x: 2060, y: 940, rx: 470, ry: 380, lvl: 0 },                    // the gully between the shelf and the terrace
+    { x: 3200, y: 4900, rx: 2200, ry: 270, lvl: 0, solid: true },     // behind the camp
+    { x: 110, y: 2800, rx: 410, ry: 1600, lvl: 0, solid: true },        // the west edge
+    { x: 5860, y: 3300, rx: 560, ry: 780, lvl: 0 },                   // the Ashwood: pines across the river, south-east
+    { x: 1820, y: 2780, rx: 210, ry: 150, lvl: 0 },                    // copses on open ground: cover, not walls
+    { x: 2460, y: 3000, rx: 180, ry: 135, lvl: 0 },
+    { x: 2200, y: 2650, rx: 190, ry: 150, lvl: 0 },
+    { x: 5580, y: 2600, rx: 230, ry: 160, lvl: 0 },
   ];
-  const WOOD_CARVE = [[1600, 1960, 452], [2860, 520, 215], [2938, 565, 90], [2140, 900, 125], [300, 2192, 95], [1478, 2284, 90], [1396, 2121, 90], [3130, 1010, 150], [1480, 70, 150], [2563, 1163, 100]];
+  const WOOD_CARVE = [[3200, 3880, 820], [5720, 1040, 300], [5910, 744, 400], [5876, 1130, 90], [4280, 1800, 125], [600, 4384, 95], [2956, 4568, 90], [2792, 4242, 90], [6260, 2020, 150], [2960, 140, 150], [5126, 2326, 100]];
   {
     const cap = 130, F = new Float32Array(NCELL).fill(cap), rad = Math.ceil(cap / TC);
     const paths = LANES.map(L => L.path).concat(Object.values(FOOT));
@@ -296,7 +325,7 @@ const FoundingMap = (() => {
   const laneLength = id => { const pl = lane(id).path; return pl[pl.length - 1][2]; };
 
   return { W, H, P, CAMP_R, LANES, LANE_HW, RIVER, FORD_R, FOOT, MOUNTAIN_Y, PASS, SOLIDS, addSolid, spline, noise, hash, inRiver, walkable, laneAt, lane, along, laneLength, near,
-    heightAt, slowAt, losClear, SIGHT, PLATEAUS, RAMPS, WOODS, POND, TC, TCOLS, TROWS, CLIFF_HW, deepIn, flagsAt, waterAt, woodAt, rampAt, cliffAt, fbm, closedSpline };
+    heightAt, slowAt, losClear, SIGHT, PLATEAUS, RAMPS, WOODS, POND, POOLS, KEEP, WAYS, TC, TCOLS, TROWS, CLIFF_HW, deepIn, flagsAt, waterAt, woodAt, rampAt, cliffAt, fbm, closedSpline };
 })();
 
 if (typeof module !== 'undefined') module.exports = { FoundingMap };

@@ -7,7 +7,7 @@ const path = require('path');
 const { FoundingMap: M } = require(path.join(__dirname, '../client/js/founding/map-data.js'));
 const { FOUNDING_DATA: D } = require(path.join(__dirname, '../client/js/founding/data.js'));
 const { FoundingSim } = require(path.join(__dirname, '../client/js/founding/sim.js'));
-for (const m of ['sim-items', 'sim-defence', 'sim-wild', 'sim-chain', 'sim-quests', 'sim-trials']) require(path.join(__dirname, '../client/js/founding/' + m + '.js'));   // feature modules register on FoundingSim.mods
+for (const m of ['sim-items', 'sim-defence', 'sim-wild', 'sim-chain', 'sim-quests', 'sim-trials', 'sim-intro', 'sim-world']) require(path.join(__dirname, '../client/js/founding/' + m + '.js'));   // feature modules register on FoundingSim.mods
 // the map art adds the valley's solids (trees, tents, the Hearth ring...) to FoundingMap.SOLIDS; the sim must run with them
 const { FoundingArt } = require(path.join(__dirname, '../client/js/founding/map-art.js'));
 FoundingArt.layoutOnly();
@@ -37,7 +37,7 @@ function makeSim(N, seed, extra) {
     } else if (m.t === 'fdend') log.fdend.push(m);
   };
   const emitTo = (id, m) => { log.fdp++; log.fdpLast[id] = m; };
-  const sim = new FoundingSim(Object.assign({ players, emit, emitTo, seed }, extra || {}));
+  const sim = new FoundingSim(Object.assign({ players, emit, emitTo, seed, autoLoot: true }, extra || {}));
   sim.log = log;
   for (let i = 0; i < N; i++) sim.intent('p' + i, { k: 'pick', hero: (extra && extra.heroes ? extra.heroes : ['bastion', 'cleric', 'pyromancer', 'ranger'])[i] });
   sim.intent('p0', { k: 'ready' });
@@ -45,9 +45,9 @@ function makeSim(N, seed, extra) {
 }
 
 // ---------------------------------------------------------------- the scripted hero
-const DP = [1615, 1700];     // where the party holds: just south of the junction, where both lanes meet the camp
-const DP2 = [1400, 1010];    // the siege: south of the gate, on the North Road
-const MIRE_HOLD = [2390, 1190];   // the west bank of the ford
+const DP = [3215, 3400];     // where the party holds: just south of the junction, where both lanes meet the camp
+const DP2 = [2800, 2020];    // the siege: south of the gate, on the North Road
+const MIRE_HOLD = [4780, 2380];   // the west bank of the ford
 function cluster(sim, x, y, R, minN) {   // the enemy with the most neighbours within 90; returns {x, y, n}
   let best = null;
   for (const e of sim.enemies) {
@@ -228,7 +228,7 @@ function sectionQuests() {
   // fountain: full heal rate vs trickle
   s.heroes[1].hp = 10; put(s.heroes[1], M.P.spring[0], M.P.spring[1] + 20); runFor(s, 3); check(s.heroes[1].hp > 40, 'the full fountain heals quickly (' + Math.round(s.heroes[1].hp) + ')');
   // The Spring: missed
-  s = quiet(2, 12); runFor(s, D.WAVE_T0 + 3 * D.WAVE_GAP + 2, () => { for (const x of s.heroes) put(x, 1600, 1100); });
+  s = quiet(2, 12); runFor(s, D.WAVE_T0 + 3 * D.WAVE_GAP + 2, () => { for (const x of s.heroes) put(x, 3200, 2200); });
   check(s.q.spring.st === 3 && s.spring === 0, 'The Spring missed leaves the trickle'); s.heroes[1].hp = 10; put(s.heroes[1], M.P.spring[0], M.P.spring[1] + 20); runFor(s, 3); check(s.heroes[1].hp < 25, 'a missed Spring only trickles (' + Math.round(s.heroes[1].hp) + ')');
   check(!s.heroes[0].offers || s.heroes[0].offers.every(id => !D.QUESTS.spring.boons.includes(id)), 'a missed quest gives no boons');
   // Stone for the Gate: done
@@ -250,7 +250,7 @@ function sectionQuests() {
   s = quiet(2, 16); runFor(s, D.WAVE_T0 + 2 * D.WAVE_GAP + 1); s.hurtObj(s.smith, 9999, null, null);
   check(s.q.fire.st === 3 && s.forge === 0 && !s.smith, 'a fallen Smith misses The First Fire');
   // enemies divert to the Smith
-  s = quiet(2, 17); runFor(s, D.WAVE_T0 + 2 * D.WAVE_GAP + 1); s.noSpawn = false; const se = s.spawnEnemy('streak', 1, [2250, 1420]);   // west of the river, with a clear run to her
+  s = quiet(2, 17); runFor(s, D.WAVE_T0 + 2 * D.WAVE_GAP + 1); s.noSpawn = false; const se = s.spawnEnemy('streak', 1, [4500, 2840]);   // west of the river, with a clear run to her
   se.tgt = null; s.carts = []; runFor(s, 25); check(se.tgt === s.smith || s.smith.hp < s.smith.max || se.dead, 'a runner goes for the Smith');
 }
 
@@ -276,20 +276,20 @@ function sectionLevels() {
   check(h.max > hp1 && h.max < hp1 * 2.3 && h.dmgMul > dm1 * 1.4 && h.dmgMul < dm1 * 1.9, 'level 20 hero: health ' + hp1 + ' to ' + h.max + ', damage x' + (h.dmgMul / dm1).toFixed(2));
   // shared XP, WC3-style
   s = quiet(3, 404, ['bastion', 'cleric', 'ranger']); runFor(s, 0.5); const [a, b, c] = s.heroes;
-  put(a, 1500, 1500); put(b, 1700, 1500); put(c, 200, 200); const xp0 = [a, b, c].map(x => x.xpAll);
-  let e = s.spawnEnemy('brute', 0, [1560, 1480]); s.dmgE(e, 99999, a, {});
+  put(a, 3100, 3200); put(b, 3300, 3200); put(c, 1800, 1900); const xp0 = [a, b, c].map(x => x.xpAll);
+  let e = s.spawnEnemy('brute', 0, [3160, 3180]); s.dmgE(e, 99999, a, {});
   const each = e.def.xp * D.xpMul(3) / 2; check(Math.abs(a.xpAll - xp0[0] - each) < 0.01 && Math.abs(b.xpAll - xp0[1] - each) < 0.01 && c.xpAll === xp0[2], 'two heroes near a kill split its XP equally (' + Math.round(each) + ' each), the far one gets none');
-  b.dead = true; const xa = a.xpAll; e = s.spawnEnemy('brute', 0, [1560, 1480]); s.dmgE(e, 99999, a, {}); check(Math.abs(a.xpAll - xa - e.def.xp * D.xpMul(3)) < 0.01, 'a fallen hero takes no share: the one left standing gets it all');
-  b.dead = false; put(c, 1500 + 990, 1500); const xc = c.xpAll; e = s.spawnEnemy('ashling', 0, [1500, 1500]); s.dmgE(e, 99999, null, {}); check(c.xpAll > xc, 'within 1000 px counts, and a kill by a tower or a soldier (nobody credited) still shares');
-  put(c, 1500 + 1010, 1500); const xc2 = c.xpAll; e = s.spawnEnemy('ashling', 0, [1500, 1500]); s.dmgE(e, 99999, a, {}); check(c.xpAll === xc2, 'past 1000 px gets nothing');
-  s = quiet(1, 405, ['ranger']); runFor(s, 0.3); h = s.heroes[0]; put(h, 1500, 1500); const x1 = h.xpAll; e = s.spawnEnemy('ashling', 0, [1500, 1500]); s.dmgE(e, 99999, h, {});
+  b.dead = true; const xa = a.xpAll; e = s.spawnEnemy('brute', 0, [3160, 3180]); s.dmgE(e, 99999, a, {}); check(Math.abs(a.xpAll - xa - e.def.xp * D.xpMul(3)) < 0.01, 'a fallen hero takes no share: the one left standing gets it all');
+  b.dead = false; put(c, 3100 + 990, 3200); const xc = c.xpAll; e = s.spawnEnemy('ashling', 0, [3100, 3200]); s.dmgE(e, 99999, null, {}); check(c.xpAll > xc, 'within 1000 px counts, and a kill by a tower or a soldier (nobody credited) still shares');
+  put(c, 3100 + 1010, 3200); const xc2 = c.xpAll; e = s.spawnEnemy('ashling', 0, [3100, 3200]); s.dmgE(e, 99999, a, {}); check(c.xpAll === xc2, 'past 1000 px gets nothing');
+  s = quiet(1, 405, ['ranger']); runFor(s, 0.3); h = s.heroes[0]; put(h, 3100, 3200); const x1 = h.xpAll; e = s.spawnEnemy('ashling', 0, [3100, 3200]); s.dmgE(e, 99999, h, {});
   check(Math.abs(h.xpAll - x1 - e.def.xp * D.xpMul(1)) < 0.01, 'a lone hero gets all of what it kills');
   { let cum = 0, c6 = 0; for (let lv = 1; lv < 20; lv++) { cum += D.LEVELS.need(lv); if (lv === 5) c6 = cum; } check(c6 > 600 && c6 < 1400 && cum > 8000 && cum < 13000, 'the curve: level 6 costs ' + c6 + ' XP, level 20 costs ' + cum); }
   // what the ranks change
-  const mk = (hid, others) => { const q = quiet(2, 410, [hid, others || 'bastion']); runFor(q, 0.3); const x = q.heroes[0]; x.level = 20; q.recalc(x); put(x, 1600, 1700); put(q.heroes[1], 1000, 1000); return q; };
+  const mk = (hid, others) => { const q = quiet(2, 410, [hid, others || 'bastion']); runFor(q, 0.3); const x = q.heroes[0]; x.level = 20; q.recalc(x); put(x, 3200, 3400); put(q.heroes[1], 2600, 2700); return q; };
   const dealt = (hid, slot, rank) => {   // damage a Meteor or a Volley does to one big target at that rank
-    const q = mk(hid), x = q.heroes[0]; x.ranks = [1, 1, 1, rank, 0]; q.noSpawn = false; const foe = q.spawnEnemy('ashling', 0, [1600, 1500]); foe.speed = 0; foe.hp = foe.max = 1e6; q.buildHash();
-    q.release(x, slot, { x: 1600, y: 1500 }, 1); runFor(q, 6); return 1e6 - foe.hp;
+    const q = mk(hid), x = q.heroes[0]; x.ranks = [1, 1, 1, rank, 0]; q.noSpawn = false; const foe = q.spawnEnemy('ashling', 0, [3200, 3200]); foe.speed = 0; foe.hp = foe.max = 1e6; q.buildHash();
+    q.release(x, slot, { x: 3200, y: 3200 }, 1); runFor(q, 6); return 1e6 - foe.hp;
   };
   const m1 = dealt('pyromancer', 'r', 1), m3 = dealt('pyromancer', 'r', 3), v1 = dealt('ranger', 'r', 1), v3 = dealt('ranger', 'r', 3);
   check(m1 > 300 && m3 > m1 * 1.8, 'Meteor is heavy and grows by rank (' + Math.round(m1) + ' then ' + Math.round(m3) + ' on a target at its centre)');
@@ -302,10 +302,10 @@ function sectionLevels() {
     x.ranks[4] = 0; x.st.petals = 0; x.st.pt = 0; runFor(q, 4.3); const r0 = x.st.petals; x.ranks[4] = 1; x.st.petals = 0; x.st.pt = 0; runFor(q, 4.3); check(r0 === 0 && x.st.petals === 1, 'a petal grows in four seconds at rank 1, not at rank 0');
     x.ranks[0] = 5; x.ranks[4] = 0; x.st.petals = 2; x.ch[0] = 1; q.heroes[1].hp = 20; q.intent('p0', { k: 'cast', s: 'q', id: 'p1' }); runFor(q, 0.5); check(x.st.petals === 2, 'Mend rank 5 keeps its petal on an ally under half health'); }
   { const q = mk('ranger'), x = q.heroes[0]; const ke = r => { x.ranks[4] = r; return q.keenOf(x); }; check(ke(0).every === 4 && ke(1).every === 3 && ke(2).pierce > ke(0).pierce && ke(2).keep === 3 && ke(0).keep === 0, 'Keen Eye: every fourth shot pierces, then every third, then harder with part of the speed kept'); }
-  { const q = mk('pyromancer'), x = q.heroes[0]; x.ranks = [3, 1, 1, 1, 2]; x.st.hot = true; x.st.hotN = 2; q.intent('p0', { k: 'cast', s: 'q', x: 1600, y: 1500 }); const first = x.st.hot; x.ch[0] = 1; x.cdT[0] = 0; q.intent('p0', { k: 'cast', s: 'q', x: 1600, y: 1500 });
+  { const q = mk('pyromancer'), x = q.heroes[0]; x.ranks = [3, 1, 1, 1, 2]; x.st.hot = true; x.st.hotN = 2; q.intent('p0', { k: 'cast', s: 'q', x: 3200, y: 3200 }); const first = x.st.hot; x.ch[0] = 1; x.cdT[0] = 0; q.intent('p0', { k: 'cast', s: 'q', x: 3200, y: 3200 });
     check(first === true && x.st.hot === false, 'Hot Streak rank 2 lasts two Fireballs'); x.ranks[4] = 0; check(q.critChance(x) === 0.4, 'the crit chance is 40% at rank 0'); x.ranks[4] = 1; check(q.critChance(x) === 0.5, 'and 50% from rank 1'); }
   // the wall by rank
-  { const q = mk('bastion'), x = q.heroes[0]; q.noSpawn = false; const f = q.spawnEnemy('ashling', 0, [1600, 1500]); f.speed = 0; f.hp = f.max = 5000; q.buildHash(); x.ranks[3] = 3; q.release(x, 'r', { x: 1600, y: 1500 }, 1); check(f.stun > 0, 'The Wall rank 3 stuns what it is raised on'); const z = q.zones.find(o => o.kind === FoundingSim.ZONE.WALL); check(z && z.a === 390 && z.hp === 900, 'and is longer and stronger (' + (z && z.a) + ' wide, ' + (z && z.hp) + ')'); }
+  { const q = mk('bastion'), x = q.heroes[0]; q.noSpawn = false; const f = q.spawnEnemy('ashling', 0, [3200, 3200]); f.speed = 0; f.hp = f.max = 5000; q.buildHash(); x.ranks[3] = 3; q.release(x, 'r', { x: 3200, y: 3200 }, 1); check(f.stun > 0, 'The Wall rank 3 stuns what it is raised on'); const z = q.zones.find(o => o.kind === FoundingSim.ZONE.WALL); check(z && z.a === 390 && z.hp === 900, 'and is longer and stronger (' + (z && z.a) + ' wide, ' + (z && z.hp) + ')'); }
 }
 
 function sectionEconomy() {
@@ -315,7 +315,7 @@ function sectionEconomy() {
   s.intent('p0', { k: 'learn', s: 'r' }); check(h.ranks[3] === 0, 'R is refused below level 6');
   s.intent('p0', { k: 'learn', s: 'q' }); check(h.ranks[0] === 1, 'a skill point learns a rank'); s.intent('p0', { k: 'learn', s: 'w' }); check(h.ranks[1] === 0, 'no second point at level 1');
   // buying
-  h.gold = 500; put(h, 100, 100); s.intent('p0', { k: 'buy', up: 'split' }); check(!h.ups.split, 'upgrades can only be bought at the tent');
+  h.gold = 500; put(h, 200, 200); s.intent('p0', { k: 'buy', up: 'split' }); check(!h.ups.split, 'upgrades can only be bought at the tent');
   put(h, M.P.shop[0] - 30, M.P.shop[1] - 30); s.intent('p0', { k: 'buy', up: 'wildfire' }); check(!h.ups.wildfire, 'an upgrade for an unlearned skill is refused');
   s.intent('p0', { k: 'buy', up: 'bastionbogus' }); s.intent('p0', { k: 'buy', up: 'shield' + 'charge' }); check(!h.ups.shieldcharge, "another hero's upgrade is refused");
   s.intent('p0', { k: 'buy', up: 'split' }); check(h.ups.split && h.gold === 450, 'the first upgrade on a skill costs 50');
@@ -334,7 +334,7 @@ function sectionEconomy() {
   const f = quiet(1, 22, ['ranger']); runFor(f, 1); const g = f.heroes[0];
   g.items[0] = { uid: 91, id: 'whetstone' }; g.items[1] = { uid: 92, id: 'cord' }; g.items[2] = { uid: 93, id: 'keenedge' }; g.items[3] = { uid: 94, id: 'emberblade' }; g.items[4] = { uid: 95, id: 'longlens' }; g.items[5] = { uid: 96, id: 'anklet' }; f.recalc(g);
   put(g, M.P.forge[0], M.P.forge[1] - 60); f.intent('p0', { k: 'forge', a: 91, b: 92 }); check(g.items[0] && g.items[0].id === 'whetstone', 'the forge is shut until The First Fire is done');
-  f.forge = 2; put(g, 100, 100); f.intent('p0', { k: 'forge', a: 91, b: 92 }); check(g.items[0].id === 'whetstone', 'the forge works only at the forge site');
+  f.forge = 2; put(g, 200, 200); f.intent('p0', { k: 'forge', a: 91, b: 92 }); check(g.items[0].id === 'whetstone', 'the forge works only at the forge site');
   put(g, M.P.forge[0], M.P.forge[1] - 60); f.intent('p0', { k: 'forge', a: 91, b: 93 }); check(g.items[0].id === 'whetstone' && g.items[2].id === 'keenedge', 'two items of different rarity cannot be forged');
   f.intent('p0', { k: 'forge', a: 91, b: 91 }); f.intent('p0', { k: 'forge', a: 91, b: 12345 }); check(g.items[0].id === 'whetstone', 'forging an item with itself or a missing one is refused');
   f.intent('p0', { k: 'forge', a: 91, b: 92 }); check(g.items[0].id === 'whetstone' && g.items[1].id === 'cord', 'Commons cannot be forged: only Rare and up');
@@ -378,8 +378,8 @@ function sectionSkills() {
       for (const up of variants) {
         const s = quiet(2, 31, [hid, hid === 'bastion' ? 'cleric' : 'bastion']); runFor(s, 0.5); const h = s.heroes[0], ally = s.heroes[1];
         h.level = 20; h.ranks = [5, 5, 5, 3, 2]; s.recalc(h); h.hp = h.max; if (up) { h.ups[up] = 1; if (/twin(flame|sanctum)|doublestep/.test(up)) h.chMax['qwer'.indexOf(slot)] = 2; }
-        put(h, 1600, 1500); put(ally, 1640, 1530); ally.hp = 30; if (hid === 'bastion') ally.hp = 30;
-        s.noSpawn = false; const foes = []; for (let i = 0; i < 12; i++) foes.push(s.spawnEnemy(i % 5 === 4 ? 'brute' : 'ashling', 0, [1600 + (i % 4) * 40 - 60, 1380 + Math.floor(i / 4) * 40]));
+        put(h, 3200, 3200); put(ally, 3240, 3230); ally.hp = 30; if (hid === 'bastion') ally.hp = 30;
+        s.noSpawn = false; const foes = []; for (let i = 0; i < 12; i++) foes.push(s.spawnEnemy(i % 5 === 4 ? 'brute' : 'ashling', 0, [3200 + (i % 4) * 40 - 60, 3080 + Math.floor(i / 4) * 40]));
         for (const e of foes) { e.speed = 0; e.hp = e.max = 4000; }
         s.buildHash(); const before = foes.reduce((a, e) => a + e.hp, 0);
         const m = { k: 'cast', s: slot, id: slot === 'q' && hid === 'cleric' ? 'p1' : foes[5].id, x: foes[5].x, y: foes[5].y };
@@ -398,7 +398,7 @@ function sectionSkills() {
   console.log(`  ${casts} skill/upgrade variants cast without error (${Math.round(dealt)} total damage)`);
   // specific effects
   let s = quiet(1, 32, ['cleric']); runFor(s, 0.5); let h = s.heroes[0]; h.level = 10; h.ranks = [3, 3, 3, 1]; s.recalc(h); h.hp = 10; s.intent('p0', { k: 'cast', s: 'q', id: 'p0' }); runFor(s, 6); check(h.hp > 80, 'Mend heals over time (' + Math.round(h.hp) + ')');
-  s = quiet(2, 33, ['cleric', 'bastion']); runFor(s, 0.5); h = s.heroes[0]; h.level = 10; h.ranks = [3, 3, 3, 1]; s.recalc(h); const dead = s.heroes[1]; put(dead, 1500, 1500); put(h, 1500, 1500); s.killHero(dead); s.intent('p0', { k: 'cast', s: 'r', x: 1500, y: 1500 }); runFor(s, 2);
+  s = quiet(2, 33, ['cleric', 'bastion']); runFor(s, 0.5); h = s.heroes[0]; h.level = 10; h.ranks = [3, 3, 3, 1]; s.recalc(h); const dead = s.heroes[1]; put(dead, 3100, 3200); put(h, 3100, 3200); s.killHero(dead); s.intent('p0', { k: 'cast', s: 'r', x: 3100, y: 3200 }); runFor(s, 2);
   check(!dead.dead && dead.hp > 0, 'Dawn Breaks raises a fallen hero at once');
   s = quiet(2, 34, ['bastion', 'cleric']); runFor(s, 0.5); h = s.heroes[0]; s.killHero(s.heroes[1]); runFor(s, D.TUNE.respawn + 1); check(!s.heroes[1].dead, 'a fallen hero rises after a timer'); s.killHero(s.heroes[1]); check(s.heroes[1].respT > D.TUNE.respawn, 'the timer grows with each fall');
   // Perfect Block
@@ -431,7 +431,7 @@ function sectionPerf() {
   const s = quiet(4, 51); jump(s, 17); runFor(s, 1); s.noSpawn = false;
   const KINDS = ['ashling', 'streak', 'slagback', 'spitter', 'stalker', 'husk', 'whelp', 'cartburner'];
   for (let i = 0; i < 96; i++) s.spawnEnemy(KINDS[i % KINDS.length], i % 2, null);
-  for (const h of s.heroes) { h.level = 10; h.ranks = [3, 3, 3, 1]; s.recalc(h); h.hp = h.max = 99999; put(h, 1600, 1700); }
+  for (const h of s.heroes) { h.level = 10; h.ranks = [3, 3, 3, 1]; s.recalc(h); h.hp = h.max = 99999; put(h, 3200, 3400); }
   const B = s.heroes.map(() => makeBot()); const t0 = process.hrtime.bigint(); let ticks = 0;
   for (let i = 0; i < 1200; i++) { if (i % 4 === 0) s.heroes.forEach((h, k) => botStep(s, h, B[k], false, 4)); if (i % 20 === 0 && s.enemies.length < 100) { for (let k = 0; k < 15; k++) s.spawnEnemy(KINDS[k % KINDS.length], k % 2); } s.tick(DT); ticks++; }
   const ms = Number(process.hrtime.bigint() - t0) / 1e6;
@@ -446,7 +446,7 @@ function sectionPerf() {
   check(JSON.stringify(Object.keys(D.ENEMIES).slice(0, 6)) === '["ashling","streak","slagback","spitter","brute","tunnelmaw"]', 'the older enemy type indexes never move');
   check(JSON.stringify(late.props.posts) === '[]' && FoundingArt.POST_SLOTS.length === 13, 'the post slots are the map art\'s');
   // determinism
-  const r1 = play(2, 61, { stopAtWave: 9 }), r2 = play(2, 61, { stopAtWave: 9 });
+  const r1 = play(2, 65, { stopAtWave: 9 }), r2 = play(2, 65, { stopAtWave: 9 });
   check(JSON.stringify(r1.sim.snapshot()) === JSON.stringify(r2.sim.snapshot()) && r1.sim.log.fdsBytes === r2.sim.log.fdsBytes, 'the same seed plays out the same (to wave 9)');
   check(r1.sim.wave >= 9, 'the determinism run reached the night');
   // waves do not grow with the party; the main bosses take a gentle step
@@ -471,7 +471,7 @@ function sectionBeaconRoad() {
   let s = quiet(2, 71); jump(s, 5); const h = s.heroes[0], H = s.haul.beacon;
   check(s.q.beacon.st === 1 && H.left === 3 && H.need === 3, 'The Beacon is offered at wave 7 with three jars for two heroes');
   const s4 = quiet(4, 72); jump(s4, 5); check(s4.haul.beacon.need === 4, 'four jars for four heroes');
-  put(h, 100, 100); interact(s, 'p0'); check(!h.carry, 'a jar is only picked up at the camp depot');
+  put(h, 200, 200); interact(s, 'p0'); check(!h.carry, 'a jar is only picked up at the camp depot');
   put(h, H.fx, H.fy); const free = s.heroSpeed(h); interact(s, 'p0'); check(h.carry === 'jar' && H.left === 2, 'a jar is picked up');
   check(s.heroSpeed(h) < free * 0.85, 'carrying a jar slows you'); check(s.snapshot().h[0][6] & F.CARRY && s.snapshot().h[0][11] === 2, 'the carry flag and kind (jar = 2) are sent');
   s.intent('p0', { k: 'drop' }); check(!h.carry && s.drops.length === 1, 'a jar can be set down'); check(s.snapshot().props.qo.some(o => o[0] === 2 && o[3] === 1), 'the set-down jar is in props.qo');
@@ -484,7 +484,7 @@ function sectionBeaconRoad() {
   check(s.snapshot().props.beacon === true && s.secrets.some(x => x.n === 2), 'the beacon is lit in props and the circlet shows in its light');
   runFor(s, 12); jump(s, 8); runFor(s, 40); check(s.peak < 0.9 && s.night > 0.6 && s.night < 0.9, 'a lit beacon makes the night lighter (' + s.night.toFixed(2) + ')');
   // the circlet is a run item found by the slab
-  const hh = s.heroes[1]; put(hh, 752, 936); interact(s, 'p1'); check(hh.items.some(x => x && x.id === 'circlet') && s.secrets.find(x => x.n === 2).st === 1, 'the circlet is found at the foot of the hill');
+  const hh = s.heroes[1]; put(hh, 1504, 1872); interact(s, 'p1'); check(hh.items.some(x => x && x.id === 'circlet') && s.secrets.find(x => x.n === 2).st === 1, 'the circlet is found at the foot of the hill');
   // The Beacon: missed, and the night is darker
   const m = quiet(2, 73); jump(m, 5); jump(m, 8); runFor(m, 40); const dark = m.night; jump(m, 10); runFor(m, 1);
   check(m.q.beacon.st === 3 && !m.beaconLit && !m.heroes[0].offers, 'The Beacon missed leaves it cold'); check(dark > 0.95 && m.peak === 1, 'an unlit beacon makes the night darker (' + dark.toFixed(2) + ')');
@@ -493,7 +493,7 @@ function sectionBeaconRoad() {
   // The Road
   s = quiet(2, 74); jump(s, 9); const r = s.heroes[0];
   check(s.q.road.st === 1 && s.q.road.need === 5 && s.snapshot().props.postSlots === true, 'The Road is offered at wave 9: five posts for two heroes');
-  put(r, 100, 100); interact(s, 'p0'); check(!r.chan, 'a post is planted only beside a free slot');
+  put(r, 200, 200); interact(s, 'p0'); check(!r.chan, 'a post is planted only beside a free slot');
   for (let i = 0; i < 5; i++) {
     const sl = s.postSlots[i]; put(r, sl[0] + 10, sl[1] + 10); interact(s, 'p0'); check(i > 0 || (r.chan && r.chan.kind === 'post'), 'planting is a short channel');
     runFor(s, 1.0, () => put(r, sl[0] + 10, sl[1] + 10)); if (i === 0) check(s.posts.length === 0, 'a post takes its time'); runFor(s, 0.5, () => put(r, sl[0] + 10, sl[1] + 10));
@@ -502,7 +502,7 @@ function sectionBeaconRoad() {
   check(JSON.stringify(s.snapshot().props.posts) === '[0,1,2,3,4]', 'the planted slots are sent');
   check(r.offers && r.offers.every(id => D.QUESTS.road.boons.includes(id)), 'three Road boons are offered');
   // later enemies take the long way round
-  s.noSpawn = false; put(s.heroes[0], 100, 100); put(s.heroes[1], 120, 100);
+  s.noSpawn = false; put(s.heroes[0], 200, 200); put(s.heroes[1], 240, 200);
   let longN = 0; const list = []; for (let i = 0; i < 100; i++) { const e = s.spawnEnemy('ashling', 0); if (e.long) { longN++; check(e.route && e.route.length > 20, 'a long-way enemy has a route'); } list.push(e); }
   check(longN > 25 && longN < 55, `about 40% of the North Road enemies take the long way (${longN}/100)`); for (const e of list) e.dead = true; s.reap();
   const a = s.spawnEnemy('ashling', 0), b = s.spawnEnemy('ashling', 0); a.route = null; a.long = false; b.route = s.longRoute(); b.ri = 0; b.long = true; a.speed = b.speed = 100;
@@ -520,7 +520,7 @@ function sectionGravesGate() {
   check(s.q.graves.st === 1 && H.need === 3, 'The First Graves are offered at wave 11 with three biers for two heroes'); check(!s.secrets.some(x => x.n === 6), 'the old stone is not there yet');
   put(h, H.fx, H.fy); interact(s, 'p0'); check(h.carry === 'bier', 'a bier is picked up'); put(h, H.tx, H.ty); runFor(s, 0.3, () => put(h, H.tx, H.ty)); check(H.got === 0 && !!h.carry, 'a bier is not laid until the bluebells are planted (stand still)');
   runFor(s, 2, () => put(h, H.tx, H.ty)); check(H.got === 1 && s.graves === 1 && s.snapshot().props.graves === 1, 'a grave is dug and bluebells planted'); check(s.secrets.some(x => x.n === 6), 'one stone in the meadow is older than the founders');
-  const hh = s.heroes[1]; put(hh, 300, 2192); interact(s, 'p1'); runFor(s, 0.1); check(hh.pages.includes(6) && s.log.tags.pg.some(e => e[2] === 6), 'the old stone can be read: a story page');
+  const hh = s.heroes[1]; put(hh, 600, 4384); interact(s, 'p1'); runFor(s, 0.1); check(hh.pages.includes(6) && s.log.tags.pg.some(e => e[2] === 6), 'the old stone can be read: a story page');
   haulOne(s, 'p0', 'graves', true); haulOne(s, 'p0', 'graves', true);
   check(s.q.graves.st === 2 && s.blessing === 1, 'The First Graves complete: the meadow blesses the camp'); check(h.offers && h.offers.every(id => D.QUESTS.graves.boons.includes(id)), 'three Grave boons are offered');
   hh.hp = 5; s.killHero(hh); check(s.blessing === 0, 'the blessing is spent on the first fall'); runFor(s, 3.2); check(!hh.dead && hh.hp > 20 && hh.deaths === 1, 'a fallen hero rises by themselves, once'); check(s.log.tags.bl && s.log.tags.bl.length === 1, 'the blessing event is sent');
@@ -532,7 +532,7 @@ function sectionGravesGate() {
   check(s.q.stonegate.st === 1 && G.need === 3 && !s.sg, 'The Stone Gate is offered at wave 13: stone to haul first');
   for (let i = 0; i < 3; i++) haulOne(s, 'p0', 'stonegate');
   check(!!s.sg && s.q.stonegate.st === 1 && G.got === 3, 'with the stone at the gate, the Words can be carved'); check(s.snapshot().props.qd.some(o => o[0] === 6), 'the carving place is in props.qd');
-  put(g, 100, 100); interact(s, 'p0'); check(!g.chan, 'carving starts only at the gate\'s back');
+  put(g, 200, 200); interact(s, 'p0'); check(!g.chan, 'carving starts only at the gate\'s back');
   put(g, s.carvePt[0], s.carvePt[1]); interact(s, 'p0'); check(g.chan && g.chan.kind === 'carve', 'carving is a channel'); runFor(s, 12, () => put(g, s.carvePt[0], s.carvePt[1])); const c1 = s.sg.carve; check(c1 > 0.25 && c1 < 0.6, 'the Words come on while nobody is hit (' + c1.toFixed(2) + ')');
   s.hurtHero(g, 5, null, {}); check(!g.chan && Math.abs(s.sg.carve - Math.floor(c1 * 4) / 4) < 1e-6, 'a hit makes the carver lose their place back to the last quarter (' + s.sg.carve + ')');
   check(s.snapshot().props.carved === s.sg.carve, 'props.carved follows the carving');
@@ -540,7 +540,7 @@ function sectionGravesGate() {
   check(s.q.stonegate.st === 2 && s.pal && s.pal.stone && s.pal.hp >= 900, 'The Stone Gate completes: a stone gate that holds far longer'); check(s.snapshot().props.gate === 'stone' && s.snapshot().props.carved === 1, 'props.gate is stone and the Words are carved');
   check(s.heroes.every(x => x.pages.includes(9)), 'everyone reads the Words: a story page'); check(s.secrets.some(x => x.n === 7), 'a word in another hand appears below');
   check(g.offers && g.offers.every(id => D.QUESTS.stonegate.boons.includes(id)), 'three Stone Gate boons are offered');
-  const g2 = s.heroes[1]; put(g2, 1330, 876); interact(s, 'p1'); check(g2.pages.includes(7), 'the word in another hand can be read');
+  const g2 = s.heroes[1]; put(g2, 2660, 1716); interact(s, 'p1'); check(g2.pages.includes(7), 'the word in another hand can be read');
   // the stone gate outlasts the palisade
   const palHp = D.QUEST_TUNE.palHp * 3 + D.QUEST_TUNE.palPerExtra; check(s.pal.max > palHp * 1.5, `the stone gate is far sturdier than the palisade (${s.pal.max} vs ${palHp})`);
   const mm = quiet(2, 85); jump(mm, 16); jump(mm, 20); runFor(mm, 0.5); check(mm.q.stonegate.st === 3 && !mm.pal && !mm.sg, 'The Stone Gate missed: no stone gate');
@@ -557,12 +557,12 @@ function sectionGravesGate() {
   // The Covering
   s = quiet(2, 89); jump(s, 26); const c0 = s.heroes[0], c1h = s.heroes[1];
   check(s.q.cover.st === 1, 'The Covering is offered at wave 26'); check(s.snapshot().q.find(q => q[0] === 'cover')[3] === 30, 'its deadline is shown as wave 30 (the siege)');
-  put(c0, 100, 100); interact(s, 'p0'); check(!c0.chan, 'the capstone is laid only at the Hearth');
+  put(c0, 200, 200); interact(s, 'p0'); check(!c0.chan, 'the capstone is laid only at the Hearth');
   put(c0, s.coverPt[0], s.coverPt[1]); interact(s, 'p0'); check(c0.chan && c0.chan.kind === 'cover', 'laying the capstone is a channel'); runFor(s, 10, () => put(c0, s.coverPt[0], s.coverPt[1]));
   const p1 = s.cap; check(p1 > 0.1 && s.covering, 'the capstone goes down while a hero stands by it (' + p1.toFixed(2) + ')');
   put(c1h, s.coverPt[0] + 30, s.coverPt[1]); interact(s, 'p1'); const t0 = s.cap; runFor(s, 10, () => { put(c0, s.coverPt[0], s.coverPt[1]); put(c1h, s.coverPt[0] + 30, s.coverPt[1]); }); check((s.cap - t0) > (p1) * 1.2, 'a second pair of hands speeds it');
   // every enemy turns for the camp while it goes on
-  s.noSpawn = false; const br = s.spawnEnemy('brute', 0, [1500, 1300]); const hero3 = s.heroes[1]; hero3.chan = null; put(hero3, 1500 + 130, 1300); br.tgt = null; s.covering = true; s.pickTarget(br); const covTgt = br.tgt; s.covering = false; s.pickTarget(br); const normTgt = br.tgt;
+  s.noSpawn = false; const br = s.spawnEnemy('brute', 0, [3100, 3000]); const hero3 = s.heroes[1]; hero3.chan = null; put(hero3, 3100 + 130, 3000); br.tgt = null; s.covering = true; s.pickTarget(br); const covTgt = br.tgt; s.covering = false; s.pickTarget(br); const normTgt = br.tgt;
   check(normTgt === hero3 && covTgt !== hero3, 'while it is laid, enemies stop chasing heroes who are not in their face'); br.dead = true; s.reap();
   interact(s, 'p1'); runFor(s, 40, () => { put(c0, s.coverPt[0], s.coverPt[1]); put(c1h, s.coverPt[0] + 30, s.coverPt[1]); });
   check(s.q.cover.st === 2 && s.hearthCovered && s.snapshot().props.capstone === 1, 'The Covering completes: the Hearth is capped'); check(c0.offers && c0.offers.every(id => D.QUESTS.cover.boons.includes(id)), 'three Covering boons are offered');
@@ -573,24 +573,24 @@ function sectionGravesGate() {
 function sectionNight() {
   console.log('The night and the light:');
   let s = quiet(2, 91); jump(s, 3); runFor(s, 1); check(s.night === 0, 'day one is bright'); s.noSpawn = false;
-  let e = s.spawnEnemy('stalker', 0, [900, 400]); e.speed = 0;
+  let e = s.spawnEnemy('stalker', 0, [1800, 800]); e.speed = 0;
   const flagOf = en => s.snapshot().e.find(r => r[0] === en.id)[6];
   check(!(flagOf(e) & F.HIDDEN), 'a night stalker is seen by day');
   jump(s, 8); runFor(s, 40); s.noSpawn = false; check(s.night > 0.95, 'wave 8 is full night (' + s.night.toFixed(2) + ')'); check(s.snapshot().props.night >= 0.95, 'props.night carries it');
-  put(s.heroes[0], 1500, 900); put(s.heroes[1], 1500, 920);
-  e = s.spawnEnemy('stalker', 0, [900, 400]); e.speed = 0; e.reveal = 0; s.tick(DT);
+  put(s.heroes[0], 3000, 1800); put(s.heroes[1], 3000, 1820);
+  e = s.spawnEnemy('stalker', 0, [1800, 800]); e.speed = 0; e.reveal = 0; s.tick(DT);
   check(!!(flagOf(e) & F.HIDDEN), 'a night stalker in the dark is flagged hidden');
-  const ash = s.spawnEnemy('ashling', 0, [900, 450]); ash.speed = 0; check(!(flagOf(ash) & F.HIDDEN), 'other enemies are never flagged hidden');
-  put(s.heroes[0], 920, 440); s.tick(DT); check(!(flagOf(e) & F.HIDDEN), 'a hero\'s lamp shows it');
-  put(s.heroes[0], 1500, 900); s.tick(DT); check(!!(flagOf(e) & F.HIDDEN), 'and it is hidden again when the lamp leaves');
+  const ash = s.spawnEnemy('ashling', 0, [1800, 850]); ash.speed = 0; check(!(flagOf(ash) & F.HIDDEN), 'other enemies are never flagged hidden');
+  put(s.heroes[0], 1820, 840); s.tick(DT); check(!(flagOf(e) & F.HIDDEN), 'a hero\'s lamp shows it');
+  put(s.heroes[0], 3000, 1800); s.tick(DT); check(!!(flagOf(e) & F.HIDDEN), 'and it is hidden again when the lamp leaves');
   // light sources
-  const L = s.lights(); check(s.isLit(M.P.hearth[0], M.P.hearth[1], L) && !s.isLit(300, 300, L), 'the camp is lit and the far hills are not');
-  s.posts.push({ slot: 0, x: 600, y: 500, lx: 608, ly: 492, lit: true }); s._lt = -1; check(s.isLit(620, 500), 'a lit post gives light'); s.posts[0].lit = false; s._lt = -1; check(!s.isLit(620, 500), 'a dark post does not');
-  s.heroes[0].brand = 20; put(s.heroes[0], 300, 300); s._lt = -1; check(s.isLit(420, 300), 'a carried brand gives light');
-  s.heroes[0].brand = 0; s.addZone(Z.SANCT, 400, 1500, 100, 0, 0, 5, s.heroes[0]); s.addZone(Z.BURN, 500, 1500, 60, 0, 0, 5, s.heroes[0]); s._lt = -1; check(s.isLit(400, 1560) && s.isLit(500, 1540), 'Sanctums and burning ground give light');
-  s.beaconLit = true; s._lt = -1; check(s.isLit(700, 1000), 'a lit beacon lights a wide ring');
+  const L = s.lights(); check(s.isLit(M.P.hearth[0], M.P.hearth[1], L) && !s.isLit(600, 600, L), 'the camp is lit and the far hills are not');
+  s.posts.push({ slot: 0, x: 2200, y: 2200, lx: 2208, ly: 2192, lit: true }); s._lt = -1; check(s.isLit(2220, 2200), 'a lit post gives light'); s.posts[0].lit = false; s._lt = -1; check(!s.isLit(2220, 2200), 'a dark post does not');
+  s.heroes[0].brand = 20; put(s.heroes[0], 1900, 2000); s._lt = -1; check(s.isLit(2020, 2000), 'a carried brand gives light');
+  s.heroes[0].brand = 0; s.addZone(Z.SANCT, 2000, 3200, 100, 0, 0, 5, s.heroes[0]); s.addZone(Z.BURN, 2100, 3200, 60, 0, 0, 5, s.heroes[0]); s._lt = -1; check(s.isLit(2000, 3260) && s.isLit(2100, 3240), 'Sanctums and burning ground give light');
+  s.beaconLit = true; s._lt = -1; check(s.isLit(1400, 1700), 'a lit beacon lights a wide ring');
   // a stalker's strike always sends a telegraph, hidden or not
-  const s3 = quiet(2, 92); jump(s3, 9); runFor(s3, 40); s3.noSpawn = false; put(s3.heroes[0], 1500, 900); put(s3.heroes[1], 1500, 1500); const st = s3.spawnEnemy('stalker', 0, [1500, 935]); st.acd = 0; const t0 = (s3.log.tags.t || []).length;
+  const s3 = quiet(2, 92); jump(s3, 9); runFor(s3, 40); s3.noSpawn = false; put(s3.heroes[0], 3000, 1800); put(s3.heroes[1], 3000, 3000); const st = s3.spawnEnemy('stalker', 0, [3000, 1835]); st.acd = 0; const t0 = (s3.log.tags.t || []).length;
   runFor(s3, 3); check((s3.log.tags.t || []).length > t0, 'a night stalker\'s strike sends a telegraph');
 }
 
@@ -602,7 +602,7 @@ function sectionBosses() {
   jump(s, 15); s.spawnQ = s.spawnQ.filter(x => x.kind === 'wickeater'); runFor(s, 6);
   let boss = s.enemies.find(e => e.kind === 'wickeater'); check(!!boss && (boss.def.boss), 'the Wick-Eater walks the North Road at wave 10'); if (!boss) return;
   check(!!(s.snapshot().e.find(r => r[0] === boss.id)[6] & F.BOSS), 'it carries the boss flag'); check(s.snapshot().bs.some(r => r[0] === boss.id && r.length === 7 && r[1] === ID('wickeater')), 'fds.bs describes it');
-  put(s.heroes[0], 100, 100); put(s.heroes[1], 140, 100);
+  put(s.heroes[0], 200, 200); put(s.heroes[1], 280, 200);
   for (let i = 0; i < 5; i++) s.posts.push({ slot: i, x: s.postSlots[i][0], y: s.postSlots[i][1], lx: s.postSlots[i][0] + 8, ly: s.postSlots[i][1] - 8, lit: true });
   const seen = new Set(); let glowCone = false;
   for (let i = 0; i < 20 * 140 && !s.posts.every(p => !p.lit); i++) { if (i % 40 === 0) { /* heroes stay far away: only the posts are its food */ } s.tick(DT); if (boss.ai.ph) seen.add(boss.ai.ph); }
@@ -613,7 +613,7 @@ function sectionBosses() {
   const t0 = (s.log.tags.t || []).length; runFor(s, 4, keepAlive(s));
   check((s.log.tags.wg || []).length >= 1, 'its throat glows before it lunges'); const cones = (s.log.tags.t || []).slice(t0).filter(e => e[2] === 2 && e[9] === 0); check(cones.length >= 1 && cones[0][8] >= 1, 'a red cone shows the lunge, with a warning of a second or more');
   // Wick Breath: party-wide, grows with the dark
-  s.heroes[1].hp = s.heroes[1].max; boss.ai.breathT = 0.1; const hp1 = s.heroes[1].hp; put(s.heroes[1], 100, 100); put(s.heroes[0], 100, 100); runFor(s, 3);
+  s.heroes[1].hp = s.heroes[1].max; boss.ai.breathT = 0.1; const hp1 = s.heroes[1].hp; put(s.heroes[1], 200, 200); put(s.heroes[0], 200, 200); runFor(s, 3);
   check((s.log.tags.wb || []).length >= 1 && s.heroes[1].hp < hp1, 'Wick Breath chills the whole party (' + (s.log.tags.wb || []).map(e => e[3]).join(',') + ')');
   // a hero with a brand relights a dark post
   const rh = s.heroes[1]; rh.dead = false; put(rh, s.posts[2].x + 20, s.posts[2].y); rh.brand = 20; interact(s, 'p1'); runFor(s, 1.2, () => put(rh, s.posts[2].x + 20, s.posts[2].y));
@@ -629,11 +629,11 @@ function sectionBosses() {
 
   // ---- the Mirebull
   s = makeSim(2, 102, { heroes: ['bastion', 'ranger'] }); runFor(s, 1); for (const h of s.heroes) { h.level = 10; s.recalc(h); h.hp = h.max; }
-  jump(s, 23); s.spawnQ = s.spawnQ.filter(x => x.kind === 'mirebull'); put(s.heroes[0], 2000, 1400); put(s.heroes[1], 2020, 1420);
+  jump(s, 23); s.spawnQ = s.spawnQ.filter(x => x.kind === 'mirebull'); put(s.heroes[0], 4540, 2510); put(s.heroes[1], 4560, 2530);
   runFor(s, 40, keepAlive(s)); boss = s.enemies.find(e => e.kind === 'mirebull'); check(!!boss && boss.def.boss, 'the Mirebull comes down the East Ford at wave 15'); if (!boss) return;
   check(boss.ai.ph !== 'walk' && boss.ai.logs.length === 3 && boss.ai.logs.every(l => !l.dead && l.kind === 'damlog'), 'it plants itself in the ford with three dam logs round it');
   check(s.snapshot().bs.find(r => r[0] === boss.id)[2] >= 1, 'the flood has risen (fds.bs level ' + s.snapshot().bs.find(r => r[0] === boss.id)[2] + ')'); check(s.snapshot().z.some(z => z[1] === Z.FLOOD && z[4] > 0), 'the flood is a zone in fds.z');
-  runFor(s, 30, () => { keepAlive(s)(); put(s.heroes[0], 2000, 1400); put(s.heroes[1], 2020, 1420); });
+  runFor(s, 30, () => { keepAlive(s)(); put(s.heroes[0], 4540, 2510); put(s.heroes[1], 4560, 2530); });
   const ts = (s.log.tags.t || []); check(ts.some(e => e[2] === 0 && e[9] === 1), 'a blue ring shows the water about to rise'); check(ts.some(e => e[2] === 0 && e[9] === 0), 'its stamp is a red ring'); check(ts.some(e => e[2] === 1 && e[9] === 0 && e[8] >= 1), 'its charge is a red line'); check(ts.some(e => e[2] === 2 && e[9] === 0), 'its horn sweep is a red cone');
   check((s.log.tags.ms || []).length >= 1, 'it shields a dam log (' + (s.log.tags.ms || []).length + ')');
   const shielded = boss.ai.logs.find(l => l.invuln); if (shielded) { const hp = shielded.hp; check(s.dmgE(shielded, 500, s.heroes[0], {}) === 0 && shielded.hp === hp, 'a shielded log cannot be hurt'); check(!!(s.snapshot().e.find(r => r[0] === shielded.id)[6] & F.INVULN), 'and it is flagged invulnerable'); shielded.invT = 0.01; runFor(s, 0.2); }
@@ -643,7 +643,7 @@ function sectionBosses() {
   check(boss.ai.ph === 'drown' && (s.log.tags.md || []).length === 1, 'the last log breaks: the Mirebull is drowning'); runFor(s, 5, keepAlive(s));
   check(boss.dead && (s.log.tags.bossdown || []).some(e => e[2] === ID('mirebull')), 'it drowns in its own flood'); check(!s.zones.some(z => z.kind === Z.FLOOD && !z.dead), 'the flood is gone');
   // ... or it can simply be killed
-  s = makeSim(2, 103, { heroes: ['bastion', 'ranger'] }); runFor(s, 1); jump(s, 23); s.spawnQ = s.spawnQ.filter(x => x.kind === 'mirebull'); put(s.heroes[0], 2000, 1400); put(s.heroes[1], 2020, 1420); runFor(s, 40, keepAlive(s));
+  s = makeSim(2, 103, { heroes: ['bastion', 'ranger'] }); runFor(s, 1); jump(s, 23); s.spawnQ = s.spawnQ.filter(x => x.kind === 'mirebull'); put(s.heroes[0], 4540, 2510); put(s.heroes[1], 4560, 2530); runFor(s, 40, keepAlive(s));
   boss = s.enemies.find(e => e.kind === 'mirebull'); s.dmgE(boss, 99999, s.heroes[0], {}); s.reap(); check(boss.dead && !s.enemies.some(e => e.kind === 'damlog'), 'killing the Mirebull outright clears the logs');
 }
 
@@ -653,7 +653,7 @@ function sectionSiege() {
   const mk = (seed, covered, brand) => {
     const s = makeSim(2, seed, { heroes: ['bastion', 'ranger'] }); runFor(s, 1); s.noSpawn = true; for (const h of s.heroes) { h.level = 10; s.recalc(h); h.hp = h.max; }
     s.spawnEnemy('oldgnaw', 0); s.noSpawn = true; jump(s, D.LAST_WAVE); s.noSpawn = false; s.spawnQ = []; s.hearthCovered = covered; if (covered) s.q.cover.st = 2;
-    put(s.heroes[0], 150, 2300); put(s.heroes[1], 200, 2300); if (brand) { s.heroes[1].brand = 9999; put(s.heroes[1], brand[0], brand[1]); }
+    put(s.heroes[0], 300, 4600); put(s.heroes[1], 400, 4600); if (brand) { s.heroes[1].brand = 9999; put(s.heroes[1], brand[0], brand[1]); }
     return s;
   };
   // the uncovered Hearth is what it wants; a brand steers it
@@ -661,27 +661,27 @@ function sectionSiege() {
   check(!!g && g.def.boss, 'Old Gnaw comes down the North Road at the last wave'); if (!g) return;
   const row = a.snapshot().bs.find(r => r[0] === g.id); check(row && row.length === 7 && row[2] > 0 && row[4] === 1 && row[6] === 1, 'fds.bs gives its target, the part and whether the Hearth is open (' + JSON.stringify(row) + ')');
   check((a.log.tags.sh || []).length >= 1 && a.log.tags.sh[0][6] === 1, 'a shimmer line points from its nose to the Hearth (event sh)');
-  const A = mk(112, true, null), B = mk(113, true, [900, 450]);
-  runFor(A, 30, keepAlive(A)); runFor(B, 30, () => { keepAlive(B)(); put(B.heroes[1], 900, 450); });
+  const A = mk(112, true, null), B = mk(113, true, [2380, 560]);
+  runFor(A, 30, keepAlive(A)); runFor(B, 30, () => { keepAlive(B)(); put(B.heroes[1], 2380, 560); });
   const ga = A.enemies.find(e => e.kind === 'oldgnaw'), gb = B.enemies.find(e => e.kind === 'oldgnaw');
   check(gb.ai.tgt && gb.ai.tgt.k === 2, 'it follows the brand when it is the warmest thing it smells'); check(ga.ai.tgt && ga.ai.tgt.k !== 2 && ga.ai.tgt.k !== 1, 'with the Hearth covered and no brand, it has only the camp fires');
   check(gb.x < ga.x - 150, `a brand carrier leads it off the road (x ${Math.round(gb.x)} vs ${Math.round(ga.x)})`);
   check((B.log.tags.t || []).some(e => e[2] === 2 && e[9] === 0 && e[8] >= 1), 'Ash Breath is a red cone, aimed along the shimmer line');
   // a lit post and burning ground pull it too
-  const C = mk(114, true, null); C.posts.push({ slot: 0, x: 700, y: 700, lx: 708, ly: 692, lit: true }); runFor(C, 3, keepAlive(C)); const gc = C.enemies.find(e => e.kind === 'oldgnaw'); check(gc.ai.tgt && gc.ai.tgt.k === 4, 'a lit post pulls it');
-  C.posts[0].lit = false; runFor(C, 1, keepAlive(C)); C.addZone(Z.BURN, 800, 300, 80, 0, 0, 30, C.heroes[0]); runFor(C, 1, keepAlive(C)); check(gc.ai.tgt && gc.ai.tgt.k === 5, 'putting a fire out sends it elsewhere; burning ground draws it');
+  const C = mk(114, true, null); C.posts.push({ slot: 0, x: 1400, y: 1400, lx: 1408, ly: 1392, lit: true }); runFor(C, 3, keepAlive(C)); const gc = C.enemies.find(e => e.kind === 'oldgnaw'); check(gc.ai.tgt && gc.ai.tgt.k === 4, 'a lit post pulls it');
+  C.posts[0].lit = false; runFor(C, 1, keepAlive(C)); C.addZone(Z.BURN, 1600, 600, 80, 0, 0, 30, C.heroes[0]); runFor(C, 1, keepAlive(C)); check(gc.ai.tgt && gc.ai.tgt.k === 5, 'putting a fire out sends it elsewhere; burning ground draws it');
   // the Breach: it tears at the gate, ash-whelps pour from its fur
-  const Bc = mk(115, true, [1400, 1000]); Bc.finishQuest = Bc.finishQuest; const pp = Bc.paths[0][Bc.palIdx]; Bc.pal = { tk: 'pal', x: pp[0], y: pp[1], r: 46, hp: 900, max: 900, stone: true };
-  const gg = Bc.enemies.find(e => e.kind === 'oldgnaw'); gg.x = 1330; gg.y = 700; gg.hp = gg.max * 0.8; const palHp = Bc.pal.hp;
-  runFor(Bc, 40, () => { keepAlive(Bc)(); put(Bc.heroes[1], 1400, 1000); put(Bc.heroes[0], 1380, 1040); });
+  const Bc = mk(115, true, [2800, 2000]); Bc.finishQuest = Bc.finishQuest; const pp = Bc.paths[0][Bc.palIdx]; Bc.pal = { tk: 'pal', x: pp[0], y: pp[1], r: 46, hp: 900, max: 900, stone: true };
+  const gg = Bc.enemies.find(e => e.kind === 'oldgnaw'); gg.x = 2660; gg.y = 1400; gg.hp = gg.max * 0.8; const palHp = Bc.pal.hp;
+  runFor(Bc, 40, () => { keepAlive(Bc)(); put(Bc.heroes[1], 2800, 2000); put(Bc.heroes[0], 2780, 2040); });
   check((Bc.log.tags.gp || []).some(e => e[2] === 2), 'at the gate it enters The Breach (gp 2)'); check((Bc.log.tags.gw || []).length >= 1 && Bc.enemies.some(e => e.kind === 'whelp'), 'ash-whelps pour from its fur'); check(!Bc.pal || Bc.pal.hp < palHp, 'it tears at the gate (' + (Bc.pal ? Math.round(Bc.pal.hp) : 'broken') + '/' + palHp + ')');
   const tt = Bc.log.tags.t || []; check(tt.some(e => e[2] === 0 && e[5] === 170 && e[9] === 0), 'Stamp is a red ring');   // The Cold, and an open Hearth: a lunge along a red line
-  const D3 = mk(116, false, null); const g3 = D3.enemies.find(e => e.kind === 'oldgnaw'); g3.x = 1560; g3.y = 1250; g3.hp = g3.max * 0.25; D3.q.cover.st = 1; const camp0 = D3.camp.hp;
+  const D3 = mk(116, false, null); const g3 = D3.enemies.find(e => e.kind === 'oldgnaw'); g3.x = 3180; g3.y = 2900; g3.hp = g3.max * 0.25; D3.q.cover.st = 1; const camp0 = D3.camp.hp;
   runFor(D3, 25, keepAlive(D3));
   check((D3.log.tags.gp || []).some(e => e[2] === 3), 'at a third of its health it is in The Cold'); check(D3.q.cover.st === 3, 'The Covering unfinished when The Cold comes is missed'); check((D3.log.tags.t || []).some(e => e[2] === 1 && e[9] === 0 && e[8] >= 1), 'its lunge for the Hearth is a red line');
   check(D3.camp.hp < camp0, 'the uncovered Hearth takes the strikes (' + Math.round(D3.camp.hp) + '/' + camp0 + ')');
   // it dies, whelps with it, and the end beat plays
-  const E = mk(117, true, null); E.spawnEnemy('whelp', 0, [1500, 400]); const ge = E.enemies.find(e => e.kind === 'oldgnaw'); runFor(E, 2, keepAlive(E));
+  const E = mk(117, true, null); E.spawnEnemy('whelp', 0, [3000, 800]); const ge = E.enemies.find(e => e.kind === 'oldgnaw'); runFor(E, 2, keepAlive(E));
   E.q.fire.st = 2; E.dmgE(ge, ge.max * 2, E.heroes[0], {}); E.reap(); check(ge.dead && !E.enemies.some(e => e.kind === 'whelp'), 'Old Gnaw falls and its whelps with it');
   runFor(E, 20, keepAlive(E)); const ends = (E.log.tags.end || []).map(e => e[1]); check(ends.join() === '0,1,2' && E.shut, 'the end beat: the siege is beaten, the gate shuts, the Steward names the town'); check((E.log.tags.count || []).length === 2 && E.log.tags.count[1][2] === 2 && E.log.tags.count[1][3] === 2, 'the Warden counts each hero in (event count)');
   check(E.st === 'won' && E.log.fdend.length === 1 && E.snapshot().props.shut === true, 'the run is won and the gate is shut in props');
@@ -710,29 +710,29 @@ function sectionBoons() {
   check(dup === 0, 'no boon repeats the id or name of another boon, an upgrade or an item');
   check(NEW.length === 18 && NEW.every(id => D.BOONS[id] && D.BOONS[id].text.length > 10 && D.BOONS[id].text.length < 140), 'eighteen new boons with short tooltips');
   for (const q of ['beacon', 'road', 'graves', 'stonegate', 'roof', 'cover']) check(D.QUESTS[q].boons.length === 3 && D.QUESTS[q].boons.every(id => D.BOONS[id] && D.BOONS[id].quest === q), q + ' has three boons of its own');
-  const fresh = (heroes, boons) => { const s = quiet(2, 140, heroes || ['bastion', 'cleric']); runFor(s, 0.5); for (const h of s.heroes) { h.level = 10; h.ranks = [3, 3, 3, 1]; s.recalc(h); h.hp = h.max; } for (const b of boons || []) s.heroes[0].boons[b] = 1; put(s.heroes[0], 700, 700); put(s.heroes[1], 760, 700); return s; };
+  const fresh = (heroes, boons) => { const s = quiet(2, 140, heroes || ['bastion', 'cleric']); runFor(s, 0.5); for (const h of s.heroes) { h.level = 10; h.ranks = [3, 3, 3, 1]; s.recalc(h); h.hp = h.max; } for (const b of boons || []) s.heroes[0].boons[b] = 1; put(s.heroes[0], 2300, 2400); put(s.heroes[1], 2360, 2400); return s; };
   const dummy = (s, x, y) => { const e = s.spawnEnemy('slagback', 0, [x, y]); e.speed = 0; e.acd = 1e9; e.hp = e.max = 9e5; e.def = Object.assign({}, e.def, { shield: null }); return e; };
   const dmgOf = (s, h, e) => { const hp = e.hp; s.dmgE(e, 100, h, { quiet: 1 }); return hp - e.hp; };
   let s = fresh(null, []), h = s.heroes[0]; const base = s.lampR(h);
-  s = fresh(null, ['lamplighter']); h = s.heroes[0]; put(h, 800, 800); let e = dummy(s, 840, 800); const d1 = dmgOf(s, h, e); s.heroes[0].boons = {}; check(s.lampR(s.heroes[0]) === base && dmgOf(s, h, e) < d1, 'Lamplighter: a wider lamp and more damage inside it'); s.heroes[0].boons.lamplighter = 1; check(s.lampR(h) > base * 1.7, 'Lamplighter widens the lamp');
+  s = fresh(null, ['lamplighter']); h = s.heroes[0]; put(h, 2400, 2500); let e = dummy(s, 2440, 2500); const d1 = dmgOf(s, h, e); s.heroes[0].boons = {}; check(s.lampR(s.heroes[0]) === base && dmgOf(s, h, e) < d1, 'Lamplighter: a wider lamp and more damage inside it'); s.heroes[0].boons.lamplighter = 1; check(s.lampR(h) > base * 1.7, 'Lamplighter widens the lamp');
   s = fresh(null, []); h = s.heroes[0]; h.carry = 'jar'; const slow = s.heroSpeed(h); h.boons.steadyhands = 1; check(s.heroSpeed(h) > slow * 1.2, 'Steady Hands: carrying hardly slows you');
   s = fresh(null, ['brandbearer']); h = s.heroes[0]; put(h, D.QUEST_TUNE.fires[0][0] - 60, D.QUEST_TUNE.fires[0][1]); interact(s, 'p0'); check(h.brand >= D.QUEST_TUNE.brandSecs * 2 - 1, 'Brandbearer: the brand burns twice as long'); const en = dummy(s, h.x + 30, h.y); s.hurtHero(h, 5, en, {}); check(!!en.burn, 'Brandbearer: what strikes you while you hold a brand catches fire');
   s = fresh(null, ['keeper']); h = s.heroes[0]; put(h, D.QUEST_TUNE.fires[0][0] - 60, D.QUEST_TUNE.fires[0][1]); interact(s, 'p0'); runFor(s, 60); check(h.brand > 9000, 'Keeper of the Flame: the brand never burns out');
-  s = fresh(null, ['roadwarden']); h = s.heroes[0]; put(h, 800, 800); e = dummy(s, 840, 800); const dn = dmgOf(s, h, e); s.posts.push({ slot: 0, x: 790, y: 800, lx: 798, ly: 792, lit: true }); const dl = dmgOf(s, h, e); const hp0 = h.hp; s.hurtHero(h, 20, null, {}); const taken = hp0 - h.hp; s.posts[0].lit = false; h.hp = hp0; h.lastHit = -99; s.hurtHero(h, 20, null, {});
+  s = fresh(null, ['roadwarden']); h = s.heroes[0]; put(h, 2400, 2500); e = dummy(s, 2440, 2500); const dn = dmgOf(s, h, e); s.posts.push({ slot: 0, x: 2390, y: 2500, lx: 2398, ly: 2492, lit: true }); const dl = dmgOf(s, h, e); const hp0 = h.hp; s.hurtHero(h, 20, null, {}); const taken = hp0 - h.hp; s.posts[0].lit = false; h.hp = hp0; h.lastHit = -99; s.hurtHero(h, 20, null, {});
   check(dl > dn && taken < hp0 - h.hp, 'Waywarden: more damage dealt and less taken in a lit post\'s glow');
   s = fresh(null, ['pathfinder']); h = s.heroes[0]; const sp0 = s.heroSpeed(h); h.runT = 2.5; check(s.heroSpeed(h) > sp0 * 1.1, 'Pathfinder: faster after a couple of seconds running');
-  s = fresh(null, ['stragglersbane']); h = s.heroes[0]; put(h, 800, 800); e = dummy(s, 840, 800); const dstr = dmgOf(s, h, e); e.long = true; check(dmgOf(s, h, e) > dstr * 1.1, 'Straggler\'s Bane: more damage to those who came the long way');
-  s = fresh(null, ['lastrites']); h = s.heroes[0]; put(h, 800, 800); put(s.heroes[1], 850, 800); e = dummy(s, 840, 800); const dr0 = dmgOf(s, h, e); s.killHero(s.heroes[1]); check(h.rage > 0 && dmgOf(s, h, e) > dr0 * 1.1, 'Last Rites: an ally falling near you makes you rage');
+  s = fresh(null, ['stragglersbane']); h = s.heroes[0]; put(h, 2400, 2500); e = dummy(s, 2440, 2500); const dstr = dmgOf(s, h, e); e.long = true; check(dmgOf(s, h, e) > dstr * 1.1, 'Straggler\'s Bane: more damage to those who came the long way');
+  s = fresh(null, ['lastrites']); h = s.heroes[0]; put(h, 2400, 2500); put(s.heroes[1], 2450, 2500); e = dummy(s, 2440, 2500); const dr0 = dmgOf(s, h, e); s.killHero(s.heroes[1]); check(h.rage > 0 && dmgOf(s, h, e) > dr0 * 1.1, 'Last Rites: an ally falling near you makes you rage');
   s = fresh(null, ['quiethands']); h = s.heroes[0]; h.hp = h.max * 0.5; s.hurtHero(h, 1, null, {}); const q0 = h.hp; runFor(s, 3); const q1 = h.hp; runFor(s, 3); check(q1 - q0 < 1 && h.hp > q1 + 5, 'Quiet Hands: four quiet seconds and you mend');
-  s = fresh(null, ['bluebellbloom']); h = s.heroes[0]; s.heroes[1].hp = 50; put(h, 800, 800); put(s.heroes[1], 850, 800); s.killHero(h); s.raise(h, 0.5, 0); runFor(s, 0.05); check(h.invul > 1 && s.heroes[1].hp > 80 && (s.log.tags.bb || []).length === 1, 'Bluebell Bloom: rising heals allies and shields you a moment');
+  s = fresh(null, ['bluebellbloom']); h = s.heroes[0]; s.heroes[1].hp = 50; put(h, 2400, 2500); put(s.heroes[1], 2450, 2500); s.killHero(h); s.raise(h, 0.5, 0); runFor(s, 0.05); check(h.invul > 1 && s.heroes[1].hp > 80 && (s.log.tags.bb || []).length === 1, 'Bluebell Bloom: rising heals allies and shields you a moment');
   s = fresh(null, ['stoneskin']); h = s.heroes[0]; let hp = h.hp; s.hurtHero(h, 30, null, {}); const first = hp - h.hp; hp = h.hp; s.hurtHero(h, 30, null, {}); check(first <= 11 && hp - h.hp >= 25, 'Stoneskin: the first blow after quiet is cut to a third (' + first + ' then ' + (hp - h.hp) + ')');
-  s = fresh(null, ['chisel']); h = s.heroes[0]; put(h, 800, 800); put(s.heroes[1], 830, 800); e = dummy(s, 840, 800); const c0 = dmgOf(s, s.heroes[1], e); s.dmgE(e, 1, h, { quiet: 1 }); check(e.crack > 0 && dmgOf(s, s.heroes[1], e) > c0, 'Chisel: a hit cracks the target for everyone');
+  s = fresh(null, ['chisel']); h = s.heroes[0]; put(h, 2400, 2500); put(s.heroes[1], 2430, 2500); e = dummy(s, 2440, 2500); const c0 = dmgOf(s, s.heroes[1], e); s.dmgE(e, 1, h, { quiet: 1 }); check(e.crack > 0 && dmgOf(s, s.heroes[1], e) > c0, 'Chisel: a hit cracks the target for everyone');
   s = fresh(null, ['laststand']); h = s.heroes[0]; h.hp = 10; s.hurtHero(h, 500, null, {}); runFor(s, 0.05); check(!h.dead && h.hp === 1 && (s.log.tags.ls || []).length === 1, 'Last Stand: a lethal blow leaves you at one health'); h.lastHit = -99; s.hurtHero(h, 500, null, {}); check(h.dead, 'Last Stand: once a minute');
   s = fresh(null, ['hearthside']); h = s.heroes[0]; put(h, M.P.hearth[0] - 80, M.P.hearth[1]); h.hp = h.max * 0.3; const h0 = h.hp; runFor(s, 3); check(h.hp > h0 + 8, 'Hearthside: you mend in camp'); h.ch[0] = 0; h.cdT[0] = 10; const cd0 = h.cdT[0]; runFor(s, 2); check(cd0 - h.cdT[0] > 2.4, 'Hearthside: skills recharge faster in camp');
-  s = fresh(null, ['axehand']); h = s.heroes[0]; put(h, 800, 800); e = dummy(s, 830, 800); const nb = dummy(s, 850, 830); s.buildHash(); const nb0 = nb.hp; s.resolveAttack(h, e); check(nb.hp < nb0, 'Axe-Hand: basic attacks cleave beside the target');
-  s = fresh(null, ['rafters']); h = s.heroes[0]; put(h, 100, 100); runFor(s, 12); put(h, M.P.hearth[0] - 80, M.P.hearth[1]); runFor(s, 0.3); check(h.shield > 20, 'Rafters: coming back into camp after a long absence shields you');
-  s = fresh(null, ['capstoneward']); h = s.heroes[0]; put(h, 1500, 1500); put(s.heroes[1], 1530, 1500); s.noSpawn = false; const tg = dummy(s, 1560, 1450); s.intent('p0', { k: 'cast', s: 'r', x: 1520, y: 1480 }); runFor(s, 1.5, () => { s.heroes[0].hp = s.heroes[0].max; }); check(s.heroes[1].shield > 20, 'Capstone Ward: casting R shields the allies around you');
-  s = fresh(null, ['longnight']); h = s.heroes[0]; put(h, 800, 800); e = dummy(s, 840, 800); const dday = dmgOf(s, h, e); s.hurtHero(h, 30, null, {}); const tday = h.max - h.hp; h.hp = h.max; h.lastHit = -99; jump(s, 8); runFor(s, 40); put(h, 800, 800); const dnight = dmgOf(s, h, e); s.hurtHero(h, 30, null, {}); check(dnight > dday && h.max - h.hp < tday + 0 && true, 'Long Night: at night you hit a little harder and take less');
+  s = fresh(null, ['axehand']); h = s.heroes[0]; put(h, 2400, 2500); e = dummy(s, 2430, 2500); const nb = dummy(s, 2450, 2530); s.buildHash(); const nb0 = nb.hp; s.resolveAttack(h, e); check(nb.hp < nb0, 'Axe-Hand: basic attacks cleave beside the target');
+  s = fresh(null, ['rafters']); h = s.heroes[0]; put(h, 200, 200); runFor(s, 12); put(h, M.P.hearth[0] - 80, M.P.hearth[1]); runFor(s, 0.3); check(h.shield > 20, 'Rafters: coming back into camp after a long absence shields you');
+  s = fresh(null, ['capstoneward']); h = s.heroes[0]; put(h, 3100, 3200); put(s.heroes[1], 3130, 3200); s.noSpawn = false; const tg = dummy(s, 3160, 3150); s.intent('p0', { k: 'cast', s: 'r', x: 3120, y: 3180 }); runFor(s, 1.5, () => { s.heroes[0].hp = s.heroes[0].max; }); check(s.heroes[1].shield > 20, 'Capstone Ward: casting R shields the allies around you');
+  s = fresh(null, ['longnight']); h = s.heroes[0]; put(h, 2400, 2500); e = dummy(s, 2440, 2500); const dday = dmgOf(s, h, e); s.hurtHero(h, 30, null, {}); const tday = h.max - h.hp; h.hp = h.max; h.lastHit = -99; jump(s, 8); runFor(s, 40); put(h, 2400, 2500); const dnight = dmgOf(s, h, e); s.hurtHero(h, 30, null, {}); check(dnight > dday && h.max - h.hp < tday + 0 && true, 'Long Night: at night you hit a little harder and take less');
 }
 
 // ---------------------------------------------------------------- pass 2: the hour run, recall, ping, alerts, rejoin, tiers, the Gnaw
@@ -759,20 +759,20 @@ function sectionPass2() {
   runFor(s, 3); check((s.log.tags.step || []).length === 2, 'the step is not repeated'); check(s.tier === 1 && s.snapshot().tier === 1, 'fds.tier follows');
   s.noSpawn = false; const e1 = s.spawnEnemy('ashling', 0); check(e1.tier === 1 && s.snapshot().e.find(r => r[0] === e1.id)[7] === 1, 'enemies carry the tier as the eighth entry');
   jump(s, 17); const e4 = s.spawnEnemy('ashling', 0), e5 = s.spawnEnemy('ashling', 1); check(e4.tier === 4 && (e4.arm > 0 || e5.arm > 0 || e4.speed > 52 || e5.speed > 52), 'a stepped lane has plated or quicker enemies');
-  const a0 = s.spawnEnemy('ashling', 0, [900, 900]); check(a0.tier === 0, 'an enemy placed by a boss carries no tier');
+  const a0 = s.spawnEnemy('ashling', 0, [2500, 2600]); check(a0.tier === 0, 'an enemy placed by a boss carries no tier');
   const bo = s.spawnEnemy('tunnelmaw', 0); check(bo.tier === 0 && !bo.arm, 'bosses carry no tier');
   // recall
-  s = quiet(2, 202); runFor(s, 1); const h = s.heroes[0]; put(h, 900, 900); s.intent('p0', { k: 'recall' });
+  s = quiet(2, 202); runFor(s, 1); const h = s.heroes[0]; put(h, 2500, 2600); s.intent('p0', { k: 'recall' });
   check(h.rcOn && h.chan && h.chan.kind === 'recall', 'recall begins a channel'); runFor(s, 2);
-  s.intent('p0', { k: 'move', x: 950, y: 900 }); runFor(s, 0.1); check(!h.rcOn && hyp(h.x - M.P.spring[0], h.y - M.P.spring[1]) > 300, 'moving cancels the recall'); check(h.rcCd > 0 && h.rcCd < 10, 'a cancelled recall has only a short wait');
-  runFor(s, 5); put(h, 900, 900); s.intent('p0', { k: 'recall' }); runFor(s, 1.5); s.hurtHero(h, 3, null, {}); runFor(s, 0.1); check(!h.rcOn && hyp(h.x - M.P.spring[0], h.y - M.P.spring[1]) > 300, 'a hit cancels the recall');
-  runFor(s, 5); put(h, 900, 900); s.intent('p0', { k: 'recall' }); runFor(s, 3.5); check(hyp(h.x - 900, h.y - 900) < 5, 'it takes four seconds'); runFor(s, 0.8); check(hyp(h.x - M.P.spring[0], h.y - M.P.spring[1]) < 140 && !h.rcOn, 'the hero appears at the spring');
-  check(h.rcCd > 40 && h.rcCd <= 45, 'the cooldown is 45 s (' + h.rcCd.toFixed(1) + ')'); put(h, 900, 900); s.intent('p0', { k: 'recall' }); check(!h.rcOn, 'no recall during the cooldown'); runFor(s, 1);
+  s.intent('p0', { k: 'move', x: 2550, y: 2600 }); runFor(s, 0.1); check(!h.rcOn && hyp(h.x - M.P.spring[0], h.y - M.P.spring[1]) > 300, 'moving cancels the recall'); check(h.rcCd > 0 && h.rcCd < 10, 'a cancelled recall has only a short wait');
+  runFor(s, 5); put(h, 2500, 2600); s.intent('p0', { k: 'recall' }); runFor(s, 1.5); s.hurtHero(h, 3, null, {}); runFor(s, 0.1); check(!h.rcOn && hyp(h.x - M.P.spring[0], h.y - M.P.spring[1]) > 300, 'a hit cancels the recall');
+  runFor(s, 5); put(h, 2500, 2600); s.intent('p0', { k: 'recall' }); runFor(s, 3.5); check(hyp(h.x - 2500, h.y - 2600) < 5, 'it takes four seconds'); runFor(s, 0.8); check(hyp(h.x - M.P.spring[0], h.y - M.P.spring[1]) < 140 && !h.rcOn, 'the hero appears at the spring');
+  check(h.rcCd > 40 && h.rcCd <= 45, 'the cooldown is 45 s (' + h.rcCd.toFixed(1) + ')'); put(h, 2500, 2600); s.intent('p0', { k: 'recall' }); check(!h.rcOn, 'no recall during the cooldown'); runFor(s, 1);
   check(s.log.fdpLast.p0.rc > 0 && s.log.fdpLast.p0.rc <= 45, 'fdp.rc carries the cooldown left (' + s.log.fdpLast.p0.rc + ')');
   // the events: began, arrived (with x and y), cancelled
   const s2 = quiet(1, 203); runFor(s2, 1); const rcEv = []; const oe = s2.emit; s2.emit = m => { oe(m); if (m.t === 'fdx') for (const e of m.ev) if (e[0] === 'rc') rcEv.push(e); };
-  put(s2.heroes[0], 900, 900); s2.intent('p0', { k: 'recall' }); runFor(s2, 5); check(rcEv.length === 2 && rcEv[0][2] === 1 && rcEv[1][2] === 2 && rcEv[1].length === 5, 'rc events: began 1 then arrived 2 with x and y (' + JSON.stringify(rcEv) + ')');
-  put(s2.heroes[0], 900, 900); s2.heroes[0].rcCd = 0; rcEv.length = 0; s2.intent('p0', { k: 'recall' }); runFor(s2, 1); s2.intent('p0', { k: 'stop' }); s2.heroes[0].chan = null; runFor(s2, 0.2); check(rcEv.length === 2 && rcEv[1][2] === 0, 'rc 0 when it is cancelled');
+  put(s2.heroes[0], 2500, 2600); s2.intent('p0', { k: 'recall' }); runFor(s2, 5); check(rcEv.length === 2 && rcEv[0][2] === 1 && rcEv[1][2] === 2 && rcEv[1].length === 5, 'rc events: began 1 then arrived 2 with x and y (' + JSON.stringify(rcEv) + ')');
+  put(s2.heroes[0], 2500, 2600); s2.heroes[0].rcCd = 0; rcEv.length = 0; s2.intent('p0', { k: 'recall' }); runFor(s2, 1); s2.intent('p0', { k: 'stop' }); s2.heroes[0].chan = null; runFor(s2, 0.2); check(rcEv.length === 2 && rcEv[1][2] === 0, 'rc 0 when it is cancelled');
   put(s2.heroes[0], M.P.spring[0] + 40, M.P.spring[1]); s2.heroes[0].rcCd = 0; s2.intent('p0', { k: 'recall' }); check(!s2.heroes[0].rcOn, 'no recall when already at the spring');
   // ping
   const pings = []; const op = s2.emit; s2.emit = m => { op(m); if (m.t === 'fdx') for (const e of m.ev) if (e[0] === 'pi') pings.push(e); };
@@ -782,12 +782,12 @@ function sectionPass2() {
   const sellEv = []; const f = quiet(1, 204, ['ranger']); runFor(f, 1); f.heroes[0].items[0] = { uid: 7, id: 'jerkin' }; const of = f.emit; f.emit = m => { of(m); if (m.t === 'fdx') for (const e of m.ev) if (e[0] === 'sl') sellEv.push(e); }; f.intent('p0', { k: 'sell', slot: 0 }); runFor(f, 0.1); check(sellEv.length === 1 && sellEv[0][1] === 'p0' && sellEv[0][2] === 'jerkin' && sellEv[0][3] === 9, 'the sell event gives player, item and gold');
   // lane alert
   const al = []; s = quiet(2, 205); runFor(s, 1); const oa = s.emit; s.emit = m => { oa(m); if (m.t === 'fdx') for (const e of m.ev) if (e[0] === 'al') al.push([e[1], s.time]); };
-  put(s.heroes[0], 1500, 2300); put(s.heroes[1], 1520, 2300);
+  put(s.heroes[0], 3100, 4000); put(s.heroes[1], 3120, 4000);
   const half = s.laneHalf(0); const mk = () => { const en = s.spawnEnemy('ashling', 0); en.pi = half + 12; en.speed = 0; const q = s.paths[0][en.pi]; en.x = q[0]; en.y = q[1]; en.acd = 1e9; return en; };
   runFor(s, 1); check(al.length === 0, 'no alert while the lane holds'); const e1a = mk(), e2a = mk(); runFor(s, 1); check(al.length === 1 && al[0][0] === 0, 'two enemies past the halfway mark with no hero near raise an alert on that lane');
   runFor(s, 10); check(al.length === 1, 'at most once per lane every 20 s'); runFor(s, 11); check(al.length === 2, 'and again after 20 s'); e1a.dead = e2a.dead = true; s.reap();
   const e3a = mk(), e4a = mk(); put(s.heroes[0], e3a.x, e3a.y); runFor(s, 22); check(al.length === 2, 'no alert with a hero within 500 px of them'); e3a.dead = e4a.dead = true; s.reap();
-  put(s.heroes[0], 1500, 2300); const pp = s.paths[0][s.palIdx]; s.pal = { tk: 'pal', x: pp[0], y: pp[1], r: 46, hp: 30, max: 140 }; runFor(s, 22); check(al.length === 2, 'a battered palisade with nobody at it is not an alert');
+  put(s.heroes[0], 3100, 4000); const pp = s.paths[0][s.palIdx]; s.pal = { tk: 'pal', x: pp[0], y: pp[1], r: 46, hp: 30, max: 140 }; runFor(s, 22); check(al.length === 2, 'a battered palisade with nobody at it is not an alert');
   const ea = s.spawnEnemy('ashling', 0), eb = s.spawnEnemy('ashling', 0); for (const [en, dx] of [[ea, 0], [eb, 20]]) { en.x = pp[0] + dx; en.y = pp[1] + 30; en.speed = 0; en.acd = 1e9; } runFor(s, 1); check(al.length === 3 && al[2][0] === 0, 'the gate under 40% with enemies at it raises an alert');
   // rejoin
   s = quiet(3, 206, ['bastion', 'cleric', 'ranger']); runFor(s, 2); const r = s.heroes[1]; r.gold = 321; r.level = 7; r.xp = 55; r.ranks = [2, 2, 1, 0]; r.ups.swiftmend = 1; r.items[0] = { uid: 77, id: 'keenedge' }; r.boons.wellspring = 1; s.recalc(r);
@@ -805,11 +805,11 @@ function sectionPass2() {
 function sectionGnawWander() {
   console.log('Old Gnaw never parks:');
   const keepAlive = s => () => { for (const h of s.heroes) if (!h.dead) h.hp = h.max; };
-  const away = s => () => { keepAlive(s)(); put(s.heroes[0], 150, 2300); put(s.heroes[1], 200, 2300); };
+  const away = s => () => { keepAlive(s)(); put(s.heroes[0], 300, 4600); put(s.heroes[1], 400, 4600); };
   const s = makeSim(2, 301, { heroes: ['bastion', 'ranger'] }); runFor(s, 1); s.noSpawn = true; for (const h of s.heroes) { h.level = 10; s.recalc(h); h.hp = h.max; }
   s.spawnEnemy('oldgnaw', 0); jump(s, D.LAST_WAVE); s.noSpawn = false; s.spawnQ = []; s.hearthCovered = true; s.q.cover.st = 2;
-  const g = s.enemies.find(e => e.kind === 'oldgnaw'); put(s.heroes[0], 150, 2300); put(s.heroes[1], 200, 2300); s.camp.hp = s.camp.max = 1e9;
-  s.posts.push({ slot: 0, x: 900, y: 600, lx: 908, ly: 592, lit: true }); g.x = 960; g.y = 640; g.hp = g.max = 1e7;
+  const g = s.enemies.find(e => e.kind === 'oldgnaw'); put(s.heroes[0], 300, 4600); put(s.heroes[1], 400, 4600); s.camp.hp = s.camp.max = 1e9;
+  s.posts.push({ slot: 0, x: 2500, y: 2300, lx: 2508, ly: 2292, lit: true }); g.x = 2560; g.y = 2340; g.hp = g.max = 1e7;
   runFor(s, 6, away(s)); check(g.ai.tgt && g.ai.tgt.k === 4, 'it stands by the warmest source, a lit post');
   const tele0 = (s.log.tags.t || []).length;
   runFor(s, 18, away(s));
@@ -820,9 +820,59 @@ function sectionGnawWander() {
   check(maxRun < 40, 'in two and a half minutes with nobody near it never stands still for forty seconds (longest ' + maxRun + ' s)');
 }
 
+// the valley (2026-10-30, the map doubled): roads walkable at full width, every place reachable on foot from the junction on the
+// sim's 40 px grid, the ground the art keeps clear (FoundingMap.KEEP) in step with the camps, the chain and the quests, and the
+// different systems' places kept apart
+function sectionValley() {
+  console.log('The valley:');
+  check(M.W === 6400 && M.H === 4800, 'the valley is 6400 x 4800');
+  for (const L of M.LANES) {
+    let bad = 0; for (const p of L.path) for (const o of [-40, -20, 0, 20, 40]) { const x = p[0] - p[4] * o, y = p[1] + p[3] * o; if (x > 20 && x < M.W - 20 && y > 20 && !M.walkable(x, y, 12)) bad++; }
+    check(bad === 0, `${L.name} is walkable end to end at full width (${bad} blocked)`); check(M.laneLength(L.id) > 3400, `${L.name} is long (${Math.round(M.laneLength(L.id))} px)`);
+  }
+  for (const [k, pl] of Object.entries(M.FOOT)) { let bad = 0; for (const p of pl) if (!M.walkable(p[0], p[1], 12)) bad++; check(bad === 0, `the ${k} footpath is walkable (${bad} blocked)`); }
+  const G = 40, cols = Math.ceil(M.W / G), rows = Math.ceil(M.H / G), seen = new Uint8Array(cols * rows);
+  const s0 = [Math.round(M.P.junction[0] / G), Math.round(M.P.junction[1] / G)], q = [s0]; seen[s0[1] * cols + s0[0]] = 1;
+  while (q.length) { const [cx, cy] = q.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) { const nx = cx + dx, ny = cy + dy; if (nx < 0 || ny < 0 || nx >= cols || ny >= rows || seen[ny * cols + nx] || !M.walkable(nx * G, ny * G, 12)) continue; seen[ny * cols + nx] = 1; q.push([nx, ny]); } }
+  // (a solid building or the Pike's pond is reached at its edge: look a few cells round it)
+  const reach = (x, y, r) => { for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) { const gx = Math.round(x / G) + i, gy = Math.round(y / G) + j; if (gx >= 0 && gy >= 0 && gx < cols && gy < rows && seen[gy * cols + gx]) return true; } return false; };
+  const s = quiet(1, 7); runFor(s, 0.2);
+  const X = FoundingSim.QUESTX, QT = D.QUEST_TUNE, CAMPS = FoundingSim.WILD.CAMPS, LINKS = FoundingSim.CHAIN.LINKS;
+  const LATE = [[4, 5126, 2326], [6, 600, 4384], [2, 1504, 1872], [7, 2660, 1716]];   // the secrets the sim adds later (sim.js addSecret)
+  const groups = {
+    camp: CAMPS.map(c => [c.id, c.x, c.y]),
+    chain: LINKS.map(L => [L.id, L.place[0], L.place[1], L.pond]),
+    quest: [['start', ...X.START], ...X.STAKES.map((p, i) => ['stake ' + i, ...p]), ['mill', ...X.MILL], ['shed', ...X.SHED], ...X.LARDER.map((p, i) => ['sack ' + i, ...p]), ['quarry', ...X.PILE], ['bell', ...X.BELL], ['ward', ...X.WARD], ...X.FIRES.map((p, i) => ['watch-fire ' + i, ...p])],
+    secret: s.secrets.map(x => ['secret ' + x.n, x.x, x.y]).concat(LATE.map(x => ['secret ' + x[0], x[1], x[2]])),
+  };
+  const all = [];
+  for (const k in groups) for (const p of groups[k]) all.push([k + ' ' + p[0], p[1], p[2], p[3] ? 3 : 0]);
+  for (const [k, p] of Object.entries(M.P)) all.push(['place ' + k, p[0], p[1], 3]);
+  for (const [k, h] of Object.entries(QT.haul)) { all.push(['haul ' + k + ' from', h.from[0], h.from[1], 1]); all.push(['haul ' + k + ' to', h.to[0], h.to[1], 1]); }
+  all.push(['the carving', QT.carve[0], QT.carve[1], 1], ['the covering', QT.cover[0], QT.cover[1], 3]); QT.fires.forEach((f, i) => all.push(['camp fire ' + i, f[0], f[1], 2]));
+  let unreached = all.filter(p => !reach(p[1], p[2], p[3]));
+  check(unreached.length === 0, 'every place, camp, link, quest object and secret is reachable on foot from the junction' + (unreached.length ? ': ' + unreached.map(p => p[0]).join(', ') : ''));
+  const keep = new Set(M.KEEP.map(p => p.join()));
+  const unkept = groups.camp.concat(groups.chain, groups.quest).filter(p => !keep.has(p[1] + ',' + p[2]));
+  check(unkept.length === 0, 'FoundingMap.KEEP lists every camp, link and quest object (so the art keeps their ground clear)' + (unkept.length ? ': ' + unkept.map(p => p[0]).join(', ') : ''));
+  // apart: 450 px between places of different systems, except the pairings the story makes on purpose (the carved oak's secrets at
+  // the Stumpwarden, and the camp's own secrets by the spring and the shed)
+  const inCamp = p => hyp(p[1] - M.P.hearth[0], p[2] - M.P.hearth[1]) < M.CAMP_R + 300;
+  const OK = new Set(['chain warden|secret secret 1', 'chain warden|secret secret 5']);
+  const ks = Object.keys(groups), close = [];
+  for (let a = 0; a < ks.length; a++) for (let b = a + 1; b < ks.length; b++) for (const p of groups[ks[a]]) for (const r of groups[ks[b]]) {
+    const d = hyp(p[1] - r[1], p[2] - r[2]); if (d >= 450 || (inCamp(p) && inCamp(r)) || OK.has(ks[a] + ' ' + p[0] + '|' + ks[b] + ' ' + r[0])) continue; close.push(`${ks[a]} ${p[0]} / ${ks[b]} ${r[0]} ${Math.round(d)} px`);
+  }
+  check(close.length === 0, 'the camps, the chain, the quests and the secrets keep 450 px apart' + (close.length ? ': ' + close.join('; ') : ''));
+  const onPath = groups.camp.concat(groups.chain, groups.quest).filter(p => M.laneAt(p[1], p[2]) || Object.values(M.FOOT).some(pl => M.near(pl, p[1], p[2]).d < 60));
+  check(onPath.length === 0, 'no camp, link or quest object sits on a lane or a footpath' + (onPath.length ? ': ' + onPath.map(p => p[0]).join(', ') : ''));
+  check(CAMPS.length >= 14, 'the bigger wilds hold fourteen camps or more (' + CAMPS.length + ')');
+  check(M.SOLIDS.length < 3200, 'the art stands a sparse valley (' + M.SOLIDS.length + ' solids)');
+}
+
 if (process.env.FT_EXPORT) { module.exports = { play, makeSim, botStep, makeBot, quiet }; return; }
 const T0 = Date.now();
-const SECTIONS = [sectionQuests, sectionEconomy, sectionLevels, sectionSkills, sectionBoss, sectionBeaconRoad, sectionGravesGate, sectionNight, sectionBosses, sectionSiege, sectionPayout, sectionBoons, sectionPass2, sectionGnawWander, sectionPerf, sectionRuns];
+const SECTIONS = [sectionValley, sectionQuests, sectionEconomy, sectionLevels, sectionSkills, sectionBoss, sectionBeaconRoad, sectionGravesGate, sectionNight, sectionBosses, sectionSiege, sectionPayout, sectionBoons, sectionPass2, sectionGnawWander, sectionPerf, sectionRuns];
 try {
   for (const f of SECTIONS) { const t = Date.now(); f(); if (VERBOSE) console.log(`  (${f.name}: ${((Date.now() - t) / 1000).toFixed(1)} s)`); }
 } catch (e) { failures++; console.log('EXCEPTION: ' + e.stack); }

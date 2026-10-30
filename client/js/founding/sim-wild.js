@@ -48,16 +48,23 @@
   // ---------------------------------------------------------------- the camps
   // x, y: the leader's place; grunts stand in a ring round it. m: strength (health, damage, pay). where: for the notes and the test.
   const CAMPS = [
-    { id: 'hillcairn', name: 'Cairn Hollow', where: 'Beacon Hill, the mountain side', x: 360, y: 590, fam: 'stone', leader: 'wwarden', grunts: [['wcairn', 2], ['wwisp', 1]], m: 1.1 },
-    { id: 'plainwolves', name: 'The Wind Den', where: 'the western plain', x: 540, y: 1290, fam: 'wolf', leader: 'walpha', grunts: [['wwolf', 3]], m: 1.0 },
-    { id: 'westcopse', name: 'Bristle Copse', where: 'the western copse', x: 820, y: 1460, fam: 'boar', leader: 'wsow', grunts: [['wboar', 3]], m: 1.0 },
-    { id: 'swplain', name: 'The Far Den', where: 'the south-west plain', x: 370, y: 1780, fam: 'wolf', leader: 'walpha', grunts: [['wwolf', 3]], m: 1.15 },
-    { id: 'bluffpack', name: 'Bluff Rest', where: 'the East Bluff', x: 2160, y: 780, fam: 'wolf', leader: 'walpha', grunts: [['wwolf', 3]], m: 1.1 },
-    { id: 'pasture', name: 'The High Pasture', where: 'the pasture between the road and the bluff', x: 1830, y: 560, fam: 'boar', leader: 'wsow', grunts: [['wboar', 3]], m: 1.0 },
-    { id: 'seaflats', name: 'The Ashwood Wallow', where: 'the woods across the river, south-east', x: 2900, y: 1890, fam: 'boar', leader: 'wsow', grunts: [['wboar', 4]], m: 1.2 },
-    { id: 'southbend', name: 'Silt Bend', where: 'the south bend of the river, east bank', x: 2380, y: 1990, fam: 'river', leader: 'wsilt', grunts: [['wsnapper', 2], ['wspit', 1]], m: 1.05 },
-    { id: 'eastbank', name: 'The Reed Bank', where: 'the east bank above the bend', x: 2440, y: 1660, fam: 'river', leader: 'wsilt', grunts: [['wsnapper', 2], ['wspit', 2]], m: 1.15 },
-    { id: 'embergrove', name: 'The Ember Cairns', where: 'the far south-east', x: 2650, y: 2230, fam: 'stone', leader: 'wwarden', grunts: [['wcairn', 2], ['wwisp', 2]], m: 1.25 },
+    { id: 'hillcairn', name: 'Cairn Hollow', where: 'Beacon Hill, the mountain side', x: 720, y: 1180, fam: 'stone', leader: 'wwarden', grunts: [['wcairn', 2], ['wwisp', 1]], m: 1.1 },
+    { id: 'plainwolves', name: 'The Wind Den', where: 'the western plain', x: 1080, y: 2580, fam: 'wolf', leader: 'walpha', grunts: [['wwolf', 3]], m: 1.0 },
+    { id: 'westcopse', name: 'Bristle Copse', where: 'the western copse', x: 1640, y: 2920, fam: 'boar', leader: 'wsow', grunts: [['wboar', 3]], m: 1.0 },
+    { id: 'swplain', name: 'The Far Den', where: 'the south-west plain', x: 740, y: 3560, fam: 'wolf', leader: 'walpha', grunts: [['wwolf', 3]], m: 1.15 },
+    { id: 'bluffpack', name: 'Bluff Rest', where: 'the East Bluff', x: 4320, y: 1560, fam: 'wolf', leader: 'walpha', grunts: [['wwolf', 3]], m: 1.1 },
+    { id: 'pasture', name: 'The High Pasture', where: 'the pasture between the road and the bluff', x: 3660, y: 1120, fam: 'boar', leader: 'wsow', grunts: [['wboar', 3]], m: 1.0 },
+    { id: 'seaflats', name: 'The Ashwood Wallow', where: 'the woods across the river, south-east', x: 5800, y: 3780, fam: 'boar', leader: 'wsow', grunts: [['wboar', 4]], m: 1.2 },
+    { id: 'southbend', name: 'Silt Bend', where: 'the south bend of the river, east bank', x: 4760, y: 3980, fam: 'river', leader: 'wsilt', grunts: [['wsnapper', 2], ['wspit', 1]], m: 1.05 },
+    { id: 'eastbank', name: 'The Reed Bank', where: 'the east bank above the bend', x: 4880, y: 3320, fam: 'river', leader: 'wsilt', grunts: [['wsnapper', 2], ['wspit', 2]], m: 1.15 },
+    { id: 'embergrove', name: 'The Ember Cairns', where: 'the far south-east', x: 5300, y: 4460, fam: 'stone', leader: 'wwarden', grunts: [['wcairn', 2], ['wwisp', 2]], m: 1.25 },
+    // (2026-10-30, the bigger valley) six more camps for the new wilds
+    { id: 'ruins', name: 'The Broken Ring', where: 'the old ruins on the west plain', x: 1060, y: 3220, fam: 'stone', leader: 'wwarden', grunts: [['wcairn', 2], ['wwisp', 1]], m: 1.1 },
+    { id: 'greyback', name: 'The Grey Stones', where: 'the top of the Greyback', x: 1050, y: 2150, fam: 'wolf', leader: 'walpha', grunts: [['wwolf', 3]], m: 1.05 },
+    { id: 'fen', name: 'Sedge Hollow', where: 'the Sedge Fen, south-west', x: 820, y: 3980, fam: 'river', leader: 'wsilt', grunts: [['wsnapper', 2], ['wspit', 1]], m: 1.1 },
+    { id: 'delta', name: 'The Delta Shoals', where: 'the river delta, south-east', x: 5750, y: 4400, fam: 'river', leader: 'wsilt', grunts: [['wsnapper', 2], ['wspit', 2]], m: 1.2 },
+    { id: 'heights', name: 'The High Runs', where: 'the Timber Heights, north-east', x: 6100, y: 1560, fam: 'wolf', leader: 'walpha', grunts: [['wwolf', 3]], m: 1.15 },
+    { id: 'ashpines', name: 'The Pine Hollow', where: 'deep in the Ashwood', x: 6100, y: 3400, fam: 'boar', leader: 'wsow', grunts: [['wboar', 3]], m: 1.2 },
   ];
 
   const TUNE = {
@@ -68,10 +75,13 @@
     tierHp: 0.08, tierDmg: 0.05, tierPay: 0.06,   // stronger per lane tier (sim.tier 0..7)
     tierExtra: 4,                 // from this tier a camp has one more grunt
     respawn: [118, 4.5, 40],      // seconds: base, per wave reached, random spread
-    respawnApart: 700,            // a camp does not refill with a hero this close
+    respawnApart: 260,            // a camp does not refill with a hero right on top of it (it refills behind you otherwise)
+    sight: 560,                   // how far a pack sees a hero it has not been hurt by (and only along a clear line: woods, ridges and higher ground hide)
+    lostSecs: 3,                  // an unhurt pack that has lost sight of everyone this long goes home
     wakeR: 520, sleepR: 800,    // a camp only exists in the world while a hero is within this of it (it is asleep, whole and healed, otherwise)
     itemLeader: 0.42, itemGrunt: 0.05, itemTier: 0.015,
     rewardMul: 1,                 // all camp xp and gold
+    xpMul: 3,                     // camp xp on top: a hero who jungles levels well ahead of one who only holds a lane (user, 2026-10-30)
     idle: 0.35,                   // idle wander speed
   };
 
@@ -106,22 +116,23 @@
       const rec = (kind, slot, leader) => { const base = D.ENEMIES[kind], hp = base.hp * hpMul * (leader ? TUNE.leaderHp[Math.min(3, N - 1)] : 1); c.recs.push({ kind, slot, leader, hp, max: hp, dm, pay, tier, dead: false }); };
       rec(d.leader, slots[0], true);
       kinds.forEach((k, i) => rec(k, slots[i + 1], false));
-      c.st = 'live'; c.act = false; c.alert = false; c.gen++; sim.ev(['wcre', c.i]);
+      c.st = 'live'; c.act = false; c.alert = false; c.prov = false; c.gen++; sim.ev(['wcre', c.i]);
     }
     function mk(c, r) {
       const base = D.ENEMIES[r.kind], slot = r.slot;
       const e = sim.spawnAt(r.kind, slot[0], slot[1], mod, { hp: r.max, tier: r.tier, face: sim.rand() * TAU });
       e.hp = r.hp; e.max = r.max;
-      e.def = Object.assign({}, base, { atk: Object.assign({}, base.atk, { dmg: base.atk.dmg * r.dm }), xp: base.xp * r.pay, gold: base.gold * r.pay });   // this one's own numbers; the client reads the kind's
+      e.def = Object.assign({}, base, { atk: Object.assign({}, base.atk, { dmg: base.atk.dmg * r.dm }), xp: base.xp * r.pay * TUNE.xpMul, gold: base.gold * r.pay });   // this one's own numbers; the client reads the kind's
       e.w = { c, slot, rec: r, leader: r.leader, mode: 'idle', baseSpeed: base.speed, hasteT: 0, tgtT: sim.rr(0, 0.3), lostT: 0, wanderT: sim.rr(0.5, 4), wx: slot[0], wy: slot[1], cool: 0, spCd: sim.rr(2, 5), dmgF: r.dm, path: null, pi: 0, pathUntil: 0, sp: null };
       e.acd = sim.rr(0.4, 1.2);
       c.mem.push(e); return e;
     }
-    function activate(c) { c.mem = []; for (const r of c.recs) if (!r.dead) mk(c, r); c.act = true; c.alert = false; }
-    function deactivate(c) { for (const e of c.mem) if (!e.dead) { e.w.rec.hp = e.w.rec.max; e.dead = true; } c.mem = []; c.act = false; c.alert = false; }
+    function activate(c) { c.mem = []; for (const r of c.recs) if (!r.dead) mk(c, r); c.act = true; c.alert = false; c.prov = false; }
+    function deactivate(c) { for (const e of c.mem) if (!e.dead) { e.w.rec.hp = e.w.rec.max; e.dead = true; } c.mem = []; c.act = false; c.alert = false; c.prov = false; }
 
     // ---------------------------------------------------------------- waking, leashing
-    function alertCamp(c, by, who) {
+    function alertCamp(c, by, who, hurt) {
+      if (hurt) c.prov = true;   // a blow was struck: the pack hunts whoever it likes from now on (until it has gone home)
       if (c.alert) return;
       c.alert = true; c.alertT = sim.time;
       sim.ev(['wcwake', c.i, who ? who.id : 0, Math.round(who ? who.x : c.x), Math.round(who ? who.y : c.y)]);
@@ -132,13 +143,20 @@
       w.hasteT = 0; e.speed = w.baseSpeed * 1.8; w.path = null; w.retT = 0;
       if (!w.c.rstT || sim.time - w.c.rstT > 2) { w.c.rstT = sim.time; sim.ev(['wcrst', w.c.i, Math.round(e.x), Math.round(e.y)]); }
     }
+    // sight: a creature sees a point only along a clear line (FoundingMap.losClear: thick woods, higher ground and ridges block it)
+    function seesPt(e, x, y, R) { const d = hyp(x - e.x, y - e.y); return d <= R && M.losClear(e.x, e.y, x, y); }
+    // the pack shares its eyes: a hero any living, unreturned member can see
+    function packSees(c, x, y) { for (const m of c.mem) if (!m.dead && m.w.mode !== 'return' && seesPt(m, x, y, TUNE.sight)) return true; return false; }
+    function sightedHero(e, R) {   // the nearest hero this creature itself sees within R
+      let best = null, bd = R; for (const h of sim.heroes) { if (h.dead || h.invul > 0) continue; const d = hyp(h.x - e.x, h.y - e.y); if (d < bd && M.losClear(e.x, e.y, h.x, h.y)) { bd = d; best = h; } } return best;
+    }
     function pickTarget(e) {
-      const w = e.w, c = w.c, lim = TUNE.leash + 40;
+      const w = e.w, c = w.c, lim = TUNE.leash + 40, blind = !c.prov;   // an unhurt pack only follows what it can see
       if (e.tauntT > 0 && e.taunter && !e.taunter.dead && hyp(e.taunter.x - c.x, e.taunter.y - c.y) < lim + 60) { e.tgt = e.taunter; return; }
       let best = null, bd = 1e9;
-      const cur = e.tgt && validT(e, e.tgt) ? e.tgt : null; if (cur) { best = cur; bd = hyp(cur.x - e.x, cur.y - e.y) * 0.75; }   // stick to the one it has, unless another is much nearer
-      for (const h of sim.heroes) { if (h.dead || h.invul > 0) continue; if (hyp(h.x - c.x, h.y - c.y) > lim) continue; const d = hyp(h.x - e.x, h.y - e.y); if (d < bd) { bd = d; best = h; } }
-      for (const u of sim.allies || []) { if (u.dead) continue; if (hyp(u.x - c.x, u.y - c.y) > lim) continue; const d = hyp(u.x - e.x, u.y - e.y) - (u.r || 0); if (d < bd) { bd = d; best = u; } }
+      const cur = e.tgt && validT(e, e.tgt) && (!blind || packSees(c, e.tgt.x, e.tgt.y)) ? e.tgt : null; if (cur) { best = cur; bd = hyp(cur.x - e.x, cur.y - e.y) * 0.75; }   // stick to the one it has, unless another is much nearer
+      for (const h of sim.heroes) { if (h.dead || h.invul > 0) continue; if (hyp(h.x - c.x, h.y - c.y) > lim) continue; const d = hyp(h.x - e.x, h.y - e.y); if (d < bd && (!blind || packSees(c, h.x, h.y))) { bd = d; best = h; } }
+      for (const u of sim.allies || []) { if (u.dead) continue; if (hyp(u.x - c.x, u.y - c.y) > lim) continue; const d = hyp(u.x - e.x, u.y - e.y) - (u.r || 0); if (d < bd && (!blind || packSees(c, u.x, u.y))) { bd = d; best = u; } }
       e.tgt = best;
     }
     function validT(e, t) { const c = e.w.c; return !t.dead && hyp(t.x - c.x, t.y - c.y) < TUNE.leash + 100; }
@@ -256,8 +274,8 @@
         if (now < w.cool) { idleStep(e, dt); return; }
         if (c.alert) { w.mode = 'fight'; w.lostT = 0; }
         else {
-          const near = sim.nearestHeroTo(e.x, e.y, def.aggro * TUNE.wake + 20);
-          if (near && near.invul <= 0) { alertCamp(c, near, e); w.mode = 'fight'; w.lostT = 0; }
+          const near = sightedHero(e, def.aggro * TUNE.wake + 20);   // its own eyes, along a clear line
+          if (near) { alertCamp(c, near, e); w.mode = 'fight'; w.lostT = 0; }
         }
         if (w.mode === 'idle') { idleStep(e, dt); return; }
       }
@@ -265,7 +283,7 @@
       if (hyp(e.x - c.x, e.y - c.y) > TUNE.leash) { startReturn(e); return; }
       if ((w.tgtT -= dt) <= 0) { w.tgtT = 0.25; pickTarget(e); }
       const t = e.tgt;
-      if (!t || !validT(e, t)) { e.tgt = null; w.lostT += dt; if (w.lostT > 3) startReturn(e); else idleStep(e, dt * 0.5); return; }
+      if (!t || !validT(e, t)) { e.tgt = null; w.lostT += dt; if (w.lostT > (c.prov ? 3 : TUNE.lostSecs)) startReturn(e); else idleStep(e, dt * 0.5); return; }
       w.lostT = 0;
       const atk = def.atk, dx = t.x - e.x, dy = t.y - e.y, dist = hyp(dx, dy), gap = dist - e.r - (t.r || 0), range = atk.range || atk.reach;
       if (def.sp === 'pounce' && now >= (w.howlAt || 0) && c.mem.length > 1 && e.acd <= 0.5) { howl(e); }
@@ -286,12 +304,13 @@
       // the items that do something (a passive) are favoured: the items module may mark them with passive/pas/proc
       const wt = pool.map(i => (i.passive || i.pas || i.proc ? 2 : 1)), wsum = wt.reduce((a, b) => a + b, 0);
       let y = sim.rand() * wsum, it = pool[0]; for (let k = 0; k < pool.length; k++) { if (y < wt[k]) { it = pool[k]; break; } y -= wt[k]; }
+      if (!sim.autoLoot && sim.worldDrop) { sim.worldDrop(e.x, e.y, it.id); stats.items++; return; }   // in play it lies where the leader fell (sim-world.js)
       for (let t = 0; t < hs.length; t++) { const h = hs[(sim.dropN++) % hs.length]; if (sim.freeSlot(h) >= 0) { sim.giveItem(h, it.id); sim.ev(['dr', h.id, it.id]); stats.items++; return; } else if (t === hs.length - 1) { h.gold += 20; h.dirty = true; } }
     }
     return {
       camps, stats,   // (for the tuning runner and the test)
       start() { if (!sim.noSpawn) buildAll(); },
-      hit(a, e, h) { if (e && e.w && e.w.mode !== 'return') alertCamp(e.w.c, h, e); return a; },
+      hit(a, e, h) { if (e && e.w && e.w.mode !== 'return') alertCamp(e.w.c, h, e, true); return a; },
       kill(e, killer) {
         const w = e.w; if (!w) return;
         const c = w.c; w.rec.dead = true; c.mem = c.mem.filter(m => m !== e && !m.dead); stats.kills++; stats.xp += e.def.xp * D.xpMul(sim.scaleN()); stats.gold += e.def.gold;
@@ -310,7 +329,7 @@
           if (c.st === 'live') {
             const near = sim.nearestHeroTo(c.x, c.y, c.act ? TUNE.sleepR : TUNE.wakeR);
             if (!c.act) { if (near) activate(c); continue; }
-            if (c.alert && now - c.alertT > 0.6 && !c.mem.some(m => !m.dead && m.w.mode === 'fight')) c.alert = false;   // everyone has gone home
+            if (c.alert && now - c.alertT > 0.6 && !c.mem.some(m => !m.dead && m.w.mode === 'fight')) { c.alert = false; c.prov = false; }   // everyone has gone home
             if (!near && !c.alert && !c.mem.some(m => !m.dead && m.w.mode === 'return')) deactivate(c);
           } else if (c.st === 'clear' && now >= c.respawnAt && !over && !sim.noSpawn && !sim.nearestHeroTo(c.x, c.y, TUNE.respawnApart)) buildCamp(c);
         }

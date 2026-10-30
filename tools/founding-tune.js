@@ -14,7 +14,7 @@ const cp = require('child_process');
 const { FoundingMap: M } = require(path.join(__dirname, '../client/js/founding/map-data.js'));
 const { FOUNDING_DATA: D } = require(path.join(__dirname, '../client/js/founding/data.js'));
 const { FoundingSim } = require(path.join(__dirname, '../client/js/founding/sim.js'));
-for (const m of ['sim-items', 'sim-defence', 'sim-wild', 'sim-chain', 'sim-quests', 'sim-trials']) require(path.join(__dirname, '../client/js/founding/' + m + '.js'));   // feature modules register on FoundingSim.mods
+for (const m of ['sim-items', 'sim-defence', 'sim-wild', 'sim-chain', 'sim-quests', 'sim-trials', 'sim-intro', 'sim-world']) require(path.join(__dirname, '../client/js/founding/' + m + '.js'));   // feature modules register on FoundingSim.mods
 const { FoundingArt } = require(path.join(__dirname, '../client/js/founding/map-art.js'));
 FoundingArt.layoutOnly();
 
@@ -44,7 +44,7 @@ function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Ma
 const angDiff = (a, b) => { let d = (b - a) % TAU; if (d > PI) d -= TAU; if (d < -PI) d += TAU; return d; };
 function segDist(px, py, x1, y1, x2, y2) { const dx = x2 - x1, dy = y2 - y1, l = dx * dx + dy * dy; let t = l ? ((px - x1) * dx + (py - y1) * dy) / l : 0; t = t < 0 ? 0 : t > 1 ? 1 : t; return hyp(px - (x1 + dx * t), py - (y1 + dy * t)); }
 
-const HOLD = [1615, 1700], HOLD_SIEGE = [1400, 1010], MIRE_HOLD = [2390, 1190];
+const HOLD = [3215, 3400], HOLD_SIEGE = [2800, 2020], MIRE_HOLD = [4780, 2380];   // (the valley doubled 2026-10-30)
 const HAUL = ['beacon', 'graves', 'stonegate', 'roof'];
 
 // which skill a person levels next (the sim's own rules decide what is allowed): the ultimate whenever a rank opens, the passive three times in four, then the thinnest of Q W E
@@ -90,7 +90,7 @@ function makeRun(N, seed, heroes) {
       switch (e[0]) {
         case 't': hazards.push({ id: e[1], shape: e[2], x: e[3], y: e[4], a: e[5], b: e[6], w: e[7], warn: e[8], col: e[9], born: sim.time, end: sim.time + e[8] }); break;
         case 'i': { const i = hazards.findIndex(z => z.id === e[1]); if (i >= 0) hazards.splice(i, 1); break; }
-        case 'w': { rec.waves[e[1]] = { t: Math.round(sim.time), camp: Math.round(sim.camp.hp / sim.camp.max * 100), alive: sim.heroes.filter(h => !h.dead).length, enemies: sim.enemies.filter(x => !x.dead).length }; break; }
+        case 'w': { rec.waves[e[1]] = { t: Math.round(sim.time), camp: Math.round(sim.camp.hp / sim.camp.max * 100), alive: sim.heroes.filter(h => !h.dead).length, enemies: sim.enemies.filter(x => !x.dead).length, lv: sim.heroes.reduce((a, h) => a + h.level, 0) / sim.heroes.length }; break; }
         case 'boss': rec.boss[D.ENEMY_IDS[e[2]]] = { spawn: sim.time, engage: null, down: null }; break;
         case 'bossdown': { const b = rec.boss[D.ENEMY_IDS[e[2]]]; if (b) b.down = sim.time; break; }
         case 'gp': rec.partT[e[2]] = sim.time; break;
@@ -100,7 +100,7 @@ function makeRun(N, seed, heroes) {
       }
     }
   };
-  sim = new FoundingSim({ players, emit, emitTo() {}, seed });
+  sim = new FoundingSim({ players, emit, emitTo() {}, seed, autoLoot: true });   // (the pilots have no hands: drops go straight to a hero, as before sim-world.js)
   players.forEach((p, i) => sim.intent(p.id, { k: 'pick', hero: heroes[i] }));
   sim.intent('p0', { k: 'ready' });
   // account who hurts whom, and what the camp loses, by wave and by kind
@@ -609,6 +609,7 @@ function summarize(results, o) {
     console.log(`  hero falls per run: avg ${avg(rs.map(r => r.deaths.reduce((a, b) => a + b, 0))).toFixed(1)} (won ${avg(won.map(r => r.deaths.reduce((a, b) => a + b, 0))).toFixed(1)}, lost ${avg(lost.map(r => r.deaths.reduce((a, b) => a + b, 0))).toFixed(1)})  perfect blocks/run ${avg(rs.map(r => r.perfect)).toFixed(1)}`);
     // camp hp over time
     const campRow = []; for (const w of [3, 6, 9, 12, 15, 18, 21, 24, 27, 30]) { const v = rs.filter(r => r.waves[w]).map(r => r.waves[w].camp); campRow.push(`w${w}:${v.length ? Math.round(avg(v)) : '-'}`); }
+    { const lvRow = []; for (const w of [2, 4, 6, 8, 10, 12, 15, 18, 21, 24, 26, 28, 30]) { const v = rs.filter(r => r.waves[w]).map(r => r.waves[w].lv); lvRow.push(`w${w}:${v.length ? avg(v).toFixed(1) : '-'}`); } console.log('  avg hero level at wave start: ' + lvRow.join(' ')); }
     console.log('  camp HP % at wave start (avg over runs that got there): ' + campRow.join(' '));
     // quests
     console.log('  quests done (of runs that reached the offer):');

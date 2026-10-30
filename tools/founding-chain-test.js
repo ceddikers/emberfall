@@ -136,7 +136,7 @@ function sectionData() {
   check(!D.ITEMS.some(i => i.shop && CH.ITEMS.some(x => x[0] === i.id)), 'chain items are never in the shop');
   for (const L of CH.LINKS.slice(0, CH.BUILT)) check(D.ENEMIES[L.kind] && D.ENEMIES[L.kind].boss, `${L.kind} is a boss kind`);
   // places: walkable, reachable from the junction on the 40 px grid, and the new ones clear of every wild camp
-  const G = 40, cols = 80, rows = 60, seen = new Uint8Array(cols * rows), q = [[40, 40]]; seen[40 * cols + 40] = 1;   // (1600, 1600) is open ground
+  const G = 40, cols = Math.ceil(M.W / G), rows = Math.ceil(M.H / G), seen = new Uint8Array(cols * rows), q = [[80, 80]]; seen[80 * cols + 80] = 1;   // (3200, 3200) is open ground by the junction
   while (q.length) { const [cx, cy] = q.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) { const nx = cx + dx, ny = cy + dy; if (nx < 0 || ny < 0 || nx >= cols || ny >= rows || seen[ny * cols + nx] || !M.walkable(nx * G, ny * G, 12)) continue; seen[ny * cols + nx] = 1; q.push([nx, ny]); } }
   const camps = FoundingSim.WILD.CAMPS;
   CH.LINKS.forEach((L, i) => {
@@ -152,7 +152,7 @@ function sectionData() {
 function sectionWake() {
   console.log('Waking:');
   const sim = makeSim(4, 11), C = sim.chain;
-  place(sim, 1735, 262);
+  place(sim, 3470, 524);
   sim.intent('p0', { k: 'carry' });
   check(!C.rung, 'the bell does nothing before wave 3');
   sim.wave = 3;
@@ -173,7 +173,7 @@ function sectionWake() {
   const props = sim.snapshot(true).props; check(Array.isArray(props.chb) && props.chb[2] === 1 && Array.isArray(props.chn), 'props chb/chn are sent');
   // party-size scaling
   // no party-size scaling: one fixed health and one fixed hit for 1-4 heroes
-  for (const N of [1, 2, 3]) { const s = makeSim(N, 5); s.wave = 3; place(s, 1735, 262); s.heroes[0].x = s.chain.bell[0]; s.heroes[0].y = s.chain.bell[1]; s.intent('p0', { k: 'carry' }); for (let i = 0; i < 90; i++) s.tick(DT); check(s.chain.boss && s.chain.boss.max === CH.LINKS[0].hp, `${N}p: the Ram has the same health (${s.chain.boss && s.chain.boss.max})`); }
+  for (const N of [1, 2, 3]) { const s = makeSim(N, 5); s.wave = 3; place(s, 3470, 524); s.heroes[0].x = s.chain.bell[0]; s.heroes[0].y = s.chain.bell[1]; s.intent('p0', { k: 'carry' }); for (let i = 0; i < 90; i++) s.tick(DT); check(s.chain.boss && s.chain.boss.max === CH.LINKS[0].hp, `${N}p: the Ram has the same health (${s.chain.boss && s.chain.boss.max})`); }
   for (let i = 0; i < 10; i++) {
     const hp = [1, 2, 3, 4].map(N => { const q = startLink(i, 70 + i, N); return q.e && q.e.max; });
     check(hp.every(x => x === CH.LINKS[i].hp), `link ${i + 1} has one fixed health for 1-4 heroes: ${hp.join(' / ')}`);
@@ -208,7 +208,7 @@ function guardTelegraphs(sim) {
 function runChain(seed, opts) {
   opts = opts || {}; const nLinks = opts.until || 10;
   const sim = makeSim(4, seed), C = sim.chain, G = guardTelegraphs(sim);
-  sim.wave = FAST_WAVE; sim.time = D.waveStartAt(FAST_WAVE); levelTo(sim, FAST[0]); topUp(sim, SHOP[0]); place(sim, 1735, 262);   // the quick party: level 6 by wave 3, well ahead of the human pace; then the suited levels
+  sim.wave = FAST_WAVE; sim.time = D.waveStartAt(FAST_WAVE); levelTo(sim, FAST[0]); topUp(sim, SHOP[0]); place(sim, 3470, 524);   // the quick party: level 6 by wave 3, well ahead of the human pace; then the suited levels
   const t0 = sim.time, kills = [], wakes = [], sizes = [], deaths = [], stoneSeen = { max: 0 };
   sim.heroes[0].x = C.bell[0]; sim.heroes[0].y = C.bell[1]; sim.intent('p0', { k: 'carry' });
   let prev = CH.LINKS[0].place;
@@ -277,19 +277,19 @@ function sectionAfterThree() {
   const arm = (seed, wave) => { const sim = makeSim(4, seed), C = sim.chain; sim.wave = wave || 3; return { sim, C }; };
   // the Pike: a lit brand held at the pool before it arrives
   {
-    const sim = makeSim(4, 31), C = sim.chain; sim.wave = 3; place(sim, 1735, 262); sim.heroes[0].x = C.bell[0]; sim.heroes[0].y = C.bell[1]; sim.intent('p0', { k: 'carry' });
+    const sim = makeSim(4, 31), C = sim.chain; sim.wave = 3; place(sim, 3470, 524); sim.heroes[0].x = C.bell[0]; sim.heroes[0].y = C.bell[1]; sim.intent('p0', { k: 'carry' });
     for (let i = 0; i < 80; i++) sim.tick(DT);
     const ram = C.boss; ram.hp = 1; sim.dmgE(ram, 5, sim.heroes[0]);
     check(C.st[0] === 'done' && C.st[1] === 'gap', 'killing the Ram starts the next gap');
-    const h = sim.heroes[1]; h.x = 2060; h.y = 1620; h.brand = 60; for (let i = 0; i < 20 * 12; i++) { h.brand = 60; sim.tick(DT); }
+    const h = sim.heroes[1]; h.x = 4165; h.y = 3255; h.brand = 60; for (let i = 0; i < 20 * 12; i++) { h.brand = 60; sim.tick(DT); }
     check(C.bonus[1] && evs(sim, 'chbonus').length === 1, 'a lit brand held at the pool weakens the Pike (chbonus)');
     while (C.st[1] === 'gap') sim.tick(DT);
-    place(sim, 2105, 1700); for (let i = 0; i < 40; i++) sim.tick(DT);
+    place(sim, 4210, 3400); for (let i = 0; i < 40; i++) sim.tick(DT);
     check(C.boss && C.boss.kind === 'pike' && C.boss.max === Math.round(CH.LINKS[1].hp * CH.TUNE.weaken), 'the weakened Pike has 80% health: ' + (C.boss && C.boss.max));
-    settle(sim); place(sim, 400, 1900); sim.heroes.forEach((hh, i) => { hh.x = 349 + i * 20; hh.y = 1940; hh.invul = 1e6; });   // (all four far away and standing: a hero who fell in the fight would respawn at the spring, which is near the Pike)
+    settle(sim); place(sim, 800, 3800); sim.heroes.forEach((hh, i) => { hh.x = 698 + i * 20; hh.y = 3880; hh.invul = 1e6; });   // (all four far away and standing: a hero who fell in the fight would respawn at the spring, which is near the Pike)
     const bossE = C.boss; for (let i = 0; i < 20 * 18; i++) { sim.tick(DT); }
     check(bossE.dead && C.st[1] === 'placed' && !C.boss && evs(sim, 'chlose').length === 1, 'the Pike slips back when the party leaves (chlose)');
-    place(sim, 2105, 1700); for (let i = 0; i < 40; i++) sim.tick(DT);
+    place(sim, 4210, 3400); for (let i = 0; i < 40; i++) sim.tick(DT);
     check(C.boss && C.boss.kind === 'pike' && C.boss.hp > C.boss.max * 0.99, 'it comes back whole when found again');
   }
   // the oak: six cuts before the Stumpwarden arrives
@@ -318,7 +318,7 @@ function sectionAfterThree() {
   }
   // the siege ends the chain
   {
-    const sim = makeSim(4, 51), C = sim.chain; sim.wave = 3; place(sim, 1735, 262); sim.heroes[0].x = C.bell[0]; sim.heroes[0].y = C.bell[1]; sim.intent('p0', { k: 'carry' });
+    const sim = makeSim(4, 51), C = sim.chain; sim.wave = 3; place(sim, 3470, 524); sim.heroes[0].x = C.bell[0]; sim.heroes[0].y = C.bell[1]; sim.intent('p0', { k: 'carry' });
     for (let i = 0; i < 80; i++) sim.tick(DT); const ram = C.boss;
     sim.wave = D.LAST_WAVE - 1; sim.hook('wave', D.LAST_WAVE);
     sim.tick(DT); check(C.over && ram.dead && evs(sim, 'chend').length === 1, 'the siege begins: the chain stops and the Ram is gone');
@@ -351,18 +351,19 @@ function sectionPieces() {
     const { sim, C, e } = startLink(4); for (const h of sim.heroes) h.invul = 1e6;
     check(e && e.kind === 'lanternwarden' && C.stones.length === 4, 'the Warden stands among four stones');
     const s = C.stones[0], h = sim.heroes[0], a = Math.atan2(s.y - e.y, s.x - e.x);
-    for (const o of C.stones) if (o !== s) o.x += 3000;   // (the others out of the way for the line test)
-    for (const o of sim.heroes) if (o !== h) o.dead = true;
+    for (const o of C.stones) if (o !== s) o.x += 7000;   // (the others out of the way for the line test)
+    for (const o of sim.heroes) if (o !== h) { o.dead = true; o.respT = 1e9; }   // (and they stay down for the test)
     h.x = s.x + Math.cos(a) * 90; h.y = s.y + Math.sin(a) * 90;   // a hero right behind that stone
     const guard = { hurt: 0 }; const orig = sim.hurtHero.bind(sim); sim.hurtHero = (hh, amt, src, o) => { guard.hurt++; return orig(hh, amt, src, o); };
     for (let k = 0; k < 2; k++) { begin(sim, e, 'gaze', h); hold(sim, e, 40); }
+   
     check(guard.hurt === 0, 'two gazes at a hero behind a stone burn nobody');
     check(!C.stones.includes(s), 'the stone cracks away after the second gaze'); check(evs(sim, 'chbreak').length >= 1, 'chbreak event');
   }
   {
     const { sim, C, e } = startLink(4, 91); const h = sim.heroes[1]; C.stones.length = 0;
     h.hp = h.max; h.x = e.x + 200; h.y = e.y; const hp0 = h.hp;
-    for (const o of sim.heroes) if (o !== h) o.dead = true; begin(sim, e, 'gaze', h); hold(sim, e, 40); check(h.hp < hp0, 'with no stone between, the gaze burns');
+    for (const o of sim.heroes) if (o !== h) { o.dead = true; o.respT = 1e9; }   // (and they stay down for the test) begin(sim, e, 'gaze', h); hold(sim, e, 40); check(h.hp < hp0, 'with no stone between, the gaze burns');
     const stones = C.stones.length; e.hp = e.max * 0.65; e.ai.gate = 0; e.ai.intro = 5; sim.tick(DT); check(C.stones.length > stones, 'the Warden relights its dais as it weakens');
   }
   // 6. the Hollow Stag: thorns stay for 8 s and burn
@@ -528,7 +529,7 @@ function sectionRules() {
   console.log('Ultimates for damage and the named enrage:');
   // the enrage itself: a step every 12 s after the first, named and shown, rising damage
   {
-    const sim = makeSim(4, 330), C = sim.chain; sim.wave = 3; levelTo(sim, 8); C.cur = 0; C.st[0] = 'placed'; C.at = 0; place(sim, 1840, 330); for (let i = 0; i < 100 && !C.boss; i++) sim.tick(DT);
+    const sim = makeSim(4, 330), C = sim.chain; sim.wave = 3; levelTo(sim, 8); C.cur = 0; C.st[0] = 'placed'; C.at = 0; place(sim, 3680, 660); for (let i = 0; i < 100 && !C.boss; i++) sim.tick(DT);
     for (const x of sim.heroes) x.invul = 1e6; C.boss.invuln = true;
     while (C.fightT < CH.TUNE.rageAt - 1) sim.tick(DT); check(C.rage === 0 && C.rageMul === 1, 'no fury before ' + CH.TUNE.rageAt + ' s');
     while (C.fightT < CH.TUNE.rageAt + 30) sim.tick(DT);

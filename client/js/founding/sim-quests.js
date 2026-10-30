@@ -22,14 +22,14 @@
 
   // ---------------------------------------------------------------- the places (checked by tools/founding-quests-test.js: off the lanes, the wild camps, the chain's ground and the secrets; reachable on the 40 px grid)
   const X = FS.QUESTX = {
-    START: [1320, 1800],                                                   // the Warden sets out from the hall
-    STAKES: [[1381, 1705], [1182, 1637], [1025, 1706], [940, 1800]],       // the west plain, out from the camp
-    MILL: [760, 1710],
-    SHED: [1530, 2190],                                                    // the larder's shed, at the camp's south edge by the spring
-    LARDER: [[2586, 556], [1495, 529], [236, 864], [306, 1471], [1096, 871], [2385, 955], [2210, 420], [1252, 2266]],
-    PILE: [570, 2188],                                                     // the quarry
-    BELL: [1130, 1790], WARD: [1420, 1790],
-    FIRES: [[1540, 700], [845, 1137], [2321, 401]],
+    START: [2640, 3600],                                                   // the Warden sets out from the hall
+    STAKES: [[2701, 3505], [2364, 3274], [2050, 3412], [1880, 3600]],       // the west plain, out from the camp
+    MILL: [1520, 3420],
+    SHED: [3060, 4380],                                                    // the larder's shed, at the camp's south edge by the spring
+    LARDER: [[5172, 1112], [2990, 1058], [472, 1728], [612, 2942], [2120, 1840], [4770, 1910], [4420, 840], [2380, 4560]],
+    PILE: [1140, 4376],                                                     // the quarry
+    BELL: [2260, 3580], WARD: [2840, 3580],
+    FIRES: [[3080, 1400], [1720, 2330], [4642, 802]],
   };
   const T = X.TUNE = {
     stakes: { hp: [150, 190, 230, 270], speed: 70, near: 175, drive: 6, foe: 150, raid: [[3, 0], [4, 2], [5, 2], [6, 3]], slow: 0.85, slowR: 130 },

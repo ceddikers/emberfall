@@ -92,9 +92,8 @@
         const age = tm - fx.stake[i], k = age < 0.5 ? K.eo(clamp(age / 0.5, 0, 1)) : 1;
         stakeAt(g, p[0], p[1], tm, true, k);
       } else if (active) {
-        const cur = i === (q ? q[7] : 0), a = cur ? 0.9 : 0.4;
-        g.save(); g.setLineDash([6, 7]); g.lineDashOffset = -tm * 8; E(g, p[0], p[1], 20, 18, 0, cur ? 'rgba(240,214,140,.07)' : null, `rgba(240,214,140,${a})`, 1.8); g.setLineDash([]); g.restore();
-        if (cur) { g.fillStyle = '#e6c98a'; const b = Math.sin(tm * 2.4) * 2.5; poly(g, [[p[0] - 6, p[1] - 34 + b], [p[0] + 6, p[1] - 34 + b], [p[0], p[1] - 25 + b]], '#e6c98a', OUT, 1); }
+        const cur = i === (q ? q[7] : 0);   // (the next stake is marked by the core's quiet marker; the ones further on are not painted)
+        if (cur) { g.save(); g.setLineDash([6, 7]); E(g, p[0], p[1], 20, 18, 0, 'rgba(240,214,140,.05)', 'rgba(240,214,140,.45)', 1.4); g.setLineDash([]); g.restore(); }
       }
     }
     for (let i = 1; i < n; i++) if (seen(X.STAKES[i][0], X.STAKES[i][1], 100)) ropeAt(g, X.STAKES[i - 1], X.STAKES[i], tm);
@@ -154,7 +153,7 @@
     L.push([y + 10, 9, { draw(c) {
       if (!seen(x, y, 120)) return;
       const tm = now;
-      if (kind === 0) { const staffed = q && q[3] === 1; c.save(); c.setLineDash([9, 10]); c.lineDashOffset = -tm * 10; E(c, x, y, T.mill.staffR * 0.5, T.mill.staffR * 0.46, 0, null, staffed ? 'rgba(240,214,140,.22)' : `rgba(255,150,90,${0.3 + 0.2 * Math.sin(tm * 4)})`, 1.5); c.setLineDash([]); c.restore(); }
+      if (kind === 0) { const staffed = q && q[3] === 1; c.save(); c.setLineDash([9, 10]); E(c, x, y, T.mill.staffR * 0.5, T.mill.staffR * 0.46, 0, null, staffed ? 'rgba(240,214,140,.16)' : 'rgba(255,150,90,.3)', 1.3); c.setLineDash([]); c.restore(); }
       millAt(c, x, y, prog, tm, kind);
       if (kind === 0) {
         // the Smith's builders, hammering while someone holds the frame
@@ -185,14 +184,14 @@
     if (st !== 1 || !q) return;
     for (let i = 0; i < X.LARDER.length; i++) {
       if (q[0] & (1 << i)) continue; const p = X.LARDER[i];
-      L.push([p[1], 9, { draw(c) { if (!seen(p[0], p[1], 40)) return; const b = Math.sin(now * 2.6 + i) * 1.6; c.save(); E(c, p[0], p[1] + 5, 20, 7 + Math.sin(now * 2) * 0.8, 0, 'rgba(240,214,140,.07)', 'rgba(240,214,140,.55)', 1.5); c.restore(); sack(c, p[0], p[1] - b, 1.25, now, true); poly(c, [[p[0] - 5, p[1] - 38 - b], [p[0] + 5, p[1] - 38 - b], [p[0], p[1] - 30 - b]], '#e6c98a', OUT, 1); } }]);
+      L.push([p[1], 9, { draw(c) { if (!seen(p[0], p[1], 40)) return; sack(c, p[0], p[1], 1.25, now, true); } }]);
     }
   }
 
   // ---------------------------------------------------------------- The Last of the Stone
   function siteFoot(g, x, y, tm, got, need, alpha, label) {
     g.save(); g.globalAlpha = alpha;
-    g.setLineDash([8, 8]); g.lineDashOffset = -tm * 6; E(g, x, y, T.choice.siteR, T.choice.siteR * 0.62, 0, 'rgba(240,214,140,.045)', 'rgba(240,214,140,.7)', 1.8); g.setLineDash([]);
+    g.setLineDash([8, 8]); E(g, x, y, T.choice.siteR, T.choice.siteR * 0.62, 0, 'rgba(240,214,140,.03)', 'rgba(240,214,140,.45)', 1.5); g.setLineDash([]);
     for (let i = 0; i < need; i++) { const a = (i / need) * TAU - PI / 2, px = x + Math.cos(a) * 34, py = y + Math.sin(a) * 21; if (i < got) { stone(g, px, py + 5, 7, 7, '#a8a190'); } else E(g, px, py, 6.5, 4, 0, null, 'rgba(240,214,140,.55)', 1.3); }
     g.restore();
   }
@@ -225,7 +224,6 @@
       const px = X.PILE[0], py = X.PILE[1];
       L.push([py + 6, 9, { draw(c) { if (!seen(px, py, 60)) return; c.save(); E(c, px, py + 6, 40, 14, 0, 'rgba(0,0,0,.35)');
         const n = q[2]; for (let i = 0; i < Math.min(n, 5); i++) stone(c, px - 22 + (i % 3) * 22 + (i > 2 ? 11 : 0), py + 6 - (i > 2 ? 14 : 0), 10, 10, '#a39c8b');
-        if (n > 0) { const b = Math.sin(now * 2.6) * 2; poly(c, [[px - 6, py - 44 + b], [px + 6, py - 44 + b], [px, py - 35 + b]], '#e6c98a', OUT, 1); c.fillStyle = '#f3dfa4'; c.strokeStyle = 'rgba(0,0,0,.85)'; c.lineWidth = 3; c.font = 'bold 12px system-ui'; c.textAlign = 'left'; c.strokeText('x' + n, px + 36, py + 4); c.fillText('x' + n, px + 36, py + 4); }
         c.restore(); } }]);
     }
     for (const [site, p, pending] of [[1, X.BELL, 'bell'], [2, X.WARD, 'ward']]) {
@@ -260,7 +258,6 @@
       L.push([p[1] + 6, 9, { draw(c) {
         if (!seen(p[0], p[1], 90)) return;
         const lit = f[0] === 1, hurt = lit && f[1] < f[2] * 0.6;
-        if (!lit && st === 1) { c.save(); c.setLineDash([7, 8]); c.lineDashOffset = -now * 8; E(c, p[0], p[1], T.fires.reach + 12, (T.fires.reach + 12) * 0.62, 0, 'rgba(240,214,140,.05)', `rgba(240,214,140,${0.5 + 0.2 * Math.sin(now * 3 + i)})`, 1.6); c.setLineDash([]); c.restore(); }
         fireAt(c, p[0], p[1], now, lit, i, hurt);
         if (lit && f[1] < f[2]) { bar(c, p[0], p[1] - 78, 40, f[1] / f[2], f[1] / f[2] < 0.35 ? '#d9533f' : '#e6a24a'); }
         const age = now - fx.snuff[i]; if (age < 1.4) { c.save(); c.globalAlpha = 1 - age / 1.4; E(c, p[0], p[1] - 30 - age * 30, 16 + age * 10, 10 + age * 6, 0, 'rgba(110,105,98,.7)'); c.restore(); }
@@ -360,6 +357,29 @@
       wardenUnit(L); drawMill(L); drawLarder(null, L, tm); drawChoice(null, L, tm); drawFires(L, tm);
     },
     top() { if (K) hoverTip(); },
+    // each of these quests' current step, for the core's quiet markers and the minimap (one per quest)
+    qfocus(out, my) {
+      const s = S(); if (!K || !s) return;
+      const hx = my ? my.x : X.START[0], hy = my ? my.y : X.START[1], G = keyLabel('fdUse');
+      const add = (id, step, p, R, carry, title, tip, sub) => out.push({ id, step, x: p[0], y: p[1], R: R || 0, code: 0, carry: !!carry, title, tip, sub: sub || '' });
+      const nearest = pts => { let b = null, bd = 1e12; for (const p of pts) { const d = (p[0] - hx) * (p[0] - hx) + (p[1] - hy) * (p[1] - hy); if (d < bd) { bd = d; b = p; } } return b; };
+      if (qst('stakes') === 1 && qx.st) { const cur = X.STAKES[qx.st[7]]; if (cur) add('stakes', 'site', cur, 0, false, 'The next stake', 'The Warden will drive a stake here.', qx.st[0] + ' of ' + X.STAKES.length); }
+      if (qst('mill') === 1) add('mill', 'site', X.MILL, 0, false, 'The mill site', 'The sails only go up while someone stands near.', qx.ml ? Math.round(qx.ml[0] * 100) + '%' : '');
+      if (qst('larder') === 1 && qx.lg) { const p = nearest(X.LARDER.filter((q, i) => !(qx.lg[0] & (1 << i)))); if (p) add('larder', 'pick', p, 0, false, 'A sack for the larder', 'Walk up to it to gather it.', qx.lg[1] + ' of ' + qx.lg[2]); }
+      if (qst('choice') === 1 && qx.ch) {
+        const carrying = !!my && my.carry === 4 && qst('stonegate') !== 1;
+        if (carrying) { const p = nearest([X.BELL, X.WARD]); add('choice', 'dest', p, T.choice.siteR, true, p === X.BELL ? 'Bell tower site' : 'Ward-stone site', 'Lay the stone here. Whichever site is finished first is the one that stands.', ''); }
+        else if (qx.ch[2] > 0) add('choice', 'pick', X.PILE, 0, false, 'The quarry', 'Press ' + G + ' beside the stone to shoulder one.', qx.ch[2] + ' left');
+      }
+      if (qst('watchfires') === 1 && qx.wf) {
+        const branded = !!my && !!(my.f & K.FLAG.BRAND), unlit = X.FIRES.filter((p, i) => !qx.wf[i][0]), lit = qx.wf.filter(f => f[0]).length;
+        if (branded && unlit.length) add('watchfires', 'dest', nearest(unlit), 0, true, 'A watch-fire', 'Press ' + G + ' beside this fire and hold still a moment while it catches.', lit + ' of ' + qx.wf.length + ' lit');
+        else {
+          const camp = nearest(((s.props && s.props.qo) || []).filter(o => o[0] === 8).map(o => [o[1], o[2]])) || nearest(unlit);
+          if (camp) add('watchfires', 'site', camp, 0, false, branded ? 'A watch-fire' : 'A camp fire', branded ? 'Light a brand and carry it here.' : 'Press ' + G + ' beside it to light a brand, then carry it to a far fire.', lit + ' of ' + qx.wf.length + ' lit');
+        }
+      }
+    },
     lights(add) {
       if (!K) return;
       if (qx.wf) for (let i = 0; i < X.FIRES.length; i++) if (qx.wf[i] && qx.wf[i][0]) add(X.FIRES[i][0], X.FIRES[i][1] - 30, T.fires.lightR * 0.9, 1);
@@ -370,13 +390,8 @@
     mini(g, kx, ky) {
       if (!K) return;
       const dot = (p, col, r) => { g.fillStyle = col; g.strokeStyle = '#000'; g.lineWidth = 1; g.beginPath(); g.arc(p[0] * kx, p[1] * ky, r, 0, TAU); g.fill(); g.stroke(); };
-      const ring = (p, col, r) => { g.strokeStyle = col; g.lineWidth = 1.6; g.beginPath(); g.arc(p[0] * kx, p[1] * ky, r, 0, TAU); g.stroke(); };
-      if (qst('stakes') === 1 && qx.st) { const cur = X.STAKES[qx.st[7]]; if (cur) ring(cur, '#f0d68c', 4); dot([wdn.x, wdn.y], '#c9d98a', 3); }
-      if (qst('stakes') === 2 || qx.st) for (let i = 0; i < (qx.st ? qx.st[0] : 0); i++) dot(X.STAKES[i], '#c24a36', 2);
-      if (qst('mill') === 1) ring(X.MILL, '#f0d68c', 5); else if (qst('mill') === 2) dot(X.MILL, '#e6dcc0', 3);
-      if (qst('larder') === 1 && qx.lg) X.LARDER.forEach((p, i) => { if (!(qx.lg[0] & (1 << i))) dot(p, '#f0d68c', 3); });
-      if (qst('choice') === 1) { ring(X.BELL, '#f0d68c', 5); ring(X.WARD, '#f0d68c', 5); dot(X.PILE, '#a8a190', 3); }
-      if (qx.wf && qst('watchfires')) X.FIRES.forEach((p, i) => { if (qx.wf[i][0]) dot(p, '#ff9a3a', 3.5); else if (qst('watchfires') === 1) ring(p, '#f0d68c', 4); });
+      if (qst('mill') === 2) dot(X.MILL, '#e6dcc0', 3);
+      if (qx.wf && qst('watchfires')) X.FIRES.forEach((p, i) => { if (qx.wf[i][0]) dot(p, '#ff9a3a', 3.5); });
     },
   });
 })();

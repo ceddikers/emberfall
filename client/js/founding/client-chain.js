@@ -456,7 +456,7 @@
     const k2 = (t * 0.22 + 0.5) % 1; ell(c, P.x - 14, P.y + 6, 10 + k2 * 40, 6 + k2 * 20, 0, null, `rgba(215,236,244,${0.15 * (1 - k2)})`, 1.4);
   }
   function drawOak(c, inV) {
-    const o = [2955, 322]; if (inV && !inV(o[0], o[1], 140)) return; const t = K.S.T, x = o[0], y = o[1], cuts = ST.cuts;
+    const o = [5910, 644]; if (inV && !inV(o[0], o[1], 140)) return; const t = K.S.T, x = o[0], y = o[1], cuts = ST.cuts;
     K.ell(c, x + 6, y + 14, 34, 14, 0, 'rgba(0,0,0,.34)');
     c.strokeStyle = OUT; c.lineWidth = 3; for (const a of [-2.6, -1.9, -1.1, -0.4, 0.3, 1]) { c.beginPath(); c.moveTo(x, y + 6); c.quadraticCurveTo(x + Math.cos(a) * 20, y + 8 + Math.sin(a) * 8, x + Math.cos(a) * 36, y + 10 + Math.sin(a) * 14); c.stroke(); }
     ell(c, x, y, 24, 19, 0, '#4d3a29', OUT, 3.2); ell(c, x - 3, y - 4, 17, 13, 0, '#6a5039');

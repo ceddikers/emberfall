@@ -46,27 +46,27 @@
   // share (blue circle: enough heroes inside, or all take the burst; need = share of the living; fail: burst | hounds | heal | calm), call (minions);
   // set pieces: gaze, rockfall, bellow, stampede, calf, tether (see the module).
   const LINKS = [
-    { id: 'ram', kind: 'ram', name: 'The Ram of the High Pass', place: [1840, 262], spawn: [1905, 264], r: 42, hp: 23600, speed: 74, reach: 40, rest: 0.75, wake: 0, home: 150, item: 'chram',
+    { id: 'ram', kind: 'ram', name: 'The Ram of the High Pass', place: [3680, 524], spawn: [3810, 528], r: 42, hp: 23600, speed: 74, reach: 40, rest: 0.75, wake: 0, home: 150, item: 'chram',
       moves: {
         jab: { type: 'cone', wind: 0.75, reach: 118, half: 0.5, dmg: 30, label: 'Horn jab' },
         swing: { type: 'cone', wind: 1.0, reach: 150, half: 1.0, dmg: 34, label: 'Horn sweep' },
         charge: { type: 'line', wind: 1.35, len: 300, hw: 48, dmg: 44, dash: 0.38, label: 'Charge', pick: 'far' },
         stamp: { type: 'ring', wind: 1.25, R: 125, dmg: 34, label: 'Stamp' },
       }, seq: ['jab', 'charge', 'swing', 'stamp', 'jab', 'jab', 'charge', 'stamp'] },
-    { id: 'pike', kind: 'pike', name: 'The Pale Pike', place: [2105, 1635], spawn: [2105, 1635], r: 46, hp: 35500, speed: 60, reach: 0, rest: 0.8, wake: 380, pond: true, item: 'chpike',
+    { id: 'pike', kind: 'pike', name: 'The Pale Pike', place: [4210, 3270], spawn: [4210, 3270], r: 46, hp: 35500, speed: 60, reach: 0, rest: 0.8, wake: 380, pond: true, item: 'chpike',
       moves: {
         lunge: { type: 'line', wind: 1.25, len: 330, hw: 42, dmg: 36, dash: 0, label: 'Lunge', pick: 'any' },
         slap: { type: 'ring', wind: 1.2, R: 118, dmg: 27, label: 'Tail slap' },
         spit: { type: 'share', wind: 2.1, R: 92, dmg: 34, label: 'Pale bubble' },
       }, seq: ['lunge', 'spit', 'slap', 'lunge', 'slap', 'spit', 'lunge'] },
-    { id: 'warden', kind: 'stumpwarden', name: 'The Stumpwarden', place: [2955, 372], spawn: [2955, 372], r: 52, hp: 33900, speed: 46, reach: 62, rest: 0.8, wake: 340, home: 230, item: 'chroot',
+    { id: 'warden', kind: 'stumpwarden', name: 'The Stumpwarden', place: [5910, 744], spawn: [5910, 744], r: 52, hp: 33900, speed: 46, reach: 62, rest: 0.8, wake: 340, home: 230, item: 'chroot',
       moves: {
         slam: { type: 'cone', wind: 1.1, reach: 175, half: 0.8, dmg: 48, label: 'Bough slam' },
         pound: { type: 'ring', wind: 1.3, R: 140, dmg: 38, label: 'Pound' },
         roots: { type: 'spot', wind: 1.5, R: 72, dmg: 16, root: 2.4, count: 2, label: 'Root snare' },
         throw: { type: 'spot', wind: 1.6, R: 88, dmg: 46, count: 1, label: 'Stump throw', pick: 'far' },
       }, seq: ['slam', 'roots', 'pound', 'throw', 'slam', 'throw', 'roots', 'pound'] },
-    { id: 'mother', kind: 'ashmother', name: 'The Ash Mother', place: [700, 246], spawn: [700, 246], r: 54, hp: 67000, speed: 56, reach: 50, rest: 0.75, wake: 340, home: 260, item: 'chfang',
+    { id: 'mother', kind: 'ashmother', name: 'The Ash Mother', place: [1400, 492], spawn: [1400, 492], r: 54, hp: 67000, speed: 56, reach: 50, rest: 0.75, wake: 340, home: 260, item: 'chfang',
       moves: {
         maul: { type: 'cone', wind: 0.9, reach: 140, half: 1.0, dmg: 42, label: 'Maul' },
         breath: { type: 'cone', wind: 1.5, reach: 390, half: 0.5, dmg: 38, label: 'Ash breath' },
@@ -74,7 +74,7 @@
         call: { type: 'call', wind: 1.2, n: 3, label: 'Whelp call' },
       }, seq: ['maul', 'breath', 'call', 'stamp', 'maul', 'breath', 'stamp', 'call'] },
     // 5. The Lantern Warden: a stone sentinel on the plain between the two roads. Its gaze burns what it looks at; standing stones stop it.
-    { id: 'lantern', kind: 'lanternwarden', name: 'The Lantern Warden', place: [1850, 1190], spawn: [1850, 1190], r: 48, hp: 100700, speed: 36, reach: 58, rest: 0.8, wake: 380, home: 240, item: 'chain5', fx: 'lantern',
+    { id: 'lantern', kind: 'lanternwarden', name: 'The Lantern Warden', place: [3700, 2380], spawn: [3700, 2380], r: 48, hp: 100700, speed: 36, reach: 58, rest: 0.8, wake: 380, home: 240, item: 'chain5', fx: 'lantern',
       moves: {
         gaze: { type: 'gaze', wind: 1.6, len: 560, hw: 34, dmg: 58, label: 'Gaze' },
         fist: { type: 'ring', wind: 1.2, R: 132, dmg: 50, label: 'Stone fist' },
@@ -82,7 +82,7 @@
         flare: { type: 'share', wind: 2.2, R: 124, dmg: 58, need: 0.5, lamps: true, label: 'Lantern flare' },
       }, seq: ['gaze', 'fist', 'flare', 'gaze', 'rockfall', 'fist', 'gaze', 'flare'] },
     // 6. The Hollow Stag: antler and fog in the thick woods south-east of the ford road. Every stab plants thorns that stay.
-    { id: 'stag', kind: 'hollowstag', name: 'The Hollow Stag', place: [2880, 1370], spawn: [2880, 1370], r: 44, hp: 121400, speed: 72, reach: 46, rest: 0.75, wake: 380, home: 380, item: 'chain6', fx: 'stag',
+    { id: 'stag', kind: 'hollowstag', name: 'The Hollow Stag', place: [5760, 2740], spawn: [5760, 2740], r: 44, hp: 121400, speed: 72, reach: 46, rest: 0.75, wake: 380, home: 380, item: 'chain6', fx: 'stag',
       moves: {
         charge: { type: 'line', wind: 1.4, len: 400, hw: 44, dmg: 58, dash: 0.42, label: 'Charge', pick: 'far', thorns: { R: 48, dmg: 14, dur: 8, every: 105 } },
         stab: { type: 'cone', wind: 1.0, reach: 150, half: 0.55, dmg: 54, label: 'Antler stab', thorns: { R: 56, dmg: 14, dur: 8 } },
@@ -90,7 +90,7 @@
         heartbeat: { type: 'share', wind: 2.3, R: 150, dmg: 0, need: 1, fail: 'hounds', at: 'near', label: 'Heartbeat' },
       }, seq: ['stab', 'charge', 'bellow', 'stab', 'heartbeat', 'charge', 'stab', 'bellow'] },
     // 7. The Drover of Cairns: a ghost with a herd of stone cattle, in the west field beside the north road.
-    { id: 'drover', kind: 'drover', name: 'The Drover of Cairns', place: [1280, 1240], spawn: [1280, 1240], r: 36, hp: 115300, speed: 46, reach: 52, rest: 0.8, wake: 380, home: 240, item: 'chain7', fx: 'drover',
+    { id: 'drover', kind: 'drover', name: 'The Drover of Cairns', place: [2560, 2480], spawn: [2560, 2480], r: 36, hp: 115300, speed: 46, reach: 52, rest: 0.8, wake: 380, home: 240, item: 'chain7', fx: 'drover',
       moves: {
         stampede: { type: 'stampede', wind: 2.1, len: 800, hw: 56, slots: 5, slot: 130, dmg: 66, label: 'Stampede', anyRange: true },
         whip: { type: 'cone', wind: 1.0, reach: 290, half: 0.32, dmg: 64, label: 'Whip crack' },
@@ -98,8 +98,8 @@
         calf: { type: 'calf', wind: 1.1, label: 'Lost calf', anyRange: true },
       }, seq: ['whip', 'stampede', 'cairn', 'stampede', 'calf', 'whip', 'stampede', 'cairn'] },
     // 8. The Gorge-Twins: two gargoyles that were one statue, at the two ends of the old meadow road in the south-west.
-    { id: 'twins', kind: 'gorgetwin', name: 'The Gorge-Twins', place: [950, 2090], spawn: [950, 2090], r: 40, hp: 164300, speed: 40, reach: 50, rest: 0.8, wake: 380, home: 150, item: 'chain8', fx: 'twins', solo: true,
-      ends: [[790, 2090], [1110, 2090]],
+    { id: 'twins', kind: 'gorgetwin', name: 'The Gorge-Twins', place: [1900, 4180], spawn: [1900, 4180], r: 40, hp: 164300, speed: 40, reach: 50, rest: 0.8, wake: 380, home: 150, item: 'chain8', fx: 'twins', solo: true,
+      ends: [[1740, 4180], [2060, 4180]],
       moves: {
         tether: { type: 'tether', wind: 1.2, hw: 40, dmg: 56, label: 'Tether', anyRange: true },
         roar: { type: 'share', wind: 2.0, R: 118, dmg: 54, need: 0.5, at: 'self', label: 'Gorge-roar' },
@@ -107,10 +107,10 @@
         pull: { type: 'cone', wind: 1.1, reach: 240, half: 0.3, dmg: 42, pull: true, label: 'Pull' },
       }, seq: ['splinter', 'tether', 'roar', 'pull', 'tether', 'splinter', 'pull', 'roar'] },
     // 9. The Ember-Hound Pack: three hounds of different fire and their leader, on the south shore.
-    { id: 'hounds', kind: 'emberlord', name: 'The Ember-Hound Pack', place: [2010, 2290], spawn: [2010, 2290], r: 42, hp: 75000, speed: 72, reach: 50, rest: 0.8, wake: 420, home: 340, item: 'chain9', fx: 'hounds',
+    { id: 'hounds', kind: 'emberlord', name: 'The Ember-Hound Pack', place: [4020, 4580], spawn: [4020, 4580], r: 42, hp: 75000, speed: 72, reach: 50, rest: 0.8, wake: 420, home: 340, item: 'chain9', fx: 'hounds',
       moves: { maul: { type: 'cone', wind: 0.95, reach: 150, half: 1.0, dmg: 60, label: 'Maul' } }, seq: ['maul'] },
     // 10. The First Hunger's Shadow: an echo of the first hungry thing, on the crater rim above Beacon Hill. It wears each link in turn.
-    { id: 'shadow', kind: 'shadow', name: "The First Hunger's Shadow", place: [800, 490], spawn: [800, 490], r: 52, hp: 265000, speed: 52, reach: 62, rest: 0.7, wake: 420, home: 330, item: 'choath', fx: 'shadow',
+    { id: 'shadow', kind: 'shadow', name: "The First Hunger's Shadow", place: [1600, 980], spawn: [1600, 980], r: 52, hp: 265000, speed: 52, reach: 62, rest: 0.7, wake: 420, home: 330, item: 'choath', fx: 'shadow',
       moves: { }, seq: [] },
   ];
   LINKS.forEach((L, i) => { L.i = i; if (L.built === undefined) L.built = true; L.pay = TUNE.pay0 + TUNE.payStep * i; });
@@ -158,9 +158,9 @@
   const ASHFALL = { type: 'share', wind: 2.4, R: 134, dmg: 64, need: 0.75, at: 'hero', label: 'Ash-fall' };
 
   // ---------------------------------------------------------------- enemies (load order is the same on every machine, so the type indexes match)
-  const BOSS_DEF = (name, r, speed, atk) => ({ name, r, hp: 1000, speed, aggro: 0, xp: 260, gold: 90, elite: true, boss: true, kbRes: 1, drop: 0, chain: true, atk: atk || { wind: 1, cd: 2, dmg: 30, hitR: 60, reach: 20, off: 0, tele: true } });
+  const BOSS_DEF = (name, r, speed, atk) => ({ name, r, hp: 1000, speed, aggro: 0, xp: 650, gold: 90, elite: true, boss: true, kbRes: 1, drop: 0, chain: true, atk: atk || { wind: 1, cd: 2, dmg: 30, hitR: 60, reach: 20, off: 0, tele: true } });
   for (const L of LINKS) D.addEnemy(L.kind, BOSS_DEF(L.name, L.r, L.speed));
-  for (const H of HOUNDS) D.addEnemy(H.kind, { name: H.name, r: H.r, hp: 1000, speed: H.speed, aggro: 0, xp: 120, gold: 40, elite: true, boss: false, kbRes: 0.9, drop: 0, chain: true, atk: { wind: 1, cd: 2, dmg: 30, hitR: 40, reach: 20, off: 0, tele: true } });
+  for (const H of HOUNDS) D.addEnemy(H.kind, { name: H.name, r: H.r, hp: 1000, speed: H.speed, aggro: 0, xp: 300, gold: 40, elite: true, boss: false, kbRes: 0.9, drop: 0, chain: true, atk: { wind: 1, cd: 2, dmg: 30, hitR: 40, reach: 20, off: 0, tele: true } });
   D.addEnemy('chainwhelp', { name: 'Ash-Whelp', r: 10, hp: 30, speed: 112, aggro: 700, xp: 3, gold: 0, atk: { wind: 0.45, cd: 1.0, dmg: 5, hitR: 20, reach: 10, off: 16 } });
   D.addEnemy('foghound', { name: 'Fog-Hound', r: 12, hp: 90, speed: 118, aggro: 700, xp: 4, gold: 0, atk: { wind: 0.5, cd: 1.1, dmg: 9, hitR: 22, reach: 12, off: 18 } });
   D.addEnemy('stonecalf', { name: 'Lost Calf', r: 16, hp: 200, speed: 86, aggro: 900, xp: 6, gold: 0, atk: { wind: 0.9, cd: 2, dmg: 30, hitR: 40, reach: 10, off: 0, tele: true } });
@@ -247,7 +247,8 @@
       e.dead = true; const i = e.chain; C.st[i] = 'placed'; C.boss = null; clearField();
       sim.ev(['chlose', i]); log('despawn ' + LINKS[i].id);
     }
-    function award(i) {   // the found-only item goes to the hero with the fewest chain items who has room
+    function award(i, at) {   // the found-only item goes to the hero with the fewest chain items who has room (in play it lies where the link fell, and never fades)
+      if (at && !sim.autoLoot && sim.worldDrop) { sim.worldDrop(at.x, at.y, LINKS[i].item, { keep: true }); return null; }
       const id = LINKS[i].item, order = sim.heroes.slice().sort((a, b) => (C.items[a.id] || 0) - (C.items[b.id] || 0));
       for (const h of order) if (sim.giveItem(h, id)) { C.items[h.id] = (C.items[h.id] || 0) + 1; sim.ev(['dr', h.id, id]); return h; }
       for (const h of sim.heroes) { h.gold += 60; h.dirty = true; }
@@ -592,11 +593,11 @@
     function setBonus(i) { C.bonus[i] = true; sim.ev(['chbonus', i]); log('bonus ' + LINKS[i].id); }
     function startActs() {   // landmark spots for the acts of links 5-9 (kept off the ground the fights use, on the ground that is walkable)
       const w = (x, y) => { const p = walk(x, y, 20); return [p[0], p[1]]; };
-      C.acts.lantern = w(1850 - 150, 1190 + 120);                                             // link 5: the dark lantern
-      C.acts.stagFire = w(2880, 1370);                                                         // link 6: a brand lit in its clearing
-      C.acts.posts = [w(1280 - 200, 1240 - 150), w(1280 + 10, 1240 - 230), w(1280 + 230, 1240 - 120)].map(p => ({ x: p[0], y: p[1], on: false })); // link 7: the fence line
-      C.acts.pile = w(1110 + 120, 2090 - 40);                                                  // link 8: the loose rockfall at the road's east end
-      C.acts.kennel = [w(2010 - 190, 2290 - 50), w(2010 + 10, 2290 - 140), w(2010 + 150, 2290 + 20)].map(p => ({ x: p[0], y: p[1], on: false })); // link 9: kennel posts
+      C.acts.lantern = w(3700 - 150, 2380 + 120);                                             // link 5: the dark lantern
+      C.acts.stagFire = w(5760, 2740);                                                         // link 6: a brand lit in its clearing
+      C.acts.posts = [w(2560 - 200, 2480 - 150), w(2560 + 10, 2480 - 230), w(2560 + 230, 2480 - 120)].map(p => ({ x: p[0], y: p[1], on: false })); // link 7: the fence line
+      C.acts.pile = w(2220 + 120, 4180 - 40);                                                  // link 8: the loose rockfall at the road's east end
+      C.acts.kennel = [w(4020 - 190, 4580 - 50), w(4020 + 10, 4580 - 140), w(4020 + 150, 4580 + 20)].map(p => ({ x: p[0], y: p[1], on: false })); // link 9: kennel posts
     }
     function touchPosts(i, posts) {
       let n = posts.filter(p => p.on).length; if (n >= posts.length) return;
@@ -623,7 +624,7 @@
 
     return {
       start() {
-        const p = sim.nearestWalkable(1735, 258, 14); C.bell = [p[0], p[1]]; C.oak = [2955, 322]; startActs();
+        const p = sim.nearestWalkable(3470, 516, 14); C.bell = [p[0], p[1]]; C.oak = [5910, 644]; startActs();
       },
       wave(n) {
         if (n >= D.LAST_WAVE && !C.over) {   // the siege begins: the chain stops
@@ -707,7 +708,7 @@
         if (e.chain === undefined || !e.link) return;
         const i = e.chain; C.st[i] = 'done'; C.done = i + 1; C.boss = null; C.paid += LINKS[i].pay;
         clearField();
-        const who = award(i); sim.ev(['chdown', i, LINKS[i].pay]); log('down ' + LINKS[i].id);
+        const who = award(i, e); sim.ev(['chdown', i, LINKS[i].pay]); log('down ' + LINKS[i].id);
         startGap(i + 1);
         void who;
       },

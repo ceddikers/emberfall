@@ -60,6 +60,126 @@ const lastProps = sim => { const f = sim.log.fds.filter(m => m.props).pop(); ret
   const w = ST.pageOf(9); check(Array.isArray(w.words) && w.words.length === 3, 'page 9 carries the Words');
 }
 
+// ---------------------------------------------------------------- 1b. the thread: one story from quest to quest
+{
+  const order = D.QUEST_ORDER, last = order[order.length - 1], Q = D.QUESTS;
+  const giver = id => ST.byGiver(Q[id].giver), ctxOf = (st, wave, led) => ({ st: st || {}, wave: wave | 0, led: led || {} });
+  const sane = (l, what, max) => {
+    if (!check(l && l.t && l.name && l.col && ST.FOUNDERS[l.by], what + ' has a line')) return;
+    check(l.t.length <= (max || 150), what + ' stays short: ' + l.t);
+    check(!/\d/.test(l.t), what + ' has no digits: ' + l.t);
+    check(!/[{}]/.test(l.t), what + ' has no template left: ' + l.t);
+    check(!/—|--/.test(l.t), what + ' has no dashes');
+  };
+  const hearth = /Hearth/i, spoil = /\b(under|beneath|below|inside|within|bottom|sleep\w*|seal\w*|prison\w*|chain\w*|monster|king|dragon|demon|dead|buried)\b/i;
+  const all = [];
+
+  // the first quest has only its own offer; every later one has a pickup for each way the quest before it ended, in its giver's voice
+  check(ST.thread('q', order[0], 0, ctxOf())[0].t === ST.line('q', order[0], 0).t, 'the first quest is offered in its own words');
+  for (let i = 1; i < order.length; i++) {
+    const id = order[i], prev = order[i - 1], ts = new Set();
+    for (const ps of [2, 3, 1, 0]) {
+      const l = ST.thread('q', id, 0, ctxOf({ [prev]: ps }, Q[id].offerWave))[0];
+      sane(l, `${id} offered after ${prev} was ${['unseen', 'open', 'done', 'missed'][ps]}`);
+      if (l) { all.push(l); ts.add(l.t); check(l.by === giver(id), `${id} is offered by its giver`); }
+    }
+    check(ts.size === 3, `${id}'s pickup differs when ${prev} was done, missed or still open`);
+  }
+
+  // when a quest ends the giver speaks, then someone else answers it and leads on; a miss is never scolded
+  const SCOLD = /\b(fail\w*|your fault|should have|blame|shame|disappoint\w*|useless|careless|lazy|stupid)\b/i;
+  for (const id of order) for (const outcome of [2, 3]) {
+    const out = ST.thread('q', id, outcome, ctxOf({}, Q[id].offerWave));
+    const name = `${id} ${outcome === 2 ? 'done' : 'missed'}`;
+    check(out.length === 2 && out[0].tag !== 'hand' && out[1].tag === 'hand', `${name}: the giver's word, then a hand-off`);
+    if (out.length < 2) continue;
+    out.forEach(l => { sane(l, name); all.push(l); check(!SCOLD.test(l.t), 'no scolding: ' + l.t); });
+    check(out[1].by !== giver(id), `${id}: another founder answers the giver`);
+  }
+  for (const id of order) for (const o of ['done', 'missed']) { const r = ST.THREAD.REACT[id] && ST.THREAD.REACT[id][o]; check(r && ST.FOUNDERS[r[0]] && r[0] !== giver(id), `${id} ${o}: a reaction from someone other than the giver`); }
+
+  // the hand-off only names a job that is open or about to be offered; further off it only hints
+  for (let i = 0; i < order.length - 1; i++) {
+    const id = order[i], nxt = order[i + 1], at = Q[nxt].offerWave;
+    for (const [wave, st, want] of [[at - 3, {}, 'far'], [at - 2, {}, 'far'], [at - 1, {}, 'near'], [at, { [nxt]: 1 }, 'near']]) {
+      const n = ST.nextAfter(id, ctxOf(st, wave));
+      check(n && n.id === nxt && n.timing === want, `after ${id} at wave ${wave}: ${nxt} is ${want} (${n && n.id} ${n && n.timing})`);
+    }
+    const near = ST.thread('q', id, 2, ctxOf({ [nxt]: 1 }, at))[1], far = ST.thread('q', id, 2, ctxOf({}, at - 3))[1];
+    check(near.t.endsWith(ST.THREAD.LEAD[nxt].near.replace('{S}', ST.FOUNDERS[giver(nxt)].name)) || near.t.endsWith(ST.THREAD.LEAD[nxt].near.replace('{S}', 'I')), `${id}: an open job is named: ${near.t}`);
+    check(far.t.endsWith(ST.THREAD.LEAD[nxt].far.replace('{S}', ST.FOUNDERS[giver(nxt)].name)) && far.t !== near.t, `${id}: a far job is only hinted: ${far.t}`);
+    // a job already settled is skipped: the hand-off points at the next one still to do
+    if (i + 2 < order.length) { const n2 = ST.nextAfter(id, ctxOf({ [nxt]: 2 }, at)); check(n2 && n2.id === order[i + 2], `after ${id} with ${nxt} settled the thread points at ${order[i + 2]}`); }
+  }
+  check(ST.nextAfter(last, ctxOf({}, 30)) === null, 'nothing follows the last quest');
+  const lastOut = ST.thread('q', last, 2, ctxOf({}, 30));
+  check(lastOut.length === 2 && lastOut[1].tag === 'hand', 'the last quest still gets a reaction');
+  // the same lead is not said twice; the reaction still is
+  {
+    const led = {}, y = order[2], one = ST.thread('q', y, 2, ctxOf({}, 10, led))[1], two = ST.thread('q', y, 3, ctxOf({}, 10, led))[1];
+    check(one.t.length > two.t.length && two.t === ST.THREAD.REACT[y].missed[1], 'a lead already spoken is left out: ' + two.t);
+  }
+  // when the speaker owns the next job, they say it in the first person
+  {
+    const n = order[1], h = ST.THREAD.REACT[order[0]], saved = h.done;
+    h.done = [giver(n), 'Aye.'];
+    const own = ST.thread('q', order[0], 2, ctxOf({}, Q[n].offerWave))[1];
+    h.done = saved;
+    check(/^Aye\. I /.test(own.t), 'an owner speaks of their own job as I: ' + own.t);
+  }
+  // a quest nobody wrote for still gets a thread
+  check(ST.thread('q', 'a-quest-nobody-wrote', 0, ctxOf()).length === 1 && ST.thread('q', 'a-quest-nobody-wrote', 2, ctxOf()).length >= 1, 'an unwritten quest still has a thread');
+  check(ST.thread('q', 'spring', 1, ctxOf()).length === 0, 'an active-state event has no thread');
+  check(ST.thread('boss', 'oldgnaw').length === 1 && ST.thread('part', 2).length === 1 && ST.thread('end', 1).length === 1, 'other moments pass through');
+
+  // no spoilers about the Hearth: warmth only
+  for (const l of all) if (hearth.test(l.t)) check(!spoil.test(l.t), 'the Hearth is warmth only: ' + l.t);
+
+  // a whole run, wave by wave: every line reads, nothing is said twice in a row, and every hand-off points at a job still to do
+  for (const pattern of ['allDone', 'allMissed', 'mixed']) {
+    const st = {}, led = {}, said = [], resolveAt = {};
+    order.forEach((id, i) => { const w = Q[id].offerWave + 2 + (i % 3), o = pattern === 'allDone' ? 2 : pattern === 'allMissed' ? 3 : (i % 3 === 2 ? 3 : 2); (resolveAt[w] = resolveAt[w] || []).push([id, o]); });
+    for (let w = 1; w <= D.LAST_WAVE; w++) {
+      for (const id of order) if (Q[id].offerWave === w) { st[id] = 1; for (const l of ST.thread('q', id, 0, ctxOf(st, w, led))) said.push(l); }
+      for (const [id, o] of resolveAt[w] || []) {
+        st[id] = o;
+        for (const l of ST.thread('q', id, o, ctxOf(st, w, led))) {
+          said.push(l);
+          if (l.tag === 'hand') { const n = ST.nextAfter(id, ctxOf(st, w, led)); check(!n || !st[n.id] || st[n.id] === 1, 'the hand-off points at a job that is not settled'); }
+        }
+      }
+    }
+    for (let i = 0; i < said.length; i++) { sane(said[i], `${pattern} run line ${i}`); if (i) check(said[i].t !== said[i - 1].t, 'no line repeats straight away: ' + said[i].t); }
+    check(said.length >= order.length * 2, `${pattern}: the run speaks (${said.length} lines)`);
+    check(new Set(said.map(l => l.by)).size === 4, `${pattern}: all four founders speak`);
+  }
+}
+
+// ---------------------------------------------------------------- 1c. the voice box keeps the thread (client-trials.js with the layer stubbed)
+{
+  let layer = null;
+  const Sv = { S: { phase: 'live', wave: 3, q: [['spring', 1, 0, 4]], myId: 'p0', props: {}, sheet: {} } };
+  const ctx = vm.createContext({ Founding: { addLayer: l => { layer = l; } }, FOUNDING_STORY: ST, FOUNDING_DATA: D, console });
+  vm.runInContext(fs.readFileSync(R('client-trials.js'), 'utf8').replace(/^const FoundingBook/m, 'var FoundingBook'), ctx, { filename: 'client-trials.js' });
+  check(layer && typeof layer.event === 'function', 'the layer registers');
+  layer.init(Sv);
+  const q = () => (Sv.S.__trials ? Sv.S.__trials.queue : []);
+  layer.event(['q', 'spring', 2]);
+  check(q().length === 2 && q()[1].tag === 'hand', 'a done quest queues the giver and the hand-off');
+  const T = Sv.S.__trials; T.queue.length = 0;
+  layer.event(['w', 1, 1, 0, 0]); layer.event(['q', 'gate', 0]); layer.event(['q', 'gate', 2]);
+  check(q().length <= 4, 'the queue stays short');
+  check(q().every((l, i) => i === 0 || (q()[i - 1].p | 0) >= (l.p | 0)), 'the queue is ordered by priority');
+  layer.event(['end', 2]);
+  check(q()[0].p === 5, 'the end beat jumps the queue');
+  T.queue.length = 0;
+  layer.event(['q', 'fire', 0]); layer.event(['q', 'fire', 3]); layer.event(['q', 'beacon', 0]); layer.event(['w', 5, 1, 0, 2]); layer.event(['q', 'beacon', 2]);
+  check(q().length === 4 && q().filter(l => l.tag === 'hand').length >= 1, 'a crowded voice keeps a hand-off over a part line: ' + q().map(l => l.tag || 'x').join());
+  check(!q().some(l => l.p === 1), 'part lines are the first to go');
+  const before = q().length; layer.event(['q', 'beacon', 2]);
+  check(q().length === before, 'the same line is not queued twice');
+}
+
 // ---------------------------------------------------------------- 2. the record and the marks the feats read
 {
   const f = ST.fixProgress(null);

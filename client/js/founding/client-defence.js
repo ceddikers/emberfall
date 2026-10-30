@@ -16,7 +16,7 @@
     ballista: 'A slow heavy bolt. Elites and bosses first.',
   };
   let K = null, S = null;
-  const towers = new Map(), sol = new Map(), fxT = new Map();
+  const towers = new Map(), sol = new Map(), fxT = new Map(), corpses = [];
   const L = { last: performance.now(), placing: null, shift: false, sel: null, open: false, tab: 't', panel: null, tp: null, sig: '', tsig: '', lastVis: null, baseVis: null, board: null, hover: null, msgT: 0, prev: 0, mini: 0 };
   const have = n => typeof Sound !== 'undefined' && Sound.has && Sound.has(n);
   const sfx = (...names) => { for (const n of names) if (have(n)) { K.snd(n); return; } };
@@ -214,66 +214,371 @@
   const rangeOf = t => { const T = TW[t.kind]; return t.kind === 'bell' ? T.radius[t.rank - 1] : t.kind === 'post' ? T.range[t.rank - 1] : t.kind === 'brazier' ? T.range[t.rank - 1] : T.range[t.rank - 1]; };
 
   // ============================================================ the soldiers
-  function drawSoldier(c, s, tm) {
-    const dir = Math.cos(s.face) >= 0 ? 1 : -1, ur = s.ur, ar = ur & 3, wp = (ur >> 2) & 3, hl = (ur >> 4) & 3, walk = s.moving, ph = tm * 9 + s.id * 1.7, bob = walk ? Math.abs(Math.sin(ph)) * 1.6 : 0;
-    const rider = s.ti === 3;
-    c.save(); c.translate(s.x, s.y); K.ell(c, 0, 1, rider ? 15 : 8.5, rider ? 4.4 : 3.4, 0, 'rgba(0,0,0,.32)'); c.scale(dir, 1);
-    const leg = walk ? Math.sin(ph) * 3 : 0;
-    if (!rider) { limb(c, -2.2, -6 - bob * 0.3, -2.2 + leg * 0.6, 0, 2.6, '#3a2e24'); limb(c, 2.2, -6 - bob * 0.3, 2.2 - leg * 0.6, 0, 2.6, '#3a2e24'); }
-    const fl = s.flash > 0 ? s.flash : 0;
-    if (rider) {   // a cavalry knight: a chestnut horse, a rider with a couched lance; the gallop is wider when it charges
-      const gp = tm * (s.chg ? 17 : 11) + s.id * 1.3, gl = walk ? 1 : 0, rise = walk ? Math.sin(gp * 2) * (s.chg ? 2.2 : 1.2) : 0, sw = fl > 0 ? Math.sin((1 - fl / 0.25) * PI) : 0;
-      const legs = [[-8, 0], [-5, 2.4], [5, 1.2], [8, 3.6]];
-      legs.forEach(([lx, po], li) => { const a = Math.sin(gp + po) * 5.5 * gl, lift = Math.max(0, Math.cos(gp + po)) * 2.5 * gl; limb(c, lx, -10 - rise, lx + a, -lift, 2.4, li % 2 ? '#4a2c18' : '#5e3a20'); K.ell(c, lx + a, -lift, 1.6, 1.1, 0, '#1e1812'); });
-      c.strokeStyle = '#2a1a10'; c.lineWidth = 2.6; c.lineCap = 'round'; c.beginPath(); c.moveTo(-11, -15 - rise); c.quadraticCurveTo(-17, -14 + Math.sin(gp) * 2 * gl, -16, -7 + Math.sin(gp * 1.5) * 2 * gl); c.stroke(); c.lineCap = 'butt';
-      K.ell(c, 0, -13 - rise, 12, 5.6, 0, hgrad(c, -8, 8, '#a8602c', '#6a3818', '#c07a3c'), OUT, 1.2);
-      poly(c, [[7, -16 - rise], [11, -25 - rise], [15, -24 - rise], [13, -15 - rise]], hgrad(c, 6, 15, '#a8602c', '#6a3818', '#c07a3c'), OUT, 1.1);
-      K.ell(c, 16.4, -23.6 - rise, 4.6, 2.5, 0.5, hgrad(c, 12, 20, '#a8602c', '#6a3818', '#c07a3c'), OUT, 1.1); c.fillStyle = '#1a1612'; c.fillRect(15.6, -25 - rise, 1.2, 1.2);
-      c.strokeStyle = '#2a1a10'; c.lineWidth = 2; c.beginPath(); c.moveTo(10.5, -25 - rise); c.quadraticCurveTo(7, -24 - rise, 8, -18 - rise); c.stroke();
-      poly(c, [[-4, -17.5 - rise], [5, -17.5 - rise], [6, -9 - rise], [-5, -9 - rise]], ar >= 1 ? '#b23a24' : '#8a2e1c', OUT, 1.1);   // the horse's cloth
-      if (ar >= 1) { c.strokeStyle = '#e6c98a'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(-4.6, -10 - rise); c.lineTo(5.4, -10 - rise); c.stroke(); }
-      if (ar >= 2) poly(c, [[14.4, -26.6 - rise], [19.4, -24.6 - rise], [18.4, -23.2 - rise], [13.8, -24.4 - rise]], '#9aa0ac', OUT, 1);
-      poly(c, [[-3.6, -17.5 - rise], [-3, -27 - rise], [3, -27 - rise], [3.6, -17.5 - rise]], hgrad(c, -4, 4, '#d9a24a', '#9a6a22', '#e8b45c'), OUT, 1.2);
-      K.ell(c, 0, -30.6 - rise, 3.6, 3.7, 0, hgrad(c, -4, 4, '#aab0bc', '#555a64', '#d0d6e0'), OUT, 1.2); c.fillStyle = '#1a1612'; c.fillRect(0.4, -31.2 - rise, 3, 1.2);
-      if (ar >= 2) { c.strokeStyle = ar >= 3 ? '#e6c98a' : '#b23a24'; c.lineWidth = 2; c.beginPath(); c.moveTo(-1, -34 - rise); c.quadraticCurveTo(-5, -37 - rise + Math.sin(gp) * gl, -8, -33 - rise); c.stroke(); }
-      K.ell(c, -3.2, -22.6 - rise, 2.8, 4.2, 0, hgrad(c, -6, 0, '#9aa0ac', '#4a4e58', '#c0c6d0'), OUT, 1.1); K.ell(c, -3.2, -22.6 - rise, 1, 1, 0, '#c8923a');
-      const ll = 19 + wp * 2.2 + sw * 4, tipy = -24 - rise - (s.chg ? 1 : 3) + sw * 3; limb(c, 2, -22.5 - rise, 2 + ll, tipy, 1.6, '#7a5a38'); limb(c, 2 + ll - 4, tipy + 0.3, 2 + ll + 3, tipy, 2.1, wp >= 3 ? '#e6eef8' : '#c4cad4');
-      c.fillStyle = '#b23a24'; c.beginPath(); c.moveTo(2 + ll - 6, tipy); c.lineTo(2 + ll - 14 - Math.sin(gp) * gl, tipy + 3.4); c.lineTo(2 + ll - 6, tipy + 4.4); c.closePath(); c.fill();
-      if (wp >= 3) K.glowAt(c, 2 + ll, tipy, 11, '255,240,200', 0.4);
-      if (s.chg) { c.strokeStyle = 'rgba(230,210,170,.35)'; c.lineWidth = 1.2; for (let i = 0; i < 3; i++) { c.beginPath(); c.moveTo(-18 - i * 5, -8 - i * 6); c.lineTo(-27 - i * 6, -8 - i * 6); c.stroke(); } }
-    } else if (s.ti === 0) {   // a knight
-      const sw = fl > 0 ? Math.sin((1 - fl / 0.25) * PI) : 0;
-      poly(c, [[-4.8, -7 - bob], [-3.8, -17 - bob], [3.8, -17 - bob], [4.8, -7 - bob]], hgrad(c, -5, 5, '#d9a24a', '#9a6a22', '#e8b45c'), OUT, 1.2);
-      c.strokeStyle = '#7a1e12'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(0, -16 - bob); c.lineTo(0, -8 - bob); c.stroke();
-      K.ell(c, -5.4, -11 - bob, 3.2, 4.6, 0, hgrad(c, -8, -2, '#9aa0ac', '#4a4e58', '#c0c6d0'), OUT, 1.2); K.ell(c, -5.4, -11 - bob, 1.1, 1.1, 0, '#c8923a');
-      if (ar >= 1) { K.ell(c, 4.6, -16.6 - bob, 2.6, 1.8, 0, '#9aa0ac', OUT, 1); K.ell(c, -4.6, -16.6 - bob, 2.6, 1.8, 0, '#9aa0ac', OUT, 1); }
-      K.ell(c, 0, -20 - bob, 3.8, 3.9, 0, hgrad(c, -4, 4, '#aab0bc', '#555a64', '#d0d6e0'), OUT, 1.2);
-      c.fillStyle = '#1a1612'; c.fillRect(0.4, -20.6 - bob, 3.2, 1.3);
-      if (ar >= 2) { c.strokeStyle = ar >= 3 ? '#e6c98a' : '#b23a24'; c.lineWidth = 2; c.beginPath(); c.moveTo(-1, -23.6 - bob); c.quadraticCurveTo(-4, -26 - bob, -5.5, -22 - bob); c.stroke(); }
-      if (ar >= 3) { c.strokeStyle = '#e6c98a'; c.lineWidth = 1; c.beginPath(); c.arc(0, -20 - bob, 3.9, PI * 1.05, PI * 1.95); c.stroke(); }
-      const ang = -0.9 + sw * 2.0, bl = 9 + wp * 1.8;
-      limb(c, 4.4, -13 - bob, 4.4 + Math.cos(ang) * bl, -13 - bob + Math.sin(ang) * bl, 1.8, wp >= 3 ? '#e6eef8' : '#c4cad4');
-      limb(c, 4.4, -13 - bob, 6, -11.5 - bob, 2.4, '#5c4128');
-      if (sw > 0.2) { c.strokeStyle = `rgba(255,245,210,${sw * 0.7})`; c.lineWidth = 2; c.beginPath(); c.arc(4.4, -13 - bob, bl, -1.4, 0.7); c.stroke(); }
-      if (wp >= 3) K.glowAt(c, 4.4 + Math.cos(ang) * bl * 0.6, -13 - bob + Math.sin(ang) * bl * 0.6, 12, '255,240,200', 0.4);
-    } else if (s.ti === 1) {   // an archer
-      poly(c, [[-4.2, -7 - bob], [-3.2, -16 - bob], [3.2, -16 - bob], [4.2, -7 - bob]], hgrad(c, -5, 5, '#6e7f46', '#3e4a28', '#7e9050'), OUT, 1.2);
-      if (ar >= 1) { c.strokeStyle = '#8a6340'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(-3, -16 - bob); c.lineTo(3, -8 - bob); c.stroke(); }
-      K.ell(c, 0, -19.5 - bob, 3.5, 3.5, 0, '#d6b48a', OUT, 1.1); c.fillStyle = ar >= 2 ? '#4a5a2c' : '#44522c'; c.beginPath(); c.arc(0, -20.3 - bob, 3.9, PI, TAU); c.lineTo(3.9, -17 - bob); c.lineTo(-3.9, -17 - bob); c.closePath(); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1; c.stroke();
-      c.fillStyle = '#5a3a20'; c.fillRect(-6.2, -17 - bob, 2.4, 8);
-      const draw = fl > 0 ? 1 - fl / 0.25 : 0.4; c.strokeStyle = '#6a4a2e'; c.lineWidth = 1.7; c.beginPath(); c.arc(6.5 + draw * 0.4, -12.5 - bob, 7 + wp * 0.8, -1.1, 1.1); c.stroke();
-      c.strokeStyle = 'rgba(240,230,200,.85)'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(6.5 + 7 * Math.cos(1.1), -12.5 - bob - 7 * Math.sin(1.1)); c.lineTo(3.5 - draw * 3, -12.5 - bob); c.lineTo(6.5 + 7 * Math.cos(1.1), -12.5 - bob + 7 * Math.sin(1.1)); c.stroke();
-      if (wp >= 3) K.glowAt(c, 9, -12.5 - bob, 10, '255,225,150', 0.35);
-    } else {   // the cleric
-      poly(c, [[-5.4, -1], [-3.4, -16 - bob], [3.4, -16 - bob], [5.4, -1]], hgrad(c, -6, 6, '#f2ead4', '#b8ad90', '#fffaf0'), OUT, 1.2);
-      c.strokeStyle = '#d6aa4a'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(-3.4, -12 - bob); c.lineTo(3.4, -12 - bob); c.stroke();
-      K.ell(c, 0, -19.5 - bob, 3.5, 3.5, 0, '#d6b48a', OUT, 1.1); c.fillStyle = '#f2ead4'; c.beginPath(); c.arc(0, -20.4 - bob, 3.9, PI, TAU); c.lineTo(3.4, -17 - bob); c.lineTo(-3.4, -17 - bob); c.closePath(); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1; c.stroke();
-      limb(c, 6.4, -2 - bob, 6.4, -23 - bob, 1.8, '#8a6340'); const g = 0.55 + 0.25 * Math.sin(tm * 4 + s.id) + (fl > 0 ? 0.6 : 0);
-      K.ell(c, 6.4, -24.6 - bob, 2.6 + hl * 0.4, 2.6 + hl * 0.4, 0, '#fff3b0', OUT, 1);
-      K.glowAt(c, 6.4, -24.6 - bob, 16 + hl * 5 + (fl > 0 ? 12 : 0), '255,230,150', g * 0.7);
+  // Painted models at about hero scale (a little under, so heroes stay the focus). Every soldier is a few cached sprites per type x squad ranks
+  // (armour, weapon, healing) x animation frame, drawn once at 2x and then blitted: a walk cycle, an attack/shot/heal, a bow draw, a gallop and
+  // a charge. Only the lantern glow, the hit flash, the shadow, the health bar and the death fall are drawn live, so thirty soldiers cost almost nothing.
+  const CRIM = '#a8301f', CRIM_D = '#64190f', CRIM_L = '#cf4a2e', GOLD = '#e6c98a', GOLD_D = '#a47a2c', GOLD_L = '#f7e2a6', LEATH = '#6b4a2c', LEATH_D = '#3e2a18', SKIN = '#d6b48a', SKIN_D = '#a8845e';
+  const METAL = [['#a7adb6', '#4f545e', '#c9cfd8'], ['#bcc3cd', '#5a606c', '#e0e6ee'], ['#d2d8e2', '#667088', '#f2f6fc'], ['#d6dae4', '#7c6a3e', '#fff2c8']];   // by armour rank: iron, steel, bright steel, gilded
+  const SQ = 2;   // sprite supersample
+  const DIM = { foot: [76, 84, 38, 76], horse: [138, 98, 60, 86] };   // [w, h, origin x, origin y] of a sprite, the origin being the feet
+  const FRAMES = { walk: 8, idle: 4, act: 6, draw: 6, chg: 6 };
+  const CYC = { walk: 2.8, idle: 0.5, chg: 3.3 };   // cycles per second
+  const sprites = new Map(), BUILD = { n: 0 };   // (BUILD.n: pictures made this frame)
+  const SOLD_SC = 0.88;   // soldiers stand a little under the heroes (HS 1.25), so the heroes stay the focus
+const sm = t => t * t * (3 - 2 * t);
+  function kfi(A, k) { for (let i = 1; i < A.length; i++) if (k <= A[i][0]) { const a = A[i - 1], b = A[i], t = sm((k - a[0]) / (b[0] - a[0] || 1)); return a.slice(1).map((v, j) => v + (b[j + 1] - v) * t); } return A[A.length - 1].slice(1); }
+  function limb2(c, p, w, col, hi) {
+    c.lineCap = 'round'; c.lineJoin = 'round'; c.beginPath(); c.moveTo(p[0], p[1]); for (let i = 2; i < p.length; i += 2) c.lineTo(p[i], p[i + 1]);
+    c.strokeStyle = OUT; c.lineWidth = w + 2.2; c.stroke(); c.strokeStyle = col; c.lineWidth = w; c.stroke();
+    if (hi) { c.strokeStyle = hi; c.lineWidth = Math.max(0.8, w * 0.26); c.stroke(); }
+  }
+  const mg = (c, x0, x1, ar) => hgrad(c, x0, x1, METAL[ar][0], METAL[ar][1], METAL[ar][2]);
+  function ember(c, x, y, s, col, out) {
+    c.beginPath(); c.moveTo(x, y - s * 1.35); c.quadraticCurveTo(x + s * 0.95, y - s * 0.2, x + s * 0.55, y + s * 0.55); c.quadraticCurveTo(x, y + s * 1.0, x - s * 0.55, y + s * 0.55); c.quadraticCurveTo(x - s * 0.95, y - s * 0.1, x, y - s * 1.35);
+    c.fillStyle = col; c.fill(); if (out) { c.strokeStyle = out; c.lineWidth = 0.5; c.stroke(); }
+  }
+  function gait(an, k) {
+    const g = { ph: k * TAU, sA: 0, sB: 0, lA: 0, lB: 0, bob: 0, sway: 0 };
+    if (an === 'walk' || an === 'chg') { const s = Math.sin(g.ph), cs = Math.cos(g.ph); g.sA = s * 6.2; g.sB = -s * 6.2; g.lA = Math.max(0, cs) * 4.2; g.lB = Math.max(0, -cs) * 4.2; g.bob = Math.abs(cs) * 1.5; g.sway = s; }
+    else if (an === 'idle') { g.sway = Math.sin(g.ph) * 0.7; g.bob = Math.sin(g.ph) * 0.35 + 0.35; }
+    else { g.sA = 2.2; g.sB = -2.6; }
+    return g;
+  }
+  // two legs: hip y, trouser colour, optional greaves (armour rank)
+  function legs(c, g, hy, col, ar, greave, long) {
+    [[-1, g.sB, g.lB], [1, g.sA, g.lA]].forEach(([sd, sx, lf]) => {
+      const hx = sd * 1.9, fx = hx + sx * 0.9 + sd * 0.8, fy = -lf, kx = (hx + fx) / 2 + 1.5, ky = (hy + fy) / 2 - 0.2 - lf * 0.25;
+      limb2(c, [hx, hy, kx, ky, fx, fy], 3.4, col);
+      if (greave) limb2(c, [kx, ky, fx, fy - 0.5], 3.1, METAL[ar][0], METAL[ar][2]);
+      if (greave && ar >= 1) K.ell(c, kx + 0.4, ky, 1.9, 1.5, 0, ar >= 3 ? GOLD : METAL[ar][2], OUT, 0.8);   // a knee cop
+      K.ell(c, fx + 1.5, fy - 0.1, long ? 3.4 : 3, 1.7, 0, LEATH_D, OUT, 1);
+    });
+  }
+  // a helm by armour rank: cap, sallet, great helm, gilded great helm. (x, y) is the head's middle.
+  function helm(c, x, y, ar, sw) {
+    const m = METAL[ar];
+    if (ar === 0) {
+      K.ell(c, x, y + 0.4, 3.9, 4.0, 0, SKIN, OUT, 1.1);
+      c.fillStyle = hgrad(c, x - 4.3, x + 4.3, m[0], m[1], m[2]); c.beginPath(); c.arc(x, y - 0.4, 4.4, PI, TAU); c.lineTo(x + 4.9, y - 0.2); c.lineTo(x - 4.9, y - 0.2); c.closePath(); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.1; c.stroke();
+      c.fillStyle = m[1]; c.fillRect(x + 0.5, y - 0.3, 1.2, 3.4);   // the nasal bar
+      c.fillStyle = '#1a1612'; c.fillRect(x - 2, y + 0.9, 1.3, 1.1); c.fillRect(x + 2.2, y + 0.9, 1.3, 1.1);
+    } else if (ar === 1) {
+      K.ell(c, x, y, 4.4, 4.5, 0, mg(c, x - 4.4, x + 4.4, 1), OUT, 1.2);
+      c.fillStyle = '#14100c'; c.fillRect(x - 0.4, y - 0.8, 4.6, 1.3); c.strokeStyle = m[2]; c.lineWidth = 0.8; c.beginPath(); c.moveTo(x - 3.8, y - 1.8); c.quadraticCurveTo(x, y - 3.2, x + 3.8, y - 1.8); c.stroke();
+      c.strokeStyle = m[1]; c.lineWidth = 1.6; c.beginPath(); c.moveTo(x - 0.6, y - 4.4); c.lineTo(x - 0.6, y - 6.4); c.stroke();   // a low comb
+    } else {
+      const top = y - 5.4, bot = y + 4.6;
+      c.beginPath(); c.moveTo(x - 4.5, bot); c.lineTo(x - 4.5, y - 2); c.quadraticCurveTo(x - 4.5, top, x, top); c.quadraticCurveTo(x + 4.5, top, x + 4.5, y - 2); c.lineTo(x + 4.5, bot); c.closePath();
+      c.fillStyle = mg(c, x - 4.5, x + 4.5, ar); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.2; c.stroke();
+      c.fillStyle = '#14100c'; c.fillRect(x - 0.4, y - 0.9, 4.9, 1.2); c.fillRect(x + 1.6, y - 3.8, 1.1, 6.6);
+      c.strokeStyle = ar >= 3 ? GOLD : m[2]; c.lineWidth = 0.9; c.beginPath(); c.moveTo(x - 4.3, y - 3.3); c.lineTo(x + 4.3, y - 3.3); c.moveTo(x - 4.3, y + 2.6); c.lineTo(x + 4.3, y + 2.6); c.stroke();
+      const pl = ar >= 3 ? 1 : 0.8; c.beginPath(); c.moveTo(x - 0.4, top + 0.4); c.quadraticCurveTo(x - 5 - sw * 1.5, top - 3.4, x - 8.6 * pl - sw * 2.4, y - 2 + sw * 1.6); c.quadraticCurveTo(x - 5, top + 0.2, x + 0.8, top + 1.4); c.closePath();
+      c.fillStyle = ar >= 3 ? CRIM_L : CRIM; c.fill(); c.strokeStyle = OUT; c.lineWidth = 0.9; c.stroke();
+      if (ar >= 3) { c.strokeStyle = GOLD; c.lineWidth = 1.2; c.beginPath(); c.arc(x + 0.2, y - 2.4, 4.9, PI * 1.12, PI * 1.9); c.stroke(); }
     }
+  }
+  // the squad's standard: a pole on the bearer's back; the flag streams behind when marching and hangs when still. Better weapons, finer cloth.
+  function banner(c, wp, g, walk) {
+    const x0 = -7.8, top = -66;
+    limb2(c, [x0, -4, x0, top], 1.7, '#7a5636');
+    const W = 12.5 + wp * 2.4, H = 15 + wp * 2.2, drop = walk ? 0.16 : 0.85 + g.sway * 0.07, wav = walk ? 2 : 0.9, ax = Math.cos(drop), ay = Math.sin(drop), tp = [], bt = [];
+    for (let i = 0; i <= 6; i++) { const t = i / 6, wv = Math.sin(g.ph - t * 3.4) * wav * t, px = x0 - ax * W * t, py = top + 2 + ay * W * t + wv; tp.push([px, py]); bt.push([px + ay * H * (1 - 0.12 * t), py + ax * H * (1 - 0.12 * t)]); }
+    const nm = [(tp[6][0] + bt[6][0]) / 2 + ax * 4.2, (tp[6][1] + bt[6][1]) / 2 - ay * 4.2], pts = tp.concat([nm]).concat(bt.slice().reverse());
+    c.beginPath(); pts.forEach((p, i) => { if (i) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); }); c.closePath();
+    c.fillStyle = hgrad(c, x0 - W, x0, CRIM_D, CRIM_L, CRIM); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.1; c.lineJoin = 'round'; c.stroke();
+    if (wp >= 1) { c.strokeStyle = wp >= 2 ? GOLD : GOLD_D; c.lineWidth = 1; c.beginPath(); tp.forEach((p, i) => { if (i) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); }); c.stroke(); c.beginPath(); bt.forEach((p, i) => { if (i) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); }); c.stroke(); }
+    const ex = (tp[2][0] + bt[2][0]) / 2, ey = (tp[2][1] + bt[2][1]) / 2; ember(c, ex, ey, 2.6 + wp * 0.35, GOLD, OUT);
+    if (wp >= 3) for (let i = 1; i < 6; i++) { c.strokeStyle = GOLD; c.lineWidth = 0.9; c.beginPath(); c.moveTo(bt[i][0], bt[i][1]); c.lineTo(bt[i][0] + ay * 2.2, bt[i][1] + ax * 2.2); c.stroke(); }
+    K.ell(c, x0, top - 1.2, 1.9 + (wp >= 2 ? 0.5 : 0), 1.9 + (wp >= 2 ? 0.5 : 0), 0, wp >= 2 ? GOLD_L : '#8a909c', OUT, 1);
+    if (wp >= 3) K.glowAt(c, x0, top - 1.2, 11, '255,225,150', 0.5);
+  }
+
+  // ---- the knight
+  function paintKnight(c, o) {
+    const { ar, wp, ban, an, k } = o, g = gait(an, k), b = g.bob, m = METAL[ar], act = an === 'act', walk = an === 'walk';
+    let lean = 0, th = -1.05 + (walk ? Math.sin(g.ph) * 0.07 : g.sway * 0.04), hx = 7.6, hy = -21 - b * 0.6, thPrev = th;
+    const SW = [[0, -1.05, 7.6, -21], [0.22, -2.2, 6.4, -32.5], [0.5, 0.15, 10.8, -23.5], [0.76, 0.75, 9.8, -19], [1, -1.05, 7.6, -21]];
+    if (act) { const v = kfi(SW, k); th = v[0]; hx = v[1]; hy = v[2]; thPrev = kfi(SW, Math.max(0, k - 0.1))[0]; lean = kfi([[0, 0], [0.22, -1.2], [0.5, 2.4], [0.76, 1.6], [1, 0]], k)[0]; }
+    const sway = g.sway * 1.4 + (walk ? 0.8 : 0);
+    if (ban) banner(c, wp, g, walk);
+    if (ar >= 3) { c.beginPath(); c.moveTo(-3.4, -28.6 - b); c.lineTo(3, -28.6 - b); c.quadraticCurveTo(1 - sway * 1.2, -18, -6 - sway * 2.4 - (walk ? 3 : 0), -8.5); c.lineTo(-12 - sway * 2.2 - (walk ? 3 : 0), -9.5); c.quadraticCurveTo(-7, -19, -5.4, -28.6 - b); c.closePath(); c.fillStyle = hgrad(c, -13, 3, CRIM_D, CRIM, CRIM_L); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.1; c.stroke(); }   // the cloak
+    legs(c, g, -15.5 - b, ar === 0 ? '#4a3a2c' : '#33291f', ar, ar >= 1, false);
+    // body: a gambeson, then plate
+    const T = [[-4.2, -15.5 - b], [-5.5 + lean, -28 - b], [-3.5 + lean, -29.8 - b], [3.5 + lean, -29.8 - b], [5.5 + lean, -28 - b], [4.2, -15.5 - b]];
+    poly(c, T, ar === 0 ? hgrad(c, -5.5, 5.5, '#8c6a46', '#4a3320', '#a58056') : mg(c, -5.5, 5.5, ar), OUT, 1.2);
+    if (ar === 0) { c.strokeStyle = 'rgba(40,26,14,.5)'; c.lineWidth = 0.7; for (let i = 0; i < 3; i++) { c.beginPath(); c.moveTo(-4.6 + lean * 0.5, -26 + i * 3.6 - b); c.lineTo(4.6 + lean * 0.5, -26 + i * 3.6 - b); c.stroke(); } }
+    const tb = lean * 0.6;
+    poly(c, [[-3.3 + tb, -28 - b], [3.3 + tb, -28 - b], [4 + sway * 0.7, -7.4], [-4 + sway * 0.7, -7.4]], hgrad(c, -4, 4, CRIM_D, CRIM_L, CRIM), OUT, 1);   // the tabard
+    if (ar >= 1) { c.strokeStyle = ar >= 2 ? GOLD : GOLD_D; c.lineWidth = 1; c.beginPath(); c.moveTo(-4 + sway * 0.7, -7.9); c.lineTo(4 + sway * 0.7, -7.9); c.stroke(); }
+    ember(c, tb + sway * 0.2, -19.5 - b * 0.5, 2.2, ar >= 1 ? GOLD : '#d9a24a', OUT);
+    c.fillStyle = LEATH_D; c.fillRect(-4.6, -16.8 - b, 9.2, 2.1); if (ar >= 1) { c.fillStyle = GOLD; c.fillRect(-1, -17 - b, 2.2, 2.5); }
+    if (ar >= 1) { const rr = ar === 1 ? [2.8, 2] : [3.7, 2.7]; [-1, 1].forEach(sd => { K.ell(c, sd * 5.8 + lean, -28.2 - b, rr[0], rr[1], sd * 0.25, mg(c, sd * 5.8 - 3, sd * 5.8 + 3, ar), OUT, 1); if (ar >= 2) { c.strokeStyle = ar >= 3 ? GOLD : m[2]; c.lineWidth = 0.8; c.beginPath(); c.ellipse(sd * 5.8 + lean, -28.2 - b, rr[0] - 0.7, rr[1] - 0.6, sd * 0.25, PI, TAU); c.stroke(); } }); }
+    else { [-1, 1].forEach(sd => K.ell(c, sd * 5.4 + lean, -27.6 - b, 2.1, 1.7, 0, '#7a5a3a', OUT, 1)); }
+    helm(c, 0.8 + lean, -34.2 - b + (act ? lean * 0.1 : 0), ar, sway * 0.5);
+    // sword arm
+    const sx = 5.4 + lean, sy = -27.6 - b;
+    limb2(c, [sx, sy, (sx + hx) / 2 + 2, (sy + hy) / 2 + 1.5, hx, hy], 2.5, ar === 0 ? '#7a5a3a' : m[0], ar === 0 ? null : m[2]);
+    K.ell(c, hx, hy, 1.6, 1.6, 0, ar === 0 ? SKIN : '#5a4430', OUT, 0.8);
+    // the sword by weapon rank
+    const bl = 11 + wp * 2.1, cx = Math.cos(th), cy = Math.sin(th), px = -cy, py = cx;
+    if (act && th > thPrev + 0.02 && k > 0.2 && k < 0.85) { c.save(); c.strokeStyle = `rgba(255,245,215,${0.55})`; c.lineWidth = 2.6; c.lineCap = 'round'; c.beginPath(); c.arc(hx, hy, bl * 0.82, thPrev - 0.9, th, false); c.stroke(); c.strokeStyle = 'rgba(255,255,255,.6)'; c.lineWidth = 1; c.stroke(); c.restore(); }
+    const blade = ['#9aa0a8', '#c4cad4', '#e6ecf6', '#f6faff'][wp];
+    c.lineCap = 'round'; c.strokeStyle = OUT; c.lineWidth = 3.3 + (wp >= 2 ? 0.4 : 0); c.beginPath(); c.moveTo(hx + cx * 1.5, hy + cy * 1.5); c.lineTo(hx + cx * bl, hy + cy * bl); c.stroke();
+    c.strokeStyle = blade; c.lineWidth = 1.7 + (wp >= 2 ? 0.4 : 0); c.stroke();
+    if (wp >= 2) { c.strokeStyle = 'rgba(90,100,120,.6)'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(hx + cx * 4, hy + cy * 4); c.lineTo(hx + cx * (bl - 2), hy + cy * (bl - 2)); c.stroke(); }
+    if (wp >= 1) { c.strokeStyle = wp >= 2 ? GOLD : '#7a7f88'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(hx + cx * 1.6 + px * 2.5, hy + cy * 1.6 + py * 2.5); c.lineTo(hx + cx * 1.6 - px * 2.5, hy + cy * 1.6 - py * 2.5); c.stroke(); }
+    K.ell(c, hx - cx * 1.5, hy - cy * 1.5, 1.1, 1.1, 0, wp >= 2 ? GOLD : '#7a7f88', OUT, 0.7);
+    if (wp >= 3) { K.glowAt(c, hx + cx * bl * 0.6, hy + cy * bl * 0.6, 12, '255,236,190', 0.45); c.strokeStyle = 'rgba(255,214,120,.85)'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(hx + cx * 4, hy + cy * 4); c.lineTo(hx + cx * bl, hy + cy * bl); c.stroke(); }
+    // shield on the other arm: round wood, a heater, steel-rimmed, gilded
+    const shx = -6.6 + lean * 0.8, shy = -21 - b;
+    limb2(c, [-5.4 + lean, sy, -7 + lean, -23 - b, shx + 1.5, shy + 1], 2.5, ar === 0 ? '#7a5a3a' : m[0]);
+    if (ar === 0) {
+      K.ell(c, shx, shy, 5.6, 5.8, 0, hgrad(c, shx - 5.6, shx + 5.6, '#a07040', '#5c3a1c', '#b88650'), OUT, 1.2); c.strokeStyle = '#5a5e66'; c.lineWidth = 1.1; c.beginPath(); c.arc(shx, shy, 4.6, 0, TAU); c.stroke();
+      K.ell(c, shx, shy, 1.6, 1.6, 0, '#8a909c', OUT, 0.8); ember(c, shx, shy - 3, 1.1, '#d9a24a');
+    } else {
+      const w = ar === 1 ? 5.6 : 6.2, h = ar === 1 ? 13 : 14.5;
+      c.beginPath(); c.moveTo(shx - w, shy - h * 0.5); c.lineTo(shx + w, shy - h * 0.5); c.lineTo(shx + w, shy + h * 0.05); c.quadraticCurveTo(shx + w * 0.8, shy + h * 0.38, shx, shy + h * 0.55); c.quadraticCurveTo(shx - w * 0.8, shy + h * 0.38, shx - w, shy + h * 0.05); c.closePath();
+      c.fillStyle = hgrad(c, shx - w, shx + w, CRIM_D, CRIM_L, CRIM); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.3; c.stroke();
+      c.strokeStyle = ar >= 3 ? GOLD : m[2]; c.lineWidth = 1.5; c.stroke();
+      ember(c, shx, shy - 1.4, ar >= 2 ? 3 : 2.5, ar >= 3 ? GOLD_L : GOLD, OUT);
+      if (ar >= 2) { K.ell(c, shx - w + 0.6, shy - h * 0.5 + 0.6, 0.9, 0.9, 0, GOLD, null); K.ell(c, shx + w - 0.6, shy - h * 0.5 + 0.6, 0.9, 0.9, 0, GOLD, null); }
+    }
+  }
+
+  // ---- the archer
+  function paintArcher(c, o) {
+    const { ar, wp, an, k } = o, g = gait(an, k), b = g.bob, walk = an === 'walk', m = METAL[ar];
+    let d = 0.18, ang = 0, gx = 10.6, gy = -26.5 - b, arrow = true, flick = 0;
+    if (an === 'draw') { d = 0.2 + k * 0.8; gy = -26.8 - b; } else if (an === 'act') { d = 0; arrow = false; flick = 1 - k; gx = 10.6 + Math.sin(k * 9) * 0.6 * (1 - k); }
+    else if (walk) { ang = 0.4; gx = 8.8; gy = -19.5 - b; d = 0.1; }
+    const jk = ['#6f8148', '#5c6e3c', '#4c5c30', '#3c4828'][ar], jkd = ['#41502a', '#344122', '#2c3820', '#232c18'][ar];
+    legs(c, g, -15.5 - b, '#3c3226', ar, ar >= 2, false);
+    // the quiver on the back
+    c.save(); c.translate(-6.4, -22 - b); c.rotate(-0.28);
+    [-2, 0, 1.6].forEach((x, i) => { c.strokeStyle = '#d8d0b8'; c.lineWidth = 0.9; c.beginPath(); c.moveTo(x, -6); c.lineTo(x - 0.3, -10 - i * 0.7); c.stroke(); c.fillStyle = i === 1 ? CRIM : '#efe8d4'; c.beginPath(); c.moveTo(x - 1.1, -9.4 - i * 0.7); c.lineTo(x + 0.2, -11.8 - i * 0.7); c.lineTo(x + 1.1, -9 - i * 0.7); c.closePath(); c.fill(); });
+    poly(c, [[-2.8, -7], [2.8, -7], [2.4, 6], [-2.4, 6]], hgrad(c, -3, 3, '#7a5836', '#3e2a18', '#8c6842'), OUT, 1.1);
+    c.fillStyle = ar >= 3 ? GOLD : '#2c1e10'; c.fillRect(-2.8, -7, 5.6, 1.4); c.fillRect(-2.5, 1, 5, 1);
     c.restore();
-    if (s.hp < 100) { const by = s.y - (rider ? 42 : 31); c.fillStyle = '#000a'; c.fillRect(s.x - 8, by, 16, 3); c.fillStyle = s.hp > 50 ? '#6aa86a' : s.hp > 25 ? '#d9a050' : '#c4513f'; c.fillRect(s.x - 7.5, by + 0.5, 15 * s.hp / 100, 2); }
+    // the draw arm, behind the chest
+    const dhx = gx - 1.5 - d * 9.5, dhy = gy + 0.3;
+    const torso = [[-4, -15.5 - b], [-4.8, -27.8 - b], [4.8, -27.8 - b], [4, -15.5 - b]];
+    if (an === 'draw' || an === 'act') limb2(c, [-3.4, -26.5 - b, (-3.4 + dhx) / 2 - 1.2, (-26.5 - b + dhy) / 2 - 2.2, dhx, dhy], 2.3, jk);
+    poly(c, torso, hgrad(c, -5, 5, jk, jkd, jk), OUT, 1.2);
+    poly(c, [[-4.2, -15.8 - b], [4.2, -15.8 - b], [5.4, -9.4], [2.2, -10.4], [0, -8.6], [-2.4, -10.4], [-5.4, -9.4]], jkd, OUT, 1);
+    c.strokeStyle = LEATH; c.lineWidth = 1.7; c.beginPath(); c.moveTo(-3.6, -27.4 - b); c.lineTo(4.2, -15.6 - b); c.stroke();
+    if (ar >= 1) { c.fillStyle = '#c8ccd2'; for (let i = 0; i < 4; i++) c.fillRect(-2.6 + i * 1.4, -24 + i * 2.6 - b, 0.9, 0.9); }
+    c.fillStyle = LEATH_D; c.fillRect(-4.4, -16.8 - b, 8.8, 2); c.fillStyle = ar >= 3 ? GOLD : '#a08050'; c.fillRect(-0.8, -17 - b, 2, 2.4);
+    c.strokeStyle = CRIM; c.lineWidth = 2.2; c.beginPath(); c.moveTo(-4.2, -17.4 - b); c.lineTo(4.4, -17.4 - b); c.stroke();   // the founders' sash
+    c.lineWidth = 1.7; c.beginPath(); c.moveTo(3.2, -17 - b); c.quadraticCurveTo(5.2 + g.sway * 1.2, -13.5, 4.4 + g.sway * 1.6, -10.4); c.stroke();
+    if (ar >= 2) { K.ell(c, -5.2, -27.6 - b, 3.1, 2.4, -0.2, mg(c, -8, -2, ar), OUT, 1); if (ar >= 3) { c.strokeStyle = GOLD; c.lineWidth = 0.9; c.beginPath(); c.ellipse(-5.2, -27.6 - b, 2.4, 1.8, -0.2, PI, TAU); c.stroke(); } }
+    if (ar >= 3) { c.strokeStyle = GOLD; c.lineWidth = 0.9; c.beginPath(); c.moveTo(-4.8, -27.8 - b); c.lineTo(4.8, -27.8 - b); c.stroke(); }
+    // the hood
+    const hxx = 0.7, hyy = -33.4 - b;
+    K.ell(c, hxx - 0.9, hyy + 0.3, 5.1, 5.3, 0, hgrad(c, -5, 4, jkd, jk, jkd), OUT, 1.1);
+    K.ell(c, hxx + 0.9, hyy + 0.8, 3.1, 3.3, 0, SKIN, OUT, 0.9);
+    c.fillStyle = 'rgba(30,20,12,.5)'; c.beginPath(); c.ellipse(hxx + 0.9, hyy - 0.4, 3, 1.4, 0, PI, TAU); c.fill();
+    c.fillStyle = '#1a1612'; c.fillRect(hxx + 0.4, hyy + 0.2, 1, 1); c.fillRect(hxx + 2.5, hyy + 0.2, 1, 1);
+    c.beginPath(); c.arc(hxx, hyy - 0.2, 5.1, PI * 0.98, TAU * 0.995); c.lineTo(hxx + 4.2, hyy - 0.8); c.quadraticCurveTo(hxx + 1.5, hyy - 3.6, hxx - 2.4, hyy - 1); c.closePath(); c.fillStyle = hgrad(c, -5, 5, jk, jkd, jk); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.1; c.stroke();
+    c.beginPath(); c.moveTo(hxx - 4.6, hyy + 0.6); c.quadraticCurveTo(hxx - 7.4, hyy + 1.4 + g.sway * 0.6, hxx - 9.4, hyy + 4.4 + g.sway); c.quadraticCurveTo(hxx - 6, hyy + 4.6, hxx - 3.8, hyy + 4.2); c.closePath(); c.fillStyle = jkd; c.fill(); c.stroke();   // the hood's tail
+    if (ar >= 2) { c.strokeStyle = m[2]; c.lineWidth = 1; c.beginPath(); c.arc(hxx + 0.3, hyy - 0.3, 4.4, PI * 1.12, PI * 1.8); c.stroke(); }
+    if (ar >= 3) { c.fillStyle = CRIM_L; c.beginPath(); c.moveTo(hxx - 1, hyy - 4.6); c.quadraticCurveTo(hxx - 3.4, hyy - 9.4, hxx - 6.6, hyy - 8.2); c.quadraticCurveTo(hxx - 4, hyy - 6.6, hxx - 1.2, hyy - 4.2); c.closePath(); c.fill(); c.strokeStyle = OUT; c.lineWidth = 0.8; c.stroke(); K.ell(c, 0, -28.2 - b, 1.1, 1.1, 0, GOLD, OUT, 0.7); }
+    // the bow arm, then the longbow
+    limb2(c, [4.6, -26.8 - b, (4.6 + gx) / 2 + 0.6, (-26.8 - b + gy) / 2 + 1.8, gx - 0.4, gy], 2.4, jk);
+    c.save(); c.translate(gx, gy); c.rotate(ang);
+    const half = 16 + wp * 0.5, belly = (wp >= 2 ? 9.4 : 8.2) - d * 2.2, tipx = -1.2 * d - (wp >= 2 ? 1.4 : 0), wood = ['#7a5636', '#8a6038', '#6a3e1e', '#5a3418'][wp];
+    c.lineCap = 'round'; c.beginPath(); c.moveTo(tipx, -half); c.quadraticCurveTo(belly, 0, tipx, half); c.strokeStyle = OUT; c.lineWidth = 3.7; c.stroke(); c.strokeStyle = wood; c.lineWidth = 2.2; c.stroke();
+    c.strokeStyle = 'rgba(255,230,180,.35)'; c.lineWidth = 0.7; c.stroke();
+    if (wp >= 1) { c.fillStyle = '#2c1e10'; c.fillRect(belly * 0.5 - 1.2, -2.6, 2.4, 5.2); }
+    if (wp >= 2) { K.ell(c, tipx, -half, 1.2, 1.2, 0, GOLD, OUT, 0.6); K.ell(c, tipx, half, 1.2, 1.2, 0, GOLD, OUT, 0.6); }
+    const hx = -1.5 - d * 9.5 + (flick ? -flick * 1.5 : 0);
+    c.strokeStyle = 'rgba(244,238,214,.9)'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(tipx, -half); c.lineTo(arrow || an === 'act' ? hx : tipx + 0.8, 0.2); c.lineTo(tipx, half); c.stroke();
+    if (arrow) {
+      const ax1 = hx + 24; c.strokeStyle = '#e8dcc0'; c.lineWidth = 1; c.beginPath(); c.moveTo(hx, 0.1); c.lineTo(ax1, 0.1); c.stroke();
+      c.fillStyle = wp >= 3 ? '#ffb040' : '#c4cad4'; c.beginPath(); c.moveTo(ax1 - 1, -1.7); c.lineTo(ax1 + 3.4, 0.1); c.lineTo(ax1 - 1, 1.9); c.closePath(); c.fill(); c.strokeStyle = OUT; c.lineWidth = 0.5; c.stroke();
+      c.fillStyle = CRIM_L; c.beginPath(); c.moveTo(hx + 0.6, 0.1); c.lineTo(hx + 4, -1.6); c.lineTo(hx + 4, 1.8); c.closePath(); c.fill();
+      if (wp >= 3) K.glowAt(c, ax1 - 1, 0.1, 4.5, '255,170,70', 0.7);
+    }
+    K.ell(c, hx, 0.3, 1.4, 1.4, 0, SKIN, OUT, 0.7);
+    c.restore();
+    K.ell(c, gx, gy, 1.5, 1.6, 0, SKIN, OUT, 0.7);
+  }
+
+  // ---- the cleric
+  function paintCleric(c, o) {
+    const { ar, hl, an, k } = o, g = gait(an, k), b = g.bob, walk = an === 'walk', act = an === 'act', m = METAL[ar];
+    const rob = ['#ece3c8', '#f2ead2', '#f8f1dc', '#fffaea'][hl], robd = ['#b5aa8a', '#bdb292', '#c6bb9a', '#d6cba8'][hl], hem = walk ? g.sway * 1.3 : g.sway * 0.5;
+    const e = act ? Math.sin(k * PI) : 0;
+    // staff, planted; in the heal it lifts and tips toward the ally
+    const sx = 8.4 + (act ? e * 1.5 : 0), sbot = act ? -2 - e * 7 : -1.5, stop = -45 - (act ? e * 5 : 0), tilt = act ? e * 5.5 : g.sway * 0.5, hy = act ? -24 - e * 3 : -15.5 - b;
+    limb2(c, [sx, sbot, sx + tilt * 0.45, (sbot + stop) / 2, sx + tilt, stop], 1.9, '#7a5636');
+    c.lineCap = 'round'; c.strokeStyle = OUT; c.lineWidth = 3.4; c.beginPath(); c.moveTo(sx + tilt, stop); c.quadraticCurveTo(sx + tilt + 3.2, stop - 3.4, sx + tilt + 6.2, stop + 0.6); c.stroke(); c.strokeStyle = hl >= 2 ? GOLD : '#8a6a3c'; c.lineWidth = 1.5; c.stroke();   // the hook
+    const lsw = Math.sin(g.ph * (walk ? 1 : 1) + 1) * (walk ? 0.28 : 0.1) + (act ? 0.5 * e : 0), lax = sx + tilt + 6.2, lay = stop + 0.8, ls = 1 + hl * 0.1, lx = lax + Math.sin(lsw) * 5 * ls, ly = lay + 3.8 + Math.cos(lsw) * 4.2 * ls;
+    // the robe, a bell to the ground; a stole in the founders' crimson
+    const sw = hem * 1.4;
+    c.beginPath(); c.moveTo(-3.6, -29.4 - b); c.quadraticCurveTo(-5.6, -17, -7.6 + sw, -1.6); c.quadraticCurveTo(-3 + sw, -0.2, 0, -1 + (walk ? Math.abs(g.sway) * 0.8 : 0)); c.quadraticCurveTo(3.4 + sw, -0.2, 7.6 + sw, -1.6); c.quadraticCurveTo(5.6, -17, 3.6, -29.4 - b); c.closePath();
+    c.fillStyle = hgrad(c, -7.6, 7.6, robd, robd, rob); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.2; c.lineJoin = 'round'; c.stroke();
+    c.strokeStyle = 'rgba(110,98,70,.35)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(-2.4, -13); c.quadraticCurveTo(-3.6 + sw * 0.5, -7, -4.4 + sw, -2); c.moveTo(2.6, -13); c.quadraticCurveTo(3.8 + sw * 0.5, -7, 4.6 + sw, -2); c.stroke();
+    if (walk) { K.ell(c, -2.4 + g.sA * 0.4, -0.4 - g.lA * 0.4, 2.3, 1.3, 0, LEATH_D, OUT, 0.9); K.ell(c, 2.6 + g.sB * 0.4, -0.4 - g.lB * 0.4, 2.3, 1.3, 0, LEATH_D, OUT, 0.9); }
+    poly(c, [[-1.5, -29 - b], [1.5, -29 - b], [2 + sw * 0.4, -1.4], [-2 + sw * 0.4, -1.4]], hgrad(c, -2, 2, CRIM_D, CRIM_L, CRIM), OUT, 0.9);
+    if (hl >= 1) { c.strokeStyle = GOLD; c.lineWidth = 0.8; c.beginPath(); c.moveTo(-1.5, -28 - b); c.lineTo(-2 + sw * 0.4, -2); c.moveTo(1.5, -28 - b); c.lineTo(2 + sw * 0.4, -2); c.stroke(); ember(c, sw * 0.2, -6.4, 1.6 + (hl >= 2 ? 0.4 : 0), GOLD); c.strokeStyle = GOLD; c.lineWidth = 1.2; c.beginPath(); c.moveTo(-7.4 + sw, -2.6); c.quadraticCurveTo(0, -0.9, 7.4 + sw, -2.6); c.stroke(); }
+    c.fillStyle = GOLD_D; c.fillRect(-4.6, -17.6 - b, 9.2, 1.7); c.strokeStyle = GOLD; c.lineWidth = 0.9; c.beginPath(); c.moveTo(2.8, -16.2 - b); c.quadraticCurveTo(4.4 + sw * 0.5, -11, 3.6 + sw * 0.7, -8.6); c.stroke();
+    // armour: a crimson mantle, then a steel gorget and pauldron, then a gilded mantle and cape
+    if (ar >= 1) { c.beginPath(); c.moveTo(-6.4, -26.6 - b); c.quadraticCurveTo(0, -31.8 - b, 6.4, -26.6 - b); c.lineTo(5.4, -22.4 - b); c.quadraticCurveTo(0, -25.4 - b, -5.4, -22.4 - b); c.closePath(); c.fillStyle = hgrad(c, -6.4, 6.4, CRIM_D, CRIM_L, CRIM); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1; c.stroke(); if (ar >= 3) { c.strokeStyle = GOLD; c.lineWidth = 1; c.beginPath(); c.moveTo(-5.4, -22.4 - b); c.quadraticCurveTo(0, -25.4 - b, 5.4, -22.4 - b); c.stroke(); } }
+    if (ar >= 2) { K.ell(c, 0, -28.6 - b, 3.6, 1.7, 0, mg(c, -3.6, 3.6, ar), OUT, 1); K.ell(c, -5.8, -27.4 - b, 3, 2.3, -0.3, mg(c, -8.8, -2.8, ar), OUT, 1); }
+    // sleeves and hands: the staff hand, and the free hand (open, forward, when healing)
+    const lhx = act ? 11 + e * 4 : -6.4, lhy = act ? -27 - e * 2 : -16.4 - b;
+    limb2(c, [-4.4, -27 - b, act ? 4 : -6.6, act ? -29 : -22, lhx, lhy], 2.6, rob);
+    K.ell(c, lhx, lhy, 1.6, 1.6, 0, SKIN, OUT, 0.8);
+    limb2(c, [4.4, -27 - b, 7 + sx * 0.15, (-27 - b + hy) / 2 + 1, sx - 0.6, hy], 2.6, rob);
+    K.ell(c, sx, hy, 1.7, 1.7, 0, SKIN, OUT, 0.8);
+    // head: a cream cowl and a circlet
+    const hxx = 0.6, hyy = -33.4 - b;
+    if (hl >= 3) { c.strokeStyle = 'rgba(255,230,150,.7)'; c.lineWidth = 1.2; c.beginPath(); c.ellipse(hxx, hyy - 0.4, 7.4, 7.7, 0, 0, TAU); c.stroke(); K.glowAt(c, hxx, hyy, 12, '255,228,150', 0.35); }
+    K.ell(c, hxx - 0.7, hyy + 0.4, 5, 5.3, 0, hgrad(c, -5, 4, robd, rob, robd), OUT, 1.1);
+    K.ell(c, hxx + 0.9, hyy + 0.9, 3.1, 3.3, 0, SKIN, OUT, 0.9);
+    c.fillStyle = '#1a1612'; c.fillRect(hxx + 0.2, hyy + 0.4, 1, 1); c.fillRect(hxx + 2.4, hyy + 0.4, 1, 1);
+    c.beginPath(); c.arc(hxx, hyy - 0.2, 5, PI * 0.98, TAU * 0.995); c.lineTo(hxx + 4, hyy - 0.8); c.quadraticCurveTo(hxx + 1.5, hyy - 3.2, hxx - 2.4, hyy - 1); c.closePath(); c.fillStyle = hgrad(c, -5, 5, rob, robd, rob); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.1; c.stroke();
+    if (hl >= 1) { c.strokeStyle = GOLD; c.lineWidth = 1.1; c.beginPath(); c.arc(hxx + 0.2, hyy - 0.4, 4.5, PI * 1.08, PI * 1.9); c.stroke(); if (hl >= 2) K.ell(c, hxx + 0.2, hyy - 4.7, 1.1, 1.1, 0, '#ff8a6a', OUT, 0.5); }
+    // the lantern on the hook: glass and a bright core
+    c.strokeStyle = OUT; c.lineWidth = 1.4; c.beginPath(); c.moveTo(lax, lay); c.lineTo(lx, ly - 3.7 * ls - 2); c.stroke();
+    const lw = 2.6 * ls + 0.4, lh = 3.7 * ls;
+        poly(c, [[lx - lw * 0.6, ly - lh], [lx + lw * 0.6, ly - lh], [lx + lw, ly - lh + 1.5], [lx + lw, ly + lh - 1.2], [lx - lw, ly + lh - 1.2], [lx - lw, ly - lh + 1.5]], hgrad(c, lx - lw, lx + lw, '#f6c25a', '#f3b040', '#fff6c8'), OUT, 1.1);
+    c.strokeStyle = '#4a3418'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(lx, ly - lh); c.lineTo(lx, ly + lh - 1.2); c.stroke();
+    poly(c, [[lx - lw - 0.5, ly - lh], [lx, ly - lh - 2.2], [lx + lw + 0.5, ly - lh]], hl >= 2 ? GOLD : '#8a6a3c', OUT, 0.9);
+    poly(c, [[lx - lw, ly + lh - 1.2], [lx + lw, ly + lh - 1.2], [lx, ly + lh + 0.8]], hl >= 2 ? GOLD : '#8a6a3c', OUT, 0.8);
+    K.ell(c, lx, ly, lw * 0.5, lh * 0.5, 0, '#ffffe6');
+    if (hl >= 2) { c.strokeStyle = 'rgba(255,214,110,.9)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(lx, ly + lh + 0.8); c.lineTo(lx + 0.4, ly + lh + 3.6); c.stroke(); }
+    return { x: lx, y: ly, r: 17 + hl * 4 + (act ? 9 * e : 0) };
+  }
+
+  // ---- the cavalry knight: a chestnut horse with barding by armour rank, a rider in plate, a lance
+  function paintCavalry(c, o) {
+    const { ar, wp, an, k } = o, chg = an === 'chg', gal = an === 'walk' || chg, act = an === 'act', ph = k * TAU, m = METAL[ar];
+    const e = act ? Math.sin(k * PI) : 0, rise = gal ? Math.sin(ph * 2) * (chg ? 2.5 : 1.3) : an === 'idle' ? Math.sin(ph) * 0.35 + 0.3 : -e * 1;
+    c.save(); if (act) { c.translate(-10, 0); c.rotate(-0.14 * e); c.translate(10, 0); }   // a rear on the thrust
+    if (chg) { c.strokeStyle = 'rgba(230,210,170,.4)'; c.lineWidth = 1.3; for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(-26 - i * 4, -10 - i * 6.5); c.lineTo(-37 - i * 6 - (k * 6) % 3, -10 - i * 6.5); c.stroke(); } }
+    // legs: far pair darker, rotary gallop; white socks
+    const OFF = [0, 0.75, 2.6, 3.35], LX = [-12.5, -9, 9.5, 12.5], amp = chg ? 8.5 : gal ? 6 : 0;
+    for (const i of [0, 2, 1, 3]) {
+      const hind = i < 2, a = Math.sin(ph + OFF[i]) * amp, lift = gal ? Math.max(0, Math.cos(ph + OFF[i])) * (chg ? 5.5 : 3.6) : (!hind && act ? e * 4 : 0), lx = LX[i];
+      const hipx = lx, hipy = -16 - rise, fx = lx + a - (!hind && act ? e * 2 : 0), fy = -lift, mx = lx + a * 0.5 + (hind ? -2.6 : 2), my = -9 - lift * 0.55;
+      const near = i === 1 || i === 3;
+      limb2(c, [hipx, hipy, mx, my, fx, fy - 2], 2.9, near ? '#8c4e26' : '#6a3a1c');
+      if (i === 1 || i === 2) limb2(c, [mx + (fx - mx) * 0.2, my + (fy - 2 - my) * 0.2, fx, fy - 2], 2.7, '#efe7d4');
+      K.ell(c, fx + 0.6, fy - 0.4, 1.9, 1.3, 0, '#1e1812', OUT, 0.7);
+    }
+    // tail
+    const tw = Math.sin(ph * (gal ? 1 : 0.5)) * (chg ? 4 : 2);
+    c.lineCap = 'round'; c.beginPath(); c.moveTo(-15, -26 - rise); c.quadraticCurveTo(-24 - (chg ? 4 : 0), -25 - rise + tw * 0.4, -26 - (chg ? 6 : 0), -15 + tw - (chg ? 4 : 0)); c.strokeStyle = OUT; c.lineWidth = 5; c.stroke(); c.strokeStyle = '#2c180c'; c.lineWidth = 3.2; c.stroke();
+    // body
+    const bodyG = c.createLinearGradient(0, -31, 0, -13); bodyG.addColorStop(0, '#c07a3c'); bodyG.addColorStop(0.5, '#a05a28'); bodyG.addColorStop(1, '#6e3a1a');
+    K.ell(c, -8, -22.5 - rise, 8.4, 8, 0, bodyG, OUT, 1.2); K.ell(c, 8.5, -23 - rise, 7.2, 8.4, 0, bodyG, OUT, 1.2); K.ell(c, 0, -21.5 - rise, 13.5, 6.6, 0, bodyG);
+    // neck and head
+    const P = chg ? [22, -37 - rise] : [19.5, -43 - rise], Mz = chg ? [32.4, -31.5 - rise] : [28.2, -35.4 - rise];
+    poly(c, [[3.5, -27 - rise], [6.5, -34 - rise], [P[0] - 2.8, P[1] - 1.4], [P[0] + 2.6, P[1] + 3.6], [14.2, -21.4 - rise]], bodyG, OUT, 1.2);
+    c.strokeStyle = '#2c180c'; c.lineWidth = 2.6; c.beginPath(); c.moveTo(5.4, -33.4 - rise); c.quadraticCurveTo(10, -38 - rise, P[0] - 1.6, P[1] - 1.2); c.stroke();   // the mane
+    const hc = [(P[0] + Mz[0]) / 2, (P[1] + Mz[1]) / 2], hr = Math.atan2(Mz[1] - P[1], Mz[0] - P[0]), hl2 = Math.hypot(Mz[0] - P[0], Mz[1] - P[1]) / 2 + 1.4;
+    K.ell(c, hc[0], hc[1], hl2, 3, hr, bodyG, OUT, 1.1); K.ell(c, Mz[0] - 0.4, Mz[1] + 0.2, 2.5, 2.2, hr, '#5a3418', OUT, 0.9);
+    c.strokeStyle = '#efe7d4'; c.lineWidth = 1; c.beginPath(); c.moveTo(P[0] + 0.5, P[1] - 0.2); c.lineTo(Mz[0] - 1.4, Mz[1] - 0.4); c.stroke();
+    poly(c, [[P[0] - 1.8, P[1] - 1.2], [P[0] - 1, P[1] - 5.6], [P[0] + 1.4, P[1] - 1.4]], '#7a4222', OUT, 0.9);
+    c.fillStyle = '#1a1612'; c.fillRect(P[0] + 1.6, P[1] + 0.6, 1.2, 1.2);
+    // barding by armour rank
+    if (ar >= 1) {
+      c.beginPath(); c.moveTo(-14.6, -29 - rise); c.lineTo(8.4, -30 - rise); c.lineTo(10, -17 - rise); for (let i = 0; i < 5; i++) c.lineTo(7.4 - i * 4.6, -11 - rise + (i % 2) * 1.8); c.lineTo(-14.6, -17 - rise); c.closePath();
+      c.fillStyle = hgrad(c, -15, 10, CRIM_D, CRIM_L, CRIM); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.2; c.lineJoin = 'round'; c.stroke();
+      c.strokeStyle = ar >= 2 ? GOLD : GOLD_D; c.lineWidth = 1.3; c.beginPath(); c.moveTo(-14.6, -17.8 - rise); for (let i = 0; i < 5; i++) c.lineTo(7.4 - i * 4.6, -11.6 - rise + (i % 2) * 1.8); c.stroke();
+      ember(c, -3.4, -22.6 - rise, 3, ar >= 3 ? GOLD_L : GOLD, OUT);
+    } else {
+      poly(c, [[-5.6, -29 - rise], [5.4, -29.5 - rise], [6.4, -18 - rise], [-6.4, -18 - rise]], hgrad(c, -6, 6, CRIM_D, CRIM_L, CRIM), OUT, 1.1);
+      c.strokeStyle = GOLD_D; c.lineWidth = 1.1; c.beginPath(); c.moveTo(-6.2, -18.8 - rise); c.lineTo(6.2, -18.8 - rise); c.stroke();
+    }
+    if (ar >= 2) {
+      K.ell(c, 11.2, -24 - rise, 3.4, 5.6, 0.1, mg(c, 8, 15, ar), OUT, 1.1);   // the peytral
+      for (let i = 0; i < 4; i++) { const t = i / 3, nx = 5.2 + (P[0] - 7.2) * t * 0.9, ny = -33 - rise + (P[1] + rise + 33) * t * 0.9; K.ell(c, nx + 1.6, ny + 1.2, 2, 1.6, 0.6, mg(c, nx - 2, nx + 3, ar), OUT, 0.7); }   // the crinet
+      poly(c, [[P[0] - 0.4, P[1] - 1.2], [Mz[0] - 2, Mz[1] - 2], [Mz[0] - 2, Mz[1] + 1.2], [P[0] + 2.6, P[1] + 3.2]], mg(c, P[0], Mz[0], ar), OUT, 0.9);   // the chamfron
+      if (ar >= 3) { c.fillStyle = CRIM_L; c.beginPath(); c.moveTo(P[0] - 0.4, P[1] - 4.4); c.quadraticCurveTo(P[0] - 3.6, P[1] - 10.6 + Math.sin(ph) * (gal ? 1 : 0), P[0] - 7.4, P[1] - 7.6); c.quadraticCurveTo(P[0] - 3.6, P[1] - 6, P[0] + 0.8, P[1] - 3); c.closePath(); c.fill(); c.strokeStyle = OUT; c.lineWidth = 0.8; c.stroke(); }
+    }
+    // reins
+    c.strokeStyle = LEATH_D; c.lineWidth = 0.9; c.beginPath(); c.moveTo(Mz[0] - 2.4, Mz[1] + 0.6); c.quadraticCurveTo(14, -32 - rise, 5.4, -34 - rise); c.stroke();
+    K.ell(c, 0.5, -29.6 - rise, 5.4, 1.7, 0, LEATH, OUT, 0.9);   // the saddle
+    // the rider
+    const rl = chg ? 2.5 : 0;
+    limb2(c, [-1, -31.4 - rise, 5.6, -26.8 - rise, 2.4, -19.4 - rise], 3, ar === 0 ? '#4a3a2c' : '#33291f');
+    if (ar >= 1) limb2(c, [5.6, -26.8 - rise, 2.4, -19.4 - rise], 2.5, m[0]); K.ell(c, 3.2, -18.4 - rise, 2.6, 1.4, 0, LEATH_D, OUT, 0.8);
+    const T = [[-3.8, -30 - rise], [-4.9 + rl * 0.3, -41 - rise], [-3.2 + rl * 0.3, -43 - rise], [3.2 + rl * 0.3, -43 - rise], [4.9 + rl * 0.3, -41 - rise], [3.8, -30 - rise]];
+    poly(c, T, ar === 0 ? hgrad(c, -5, 5, '#8c6a46', '#4a3320', '#a58056') : mg(c, -5, 5, ar), OUT, 1.2);
+    poly(c, [[-3.1, -41 - rise], [3.1, -41 - rise], [3.7, -29.6 - rise], [-3.7, -29.6 - rise]], hgrad(c, -4, 4, CRIM_D, CRIM_L, CRIM), OUT, 0.9); ember(c, 0.2, -36 - rise, 2, GOLD, OUT);
+    if (ar >= 1) { const rr = ar === 1 ? [2.6, 1.9] : [3.4, 2.5]; [-1, 1].forEach(sd => K.ell(c, sd * 5 + rl * 0.3, -41.4 - rise, rr[0], rr[1], 0, mg(c, sd * 5 - 3, sd * 5 + 3, ar), OUT, 1)); }
+    helm(c, 1.2 + rl * 0.4, -48.6 - rise, ar, Math.sin(ph) * (gal ? 1 : 0.3) - 0.5 - (chg ? 1 : 0));
+    // the shield on the near arm, strapped across the chest
+    const shx = -3.4, shy = -35.4 - rise;
+    if (ar === 0) { K.ell(c, shx, shy, 4.8, 5, 0, hgrad(c, shx - 5, shx + 5, '#a07040', '#5c3a1c', '#b88650'), OUT, 1.1); K.ell(c, shx, shy, 1.4, 1.4, 0, '#8a909c', OUT, 0.7); }
+    else { const w = 4.9, h = 11.5; c.beginPath(); c.moveTo(shx - w, shy - h * 0.5); c.lineTo(shx + w, shy - h * 0.5); c.lineTo(shx + w, shy); c.quadraticCurveTo(shx + w * 0.7, shy + h * 0.38, shx, shy + h * 0.55); c.quadraticCurveTo(shx - w * 0.7, shy + h * 0.38, shx - w, shy); c.closePath(); c.fillStyle = hgrad(c, shx - w, shx + w, CRIM_D, CRIM_L, CRIM); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.2; c.stroke(); c.strokeStyle = ar >= 3 ? GOLD : m[2]; c.lineWidth = 1.2; c.stroke(); ember(c, shx, shy - 1.2, 2.3, ar >= 3 ? GOLD_L : GOLD, OUT); }
+    // the lance: raised when still, carried slanted at the march, couched at the charge, thrust on the blow. It never crosses the helm.
+    const hand = [6.8 + rl * 0.4, -35 - rise], a = an === 'idle' ? -1.0 + Math.sin(ph) * 0.02 : chg ? 0.1 : act ? kfi([[0, -0.5], [0.25, -0.2], [0.55, 0.1], [1, -0.5]], k)[0] : -0.52 + Math.sin(ph * 2) * 0.03, push = act ? e * 7 : 0;
+    limb2(c, [4.6, -40 - rise, 6.4, -38 - rise, hand[0], hand[1]], 2.6, m[0]); K.ell(c, hand[0], hand[1], 1.7, 1.7, 0, '#5a4430', OUT, 0.8);
+    c.save(); c.translate(hand[0], hand[1]); c.rotate(a);
+    const LF = 40 + wp * 1.4 + push;
+    c.lineCap = 'round'; c.beginPath(); c.moveTo(-9, 0); c.lineTo(LF, 0); c.strokeStyle = OUT; c.lineWidth = 3.8; c.stroke(); c.strokeStyle = wp >= 3 ? '#e8d8b0' : '#8a6a42'; c.lineWidth = 2.1; c.stroke();
+    if (wp >= 2) { c.strokeStyle = GOLD; c.lineWidth = 2.2; [4, 14, 24].forEach(x => { c.beginPath(); c.moveTo(x, 0); c.lineTo(x + 1.1, 0); c.stroke(); }); }
+    if (wp >= 1) { K.ell(c, 3.4, 0, 1.6, 4.2, 0, mg(c, 2, 5, Math.max(1, ar)), OUT, 0.9); }   // the vamplate
+    const pw = Math.sin(ph * (gal ? 2 : 1)) * (gal ? 2.4 : 0.8), ps = LF - 6;
+    c.beginPath(); c.moveTo(ps, -0.8); c.lineTo(ps - 15 - (chg ? 3 : 0), -3.2 + pw * 0.3); c.lineTo(ps - 12.4, -0.6 + pw); c.lineTo(ps - 15 - (chg ? 3 : 0), 3.2 + pw * 0.6 + 1); c.lineTo(ps, 1.4); c.closePath(); c.fillStyle = hgrad(c, ps - 16, ps, CRIM_L, CRIM_D, CRIM); c.fill(); c.strokeStyle = OUT; c.lineWidth = 0.9; c.stroke();
+    if (wp >= 2) { c.strokeStyle = GOLD; c.lineWidth = 0.7; c.beginPath(); c.moveTo(ps, -0.8); c.lineTo(ps - 15 - (chg ? 3 : 0), -3.2 + pw * 0.3); c.stroke(); }
+    poly(c, [[LF - 1, -1.7], [LF + 6.4, 0], [LF - 1, 1.7]], wp >= 3 ? '#f4f8ff' : wp >= 1 ? '#d4dae4' : '#a8aeb8', OUT, 0.9);
+    if (wp >= 3) K.glowAt(c, LF + 3, 0, 12, '255,240,200', 0.5);
+    c.restore(); c.restore();
+  }
+
+  // ---- sprites: one cached picture per (type, squad ranks, standard, animation frame)
+  function frameOf(ti, an) { return ti === 3 && an === 'walk' ? 6 : FRAMES[an]; }
+  function getSprite(ti, ur, ban, an, idx) {
+    const key = ti + '|' + ur + '|' + ban + '|' + an + idx;
+    let sp = sprites.get(key); if (sp) return sp;
+        if (BUILD.n >= 5) {   // a frame builds only a few new pictures: a near frame of the same motion will do for now
+      const n = frameOf(ti, an); for (let j = 1; j < n; j++) { const alt = sprites.get(ti + '|' + ur + '|' + ban + '|' + an + ((idx + j) % n)); if (alt) return alt; }
+    }
+    BUILD.n++;
+    if (sprites.size > 700) sprites.clear();
+    const o = { ar: ur & 3, wp: (ur >> 2) & 3, hl: (ur >> 4) & 3, ban, an, k: an === 'draw' || an === 'act' ? idx / 5 : idx / frameOf(ti, an) };
+    const dm = ti === 3 ? DIM.horse : DIM.foot, fn = ti === 0 ? paintKnight : ti === 1 ? paintArcher : ti === 2 ? paintCleric : paintCavalry;
+    const cv = document.createElement('canvas'); cv.width = dm[0] * SQ; cv.height = dm[1] * SQ;
+    const c = cv.getContext('2d'); c.scale(SQ, SQ); c.translate(dm[2], dm[3]);
+    const hot = fn(c, o) || null;
+    sp = { cv, ox: dm[2], oy: dm[3], w: dm[0], h: dm[1], hot }; sprites.set(key, sp); return sp;
+  }
+  function whiteOf(sp) {
+    if (sp.wh) return sp.wh;
+    const cv = document.createElement('canvas'); cv.width = sp.cv.width; cv.height = sp.cv.height; const c = cv.getContext('2d');
+    c.drawImage(sp.cv, 0, 0); c.globalCompositeOperation = 'source-atop'; c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height); return (sp.wh = cv);
+  }
+  // which animation and frame a soldier is in right now
+  function pose(s, tm) {
+    const ti = s.ti, ph = tm + s.id * 0.37;
+    if (s.flash > 0) { const k = clamp(1 - s.flash / (s.fdur || 0.25), 0, 0.999); return ['act', Math.floor(k * FRAMES.act)]; }
+    if (s.moving) { const an = ti === 3 && s.chg ? 'chg' : 'walk', n = frameOf(ti, an); return [an, Math.floor(((ph * CYC[an]) % 1) * n)]; }
+    if (ti === 1 && tm - s.actAt < 2.6) return ['draw', Math.round(clamp((tm - s.actAt - 0.25) / 1.0, 0, 1) * 5)];
+    return ['idle', Math.floor(((ph * CYC.idle) % 1) * FRAMES.idle)];
+  }
+  function drawSoldier(c, s, tm) {
+    const dir = Math.cos(s.face) >= 0 ? 1 : -1, rider = s.ti === 3, [an, idx] = pose(s, tm), sp = getSprite(s.ti, s.ur, s.bear ? 1 : 0, an, idx);
+    K.ell(c, s.x, s.y + 1, (rider ? 17 : 9.5) * SOLD_SC, (rider ? 4.6 : 3.6) * SOLD_SC, 0, 'rgba(0,0,0,.34)');
+    c.save(); c.translate(s.x, s.y); c.scale(dir * SOLD_SC, SOLD_SC);
+    c.drawImage(sp.cv, -sp.ox, -sp.oy, sp.w, sp.h);
+    if (s.hit > 0) { c.globalAlpha = clamp(s.hit / 0.16, 0, 1) * 0.75; c.drawImage(whiteOf(sp), -sp.ox, -sp.oy, sp.w, sp.h); c.globalAlpha = 1; }
+    if (sp.hot) K.glowAt(c, sp.hot.x, sp.hot.y, sp.hot.r * (1 + 0.1 * Math.sin(tm * 5 + s.id)), '255,226,150', 0.5 + 0.12 * Math.sin(tm * 4 + s.id) + (s.flash > 0 ? 0.25 : 0));
+    c.restore();
+    if (s.hp < 100) { const by = s.y - (rider ? 66 : 50) * SOLD_SC, w = 18; c.fillStyle = '#000a'; c.fillRect(s.x - w / 2 - 1, by - 1, w + 2, 4.4); c.fillStyle = s.hp > 50 ? '#6aa86a' : s.hp > 25 ? '#d9a050' : '#c4513f'; c.fillRect(s.x - w / 2, by, w * s.hp / 100, 2.4); }
+  }
+  // a fallen soldier: tipped backward off their feet and gone with a fade
+  function drawCorpse(c, o) {
+    const k = o.t / 0.85, e = 1 - Math.pow(1 - clamp(k, 0, 1), 3), rider = o.ti === 3, sp = getSprite(o.ti, o.ur, 0, 'idle', 0);
+    K.ell(c, o.x, o.y + 1, (rider ? 17 : 9.5) * SOLD_SC * (1 + e * 0.5), (rider ? 4.6 : 3.6) * SOLD_SC * (1 + e * 0.3), 0, `rgba(0,0,0,${0.34 * (1 - clamp((o.t - 0.5) / 0.9, 0, 1))})`);
+    c.save(); c.translate(o.x, o.y); c.scale(o.dir * SOLD_SC, SOLD_SC); c.globalAlpha = 1 - clamp((o.t - 0.55) / 0.5, 0, 1);
+    c.translate(-e * 3, -Math.sin(clamp(k * 1.6, 0, 1) * PI) * 3); c.rotate(-(rider ? 0.55 : 1.45) * e); c.scale(1, 1 - (rider ? 0.3 : 0.12) * e);
+    c.drawImage(sp.cv, -sp.ox, -sp.oy, sp.w, sp.h);
+    if (o.t < 0.1) { c.globalAlpha *= (1 - o.t / 0.1) * 0.8; c.drawImage(whiteOf(sp), -sp.ox, -sp.oy, sp.w, sp.h); }
+    c.restore();
   }
 
   const SQ_NAME = { knight: ['knight', 'knights'], archer: ['archer', 'archers'], cleric: ['cleric', 'clerics'], cavalry: ['cavalry knight', 'cavalry knights'] };
@@ -335,13 +640,17 @@
       const seen = new Set();
       for (const r of m.sd) {
         seen.add(r[0]); let s = sol.get(r[0]);
-        if (!s) { s = { id: r[0], x: r[2], y: r[3], face: r[4] / 10, flash: 0, moving: false, hp: 100, ur: 0, ti: r[1] }; sol.set(r[0], s); }
-        s.ti = r[1]; s.tx = r[2]; s.ty = r[3]; s.tf = r[4] / 10; s.hp = r[5]; s.moving = !!(r[6] & 2); s.ur = (r[6] >> 2) & 63; s.chg = !!(r[6] & 256); s.lane = r[7];
-        if (r[6] & 1 && s.flash <= 0) { s.flash = s.ti === 2 ? 0.35 : 0.25; if ((s.ti === 0 || s.ti === 3) && K.visAt(s.x, s.y, 10)) K.snd('fd-soldier-swing', { minGap: 0.12 }); }
+        if (!s) { s = { id: r[0], x: r[2], y: r[3], face: r[4] / 10, flash: 0, fdur: 0.25, hit: 0, actAt: -9, moving: false, hp: 100, ur: 0, ti: r[1], sq: r[7] + '@' + S.T.toFixed(2), bear: false }; sol.set(r[0], s); }
+        s.ti = r[1]; s.tx = r[2]; s.ty = r[3]; s.tf = r[4] / 10; if (r[5] < s.hp - 0.5) s.hit = 0.16; s.hp = r[5]; s.moving = !!(r[6] & 2); s.ur = (r[6] >> 2) & 63; s.chg = !!(r[6] & 256); s.lane = r[7];
+        if (r[6] & 1 && s.flash <= 0) { kick(s, s.ti === 2 ? 0.35 : 0.25); if ((s.ti === 0 || s.ti === 3) && K.visAt(s.x, s.y, 10)) K.snd('fd-soldier-swing', { minGap: 0.12 }); }
       }
       for (const id of sol.keys()) if (!seen.has(id)) sol.delete(id);
+      // the squad's first knight carries the standard (and when they fall, the next takes it up)
+      const first = new Map(); for (const s of sol.values()) if (s.ti === 0 && !(first.get(s.sq) < s.id)) first.set(s.sq, s.id);
+      for (const s of sol.values()) s.bear = s.ti === 0 && first.get(s.sq) === s.id;
     }
   }
+  function kick(s, dur) { s.flash = dur; s.fdur = dur; s.actAt = S ? S.T : 0; }
   const byId = id => towers.get(id);
   const ERR = { 1: 'Not enough gold.', 2: 'The camp cannot hold more towers.', 3: 'The ground will not take it.', 4: 'Too far from your party.', 5: 'Stand closer to it.', 6: 'Nothing more to add.' };
   function onEvent(ev) {
@@ -369,10 +678,10 @@
     if (tag.charCodeAt(0) === 115 && tag.charCodeAt(1) === 111) {   // so*
       switch (tag) {
         case 'sob': sfx('fd-march', 'fd-wave'); break;
-        case 'sof': { const s = sol.get(ev[1]); if (s) { s.flash = 0.25; if (K.visAt(s.x, s.y, 10)) K.snd('fd-soldier-shot', { minGap: 0.12 }); fxArrow(s.x + (Math.cos(s.face) >= 0 ? 6 : -6), s.y - 12, ev[2], ev[3] - 6, 0.1, '255,236,190', 1.2, 14); } break; }
-        case 'soh': { const s = sol.get(ev[1]); if (s) { s.flash = 0.35; if (K.visAt(s.x, s.y, 10)) K.snd('fd-soldier-heal', { minGap: 0.3 }); const x1 = ev[2], y1 = ev[3]; K.fxAdd({ dur: 0.45, draw(c) { const k = this.t / 0.45; K.glowAt(c, s.x + (x1 - s.x) * K.eo(k), s.y - 16 + (y1 - 12 - s.y + 16) * K.eo(k), 14, '255,240,170', 1 - k * 0.6); } }); K.burst(x1, y1 - 10, 4, { color: '#bff2c4', spd: 30, dur: 0.7, size: 2, kind: 'dot', vy: -36 }); } break; }
-        case 'sod': K.burst(ev[2], ev[3] - 8, 6, { color: '#a89878', spd: 60, dur: 0.6, size: 3, kind: 'dust', vy: -20 }); sol.delete(ev[1]); break;
-        case 'soc': { const s = sol.get(ev[1]); if (s) { s.flash = 0.25; } K.burst(ev[2], ev[3] - 6, 9, { color: '#d9c9a0', spd: 140, dur: 0.45, size: 2.4, kind: 'spark' }); K.burst(ev[2], ev[3], 5, { color: '#a89878', spd: 70, dur: 0.6, size: 3, kind: 'dust', vy: -16 }); K.fxRing(ev[2], ev[3], 4, 34, 0.3, '240,225,190', 2); if (K.visAt(ev[2], ev[3], 10)) K.snd('fd-soldier-swing', { minGap: 0.1 }); break; }
+        case 'sof': { const s = sol.get(ev[1]); if (s) { kick(s, 0.25); if (K.visAt(s.x, s.y, 10)) K.snd('fd-soldier-shot', { minGap: 0.12 }); fxArrow(s.x + (Math.cos(s.face) >= 0 ? 12 : -12), s.y - 24, ev[2], ev[3] - 6, 0.1, '255,236,190', 1.2, 14); } break; }
+        case 'soh': { const s = sol.get(ev[1]); if (s) { kick(s, 0.35); if (K.visAt(s.x, s.y, 10)) K.snd('fd-soldier-heal', { minGap: 0.3 }); const x1 = ev[2], y1 = ev[3]; K.fxAdd({ dur: 0.45, draw(c) { const k = this.t / 0.45; K.glowAt(c, s.x + (x1 - s.x) * K.eo(k), s.y - 34 + (y1 - 12 - s.y + 34) * K.eo(k), 14, '255,240,170', 1 - k * 0.6); } }); K.burst(x1, y1 - 10, 4, { color: '#bff2c4', spd: 30, dur: 0.7, size: 2, kind: 'dot', vy: -36 }); } break; }
+        case 'sod': { const s = sol.get(ev[1]); if (s && corpses.length < 40) corpses.push({ ti: s.ti, ur: s.ur, x: s.x, y: s.y, dir: Math.cos(s.face) >= 0 ? 1 : -1, t: 0 }); K.burst(ev[2], ev[3] - 8, 6, { color: '#a89878', spd: 60, dur: 0.6, size: 3, kind: 'dust', vy: -20 }); sol.delete(ev[1]); break; }
+        case 'soc': { const s = sol.get(ev[1]); if (s) kick(s, 0.25); K.burst(ev[2], ev[3] - 6, 9, { color: '#d9c9a0', spd: 140, dur: 0.45, size: 2.4, kind: 'spark' }); K.burst(ev[2], ev[3], 5, { color: '#a89878', spd: 70, dur: 0.6, size: 3, kind: 'dust', vy: -16 }); K.fxRing(ev[2], ev[3], 4, 34, 0.3, '240,225,190', 2); if (K.visAt(ev[2], ev[3], 10)) K.snd('fd-soldier-swing', { minGap: 0.1 }); break; }
         case 'sou': if (ev[1] === S.myId) sfx('fd-buy'); break;
       }
       return true;
@@ -401,7 +710,7 @@
     }
     return best;
   }
-  function boardPos() { return L.board || (L.board = DEF.boardAt || [1700, 1806]); }
+  function boardPos() { return L.board || (L.board = DEF.boardAt || [3400, 3612]); }
   function onBoard(wx, wy) { const b = boardPos(); return wx > b[0] - 34 && wx < b[0] + 34 && wy > b[1] - 62 && wy < b[1] + 10; }
 
   // ============================================================ DOM: the board and the tower panel
@@ -536,8 +845,9 @@
   // ============================================================ the layer
 function frameUpdate(dt) {
     S = K.S; if (!S) return;
-    if (S.phase !== 'live') { if (towers.size || sol.size || L.open) { towers.clear(); sol.clear(); L.sel = null; L.placing = null; if (L.open) setOpen(false); closeTp(); } return; }
-    for (const s of sol.values()) { const k = 1 - Math.exp(-dt * 11); s.x += (s.tx - s.x) * k; s.y += (s.ty - s.y) * k; let d = s.tf - s.face; d = ((d % TAU) + TAU + PI) % TAU - PI; s.face += d * Math.min(1, dt * 10); if (s.flash > 0) s.flash -= dt; if (Math.abs(s.tx - s.x) + Math.abs(s.ty - s.y) > 200) { s.x = s.tx; s.y = s.ty; } }
+    if (S.phase !== 'live') { if (towers.size || sol.size || L.open) { towers.clear(); sol.clear(); corpses.length = 0; L.sel = null; L.placing = null; if (L.open) setOpen(false); closeTp(); } return; }
+    for (const s of sol.values()) { const k = 1 - Math.exp(-dt * 11); s.x += (s.tx - s.x) * k; s.y += (s.ty - s.y) * k; let d = s.tf - s.face; d = ((d % TAU) + TAU + PI) % TAU - PI; s.face += d * Math.min(1, dt * 10); if (s.flash > 0) s.flash -= dt; if (s.hit > 0) s.hit -= dt; if (Math.abs(s.tx - s.x) + Math.abs(s.ty - s.y) > 200) { s.x = s.tx; s.y = s.ty; } }
+    BUILD.n = 0; for (let i = corpses.length - 1; i >= 0; i--) { corpses[i].t += dt; if (corpses[i].t > 1.2) corpses.splice(i, 1); }
     // hover and the panels
     const m = S.mouse, ht = L.placing ? null : towerAtPoint(m.wx, m.wy); L.hover = ht ? ht.id : null; L.hoverBoard = !L.placing && onBoard(m.wx, m.wy);
     L.prev += dt; if (L.open && L.prev > 0.15) { L.prev = 0; renderBoard(false); }
@@ -581,6 +891,7 @@ function lightsOut(add) {
     units(list, inV) {
       for (const t of towers.values()) if (inV(t.x, t.y)) list.push([t.y, 9, { draw(c) { drawTower(c, t, S.T); } }]);
       for (const s of sol.values()) if (inV(s.x, s.y) && K.visAt(s.x, s.y, 10)) list.push([s.y, 9, { draw(c) { drawSoldier(c, s, S.T); } }]);
+      for (const o of corpses) if (inV(o.x, o.y) && K.visAt(o.x, o.y, 10)) list.push([o.y, 8, { draw(c) { drawCorpse(c, o); } }]);
       const b = boardPos(); if (inV(b[0], b[1])) list.push([b[1], 9, { draw(c) { drawBoard(c, S.T); } }]);
     },
     top(c) {

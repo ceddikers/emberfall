@@ -30,7 +30,7 @@ function wear(sim, h, ids) { h.items = new Array(D.ITEM_SLOTS).fill(null); ids.f
 function put(h, x, y) { h.x = x; h.y = y; h.path = null; }
 function foe(sim, x, y, hp, kind) { const e = sim.spawnEnemy(kind || 'streak', 0, [x, y]); e.x = x; e.y = y; e.hp = e.max = hp === undefined ? 1e6 : hp; e.arm = 0; e.atk = null; e.stun = 0; sim.buildHash(); return e; }
 function freeze(sim) { sim.updateNight = () => {}; }
-const OPEN = [1615, 1700];   // open ground south of the junction
+const OPEN = [3230, 3400];   // open ground south of the junction
 
 // ---------------------------------------------------------------- the list
 function sectionList() {

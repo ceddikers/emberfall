@@ -32,6 +32,7 @@ const Founding = (() => {
   const eb = t => { t = clamp(t, 0, 1); const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
   const angDiff = (a, b) => { let d = (b - a) % TAU; if (d > PI) d -= TAU; if (d < -PI) d += TAU; return d; };
   const rk = D.rk;
+  const Fx = FoundingFx;   // the skill effects (fx.js)
   const HS = 1.25;   // hero draw scale at zoom 1
   const OUT = '#0b0806';
   const SKILL_ICON = {
@@ -117,7 +118,7 @@ const Founding = (() => {
     // zones
     const zs = new Set();
     for (const z of m.z || []) { zs.add(z[0]); let o = S.zones.get(z[0]); if (!o) { o = { id: z[0], seen: S.T, tMax: z[6] }; S.zones.set(z[0], o); } o.kind = z[1]; o.x = z[2]; o.y = z[3]; o.a = z[4]; o.b = z[5]; o.tLeft = z[6]; o.c = z[7]; o.at = S.T; if (z[6] > o.tMax) o.tMax = z[6]; }
-    for (const id of S.zones.keys()) if (!zs.has(id)) S.zones.delete(id);
+    for (const [id, z] of S.zones) if (!zs.has(id)) { if (z.kind === ZONE.WALL && z.seen <= S.T) Fx.wallEnd(z); S.zones.delete(id); }
   }
 
   // the world's state changed: the night coming and going, the Words and the capstone being worked
@@ -222,7 +223,7 @@ const Founding = (() => {
   }
 
   function init(deps) {
-    dep = deps; inited = true;
+    dep = deps; inited = true; Fx.init(kit());
     for (const t of ['fds', 'fdp', 'fdx', 'fdend']) dep.Net.on(t, handlers[t]);
     dep.Net.on('fdbusy', () => { try { dep.toast('A run of The Founding is underway. You can join when it ends.'); } catch (e) { /* no toast */ } });
   }
@@ -258,14 +259,6 @@ const Founding = (() => {
       c.save(); c.globalCompositeOperation = 'lighter';
       for (let i = 0; i < 5; i++) { const a = (0.16 - i * 0.025) * f, ww = w * (1 - i * 0.16); c.fillStyle = `rgba(${rgb},${a})`; c.fillRect(x - ww * 0.5 * (1 - 0.15 * k), y - hh * (1 - i * 0.12), ww * (1 - 0.15 * k), hh * (1 - i * 0.12)); }
       c.restore(); glowAt(c, x, y, w * 1.6, rgb, 0.6 * f); ell(c, x, y, w * 0.9 * (1 - k * 0.3), w * 0.45, 0, `rgba(${rgb},${0.4 * f})`);
-    } });
-  }
-  function fxBeam(x1, y1, x2, y2, rgb, dur) { fxAdd({ dur, draw(c) { const k = this.t / dur; c.strokeStyle = `rgba(${rgb},${(1 - k) * 0.8})`; c.lineWidth = 3 * (1 - k) + 1; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); } }); }
-  function arrowFx(x1, y1, x2, y2, dur, rgb, lw) {
-    fxAdd({ dur: dur + 0.18, draw(c) {
-      const k = this.t < dur ? eo(this.t / dur) : 1, f = this.t < dur ? 1 : 1 - (this.t - dur) / 0.18, tx = lerp(x1, x2, k), ty = lerp(y1, y2, k);
-      const q = this.t < dur ? 0 : (this.t - dur) / 0.18;
-      c.strokeStyle = `rgba(${rgb},${0.85 * f})`; c.lineWidth = lw * f + 0.5; c.lineCap = 'round'; c.beginPath(); c.moveTo(lerp(x1, tx, q), lerp(y1, ty, q)); c.lineTo(tx, ty); c.stroke(); glowAt(c, tx, ty, 14, rgb, 0.7 * f);
     } });
   }
   function flame(c, x, y, r, t, a) {
@@ -304,7 +297,7 @@ const Founding = (() => {
   const LAYERS = [];
   function addLayer(o) { LAYERS.push(o); if (o.init) o.init(kit()); return o; }
   function lay(name, a, b, c) { let r; for (const L of LAYERS) if (L[name]) { try { const v = L[name](a, b, c); if (v) r = v; } catch (err) { if (!L._err) { L._err = 1; console.error('Founding layer', name, err); } } } return r; }
-  function kit() { return { get S() { return S; }, D, M, FLAG, ZONE, send, snd, ell, glowAt, burst, fxRing, fxAdd, fxBlast, ftxt, shake, say: (t) => say(t), visAt, U: (k) => U(k), me: () => me(), W, H, dep, toast: (t) => dep.toast && dep.toast(t), clamp, lerp, eo, TAU, PI }; }
+  function kit() { return { get S() { return S; }, D, M, FLAG, ZONE, send, snd, ell, glowAt, burst, fxRing, fxAdd, fxBlast, ftxt, shake, say: (t) => say(t), visAt, U: (k) => U(k), qfocus: () => S.qf || [], qhover: () => S.qhover || null, me: () => me(), W, H, dep, toast: (t) => dep.toast && dep.toast(t), clamp, lerp, eo, TAU, PI }; }
   function doEv(ev) {
     const tag = ev[0];
     if (LAYERS.length && lay('event', ev)) return;
@@ -318,7 +311,7 @@ const Founding = (() => {
       case 'h': evHit(ev); break;
       case 'd': evDeath(ev); break;
       case 'hd': { snd('fd-hero-down'); const u = U('h' + ev[1]); if (u) { ftxt(ev[2], ev[3] - 30, 'Down', '#ff7a68', 13); burst(ev[2], ev[3], 8, { color: '#ff6a5a', spd: 80, dur: 0.4, size: 2, kind: 'dot' }); if (ev[1] === S.myId) { S.aim = null; shake(3, 0.2); } } break; }
-      case 'hu': { snd('fd-hero-rise'); ftxt(ev[2], ev[3] - 34, 'Raised', '#fff1b8', 13, 1.3); fxRing(ev[2], ev[3], 6, 50, 0.7, '255,240,190', 3, 0); glowAt2(ev[2], ev[3], 1.1); break; }
+      case 'hu': { snd('fd-hero-rise'); ftxt(ev[2], ev[3] - 34, 'Raised', '#fff1b8', 13, 1.3); Fx.raise(ev[2], ev[3]); break; }
       case 'pb': evPerfectBlock(ev); break;
       case 't': S.tele.set(ev[1], { id: ev[1], shape: ev[2], x: ev[3], y: ev[4], a: ev[5], b: ev[6], w: ev[7], warn: Math.max(0.3, ev[8]), col: ev[9], t0: S.T, res: 0, boss: S.boss ? S.boss.eid : null }); teleStart(S.tele.get(ev[1])); break;
       case 'i': { const t = S.tele.get(ev[1]); if (t) { t.res = S.T; teleResolve(t); fxRing(ev[2], ev[3], 8, Math.max(40, t.a * 0.9), 0.3, t.col ? '140,190,255' : '255,120,90', 2, 0); if (t.shape === 0 && t.a > 60) { shake(2.5, 0.2); burst(ev[2], ev[3], 8, { color: '#6a5a48', spd: 90, dur: 0.5, size: 3, kind: 'dust' }); } } break; }
@@ -586,34 +579,17 @@ const Founding = (() => {
     if (u.hero === 'bastion' && slot === 2) { u.braceVis = S.T + 0.45; }
     if (u.hero === 'cleric' && slot === 0) petalBurst(u.x, u.y, 2);
     if (u.hero === 'pyromancer' && slot === 0 && wind <= 0.01) { burst(u.x, u.y, 8, { color: '#ffb048', spd: 120, dur: 0.35, size: 2.2, kind: 'spark' }); }
+    Fx.cast(u, slot, wind, tx, ty, pid === S.myId);
   }
 
   function evRelease(ev) {
     const [, pid, slot, x, y, cx, cy, rank] = ev, u = U('h' + pid); if (!u) return;
     const hero = u.hero;
     releaseSound(hero, slot, rank);
-    if (hero === 'bastion') {
-      if (slot === 0) { fxRing(x, y, 6, 38, 0.35, '255,235,170', 3, 1); burst(x, y, 8, { color: '#ffe9a8', spd: 120, dur: 0.4, size: 2.2, kind: 'spark' }); shake(2.5, 0.18); if (rank === 9) ftxt(x, y - 24, 'Ricochet', '#ffe9a8', 11); }
-      else if (slot === 1) { fxRing(x, y, 10, 100, 0.5, '255,220,120', 3, 0); burst(x, y, 10, { color: '#c9a45c', spd: 90, dur: 0.5, size: 2.5, kind: 'dust' }); shake(2, 0.15); }
-      else if (slot === 2) { fxRing(u.x, u.y, 24, 10, 0.2, '255,235,170', 2, 1); }
-      else if (slot === 3) { fxRing(x, y, 10, 150, 0.5, '255,220,120', 3, 0); burst(x, y, 18, { color: '#9aa6b8', spd: 150, dur: 0.6, size: 3, kind: 'chunk', g: 300 }); shake(4, 0.3); }
-    } else if (hero === 'cleric') {
-      if (slot === 0) { fxBeam(cx, cy, x, y, '150,255,170', 0.3); fxRing(x, y, 26, 8, 0.4, '150,255,170', 2, 1); petalBurst(x, y, 6); }
-      else if (slot === 1) { fxPillar(x, y, 26, 0.5, '255,235,170', 160); fxRing(x, y, 10, 90, 0.5, '255,235,170', 2, 0); shake(1.5, 0.12); }
-      else if (slot === 2) { fxRing(x, y, 10, 100, 0.5, '255,235,160', 3, 0); }
-      else if (slot === 3) { fxRing(x, y, 10, 150, 0.9, '255,235,170', 4, 0); fxRing(x, y, 10, 105, 0.7, '255,255,255', 2, 0); fxPillar(x, y, 82, 1.4, '255,240,190', 420); shake(3, 0.3); for (let i = 0; i < 24; i++) burst(x + rnd(-130, 130), y + rnd(-130, 130), 1, { color: '#fff1b8', spd: 30, dur: 1.2, size: 2.2, kind: 'dot', vy: -70, g: -20 }); }
-    } else if (hero === 'pyromancer') {
-      if (slot === 0) launchFireball(pid, x, y, cx, cy, rank);
-      else if (slot === 2) {
-        burst(cx, cy, 16, { color: '#ffb048', spd: 140, dur: 0.5, size: 3, kind: 'spark' }); fxRing(cx, cy, 8, 40, 0.35, '255,160,60', 3, 1);
-        fxRing(x, y, 40, 8, 0.3, '255,200,100', 3, 1); burst(x, y, 14, { color: '#ffd27a', spd: 120, dur: 0.5, size: 2.4, kind: 'spark' });
-        u.tr.settle(); u.x = x; u.y = y; u.an.dashT = S.T;
-      }
-    } else if (hero === 'ranger') {
-      if (slot === 0) { arrowFx(x, y, cx, cy, 0.22, '255,240,170', 3.5); shake(1.5, 0.1); }
-      else if (slot === 1) burst(x, y, 8, { color: '#8a7a5a', spd: 80, dur: 0.4, size: 2, kind: 'dust' });
-      else if (slot === 2) { fxRing(x, y, 50, 12, 0.4, '255,200,90', 3, 1); }
-    }
+    if (hero === 'bastion' && slot === 0 && rank === 9) ftxt(x, y - 24, 'Ricochet', '#ffe9a8', 11);
+    if (hero === 'pyromancer' && slot === 0) launchFireball(pid, x, y, cx, cy, rank);
+    Fx.release(u, slot, x, y, cx, cy, rank);   // (before a Firestep moves the unit: it draws from where you stood)
+    if (hero === 'pyromancer' && slot === 2) { u.tr.settle(); u.x = x; u.y = y; u.an.dashT = S.T; }
   }
 
   function launchFireball(pid, x, y, ex, ey, rank) {
@@ -627,25 +603,13 @@ const Founding = (() => {
     const [, pid, slot, x, y, rad] = ev, u = U('h' + pid), hero = u ? u.hero : null;
     if (hero === 'pyromancer') snd(slot === 0 ? 'fd-fireball-hit' : slot === 1 ? 'fd-erupt' : slot === 3 ? 'fd-meteor-hit' : 'fd-firestep', { vol: slot === 2 ? 0.5 : 1 });
     else if (hero === 'ranger' && slot === 1) snd('fd-trap-burst');
-    if (hero === 'pyromancer') {
-      if (slot === 0) {
-        // the fireball that matches this burst ends here
-        let best = null, bd = 1e9; for (const p of S.projs) if (p.fb && p.pid === pid && !p.end) { const dd = Math.hypot(p.ex - x, p.ey - y); if (dd < bd) { bd = dd; best = p; } }
-        if (best) best.end = true;
-        fxBlast(x, y, rad, '255,140,40', rad > 40); shake(rad > 80 ? 5 : 3, 0.2); if (rad > 80) fxRing(x, y, 10, rad * 1.3, 0.4, '255,230,160', 3, 1);
-      } else if (slot === 1) { fxBlast(x, y, rad, '255,150,50', true); shake(3, 0.22); }
-      else if (slot === 2) { fxBlast(x, y, rad, '255,150,50'); }
-      else if (slot === 3) {
-        fxBlast(x, y, rad, '255,130,40', true); fxRing(x, y, 10, rad * 1.5, 0.6, '255,200,120', 4, 0); fxRing(x, y, 6, rad * 1.1, 0.4, '255,255,255', 3, 0);
-        shake(rad > 100 ? 9 : 4, 0.5); burst(x, y, 24, { color: '#6a4a38', spd: 260, dur: 0.9, size: 4, kind: 'chunk', g: 520, vy: -120 }); burst(x, y, 20, { color: '#ffb048', spd: 220, dur: 0.7, size: 2.5, kind: 'spark' });
-      }
-    } else if (hero === 'bastion') { fxRing(x, y, 10, rad, 0.4, '255,235,170', 3, 0); burst(x, y, 12, { color: '#d9c8a0', spd: 140, dur: 0.6, size: 3, kind: 'dust' }); shake(4, 0.25); }
-    else if (hero === 'cleric') {
-      if (slot === 1) fxRing(x, y, 10, rad, 0.5, '255,235,170', 2, 0);
-      else { fxRing(x, y, 10, rad, 0.8, '255,235,170', 3, 0); sparkleHeal(x, y); }
-    } else if (hero === 'ranger') {
-      fxBlast(x, y, rad, '255,200,90'); shake(2.5, 0.18); burst(x, y, 10, { color: '#cfc3a0', spd: 200, dur: 0.5, size: 2.5, kind: 'chunk', g: 200 });
+    if (hero === 'pyromancer' && slot === 0) {
+      // the fireball that matches this burst ends here
+      let best = null, bd = 1e9; for (const p of S.projs) if (p.fb && p.pid === pid && !p.end) { const dd = Math.hypot(p.ex - x, p.ey - y); if (dd < bd) { bd = dd; best = p; } }
+      if (best) best.end = true;
     }
+    if (hero) Fx.impact(hero, slot, x, y, rad, pid === S.myId);
+    if (hero === 'cleric' && slot !== 1) sparkleHeal(x, y);
   }
 
   function evAuto(ev) {
@@ -657,7 +621,7 @@ const Founding = (() => {
       sndGap('fd-auto-melee', 0.12); sndGap('fd-auto-hit-melee', 0.12);
       setPose(u, 'attack', 0, 0.24);
       const ang = Math.atan2(t.y - u.y, t.x - u.x);
-      fxAdd({ dur: 0.18, draw(c) { const k = this.t / 0.18; c.save(); c.translate(u.x, u.y); c.rotate(ang); c.strokeStyle = `rgba(240,245,255,${0.9 * (1 - k)})`; c.lineWidth = 4 * (1 - k) + 1; c.beginPath(); c.arc(0, 0, 26, -1.1 + k * 0.6, 1.0 + k * 0.2); c.stroke(); c.restore(); } });
+      Fx.autoSlash(u, t, ang);
       burst(t.x, t.y, 3, { color: '#e8eef8', spd: 90, dur: 0.2, size: 1.8, kind: 'spark' });
     } else {
       setPose(u, hero === 'ranger' ? 'attack' : 'cast', 0, 0.26);
@@ -787,13 +751,8 @@ const Founding = (() => {
   }
   // the Ranger's every-fourth arrow: a long gold line through everything in its path
   function pierceShot(u, t) {
-    const ang = Math.atan2(t.y - u.y, t.x - u.x), L = D.KITS.ranger.range + 90, x1 = u.x + Math.cos(ang) * 16, y1 = u.y + Math.sin(ang) * 16, x2 = u.x + Math.cos(ang) * L, y2 = u.y + Math.sin(ang) * L;
-    fxAdd({ dur: 0.28, layer: 1, draw(c) {
-      const k = this.t / 0.28, f = 1 - k; c.save(); c.lineCap = 'round'; c.globalCompositeOperation = 'lighter';
-      c.strokeStyle = `rgba(255,214,120,${0.35 * f})`; c.lineWidth = 11 * f + 2; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
-      c.strokeStyle = `rgba(255,248,214,${0.95 * f})`; c.lineWidth = 3.4 * f + 0.8; c.beginPath(); c.moveTo(x1, y1); c.lineTo(lerp(x1, x2, Math.min(1, k * 3.2 + 0.25)), lerp(y1, y2, Math.min(1, k * 3.2 + 0.25))); c.stroke();
-      c.restore(); glowAt(c, x1, y1, 22 * f + 6, '255,230,150', 0.8 * f);
-    } });
+    const ang = Math.atan2(t.y - u.y, t.x - u.x), L = D.KITS.ranger.range + 90;
+    Fx.beam(u.x + Math.cos(ang) * 16, u.y + Math.sin(ang) * 16, u.x + Math.cos(ang) * L, u.y + Math.sin(ang) * L, 6, 1, '255,214,120');
     burst(t.x, t.y, 6, { color: '#fff4c8', spd: 130, dur: 0.35, size: 2, kind: 'spark' });
   }
   // floating numbers: hits on one target inside a moment add up; a crowd shows only the big ones
@@ -880,6 +839,7 @@ const Founding = (() => {
 
   function update(dt) {
     S.T += dt;
+    if (LAYERS.length) lay('update', dt);   // (feature layers' own per-frame work: wild corpses fading, ...)
     while (S.evq.length && S.evq[0].t <= S.T) { const e = S.evq.shift(); try { doEv(e.ev); } catch (er) { console.error(er); } }
     const rt = S.T - TRACK.DELAY;
     for (const u of S.units.values()) refreshUnit(u, dt, rt);
@@ -915,7 +875,7 @@ const Founding = (() => {
       zn.acc = (zn.acc || 0) + dt; const left = zn.tLeft - (S.T - zn.at);
       while (zn.acc >= 0.075) { zn.acc -= 0.075; if (left > 0.6 && S.volley.length < 120) { const a = rnd(0, TAU), d = Math.sqrt(Math.random()) * zn.a; S.volley.push({ x: zn.x + Math.cos(a) * d, y: zn.y + Math.sin(a) * d, t: 0, done: false }); } }
     }
-    for (const v of S.volley) { v.t += dt; if (!v.done && v.t >= 0.4) { v.done = true; fxRing(v.x, v.y, 3, 26, 0.25, '255,235,160', 2, 0); burst(v.x, v.y, 3, { color: '#ffe9a8', spd: 70, dur: 0.3, size: 1.8, kind: 'spark' }); } }
+    for (const v of S.volley) { v.t += dt; if (!v.done && v.t >= 0.4) v.done = true; }
     S.volley = S.volley.filter(v => v.t < 0.7);
     // burning ground and trails give off a few sparks
     // projectiles
@@ -924,13 +884,13 @@ const Founding = (() => {
         const t = p.tgt; if (t && !t.goneAt && S.units.has(t.key)) { p.lx = t.x; p.ly = t.y; }
         const dx = p.lx - p.x, dy = p.ly - p.y, d = Math.hypot(dx, dy), st = p.speed * dt; p.ang = Math.atan2(dy, dx);
         p.trail.push({ x: p.x, y: p.y }); if (p.trail.length > 8) p.trail.shift();
-        if (d <= st + 6) { p.dead = true; if (p.hero) sndGap(p.hero === 'cleric' ? 'fd-auto-hit-holy' : p.hero === 'pyromancer' ? 'fd-auto-hit-ember' : 'fd-auto-hit-arrow', 0.08); burst(p.lx, p.ly, 4, { color: p.hero === 'cleric' ? '#fff1b8' : p.hero === 'pyromancer' ? '#ffb048' : '#e8e0c8', spd: 80, dur: 0.3, size: 2, kind: 'spark' }); continue; }
+        if (d <= st + 6) { p.dead = true; if (p.hero) sndGap(p.hero === 'cleric' ? 'fd-auto-hit-holy' : p.hero === 'pyromancer' ? 'fd-auto-hit-ember' : 'fd-auto-hit-arrow', 0.08); burst(p.lx, p.ly, 4, { color: p.hero === 'cleric' ? '#fff1b8' : p.hero === 'pyromancer' ? '#ffb048' : '#e8e0c8', spd: 80, dur: 0.3, size: 2, kind: 'spark' }); if (p.hero === 'ranger') Fx.arrowHit(p.lx, p.ly, p.ang || 0); else Fx.flareAt(p.lx, p.ly, p.hero === 'cleric' ? 34 : 28, p.hero === 'cleric' ? '255,240,190' : '255,150,60', 0.2); continue; }
         p.x += dx / d * st; p.y += dy / d * st; p.prog = 1 - d / p.d0;
       } else if (p.fb) {
         if (p.end) { p.dead = true; continue; }
         const st = p.speed * dt; p.x += p.dx * st; p.y += p.dy * st; p.dist += st;
         p.trail.push({ x: p.x, y: p.y }); if (p.trail.length > 14) p.trail.shift();
-        if (Math.random() < 0.6) burst(p.x, p.y, 1, { color: '#ffb048', spd: 25, dur: 0.3, size: 2, kind: 'dot' });
+        if (Math.random() < 0.6) burst(p.x, p.y, 1, { color: Math.random() < 0.5 ? '#ffb048' : '#ffd27a', spd: 30, dur: 0.4, size: 2, kind: Math.random() < 0.5 ? 'spark' : 'dot' }); if (Math.random() < 0.18) burst(p.x, p.y, 1, { color: '#3a2a24', spd: 14, dur: 0.7, size: 3, kind: 'dust' });
         if (p.dist > p.maxD + 40) p.dead = true;
       }
     }
@@ -1275,44 +1235,95 @@ const Founding = (() => {
     }
     return null;
   }
+  // ---- quest markers, kept quiet (2026-10-30): each active quest marks only its current step, one marker per quest. The step is the nearest
+  // pick-up, or the place to bring it once you are carrying; the other quests' places are not painted. A marker is a small soft ring with a
+  // little pin; its name and count appear only when a hero is near (~300 px), the cursor is near, or its row in the tracker is hovered.
+  // Edge arrows point only at what the hero is carrying for, or at the quest whose tracker row is hovered. Layers add their quests' steps
+  // through the `qfocus(out, hero)` hook (see client-quests.js).
+  const HAUL_CODE = { beacon: 2, graves: 3, stonegate: 4, roof: 5 };
+  function nearestOf(arr, x, y, ok) { let best = null, bd = 1e12; for (const a of arr) { if (ok && !ok(a)) continue; const d = (a[1] - x) * (a[1] - x) + (a[2] - y) * (a[2] - y); if (d < bd) { bd = d; best = a; } } return best; }
+  function qFocus() {
+    const out = S.qf || (S.qf = []); out.length = 0;
+    if (!S.q || S.phase !== 'live') return out;
+    const P = S.props || {}, my = me(), hx = my ? my.x : M.P.hearth[0], hy = my ? my.y : M.P.hearth[1], qo = P.qo || [], qd = P.qd || [];
+    const add = (id, step, x, y, R, code, carry, title, tip, sub) => out.push({ id, step, x, y, R: R || 0, code: code || 0, carry: !!carry, title, tip, sub: sub || '' });
+    for (const row of S.q) {
+      if (row[1] !== 1) continue; const id = row[0], code = HAUL_CODE[id];
+      if (code) {
+        const dc = id === 'stonegate' && qd.some(d => d[0] === 6) ? 6 : code, carrying = !!my && my.carry === code && dc === code;
+        const pk = carrying || dc !== code ? null : nearestOf(qo, hx, hy, o => o[0] === code);
+        if (pk) { const t = markerTip(code, false); add(id, 'pick', pk[1], pk[2], 0, code, false, t[0], t[1], pk[3] > 1 ? pk[3] + ' left' : ''); }
+        else { const d = qd.find(d => d[0] === dc); if (d) { const t = markerTip(dc, true); add(id, 'dest', d[1], d[2], d[3], dc, carrying, t[0], t[1], ''); } }
+      } else if (id === 'cover') { const d = qd.find(d => d[0] === 7); if (d) { const t = markerTip(7, true); add(id, 'dest', d[1], d[2], d[3], 7, false, t[0], t[1], ''); } }
+      else if (id === 'spring') add(id, 'site', M.P.spring[0], M.P.spring[1], 0, 0, false, 'The dig', 'Keep the dig clear and stand near it.', (+P.dg || 0) + '%');
+      else if (id === 'fire') add(id, 'site', P.sm ? P.sm[0] : M.P.forge[0], P.sm ? P.sm[1] : M.P.forge[1], 0, 0, false, 'The Smith', 'Guard the Smith while the forge catches.', (+P.fp || 0) + '%');
+      else if (id === 'gate') { const ct = nearestOf(P.ct || [], hx, hy, o => !o[5]); if (ct) add(id, 'site', ct[1], ct[2], 0, 0, false, 'A supply cart', 'Walk beside the carts as they climb the road.', ''); else { const g = FoundingArt.GATE; add(id, 'site', g.x, g.y, 0, 0, false, 'The gate', 'The carts are bound for the gate.', ''); } }
+      else if (id === 'road') {
+        const planted = Array.isArray(P.posts) ? P.posts : []; let best = null, bd = 1e12;
+        FoundingArt.POST_SLOTS.forEach((s, i) => { if (planted.includes(i)) return; const d = (s[0] - hx) * (s[0] - hx) + (s[1] - hy) * (s[1] - hy); if (d < bd) { bd = d; best = s; } });
+        if (best) add(id, 'site', best[0], best[1], 0, 0, false, 'A lantern post', 'Stand at the marked place to set a post.', planted.length + ' set');
+      }
+    }
+    if (LAYERS.length) lay('qfocus', out, my);
+    return out;
+  }
+  function drawFocusMark(c, f, full, hov) {
+    const z = clamp(1 / S.cam.zoom, 0.85, 1.4), x = f.x, y = f.y, pick = f.step === 'pick';
+    c.save();
+    if (f.step === 'dest' && f.R > 0 && full) {   // the ring to bring it into: still, only drawn when near
+      const my = me(), inside = !!my && Math.hypot(my.x - x, my.y - y) < f.R;
+      c.setLineDash([10, 9]); ell(c, x, y, f.R, f.R * 0.9, 0, `rgba(240,214,140,${inside ? 0.09 : 0.03})`, `rgba(240,214,140,${inside ? 0.7 : 0.4})`, 1.6); c.setLineDash([]);
+    }
+    const rr = (pick ? 15 : 12) * z;
+    ell(c, x, y + 4, rr * 1.3, rr * 0.6, 0, null, 'rgba(0,0,0,.4)', 3.2 * z);
+    ell(c, x, y + 4, rr * 1.3, rr * 0.6, 0, 'rgba(240,214,140,.05)', `rgba(240,214,140,${hov ? 0.95 : full ? 0.75 : 0.55})`, 1.4 * z);
+    const py = y - (pick ? 30 : 22) * z, s = (hov ? 5.6 : 4.6) * z;
+    c.beginPath(); c.moveTo(x, py - s * 1.2); c.lineTo(x + s, py); c.lineTo(x, py + s * 1.2); c.lineTo(x - s, py); c.closePath();
+    c.fillStyle = hov ? '#f6e3a8' : 'rgba(236,208,140,.92)'; c.fill(); c.strokeStyle = 'rgba(10,8,6,.85)'; c.lineWidth = 1.2; c.stroke();
+    if (full) {
+      c.textAlign = 'left'; c.lineJoin = 'round'; c.strokeStyle = 'rgba(0,0,0,.85)'; c.lineWidth = 3.2; const fs = 11.5 * z;
+      c.font = `bold ${fs}px system-ui`; c.strokeText(f.title, x + 11 * z, py + 4 * z); c.fillStyle = '#f3dfa4'; c.fillText(f.title, x + 11 * z, py + 4 * z);
+      if (f.sub) { c.font = `${fs * 0.95}px system-ui`; c.strokeText(f.sub, x + 11 * z, py + 4 * z + fs * 1.15); c.fillStyle = '#d6ccb7'; c.fillText(f.sub, x + 11 * z, py + 4 * z + fs * 1.15); }
+    }
+    c.restore();
+  }
   function drawQuestMarkers(c) {
-    const P = S.props, my = me(), t = S.T, m = S.mouse; let best = 1e9;
+    const P = S.props || {}, my = me(), t = S.T, m = S.mouse; let best = 1e9;
     S.tipTxt = null;
-    const qd = P.qd, qo = P.qo;
+    const qd = P.qd, qo = P.qo, F = S.qf || [];
+    // the things themselves, plain: the delivery places' own pieces (the Words' block, the capstone) when near, and the loose goods
     if (qd) for (let i = 0; i < qd.length; i++) {
-      const d = qd[i], code = d[0], x = d[1], y = d[2], R = d[3], inside = !!my && Math.hypot(my.x - x, my.y - y) < R;
-      c.save(); c.setLineDash([10, 9]); c.lineDashOffset = -t * 10; c.lineWidth = 2;
-      ell(c, x, y, R, R * 0.9, 0, `rgba(240,214,140,${inside ? 0.1 : 0.04})`, `rgba(240,214,140,${inside ? 0.85 : 0.5})`, 2);
-      c.setLineDash([]);
-      const pr = code === 6 ? +P.carved || 0 : code === 7 ? +P.capstone || 0 : -1;
-      if (pr >= 0) {
+      const d = qd[i], code = d[0], x = d[1], y = d[2], R = d[3];
+      if (code !== 6 && code !== 7) continue;
+      const hov = F.some(f => f.id === S.qhover && f.code === code);
+      if (!hov && !(my && Math.hypot(my.x - x, my.y - y) < R + 360)) continue;
+      const pr = code === 6 ? +P.carved || 0 : +P.capstone || 0;
+      if (code === 6) { c.fillStyle = '#9a9488'; c.strokeStyle = OUT; c.lineWidth = 1.5; c.fillRect(x - 11, y - 12, 22, 24); c.strokeRect(x - 11, y - 12, 22, 24); c.strokeStyle = 'rgba(40,36,30,.7)'; c.lineWidth = 1.3; for (let k = 0; k < 4; k++) { c.beginPath(); c.moveTo(x - 7, y - 7 + k * 5.5); c.lineTo(x + 7 - (k === 3 ? 6 : 0), y - 7 + k * 5.5); c.stroke(); } }
+      else { ell(c, x, y, 17, 13, 0, '#a39e90', OUT, 2); ell(c, x - 2, y - 2, 11, 7.5, 0, '#bcb6a6'); circ(c, x + 1, y, 3, '#4a463f'); }
+      if (pr > 0 && pr < 1) {
         ell(c, x, y, R * 0.62, R * 0.56, 0, null, 'rgba(0,0,0,.5)', 6); c.strokeStyle = '#e6c98a'; c.lineWidth = 4.5; c.beginPath(); c.ellipse(x, y, R * 0.62, R * 0.56, 0, -PI / 2, -PI / 2 + TAU * clamp(pr, 0, 1)); c.stroke();
         c.fillStyle = '#f3dfa4'; c.font = 'bold 11px system-ui'; c.textAlign = 'center'; c.fillText(Math.round(pr * 100) + '%', x, y + R * 0.62 + 18);
       }
-      const bob = Math.sin(t * 2.4 + i) * 2;
-      if (code >= 2 && code <= 5) drawItem(c, code, x, y - 4, 1.7, code === 3 || code === 5 ? 0 : 0);
-      else if (code === 6) { c.fillStyle = '#9a9488'; c.strokeStyle = OUT; c.lineWidth = 1.5; c.fillRect(x - 11, y - 12, 22, 24); c.strokeRect(x - 11, y - 12, 22, 24); c.strokeStyle = 'rgba(40,36,30,.7)'; c.lineWidth = 1.3; for (let k = 0; k < 4; k++) { c.beginPath(); c.moveTo(x - 7, y - 7 + k * 5.5); c.lineTo(x + 7 - (k === 3 ? 6 : 0), y - 7 + k * 5.5); c.stroke(); } }
-      else if (code === 7) { ell(c, x, y, 17, 13, 0, '#a39e90', OUT, 2); ell(c, x - 2, y - 2, 11, 7.5, 0, '#bcb6a6'); circ(c, x + 1, y, 3, '#4a463f'); }
-      c.fillStyle = '#e6c98a'; c.beginPath(); c.moveTo(x - 6, y - 30 + bob); c.lineTo(x + 6, y - 30 + bob); c.lineTo(x, y - 21 + bob); c.closePath(); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1; c.stroke();
-      c.restore();
-      const dd = Math.hypot(m.wx - x, m.wy - y); if (dd < R && dd < best) { best = dd; S.tipTxt = markerTip(code, true); }
     }
     if (qo) for (let i = 0; i < qo.length; i++) {
       const q = qo[i], code = q[0], x = q[1], y = q[2];
-      if (code === 8) {
-        if (!my || (my.f & FLAG.BRAND) || Math.hypot(my.x - x, my.y - y) > 460) continue;
-        c.save(); c.globalAlpha = 0.85; c.fillStyle = 'rgba(20,16,10,.7)'; c.strokeStyle = '#8a6a34'; c.lineWidth = 1.2; circ(c, x, y - 64, 11, 'rgba(20,16,10,.7)', '#8a6a34', 1.2); c.restore();
+      if (code === 8) {   // a camp fire to take a brand from: only while the Watch-Fires are the work, and close by
+        const wf = S.q.find(r => r[0] === 'watchfires');
+        if (!wf || wf[1] !== 1 || !my || (my.f & FLAG.BRAND) || Math.hypot(my.x - x, my.y - y) > 320) continue;
+        c.save(); c.globalAlpha = 0.85; circ(c, x, y - 64, 11, 'rgba(20,16,10,.7)', '#8a6a34', 1.2); c.restore();
         c.save(); c.translate(x, y - 64); c.scale(0.7, 0.7); c.lineCap = 'round'; c.strokeStyle = '#7a5530'; c.lineWidth = 2.4; c.beginPath(); c.moveTo(0, 7); c.lineTo(0, -4); c.stroke(); flame(c, 0, -3, 4.6, t, 1); c.restore();
         const dd = Math.hypot(m.wx - x, m.wy - (y - 64)); if (dd < 16 && dd < best) { best = dd; S.tipTxt = markerTip(8, false); }
         continue;
       }
-      const bob = Math.sin(t * 3 + i * 1.7) * 2.2;
-      c.save(); ell(c, x, y + 6, 22, 9 + Math.sin(t * 2) * 1, 0, 'rgba(240,214,140,.06)', 'rgba(240,214,140,.6)', 1.6);
-      drawItem(c, code, x, y - 4 - bob, 1.5, 0);
-      c.fillStyle = '#e6c98a'; c.beginPath(); c.moveTo(x - 5.5, y - 34 - bob); c.lineTo(x + 5.5, y - 34 - bob); c.lineTo(x, y - 26 - bob); c.closePath(); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1; c.stroke();
-      if (q[3] > 1) { c.fillStyle = '#f3dfa4'; c.strokeStyle = 'rgba(0,0,0,.85)'; c.lineWidth = 3; c.font = 'bold 12px system-ui'; c.textAlign = 'left'; c.strokeText('x' + q[3], x + 14, y + 4); c.fillText('x' + q[3], x + 14, y + 4); }
-      c.restore();
-      const dd = Math.hypot(m.wx - x, m.wy - (y - 10)); if (dd < 26 && dd < best) { best = dd; S.tipTxt = markerTip(code, false); }
+      drawItem(c, code, x, y - 4, 1.4, 0);
+    }
+    // the markers: one per active quest
+    for (const f of F) {
+      const dh = my ? Math.hypot(my.x - f.x, my.y - f.y) : 1e9, dm = Math.hypot(m.wx - f.x, m.wy - f.y), hov = S.qhover === f.id;
+      const full = hov || dh < 300 || dm < 190;
+      drawFocusMark(c, f, full, hov);
+      const reach = f.step === 'dest' && f.R > 0 ? f.R : 30;
+      if (f.tip && dm < reach && dm < best) { best = dm; S.tipTxt = [f.title, f.tip]; }
     }
   }
   function drawCounts(c) {
@@ -1410,7 +1421,7 @@ const Founding = (() => {
     if (F & FLAG.TAUNT) { c.fillStyle = '#ffe08a'; c.font = 'bold 13px system-ui'; c.textAlign = 'center'; c.fillText('!', u.x, u.y - r - 12 + Math.sin(t * 10) * 1.5); }
     if (F & FLAG.MARK) {
       const k = eb((t - (u.markT0 || (u.markT0 = t))) * 3); c.save(); c.translate(u.x, u.y - r - 14 - Math.sin(t * 5) * 1.5); c.scale(k, k); c.fillStyle = '#ffcf6a'; c.strokeStyle = '#000'; c.lineWidth = 1.2;
-      c.beginPath(); c.moveTo(-6, -4); c.lineTo(0, 3); c.lineTo(6, -4); c.lineTo(0, 8); c.closePath(); c.fill(); c.stroke(); c.restore(); ell(c, u.x, u.y, r + 7, (r + 7) * 0.9, 0, null, 'rgba(255,200,90,.7)', 1.8);
+      c.beginPath(); c.moveTo(-6, -4); c.lineTo(0, 3); c.lineTo(6, -4); c.lineTo(0, 8); c.closePath(); c.fill(); c.stroke(); c.restore(); Fx.markReticle(c, u, t);
     } else u.markT0 = 0;
     if (F & FLAG.VULN) ell(c, u.x, u.y, r + 4, (r + 4) * 0.9, 0, null, `rgba(255,70,60,${0.5 + 0.3 * Math.sin(t * 8)})`, 2);
     if (F & FLAG.BURN) { for (let i = 0; i < 2; i++) flame(c, u.x + Math.sin(t * 7 + i * 3) * r * 0.5, u.y - r * 0.2 + i * 3, 5 + r * 0.12, t + i, 0.9); }
@@ -1468,37 +1479,21 @@ const Founding = (() => {
     if (S.T < z.seen) return;
     const t = S.T, left = zleft(z), age = t - z.seen;
     switch (z.kind) {
-      case ZONE.SANCT: {
-        const R = z.a, k = eo(age / 0.5), f = left < 0.6 ? left / 0.6 : 1, Rr = R * k;
-        c.save(); c.globalAlpha = 0.9 * f; glowAt(c, z.x, z.y, Rr * 1.05, '255,225,140', 0.35 * f, true);
-        ell(c, z.x, z.y, Rr, Rr, 0, 'rgba(255,236,170,.10)', 'rgba(255,236,170,.85)', 2.5);
-        c.save(); c.translate(z.x, z.y); c.rotate(t * 0.5); c.strokeStyle = 'rgba(255,236,170,.5)'; c.lineWidth = 1.5; for (let i = 0; i < 6; i++) { c.rotate(TAU / 6); c.beginPath(); c.moveTo(Rr * 0.45, 0); c.lineTo(Rr * 0.85, 0); c.stroke(); } c.restore();
-        c.restore(); break;
-      }
+      case ZONE.SANCT: Fx.zone.sanct(c, z); break;
       case ZONE.BANNER: {
         const R = z.a, f = left < 0.5 ? left / 0.5 : 1, e = eo(Math.min(1, age / 0.4));
         c.save(); c.globalAlpha = f; ell(c, z.x, z.y, R * e, R * 0.9 * e, 0, 'rgba(255,220,120,.08)', 'rgba(255,220,120,.7)', 2);
-        c.save(); c.translate(z.x, z.y); c.rotate(t * 0.4); c.strokeStyle = 'rgba(255,220,120,.35)'; c.lineWidth = 1.5; for (let i = 0; i < 8; i++) { c.rotate(TAU / 8); c.beginPath(); c.moveTo(R * 0.78, 0); c.lineTo(R * 0.95, 0); c.stroke(); } c.restore(); c.restore(); break;
+        c.save(); c.translate(z.x, z.y); c.rotate(t * 0.4); c.strokeStyle = 'rgba(255,220,120,.35)'; c.lineWidth = 1.5; for (let i = 0; i < 8; i++) { c.rotate(TAU / 8); c.beginPath(); c.moveTo(R * 0.78, 0); c.lineTo(R * 0.95, 0); c.stroke(); } c.restore(); c.restore(); Fx.zone.bannerGround(c, z, f, e); break;
       }
       case ZONE.BURN: case ZONE.CRATER: {
         const R = z.a, f = left < 0.8 ? left / 0.8 : 1, crater = R > 60;
-        if (crater) ell(c, z.x, z.y, R * 0.7, R * 0.62, 0, `rgba(25,10,6,${0.5 * f})`, `rgba(255,100,30,${0.6 * f})`, 2); else ell(c, z.x, z.y, R, R * 0.9, 0, `rgba(255,100,30,${0.1 * f})`, `rgba(255,120,40,${0.35 * f})`, 1.5);
-        const n = crater ? 9 : clamp(Math.round(R / 14), 2, 6);
+        if (crater) Fx.zone.craterZone(c, z, f); else Fx.zone.burnBase(c, z, f);
+        const n = crater ? 7 : clamp(Math.round(R / 14), 2, 6);
         for (let i = 0; i < n; i++) { const a = i * 2.4 + z.id, d = Math.sqrt((i + 0.5) / n) * R * 0.8; flame(c, z.x + Math.cos(a) * d, z.y + Math.sin(a) * d * 0.85, 9, t + i, f); }
         break;
       }
-      case ZONE.FUSE: {
-        const R = z.a, kk = clamp(1 - left / Math.max(0.1, z.b), 0, 1), e = eo(kk);
-        ell(c, z.x, z.y, R, R, 0, `rgba(255,120,30,${0.05 + 0.2 * ei(kk)})`, `rgba(255,160,60,${0.5 + 0.5 * Math.sin(t * 18) * 0.3})`, 2.5);
-        ell(c, z.x, z.y, R * e, R * e, 0, null, 'rgba(255,200,90,.85)', 2);
-        c.save(); c.translate(z.x, z.y); c.rotate(t * 3); c.strokeStyle = 'rgba(255,170,60,.6)'; c.lineWidth = 1.5; for (let i = 0; i < 5; i++) { c.rotate(TAU / 5); c.beginPath(); c.moveTo(R * 0.3, 0); c.lineTo(R * 0.9 * e, 0); c.stroke(); } c.restore();
-        break;
-      }
-      case ZONE.METEOR: {
-        const R = z.a, kk = clamp(1 - left / Math.max(0.1, z.b), 0, 1);
-        ell(c, z.x, z.y, R * eo(kk), R * eo(kk), 0, `rgba(40,5,0,${0.1 + 0.35 * kk})`, `rgba(255,90,30,${0.4 + 0.5 * kk})`, 2.5); ell(c, z.x, z.y, R * 0.25 * kk, R * 0.25 * kk, 0, `rgba(255,120,40,${0.5 * kk})`);
-        break;
-      }
+      case ZONE.FUSE: Fx.zone.fuse(c, z); break;
+      case ZONE.METEOR: Fx.zone.meteorGround(c, z); break;
       case ZONE.TRAP: {
         const armed = z.b > 0, pop = eb(Math.min(1, age / 0.8));
         c.save(); c.translate(z.x, z.y); ell(c, 1, 3, 9, 5, 0, 'rgba(0,0,0,.4)');
@@ -1509,6 +1504,7 @@ const Founding = (() => {
       }
       case ZONE.TRAIL: {
         const x2 = z.a, y2 = z.b, f = left < 0.6 ? left / 0.6 : 1, n = Math.max(2, Math.floor(Math.hypot(x2 - z.x, y2 - z.y) / 16));
+        Fx.zone.trailBase(c, z, f);
         for (let i = 0; i <= n; i++) { const k = i / n; flame(c, lerp(z.x, x2, k), lerp(z.y, y2, k), 10, t + i * 0.7, f); }
         break;
       }
@@ -1521,11 +1517,7 @@ const Founding = (() => {
         for (let i = 0; i < 16; i++) { const a = i * 2.399 + z.id, d = Math.sqrt((i + 0.5) / 16) * R * 0.88, wx = z.x + Math.cos(a) * d, wy = z.y + Math.sin(a) * d * 0.9 + Math.sin(t * 1.4 + i) * 2; c.beginPath(); c.moveTo(wx - 7, wy); c.quadraticCurveTo(wx, wy - 2.5, wx + 7, wy); c.stroke(); }
         break;
       }
-      case ZONE.VOLLEY: {
-        const R = z.a, f = left < 0.6 ? left / 0.6 : eo(Math.min(1, age / 0.4));
-        ell(c, z.x, z.y, R, R, 0, `rgba(255,235,160,${0.06 * f})`, `rgba(255,235,160,${0.55 * f})`, 2);
-        break;
-      }
+      case ZONE.VOLLEY: Fx.zone.volleyZone(c, z); break;
     }
   }
   // pieces that stand up and are sorted with the units
@@ -1541,7 +1533,8 @@ const Founding = (() => {
       c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.lineTo(bx, by - h); c.lineTo(ax, ay - h); c.closePath(); c.fill(); c.stroke();
       c.fillStyle = '#c9a45c'; c.beginPath(); c.moveTo(ax, ay - h); c.lineTo(bx, by - h); c.lineTo(bx, by - h + 3.5); c.lineTo(ax, ay - h + 3.5); c.closePath(); c.fill();
     }
-    glowAt(c, z.x, z.y - 8, len * 0.55, '255,225,140', 0.18 * k);
+    glowAt(c, z.x, z.y - 8, len * 0.55, '255,225,140', 0.14 * k);
+    Fx.zone.wallStand(c, z, k, 1, h, x1, y1, ux, uy);
     c.fillStyle = '#000a'; c.fillRect(z.x - 26, z.y + 12, 52, 4); c.fillStyle = '#8fb0e8'; c.fillRect(z.x - 25, z.y + 13, 50 * clamp(z.c / 100, 0, 1), 2); c.restore();
   }
   function drawBannerPole(c, z) {
@@ -1551,34 +1544,14 @@ const Founding = (() => {
     c.strokeStyle = '#6b4e2c'; c.lineWidth = 3; c.beginPath(); c.moveTo(0, 2); c.lineTo(0, ph - 14); c.stroke();
     const wv = Math.sin(S.T * 5) * 3; c.fillStyle = '#3f5f93'; c.strokeStyle = '#c9a45c'; c.lineWidth = 1.8;
     c.beginPath(); c.moveTo(0, ph - 14); c.quadraticCurveTo(12, ph - 18 + wv, 24 + wv, ph - 12); c.lineTo(20 + wv, ph - 4); c.quadraticCurveTo(10, ph - 8 + wv, 0, ph - 2); c.closePath(); c.fill(); c.stroke();
-    circ(c, 0, ph - 15, 2.6, '#e6c98a'); c.restore();
+    circ(c, 0, ph - 15, 2.6, '#e6c98a'); c.restore(); Fx.zone.banPole(c, z, ph, f);
   }
-  function drawMeteorBody(c, z) {
-    if (S.T < z.seen) return;
-    const left = zleft(z), kk = clamp(1 - left / Math.max(0.1, z.b), 0, 1); if (kk < 0.55) return;
-    const f = ei((kk - 0.55) / 0.45), sc = z.a / 120, mx = z.x + 170 * sc * (1 - f), my = z.y - 520 * sc * (1 - f);
-    for (let i = 1; i <= 7; i++) { const q = Math.max(0, f - i * 0.035), tx = z.x + 170 * sc * (1 - q), ty = z.y - 520 * sc * (1 - q); glowAt(c, tx, ty, (26 - i * 2.4) * sc, '255,130,40', 0.5 - i * 0.06); }
-    circ(c, mx, my, 17 * sc, '#4a2a1c', '#ff8a2a', 3); glowAt(c, mx, my, 44 * sc, '255,150,60', 0.9);
-  }
-  function drawVolleyArrows(c) {
-    for (const a of S.volley) {
-      if (a.t > 0.65) continue; const k = a.t / 0.4;
-      if (!a.done) { ell(c, a.x, a.y, 6 * k, 3.5 * k, 0, 'rgba(255,235,160,.35)'); const f2 = ei(k), ay = a.y - 380 * (1 - f2); c.strokeStyle = 'rgba(255,245,200,.95)'; c.lineWidth = 2; c.beginPath(); c.moveTo(a.x - 2, ay - 16); c.lineTo(a.x, ay); c.stroke(); glowAt(c, a.x, ay, 8, '255,230,140', 0.8); }
-      else { const q = (a.t - 0.4) / 0.25; c.strokeStyle = `rgba(255,245,200,${1 - q})`; c.lineWidth = 2; c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(a.x - 1, a.y - 8 * (1 - q)); c.stroke(); }
-    }
-  }
+  function drawMeteorBody(c, z) { if (S.T < z.seen) return; Fx.zone.meteorBody(c, z); }
+  function drawVolleyArrows(c) { Fx.zone.volleyArrows(c, S.volley); }
 
   function drawProj(c, p) {
-    if (p.homing) {
-      const z = p.arc ? Math.sin(clamp(p.prog || 0, 0, 1) * PI) * 16 : 0, n = p.trail.length; c.save(); c.lineCap = 'round';
-      if (p.arc) {
-        ell(c, p.x, p.y + 2, 3, 1.6, 0, 'rgba(0,0,0,.3)'); c.strokeStyle = 'rgba(235,228,205,.7)'; c.lineWidth = 1.6;
-        const bx = p.x - Math.cos(p.ang || 0) * 12, by = p.y - Math.sin(p.ang || 0) * 12 - z; c.beginPath(); c.moveTo(bx, by); c.lineTo(p.x, p.y - z); c.stroke(); c.fillStyle = '#fff'; c.beginPath(); c.arc(p.x, p.y - z, 1.8, 0, TAU); c.fill();
-      } else { glowAt(c, p.x, p.y, 12, p.col, 0.9); for (let i = 0; i < n; i++) { const q = p.trail[i]; glowAt(c, q.x, q.y, 3 + i * 0.7, p.col, i / n * 0.5); } circ(c, p.x, p.y, 2.6, '#fff'); }
-      c.restore(); return;
-    }
-    for (let i = 0; i < p.trail.length; i++) { const q = p.trail[i], k = i / p.trail.length; glowAt(c, q.x, q.y, p.sz * (0.4 + k * 0.7), '255,120,30', k * 0.6); }
-    glowAt(c, p.x, p.y, p.sz * 2.6, '255,160,60', 0.9); circ(c, p.x, p.y, p.sz * 0.7, '#ff8a2a'); circ(c, p.x, p.y, p.sz * 0.38, '#fff0b0');
+    if (p.homing) { if (p.hero === 'ranger') Fx.arrow(c, p); else if (p.hero === 'cleric') Fx.holyBolt(c, p); else Fx.emberBolt(c, p); return; }
+    Fx.fireball(c, p);
   }
   function drawPart(c, p) {
     const k = p.t / p.dur, a = 1 - ei(k); c.save(); c.globalAlpha = clamp(a, 0, 1);
@@ -1778,7 +1751,7 @@ const Founding = (() => {
     c.font = '10px system-ui'; c.textAlign = 'center';
     for (const mk of marks) {
       const d = my ? Math.hypot(my.x - mk.x, my.y - mk.y) : 1e9;
-      const show = mk.active || ((mk.id === 'shop') && d < 700) || (mk.id === 'forge' && d < 700 && (S.props.fg | 0) === 2);
+      const show = ((mk.id === 'shop') && d < 700) || (mk.id === 'forge' && d < 700 && (S.props.fg | 0) === 2);
       if (!show) continue;
       let label = mk.label; if (mk.id === 'shop') label = 'Supplies  [' + keyLbl('fdTent') + ']'; else if (mk.id === 'forge') label = 'The Forge  [' + keyLbl('fdForge') + ']';
       const w = c.measureText(label).width + 14, y = mk.y - 70 - (mk.active ? Math.sin(t * 3) * 3 : 0);
@@ -1789,13 +1762,14 @@ const Founding = (() => {
     }
   }
   function drawEdgeArrows(ctx, state) {
-    const marks = FoundingArt.marks(state), cam = S.cam, w = W(), h = H(), k = ctx.canvas.width / w;
+    const cam = S.cam, w = W(), h = H(), k = ctx.canvas.width / w;
     ctx.save(); ctx.setTransform(k, 0, 0, k, 0, 0);
-    for (const mk of marks) {
-      if (!mk.active) continue; const sx = w / 2 + (mk.x - cam.x) * cam.zoom, sy = h / 2 + (mk.y - cam.y) * cam.zoom;
+    for (const f of S.qf || []) {
+      if (!(f.carry || f.id === S.qhover)) continue;   // only what you are carrying for, or the quest you are pointing at in the tracker
+      const sx = w / 2 + (f.x - cam.x) * cam.zoom, sy = h / 2 + (f.y - cam.y) * cam.zoom;
       if (sx > 30 && sx < w - 30 && sy > 70 && sy < h - 130) continue;
       const ang = Math.atan2(sy - h / 2, sx - w / 2), ex = clamp(w / 2 + Math.cos(ang) * 4000, 40, w - 40), ey = clamp(h / 2 + Math.sin(ang) * 4000, 90, h - 150);
-      ctx.save(); ctx.translate(ex, ey); ctx.rotate(ang); ctx.fillStyle = 'rgba(230,201,138,.9)'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-6, -7); ctx.lineTo(-3, 0); ctx.lineTo(-6, 7); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.translate(ex, ey); ctx.rotate(ang); ctx.fillStyle = 'rgba(236,208,140,.85)'; ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-5, -6); ctx.lineTo(-2, 0); ctx.lineTo(-5, 6); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
     }
     ctx.restore();
   }
@@ -1866,7 +1840,7 @@ const Founding = (() => {
     const ctx = dep.ctx, cam = S.cam;
     let sx = 0, sy = 0; if (S.shkT > 0) { const k = eo(S.shkT / (S.shkD || 0.25)) * S.shk; sx = (Math.random() - 0.5) * 2 * k; sy = (Math.random() - 0.5) * 2 * k; }
     const vc = { x: cam.x + sx / cam.zoom, y: cam.y + sy / cam.zoom, zoom: cam.zoom, w: W(), h: H() };
-    const state = artState();
+    const state = artState(); qFocus();
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     FoundingArt.drawGround(ctx, vc, state, S.T);
     ctx.save(); wt(ctx, vc);
@@ -1915,10 +1889,10 @@ const Founding = (() => {
     if (S.fogOn && S.fog) g.drawImage(S.fog.fog, 0, 0, w, h);
     const state = { props: S.props, units: [], quests: S.q };
     if (LAYERS.length) lay('mini', g, kx, ky);
-    for (const mk of FoundingArt.marks(state)) if (mk.active) { const x = mk.x * kx, y = mk.y * ky, p = 0.6 + 0.4 * Math.sin(S.T * 4); g.fillStyle = '#e6c98a'; g.strokeStyle = '#000'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y - 5 - p); g.lineTo(x + 4, y); g.lineTo(x, y + 5 + p); g.lineTo(x - 4, y); g.closePath(); g.fill(); g.stroke(); }
-    const PP = S.props;
-    if (PP.qd) for (const q of PP.qd) { const x = q[1] * kx, y = q[2] * ky; g.strokeStyle = '#f0d68c'; g.lineWidth = 1.6; g.beginPath(); g.arc(x, y, 5, 0, TAU); g.stroke(); g.fillStyle = '#f0d68c'; g.beginPath(); g.arc(x, y, 1.4, 0, TAU); g.fill(); }
-    if (PP.qo) for (const q of PP.qo) if (q[0] !== 8) { const x = q[1] * kx, y = q[2] * ky; g.fillStyle = '#f0d68c'; g.strokeStyle = '#000'; g.lineWidth = 1; g.fillRect(x - 3, y - 3, 6, 6); g.strokeRect(x - 3, y - 3, 6, 6); }
+    for (const f of S.qf || []) {   // one small mark per active quest: its current step
+      const x = f.x * kx, y = f.y * ky, hv = S.qhover === f.id, r = hv ? 4.6 : 3.4; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.55)'; g.beginPath(); g.arc(x, y, r, 0, TAU); g.stroke();
+      g.lineWidth = 1.4; g.strokeStyle = hv ? '#fff1b8' : '#f0d68c'; g.beginPath(); g.arc(x, y, r, 0, TAU); g.stroke(); g.fillStyle = '#f0d68c'; g.beginPath(); g.arc(x, y, 1.2, 0, TAU); g.fill();
+    }
     for (const u of S.units.values()) {
       const x = u.x * kx, y = u.y * ky;
       if (u.kind === 'e') { if ((u.f & FLAG.HIDDEN) || u.fogT === 0) continue; if (u.def.inert) { g.fillStyle = '#7ab8d8'; g.beginPath(); g.arc(x, y, 3, 0, TAU); g.fill(); continue; } if (u.f & FLAG.UNDER) { g.strokeStyle = '#d9a05a'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, 4, 0, TAU); g.stroke(); continue; } g.fillStyle = (u.f & FLAG.BOSS) ? '#ff8a2a' : (u.f & FLAG.ELITE) ? '#ff5a3a' : '#d84a3a'; const r = (u.f & FLAG.BOSS) ? 4.5 : (u.f & FLAG.ELITE) ? 3 : 1.7; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
@@ -2025,7 +1999,7 @@ const Founding = (() => {
 
   // what ui.js may read and call
   const api = {
-    D, M, FLAG, SKILL_ICON, state: () => S, me, send, say, snd, clsOf, roleColor, heroIdx, leave, drawMini, miniTo, pressSkill, learn, canLearn, keyLabel, cdLeft, charges, hasUp, myStat, tryRecall, rcLeft, pingAt: sendPing, isRecalling: () => !!S && S.rc.has(S.myId),
+    D, M, FLAG, SKILL_ICON, state: () => S, me, send, say, snd, clsOf, roleColor, heroIdx, leave, drawMini, miniTo, pressSkill, learn, canLearn, keyLabel, cdLeft, charges, hasUp, myStat, tryRecall, rcLeft, pingAt: sendPing, isRecalling: () => !!S && S.rc.has(S.myId), hoverQuest: id => { if (S) S.qhover = id || null; },
     get dep() { return dep; }, get sim() { return sim; }, result: () => lastResult, isActive: () => active, tryShop, tryForge,
   };
 

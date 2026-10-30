@@ -32,7 +32,7 @@ const FoundingSim = (() => {
   const CARRY_CODE = { warm: 1, jar: 2, bier: 3, stone: 4, timber: 5 };   // fds hero row [11], fdp cr
   // the lantern post slots along the North Road, camp end first (the same list the map art draws: FoundingArt.POST_SLOTS)
   const POST_SLOTS = [];
-  { const L1 = M.LANES[0].path, tot = L1[L1.length - 1][2]; let k = 0; for (let s = tot - 100; s > 280; s -= 118, k++) { let i = L1.length - 1; while (i > 0 && L1[i][2] > s) i--; const p = L1[i], side = k % 2 ? -1 : 1; POST_SLOTS.push([Math.round(p[0] - p[4] * side * 84), Math.round(p[1] + p[3] * side * 84), side]); } }
+  { const L1 = M.LANES[0].path, tot = L1[L1.length - 1][2]; let k = 0; for (let s = tot - 180; s > 560; s -= 236, k++) { let i = L1.length - 1; while (i > 0 && L1[i][2] > s) i--; const p = L1[i], side = k % 2 ? -1 : 1; POST_SLOTS.push([Math.round(p[0] - p[4] * side * 84), Math.round(p[1] + p[3] * side * 84), side]); } }
   const FLOOD_R = [0, 190, 320, 450];   // the Mirebull's flood by level
 
   class FoundingSim {
@@ -41,6 +41,7 @@ const FoundingSim = (() => {
       this.rng = o.rng || mulberry(o.seed == null ? 1 : o.seed);
       this.practice = !!o.practice;
       this.noSpawn = !!o.noSpawn;   // test hook: waves count but bring no enemies
+      this.autoLoot = !!o.autoLoot;   // headless pilots (tests, the tuner) have no hands: drops go straight to a hero with room, as before sim-world.js put them on the ground
       this.players = []; for (const p of (o.players || []).slice(0, 4)) this.players.push({ id: p.id, name: p.name || 'Hero', hero: null, ready: false });
       this.st = 'camp'; this.time = 0; this.tickN = 0; this.wave = 0; this.nextWaveAt = -1;
       this.heroes = []; this.hmap = {}; this.enemies = []; this.emap = new Map(); this.eid = 0; this.tid = 0; this.zid = 0; this.uid = 0;
@@ -102,9 +103,9 @@ const FoundingSim = (() => {
     // The Road: the long way round (the North Road to the stone gate site, west round the hill, back to the road by the junction)
     longRoute() {
       if (this.routeLong) return this.routeLong;
-      const L = this.paths[0], pts = []; for (let i = 4; i < L.length && L[i][2] < 560; i += 3) pts.push([L[i][0], L[i][1]]);
+      const L = this.paths[0], pts = []; for (let i = 4; i < L.length && L[i][2] < 1120; i += 3) pts.push([L[i][0], L[i][1]]);
       let cx = pts[pts.length - 1][0], cy = pts[pts.length - 1][1];
-      for (const w of [[960, 800], [820, 1250], [1120, 1700], [1560, 1500]]) { const wp = this.nearestWalkable(w[0], w[1]); for (const q of this.findPath(cx, cy, wp[0], wp[1])) pts.push(q); cx = wp[0]; cy = wp[1]; }
+      for (const w of [[1920, 1600], [1640, 2500], [2240, 3400], [3120, 3000]]) { const wp = this.nearestWalkable(w[0], w[1]); for (const q of this.findPath(cx, cy, wp[0], wp[1])) pts.push(q); cx = wp[0]; cy = wp[1]; }
       this.routeLong = pts; return pts;
     }
     nearestWalkable(x, y, rad = 14) {
@@ -188,8 +189,8 @@ const FoundingSim = (() => {
       this.st = 'live'; this.time = 0; this.nextWaveAt = D.WAVE_T0;
       // Day one's secrets, drawn faintly by the client (props.sec). Only the ones that belong to waves 1-6.
       // (positions are the map art's ground spots, FoundingArt.SPOTS[n - 1]; the child waits in the north-east woods)
-      const cpt = this.nearestWalkable(2960, 400);
-      this.secrets = [{ n: 1, x: 2938, y: 565, st: 0 }, { n: 3, x: 1396, y: 2121, st: 0 }, { n: 5, x: cpt[0], y: cpt[1], st: 0 }, { n: 8, x: 1478, y: 2284, st: 0 }];
+      const cpt = this.nearestWalkable(5920, 800);
+      this.secrets = [{ n: 1, x: 5876, y: 1130, st: 0 }, { n: 3, x: 2792, y: 4242, st: 0 }, { n: 5, x: cpt[0], y: cpt[1], st: 0 }, { n: 8, x: 2956, y: 4568, st: 0 }];
       for (const h of this.heroes) { this.recalc(h); h.hp = h.max; h.dirty = true; }
       this.hook('start');
       this.ev(['start', this.plist()]);
@@ -274,7 +275,7 @@ const FoundingSim = (() => {
       for (const id of D.QUEST_ORDER) { const Q = D.QUESTS[id], q = this.q[id]; if (q.st === 1 && Q.deadlineWave <= n && !Q.judgeAt) this.judge(id); }
       for (const id of D.QUEST_ORDER) if (D.QUESTS[id].offerWave === n && this.q[id].st === 0) this.offerQuest(id);
       this.hook('wave', n);
-      if (n === 11) this.addSecret(4, 2563, 1163);   // a glint in the ford, only at dawn
+      if (n === 11) this.addSecret(4, 5126, 2326);   // a glint in the ford, only at dawn
       if (n === 13) { const s = this.secrets.find(x => x.n === 4); if (s && !s.st) s.st = 2; }
       if (n === 6) { const c = this.secrets.find(s => s.n === 5); if (c) { this.child = { x: c.x, y: c.y, st: 1, path: null, pi: 0, follow: null, repathT: 0 }; this.markProps(); } }
     }
@@ -750,6 +751,7 @@ const FoundingSim = (() => {
       if (e.kind === 'damlog') this.logDown(e);
     }
     dropItem(e) {
+      if (!this.autoLoot && this.worldDrop && this.hook('drop', e)) return;   // sim-world.js: the drop lies where it fell until a hero picks it up
       const w = D.dropWeights(this.wave), tot = w.reduce((a, b) => a + b, 0), n = def => def;
       for (let k = 0; k < (e.def.drop || 1); k++) {
         let x = this.rand() * tot, rar = 0; for (; rar < 4; rar++) { if (x < w[rar]) break; x -= w[rar]; }
@@ -1280,7 +1282,7 @@ const FoundingSim = (() => {
           if (h.dead || h.carry !== H.kind || h.carryQ !== id || hyp(h.x - H.tx, h.y - H.ty) > H.toR) continue;
           if (H.plant && h.stillT < H.plant) continue;
           h.carry = null; h.carryQ = null; h.dirty = true; H.got++; this.ev(['dl', id, H.got, H.need, Math.round(H.tx), Math.round(H.ty)]);
-          if (id === 'graves') { this.graves = H.got; if (H.got === 1) this.addSecret(6, 300, 2192); }
+          if (id === 'graves') { this.graves = H.got; if (H.got === 1) this.addSecret(6, 600, 4384); }
         }
         let avail = H.left; for (const h of this.heroes) if (h.carry === H.kind && h.carryQ === id) avail++; for (const d of this.drops) if (d.q === id && !d.gone) avail++;
         if (id === 'stonegate' && this.sg) q.prog = 0.4 + 0.6 * this.sg.carve; else q.prog = (id === 'stonegate' ? 0.4 : 1) * H.got / H.need;
@@ -1308,10 +1310,10 @@ const FoundingSim = (() => {
       if (id === 'spring') { this.spring = 2; this.dig = null; }
       if (id === 'gate') { const T = D.QUEST_TUNE, n = this.carts.filter(c => c.arrived).length, hp = T.palHp * n + T.palPerExtra * (this.scaleN() - 1), p = this.paths[0][this.palIdx]; this.pal = { tk: 'pal', x: p[0], y: p[1], r: 46, hp, max: hp }; this.carts = []; }
       if (id === 'fire') this.forge = 2;
-      if (id === 'beacon') { this.beaconLit = true; this.addSecret(2, 752, 936); }
+      if (id === 'beacon') { this.beaconLit = true; this.addSecret(2, 1504, 1872); }
       if (id === 'road') this.longWay = true;
       if (id === 'graves') { this.blessing = 1; this.graves = Math.max(this.graves, this.haul.graves.got); }
-      if (id === 'stonegate') { const p = this.paths[0][this.palIdx], hp = QT.stoneGateHp + QT.stoneGatePerExtra * (this.scaleN() - 1); this.pal = { tk: 'pal', x: p[0], y: p[1], r: 46, hp, max: hp, stone: true }; this.sg = null; this.addSecret(7, 1330, 876); for (const h of this.heroes) this.page(h, 9); this.ev(['pal', 1]); }
+      if (id === 'stonegate') { const p = this.paths[0][this.palIdx], hp = QT.stoneGateHp + QT.stoneGatePerExtra * (this.scaleN() - 1); this.pal = { tk: 'pal', x: p[0], y: p[1], r: 46, hp, max: hp, stone: true }; this.sg = null; this.addSecret(7, 2660, 1716); for (const h of this.heroes) this.page(h, 9); this.ev(['pal', 1]); }
       if (id === 'roof') this.roofDone = true;
       if (id === 'cover') { this.hearthCovered = true; this.covering = false; }
       if (HAUL_IDS.includes(id)) this.clearHaul(id);

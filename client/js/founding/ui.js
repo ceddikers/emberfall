@@ -564,6 +564,9 @@ const FoundingUI = (() => {
       const d = D.QUESTS[q[0]], left = d.deadlineWave - s.wave;
       return `<div class="q act" data-q="${q[0]}"><img class="qi" alt="" draggable="false" src="${FI.quest(q[0])}"><div class="qb"><b>${esc(d.name)}</b><div class="qo">${esc(objective(s, q))}</div><div class="bar"><i style="width:${q[2]}%"></i></div></div><span class="dl${left <= 1 ? ' soon' : ''}"><small>by</small>wave ${d.deadlineWave}</span></div>`;
     }).join('') + (over.length ? '<div class="qdone">' + over.map(q => `<span class="${q[1] === 2 ? 'ok' : 'no'}" data-q="${q[0]}">${q[1] === 2 ? '&#10003;' : '&#10007;'} ${esc(D.QUESTS[q[0]].name)}</span>`).join('') + '</div>' : '');
+    // pointing at a quest's row calls out its place on the map (a larger marker and an arrow at the screen edge)
+    Q.querySelectorAll('.q.act').forEach(n => { n.addEventListener('mouseenter', () => A.hoverQuest && A.hoverQuest(n.dataset.q)); n.addEventListener('mouseleave', () => A.hoverQuest && A.hoverQuest(null)); });
+    if (A.hoverQuest) { const hv = Q.querySelector('.q.act:hover'); A.hoverQuest(hv ? hv.dataset.q : null); }   // (the rows were just rebuilt under the pointer)
     Q.querySelectorAll('.q.act').forEach(n => tip(n, () => { const d = D.QUESTS[n.dataset.q]; return `<b>${esc(d.name)}</b><em>${esc(d.giver)}</em>${esc(d.text)}<div class="fd-t-r">Done: ${esc(d.done)}</div><div class="fd-t-n">Missed: ${esc(d.missed)}</div>`; }));
     Q.querySelectorAll('.qdone span').forEach(n => tip(n, () => { const d = D.QUESTS[n.dataset.q], st = (S().q.find(q => q[0] === n.dataset.q) || [])[1]; return `<b>${esc(d.name)}</b><em>${st === 2 ? 'Done' : 'Missed'}</em>${esc(st === 2 ? d.done : d.missed)}`; }));
   }
@@ -754,5 +757,5 @@ const FoundingUI = (() => {
     if (typeof Tip !== 'undefined' && Tip.hide) Tip.hide();
   }
 
-  return { mount, unmount, update, showLobby, onLobby, onStart, onSheet, waveBanner, stepBanner, partBanner, titleCard, banner, questEvent, bossAppears, forgeResult, showEnd, openTent, openForge, closeTop, isOpen, blocking, icons: FI, itemIcon, coinImg, keyOf };
+  return { mount, unmount, update, showLobby, onLobby, onStart, onSheet, waveBanner, stepBanner, partBanner, titleCard, banner, questEvent, bossAppears, forgeResult, showEnd, openTent, openForge, closeTop, isOpen, blocking, icons: FI, itemIcon, itemDetail, coinImg, keyOf };
 })();

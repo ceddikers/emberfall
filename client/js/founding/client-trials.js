@@ -71,31 +71,31 @@ const FoundingBook = (() => {
     if (styled || typeof document === 'undefined') return; styled = true;
     const s = document.createElement('style'); s.id = 'fd-trials-css';
     s.textContent = `
-#fd-voice { position: absolute; left: 50%; bottom: 196px; transform: translate(-50%, 6px); max-width: min(560px, 86vw); padding: 7px 16px 8px; text-align: center; background: #15120fe6; border: 1px solid #5a4630; border-radius: 3px; box-shadow: 0 6px 18px #000a; opacity: 0; transition: opacity .35s, transform .35s; pointer-events: none; z-index: 5; }
+#fd-voice { position: absolute; left: 50%; bottom: 196px; transform: translate(-50%, 6px); max-width: min(580px, 86vw); padding: 8px 20px 10px; text-align: center; background: linear-gradient(#1b1713f0, #13100df0); border: 1px solid var(--fd-line); border-top-color: var(--fd-gold-dim); border-radius: 4px; box-shadow: 0 8px 22px #000b, inset 0 0 0 1px #00000080; opacity: 0; transition: opacity .35s, transform .35s; pointer-events: none; z-index: 5; }
 #fd-voice.on { opacity: 1; transform: translate(-50%, 0); }
-#fd-voice.up { bottom: auto; top: 64px; }
-#fd-voice b { display: block; font: 700 10px Cinzel, Georgia, serif; letter-spacing: .2em; text-transform: uppercase; margin-bottom: 2px; }
-#fd-voice span { display: block; font: italic 13.5px/1.4 Georgia, serif; color: #eadfc4; }
-#fd-trialchip { position: absolute; left: 50%; top: 82px; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; padding: 2px 10px; background: #15120fcc; border: 1px solid #5a4630; border-radius: 10px; font: 10.5px system-ui; letter-spacing: .04em; color: #d9b56a; z-index: 3; }
-#fd-trialchip em { font-style: normal; color: #9a8a6a; text-transform: uppercase; letter-spacing: .16em; font-size: 9px; }
-.fd-ft { margin: 0 0 12px; padding: 9px 12px; border: 1px solid #3a2a1c; border-radius: 3px; background: #0d0b0a99; text-align: center; font-size: 12.5px; color: #cfc4aa; }
-.fd-ft b { color: #e6c98a; font-weight: 600; } .fd-ft.good b { color: #9ed7a6; } .fd-ft .dim { display: block; margin-top: 3px; color: #8d8068; font-size: 11.5px; font-style: italic; }
-.fd-ft button { margin-top: 7px; background: #1b1511; color: #e6c98a; border: 1px solid #6a5232; border-radius: 3px; padding: 5px 14px; font: 12px system-ui; cursor: pointer; } .fd-ft button:hover { background: #2a2018; border-color: #a8864a; }
-#fd-book { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 60; width: min(640px, 94vw); max-height: 86vh; overflow: auto; padding: 14px 18px 18px; background: #0d0b0af6; border: 1px solid #4a3822; border-radius: 3px; box-shadow: 0 0 0 1px #000, 0 18px 44px #000d; color: #d8cdb8; font-family: system-ui, sans-serif; }
+#fd-voice.up { bottom: auto; top: 70px; }
+#fd-voice b { display: block; font: 700 11px/1.2 var(--fd-fantasy); letter-spacing: .18em; text-transform: uppercase; margin-bottom: 3px; }
+#fd-voice span { display: block; font: italic 400 16px/1.38 var(--fd-body); color: #eadfc4; }
+#fd-trialchip { position: absolute; left: 50%; top: 88px; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; padding: 2px 12px; background: #15120fd8; border: 1px solid var(--fd-gold-dim); border-radius: 10px; font: 500 13px var(--fd-body); color: #d9b56a; z-index: 3; }
+#fd-trialchip em { font-style: normal; color: var(--fd-muted); text-transform: uppercase; letter-spacing: .14em; font-size: 11px; }
+.fd-ft { margin: 0 0 14px; padding: 9px 14px; border: 1px solid var(--fd-line); border-radius: 3px; background: #0d0b0a99; text-align: center; font-size: 14px; color: #cfc4aa; }
+.fd-ft b { color: var(--fd-gold-hi); font-weight: 700; } .fd-ft.good b { color: #9ed7a6; } .fd-ft .dim { display: block; margin-top: 3px; color: var(--fd-muted); font-size: 13px; font-style: italic; }
+.fd-ft button { margin-top: 8px; padding: 5px 16px; font: 500 14px var(--fd-body); color: var(--fd-gold-hi); background: linear-gradient(#2b241b, #1d1913); border: 1px solid var(--fd-line); border-top-color: #5a4930; border-radius: 3px; cursor: pointer; transition: background .12s, border-color .12s, color .12s; } .fd-ft button:hover { background: linear-gradient(#383025, #262017); border-color: var(--fd-gold); color: #fff; }
+#fd-book { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 60; width: min(680px, 94vw); max-height: 86vh; overflow: auto; padding: 0 20px 20px; background: linear-gradient(#1b1713fa, #13100dfa); border: 1px solid var(--fd-line); border-top-color: var(--fd-gold-dim); border-radius: 4px; box-shadow: 0 0 0 1px #000, 0 18px 44px #000d, inset 0 1px 0 #ffffff0d; color: #d8cdb8; font: 400 14px/1.35 var(--fd-body); scrollbar-width: thin; scrollbar-color: #5a4630 transparent; }
 #fd-book.hidden { display: none; }
-#fd-book header { display: flex; align-items: center; gap: 12px; }
-#fd-book h3 { margin: 0; flex: 1; font: 13px Cinzel, Georgia, serif; letter-spacing: .18em; text-transform: uppercase; color: #e6c98a; }
-#fd-book .fb-count { font-size: 11px; color: #8d8068; letter-spacing: .06em; }
-#fd-book .close { background: none; border: 0; color: #9a8a6a; font-size: 20px; cursor: pointer; line-height: 1; }
-#fd-book .fb-note { margin: 6px 0 12px; font-size: 11.5px; line-height: 1.5; color: #8d8068; }
-#fd-book .fb-pages { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; align-items: start; }
+#fd-book header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; margin: 0 -20px 12px; padding: 11px 20px; background: linear-gradient(#262016, #1a150e); border-bottom: 1px solid var(--fd-line); }
+#fd-book h3 { margin: 0; flex: 1; font: 600 16px var(--fd-fantasy); letter-spacing: .14em; text-transform: uppercase; color: var(--fd-gold-hi); }
+#fd-book .fb-count { font-size: 13px; color: var(--fd-muted); font-variant-numeric: tabular-nums; }
+#fd-book .close { display: inline-grid; place-items: center; width: 24px; height: 24px; padding: 0; background: none; border: 1px solid var(--fd-line); border-radius: 3px; color: var(--fd-muted); font: 400 18px/1 var(--fd-body); cursor: pointer; transition: color .12s, border-color .12s, background .12s; } #fd-book .close:hover { color: #fff; border-color: var(--fd-gold); background: #ffffff0a; }
+#fd-book .fb-note { margin: 0 0 14px; font-size: 14px; line-height: 1.45; color: var(--fd-muted); }
+#fd-book .fb-pages { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; align-items: start; }
 @media (max-width: 560px) { #fd-book .fb-pages { grid-template-columns: 1fr; } }
-#fd-book .fb-page { padding: 10px 12px 9px; background: linear-gradient(#e9dcb9, #d9c9a0); color: #2c2214; border: 1px solid #8b7448; border-radius: 2px; box-shadow: inset 0 0 18px #8b744855; }
-#fd-book .fb-page h4 { margin: 0 0 5px; display: flex; gap: 8px; align-items: baseline; font: 700 11px Cinzel, Georgia, serif; letter-spacing: .1em; color: #5a3f1c; }
-#fd-book .fb-page h4 i { font-style: normal; color: #8b6a34; min-width: 22px; } #fd-book .fb-page h4 span { text-transform: uppercase; }
-#fd-book .fb-page p { margin: 0; font: italic 12.5px/1.5 Georgia, serif; }
-#fd-book .fb-page blockquote { margin: 7px 0 2px; padding: 5px 8px; border-left: 2px solid #8b6a34; font: 700 11px Cinzel, Georgia, serif; letter-spacing: .12em; color: #3f2c10; }
-#fd-book .fb-page footer { margin-top: 6px; text-align: right; font: 700 9.5px Cinzel, Georgia, serif; letter-spacing: .16em; text-transform: uppercase; filter: brightness(.45) saturate(1.4); }
+#fd-book .fb-page { padding: 11px 14px 10px; background: linear-gradient(#e9dcb9, #d9c9a0); color: #2c2214; border: 1px solid #8b7448; border-radius: 2px; box-shadow: inset 0 0 18px #8b744855, 0 2px 6px #0006; }
+#fd-book .fb-page h4 { margin: 0 0 6px; display: flex; gap: 8px; align-items: baseline; font: 700 12px var(--fd-fantasy); letter-spacing: .08em; color: #5a3f1c; }
+#fd-book .fb-page h4 i { font-style: normal; color: #8b6a34; min-width: 24px; } #fd-book .fb-page h4 span { text-transform: uppercase; }
+#fd-book .fb-page p { margin: 0; font: italic 400 15px/1.45 var(--fd-body); }
+#fd-book .fb-page blockquote { margin: 8px 0 2px; padding: 5px 9px; border-left: 2px solid #8b6a34; font: 700 12px var(--fd-fantasy); letter-spacing: .1em; color: #3f2c10; }
+#fd-book .fb-page footer { margin-top: 7px; text-align: right; font: 700 11px var(--fd-fantasy); letter-spacing: .14em; text-transform: uppercase; filter: brightness(.45) saturate(1.4); }
 #fd-book .fb-page.blank { background: #15120f; border: 1px dashed #3a2c1c; box-shadow: none; color: #6a5c46; } #fd-book .fb-page.blank h4 { color: #5a4a34; } #fd-book .fb-page.blank h4 i { color: #5a4a34; }`;
     document.head.appendChild(s);
   }
@@ -106,8 +106,22 @@ const FoundingBook = (() => {
 if (typeof Founding !== 'undefined' && Founding.addLayer) (() => {
   let K = null;
   // the layer's small state, one per run (it lives on the run's state object, so a new run starts clean)
-  const st = () => (K && K.S ? (K.S.__trials || (K.S.__trials = { queue: [], cur: null, t: 0, heardPart: -1, heardStart: 0, chipSig: '', pgN: -1 })) : null);
-  function speak(l) { const T = st(); if (!T || !l) return; if (T.queue.length > 3) T.queue.shift(); T.queue.push(l); }
+  const st = () => (K && K.S ? (K.S.__trials || (K.S.__trials = { queue: [], cur: null, t: 0, heardPart: -1, heardStart: 0, chipSig: '', pgN: -1, seen: {}, led: {} })) : null);
+  // a crowded voice keeps the lines that matter: a higher-priority line goes ahead of lower ones, and when the queue is full the lowest (oldest first) is dropped
+  function speak(l) {
+    const T = st(); if (!T || !l) return;
+    if (T.queue.some(x => x.t === l.t) || (T.cur && T.cur.t === l.t)) return;
+    let i = T.queue.length; while (i > 0 && (T.queue[i - 1].p | 0) < (l.p | 0)) i--;
+    T.queue.splice(i, 0, l);
+    while (T.queue.length > 4) { let lo = 0; for (let k = 1; k < T.queue.length; k++) if ((T.queue[k].p | 0) < (T.queue[lo].p | 0)) lo = k; T.queue.splice(lo, 1); }
+  }
+  // what the story thread needs to know: each quest's state (what this tab was told, or the board's, whichever is further on), and the wave
+  function threadCtx(T) {
+    const S = K.S, qs = {};
+    for (const r of S.q || []) qs[r[0]] = r[1] | 0;
+    for (const id in T.seen) qs[id] = Math.max(qs[id] | 0, T.seen[id]);
+    return { st: qs, wave: S.wave | 0, led: T.led };
+  }
 
   function tick(dt) {
     const S = K && K.S, T = st(), root = document.getElementById('fd-root'); if (!S || !T || !root) return;
@@ -167,7 +181,10 @@ if (typeof Founding !== 'undefined' && Founding.addLayer) (() => {
       const T = st(); if (!T) return false;
       const tag = ev[0];
       if (tag === 'start' && !T.heardStart) { T.heardStart = 1; FoundingBook.clearLast(); speak(FOUNDING_STORY.line('start')); }
-      else if (tag === 'q') speak(FOUNDING_STORY.line('q', ev[1], ev[2]));
+      else if (tag === 'q') {   // a quest offered, done or missed: the giver, and the thread on to what comes next
+        T.seen[ev[1]] = Math.max(T.seen[ev[1]] | 0, ev[2] === 0 ? 1 : ev[2] | 0);
+        for (const l of FOUNDING_STORY.thread('q', ev[1], ev[2], threadCtx(T))) speak(l);
+      }
       else if (tag === 'w') { const part = ev[4] | 0; if (part !== T.heardPart) { T.heardPart = part; speak(FOUNDING_STORY.line('part', part)); } }
       else if (tag === 'boss') { const id = FOUNDING_DATA.ENEMY_IDS[ev[2]]; if (id) speak(FOUNDING_STORY.line('boss', id)); }
       else if (tag === 'end') speak(FOUNDING_STORY.line('end', ev[1]));

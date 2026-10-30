@@ -161,18 +161,18 @@ const FOUNDING_DATA = (() => {
     slagback: { name: 'Slagback', r: 19, hp: 120, speed: 40, aggro: 110, xp: 20, gold: 6, shield: { half: 1.2, mult: 0.5 }, atk: { wind: 0.7, cd: 1.6, dmg: 9, hitR: 34, reach: 16, off: 26 } },
     spitter: { name: 'Cinderspitter', r: 13, hp: 40, speed: 44, aggro: 260, xp: 16, gold: 5, ranged: true, atk: { wind: 1.2, cd: 2.6, dmg: 12, hitR: 50, range: 240, tele: true } },
     brute: { name: 'Ashen Brute', r: 26, hp: 300, speed: 36, aggro: 140, xp: 60, gold: 25, elite: true, kbRes: 0.4, drop: 1, atk: { wind: 1.0, cd: 2.4, dmg: 22, hitR: 72, reach: 14, off: 40, tele: true } },
-    tunnelmaw: { name: 'Tunnelmaw', r: 40, hp: 3300, speed: 50, aggro: 0, xp: 200, gold: 100, elite: true, boss: true, kbRes: 1, drop: 2, atk: { wind: 1.1, cd: 2.0, dmg: 26, hitR: 90, reach: 20, off: 0, tele: true } },
+    tunnelmaw: { name: 'Tunnelmaw', r: 40, hp: 3300, speed: 50, aggro: 0, xp: 500, gold: 100, elite: true, boss: true, kbRes: 1, drop: 2, atk: { wind: 1.1, cd: 2.0, dmg: 26, hitR: 90, reach: 20, off: 0, tele: true } },
     // ---- later waves (new kinds are appended: the numeric type index of the older ones never changes)
     // hide: only seen in light (the sim sets FLAG.HIDDEN in the dark; its strikes always send a telegraph). hunt: goes for heroes who carry quest objects.
     stalker: { name: 'Night Stalker', r: 12, hp: 46, speed: 96, aggro: 150, xp: 14, gold: 4, hide: true, atk: { wind: 0.5, cd: 1.2, dmg: 7, hitR: 24, reach: 12, off: 20, tele: true } },
     cartburner: { name: 'Cart-Burner', r: 13, hp: 62, speed: 88, aggro: 90, xp: 14, gold: 5, runner: true, hunt: true, objMul: 2, atk: { wind: 0.5, cd: 1.0, dmg: 6, hitR: 22, reach: 12, off: 18 } },
     husk: { name: 'Ash Husk', r: 22, hp: 220, speed: 38, aggro: 120, xp: 40, gold: 14, elite: true, kbRes: 0.3, drop: 1, shield: { half: 1.0, mult: 0.55 }, atk: { wind: 0.9, cd: 2.0, dmg: 16, hitR: 56, reach: 14, off: 34, tele: true } },
     whelp: { name: 'Ash-Whelp', r: 10, hp: 24, speed: 106, aggro: 130, xp: 4, gold: 1, atk: { wind: 0.4, cd: 1.0, dmg: 4, hitR: 18, reach: 10, off: 16 } },
-    wickeater: { name: 'The Wick-Eater', r: 34, hp: 5800, speed: 44, aggro: 0, xp: 240, gold: 120, elite: true, boss: true, kbRes: 1, drop: 2, atk: { wind: 1.1, cd: 2.0, dmg: 24, hitR: 80, reach: 20, off: 0, tele: true } },
+    wickeater: { name: 'The Wick-Eater', r: 34, hp: 5800, speed: 44, aggro: 0, xp: 600, gold: 120, elite: true, boss: true, kbRes: 1, drop: 2, atk: { wind: 1.1, cd: 2.0, dmg: 24, hitR: 80, reach: 20, off: 0, tele: true } },
     wickshade: { name: 'Wick Shade', r: 16, hp: 140, speed: 58, aggro: 200, devour: true, xp: 30, gold: 10, hide: true, kbRes: 0.5, atk: { wind: 0.9, cd: 2.4, dmg: 12, hitR: 60, reach: 14, off: 30, tele: true } },
-    mirebull: { name: 'The Mirebull', r: 48, hp: 8500, speed: 42, aggro: 0, xp: 300, gold: 140, elite: true, boss: true, kbRes: 1, drop: 2, atk: { wind: 1.2, cd: 2.0, dmg: 26, hitR: 90, reach: 20, off: 0, tele: true } },
+    mirebull: { name: 'The Mirebull', r: 48, hp: 8500, speed: 42, aggro: 0, xp: 750, gold: 140, elite: true, boss: true, kbRes: 1, drop: 2, atk: { wind: 1.2, cd: 2.0, dmg: 26, hitR: 90, reach: 20, off: 0, tele: true } },
     damlog: { name: 'Dam Log', r: 26, hp: 3500, speed: 0, aggro: 0, xp: 40, gold: 10, inert: true, kbRes: 1, atk: { wind: 1, cd: 9, dmg: 0, hitR: 1, reach: 1, off: 0 } },
-    oldgnaw: { name: 'Old Gnaw', r: 72, hp: 108000, speed: 28, aggro: 0, xp: 600, gold: 300, elite: true, boss: true, kbRes: 1, drop: 3, atk: { wind: 1.4, cd: 2.0, dmg: 30, hitR: 170, reach: 20, off: 0, tele: true } },
+    oldgnaw: { name: 'Old Gnaw', r: 72, hp: 205000, speed: 28, aggro: 0, xp: 1500, gold: 300, elite: true, boss: true, kbRes: 1, drop: 3, atk: { wind: 1.4, cd: 2.0, dmg: 30, hitR: 170, reach: 20, off: 0, tele: true } },
   };
   const ENEMY_IDS = Object.keys(ENEMIES);   // the numeric `type` in fds is an index into this
   ENEMY_IDS.forEach((id, i) => { ENEMIES[id].id = id; ENEMIES[id].idx = i; });
@@ -263,18 +263,18 @@ const FOUNDING_DATA = (() => {
   // and from wave HPS.tailFrom the climb eases to HPS.tail of that (the heroes are at their best by then, so the last waves are not one wall). Not by party size.
   const HPS = { early: 0.06, lateFrom: 12, late: 0.48, tailFrom: 24, tail: 0.25 };
   const hpScale = wave => 1 + HPS.early * Math.max(0, wave - 1) + HPS.late * (Math.max(0, Math.min(wave, HPS.tailFrom) - HPS.lateFrom) + HPS.tail * Math.max(0, wave - HPS.tailFrom));
-  const CAMP_HP = [2000, 1300, 850, 850];   // by party size: one hero cannot be in both lanes, so the camp lasts longer for a small party
+  const CAMP_HP = [3000, 1300, 850, 700];   // by party size: one hero cannot be in both lanes, so the camp lasts longer for a small party
   const campHp = players => CAMP_HP[Math.max(1, Math.min(4, players)) - 1];
   // a multiplier on the experience a dying enemy gives by party size (before the equal split among the heroes near it)
-  const XP_MUL = [1.5, 1.1, 1, 1];
+  const XP_MUL = [0.8, 1.1, 1.5, 1.7];
   const bySize = (a, n) => a[Math.max(1, Math.min(4, n)) - 1];
   // a main boss's (and a dam log's) health: a base (set for four heroes) times a gentle party step (user, 2026-10-29: 1x, 1.25x, 1.5x, 1.75x for 1-4 heroes)
   const BOSS_BASE = 1.5, LOG_BASE = 1.4, BOSS_SIZE = [1, 1.25, 1.5, 1.75];
   const DMG_PER_WAVE = 0.16;   // ordinary enemies hit harder as the run goes on, x(1 + this per wave after the first)
   const dmgScale = wave => 1 + DMG_PER_WAVE * Math.max(0, wave - 1);
-  const SOLO_DMG = { bastion: 6.7, cleric: 4.4, pyromancer: 2.65, ranger: 2.35 };   // a lone hero deals this much more (the tank has no one to hit for him)
+  const SOLO_DMG = { bastion: 21.9, cleric: 14.3, pyromancer: 8.5, ranger: 7.7 };   // a lone hero deals this much more (the tank has no one to hit for him)
   const SOLO_CAMP = { bastion: 1.25, cleric: 1, pyromancer: 1, ranger: 1 };   // a lone melee tank cannot reach the spitters shooting the camp: it is sturdier for him
-  const PARTY_DMG = [1, 1.1, 1, 1];   // by party size 1-4 (a lone hero has SOLO_DMG): a smaller party's heroes deal this much more, since the waves are the same for everyone
+  const PARTY_DMG = [1, 2.1, 1.95, 1];   // by party size 1-4 (a lone hero has SOLO_DMG): a smaller party's heroes deal this much more, since the waves are the same for everyone
   const NO_DPS_DMG = 2.4;   // a pair with no damage dealer (tank and healer) deals this much more
   const SOLO_CLEAVE = 0.8;   // a lone Bastion's blows sweep: enemies beside the target take this share
   const bossHpMul = n => BOSS_BASE * bySize(BOSS_SIZE, n), logHpMul = n => LOG_BASE * bySize(BOSS_SIZE, n), xpMul = n => bySize(XP_MUL, n);
@@ -334,17 +334,17 @@ const FOUNDING_DATA = (() => {
     // hauling quests: what is carried, how many for 1-4 heroes, where it is picked up and put down (the sim snaps these to walkable ground)
     carrySlow: 0.25,
     haul: {
-      beacon: { kind: 'jar', code: 2, need: [3, 3, 4, 4], from: [1905, 2010], to: [700, 700], toR: 100 },
-      graves: { kind: 'bier', code: 3, need: [2, 3, 4, 5], from: [1385, 1950], to: [665, 1965], toR: 110, plantSecs: 1.6 },
-      stonegate: { kind: 'stone', code: 4, need: [2, 3, 3, 4], from: [1985, 1795], to: [1290, 905], toR: 100 },
-      roof: { kind: 'timber', code: 5, need: [2, 3, 3, 4], from: [2850, 585], to: [1330, 1965], toR: 110 },
+      beacon: { kind: 'jar', code: 2, need: [3, 3, 4, 4], from: [3810, 4020], to: [1400, 1400], toR: 100 },
+      graves: { kind: 'bier', code: 3, need: [2, 3, 4, 5], from: [2770, 3900], to: [1330, 3930], toR: 110, plantSecs: 1.6 },
+      stonegate: { kind: 'stone', code: 4, need: [2, 3, 3, 4], from: [3970, 3590], to: [2620, 1745], toR: 100 },
+      roof: { kind: 'timber', code: 5, need: [2, 3, 3, 4], from: [5700, 1170], to: [2660, 3930], toR: 110 },
     },
     posts: [4, 5, 6, 7], postSecs: 1.2,       // lantern posts to plant for 1-4 heroes
-    carve: [1330, 905], carveSecs: 30, carveRad: 70, carvePerExtra: 5,   // the Words: seconds of an unbroken channel; a hit loses back to the last quarter
-    cover: [1600, 1840], coverSecs: 40, coverRad: 130, coverHelp: 0.4,   // the Covering: more hands speed it
+    carve: [2660, 1745], carveSecs: 30, carveRad: 70, carvePerExtra: 5,   // the Words: seconds of an unbroken channel; a hit loses back to the last quarter
+    cover: [3200, 3780], coverSecs: 40, coverRad: 130, coverHelp: 0.4,   // the Covering: more hands speed it
     stoneGateHp: 900, stoneGatePerExtra: 250, roofHeal: 14, pickR: 90, dropHp: 40,
     brandSecs: 45, brandR: 190, lampR: 150, relightSecs: 0.8,
-    fires: [[1880, 1882], [1700, 2150]],      // the camp fires a brand is lit from
+    fires: [[3760, 3764], [3400, 4300]],      // the camp fires a brand is lit from
   };
 
   // ---------------------------------------------------------------- boons (three per quest, each unique)
@@ -464,7 +464,7 @@ const FOUNDING_DATA = (() => {
   // Levels to 20, one skill point each (a hero starts with one). A rank opens at a level: Q W E rank k at 2k-1 (1 3 5 7 9), R ranks at 6 11 16, the passive's two at 8 and 14.
   // XP is shared WC3-style: an enemy that dies gives its XP, split equally, to every living hero within `share` px of it; the rest get none. `need(lv)` is the XP from level lv to lv+1.
   const GATES = { q: [1, 3, 5, 7, 9], w: [1, 3, 5, 7, 9], e: [1, 3, 5, 7, 9], r: [6, 11, 16], p: [8, 14] };
-  const LEVELS = { max: 20, rLevel: 6, share: 1000, hpPer: 0.6, dmgPer: 0.03, need: lv => 25 + 50 * lv, gates: GATES, gate: (slot, rank) => (GATES[slot] || [])[rank - 1] || 99 };
+  const LEVELS = { max: 20, rLevel: 6, share: 1000, hpPer: 0.6, dmgPer: 0.03, need: lv => Math.round(132 * Math.pow(1.14, lv - 1)), gates: GATES, gate: (slot, rank) => (GATES[slot] || [])[rank - 1] || 99 };
   // gold to the account: wave w survived pays 6 + round(w/2), holding the whole run 40, each quest done 12 (and, later, the secret chain)
   const GOLD = { perWave: w => 6 + Math.round(w / 2), perQuest: 12, hold: 40 };
   const payoutParts = (survivedWaves, questsDone, held, chain) => { let waves = 0; for (let w = 1; w <= survivedWaves; w++) waves += GOLD.perWave(w); return { waves, quests: GOLD.perQuest * questsDone, hold: held ? GOLD.hold : 0, chain: chain || 0 }; };

@@ -13,7 +13,7 @@ for (const m of ['sim-items', 'sim-defence', 'sim-wild', 'sim-chain']) require(J
 const { FoundingArt } = require(J('map-art.js'));
 FoundingArt.layoutOnly();
 
-const hyp = Math.hypot, DT = 0.05;
+const hyp = Math.hypot, DT = 0.05, TAU = Math.PI * 2;
 let failures = 0, passed = 0;
 const check = (cond, msg) => { if (cond) passed++; else { failures++; console.log('  FAIL: ' + msg); } return !!cond; };
 const W = FoundingSim.WILD, CAMPS = W.CAMPS;
@@ -38,7 +38,7 @@ const tank = h => { h.S.armor = 0.6; h.max = h.hp = 9000; };
 
 // ---------------------------------------------------------------- the camps
 console.log('The camps:');
-check(CAMPS.length >= 8 && CAMPS.length <= 10, 'eight to ten camps (' + CAMPS.length + ')');
+check(CAMPS.length >= 14 && CAMPS.length <= 16, 'fourteen to sixteen camps (' + CAMPS.length + ')');
 check(new Set(CAMPS.map(c => c.id)).size === CAMPS.length, 'camp ids are unique');
 for (const k in W.KINDS) { const d = D.ENEMIES[k]; check(d && d.wild && d.idx >= 0 && D.ENEMY_IDS[d.idx] === k, k + ' is registered as an enemy kind'); }
 const fams = new Set(CAMPS.map(c => c.fam)); check(fams.size >= 4, 'four creature families (' + [...fams].join(',') + ')');
@@ -56,7 +56,7 @@ const dFoot = (x, y) => Math.min(...Object.values(M.FOOT).map(f => M.near(f, x, 
 // the quest places, the spring/shop/forge, the fires, and the secret spots (taken from the sim and the data, not copied here)
 const places = []; for (const k of ['hearth', 'spring', 'shop', 'hall', 'steward', 'gate', 'forge', 'beacon', 'meadow', 'woods', 'ford']) places.push([k, M.P[k]]);
 { const QT = D.QUEST_TUNE; for (const id in QT.haul) { places.push([id + ' pick-up', QT.haul[id].from]); places.push([id + ' destination', QT.haul[id].to]); } places.push(['carve', QT.carve], ['cover', QT.cover]); QT.fires.forEach((f, i) => places.push(['fire ' + i, f])); }
-{ const s = makeSim(1, 1); run(s, 0.2); for (const sc of s.secrets) places.push(['secret ' + sc.n, [sc.x, sc.y]]); for (const x of [[4, 2563, 1163], [6, 300, 2192], [2, 752, 936], [7, 1330, 876]]) places.push(['secret ' + x[0], [x[1], x[2]]]); }
+{ const s = makeSim(1, 1); run(s, 0.2); for (const sc of s.secrets) places.push(['secret ' + sc.n, [sc.x, sc.y]]); for (const x of [[4, 5126, 2326], [6, 600, 4384], [2, 1504, 1872], [7, 2660, 1716]]) places.push(['secret ' + x[0], [x[1], x[2]]]); }
 for (const c of CAMPS) {
   check(M.walkable(c.x, c.y, 16), c.id + ': the leader stands on ground a hero can stand on');
   check(reach(c.x, c.y), c.id + ': reachable by the 40 px grid from the spring');
@@ -104,6 +104,39 @@ check(sim.enemies.filter(e => e.w).length === 0, 'with no hero near, no camp is 
   run(sim, 2); check(!c.act && wildOf(c).length === 0, 'far from every hero the camp goes back to sleep, whole');
 }
 
+// ---------------------------------------------------------------- sight (2026-10-30): they notice only what they can see
+console.log('Sight:');
+{
+  // a hero inside thick woods (bluffpack) or on the ridge above a pack (plainwolves, with the waking distance stretched so the ridge is within it)
+  const realLos = M.losClear, WT = W.TUNE, wake0 = WT.wake;
+  // the nearest spot no member of the pack can see (by their own slots), within their waking distance
+  const hiddenSpot = (id, stretch) => { const s0 = makeSim(1, 70), c0 = s0.wm.camps.find(c => c.def.id === id); run(s0, 0.2); const ag = Math.max(...c0.recs.map(r => D.ENEMIES[r.kind].aggro)) * stretch;
+    for (let r = 40; r <= ag; r += 10) for (let a = 0; a < 72; a++) { const x = c0.x + Math.cos(a / 72 * TAU) * r, y = c0.y + Math.sin(a / 72 * TAU) * r; if (M.walkable(x, y, 14) && c0.slots.every(sl => !realLos(sl[0], sl[1], x, y))) return [Math.round(x), Math.round(y)]; } return null; };
+  const plant = (seed, id, x, y, wake) => { sim = makeSim(1, seed); run(sim, 0.2); const c = camp(id), h = sim.heroes[0]; tank(h); h.dmgMul = 0.01; h.auto = false; WT.wake = wake || 1; put(h, x, y); return [c, h]; };
+  // woods hide a hero from a pack that would otherwise wake (control: with sight patched clear, the same spot wakes it)
+  const woodSpot = hiddenSpot('bluffpack', 1), ridgeSpot = hiddenSpot('plainwolves', 1.4); check(woodSpot && ridgeSpot, 'both test spots exist (a wood and a ridge no member can see)');
+  let [c, h] = plant(71, 'bluffpack', woodSpot[0], woodSpot[1]); check(M.woodAt(h.x, h.y) > 0 && hyp(h.x - c.x, h.y - c.y) < 150, 'bluffpack: the test spot is inside the woods, within waking distance (' + Math.round(hyp(h.x - c.x, h.y - c.y)) + ')');
+  run(sim, 8); check(c.act && !c.alert && wildOf(c).every(e => e.w.mode === 'idle' && !e.atk), 'a hero standing in thick woods is not noticed (no wake, no blows)');
+  put(h, c.x - 140, c.y + 10); run(sim, 1.5); check(c.alert && wildOf(c).some(e => e.w.mode === 'fight'), 'stepping out into view wakes the pack');
+  M.losClear = () => true; [c, h] = plant(71, 'bluffpack', woodSpot[0], woodSpot[1]); run(sim, 4); check(c.alert, 'control: the same spot wakes the pack when sight is clear (so it was the woods)'); M.losClear = realLos;
+  // the ridge above the plain wolves
+  [c, h] = plant(72, 'plainwolves', ridgeSpot[0], ridgeSpot[1], 1.4); const dist = hyp(h.x - c.x, h.y - c.y);
+  check(M.heightAt(h.x, h.y) > M.heightAt(c.x, c.y) && dist < D.ENEMIES.wwolf.aggro * 1.4, 'plainwolves: the test spot is on higher ground, inside their stretched waking distance (' + Math.round(dist) + ')');
+  run(sim, 8); check(c.act && !c.alert && wildOf(c).every(e => e.w.mode === 'idle' && !e.atk), 'a hero on a ridge above the pack is not noticed');
+  M.losClear = () => true; [c, h] = plant(72, 'plainwolves', ridgeSpot[0], ridgeSpot[1], 1.4); run(sim, 4); check(c.alert, 'control: the same ridge wakes the pack when sight is clear'); M.losClear = realLos;
+  // a blow from the ridge still wakes everyone, and they hunt her
+  [c, h] = plant(73, 'plainwolves', ridgeSpot[0], ridgeSpot[1], 1.4); run(sim, 1); const one = wildOf(c)[1]; sim.dmgE(one, 3, h, {}); run(sim, 1.2);
+  check(c.alert && c.prov && wildOf(c).every(e => e.w.mode === 'fight'), 'a hit from out of sight wakes the whole pack');
+  run(sim, 12); check(wildOf(c).some(e => e.tgt === h || hyp(e.x - h.x, e.y - h.y) < 200), 'and a hurt pack hunts whoever hit it, seen or not');
+  // seen first, then lost: an unhurt pack gives up within a few seconds and goes home
+  [c, h] = plant(74, 'plainwolves', 1080 - 150, 2580, 1.4); run(sim, 1.5); check(c.alert && !c.prov, 'seen in the open: the pack wakes without a blow struck');
+  put(h, ridgeSpot[0], ridgeSpot[1]); let home = false; run(sim, 12, () => { if (wildOf(c).some(e => e.w.mode === 'return')) home = true; return false; });
+  check(home, 'when the hero slips out of sight (never hit) the pack runs home');
+  run(sim, 12); check(!c.alert && wildOf(c).every(e => e.w.mode === 'idle' && hyp(e.x - e.w.slot[0], e.y - e.w.slot[1]) < 80), 'and settles on its ground again, camp quiet');
+  // out of sight but nearer the leash is not enough once they are hurt: leash still brings them home
+  WT.wake = wake0; M.losClear = realLos;
+}
+
 // ---------------------------------------------------------------- each leader's own move
 console.log('The leaders:');
 for (const [id, kind] of [['pasture', 'rush'], ['bluffpack', 'pounce'], ['southbend', 'wave'], ['hillcairn', 'stonefall']]) {
@@ -140,7 +173,7 @@ console.log('Later in the run:');
   check(hb > ha * 1.5, 'a late camp has much more health (' + Math.round(ha) + ' to ' + Math.round(hb) + ')');
   check(cb.recs.length > ca.recs.length, 'and one more in the pack (' + ca.recs.length + ' to ' + cb.recs.length + ')');
   check(cb.recs[0].dm > ca.recs[0].dm && cb.recs[0].pay > ca.recs[0].pay, 'hits harder and pays more');
-  const q = makeSim(2, 42); run(q, 0.2); q.wave = 20; const c = q.wm.camps[0]; c.st = 'clear'; c.respawnAt = q.time + 1; const p = q.nearestWalkable(1600, 1900); q.heroes[0].x = p[0]; q.heroes[0].y = p[1];
+  const q = makeSim(2, 42); run(q, 0.2); q.wave = 20; const c = q.wm.camps[0]; c.st = 'clear'; c.respawnAt = q.time + 1; const p = q.nearestWalkable(3200, 3800); q.heroes[0].x = p[0]; q.heroes[0].y = p[1];
   const t0 = q.time; c.st = 'live'; c.recs.forEach(r => { r.dead = true; }); c.st = 'clear'; c.respawnAt = q.time;
   // the respawn delay grows with the wave
   const d = w => { const z = makeSim(1, 43); run(z, 0.2); z.wave = w; const cc = z.wm.camps[3], hh = z.heroes[0]; put(hh, cc.x - 400, cc.y); run(z, 0.3); for (const e of z.enemies.filter(e => e.w && e.w.c === cc)) z.dmgE(e, 99999, hh, {}); return cc.respawnAt - z.time; };
@@ -151,7 +184,7 @@ console.log('Later in the run:');
 // ---------------------------------------------------------------- the run
 console.log('The run:');
 {
-  sim = makeSim(2, 51); run(sim, 0.2); const h = sim.heroes[0]; put(h, 330, 600); run(sim, 0.4); tank(h);
+  sim = makeSim(2, 51); run(sim, 0.2); const h = sim.heroes[0]; put(h, 660, 1200); run(sim, 0.4); tank(h);
   check(wildOf(camp('hillcairn')).length >= 3, 'the cairn camp is up');
   sim.wave = D.LAST_WAVE; sim.spawnQ.length = 0; sim.enemies.filter(e => !e.w).forEach(e => { e.dead = true; }); run(sim, 0.3);
   check(sim.enemies.every(e => e.dead || !e.w), 'when the last siege is beaten the wilds do not hold the run open');

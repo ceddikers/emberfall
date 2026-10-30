@@ -813,6 +813,16 @@ function foundingTrialsCheck(r) {
   if (r.code === 0 && /Trials OK/.test(r.out)) pass(name, ''); else fail(name, r.out.slice(-900));
 }
 
+function foundingWorldCheck(r) {
+  const name = 'The Founding: items on the ground and the waystones';
+  if (r.code === 0 && /World OK/.test(r.out)) pass(name, ''); else fail(name, r.out.slice(-900));
+}
+
+function foundingIntroCheck(r) {
+  const name = 'The Founding: the opening scene and its skip vote';
+  if (r.code === 0 && /Intro OK/.test(r.out)) pass(name, ''); else fail(name, r.out.slice(-900));
+}
+
 function foundingQuestsCheck(r) {
   const name = 'The Founding: the later quests and their boons';
   if (r.code === 0 && /Quests OK/.test(r.out)) pass(name, ''); else fail(name, r.out.slice(-900));
@@ -882,6 +892,8 @@ const TESTS = [
   ['founding', 'founding-wild-test.js', foundingWildCheck, 'Wild checked', 1],
   ['founding', 'founding-items-test.js', foundingItemsCheck, 'Items checked', 1],
   ['founding', 'founding-chain-test.js', foundingChainCheck, 'Chain checked', 1],
+  ['founding', 'founding-world-test.js', foundingWorldCheck, 'World checked', 1],
+  ['founding', 'founding-intro-test.js', foundingIntroCheck, 'Intro checked', 1],
 ];
 const PVP_RUNS = [['duel', '3', 'ranger', 'bastion'], ['duel', '2', 'cleric', 'shadowblade'], ['team', '2', 'bastion', 'pyromancer', 'gorgemaw', 'cleric'], ['ctf', '2', 'bastion', 'ranger', 'gorgemaw', 'cleric']];
 
