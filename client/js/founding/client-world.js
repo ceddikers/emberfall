@@ -262,7 +262,7 @@ body:not(.in-founding) #fd-ways, body:not(.in-founding) #fd-world-hit { display:
       const tag = ev[0], s = S();
       if (tag === 'wdrop') {
         const it = K.D.ITEM[ev[4]]; if (!it) return true;
-        if (K.visAt(ev[2], ev[3], 40)) { const rgb = hexRgb(rcOf(it)); K.burst(ev[2], ev[3] - 6, 4 + it.rar * 2, { color: rcOf(it), spd: 60, dur: 0.5, size: 2.2, kind: 'dot', vy: -50, g: 120 }); if (it.rar >= 2) K.fxRing(ev[2], ev[3], 6, 38 + it.rar * 5, 0.7, rgb, 2, 0); K.snd('fd-loot-land', { vol: 0.4, key: 'fd-wdrop', minGap: 0.15 }); }
+        if (K.visAt(ev[2], ev[3], 40)) { const rgb = hexRgb(rcOf(it)); K.burst(ev[2], ev[3] - 6, 4 + it.rar * 2, { color: rcOf(it), spd: 60, dur: 0.5, size: 2.2, kind: 'dot', vy: -50, g: 120 }); if (it.rar >= 2) K.fxRing(ev[2], ev[3], 6, 38 + it.rar * 5, 0.7, rgb, 2, 0); K.sndAt('fd-loot-land', ev[2], ev[3], { vol: 0.4, key: 'fd-wdrop', minGap: 0.15 }); }
         return true;
       }
       if (tag === 'wpk') { const d = known.get(ev[1]); if (d) { const it = K.D.ITEM[d[1]]; if (it && K.visAt(d[2], d[3], 30)) K.burst(d[2], d[3] - 14, 6, { color: rcOf(it), spd: 70, dur: 0.45, size: 2, kind: 'dot', vy: -40 }); known.delete(ev[1]); } born.delete(ev[1]); return true; }
@@ -272,7 +272,7 @@ body:not(.in-founding) #fd-ways, body:not(.in-founding) #fd-world-hit { display:
         const W = WAYS[ev[1]]; if (!W) return true;
         flash[ev[1]] = s.T; seen[ev[1]] = true;
         K.fxRing(W.x, W.y + 6, 14, 150, 0.9, '255,200,120', 3, 0); K.burst(W.x, W.y - 60, 14, { color: '#ffd68a', spd: 90, dur: 1.0, size: 2.4, kind: 'dot', vy: -70, g: -40 });
-        if (K.visAt(W.x, W.y, 120)) { K.snd('fd-waystone-wake', { vol: 0.9, key: 'fd-wsl', minGap: 0.3 }); K.shake(2, 0.2); }
+        if (K.visAt(W.x, W.y, 120)) { K.sndAt('fd-waystone-wake', W.x, W.y, { vol: 0.9, key: 'fd-wsl', minGap: 0.3, reach: 1.5 }); K.shake(2, 0.2); }
         K.ftxt(W.x, W.y - 138, W.name + ' wakes', '#f3dfa4', 13, 2.2);
         K.say('The ' + W.name + ' wakes. The party can travel to it'); if (pickerOpen()) refreshPicker(true);
         return true;

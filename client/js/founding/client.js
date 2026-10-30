@@ -48,9 +48,50 @@ const Founding = (() => {
 
   // ================================================================ small helpers
   const W = () => dep.W(), H = () => dep.H(), DPR = () => dep.DPR();
-  const snd = (name, o) => { try { const s = dep.Sound && dep.Sound(); if (s && s.play) s.play(name, Object.assign({ bus: (name.indexOf('ui-') === 0 || name === 'fd-buy' || name === 'fd-boon' || name === 'fd-page') ? 'ui' : 'sfx', key: name, minGap: 0.08 }, o || {})); } catch (e) { /* sound is optional */ } };
+  // Sound by vicinity. A world sound is given the place it happened ({ at: { x, y } }, or sndAt) and is heard by how far that is
+  // from the listener (your hero; the camera's centre while you are down): full inside SND_NEAR, gone by SND_FAR, a spot in the
+  // fog almost silent, a gentle pan by the side it is on. A sound given no place (UI, your own hero, announcements) plays as it
+  // always did. 'reach' stretches the distances for big sounds (a boss's blow, the palisade giving way).
+  const SND_NEAR = 350, SND_FAR = 1100, SND_FOG = 0.1, SND_MIN = 0.03, SND_CAP = 3, SND_WIN = 120;
+  const sndClock = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  const sndRecent = {};
+  function sndListener() { const m = S && S.units.get('h' + S.myId); if (m && !(m.f & FLAG.DEAD)) return m; return S && S.cam ? S.cam : null; }
+  // how loud (0..1) a sound at (x, y) is, and its pan; { g: 1, pan: 0 } when there is nobody to measure from
+  function sndAtten(x, y, reach) {
+    const L = sndListener(); if (!L || !(x === x) || !(y === y)) return { g: 1, pan: 0, d: 0 };
+    const dx = x - L.x, dy = y - L.y, d = Math.sqrt(dx * dx + dy * dy), r = reach > 0 ? reach : 1;
+    const k = clamp((d / r - SND_NEAR) / (SND_FAR - SND_NEAR), 0, 1);
+    let g = 1 - k * k * (3 - 2 * k);
+    if (g > 0 && S.fogOn && S.fog && !visAt(x, y, 30)) g *= SND_FOG;
+    return { g, pan: clamp(dx / (1800 * r), -0.5, 0.5), d };
+  }
+  // no more than SND_CAP copies of one sound in SND_WIN ms, so a big fight beside you does not turn to noise
+  function sndRoom(name) {
+    const now = sndClock(), a = sndRecent[name] || (sndRecent[name] = []);
+    while (a.length && now - a[0] > SND_WIN) a.shift();
+    if (a.length >= SND_CAP) return false;
+    a.push(now); return true;
+  }
+  // would a sound at this place be heard at all
+  const sndHeard = o => !o || !o.at || sndAtten(o.at.x, o.at.y, o.reach).g >= SND_MIN;
+  const snd = (name, o) => { try {
+    const s = dep.Sound && dep.Sound(); if (!s || !s.play) return;
+    const p = Object.assign({ bus: (name.indexOf('ui-') === 0 || name === 'fd-buy' || name === 'fd-boon' || name === 'fd-page') ? 'ui' : 'sfx', key: name, minGap: 0.08 }, o || {});
+    if (p.at) {
+      const a = sndAtten(p.at.x, p.at.y, p.reach); if (a.g < SND_MIN || !sndRoom(name)) return;
+      p.vol = (p.vol == null ? 1 : p.vol) * a.g; p.pan = (p.pan || 0) + a.pan; if (a.d / (p.reach || 1) > 760) p.remote = true;   // (far off: muffled)
+      if (!o.key && o.minGap == null) p.minGap = 0.03;
+      delete p.at; delete p.reach;
+    }
+    s.play(name, p);
+  } catch (e) { /* sound is optional */ } };
+  const sndAt = (name, x, y, o) => snd(name, Object.assign({ at: { x, y } }, o || {}));
+  // a sound from a hero or a thing: your own hero's, or one whose place is not known, plays at its own volume; the rest by distance
+  const sndFor = (pid, name, x, y, o) => (pid === S.myId || x == null || y == null ? snd(name, o) : sndAt(name, x, y, o));
+  // a noisy sound (hits, autos): at most once per gap seconds, however many events arrive in a frame (a far one that cannot be heard leaves the gap alone)
+  const sndGap = (name, gap, o) => { if (!S) return; if (!sndHeard(o)) return; const last = S.lastSnd[name]; if (last !== undefined && S.T - last < gap) return; S.lastSnd[name] = S.T; snd(name, o); };
   // a noisy sound (hits, autos): at most once per gap seconds, however many events arrive in a frame
-  const sndGap = (name, gap, o) => { if (!S) return; const last = S.lastSnd[name]; if (last !== undefined && S.T - last < gap) return; S.lastSnd[name] = S.T; snd(name, o); };
+
   const clsOf = hero => CLASSES.find(c => c.id === hero) || CLASSES[0];
   const roleColor = hero => ROLES[clsOf(hero).role].color;
   const heroIdx = hero => D.HERO_IDS.indexOf(hero);
@@ -361,7 +402,7 @@ const Founding = (() => {
   const LAYERS = [];
   function addLayer(o) { LAYERS.push(o); if (o.init) o.init(kit()); return o; }
   function lay(name, a, b, c) { let r; for (const L of LAYERS) if (L[name]) { try { const v = L[name](a, b, c); if (v) r = v; } catch (err) { if (!L._err) { L._err = 1; console.error('Founding layer', name, err); } } } return r; }
-  function kit() { return { get S() { return S; }, D, M, FLAG, ZONE, send, snd, ell, glowAt, burst, fxRing, fxAdd, fxBlast, ftxt, shake, say: (t) => say(t), visAt, U: (k) => U(k), qfocus: () => S.qf || [], qhover: () => S.qhover || null, me: () => me(), W, H, dep, mus: (slot, o) => mus(slot, o), toast: (t) => dep.toast && dep.toast(t), clamp, lerp, eo, TAU, PI }; }
+  function kit() { return { get S() { return S; }, D, M, FLAG, ZONE, send, snd, sndAt, sndFor, ell, glowAt, burst, fxRing, fxAdd, fxBlast, ftxt, shake, say: (t) => say(t), visAt, U: (k) => U(k), qfocus: () => S.qf || [], qhover: () => S.qhover || null, me: () => me(), W, H, dep, mus: (slot, o) => mus(slot, o), toast: (t) => dep.toast && dep.toast(t), clamp, lerp, eo, TAU, PI }; }
   function doEv(ev) {
     const tag = ev[0];
     if (LAYERS.length && lay('event', ev)) return;
@@ -374,47 +415,47 @@ const Founding = (() => {
       case 'a': evAuto(ev); break;
       case 'h': evHit(ev); break;
       case 'd': evDeath(ev); break;
-      case 'hd': { snd('fd-hero-down'); const u = U('h' + ev[1]); if (u) { ftxt(ev[2], ev[3] - 30, 'Down', '#ff7a68', 13); burst(ev[2], ev[3], 8, { color: '#ff6a5a', spd: 80, dur: 0.4, size: 2, kind: 'dot' }); if (ev[1] === S.myId) { S.aim = null; shake(3, 0.2); } } break; }
-      case 'hu': { snd('fd-hero-rise'); ftxt(ev[2], ev[3] - 34, 'Raised', '#fff1b8', 13, 1.3); Fx.raise(ev[2], ev[3]); break; }
+      case 'hd': { sndFor(ev[1], 'fd-hero-down', ev[2], ev[3]); const u = U('h' + ev[1]); if (u) { ftxt(ev[2], ev[3] - 30, 'Down', '#ff7a68', 13); burst(ev[2], ev[3], 8, { color: '#ff6a5a', spd: 80, dur: 0.4, size: 2, kind: 'dot' }); if (ev[1] === S.myId) { S.aim = null; shake(3, 0.2); } } break; }
+      case 'hu': { sndFor(ev[1], 'fd-hero-rise', ev[2], ev[3]); ftxt(ev[2], ev[3] - 34, 'Raised', '#fff1b8', 13, 1.3); Fx.raise(ev[2], ev[3]); break; }
       case 'pb': evPerfectBlock(ev); break;
       case 't': S.tele.set(ev[1], { id: ev[1], shape: ev[2], x: ev[3], y: ev[4], a: ev[5], b: ev[6], w: ev[7], warn: Math.max(0.3, ev[8]), col: ev[9], t0: S.T, res: 0, boss: S.boss ? S.boss.eid : null }); teleStart(S.tele.get(ev[1])); break;
       case 'i': { const t = S.tele.get(ev[1]); if (t) { t.res = S.T; teleResolve(t); fxRing(ev[2], ev[3], 8, Math.max(40, t.a * 0.9), 0.3, t.col ? '140,190,255' : '255,120,90', 2, 0); if (t.shape === 0 && t.a > 60) { shake(2.5, 0.2); burst(ev[2], ev[3], 8, { color: '#6a5a48', spd: 90, dur: 0.5, size: 3, kind: 'dust' }); } } break; }
       case 'q': if (FoundingUI) FoundingUI.questEvent(ev[1], ev[2]); snd(ev[2] === 0 ? 'fd-quest-offer' : ev[2] === 2 ? 'fd-quest-done' : 'fd-quest-missed'); if (ev[2] === 2) { fxRing(M.P.hearth[0], M.P.hearth[1], 40, 160, 0.9, '255,230,160', 3, 0); } break;
       case 'cart': { const c = (S.props.ct || []).find(x => x[0] === ev[1]); if (c) ftxt(c[1], c[2] - 30, ev[2] ? 'Delivered' : 'Lost', ev[2] ? '#9ed7a6' : '#ff7a68', 12, 1.3); snd(ev[2] ? 'fd-deliver' : 'fd-gate-break', ev[2] ? undefined : { vol: 0.6 }); break; }
-      case 'pal': { const g = FoundingArt.GATE; burst(g.x, g.y, 24, { color: '#7a5a38', spd: 160, dur: 0.8, size: 3.5, kind: 'chunk', g: 300 }); burst(g.x, g.y, 8, { color: '#5a4a38', spd: 80, dur: 1, size: 4, kind: 'dust' }); shake(4, 0.3); ftxt(g.x, g.y - 40, 'The palisade breaks', '#ffb36b', 12, 1.5); snd('fd-gate-break'); break; }
+      case 'pal': { const g = FoundingArt.GATE; burst(g.x, g.y, 24, { color: '#7a5a38', spd: 160, dur: 0.8, size: 3.5, kind: 'chunk', g: 300 }); burst(g.x, g.y, 8, { color: '#5a4a38', spd: 80, dur: 1, size: 4, kind: 'dust' }); shake(4, 0.3); ftxt(g.x, g.y - 40, 'The palisade breaks', '#ffb36b', 12, 1.5); sndAt('fd-gate-break', g.x, g.y, { reach: 1.8 }); break; }
       case 'up': { const u = U('h' + ev[1]); const up = D.UPGRADES[ev[2]]; if (u) { ftxt(u.x, u.y - 40, up ? up.name : 'Upgrade', '#e6c98a', 12, 1.3); fxRing(u.x, u.y, 8, 44, 0.5, '255,230,160', 2, 0); } if (ev[1] === S.myId) snd('fd-buy'); break; }
-      case 'fg': snd(ev[3] ? 'fd-hyperforge' : 'fd-forge'); forgeFlash(!!ev[3]); if (ev[1] === S.myId) FoundingUI.forgeResult(ev[2], ev[3]); else { const u = U('h' + ev[1]); const it = D.ITEM[ev[2]]; if (u && it) ftxt(u.x, u.y - 40, it.name, D.RARITY_COLORS[it.rar], 12, 1.5); } break;
+      case 'fg': sndFor(ev[1], ev[3] ? 'fd-hyperforge' : 'fd-forge', M.P.forge[0], M.P.forge[1], { reach: ev[3] ? 1.6 : 1 }); forgeFlash(!!ev[3]); if (ev[1] === S.myId) FoundingUI.forgeResult(ev[2], ev[3]); else { const u = U('h' + ev[1]); const it = D.ITEM[ev[2]]; if (u && it) ftxt(u.x, u.y - 40, it.name, D.RARITY_COLORS[it.rar], 12, 1.5); } break;
       case 'dr': { const u = U('h' + ev[1]); const it = D.ITEM[ev[2]]; if (u && it) { ftxt(u.x, u.y - 40, it.name, D.RARITY_COLORS[it.rar], 12, 1.6); burst(u.x, u.y, 8, { color: D.RARITY_COLORS[it.rar], spd: 70, dur: 0.8, size: 2.4, kind: 'dot', vy: -50, g: -30 }); } if (ev[1] === S.myId) { say('Found: ' + (it ? it.name : 'an item')); snd('ui-gold'); } break; }
-      case 'lv': { const u = U('h' + ev[1]); if (u) { ftxt(u.x, u.y - 40, 'Level ' + ev[2], '#e6c98a', 13, 1.3); fxRing(u.x, u.y, 8, 48, 0.5, '255,230,160', 2, 0); burst(u.x, u.y + 4, 10, { color: '#ffe9a8', spd: 40, dur: 0.9, size: 2.2, kind: 'dot', vy: -60, g: -30 }); u.glow = 0.9; } snd('fd-levelup', { minGap: 0, key: 'fd-levelup' + ev[1] }); break; }
+      case 'lv': { const u = U('h' + ev[1]); if (u) { ftxt(u.x, u.y - 40, 'Level ' + ev[2], '#e6c98a', 13, 1.3); fxRing(u.x, u.y, 8, 48, 0.5, '255,230,160', 2, 0); burst(u.x, u.y + 4, 10, { color: '#ffe9a8', spd: 40, dur: 0.9, size: 2.2, kind: 'dot', vy: -60, g: -30 }); u.glow = 0.9; } sndFor(ev[1], 'fd-levelup', u && u.x, u && u.y, { minGap: 0, key: 'fd-levelup' + ev[1] }); break; }
       case 'pg': if (ev[1] === S.myId) { say('A page of the founders\' book is yours.'); snd('fd-page'); } break;
       case 'boss': S.bossId = ev[1]; S.bcast = null; if (FoundingUI) FoundingUI.bossAppears(ev[2]); snd('fd-boss-arrive'); shake(5, 0.4); break;
       case 'bossdown': { snd('fd-boss-down'); S.bcast = null; const u = U('e' + ev[1]) || S.gone.get('e' + ev[1]); if (u) { burst(u.x, u.y, 30, { color: '#ffb048', spd: 240, dur: 0.9, size: 3, kind: 'spark' }); burst(u.x, u.y, 14, { color: '#5a4034', spd: 120, dur: 1, size: 5, kind: 'dust' }); fxRing(u.x, u.y, 10, 200, 0.8, '255,200,120', 4, 0); } shake(8, 0.6); S.bossId = null; break; }
-      case 'bd': { snd('fd-tunnel-burrow'); const u = U('e' + ev[1]); if (u) { u.diveT0 = S.T; burst(u.x, u.y, 14, { color: '#6a5238', spd: 140, dur: 0.8, size: 4, kind: 'dust' }); shake(3, 0.3); } break; }
+      case 'bd': { const u = U('e' + ev[1]); sndFor(null, 'fd-tunnel-burrow', u && u.x, u && u.y, { reach: 1.5 }); if (u) { u.diveT0 = S.T; burst(u.x, u.y, 14, { color: '#6a5238', spd: 140, dur: 0.8, size: 4, kind: 'dust' }); shake(3, 0.3); } break; }
       case 'bu': { const u = U('e' + ev[1]); if (u) { if (ev[2] === 0 || ev[2] === undefined) { /* handled below */ } } break; }
-      case 'bw': shake(5, 0.3); S.campFlash = 1; sndGap('fd-camp-hit', 0.25); break;
-      case 'pk': { const u = U('h' + ev[1]); if (u) burst(u.x, u.y - 8, 5, { color: '#e6c98a', spd: 50, dur: 0.45, size: 2, kind: 'dot', vy: -30, g: -20 }); snd('fd-pickup'); break; }
-      case 'dp': { burst(ev[3], ev[4], 5, { color: '#a89878', spd: 60, dur: 0.4, size: 2.6, kind: 'dust' }); snd('fd-setdown'); break; }
+      case 'bw': { shake(5, 0.3); S.campFlash = 1; const u = U('e' + ev[1]); sndGap('fd-camp-hit', 0.25, { at: u ? { x: u.x, y: u.y } : { x: M.P.hearth[0], y: M.P.hearth[1] } }); break; }
+      case 'pk': { const u = U('h' + ev[1]); if (u) burst(u.x, u.y - 8, 5, { color: '#e6c98a', spd: 50, dur: 0.45, size: 2, kind: 'dot', vy: -30, g: -20 }); sndFor(ev[1], 'fd-pickup', u && u.x, u && u.y); break; }
+      case 'dp': { burst(ev[3], ev[4], 5, { color: '#a89878', spd: 60, dur: 0.4, size: 2.6, kind: 'dust' }); sndFor(ev[1], 'fd-setdown', ev[3], ev[4]); break; }
       case 'dl': { const x = ev[4], y = ev[5]; S.hauls[ev[1]] = { got: ev[2], need: ev[3] }; ftxt(x, y - 36, ev[2] + ' / ' + ev[3], '#f3dfa4', 13, 1.5); fxRing(x, y, 10, 70, 0.6, '255,230,160', 3, 0); burst(x, y, 8, { color: '#ffe9a8', spd: 70, dur: 0.7, size: 2.2, kind: 'dot', vy: -40, g: -25 }); snd('fd-deliver'); break; }
       case 'dgone': { burst(ev[2], ev[3], 8, { color: '#6a5a48', spd: 90, dur: 0.5, size: 3, kind: 'chunk', g: 260 }); ftxt(ev[2], ev[3] - 18, 'Lost', '#ff9a8a', 11, 1.1); break; }
-      case 'pp': { const ps = FoundingArt.POST_SLOTS[ev[2]]; if (ps) postFlare(ps, 0); snd('fd-post-plant'); break; }
-      case 'rl': { const ps = FoundingArt.POST_SLOTS[ev[2]]; if (ps) postFlare(ps, 1); snd('fd-relight'); break; }
-      case 'wk': { const ps = ev[2] >= 0 ? FoundingArt.POST_SLOTS[ev[2]] : null; if (ps) postFlare(ps, 2); snd(S.bossId === ev[1] ? 'fd-wick-eat' : 'fd-post-out'); break; }
-      case 'br': { const u = U('h' + ev[1]); if (u) { glowAt2(u.x, u.y - 8, 0.8); burst(u.x, u.y - 12, 8, { color: '#ffb048', spd: 70, dur: 0.6, size: 2.2, kind: 'spark', vy: -40, g: -30 }); } snd('fd-brand'); break; }
+      case 'pp': { const ps = FoundingArt.POST_SLOTS[ev[2]]; if (ps) postFlare(ps, 0); sndFor(ev[1], 'fd-post-plant', ps && ps[0], ps && ps[1]); break; }
+      case 'rl': { const ps = FoundingArt.POST_SLOTS[ev[2]]; if (ps) postFlare(ps, 1); sndFor(ev[1], 'fd-relight', ps && ps[0], ps && ps[1]); break; }
+      case 'wk': { const ps = ev[2] >= 0 ? FoundingArt.POST_SLOTS[ev[2]] : null; if (ps) postFlare(ps, 2); const eu = ps ? null : U('e' + ev[1]); sndFor(null, S.bossId === ev[1] ? 'fd-wick-eat' : 'fd-post-out', ps ? ps[0] : eu && eu.x, ps ? ps[1] : eu && eu.y); break; }
+      case 'br': { const u = U('h' + ev[1]); if (u) { glowAt2(u.x, u.y - 8, 0.8); burst(u.x, u.y - 12, 8, { color: '#ffb048', spd: 70, dur: 0.6, size: 2.2, kind: 'spark', vy: -40, g: -30 }); } sndFor(ev[1], 'fd-brand', u && u.x, u && u.y); break; }
       case 'sg': ftxt(FoundingArt.GATE.x, FoundingArt.GATE.y + 60, 'The Words', '#f3dfa4', 14, 2); snd('fd-quest-offer'); break;
       case 'cv': { const q = (S.props.qd || []).find(d => d[0] === 6); if (q) { ftxt(q[1], q[2] - 40, 'Lost your place', '#ff9a8a', 12, 1.4); burst(q[1], q[2], 8, { color: '#a89878', spd: 70, dur: 0.5, size: 2.4, kind: 'dust' }); } break; }
       case 'bl': { const u = U('h' + ev[1]); if (u) { ftxt(u.x, u.y - 44, 'The meadow raises you', '#cfd6ff', 12, 1.8); petalBurst(u.x, u.y, 8); } break; }
       case 'bb': { for (let i = 0; i < 10; i++) burst(ev[2], ev[3], 1, { color: Math.random() < 0.5 ? '#8a93d6' : '#a3a9e6', spd: 90, dur: 1.2, size: 3, kind: 'petal', vy: -30, g: -10 }); fxRing(ev[2], ev[3], 10, 120, 0.8, '150,165,235', 3, 0); break; }
       case 'ls': { const u = U('h' + ev[1]); if (u) { glowAt2(u.x, u.y, 1); ftxt(u.x, u.y - 44, 'Last stand', '#ffe9a8', 12, 1.3); } break; }
-      case 'wg': { const u = U('e' + ev[1]); if (u) { u.gl0 = S.T; u.glDur = ev[2] || 1.2; } S.bcast = { txt: 'The lunge', t0: S.T, dur: ev[2] || 1.2 }; snd('fd-wick-glow'); break; }
-      case 'wb': { const u = U('e' + ev[1]); if (u) { u.br0 = S.T; u.brDur = ev[2] || 1.6; } S.bcast = { txt: 'Wick Breath', t0: S.T, dur: ev[2] || 1.6 }; S.cold = { t0: S.T, dur: ev[2] || 1.6 }; snd('fd-wick-breath'); break; }
+      case 'wg': { const u = U('e' + ev[1]); if (u) { u.gl0 = S.T; u.glDur = ev[2] || 1.2; } S.bcast = { txt: 'The lunge', t0: S.T, dur: ev[2] || 1.2 }; sndFor(null, 'fd-wick-glow', u && u.x, u && u.y, { reach: 1.5 }); break; }
+      case 'wb': { const u = U('e' + ev[1]); if (u) { u.br0 = S.T; u.brDur = ev[2] || 1.6; } S.bcast = { txt: 'Wick Breath', t0: S.T, dur: ev[2] || 1.6 }; S.cold = { t0: S.T, dur: ev[2] || 1.6 }; sndFor(null, 'fd-wick-breath', u && u.x, u && u.y, { reach: 1.5 }); break; }
       case 'pin': { const u = U('e' + ev[1]); if (u) { u.pinned = !!ev[2]; if (ev[2]) { fxRing(u.x, u.y, 20, 110, 0.7, '200,225,255', 3, 0); burst(u.x, u.y, 12, { color: '#cfe0ff', spd: 120, dur: 0.6, size: 2, kind: 'spark' }); } } break; }
       case 'ws': { const u = U('e' + ev[1]); if (u) { burst(u.x, u.y, 22, { color: '#2a2540', spd: 200, dur: 0.9, size: 5, kind: 'dust' }); fxRing(u.x, u.y, 20, 150, 0.7, '120,110,190', 3, 0); shake(4, 0.3); } break; }
       case 'ms': { const l = U('e' + ev[2]); if (l) { fxRing(l.x, l.y, 20, 60, 0.7, '150,205,255', 3, 0); burst(l.x, l.y, 10, { color: '#bfe0ff', spd: 80, dur: 0.6, size: 2, kind: 'spark' }); } break; }
-      case 'ml': { const l = U('e' + ev[1]) || S.gone.get('e' + ev[1]); if (l) { burst(l.x, l.y, 24, { color: '#7a5a38', spd: 200, dur: 0.9, size: 4, kind: 'chunk', g: 320 }); burst(l.x, l.y, 12, { color: '#cfeaf0', spd: 150, dur: 0.8, size: 3.4, kind: 'dust' }); fxRing(l.x, l.y, 20, 140, 0.7, '190,230,240', 4, 0); } shake(6, 0.35); snd('fd-log-break'); break; }
-      case 'md': { const u = U('e' + ev[1]); if (u) { for (let i = 0; i < 4; i++) fxRing(u.x, u.y, 20 + i * 8, 190 + i * 30, 0.9 + i * 0.15, '170,215,235', 4, 0); } shake(8, 0.8); snd('fd-mire-drown'); break; }
-      case 'sh': S.shim = { x: ev[2], y: ev[3], tx: ev[4], ty: ev[5], k: ev[6], t0: S.T }; snd('fd-gnaw-sniff'); break;
+      case 'ml': { const l = U('e' + ev[1]) || S.gone.get('e' + ev[1]); if (l) { burst(l.x, l.y, 24, { color: '#7a5a38', spd: 200, dur: 0.9, size: 4, kind: 'chunk', g: 320 }); burst(l.x, l.y, 12, { color: '#cfeaf0', spd: 150, dur: 0.8, size: 3.4, kind: 'dust' }); fxRing(l.x, l.y, 20, 140, 0.7, '190,230,240', 4, 0); } shake(6, 0.35); sndFor(null, 'fd-log-break', l && l.x, l && l.y); break; }
+      case 'md': { const u = U('e' + ev[1]); if (u) { for (let i = 0; i < 4; i++) fxRing(u.x, u.y, 20 + i * 8, 190 + i * 30, 0.9 + i * 0.15, '170,215,235', 4, 0); } shake(8, 0.8); sndFor(null, 'fd-mire-drown', u && u.x, u && u.y, { reach: 1.5 }); break; }
+      case 'sh': S.shim = { x: ev[2], y: ev[3], tx: ev[4], ty: ev[5], k: ev[6], t0: S.T }; sndAt('fd-gnaw-sniff', ev[2], ev[3], { reach: 1.5 }); break;
       case 'gp': { S.bcast = null; shake(7, 0.5); if (S.boss) burst(S.boss.x, S.boss.y, 18, { color: '#6a5a4c', spd: 180, dur: 0.9, size: 5, kind: 'dust' }); if (FoundingUI) FoundingUI.partBanner(ev[2]); snd('fd-gnaw-stamp', { vol: 0.8 }); break; }
-      case 'gw': { const u = U('e' + ev[1]); if (u) burst(u.x, u.y, 16, { color: '#8a7a6a', spd: 150, dur: 0.7, size: 3.4, kind: 'dust' }); snd('fd-whelps'); break; }
+      case 'gw': { const u = U('e' + ev[1]); if (u) burst(u.x, u.y, 16, { color: '#8a7a6a', spd: 150, dur: 0.7, size: 3.4, kind: 'dust' }); sndFor(null, 'fd-whelps', u && u.x, u && u.y, { reach: 1.3 }); break; }
       case 'step': tierStep(ev); break;
       case 'rc': evRecall(ev); break;
       case 'pi': evPing(ev); break;
@@ -444,7 +485,7 @@ const Founding = (() => {
   }
   function evRecall(ev) {
     const pid = ev[1], code = ev[2], u = U('h' + pid), mine = pid === S.myId, vol = mine ? 1 : 0.4;
-    if (code === 1) { S.rc.set(pid, { t0: S.T, dur: 4, m: 0 }); snd('fd-recall', { vol, key: 'fd-recall' + pid, minGap: 0 }); }
+    if (code === 1) { S.rc.set(pid, { t0: S.T, dur: 4, m: 0 }); sndFor(pid, 'fd-recall', u && u.x, u && u.y, { vol, key: 'fd-recall' + pid, minGap: 0 }); }
     else if (code === 0) {
       S.rc.delete(pid);
       if (u) { burst(u.x, u.y, 6, { color: '#cfe6ff', spd: 50, dur: 0.4, size: 2, kind: 'dot' }); if (mine) ftxt(u.x, u.y - 44, 'Recall broken', '#c9d6e8', 11, 1.1); }
@@ -452,7 +493,7 @@ const Founding = (() => {
       S.rc.delete(pid);
       if (u) recallFlare(u.x, u.y, true);
       if (ev[3] !== undefined) recallFlare(ev[3], ev[4], false);
-      snd('fd-recall-done', { vol, key: 'fd-recalldone' + pid, minGap: 0 });
+      sndFor(pid, 'fd-recall-done', ev[3] !== undefined ? ev[3] : u && u.x, ev[3] !== undefined ? ev[4] : u && u.y, { vol, key: 'fd-recalldone' + pid, minGap: 0 });
     }
   }
   function recallFlare(x, y, out) { fxRing(x, y, out ? 40 : 8, out ? 6 : 52, 0.7, '200,230,255', 3, 0); glowAt2(x, y, 0.9); burst(x, y, 12, { color: '#d8ecff', spd: 60, dur: 0.8, size: 2.2, kind: 'dot', vy: -70, g: -30 }); }
@@ -649,7 +690,7 @@ const Founding = (() => {
   function evRelease(ev) {
     const [, pid, slot, x, y, cx, cy, rank] = ev, u = U('h' + pid); if (!u) return;
     const hero = u.hero;
-    releaseSound(hero, slot, rank);
+    releaseSound(hero, slot, rank, pid, x, y);
     if (hero === 'bastion' && slot === 0 && rank === 9) ftxt(x, y - 24, 'Ricochet', '#ffe9a8', 11);
     if (hero === 'pyromancer' && slot === 0) launchFireball(pid, x, y, cx, cy, rank);
     Fx.release(u, slot, x, y, cx, cy, rank);   // (before a Firestep moves the unit: it draws from where you stood)
@@ -665,8 +706,8 @@ const Founding = (() => {
 
   function evImpact(ev) {
     const [, pid, slot, x, y, rad] = ev, u = U('h' + pid), hero = u ? u.hero : null;
-    if (hero === 'pyromancer') snd(slot === 0 ? 'fd-fireball-hit' : slot === 1 ? 'fd-erupt' : slot === 3 ? 'fd-meteor-hit' : 'fd-firestep', { vol: slot === 2 ? 0.5 : 1 });
-    else if (hero === 'ranger' && slot === 1) snd('fd-trap-burst');
+    if (hero === 'pyromancer') sndFor(pid, slot === 0 ? 'fd-fireball-hit' : slot === 1 ? 'fd-erupt' : slot === 3 ? 'fd-meteor-hit' : 'fd-firestep', x, y, { vol: slot === 2 ? 0.5 : 1 });
+    else if (hero === 'ranger' && slot === 1) sndFor(pid, 'fd-trap-burst', x, y);
     if (hero === 'pyromancer' && slot === 0) {
       // the fireball that matches this burst ends here
       let best = null, bd = 1e9; for (const p of S.projs) if (p.fb && p.pid === pid && !p.end) { const dd = Math.hypot(p.ex - x, p.ey - y); if (dd < bd) { bd = dd; best = p; } }
@@ -680,9 +721,9 @@ const Founding = (() => {
     const [, pid, eid] = ev, u = U('h' + pid); if (!u) return;
     const t = U('e' + eid) || S.gone.get('e' + eid); if (!t) return;
     faceTo(u, t.x, t.y, 0.4);
-    const hero = u.hero;
+    const hero = u.hero, mine = pid === S.myId, au = mine ? undefined : { at: { x: u.x, y: u.y } }, ta = mine ? undefined : { at: { x: t.x, y: t.y } };   // (your own hero's sounds are never thinned by distance)
     if (hero === 'bastion') {
-      sndGap('fd-auto-melee', 0.12); sndGap('fd-auto-hit-melee', 0.12);
+      sndGap('fd-auto-melee', 0.12, au); sndGap('fd-auto-hit-melee', 0.12, ta);
       setPose(u, 'attack', 0, 0.24);
       const ang = Math.atan2(t.y - u.y, t.x - u.x);
       Fx.autoSlash(u, t, ang);
@@ -691,11 +732,11 @@ const Founding = (() => {
       setPose(u, hero === 'ranger' ? 'attack' : 'cast', 0, 0.26);
       let pierce = false;
       if (hero === 'ranger') { if (u.alast !== eid) { u.alast = eid; u.acount = 0; } u.acount = (u.acount | 0) + 1; pierce = u.acount % 4 === 0; }
-      if (pierce) { sndGap('fd-pierce', 0.1); pierceShot(u, t); return; }
-      sndGap(hero === 'ranger' ? 'fd-auto-shot' : hero === 'cleric' ? 'fd-auto-holy' : 'fd-auto-ember', 0.1);
+      if (pierce) { sndGap('fd-pierce', 0.1, au); pierceShot(u, t); return; }
+      sndGap(hero === 'ranger' ? 'fd-auto-shot' : hero === 'cleric' ? 'fd-auto-holy' : 'fd-auto-ember', 0.1, au);
       const sp = hero === 'cleric' ? 430 : hero === 'pyromancer' ? 380 : 760, col = hero === 'cleric' ? '255,235,170' : hero === 'pyromancer' ? '255,140,50' : '240,230,200';
       const ang = Math.atan2(t.y - u.y, t.x - u.x);
-      S.projs.push({ homing: true, x: u.x + Math.cos(ang) * 14, y: u.y + Math.sin(ang) * 14, tgt: t, lx: t.x, ly: t.y, speed: sp, d0: Math.hypot(t.x - u.x, t.y - u.y) || 1, trail: [], arc: hero === 'ranger', col, hero });
+      S.projs.push({ homing: true, own: mine, x: u.x + Math.cos(ang) * 14, y: u.y + Math.sin(ang) * 14, tgt: t, lx: t.x, ly: t.y, speed: sp, d0: Math.hypot(t.x - u.x, t.y - u.y) || 1, trail: [], arc: hero === 'ranger', col, hero });
     }
   }
 
@@ -703,7 +744,7 @@ const Founding = (() => {
     const [, kind, id, amt, sub, x, y] = ev;
     if (kind === 0) {
       const u = U('e' + id); if (u) { u.flash = 0.12; u.sq = 1; }
-      sndGap('fd-enemy-hit', 0.045);
+      sndGap('fd-enemy-hit', 0.045, { at: { x, y } });
       dmgText('e' + id, x, y - ((u && u.def) ? u.def.r : 14) - 8, amt, sub === 1);
     } else if (kind === 1) {
       const u = U('h' + id);
@@ -715,10 +756,10 @@ const Founding = (() => {
         if (id === S.myId) { shake(2, 0.12); S.hurtFlash = 0.35; }
       }
     } else if (kind === 2) {
-      S.campFlash = 1; ftxt(x, y - 30, '-' + amt, '#ff9a5a', 12); sndGap('fd-camp-hit', 0.2);
+      S.campFlash = 1; ftxt(x, y - 30, '-' + amt, '#ff9a5a', 12); sndGap('fd-camp-hit', 0.2, { at: { x, y } });
       burst(x, y, 4, { color: '#ffb36b', spd: 80, dur: 0.4, size: 2, kind: 'spark' });
     } else if (kind === 3) {
-      ftxt(x, y - 24, '-' + amt, '#e6b070', 11); sndGap('fd-gate-hit', 0.2); burst(x, y, 3, { color: '#7a5a38', spd: 80, dur: 0.4, size: 2.5, kind: 'chunk', g: 200 });
+      ftxt(x, y - 24, '-' + amt, '#e6b070', 11); sndGap('fd-gate-hit', 0.2, { at: { x, y } }); burst(x, y, 3, { color: '#7a5a38', spd: 80, dur: 0.4, size: 2.5, kind: 'chunk', g: 200 });
     }
   }
 
@@ -726,7 +767,7 @@ const Founding = (() => {
     const [, id, x, y, face, vx, vy, elite] = ev;
     const u = U('e' + id) || S.gone.get('e' + id);
     if (u && u.def && (u.def.boss || u.def.inert)) { if (S.tgt === id) S.tgt = null; return; }
-    if (elite) sndGap('fd-elite-die', 0.1); else sndGap('fd-enemy-die', 0.05);
+    if (elite) sndGap('fd-elite-die', 0.1, { at: { x, y } }); else sndGap('fd-enemy-die', 0.05, { at: { x, y } });
     const c = { x, y, r: u && u.def ? u.def.r : 14, eid: u ? u.eid : 'ashling', elite: !!elite, face, rot: face, vx, vy, vr: rnd(-2, 2), t: 0, life: rnd(2.2, 2.8), flung: 0 };
     S.corpses.push(c); if (S.corpses.length > 60) S.corpses.shift();
     burst(x, y, elite ? 14 : 7, { color: '#ff9a3a', spd: 90, dur: 0.6, size: 2.2, kind: 'spark', vy: -20 }); burst(x, y, elite ? 7 : 3, { color: '#5a4034', spd: 60, dur: 0.7, size: 3.5, kind: 'dust' });
@@ -747,7 +788,7 @@ const Founding = (() => {
       c.lineWidth = 1.6; for (let i = -rays; i <= rays; i++) { const a = i * half / (rays + 0.4); c.beginPath(); c.moveTo(18, Math.sin(a) * 18); c.lineTo(Math.cos(a) * reach * e * 1.08, Math.sin(a) * reach * e * 1.08); c.stroke(); }
       c.restore(); glowAt(c, x + Math.cos(ang) * 18, y + Math.sin(ang) * 18, 50 * (1 - k * 0.4), '255,240,190', 0.8 * f);
     } });
-    shake(5, 0.28); snd('fd-perfect');
+    shake(5, 0.28); sndFor(pid, 'fd-perfect', x, y);
     for (const cp of S.corpses) {
       const d = Math.hypot(cp.x - x, cp.y - y); if (d > reach + cp.r) continue;
       if (Math.abs(angDiff(ang, Math.atan2(cp.y - y, cp.x - x))) > half + 0.12 && d > cp.r + 14) continue;
@@ -759,37 +800,38 @@ const Founding = (() => {
   }
 
   // ================================================================ sounds and small moments of the later run
-  function releaseSound(hero, slot, rank) {
+  function releaseSound(hero, slot, rank, pid, x, y) {
     const N = { bastion: ['fd-bash', 'fd-banner', 'fd-brace', 'fd-wall'], cleric: ['fd-mend', 'fd-smite', 'fd-sanctum', 'fd-dawn'],
       pyromancer: ['fd-fireball-cast', 'fd-flamecircle', 'fd-firestep', 'fd-meteor-fall'], ranger: ['fd-arrow', 'fd-trap-arm', 'fd-mark', 'fd-starfall'] }[hero];
-    if (N && N[slot]) snd(N[slot], slot === 0 && rank === 8 ? { vol: 0.5 } : undefined);
+    if (N && N[slot]) sndFor(pid, N[slot], x, y, slot === 0 && rank === 8 ? { vol: 0.5 } : undefined);
   }
   // a hungry thing that struck: the heavy ones thud, the spitter spits, the stalker is only a shimmer in the dark
   function strikeSound(u) {
-    const id = u.eid;
-    if (id === 'brute' || id === 'husk') sndGap('fd-brute-slam', 0.15);
-    else if (id === 'spitter') sndGap('fd-spit', 0.12);
-    else if (id === 'ashling' || id === 'whelp') sndGap('fd-strike-claw', 0.12);
-    else if (id === 'streak') sndGap('fd-strike-dart', 0.12);
-    else if (id === 'slagback') sndGap('fd-strike-slag', 0.15);
-    else if (id === 'cartburner') sndGap('fd-strike-torch', 0.12);
-    else if (id === 'wickshade') sndGap('fd-strike-shade', 0.2);
+    const id = u.eid, at = { at: { x: u.x, y: u.y } };
+    if (id === 'brute' || id === 'husk') sndGap('fd-brute-slam', 0.15, at);
+    else if (id === 'spitter') sndGap('fd-spit', 0.12, at);
+    else if (id === 'ashling' || id === 'whelp') sndGap('fd-strike-claw', 0.12, at);
+    else if (id === 'streak') sndGap('fd-strike-dart', 0.12, at);
+    else if (id === 'slagback') sndGap('fd-strike-slag', 0.15, at);
+    else if (id === 'cartburner') sndGap('fd-strike-torch', 0.12, at);
+    else if (id === 'wickshade') sndGap('fd-strike-shade', 0.2, at);
     else if (id === 'stalker') {
-      sndGap('fd-stalker', 0.12);
+      sndGap('fd-stalker', 0.12, at);
       if (u.f & FLAG.HIDDEN) shimmerFx(u.x, u.y);
     }
   }
   function shimmerFx(x, y) { fxAdd({ dur: 0.45, layer: 1, draw(c) { const k = this.t / 0.45; ell(c, x, y, 8 + 26 * k, (8 + 26 * k) * 0.8, 0, null, `rgba(190,200,255,${0.3 * (1 - k)})`, 2); } }); }
   // which sound a boss's red or blue shape makes, by who is on the field
   function teleStart(t) {
-    if (t.boss === 'mirebull' && t.shape === 1) snd('fd-mire-charge');
+    if (t.boss === 'mirebull' && t.shape === 1) sndAt('fd-mire-charge', t.x, t.y, { reach: 1.5 });
   }
   function teleResolve(t) {
     const b = t.boss; if (!b) return;
-    if (b === 'tunnelmaw') snd(t.shape === 2 ? 'fd-tail-sweep' : 'fd-quake');
-    else if (b === 'wickeater') snd('fd-wick-lunge');
-    else if (b === 'mirebull') { if (t.shape === 0 && t.col) { snd('fd-flood-rise'); shake(3, 0.4); } else if (t.shape !== 1) snd('fd-mire-stamp'); }
-    else if (b === 'oldgnaw') snd(t.shape === 1 ? 'fd-gnaw-lunge' : t.shape === 2 ? 'fd-gnaw-breath' : 'fd-gnaw-stamp');
+    const sa = n => sndAt(n, t.x, t.y, { reach: 1.5 });   // (a boss's blow carries further than a soldier's)
+    if (b === 'tunnelmaw') sa(t.shape === 2 ? 'fd-tail-sweep' : 'fd-quake');
+    else if (b === 'wickeater') sa('fd-wick-lunge');
+    else if (b === 'mirebull') { if (t.shape === 0 && t.col) { sa('fd-flood-rise'); shake(3, 0.4); } else if (t.shape !== 1) sa('fd-mire-stamp'); }
+    else if (b === 'oldgnaw') sa(t.shape === 1 ? 'fd-gnaw-lunge' : t.shape === 2 ? 'fd-gnaw-breath' : 'fd-gnaw-stamp');
   }
   // lantern posts: planted (0), relit (1), put out (2)
   function postFlare(ps, kind) {
@@ -948,7 +990,7 @@ const Founding = (() => {
         const t = p.tgt; if (t && !t.goneAt && S.units.has(t.key)) { p.lx = t.x; p.ly = t.y; }
         const dx = p.lx - p.x, dy = p.ly - p.y, d = Math.hypot(dx, dy), st = p.speed * dt; p.ang = Math.atan2(dy, dx);
         p.trail.push({ x: p.x, y: p.y }); if (p.trail.length > 8) p.trail.shift();
-        if (d <= st + 6) { p.dead = true; if (p.hero) sndGap(p.hero === 'cleric' ? 'fd-auto-hit-holy' : p.hero === 'pyromancer' ? 'fd-auto-hit-ember' : 'fd-auto-hit-arrow', 0.08); burst(p.lx, p.ly, 4, { color: p.hero === 'cleric' ? '#fff1b8' : p.hero === 'pyromancer' ? '#ffb048' : '#e8e0c8', spd: 80, dur: 0.3, size: 2, kind: 'spark' }); if (p.hero === 'ranger') Fx.arrowHit(p.lx, p.ly, p.ang || 0); else Fx.flareAt(p.lx, p.ly, p.hero === 'cleric' ? 34 : 28, p.hero === 'cleric' ? '255,240,190' : '255,150,60', 0.2); continue; }
+        if (d <= st + 6) { p.dead = true; if (p.hero) sndGap(p.hero === 'cleric' ? 'fd-auto-hit-holy' : p.hero === 'pyromancer' ? 'fd-auto-hit-ember' : 'fd-auto-hit-arrow', 0.08, p.own ? undefined : { at: { x: p.lx, y: p.ly } }); burst(p.lx, p.ly, 4, { color: p.hero === 'cleric' ? '#fff1b8' : p.hero === 'pyromancer' ? '#ffb048' : '#e8e0c8', spd: 80, dur: 0.3, size: 2, kind: 'spark' }); if (p.hero === 'ranger') Fx.arrowHit(p.lx, p.ly, p.ang || 0); else Fx.flareAt(p.lx, p.ly, p.hero === 'cleric' ? 34 : 28, p.hero === 'cleric' ? '255,240,190' : '255,150,60', 0.2); continue; }
         p.x += dx / d * st; p.y += dy / d * st; p.prog = 1 - d / p.d0;
       } else if (p.fb) {
         if (p.end) { p.dead = true; continue; }

@@ -11,6 +11,12 @@
 // intents build / upTower / sellTower / repair / soldier; fdx events tw* and so*:
 //   twb id kind rank x y (a tower begins)  twu id rank (upgraded)  twf id tx ty variant (it fired)  twr id radius (the bell rang)
 //   twd id x y (it fell)  twx id x y (rubble cleared)  twre id (rebuilt)  tws id (sold)  twno pid code (refused: 1 gold 2 cap 3 spot 4 reach 5 away 6 max)
+// The Ash Spires: one at the far end of each lane, beside the place the waves come out. A soldier left idle at the hold point walks on and
+// attacks its lane's spire; the spire throws a slow ember bolt at the soldiers near it, so they usually die there instead of waiting. It cannot
+// fall, is no enemy and no ally (heroes, towers, enemies and the camp never touch it), and its bolts change nothing else. A soldier it takes is owed
+// back: the next squad on that lane marches with it again (up to laneExtra), so the lanes keep the strength they had. snapshot key `sp`:
+// one small flag int per spire (1 = it was just struck, 2 = soldiers are near and it is awake); events spf idx soldierId tx ty (a bolt leaves),
+//   spi idx soldierId x y (it lands), sph idx x y (a soldier struck or shot it).
 //   sob wave n (the squads march: n soldiers in all)  soc id tx ty (a cavalry knight's charge struck)  sof id tx ty type (a soldier struck or shot)  soh id tx ty (a heal)  sod id x y (a soldier fell)  sou pid which rank (squad upgrade)
 (function () {
   const FS = typeof FoundingSim !== 'undefined' ? FoundingSim : require('./sim.js').FoundingSim;
@@ -82,15 +88,25 @@
     }
     return 0;
   }
-  const DEF = D.DEFENCE = { KINDS, TOWER, SOLDIER_UP, UP_IDS, SOLDIER, TYPES, SQUAD_BASE, SQUAD_STEPS, squadAt, TUNE, SITES, POSTS, invested, capOf, fits };
+  // the Ash Spires: a crooked pillar beside each lane's far end (where the waves come out; places in map-data.js SPIRES). `stop` is the lane index
+  // a soldier walks to before it steps off the road toward the spire. r: its body. range: how far its bolts reach. cd / dmg: one bolt per cd seconds,
+  // dmg times the soldiers' own growth (so a soldier lasts a few bolts at any wave); ramp: each second of a fight adds this share to a bolt; crowd:
+  // each extra soldier near it quickens the bolts (down to minCd share); travel: the bolt's flight in seconds; idle: seconds a soldier waits at its
+  // hold point, with the lane quiet, before it goes on; stopAfter: how many lane samples back toward the camp the road stop lies.
+  const SPIRE = { r: 30, range: 330, cd: 2.2, dmg: 14, ramp: 0.1, crowd: 0.05, minCd: 0.55, travel: 0.55, idle: 8, stopAfter: 10, at: M.SPIRES[0].i };
+  const SPIRES = M.SPIRES.map(sp => ({ lane: sp.lane, x: sp.x, y: sp.y, stop: Math.min(M.LANES[sp.lane].path.length - 1, sp.i + SPIRE.stopAfter) }));
+  const DEF = D.DEFENCE = { SPIRE, SPIRES, KINDS, TOWER, SOLDIER_UP, UP_IDS, SOLDIER, TYPES, SQUAD_BASE, SQUAD_STEPS, squadAt, TUNE, SITES, POSTS, invested, capOf, fits };
 
   // ============================================================ the module
   (FS.mods = FS.mods || []).push(sim => {
     const ZONE = FS.ZONE;
     sim.extraVis = sim.extraVis || [];
     const towers = [], soldiers = [], up = { arm: 0, wpn: 0, heal: 0 };
+    const spires = SPIRES.map(d => ({ d, cd: 1, heat: 0, quiet: 99, hitT: -99, evT: -99 }));   // the Ash Spires (not enemies, not allies: nothing but a soldier ever touches them)
+    const quiet = [true, true];   // per lane: no live enemy on it (refreshed each tick)
+    const owed = [[], []];   // per lane: the types of soldiers the spire took since the last wave; they march out again with the next squad (the lane keeps its strength)
     let nid = 0, sid = 0;
-    const api = sim.defence = { towers, soldiers, up, TUNE, DEF, build: null };
+    const api = sim.defence = { towers, soldiers, up, TUNE, DEF, spires, owed, build: null };
 
     // ---------------------------------------------------------- damage to enemies: tower and soldier kills pay half
     const payDefs = new Map();
@@ -319,14 +335,14 @@
     const ORDER = { knight: 0, cavalry: 1, archer: 2, cleric: 3 };   // front rank first
     function spawnSquad(lane) {
       const path = sim.paths[lane], last = path.length - 1, tier = tierNow(); let made = 0;
-      const stop = Math.round(last * TUNE.holdFrac), list = squadAt(tier).slice().sort((a, b) => ORDER[a] - ORDER[b]);
+      const base = squadAt(tier), stop = Math.round(last * TUNE.holdFrac), list = base.concat(owed[lane].splice(0)).sort((a, b) => ORDER[a] - ORDER[b]);
       let inLane = 0; for (const o of soldiers) if (o.lane === lane) inLane++;
-      const laneCap = list.length + TUNE.laneExtra;
+      const laneCap = base.length + TUNE.laneExtra;
       for (let i = 0; i < list.length; i++) {
         if (soldiers.length >= TUNE.soldierCap || inLane >= laneCap) break;
         const type = list[i], K = SOLDIER[type], b = bodyOf(type, tier), row = (i / 4) | 0, off = ((i % 4) - 1.5) * 22;
         const q = path[Math.min(last, Math.max(0, last - 6 + row * 2 - (i % 2)))], wp = sim.nearestWalkable(q[0] - q[4] * off, q[1] + q[3] * off, 10), hx = wp[0], hy = wp[1];
-        const s = { tk: 'ally', so: true, id: ++sid, type, ti: TYPES.indexOf(type), lane, x: hx, y: hy, r: K.r, face: -PI / 2, hp: b.hp, max: b.max, dmg: b.dmg, cd: b.cd, heal: b.heal, take: b.take, dead: false, atkT: 0.3 * i, thinkT: 0.1 * i, tgt: null, pi: Math.max(0, last - 6), stop, off, px: hx, py: hy, stuck: 0, flash: 0, moving: false, hurtT: -99, healT: -9, ur: up.arm | (up.wpn << 2) | (up.heal << 4), charging: false, chargeCd: 0,
+        const s = { tk: 'ally', so: true, id: ++sid, type, ti: TYPES.indexOf(type), lane, x: hx, y: hy, r: K.r, face: -PI / 2, hp: b.hp, max: b.max, dmg: b.dmg, cd: b.cd, heal: b.heal, take: b.take, dead: false, atkT: 0.3 * i, thinkT: 0.1 * i, tgt: null, pi: Math.max(0, last - 6), stop, off, px: hx, py: hy, stuck: 0, go: false, idleT: 0, flash: 0, moving: false, hurtT: -99, healT: -9, ur: up.arm | (up.wpn << 2) | (up.heal << 4), charging: false, chargeCd: 0,
           hurt(dmg, e) { return hurtSoldier(s, dmg, e); } };
         soldiers.push(s); sim.allies.push(s); made++; inLane++;
       }
@@ -369,13 +385,16 @@
         if (had && !near) { const path = sim.paths[s.lane]; s.pi = M.near(path, s.x, s.y).i; if (s.pi < s.stop) s.pi = s.stop; }
       }
       const t = s.tgt && !s.tgt.dead ? s.tgt : null;
-      if (!t) {   // march down the lane toward the spawn, and wait at the end of it
+      if (!t) {   // march down the lane toward the spawn, and wait at the end of it (then walk on to the Ash Spire)
         s.charging = false;
+        if (s.go && s.pi <= s.stop + 1) { spireStep(s, dt, K); return; }
         const w = laneWaypoint(s);
-        if (s.pi > s.stop || hyp(w[0] - s.x, w[1] - s.y) > 24) { stepTo(s, w[0], w[1], dt, K.speed); s.moving = true; }
+        if (s.pi > s.stop || hyp(w[0] - s.x, w[1] - s.y) > 24) { stepTo(s, w[0], w[1], dt, K.speed); s.moving = true; s.idleT = 0; }
+        else if (!s.go) { s.idleT += dt; if (s.idleT >= SPIRE.idle && quiet[s.lane]) { s.go = true; s.stop = SPIRES[s.lane].stop; } }   // idle with nothing to fight: on to the spire
         if (s.hp < s.max && sim.time - s.hurtT > 6) s.hp = Math.min(s.max, s.hp + 2 * dt);
         return;
       }
+      s.idleT = 0;
       const d = hyp(t.x - s.x, t.y - s.y) - t.r;
       if (s.type === 'knight' || s.type === 'cavalry') {
         if (d > K.reach) {
@@ -402,6 +421,29 @@
         }
       }
     }
+    // a soldier at the spire: knights walk up and strike it, archers shoot it from their range. The spire never takes harm (it only flashes).
+    function spireStep(s, dt, K) {
+      const sp = spires[s.lane], X = sp.d.x, Y = sp.d.y, d = hyp(X - s.x, Y - s.y) - SPIRE.r, melee = s.type === 'knight' || s.type === 'cavalry';
+      if (d > (melee ? K.reach : K.range * 0.95)) { stepTo(s, X, Y, dt, K.speed); s.moving = true; return; }
+      s.face += angDiff(s.face, Math.atan2(Y - s.y, X - s.x)) * Math.min(1, dt * 12);
+      if (s.atkT > 0) return;
+      s.atkT = s.cd; s.flash = 0.25;
+      if (!melee) sim.ev(['sof', s.id, Math.round(X), Math.round(Y - 40), 1]);
+      sp.hitT = sim.time; if (sim.time - sp.evT > 0.3) { sp.evT = sim.time; sim.ev(['sph', s.lane, Math.round(X), Math.round(Y)]); }
+    }
+    // the spire's own turn: a bolt at the nearest soldier in reach, quicker the more of them there are, and sharper the longer a fight runs
+    function spireTick(sp, dt) {
+      let n = 0, best = null, bd = 1e9;
+      for (const o of soldiers) { if (o.dead) continue; const d = hyp(o.x - sp.d.x, o.y - sp.d.y); if (d <= SPIRE.range) { n++; if (d < bd) { bd = d; best = o; } } }
+      if (sp.cd > 0) sp.cd -= dt;
+      if (!n) { sp.quiet += dt; if (sp.quiet > 3) sp.heat = 0; return; }
+      sp.quiet = 0; sp.heat = Math.min(40, sp.heat + dt);
+      if (sp.cd > 0) return;
+      sp.cd = SPIRE.cd * Math.max(SPIRE.minCd, 1 - SPIRE.crowd * (n - 1));
+      const sg = Math.pow(D.hpScale(Math.max(1, sim.wave)), TUNE.grow), dmg = SPIRE.dmg * sg * (1 + SPIRE.ramp * sp.heat), tg = best;
+      sim.ev(['spf', sp.d.lane, tg.id, Math.round(tg.x), Math.round(tg.y)]);
+      sim.after(SPIRE.travel, () => { if (tg.dead) return; tg.hurt(dmg, null); if (tg.dead && owed[tg.lane].length < TUNE.laneExtra) owed[tg.lane].push(tg.type); sim.ev(['spi', sp.d.lane, tg.id, Math.round(tg.x), Math.round(tg.y)]); });
+    }
     function clericStep(s, dt, K) {
       // stay behind the nearest knight of the squad, heal the most hurt friend in reach
       let lead = null, ld = 1e9;
@@ -417,7 +459,12 @@
         s.healTg = best;
       }
       if (lead) { if (ld > 70) { stepTo(s, lead.x - Math.cos(lead.face) * 24, lead.y - Math.sin(lead.face) * 24, dt, K.speed); s.moving = true; } }
-      else { const w = laneWaypoint(s); if (s.pi > s.stop) { stepTo(s, w[0], w[1], dt, K.speed); s.moving = true; } }
+      else if (s.go && s.pi <= s.stop + 1) { const sp = SPIRES[s.lane]; if (hyp(sp.x - s.x, sp.y - s.y) > 150) { stepTo(s, sp.x, sp.y, dt, K.speed); s.moving = true; } }   // no knight left to follow: she goes on to the spire too
+      else {
+        const w = laneWaypoint(s);
+        if (s.pi > s.stop || hyp(w[0] - s.x, w[1] - s.y) > 24) { stepTo(s, w[0], w[1], dt, K.speed); s.moving = true; s.idleT = 0; }
+        else { s.idleT += dt; if (s.idleT >= SPIRE.idle && quiet[s.lane]) { s.go = true; s.stop = SPIRES[s.lane].stop; } }
+      }
       if (s.atkT <= 0 && s.healTg && !s.healTg.dead) {
         const tg = s.healTg, amt = s.heal; s.atkT = s.cd; s.flash = 0.35;
         if (tg.tk === 'hero') sim.heal(tg, amt, null, true); else tg.hp = Math.min(tg.max, tg.hp + amt);
@@ -435,7 +482,7 @@
 
     // ---------------------------------------------------------- hooks
     return {
-      start() { towers.length = 0; soldiers.length = 0; up.arm = up.wpn = up.heal = 0; nid = 0; sid = 0; },
+      start() { owed[0].length = owed[1].length = 0; for (const sp of spires) { sp.cd = 1; sp.heat = 0; sp.quiet = 99; sp.hitT = -99; sp.evT = -99; } towers.length = 0; soldiers.length = 0; up.arm = up.wpn = up.heal = 0; nid = 0; sid = 0; },
       wave(n) {
         if (sim.noSpawn) return;
         let made = 0; for (let lane = 0; lane < 2; lane++) made += spawnSquad(lane);
@@ -452,6 +499,8 @@
       },
       tick(dt) {
         scanTelegraphs();
+        quiet[0] = quiet[1] = true; if (soldiers.length) for (const e of sim.enemies) if (!e.dead && !e.def.inert && e.lane < 2) quiet[e.lane] = false;
+        for (const sp of spires) spireTick(sp, dt);
         for (let i = 0; i < towers.length; i++) {
           const t = towers[i];
           if (t.rubble) { if (sim.time >= t.rubbleAt) { towers.splice(i, 1); i--; sim.ev(['twx', t.id, Math.round(t.x), Math.round(t.y)]); } continue; }
@@ -462,6 +511,7 @@
       },
       snapshot(s) {
         s.tw = towers.map(t => [t.id, t.ki, t.rank, Math.round(t.x), Math.round(t.y), Math.round(t.hp), t.max, (t.rubble ? 1 : 0) | (t.buildT > 0 ? 2 : 0) | (t.upT > 0 ? 4 : 0) | (t.shield > 0 ? 8 : 0) | (t.repBy ? 16 : 0), t.rubble ? Math.ceil(t.base * TUNE.rebuild) : t.inv]);
+        s.sp = spires.map(sp => (sim.time - sp.hitT < 0.25 ? 1 : 0) | (sp.quiet < 1 ? 2 : 0));
         s.sd = soldiers.map(o => [o.id, o.ti, Math.round(o.x), Math.round(o.y), Math.round(o.face * 10), Math.max(1, Math.round(o.hp / o.max * 100)), (o.flash > 0 ? 1 : 0) | (o.moving ? 2 : 0) | (o.ur << 2) | (o.charging ? 256 : 0), o.lane]);
       },
       props(p) {

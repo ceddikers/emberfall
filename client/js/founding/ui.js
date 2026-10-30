@@ -250,6 +250,7 @@ const FoundingUI = (() => {
       <div id="fd-titlecard"><div class="t"></div><div class="s"></div></div>
       <div id="fd-end" style="display:none"></div>`;
     document.body.appendChild(root);
+    root.addEventListener('mousedown', dragDown, true);
     for (const id of ['fd-top', 'fd-boss', 'fd-tframe', 'fd-party', 'fd-hero', 'fd-skills', 'fd-help', 'fd-boons', 'fd-tent', 'fd-forge', 'fd-lobby', 'fd-end', 'fd-quests', 'fd-reveal', 'fd-meter', 'fd-pause']) root.querySelector('#' + id).addEventListener('contextmenu', e => e.preventDefault());
     // minimap: left-drag moves the camera, right-click sends the hero
     const mini = $('fd-mini'), at = e => { const r = mini.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
@@ -279,6 +280,7 @@ const FoundingUI = (() => {
   function miniUp() { const m = root && root.querySelector('#fd-mini'); if (m) m._drag = false; }
   function cacheReset() { for (const k in cache) delete cache[k]; lobbyKey = tentSig = forgeSig = boonKey = ''; slotKey = ''; itemKey = ''; }
   function unmount() {
+    endDrag(false);
     window.removeEventListener('mouseup', miniUp);
     if (root && root.parentNode) root.parentNode.removeChild(root);
     root = null; panels.tent = panels.forge = false; forgePick = []; tentSel = ''; fgSel = ''; bannerQ = []; bannerT = 0; reveal = null; lobbyBuilt = false; boonHidden = false; cacheReset();
@@ -398,6 +400,72 @@ const FoundingUI = (() => {
     if (!sellable(d)) { A.say('Only Common and Uncommon things are sold. Better ones go to the forge'); return; }
     if (!panels.tent) { A.say('Sell it at the supply tent'); return; }
     A.send({ k: 'sell', slot: i });
+  }
+
+  // ================================================================ dragging items
+  // Press an item (a bar slot, or a pack tile in the tent or the forge), pull it a few pixels and it follows the cursor as a ghost. Let go on another place
+  // in the pack (a bar slot or a pack tile) and the two trade places; on one of the forge's two boxes and it is put in; out over the world and it is set down at
+  // the hero's feet. Esc, or letting go where it began or on any other panel, puts it back. Only intents leave from here (swap, toss), so a guest does just what the host does.
+  let drag = null;
+  const DRAG_PX = 6, DRAG_SEL = '#fd-items .fd-item[data-i], [data-pk]';
+  const slotOf = n => +(n.dataset.pk !== undefined ? n.dataset.pk : n.dataset.i);
+  function dragDown(e) {
+    if (e.button !== 0 || drag || !root || !e.target.closest) return;
+    const n = e.target.closest(DRAG_SEL); if (!n) return;
+    const sh = S() && S().sheet, i = slotOf(n), x = sh && sh.it[i]; if (!x || !D.ITEM[x[1]]) return;
+    drag = { slot: i, uid: x[0], id: x[1], x0: e.clientX, y0: e.clientY, on: false, el: null, src: n, tgt: null };
+    window.addEventListener('mousemove', dragMove, true); window.addEventListener('mouseup', dragUp, true); window.addEventListener('blur', cancelDrag);
+  }
+  function dragTarget(x, y) {
+    const el = document.elementFromPoint(x, y); if (!el) return { kind: 'ui' };
+    const pk = el.closest(DRAG_SEL); if (pk) { const i = slotOf(pk); return { kind: i === drag.slot ? 'self' : 'swap', slot: i, el: pk }; }
+    const fb = panels.forge && el.closest('[data-fb]'); if (fb) return { kind: 'forge', box: +fb.dataset.fb, el: fb };
+    if (el === A.dep.canvas || el === root || el === document.body || el === document.documentElement) return { kind: 'world' };
+    return { kind: 'ui' };
+  }
+  function dragMove(e) {
+    if (!drag) return;
+    if (!drag.on) {
+      if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < DRAG_PX) return;
+      const d = D.ITEM[drag.id], g = document.createElement('div'); g.id = 'fd-ghost'; g.innerHTML = FI.frame(FI.item(d.id, d), rcOf(d), 'big') + '<i></i>';
+      root.appendChild(g); drag.el = g; drag.on = true; drag.src.classList.add('fd-dragsrc'); document.body.classList.add('fd-dragging');
+      if (typeof Tip !== 'undefined' && Tip.hide) Tip.hide();
+    }
+    e.preventDefault(); e.stopPropagation();
+    drag.el.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+    const t = dragTarget(e.clientX, e.clientY);
+    if (drag.tgt && drag.tgt.el && (!t.el || t.el !== drag.tgt.el)) drag.tgt.el.classList.remove('fd-drop');
+    if (t.el && t.kind !== 'self') t.el.classList.add('fd-drop');
+    drag.tgt = t; drag.el.dataset.to = t.kind;
+  }
+  function endDrag(swallow) {
+    window.removeEventListener('mousemove', dragMove, true); window.removeEventListener('mouseup', dragUp, true); window.removeEventListener('blur', cancelDrag);
+    if (drag) {
+      if (drag.el && drag.el.parentNode) drag.el.parentNode.removeChild(drag.el);
+      if (drag.src) drag.src.classList.remove('fd-dragsrc');
+      if (drag.tgt && drag.tgt.el) drag.tgt.el.classList.remove('fd-drop');
+      if (drag.on && swallow) {   // (the click that follows letting go on the same place is not a click on it)
+        const eat = ev => { ev.stopPropagation(); ev.preventDefault(); };
+        window.addEventListener('click', eat, true); setTimeout(() => window.removeEventListener('click', eat, true), 0);
+      }
+    }
+    drag = null; document.body.classList.remove('fd-dragging');
+  }
+  function cancelDrag() { const was = !!(drag && drag.on); endDrag(true); return was; }
+  function dragUp(e) {
+    if (!drag) return;
+    if (!drag.on) { endDrag(false); return; }
+    e.preventDefault(); e.stopPropagation();
+    const dr = drag, t = dragTarget(e.clientX, e.clientY), sh = S() && S().sheet; endDrag(true);
+    if (!sh || !dr) return;
+    if (t.kind === 'swap') { const it = sh.it, a = dr.slot, b = t.slot; A.send({ k: 'swap', a, b }); const x = it[a]; it[a] = it[b]; it[b] = x; A.snd('ui-open'); }   // (shown at once; the host's sheet follows)
+    else if (t.kind === 'world') { A.send({ k: 'toss', slot: dr.slot, uid: dr.uid }); sh.it[dr.slot] = 0; }
+    else if (t.kind === 'forge') {
+      const d = D.ITEM[dr.id], FMIN = D.FORGE_MIN != null ? D.FORGE_MIN : 2;
+      if (d.rar < FMIN) { A.say('The forge takes Rare things and better'); return; }
+      forgePick = forgePick.filter(u => u !== dr.uid); if (t.box === 0) forgePick.unshift(dr.uid); else forgePick.push(dr.uid); if (forgePick.length > 2) forgePick = t.box === 0 ? forgePick.slice(0, 2) : forgePick.slice(1);
+      forgeSig = ''; refreshForge(true);
+    }
   }
 
   // ================================================================ per frame
@@ -675,6 +743,7 @@ const FoundingUI = (() => {
   function closePanel(n) { panels[n] = false; const e = $('fd-' + n); if (e) e.style.display = 'none'; if (typeof Tip !== 'undefined' && Tip.hide) Tip.hide(); }
   function closeTop() {
     if (!root) return false;
+    if (drag && cancelDrag()) return true;   // (Esc puts a dragged item back first)
     if (reveal) { hideReveal(); return true; }
     if (panels.forge) { closePanel('forge'); return true; }
     if (panels.tent) { closePanel('tent'); return true; }
@@ -743,24 +812,24 @@ const FoundingUI = (() => {
       }
       body += `</div><div class="sec">YOUR PACK <small>${used} of ${D.ITEM_SLOTS}; right-click a Common or Uncommon to sell it</small></div><div class="tiles pack">`;
       sh.it.forEach((x, i) => {
-        if (!x) { body += `<div class="tile empty" data-hv="p:${i}"><span class="fd-ic"></span><span class="pc">&nbsp;</span></div>`; return; }
+        if (!x) { body += `<div class="tile empty" data-pk="${i}" data-hv="p:${i}"><span class="fd-ic"></span><span class="pc">&nbsp;</span></div>`; return; }
         const d = D.ITEM[x[1]], ok = sellable(d);
-        body += `<div class="tile r${d.rar}" data-sell="${i}" data-hv="p:${i}">${itemIcon(d)}<span class="pc ${ok ? 'sell' : 'frg'}">${ok ? coinImg() + sellVal(d) : 'Forge'}</span></div>`;
+        body += `<div class="tile r${d.rar}" data-sell="${i}" data-pk="${i}" data-hv="p:${i}">${itemIcon(d)}<span class="pc ${ok ? 'sell' : 'frg'}">${ok ? coinImg() + sellVal(d) : 'Forge'}</span></div>`;
       });
       body += '</div>';
     }
     if (!tentSel || tentSel[0] !== (tentTab === 'up' ? 'u' : tentSel[0] === 'p' ? 'p' : 'w')) tentSel = first;
-    T.innerHTML = `<div class="ph"><img class="hi" alt="" src="${FI.hud('tent')}"><div class="fd-title sm">SUPPLY TENT</div><div class="tabs"><button class="${tentTab === 'up' ? 'on' : ''}" data-t="up">Upgrades</button><button class="${tentTab === 'wares' ? 'on' : ''}" data-t="wares">Wares</button></div><div class="gd">${sh.gold}${coinImg()}</div><button class="x" id="fd-tentx">&times;</button></div><div class="shop"><div class="pb shelf">${body}</div><div class="dt" id="fd-tdet">${tentDetailHTML()}</div></div>`;
-    const keep = T.querySelector('.pb'); if (keep && T._sc) keep.scrollTop = T._sc;
+    T.innerHTML = `<div class="ph"><img class="hi" alt="" src="${FI.hud('tent')}"><div class="fd-title sm">SUPPLY TENT</div><div class="tabs"><button class="${tentTab === 'up' ? 'on' : ''}" data-t="up">Upgrades</button><button class="${tentTab === 'wares' ? 'on' : ''}" data-t="wares">Wares</button></div><div class="gd">${sh.gold}${coinImg()}</div><button class="x" id="fd-tentx">&times;</button></div><div class="shop"><div class="pbody shelf">${body}</div><div class="dt" id="fd-tdet">${tentDetailHTML()}</div></div>`;
+    const keep = T.querySelector('.pbody'); if (keep && T._sc) keep.scrollTop = T._sc;
     const sel = T.querySelector('[data-hv="' + tentSel + '"]'); if (sel) sel.classList.add('sel');
     T.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => { tentTab = b.dataset.t; tentSel = ''; tentSig = ''; refreshTent(true); }));
-    const keepSc = () => { T._sc = T.querySelector('.pb').scrollTop; };
+    const keepSc = () => { T._sc = T.querySelector('.pbody').scrollTop; };
     T.querySelectorAll('[data-hv]').forEach(n => n.addEventListener('mouseenter', () => { if (tentSel !== n.dataset.hv) setTentSel(n.dataset.hv); }));
     T.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => { keepSc(); A.send({ k: 'buy', up: b.dataset.up }); }));
     T.querySelectorAll('[data-item]').forEach(b => b.addEventListener('click', () => { keepSc(); A.send({ k: 'buy', item: b.dataset.item }); A.snd('fd-buy'); }));
     T.querySelectorAll('[data-sell]').forEach(b => b.addEventListener('contextmenu', e => { e.preventDefault(); keepSc(); sellSlot(+b.dataset.sell); }));
     $('fd-tentx').addEventListener('click', () => closePanel('tent'));
-    T.querySelector('.pb').addEventListener('scroll', e => { T._sc = e.target.scrollTop; });
+    T.querySelector('.pbody').addEventListener('scroll', e => { T._sc = e.target.scrollTop; });
   }
   // ---- the forge: the same family. Your pack on the left, the pair and what it makes on the right
   function fgDetailHTML(FMIN) {
@@ -784,16 +853,16 @@ const FoundingUI = (() => {
     } else if (A1) prev = '<span class="dim">Choose one more.</span>';
     const rule = D.RARITIES.map((nm, r) => `<span class="frr ${r >= FMIN ? 'ok' : 'no'}" style="--rc:${D.RARITY_COLORS[r]}">${nm}</span>`).join('');
     const slots = sh.it.map((x, i) => {
-      if (!x) return '<div class="tile empty"><span class="fd-ic"></span></div>';
+      if (!x) return `<div class="tile empty" data-pk="${i}"><span class="fd-ic"></span></div>`;
       const d = D.ITEM[x[1]], on = forgePick.indexOf(x[0]);
-      return `<div class="tile r${d.rar}${on >= 0 ? ' on' : ''}${d.rar < FMIN ? ' low' : ''}" data-u="${x[0]}" data-low="${d.rar < FMIN ? 1 : 0}" data-i="${i}">${itemIcon(d)}${on >= 0 ? `<u class="pk">${on + 1}</u>` : ''}<span class="nm">${esc(d.name)}</span></div>`;
+      return `<div class="tile r${d.rar}${on >= 0 ? ' on' : ''}${d.rar < FMIN ? ' low' : ''}" data-u="${x[0]}" data-low="${d.rar < FMIN ? 1 : 0}" data-i="${i}" data-pk="${i}">${itemIcon(d)}${on >= 0 ? `<u class="pk">${on + 1}</u>` : ''}<span class="nm">${esc(d.name)}</span></div>`;
     }).join('');
-    const box = x => (x ? itemIcon(D.ITEM[x[1]], 'big') : '<span class="fd-ic big empty"></span>');
-    const old = F.querySelector('.pb'), sc = old ? old.scrollTop : 0;
+    const box = (x, n) => `<span class="fgb" data-fb="${n}">${x ? itemIcon(D.ITEM[x[1]], 'big') : '<span class="fd-ic big empty"></span>'}</span>`;
+    const old = F.querySelector('.pbody'), sc = old ? old.scrollTop : 0;
     F.innerHTML = `<div class="ph"><img class="hi" alt="" src="${FI.hud('forge')}"><div class="fd-title sm">THE FORGE</div><div class="rule"><small>Takes</small>${rule}</div><button class="x" id="fd-forgex">&times;</button></div>
-      <div class="shop"><div class="pb shelf"><div class="sec">YOUR PACK <small>pick two of the same rarity</small></div><div class="tiles fg">${slots}</div><div class="fd-note">Rare things and better only. Commons and Uncommons are sold at the supply tent (${keyOf('fdTent', 'T')}).</div></div>
-      <div class="dt fgdt"><div class="fgrow">${box(A1)}<u>+</u>${box(B1)}<u>&rarr;</u>${res ? `<span class="fd-ic big res" style="--rc:${res}"><b>?</b></span>` : '<span class="fd-ic big empty"></span>'}</div><div class="fprev">${prev}</div><div class="frow"><button class="fd-btn gold" id="fd-dofg" ${ok ? '' : 'disabled'}>Forge</button></div><div class="dt-sep"></div><div id="fd-fdet">${fgDetailHTML(FMIN)}</div></div></div>`;
-    if (F.querySelector('.pb')) F.querySelector('.pb').scrollTop = sc;
+      <div class="shop"><div class="pbody shelf"><div class="sec">YOUR PACK <small>pick two of the same rarity</small></div><div class="tiles fg">${slots}</div><div class="fd-note">Rare things and better only. Commons and Uncommons are sold at the supply tent (${keyOf('fdTent', 'T')}).</div></div>
+      <div class="dt fgdt"><div class="fgrow">${box(A1, 0)}<u>+</u>${box(B1, 1)}<u>&rarr;</u>${res ? `<span class="fd-ic big res" style="--rc:${res}"><b>?</b></span>` : '<span class="fd-ic big empty"></span>'}</div><div class="fprev">${prev}</div><div class="frow"><button class="fd-btn gold" id="fd-dofg" ${ok ? '' : 'disabled'}>Forge</button></div><div class="dt-sep"></div><div id="fd-fdet">${fgDetailHTML(FMIN)}</div></div></div>`;
+    if (F.querySelector('.pbody')) F.querySelector('.pbody').scrollTop = sc;
     F.querySelectorAll('.tile[data-i]').forEach(n => n.addEventListener('mouseenter', () => { fgSel = n.dataset.i; const dt = F.querySelector('#fd-fdet'); if (dt) dt.innerHTML = fgDetailHTML(FMIN); }));
     F.querySelectorAll('.tile[data-u]').forEach(n => n.addEventListener('click', () => { if (n.dataset.low === '1') { A.say('The forge takes Rare things and better'); return; } const u = +n.dataset.u; const i = forgePick.indexOf(u); if (i >= 0) forgePick.splice(i, 1); else { if (forgePick.length >= 2) forgePick.shift(); forgePick.push(u); } forgeSig = ''; refreshForge(true); }));
     $('fd-forgex').addEventListener('click', () => closePanel('forge'));

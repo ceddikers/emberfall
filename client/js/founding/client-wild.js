@@ -255,7 +255,7 @@
         const u = K.U('e' + ev[1]) || (s && s.gone && s.gone.get('e' + ev[1]));
         if (!u || !u.def || !u.def.wild) return false;
         const elite = !!ev[7];
-        K.snd(elite ? 'fd-elite-die' : 'fd-enemy-die');
+        K.sndAt(elite ? 'fd-elite-die' : 'fd-enemy-die', ev[2], ev[3]);
         corpses.push({ x: ev[2], y: ev[3], rot: ev[4], face: ev[4], vx: ev[5], vy: ev[6], vr: (Math.random() - 0.5) * 4, t: 0, life: 2.6 + Math.random() * 0.4, def: u.def, eid: u.eid, ph: u.ph || 0, wp: u.wp || 0 });
         if (corpses.length > 40) corpses.shift();
         K.burst(ev[2], ev[3], elite ? 12 : 6, { color: '#ff9a3a', spd: 90, dur: 0.6, size: 2.2, kind: 'spark', vy: -20 }); K.burst(ev[2], ev[3], elite ? 7 : 3, { color: '#5a4034', spd: 60, dur: 0.7, size: 3.5, kind: 'dust' });
@@ -264,18 +264,18 @@
         return true;
       }
       if (typeof tag !== 'string' || tag.indexOf('wc') !== 0 && tag !== 'wchowl') return false;
-      if (tag === 'wcwake') { const cp = CAMPS[ev[1]]; if (cp && K.visAt(ev[3], ev[4], 40)) { K.snd('fd-wild-wake'); const u = K.U('e' + ev[2]); if (u) { u.sq = 1; } K.burst(ev[3], ev[4], 5, { color: '#7a6652', spd: 50, dur: 0.5, size: 3, kind: 'dust' }); } }
-      else if (tag === 'wchowl') { if (K.visAt(ev[2], ev[3], 40)) { K.snd('fd-wild-howl'); K.fxRing(ev[2], ev[3], 14, 120, 0.8, '255,190,110', 2, 1); } }
-      else if (tag === 'wcrst') { if (K.visAt(ev[2], ev[3], 40)) { K.snd('fd-wild-return'); K.fxRing(ev[2], ev[3], 8, 46, 0.7, '150,235,160', 1.6, 1); } }
+      if (tag === 'wcwake') { const cp = CAMPS[ev[1]]; if (cp && K.visAt(ev[3], ev[4], 40)) { K.sndAt('fd-wild-wake', ev[3], ev[4]); const u = K.U('e' + ev[2]); if (u) { u.sq = 1; } K.burst(ev[3], ev[4], 5, { color: '#7a6652', spd: 50, dur: 0.5, size: 3, kind: 'dust' }); } }
+      else if (tag === 'wchowl') { if (K.visAt(ev[2], ev[3], 40)) { K.sndAt('fd-wild-howl', ev[2], ev[3]); K.fxRing(ev[2], ev[3], 14, 120, 0.8, '255,190,110', 2, 1); } }
+      else if (tag === 'wcrst') { if (K.visAt(ev[2], ev[3], 40)) { K.sndAt('fd-wild-return', ev[2], ev[3]); K.fxRing(ev[2], ev[3], 8, 46, 0.7, '150,235,160', 1.6, 1); } }
       else if (tag === 'wcclr') { /* the kill already speaks; the camp's mark goes quiet through props.wc */ }
       else if (tag === 'wcmv') {
-        const u = K.U('e' + ev[1]); if (u) { u.spT0 = s.T; u.spKind = ['rush', 'pounce', 'wave', 'stonefall'][ev[2]]; if (K.visAt(u.x, u.y, 40)) K.snd(['fd-mire-charge', 'fd-wick-lunge', 'fd-tail-sweep', 'fd-quake'][ev[2]] || 'fd-brute-slam'); }
+        const u = K.U('e' + ev[1]); if (u) { u.spT0 = s.T; u.spKind = ['rush', 'pounce', 'wave', 'stonefall'][ev[2]]; if (K.visAt(u.x, u.y, 40)) K.sndAt(['fd-mire-charge', 'fd-wick-lunge', 'fd-tail-sweep', 'fd-quake'][ev[2]] || 'fd-brute-slam', u.x, u.y, { reach: 1.3 }); }
       } else if (tag === 'wcfx') {
         const kind = ev[1], x = ev[2], y = ev[3], R = ev[4]; if (!K.visAt(x, y, 40)) return true;
         if (kind === 0) { const an = ev[5] || 0; K.burst(x, y, 10, { color: '#6a5646', spd: 110, dur: 0.5, size: 3.4, kind: 'dust', ang: an + PI, spread: 0.9 }); K.shake(2, 0.15); }
         else if (kind === 1) { K.fxRing(x, y, R * 0.3, R * 1.1, 0.4, '255,140,70', 3, 1); K.burst(x, y, 12, { color: '#6a5646', spd: 120, dur: 0.5, size: 3.4, kind: 'dust' }); K.shake(2.2, 0.2); }
-        else if (kind === 2) { const a = ev[5] || 0; K.snd('fd-mire-stamp'); for (let k = 0; k < 12; k++) K.burst(x + Math.cos(a) * R * k / 12, y + Math.sin(a) * R * k / 12, 2, { color: '#5b5a34', spd: 80, dur: 0.6, size: 3.6, kind: 'dust', ang: a, spread: 0.7 }); K.shake(2, 0.18); }
-        else if (kind === 3) { K.snd('fd-meteor-hit'); K.fxRing(x, y, R * 0.3, R * 1.05, 0.35, '210,180,140', 2.6, 1); K.burst(x, y, 9, { color: '#7a7066', spd: 130, dur: 0.55, size: 3.4, kind: 'dust' }); K.burst(x, y, 6, { color: '#ff9a3a', spd: 90, dur: 0.5, size: 2, kind: 'spark', vy: -30 }); K.shake(2.4, 0.2); }
+        else if (kind === 2) { const a = ev[5] || 0; K.sndAt('fd-mire-stamp', x, y); for (let k = 0; k < 12; k++) K.burst(x + Math.cos(a) * R * k / 12, y + Math.sin(a) * R * k / 12, 2, { color: '#5b5a34', spd: 80, dur: 0.6, size: 3.6, kind: 'dust', ang: a, spread: 0.7 }); K.shake(2, 0.18); }
+        else if (kind === 3) { K.sndAt('fd-meteor-hit', x, y); K.fxRing(x, y, R * 0.3, R * 1.05, 0.35, '210,180,140', 2.6, 1); K.burst(x, y, 9, { color: '#7a7066', spd: 130, dur: 0.55, size: 3.4, kind: 'dust' }); K.burst(x, y, 6, { color: '#ff9a3a', spd: 90, dur: 0.5, size: 2, kind: 'spark', vy: -30 }); K.shake(2.4, 0.2); }
       }
       return true;
     },
@@ -287,7 +287,7 @@
     if (u.wsDone || u.lunge < 0.45) return;
     u.wsDone = true; const d = u.def;
     if (d.sp || !K.visAt(u.x, u.y, 40)) return;
-    K.snd(d.ranged ? (d.fam === 'river' ? 'fd-spit' : 'fd-auto-cast') : STRIKE[d.fam]);
+    K.sndAt(d.ranged ? (d.fam === 'river' ? 'fd-spit' : 'fd-auto-cast') : STRIKE[d.fam], u.x, u.y);
   }
   function drawCorpse(c, k) {
     const art = ART[k.eid], s = S(); if (!art) return;

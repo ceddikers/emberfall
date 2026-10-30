@@ -283,7 +283,7 @@ if (typeof Founding !== 'undefined' && Founding.addLayer) (() => {
   // ---------------------------------------------------------------- begin and end
   function begin(T, m) {
     T.on = true; T.t = m[0]; T.target = m[0]; T.targetAt = K.S.T; T.cap = -1; T.snd = 0; T.saidStart = false; T.mine = false;
-    T.fogWas = !!K.S.noFog; K.S.noFog = true;                      // no fog for the film (and the enemies are not drawn: drawEnemy below)
+    T.fogWas = !!K.S.noFog; K.S.noFog = true; K.S.inIntro = true;   // (inIntro: the film is on, client-defence.js keeps the spires out of it)                      // no fog for the film (and the enemies are not drawn: drawEnemy below)
     const cam = K.S.cam; cam.free = true;
     // the trials layer speaks the Steward's line when the run starts: here the Steward says it in his own beat
     const tr = K.S.__trials || (K.S.__trials = { queue: [], cur: null, t: 0, heardPart: -1, heardStart: 0, chipSig: '', pgN: -1 });
@@ -294,7 +294,7 @@ if (typeof Founding !== 'undefined' && Founding.addLayer) (() => {
   function finish(T, skipped) {
     if (!T.on) return;
     T.on = false;
-    K.S.noFog = T.fogWas;
+    K.S.noFog = T.fogWas; K.S.inIntro = false;
     const cam = K.S.cam; cam.free = false; cam.tz = 0.9;
     restoreProps(T);
     // who played the host's clock while the world stood still: a fresh one, as at the start of a run, so nothing lags

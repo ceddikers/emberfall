@@ -225,9 +225,70 @@ function sectionSmoke() {
   check(errs === 0 && bad === 0, 'three parties in full kit played on with no throw and no NaN');
 }
 
+// ---------------------------------------------------------------- the pack: what the panels are sent, tossing and swapping
+function sectionPack() {
+  console.log('The pack (the sheet the forge and tent read, tossing, swapping):');
+  require(path.join(__dirname, '../client/js/founding/sim-world.js'));   // ground drops, toss and swap
+  const sheets = {};
+  const sim = mk(['bastion', 'cleric'], 5, { emitTo(id, m) { if (m.t === 'fdp') sheets[id] = m; } });
+  const h = sim.hmap.p1;   // (the second player: an intent from p1 is exactly what a guest's tab sends)
+  put(h, OPEN[0], OPEN[1]);
+  const common = D.ITEMS.find(x => x.rar === 0 && !x.hero), rare = D.ITEMS.filter(x => x.rar === 2 && !x.hero && !x.sec).slice(0, 2), mine = D.ITEMS.find(x => x.hero === 'cleric' && x.rar >= 1 && !x.sec);
+  wear(sim, h, [common.id, rare[0].id, rare[1].id, mine.id]);
+  sim.sendSheet(h);
+  const it = (sheets.p1 || {}).it;
+  check(Array.isArray(it) && it.length === D.ITEM_SLOTS && it.slice(0, 4).every((x, i) => Array.isArray(x) && x[0] === h.items[i].uid && x[1] === h.items[i].id) && it.slice(4).every(x => x === 0), 'the sheet a guest gets lists every worn item as [uid, id] (what the forge, tent and bar read)');
+  // swap
+  const ids = () => h.items.map(x => (x ? x.id : null));
+  const before = ids();
+  sim.intent('p1', { k: 'swap', a: 0, b: 2 }); check(ids()[0] === before[2] && ids()[2] === before[0] && ids()[1] === before[1], 'swap trades two slots');
+  sim.intent('p1', { k: 'swap', a: 3, b: 5 }); check(h.items[3] === null && h.items[5] && h.items[5].id === mine.id, 'swapping with an empty slot moves the item');
+  const snap = ids(); for (const m of [{ k: 'swap', a: 1, b: 1 }, { k: 'swap', a: -1, b: 2 }, { k: 'swap', a: 1, b: 6 }, { k: 'swap', a: 0.5, b: 2 }, { k: 'swap', a: '1', b: 2 }, { k: 'swap' }]) sim.intent('p1', m);
+  check(JSON.stringify(ids()) === JSON.stringify(snap), 'a swap with a bad slot changes nothing');
+  run(sim, 0.5); sim.sendSheet(h); check(sheets.p1.it[5] && sheets.p1.it[5][1] === mine.id && sheets.p1.it[3] === 0, 'the sheet after a swap shows the new order');
+  // toss
+  const slot = h.items.findIndex(x => x && x.id === rare[0].id), uid = h.items[slot].uid, n0 = sim.groundDrops.length;
+  sim.intent('p1', { k: 'toss', slot, uid: uid + 99 }); check(h.items[slot] && sim.groundDrops.length === n0, 'a toss with the wrong uid (the slot changed meanwhile) does nothing');
+  sim.intent('p1', { k: 'toss', slot, uid });
+  check(h.items[slot] === null && sim.groundDrops.length === n0 + 1, 'toss empties the slot and puts the item on the ground');
+  const dr = sim.groundDrops[sim.groundDrops.length - 1];
+  check(dr.item === rare[0].id && hyp(dr.x - h.x, dr.y - h.y) < 120, "it lies at the hero's feet");
+  const had = h.items.filter(Boolean).length;
+  run(sim, 2); check(sim.groundDrops.includes(dr) && h.items.filter(Boolean).length === had, 'the one who set it down does not scoop it up again while standing there');
+  put(h, OPEN[0] + 400, OPEN[1]); run(sim, 0.5); put(h, dr.x, dr.y); run(sim, 0.3);
+  check(!sim.groundDrops.includes(dr) && h.items.some(x => x && x.id === rare[0].id), 'walking away and back takes it up');
+  // a class piece stays what it is; a fallen hero tosses and swaps nothing; bad slots add nothing
+  const ms = h.items.findIndex(x => x && x.id === mine.id); sim.intent('p1', { k: 'toss', slot: ms });
+  const dm = sim.groundDrops[sim.groundDrops.length - 1]; check(h.items[ms] === null && dm.item === mine.id, 'a class piece tossed stays that item');
+  const bag = JSON.stringify(ids()), n1 = sim.groundDrops.length;
+  h.dead = true; sim.intent('p1', { k: 'toss', slot: h.items.findIndex(Boolean) }); sim.intent('p1', { k: 'swap', a: 0, b: 1 }); h.dead = false;
+  check(JSON.stringify(ids()) === bag && sim.groundDrops.length === n1, 'a fallen hero tosses and swaps nothing');
+  for (const s of [5, 9, -1, 'x', null, 1.5]) sim.intent('p1', { k: 'toss', slot: s });
+  check(JSON.stringify(ids()) === bag && sim.groundDrops.length === n1, 'a toss of an empty or bad slot adds nothing');
+}
+
+// ---------------------------------------------------------------- the panels' markup must not meet the game's own styles
+// (a Founding panel body was once called .pb, which is also the raid's buff pip: the stylesheet shrank the tent, the forge and the builder's board to an 18 px box)
+function sectionStyles() {
+  console.log("The panels and the game's other styles:");
+  const fs = require('fs'), dir = path.join(__dirname, '../client/js/founding'), cls = new Set();
+  const attr = /class(?:Name)?\s*=\s*["'`]([^"'`]*)["'`]/g;
+  for (const f of fs.readdirSync(dir)) if (f.endsWith('.js')) for (const m of fs.readFileSync(path.join(dir, f), 'utf8').matchAll(attr)) for (const t of m[1].replace(/\$\{[^}]*\}/g, ' ').split(/\s+/)) if (/^[a-z][\w-]*$/i.test(t)) cls.add(t);
+  const OK = new Set(['hidden', 'close', 'sub', 'chip']);   // (known, harmless overlaps)
+  const hits = [];
+  for (const f of fs.readdirSync(path.join(__dirname, '../client')).filter(x => x.endsWith('.css') && x !== 'founding.css')) {
+    const css = fs.readFileSync(path.join(__dirname, '../client', f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const m of css.matchAll(/(^|[},])\s*\.([a-z][\w-]*)\b[^{,]*\{/g)) if (cls.has(m[2]) && !OK.has(m[2])) hits.push(m[2] + ' (' + f + ')');
+  }
+  check(cls.has('pbody') && !cls.has('pb'), 'the shop panels use their own body class');
+  check(hits.length === 0, 'no class the Founding writes into its markup is also a bare class rule in another stylesheet: ' + [...new Set(hits)].join(', '));
+}
+
 sectionList();
 sectionPassives();
 sectionSmoke();
+sectionPack();   // (last: it loads sim-world.js, which puts drops on the ground, and the sections above roll them straight into packs)
+sectionStyles();
 console.log(failures ? `\n${failures} failed, ${passed} passed` : `\n${passed} checks`);
 if (failures) process.exit(1);
 console.log('Items OK');

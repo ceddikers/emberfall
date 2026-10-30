@@ -223,6 +223,42 @@ function sectionSoldiers() {
   check(tough.camp.hp < tough.camp.max || tough.enemies.length > 0, 'and does not hold the lane alone');
 }
 
+// ------------------------------------------------------------------ the Ash Spires
+function sectionSpire() {
+  const SP = DEF.SPIRE, SPS = DEF.SPIRES;
+  check(SPS.length === 2 && SPS.every((p, i) => p.lane === i && M.walkable(p.x, p.y, SP.r) && hyp(p.x - M.LANES[i].path[0][0], p.y - M.LANES[i].path[0][1]) < 400), 'one spire per lane, on open ground by where its waves come out');
+  const sim = makeSim(2, 91); sim.tick(DT); const dd = sim.defence;
+  run(sim, 20.5);   // wave 1: the squads march
+  sim.spawnQ.length = 0; sim.enemies.length = 0; sim.nextWaveAt = 1e9;   // nothing but the soldiers and the spires from here
+  rich(sim); hold(sim); const camp0 = sim.camp.hp, towerHp = []; const t = tower(sim, 'post', 1, [3000, 3040]); towerHp.push(t.hp);
+  check(dd.spires.length === 2 && !sim.enemies.some(e => e.spire) && !sim.allies.some(a => a.spire) && dd.spires.every(sp => sp.hp === undefined && sp.d.id === undefined), 'a spire is neither an enemy nor an ally, and has no health to take');
+  check(sim.inCircle(SPS[0].x, SPS[0].y, 400).length === 0 && sim.inCircle(SPS[1].x, SPS[1].y, 400).length === 0, 'nothing a hero can aim or sweep at stands there');
+  const start = dd.soldiers.length; check(start >= 8, 'a squad per lane (' + start + ')');
+  clearEv(sim); const hp0 = sim.heroes.map(h => h.hp);
+  let reached = [false, false], firstFall = -1, flags = new Set();
+  for (let i = 0; i < 200 / DT; i++) {
+    for (const h of sim.heroes) { h.x = 3200; h.y = 3800; h.hp = h.max; }
+    sim.tick(DT); sim.enemies.length = 0; sim.spawnQ.length = 0;
+    for (const s of dd.soldiers) for (const k of [0, 1]) if (s.lane === k && hyp(s.x - SPS[k].x, s.y - SPS[k].y) < SP.r + 60) reached[k] = true;
+    if (i % 10 === 0) for (const f of sim.snapshot(true).sp) flags.add(f);
+    if (firstFall < 0 && evs(sim, 'sod').length) firstFall = sim.time;
+  }
+  check(reached[0] && reached[1], 'soldiers left idle at the hold point walk on and reach the spire at the end of each lane');
+  check(evs(sim, 'spf').length > 3 && evs(sim, 'spi').length > 3, 'the spires throw bolts that land (' + evs(sim, 'spf').length + ' thrown, ' + evs(sim, 'spi').length + ' landed)');
+  check(evs(sim, 'sph').length > 3, 'the soldiers strike and shoot the spire (' + evs(sim, 'sph').length + ' flashes)');
+  check(evs(sim, 'sod').length >= start - 2 && dd.soldiers.length <= 1, 'the soldiers die there, they do not wait forever (' + dd.soldiers.length + ' of ' + start + ' left)');
+  check(sim.camp.hp === camp0 && sim.heroes.every((h, i) => h.hp === h.max && !h.dead) && t.hp >= towerHp[0] && !t.rubble, 'it never harms a hero, a tower or the camp');
+  check(sim.enemies.length === 0, 'its soldiers\' deaths bring the enemy nothing');
+  const sn = sim.snapshot(true); check(Array.isArray(sn.sp) && sn.sp.length === 2 && sn.sp.every(v => Number.isInteger(v) && v >= 0 && v <= 3) && [...flags].some(f => f & 1) && [...flags].some(f => f & 2), 'the snapshot carries one small flag per spire (hit flash 1, awake 2): ' + [...flags].sort().join(','));
+  check(JSON.stringify(sn.sp).length < 12, 'and it is compact');
+  const ev0 = evs(sim, 'spf')[0]; check(ev0 && ev0.length === 5 && ev0.every((v, j) => j === 0 ? typeof v === 'string' : Number.isFinite(v)), 'a bolt event is [spf, lane, soldier id, x, y]');
+  const owe = dd.owed.map(o => o.length); check(owe.every(n => n >= 1 && n <= DEF.TUNE.laneExtra), 'the soldiers the spire took are owed back to their lane, up to ' + DEF.TUNE.laneExtra + ' (' + owe + ')');
+  sim.nextWaveAt = sim.time; run(sim, 0.5); sim.spawnQ.length = 0; sim.enemies.length = 0;
+  { const base = DEF.squadAt(D.tierOf(sim.wave)).length; for (const k of [0, 1]) { const n = dd.soldiers.filter(s => s.lane === k).length; check(n === Math.min(base + owe[k], base + DEF.TUNE.laneExtra) && dd.owed[k].length === 0, 'the next squad on lane ' + k + ' marches with them again (' + n + ' = ' + base + ' + ' + owe[k] + ')'); } }
+  // a fresh squad is shot at again and a spire is the same after a thousand soldiers: it holds no state that wears
+  check(dd.spires.every(sp => Object.keys(sp).every(k => ['d', 'cd', 'heat', 'quiet', 'hitT', 'evT'].includes(k))), 'a spire keeps no health or wear');
+}
+
 // ------------------------------------------------------------------ cost and determinism
 function sectionRun() {
   // cost: a full 4 hero build with towers and soldiers ticks cheaply
@@ -240,7 +276,7 @@ function sectionRun() {
 }
 
 const T0 = Date.now();
-try { for (const f of [sectionPlacement, sectionKinds, sectionHurt, sectionMessages, sectionSoldiers, sectionRun]) { f(); } } catch (e) { failures++; console.log('EXCEPTION: ' + e.stack); }
+try { for (const f of [sectionPlacement, sectionKinds, sectionHurt, sectionMessages, sectionSoldiers, sectionSpire, sectionRun]) { f(); } } catch (e) { failures++; console.log('EXCEPTION: ' + e.stack); }
 console.log(`(${passed} checks passed, ${((Date.now() - T0) / 1000).toFixed(1)} s)`);
 if (failures) { console.log(`Defence FAILED (${failures} problem${failures > 1 ? 's' : ''})`); process.exit(1); }
 console.log('Defence OK');

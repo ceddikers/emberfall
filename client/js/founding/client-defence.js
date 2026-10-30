@@ -17,9 +17,12 @@
   };
   let K = null, S = null;
   const towers = new Map(), sol = new Map(), fxT = new Map(), corpses = [];
+  const SPIRE = DEF.SPIRE, spires = (DEF.SPIRES || []).map(d => ({ d, x: d.x, y: d.y, hitAt: -9, fireAt: -9, flags: 0, wk: 0, seen: false, seenT: 0, tl: null }));   // the Ash Spires (see sim-defence.js)
   const L = { last: performance.now(), placing: null, shift: false, sel: null, open: false, tab: 't', panel: null, tp: null, sig: '', tsig: '', lastVis: null, baseVis: null, board: null, hover: null, msgT: 0, prev: 0, mini: 0 };
   const have = n => typeof Sound !== 'undefined' && Sound.has && Sound.has(n);
   const sfx = (...names) => { for (const n of names) if (have(n)) { K.snd(n); return; } };
+  // the same, heard by how far (x, y) is from you (Founding sound by vicinity); a tower's or a soldier's sound is a place's, never the whole map's
+  const sfxAt = (x, y, o, ...names) => { for (const n of names) if (have(n)) { K.sndAt(n, x, y, o); return; } };
   const myGold = () => (S && S.sheet ? S.sheet.gold | 0 : 0);
   const keyLabel = () => { try { const KB = typeof Keybinds !== 'undefined' ? Keybinds : null; return (KB && KB.label && KB.keyFor ? KB.label(KB.keyFor('fdBuild')) : null) || 'H'; } catch (e) { return 'H'; } };
   const tip = (node, fn) => { if (typeof Tip !== 'undefined' && Tip.set) Tip.set(node, fn); };
@@ -604,7 +607,7 @@ const sm = t => t * t * (3 - 2 * t);
       if (Math.random() < 0.6) K.burst(x, y, 1, { color: '#ff9a40', spd: 30, dur: 0.3, size: 1.8, kind: 'spark' });
     } });
     K.fxAdd({ dur: dur + 0.5, draw() {}, });
-    setTimeout(() => { try { if (S && K) { K.fxBlast(x1, y1, blast, '255,150,60', false); sfx('fd-fireball-hit', 'fd-erupt'); } } catch (e) { /* the run ended */ } }, dur * 1000);
+    setTimeout(() => { try { if (S && K) { K.fxBlast(x1, y1, blast, '255,150,60', false); sfxAt(x1, y1, null, 'fd-fireball-hit', 'fd-erupt'); } } catch (e) { /* the run ended */ } }, dur * 1000);
   }
   function fxBolt(x0, y0, x1, y1) {
     const d = Math.hypot(x1 - x0, y1 - y0) || 1, ux = (x1 - x0) / d, uy = (y1 - y0) / d;
@@ -636,13 +639,14 @@ const sm = t => t * t * (3 - 2 * t);
       }
       for (const id of towers.keys()) if (!seen.has(id)) { const t = towers.get(id); if (L.sel === id) L.sel = null; towers.delete(id); }
     }
+    if (Array.isArray(m.sp)) for (let i = 0; i < m.sp.length && i < spires.length; i++) spires[i].flags = m.sp[i] | 0;
     if (Array.isArray(m.sd)) {
       const seen = new Set();
       for (const r of m.sd) {
         seen.add(r[0]); let s = sol.get(r[0]);
         if (!s) { s = { id: r[0], x: r[2], y: r[3], face: r[4] / 10, flash: 0, fdur: 0.25, hit: 0, actAt: -9, moving: false, hp: 100, ur: 0, ti: r[1], sq: r[7] + '@' + S.T.toFixed(2), bear: false }; sol.set(r[0], s); }
         s.ti = r[1]; s.tx = r[2]; s.ty = r[3]; s.tf = r[4] / 10; if (r[5] < s.hp - 0.5) s.hit = 0.16; s.hp = r[5]; s.moving = !!(r[6] & 2); s.ur = (r[6] >> 2) & 63; s.chg = !!(r[6] & 256); s.lane = r[7];
-        if (r[6] & 1 && s.flash <= 0) { kick(s, s.ti === 2 ? 0.35 : 0.25); if ((s.ti === 0 || s.ti === 3) && K.visAt(s.x, s.y, 10)) K.snd('fd-soldier-swing', { minGap: 0.12 }); }
+        if (r[6] & 1 && s.flash <= 0) { kick(s, s.ti === 2 ? 0.35 : 0.25); if ((s.ti === 0 || s.ti === 3) && K.visAt(s.x, s.y, 10)) K.sndAt('fd-soldier-swing', s.x, s.y, { minGap: 0.12 }); }
       }
       for (const id of sol.keys()) if (!seen.has(id)) sol.delete(id);
       // the squad's first knight carries the standard (and when they fall, the next takes it up)
@@ -658,35 +662,135 @@ const sm = t => t * t * (3 - 2 * t);
     if (tag.charCodeAt(0) === 116 && tag.charCodeAt(1) === 119) {   // tw*
       const t = byId(ev[1]);
       switch (tag) {
-        case 'twb': { const kind = KINDS[ev[2]], x = ev[4], y = ev[5]; if (!t) { towers.set(ev[1], { id: ev[1], kind, rank: 1, x, y, max: TW[kind].hp[0], hp: TW[kind].hp[0] * 0.35, hpPrev: TW[kind].hp[0] * 0.35, flags: 2, bornAt: S.T, firedAt: -9, ringAt: -9, hitAt: -9, upAt: -9, aimA: PI / 2, inv: TW[kind].cost[0] }); } else t.bornAt = S.T; fxDust(x, y, 10); sfx('fd-post-plant', 'fd-setdown'); break; }
-        case 'twu': if (t) { t.rank = ev[2]; t.upAt = S.T; t.bornAt = S.T - 9; K.burst(t.x, t.y - 30, 12, { color: '#ffe9a8', spd: 110, dur: 0.7, size: 2.2, kind: 'spark', vy: -30 }); K.fxRing(t.x, t.y, 10, 60, 0.5, '255,228,160', 2.5); sfx('fd-rankup'); } break;
+        case 'twb': { const kind = KINDS[ev[2]], x = ev[4], y = ev[5]; if (!t) { towers.set(ev[1], { id: ev[1], kind, rank: 1, x, y, max: TW[kind].hp[0], hp: TW[kind].hp[0] * 0.35, hpPrev: TW[kind].hp[0] * 0.35, flags: 2, bornAt: S.T, firedAt: -9, ringAt: -9, hitAt: -9, upAt: -9, aimA: PI / 2, inv: TW[kind].cost[0] }); } else t.bornAt = S.T; fxDust(x, y, 10); sfxAt(x, y, null, 'fd-post-plant', 'fd-setdown'); break; }
+        case 'twu': if (t) { t.rank = ev[2]; t.upAt = S.T; t.bornAt = S.T - 9; K.burst(t.x, t.y - 30, 12, { color: '#ffe9a8', spd: 110, dur: 0.7, size: 2.2, kind: 'spark', vy: -30 }); K.fxRing(t.x, t.y, 10, 60, 0.5, '255,228,160', 2.5); sfxAt(t.x, t.y, null, 'fd-rankup'); } break;
         case 'twf': if (t) {
           const tx = ev[2], ty = ev[3], v = ev[4], a = Math.atan2(ty - t.y, tx - t.x); t.aimA = a; t.firedAt = S.T;
-          if (v === 0 || v === 1) { const ox = t.x + Math.cos(a) * 10, oy = towerTop(t); fxArrow(ox, oy, tx, ty - 6, 0.12, '255,236,190', 1.6, 24); if (v === 1) fxArrow(tx, ty - 6, tx + Math.cos(a) * 90, ty - 6 + Math.sin(a) * 90, 0.12, '255,236,190', 1.2, 30); K.sfxGap && 0; sfx('fd-arrow'); }
-          else if (v === 2) { fxLob(t.x, towerTop(t) + 6, tx, ty, 0.38, TW.brazier.blast[t.rank - 1]); sfx('fd-fireball-cast', 'fd-fireball-hit'); }
-          else if (v === 3) { fxBolt(t.x + Math.cos(a) * 24, t.y - 22 + Math.sin(a) * 10, tx, ty - 8); sfx('fd-ballista', 'fd-pierce', 'fd-arrow'); K.shake(1.5, 0.12); }
+          if (v === 0 || v === 1) { const ox = t.x + Math.cos(a) * 10, oy = towerTop(t); fxArrow(ox, oy, tx, ty - 6, 0.12, '255,236,190', 1.6, 24); if (v === 1) fxArrow(tx, ty - 6, tx + Math.cos(a) * 90, ty - 6 + Math.sin(a) * 90, 0.12, '255,236,190', 1.2, 30); sfxAt(t.x, t.y, null, 'fd-arrow'); }
+          else if (v === 2) { fxLob(t.x, towerTop(t) + 6, tx, ty, 0.38, TW.brazier.blast[t.rank - 1]); sfxAt(t.x, t.y, null, 'fd-fireball-cast', 'fd-fireball-hit'); }
+          else if (v === 3) { fxBolt(t.x + Math.cos(a) * 24, t.y - 22 + Math.sin(a) * 10, tx, ty - 8); sfxAt(t.x, t.y, null, 'fd-ballista', 'fd-pierce', 'fd-arrow'); K.shake(1.5, 0.12); }
         } break;
-        case 'twr': if (t) { t.ringAt = S.T; fxRingGold(t.x, t.y, ev[2]); sfx('fd-bell-ring', 'fd-sanctum'); } break;
-        case 'twd': if (t) { t.hpPrev = 0; } fxDust(ev[2], ev[3], 18); K.burst(ev[2], ev[3] - 20, 10, { color: '#5c4128', spd: 140, dur: 0.8, size: 3.4, kind: 'dust', vy: -50, g: 160 }); K.shake(3, 0.25); sfx('fd-tower-fall', 'fd-gate-break'); break;
+        case 'twr': if (t) { t.ringAt = S.T; fxRingGold(t.x, t.y, ev[2]); sfxAt(t.x, t.y, null, 'fd-bell-ring', 'fd-sanctum'); } break;
+        case 'twd': if (t) { t.hpPrev = 0; } fxDust(ev[2], ev[3], 18); K.burst(ev[2], ev[3] - 20, 10, { color: '#5c4128', spd: 140, dur: 0.8, size: 3.4, kind: 'dust', vy: -50, g: 160 }); K.shake(3, 0.25); sfxAt(ev[2], ev[3], { reach: 1.5 }, 'fd-tower-fall', 'fd-gate-break'); break;
         case 'twx': { const o = byId(ev[1]); if (o) { fxDust(ev[2], ev[3], 6); towers.delete(ev[1]); if (L.sel === ev[1]) L.sel = null; } break; }
-        case 'tws': { const o = byId(ev[1]); if (o) { K.burst(ev[2], ev[3] - 20, 8, { color: '#f0cf72', spd: 90, dur: 0.8, size: 2.4, kind: 'spark', vy: -50 }); K.ftxt(ev[2], ev[3] - 40, 'Sold', '#f0cf72', 11, 0.9); fxDust(ev[2], ev[3], 8); towers.delete(ev[1]); if (L.sel === ev[1]) L.sel = null; sfx('fd-sell'); } break; }
-        case 'twre': if (t) { t.bornAt = S.T; fxDust(t.x, t.y, 10); sfx('fd-post-plant', 'fd-setdown'); } break;
+        case 'tws': { const o = byId(ev[1]); if (o) { K.burst(ev[2], ev[3] - 20, 8, { color: '#f0cf72', spd: 90, dur: 0.8, size: 2.4, kind: 'spark', vy: -50 }); K.ftxt(ev[2], ev[3] - 40, 'Sold', '#f0cf72', 11, 0.9); fxDust(ev[2], ev[3], 8); towers.delete(ev[1]); if (L.sel === ev[1]) L.sel = null; sfxAt(ev[2], ev[3], null, 'fd-sell'); } break; }
+        case 'twre': if (t) { t.bornAt = S.T; fxDust(t.x, t.y, 10); sfxAt(t.x, t.y, null, 'fd-post-plant', 'fd-setdown'); } break;
         case 'twno': if (ev[1] === S.myId) { K.say(ERR[ev[2]] || 'Cannot do that.'); } break;
       }
       return true;
     }
+    if (tag.charCodeAt(0) === 115 && tag.charCodeAt(1) === 112) return onSpireEvent(ev);   // sp*: the Ash Spires
     if (tag.charCodeAt(0) === 115 && tag.charCodeAt(1) === 111) {   // so*
       switch (tag) {
         case 'sob': sfx('fd-march', 'fd-wave'); break;
-        case 'sof': { const s = sol.get(ev[1]); if (s) { kick(s, 0.25); if (K.visAt(s.x, s.y, 10)) K.snd('fd-soldier-shot', { minGap: 0.12 }); fxArrow(s.x + (Math.cos(s.face) >= 0 ? 12 : -12), s.y - 24, ev[2], ev[3] - 6, 0.1, '255,236,190', 1.2, 14); } break; }
-        case 'soh': { const s = sol.get(ev[1]); if (s) { kick(s, 0.35); if (K.visAt(s.x, s.y, 10)) K.snd('fd-soldier-heal', { minGap: 0.3 }); const x1 = ev[2], y1 = ev[3]; K.fxAdd({ dur: 0.45, draw(c) { const k = this.t / 0.45; K.glowAt(c, s.x + (x1 - s.x) * K.eo(k), s.y - 34 + (y1 - 12 - s.y + 34) * K.eo(k), 14, '255,240,170', 1 - k * 0.6); } }); K.burst(x1, y1 - 10, 4, { color: '#bff2c4', spd: 30, dur: 0.7, size: 2, kind: 'dot', vy: -36 }); } break; }
+        case 'sof': { const s = sol.get(ev[1]); if (s) { kick(s, 0.25); if (K.visAt(s.x, s.y, 10)) K.sndAt('fd-soldier-shot', s.x, s.y, { minGap: 0.12 }); fxArrow(s.x + (Math.cos(s.face) >= 0 ? 12 : -12), s.y - 24, ev[2], ev[3] - 6, 0.1, '255,236,190', 1.2, 14); } break; }
+        case 'soh': { const s = sol.get(ev[1]); if (s) { kick(s, 0.35); if (K.visAt(s.x, s.y, 10)) K.sndAt('fd-soldier-heal', s.x, s.y, { minGap: 0.3 }); const x1 = ev[2], y1 = ev[3]; K.fxAdd({ dur: 0.45, draw(c) { const k = this.t / 0.45; K.glowAt(c, s.x + (x1 - s.x) * K.eo(k), s.y - 34 + (y1 - 12 - s.y + 34) * K.eo(k), 14, '255,240,170', 1 - k * 0.6); } }); K.burst(x1, y1 - 10, 4, { color: '#bff2c4', spd: 30, dur: 0.7, size: 2, kind: 'dot', vy: -36 }); } break; }
         case 'sod': { const s = sol.get(ev[1]); if (s && corpses.length < 40) corpses.push({ ti: s.ti, ur: s.ur, x: s.x, y: s.y, dir: Math.cos(s.face) >= 0 ? 1 : -1, t: 0 }); K.burst(ev[2], ev[3] - 8, 6, { color: '#a89878', spd: 60, dur: 0.6, size: 3, kind: 'dust', vy: -20 }); sol.delete(ev[1]); break; }
-        case 'soc': { const s = sol.get(ev[1]); if (s) kick(s, 0.25); K.burst(ev[2], ev[3] - 6, 9, { color: '#d9c9a0', spd: 140, dur: 0.45, size: 2.4, kind: 'spark' }); K.burst(ev[2], ev[3], 5, { color: '#a89878', spd: 70, dur: 0.6, size: 3, kind: 'dust', vy: -16 }); K.fxRing(ev[2], ev[3], 4, 34, 0.3, '240,225,190', 2); if (K.visAt(ev[2], ev[3], 10)) K.snd('fd-soldier-swing', { minGap: 0.1 }); break; }
+        case 'soc': { const s = sol.get(ev[1]); if (s) kick(s, 0.25); K.burst(ev[2], ev[3] - 6, 9, { color: '#d9c9a0', spd: 140, dur: 0.45, size: 2.4, kind: 'spark' }); K.burst(ev[2], ev[3], 5, { color: '#a89878', spd: 70, dur: 0.6, size: 3, kind: 'dust', vy: -16 }); K.fxRing(ev[2], ev[3], 4, 34, 0.3, '240,225,190', 2); if (K.visAt(ev[2], ev[3], 10)) K.sndAt('fd-soldier-swing', ev[2], ev[3], { minGap: 0.1 }); break; }
         case 'sou': if (ev[1] === S.myId) sfx('fd-buy'); break;
       }
       return true;
     }
     return false;
+  }
+
+  // ============================================================ the Ash Spires
+  // A crooked pillar of black ash and glowing cracks beside each lane's far end, where the ash pours out. Painted live (a few shapes), only once
+  // the party has explored the ground it stands on. The host sends only a flag per spire (`sp`: 1 struck, 2 awake) and the spf / spi / sph events.
+  const seedF = i => { const v = Math.sin(i * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
+  const SP_H = 128;
+  // has the party seen the ground the spire stands on (so it may show, and answer a hover)? Asked about twice a second, and once yes, always yes
+  function spireSeen(sp) {
+    if (S.inIntro) return false;   // (the opening film: the founders cross a pass with no spire in it yet)
+    if (sp.seen) return true;
+    if (!S.fogOn || !S.fog || !S.fog.exp) return true;   // (no fog now, as in the opening scene: shown, but not yet explored)
+    if (S.T - sp.seenT < 0.5) return false;
+    sp.seenT = S.T;
+    if (K.visAt(sp.x, sp.y - 40, 50)) { sp.seen = true; return true; }
+    try { const F = S.fog, k = F.w / K.M.W, d = F.exp.getContext('2d').getImageData(Math.max(0, Math.floor(sp.x * k)), Math.max(0, Math.floor(sp.y * k)), 1, 1).data; if (d[3] > 24) sp.seen = true; } catch (e) { sp.seen = true; }
+    return sp.seen;
+  }
+  function spireAt(wx, wy) { for (const sp of spires) { const dx = Math.abs(wx - sp.x), dy = wy - sp.y; if (dx < 30 && dy > -SP_H - 6 && dy < 16 && spireSeen(sp)) return sp; } return null; }
+  // the pool of ash round the foot: a dark stain, ash run out toward the lane, cooled shards, and a few cracks in the ground still glowing
+  function drawSpireGround(c, sp, tm) {
+    if (!sp.tl) { const q = K.M.LANES[sp.d.lane].path[SPIRE.at]; sp.tl = Math.atan2(q[1] - sp.y, q[0] - sp.x); }
+    c.save(); c.translate(sp.x, sp.y);
+    K.ell(c, 0, 2, 96, 40, 0, 'rgba(40,34,30,.42)'); K.ell(c, 0, 2, 66, 28, 0, 'rgba(22,18,16,.55)'); K.ell(c, 0, 3, 38, 16, 0, 'rgba(12,10,9,.6)');
+    const ca = Math.cos(sp.tl), sa = Math.sin(sp.tl);   // ash run out toward the road, where the waves come from
+    poly(c, [[ca * 20 - sa * 16, sa * 20 + ca * 16], [ca * 96 - sa * 40, sa * 96 + ca * 40], [ca * 128, sa * 128], [ca * 96 + sa * 40, sa * 96 - ca * 40], [ca * 20 + sa * 16, sa * 20 - ca * 16]], 'rgba(34,29,26,.34)');
+    for (let i = 0; i < 12; i++) { const a = seedF(i + sp.d.lane * 31) * TAU, r = 38 + seedF(i * 3 + 5) * 62, x = Math.cos(a) * r, y = Math.sin(a) * r * 0.42, z = 2.5 + seedF(i + 9) * 3.5; K.ell(c, x, y, z, z * 0.6, 0, i % 3 ? '#2b2624' : '#3a3330', OUT, 1); }
+    const g = 0.28 + 0.16 * Math.sin(tm * 1.7 + sp.d.lane);
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * TAU + 0.4 + seedF(i) * 0.5, r0 = 34, r1 = 58 + seedF(i + 40) * 26, mx = Math.cos(a + 0.12) * (r0 + r1) / 2, my = Math.sin(a + 0.12) * (r0 + r1) / 2 * 0.42;
+      c.strokeStyle = `rgba(255,${100 + i * 8},30,${g})`; c.lineWidth = 1.8; c.lineCap = 'round'; c.beginPath(); c.moveTo(Math.cos(a) * r0, Math.sin(a) * r0 * 0.42); c.lineTo(mx, my); c.lineTo(Math.cos(a) * r1, Math.sin(a) * r1 * 0.42); c.stroke();
+    }
+    c.restore();
+  }
+  function drawSpire(c, sp, tm) {
+    const lane = sp.d.lane, pulse = 0.72 + 0.28 * Math.sin(tm * 2.1 + lane * 1.7), hit = clamp(1 - (tm - sp.hitAt) / 0.35, 0, 1), fire = clamp(1 - (tm - sp.fireAt) / 0.6, 0, 1);
+    const heat = clamp((0.42 + 0.34 * sp.wk) * pulse + 0.5 * hit + 0.4 * fire, 0, 1.3);
+    c.save(); c.translate(sp.x, sp.y);
+    shadow(c, 44);
+    K.glowAt(c, 3, -SP_H * 0.55, 90, '255,100,28', 0.1 + 0.16 * heat);
+    // the heap it stands in, behind the pillar
+    K.ell(c, 0, 2, 40, 13, 0, '#26211f', OUT, 1.4); K.ell(c, -6, -1, 30, 9, 0, '#322b28');
+    // the pillar: crooked, leaning courses, and a broken crown
+    const ys = [0, -16, -36, -54, -74, -94, -112, -130], cx = [0, -3, 3, -4, 5, -1, 6, 3], hw = [28, 26, 21, 23, 16, 14, 8, 1];
+    const Lp = [], Rp = [];
+    for (let i = 0; i < ys.length; i++) { Lp.push([cx[i] - hw[i] * (0.92 + 0.16 * seedF(i + lane * 7)), ys[i]]); Rp.push([cx[i] + hw[i] * (0.92 + 0.16 * seedF(i + 20 + lane * 7)), ys[i]]); }
+    const body = Lp.concat(Rp.slice().reverse());
+    poly(c, body, hgrad(c, -30, 30, '#4b4440', '#14110f', '#2c2724'), OUT, 2);
+    // the shaded side
+    poly(c, [[cx[0] + 6, 0], [cx[2] + 6, ys[2]], [cx[4] + 4, ys[4]], [cx[6] + 1, ys[6]], Rp[7], Rp[6], Rp[5], Rp[4], Rp[3], Rp[2], Rp[1], Rp[0]], 'rgba(0,0,0,.26)');
+    // course joints and flaked edges
+    c.strokeStyle = 'rgba(0,0,0,.55)'; c.lineWidth = 1.6; c.lineCap = 'round'; [2, 4].forEach(i => { c.beginPath(); c.moveTo(Lp[i][0] + 1, ys[i]); c.lineTo(cx[i] + 2, ys[i] + 3); c.lineTo(Rp[i][0] - 1, ys[i] - 1); c.stroke(); });
+    c.strokeStyle = 'rgba(150,136,126,.3)'; c.lineWidth = 1.2; for (let i = 0; i < 6; i++) { c.beginPath(); c.moveTo(Lp[i][0] + 3, ys[i] - 3); c.lineTo(Lp[i + 1][0] + 2.5, ys[i + 1] + 2); c.stroke(); }
+    // the cracks, glowing from within
+    const cracks = [[[-6, -4], [-10, -22], [-3, -36], [-9, -54], [-1, -68], [-4, -86], [2, -104], [3, -120]], [[9, -8], [12, -28], [6, -44], [12, -62], [8, -74]], [[-15, -30], [-10, -43], [-16, -56]], [[5, -72], [10, -86], [6, -98]]];
+    for (const pts of cracks) for (const [col, lw, a] of [['255,80,18', 6, 0.2], ['255,138,40', 2.8, 0.85], ['255,232,170', 1, 0.95]]) {
+      c.strokeStyle = `rgba(${col},${Math.min(1, a * heat)})`; c.lineWidth = lw; c.lineJoin = 'round'; c.beginPath(); pts.forEach((q, i) => i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1])); c.stroke();
+    }
+    if (hit > 0) { poly(c, body, `rgba(255,236,200,${0.3 * hit})`); K.glowAt(c, 0, -SP_H * 0.45, 70, '255,230,180', 0.4 * hit); }
+    // front chips of black stone
+    K.ell(c, -22, 4, 8, 4, 0, '#2e2826', OUT, 1.2); K.ell(c, 19, 6, 6, 3.2, 0, '#37302d', OUT, 1.2); K.ell(c, 4, 8, 4.4, 2.4, 0, '#26211f', OUT, 1);
+    // the crown: a hot core, shards turning round it, ash rising
+    const ty = -SP_H + 2;
+    K.glowAt(c, 3, ty, 36 + 16 * heat + 18 * fire, '255,150,50', clamp(0.34 + 0.34 * heat + 0.3 * fire, 0, 1));
+    K.ell(c, 3, ty, 3.4, 3.4, 0, `rgba(255,${Math.round(200 + 40 * fire)},130,${clamp(0.5 + heat * 0.5, 0, 1)})`);
+    for (let i = 0; i < 3; i++) { const a = tm * 0.55 + i * 2.09 + lane, x = 3 + Math.cos(a) * 20, y = ty + 8 + Math.sin(a) * 6 - i * 5; if (Math.sin(a) < 0) continue; poly(c, [[x, y - 5], [x + 3, y], [x, y + 5], [x - 3, y]], '#1c1816', `rgba(255,${120 + i * 20},40,${0.5 + 0.4 * heat})`, 1.3); }
+    for (let i = 0; i < 9; i++) {
+      const k = (tm * (0.2 + (i % 3) * 0.05) + i / 9) % 1, px = 3 + Math.sin(tm * 0.9 + i * 2.7) * (6 + 9 * k) + k * 16, py = ty - 4 - k * 80;
+      if (i % 3 === 0) { c.fillStyle = `rgba(255,${130 + (i * 11) % 70},50,${(1 - k) * 0.85})`; c.beginPath(); c.arc(px, py, 1.1 + (1 - k) * 0.7, 0, TAU); c.fill(); }
+      else { c.fillStyle = `rgba(52,46,42,${(1 - k) * 0.55})`; c.beginPath(); c.arc(px, py, 1.6 + k * 4, 0, TAU); c.fill(); }
+    }
+    c.restore();
+  }
+  // a slow heavy bolt from the crown to a soldier (it follows him, and lands when the host says so)
+  function fxSpireBolt(sp, id, tx, ty) {
+    const x0 = sp.x + 3, y0 = sp.y - SP_H + 2, dur = SPIRE.travel;
+    K.fxAdd({ dur: dur + 0.05, draw(c) {
+      const t = sol.get(id), ex = t ? t.x : tx, ey = (t ? t.y : ty) - 14, k = Math.min(1, this.t / dur);
+      const at = kk => [x0 + (ex - x0) * kk, y0 + (ey - y0) * kk - Math.sin(kk * PI) * 48];
+      for (let j = 6; j >= 1; j--) { const p = at(Math.max(0, k - j * 0.04)); K.glowAt(c, p[0], p[1], 9 + (6 - j) * 1.6, '255,100,30', 0.2 + (6 - j) * 0.04); }
+      const p = at(k); K.glowAt(c, p[0], p[1], 32, '255,120,30', 0.8); K.ell(c, p[0], p[1], 6.5, 6.5, 0, '#ff9a30', OUT, 1.2); K.ell(c, p[0] - 1, p[1] - 1, 3, 3, 0, '#fff0b8');
+      if (Math.random() < 0.5) K.burst(p[0], p[1], 1, { color: '#ff9040', spd: 25, dur: 0.35, size: 2, kind: 'spark' });
+    } });
+  }
+  function onSpireEvent(ev) {
+    const sp = spires[ev[1]]; if (!sp) return true;
+    switch (ev[0]) {
+      case 'spf': {
+        sp.fireAt = S.T; const t = sol.get(ev[2]);
+        if (K.visAt(sp.x, sp.y - 60, 60) || K.visAt(ev[3], ev[4], 10) || (t && K.visAt(t.x, t.y, 10))) { fxSpireBolt(sp, ev[2], ev[3], ev[4]); K.sndAt('fd-spire-bolt', sp.x, sp.y - 60, { minGap: 0.2 }); }
+        break;
+      }
+      case 'spi': if (K.visAt(ev[3], ev[4], 12)) {
+        K.burst(ev[3], ev[4] - 10, 9, { color: '#ff9a40', spd: 130, dur: 0.5, size: 2.4, kind: 'spark' }); K.burst(ev[3], ev[4] - 4, 5, { color: '#4a423c', spd: 60, dur: 0.7, size: 3.4, kind: 'dust', vy: -26 });
+        K.fxRing(ev[3], ev[4], 4, 38, 0.3, '255,170,90', 2); K.sndAt('fd-spire-hit', ev[3], ev[4], { minGap: 0.08 });
+      } break;
+      case 'sph': sp.hitAt = S.T; if (spireSeen(sp) && K.visAt(sp.x, sp.y - 40, 50)) K.burst(sp.x + (Math.random() - 0.5) * 24, sp.y - 24 - Math.random() * 30, 4, { color: '#ffb060', spd: 80, dur: 0.4, size: 2, kind: 'spark' }); break;
+    }
+    return true;
   }
 
   // ============================================================ placing and selecting
@@ -779,7 +883,7 @@ const sm = t => t * t * (3 - 2 * t);
       shelf = `<div class="sec">THE SQUADS <small>${sol.size} stand in the lanes now</small></div><div class="tiles sq">` + DEF.UP_IDS.map((id, i) => { const U = DEF.SOLDIER_UP[id], r = sdu[i]; return `<div class="tile${L.ssel === id ? ' sel' : ''}" data-hv="${id}"><span class="fd-ic" style="--rc:#8a6f35" data-ic="${id}"></span><div class="tw-i"><b>${esc(U.name)}</b><span>${esc(U.text[Math.min(2, r)])}</span></div><span class="bd-pips">${[0, 1, 2].map(j => `<i class="${j < r ? 'on' : ''}"></i>`).join('')}</span></div>`; }).join('')
         + '</div><div class="fd-note">' + squadNote() + '</div>';
     }
-    p.innerHTML = `<div class="ph"><img class="hi" alt="" src="${u ? u.icons.hud('builder') : ''}"><div class="fd-title sm">BUILDER'S BOARD</div><div class="tabs"><button class="${L.tab === 't' ? 'on' : ''}" data-t="t">Towers</button><button class="${L.tab === 's' ? 'on' : ''}" data-t="s">Soldiers</button></div><div class="gd">${gold}${coin}</div><button class="x" id="fd-buildx">&times;</button></div><div class="shop"><div class="pb shelf">${shelf}</div><div class="dt" id="fd-bdet"></div></div>`;
+    p.innerHTML = `<div class="ph"><img class="hi" alt="" src="${u ? u.icons.hud('builder') : ''}"><div class="fd-title sm">BUILDER'S BOARD</div><div class="tabs"><button class="${L.tab === 't' ? 'on' : ''}" data-t="t">Towers</button><button class="${L.tab === 's' ? 'on' : ''}" data-t="s">Soldiers</button></div><div class="gd">${gold}${coin}</div><button class="x" id="fd-buildx">&times;</button></div><div class="shop"><div class="pbody shelf">${shelf}</div><div class="dt" id="fd-bdet"></div></div>`;
     p.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => { L.tab = b.dataset.t; L.sig = ''; renderBoard(true); }));
     p.querySelector('#fd-buildx').addEventListener('click', () => setOpen(false));
     iconHolder(p.querySelector('.shelf'));
@@ -845,8 +949,9 @@ const sm = t => t * t * (3 - 2 * t);
   // ============================================================ the layer
 function frameUpdate(dt) {
     S = K.S; if (!S) return;
-    if (S.phase !== 'live') { if (towers.size || sol.size || L.open) { towers.clear(); sol.clear(); corpses.length = 0; L.sel = null; L.placing = null; if (L.open) setOpen(false); closeTp(); } return; }
+    if (S.phase !== 'live') { for (const sp of spires) { sp.seen = false; sp.seenT = 0; sp.flags = 0; sp.wk = 0; sp.hitAt = sp.fireAt = -9; } if (towers.size || sol.size || L.open) { towers.clear(); sol.clear(); corpses.length = 0; L.sel = null; L.placing = null; if (L.open) setOpen(false); closeTp(); } return; }
     for (const s of sol.values()) { const k = 1 - Math.exp(-dt * 11); s.x += (s.tx - s.x) * k; s.y += (s.ty - s.y) * k; let d = s.tf - s.face; d = ((d % TAU) + TAU + PI) % TAU - PI; s.face += d * Math.min(1, dt * 10); if (s.flash > 0) s.flash -= dt; if (s.hit > 0) s.hit -= dt; if (Math.abs(s.tx - s.x) + Math.abs(s.ty - s.y) > 200) { s.x = s.tx; s.y = s.ty; } }
+    for (const sp of spires) sp.wk += ((sp.flags & 2 ? 1 : 0) - sp.wk) * (1 - Math.exp(-dt * 3));
     BUILD.n = 0; for (let i = corpses.length - 1; i >= 0; i--) { corpses[i].t += dt; if (corpses[i].t > 1.2) corpses.splice(i, 1); }
     // hover and the panels
     const m = S.mouse, ht = L.placing ? null : towerAtPoint(m.wx, m.wy); L.hover = ht ? ht.id : null; L.hoverBoard = !L.placing && onBoard(m.wx, m.wy);
@@ -868,6 +973,7 @@ function lightsOut(add) {
       else if (t.kind === 'bell' && t.rank >= 3) add(t.x, t.y - 36, 110, 0.35, true);
     }
     if (S && (+S.props.night || 0) > 0.2) for (const s of sol.values()) add(s.x, s.y - 8, 62, 0.35);
+    for (const sp of spires) if (sp.seen) add(sp.x, sp.y - 70, 66, 0.4 + 0.2 * sp.wk);   // (under the radius that opens the fog)
 }
   Founding.addLayer({
     init(kit) {
@@ -886,9 +992,11 @@ function lightsOut(add) {
     event(ev) { S = K.S; return onEvent(ev); },
     lights(add) { const now = performance.now(), dt = clamp((now - L.last) / 1000, 0, 0.1); L.last = now; frameUpdate(dt); lightsOut(add); },
     ground(c, inV) {
+      for (const sp of spires) if (inV(sp.x, sp.y) && spireSeen(sp)) drawSpireGround(c, sp, S.T);
       for (const t of towers.values()) if (inV(t.x, t.y) && !t.rubble) { const sel = L.sel === t.id || L.hover === t.id; if (sel) { const r = rangeOf(t); K.ell(c, t.x, t.y, r, r * 0.92, 0, 'rgba(255,236,170,.05)', 'rgba(255,236,170,.4)', 1.4); } }
     },
     units(list, inV) {
+      for (const sp of spires) if (inV(sp.x, sp.y) && spireSeen(sp)) list.push([sp.y, 9, { draw(c) { drawSpire(c, sp, S.T); } }]);
       for (const t of towers.values()) if (inV(t.x, t.y)) list.push([t.y, 9, { draw(c) { drawTower(c, t, S.T); } }]);
       for (const s of sol.values()) if (inV(s.x, s.y) && K.visAt(s.x, s.y, 10)) list.push([s.y, 9, { draw(c) { drawSoldier(c, s, S.T); } }]);
       for (const o of corpses) if (inV(o.x, o.y) && K.visAt(o.x, o.y, 10)) list.push([o.y, 8, { draw(c) { drawCorpse(c, o); } }]);
@@ -898,6 +1006,7 @@ function lightsOut(add) {
       const m = S.mouse;
       if (!S.tipTxt && !L.placing && !L.open) {
         if (L.hover != null) { const t = byId(L.hover); if (t) { const T = TW[t.kind]; S.tipTxt = t.rubble ? [T.name + ', fallen', 'Rubble. Click it, then stand beside it to raise it again for half the price.'] : [T.name + ', rank ' + t.rank + ' of 3', T.text[t.rank - 1] + ' Health ' + Math.round(t.hp) + ' of ' + t.max + '. Click it to upgrade, mend or sell.']; } }
+        else if (spireAt(m.wx, m.wy)) S.tipTxt = ['Ash Spire', 'Where the ash pours out. It cannot be felled.'];
         else if (L.hoverBoard) S.tipTxt = ["The Builder's board", 'Click it, or press ' + keyLabel() + ', to raise towers and train the squads that march out with each wave.'];
       }
       if (L.placing) {
@@ -912,6 +1021,7 @@ function lightsOut(add) {
     },
     mini(g, kx, ky) {
       for (const t of towers.values()) { const x = t.x * kx, y = t.y * ky; if (t.rubble) { g.strokeStyle = '#8a7a60'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x - 2, y - 2); g.lineTo(x + 2, y + 2); g.moveTo(x + 2, y - 2); g.lineTo(x - 2, y + 2); g.stroke(); continue; } g.fillStyle = KIND_COL[t.kind]; g.strokeStyle = '#000'; g.lineWidth = 1; g.fillRect(x - 2.5, y - 2.5, 5, 5); g.strokeRect(x - 2.5, y - 2.5, 5, 5); }
+      for (const sp of spires) if (sp.seen) { const x = sp.x * kx, y = sp.y * ky; g.fillStyle = '#d2692a'; g.strokeStyle = '#000'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y - 3.4); g.lineTo(x + 2.6, y); g.lineTo(x, y + 3.4); g.lineTo(x - 2.6, y); g.closePath(); g.fill(); g.stroke(); }
       for (const s of sol.values()) if (K.visAt(s.x, s.y, 10)) { g.fillStyle = '#e6d9a8'; g.fillRect(s.x * kx - 1, s.y * ky - 1, 2.2, 2.2); }
     },
     key(act, ev) {

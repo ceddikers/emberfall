@@ -302,7 +302,7 @@
     const s = S(), me = K.me(), snd = K.snd;
     switch (tag) {
       case 'qxs': { const p = X.STAKES[e[1]] || [e[2], e[3]]; fx.stake[e[1]] = now; snd('fd-post-plant'); K.burst(p[0], p[1], 8, { color: '#a89878', spd: 70, dur: 0.5, size: 2.6, kind: 'dust' }); K.fxRing(p[0], p[1], 8, 52, 0.6, '255,230,160', 3, 0); K.ftxt(p[0], p[1] - 46, (e[1] + 1) + ' / ' + X.STAKES.length, '#f3dfa4', 13, 1.5); break; }
-      case 'qxh': K.ftxt(e[1], e[2], '' + e[3], '#ff8a78', 12, 0.9); K.snd('fd-camp-hit', { vol: 0.5 }); break;
+      case 'qxh': K.ftxt(e[1], e[2], '' + e[3], '#ff8a78', 12, 0.9); K.sndAt('fd-camp-hit', e[1], e[2], { vol: 0.5 }); break;
       case 'qxr': { const k = e[1]; snd('fd-alert'); if (K.say) K.say(k === 0 ? 'Hungry things are coming for the Warden.' : k === 1 ? 'They are coming for the builders.' : 'Something in the dark is coming for the fire.'); K.fxRing(e[2], e[3], 20, 90, 0.9, '255,120,90', 3, 0); break; }
       case 'qxm': snd('fd-wave', { vol: 0.5 }); K.shake && K.shake(2, 0.2); break;
       case 'qxg': { snd('fd-pickup'); K.burst(e[2], e[3], 8, { color: '#ffe9a8', spd: 70, dur: 0.6, size: 2.2, kind: 'dot', vy: -40, g: -20 }); K.ftxt(e[2], e[3] - 34, e[4] + ' / ' + e[5], '#f3dfa4', 13, 1.5); K.fxRing(e[2], e[3], 8, 50, 0.5, '255,230,160', 2.5, 0); break; }
@@ -321,7 +321,7 @@
         else if (e[1] === 2 && me && e[2] === s.myId) { K.ftxt(me.x, me.y - 50, '+' + T.mill.gold + ' gold', '#ffd27a', 12, 1.3); }
         break;
       }
-      case 'qxe': K.fxRing(e[1], e[2], 10, 150, 0.5, '255,150,70', 3, 0); K.burst(e[1], e[2], 12, { color: '#ff8a3a', spd: 120, dur: 0.5, size: 2.4, kind: 'spark' }); K.snd('fd-erupt', { vol: 0.35 }); break;
+      case 'qxe': K.fxRing(e[1], e[2], 10, 150, 0.5, '255,150,70', 3, 0); K.burst(e[1], e[2], 12, { color: '#ff8a3a', spd: 120, dur: 0.5, size: 2.4, kind: 'spark' }); K.sndAt('fd-erupt', e[1], e[2], { vol: 0.35 }); break;
       case 'qxb': { const u = K.U('h' + e[1]); if (u) { K.ftxt(u.x, u.y - 50, 'Cornerstone', '#e6c98a', 12, 1.4); K.fxRing(u.x, u.y, 8, 54, 0.6, '255,230,160', 2.5, 0); } break; }
     }
     return true;

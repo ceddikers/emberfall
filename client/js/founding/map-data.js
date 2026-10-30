@@ -77,6 +77,9 @@ const FoundingMap = (() => {
     { id: 'east', name: 'The East Ford', path: spline([[6400, 2020], [5800, 2080], [5400, 2180], [5080, 2220], [4760, 2370], [4300, 2600], [3800, 2880], [3400, 3060], [3200, 3170], [3200, 3560]], 8) },
   ];
   const LANE_HW = 66;   // a lane's half-width (worn earth); enemies walk inside it
+  // the Ash Spires (founding/sim-defence.js): one beside each lane, a little way in from where its waves come out. A fixed place, kept clear of trees by the map art.
+  const SPIRE_AT = 40, SPIRE_SIDE = -84;   // the lane sample it stands by, and how far off the road (negative: east of the North Road, south of the East Ford)
+  const SPIRES = LANES.map((L, lane) => { const p = L.path[SPIRE_AT]; return { lane, i: SPIRE_AT, x: Math.round(p[0] - p[4] * SPIRE_SIDE), y: Math.round(p[1] + p[3] * SPIRE_SIDE) }; });
   // the river, with its half-width at each sample (wider at the ford, where it runs shallow)
   const RIVER = spline([[4880, -120], [4940, 400], [4840, 840], [5000, 1280], [5140, 1720], [5080, 2220], [4940, 2660], [4660, 3040], [4520, 3440], [4500, 3800], [4580, 4160], [4420, 4500], [4480, 4940]], 8);
   RIVER.forEach((p, i) => { p.push(96 + 16 * Math.sin(i * 0.03) + 14 * noise(i * 0.03, 3) + 26 * Math.exp(-Math.pow((p[1] - 2220) / 150, 2))); });
@@ -324,7 +327,7 @@ const FoundingMap = (() => {
   function along(id, s) { const pl = lane(id).path; let i = 0; while (i < pl.length - 1 && pl[i + 1][2] < s) i++; const a = pl[i], b = pl[Math.min(pl.length - 1, i + 1)], seg = (b[2] - a[2]) || 1, t = Math.max(0, Math.min(1, (s - a[2]) / seg)); return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), a[3], a[4]]; }
   const laneLength = id => { const pl = lane(id).path; return pl[pl.length - 1][2]; };
 
-  return { W, H, P, CAMP_R, LANES, LANE_HW, RIVER, FORD_R, FOOT, MOUNTAIN_Y, PASS, SOLIDS, addSolid, spline, noise, hash, inRiver, walkable, laneAt, lane, along, laneLength, near,
+  return { W, H, P, CAMP_R, LANES, LANE_HW, SPIRES, RIVER, FORD_R, FOOT, MOUNTAIN_Y, PASS, SOLIDS, addSolid, spline, noise, hash, inRiver, walkable, laneAt, lane, along, laneLength, near,
     heightAt, slowAt, losClear, SIGHT, PLATEAUS, RAMPS, WOODS, POND, POOLS, KEEP, WAYS, TC, TCOLS, TROWS, CLIFF_HW, deepIn, flagsAt, waterAt, woodAt, rampAt, cliffAt, fbm, closedSpline };
 })();
 

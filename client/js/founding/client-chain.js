@@ -504,7 +504,7 @@
           gaze: 'fd-wick-breath', fist: 'stamp', rockfall: 'fd-quake', flare: 'fd-wick-glow', stab: 'sweep', bellow: 'fd-wild-howl', heartbeat: 'fd-boss-arrive', stampede: 'fd-march', whip: 'fd-tail-sweep', cairn: 'fd-wall', calf: 'fd-wild-snap',
           tether: 'fd-mire-stamp', roar: 'fd-wild-howl', splinter: 'fd-erupt', pull: 'fd-gnaw-lunge', lane: 'fd-wick-breath', flame: 'fd-wick-breath', bite: 'fd-wild-snap', snap: 'fd-wild-snap', gore: 'fd-wild-snap', ring: 'fd-quake', spines: 'fd-quake',
           howl: 'fd-wild-howl', howl2: 'fd-wild-howl', ashfall: 'fd-meteor-fall', quake: 'fd-gnaw-stamp', sweep: 'fd-tail-sweep', ashlane: 'fd-gnaw-breath', meteors: 'fd-starfall', stackfall: 'fd-wick-glow' }[nm];
-        if (k) snd(k, { vol: 0.8 });
+        if (k) snd(k, u ? { vol: 0.8, at: { x: u.x, y: u.y }, reach: 1.5 } : { vol: 0.8 });   // (by vicinity, like the other bosses' moves: client.js snd)
         return true;
       }
       case 'chdown': { ST.rage = 0; const m = K.me && K.me(); snd('down'); if (m) K.ftxt(m.x, m.y - 56, '+' + ev[2] + ' coin at the run’s end', '#f3dfa4', 12, 2.2); return true; }

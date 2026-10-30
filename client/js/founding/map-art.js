@@ -98,6 +98,7 @@ const FoundingArt = (() => {
   let LAY = null, built = false;
   const EXCL = [[3200, 3880, 780], [1400, 1400, 340], [2660, 1700, 380], [4180, 3720, 240], [1300, 3920, 420], [5720, 1040, 200], [P.ruins[0], P.ruins[1], 330], [P.stones[0], P.stones[1], 170], [P.spawn1[0], P.spawn1[1], 130], [6260, 2020, 130], [2900, 4170, 140], [4080, 3240, 110]];
   for (const k of FM.KEEP) EXCL.push([k[0], k[1], 230]);
+  for (const sp of FM.SPIRES) EXCL.push([sp.x, sp.y, 110]);   // the Ash Spires (founding/sim-defence.js) stand in the open
   for (const p of PLOTS) EXCL.push([p[0], p[1], Math.max(p[2], p[3]) * .8 + 30]);
   for (const t of TENTS) EXCL.push([t[0], t[1], 95]);
   for (const c of CARTS) EXCL.push([c[0], c[1], 95]);

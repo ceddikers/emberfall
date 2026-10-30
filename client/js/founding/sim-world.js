@@ -1,5 +1,8 @@
 // The Founding: the valley's loose things, host side. Items lie where they fell, and seven waystones let the party cross the bigger map.
 //
+// Tossing and swapping (the pack). Intent `toss slot [uid]`: the item in that pack slot is set on the ground at the hero's feet (dragging it out of the bar over the world); the one who
+// set it down does not scoop it up again until they have walked away from it. Intent `swap a b`: two pack slots trade places (an empty one is a move).
+//
 // Ground drops. Every item a boss, an elite, a wild leader or a wild grunt drops (and each of the secret chain's found-only pieces)
 // lies at the death spot until a hero walks over it or right-clicks it. Intent `pick id`. Only a hero with a free pack slot takes it;
 // a hero-made item (D.ITEM[id].hero) is taken only by that class. A drop lasts `TUNE.life` seconds, blinks for the last
@@ -61,8 +64,8 @@
     sim.worldDrop = function (x, y, id, o) {
       o = o || {};
       let it = D.ITEM[id]; if (!it) return null;
-      // an item made for a class that is not in this party would lie there for ever: a plain one of the same rarity takes its place
-      if (it.hero && !it.sec && !sim.heroes.some(h => h.hero === it.hero)) {
+      // an item made for a class that is not in this party would lie there for ever: a plain one of the same rarity takes its place (not one a hero set down)
+      if (!o.exact && it.hero && !it.sec && !sim.heroes.some(h => h.hero === it.hero)) {
         const pool = D.ITEMS.filter(i => i.rar === it.rar && !i.sec && (!i.hero || sim.heroes.some(h => h.hero === i.hero)));
         if (pool.length) it = pool[Math.floor(sim.rand() * pool.length)];
       }
@@ -70,7 +73,7 @@
       let px = x, py = y;
       if (n > 0) { const a = n * 2.39996 + 0.7, r = 32 * Math.sqrt(n) + 4; px = x + Math.cos(a) * r; py = y + Math.sin(a) * r * 0.8; }   // (a sunflower spiral: the first lies on the spot, the rest fan out so each can be pointed at)
       if (!M.walkable(px, py, 8)) { const p = sim.nearestWalkable(px, py, 8); px = p[0]; py = p[1]; }
-      const d = { id: ++did, item: it.id, x: Math.round(px), y: Math.round(py), keep: !!o.keep, exp: o.keep ? 0 : Math.round((sim.time + TUNE.life) * 10) / 10 };
+      const d = { id: ++did, item: it.id, x: Math.round(px), y: Math.round(py), keep: !!o.keep, exp: o.keep ? 0 : Math.round((sim.time + TUNE.life) * 10) / 10, mute: o.mute || 0 };
       drops.push(d);
       if (drops.length > TUNE.cap) { const i = drops.findIndex(q => !q.keep && q !== d); if (i >= 0) { sim.ev(['wgone', drops[i].id]); drops.splice(i, 1); } }
       sim.ev(['wdrop', d.id, d.x, d.y, d.item]);
@@ -125,6 +128,7 @@
           if (!d.keep && sim.time >= d.exp + TUNE.fade) { sim.ev(['wgone', d.id]); drops.splice(i, 1); continue; }
           if (!live(d)) continue;
           for (const h of sim.heroes) {
+            if (d.mute === h.id) { if (hyp(h.x - d.x, h.y - d.y) > TUNE.pickR + 24) d.mute = 0; else continue; }   // (the one who set it down walks off first)
             if (h.dead || hyp(h.x - d.x, h.y - d.y) > TUNE.pickR) continue;
             if (take(h, d, true)) break;
           }
@@ -143,6 +147,19 @@
           if (hyp(h.x - d.x, h.y - d.y) <= TUNE.reachR) { take(h, d, false); return true; }
           if (sim.freeSlot(h) < 0) { sim.ev(['wfull', h.id]); return true; }
           h.target = null; h.pending = null; h.auto = true; h.chan = null; sim.pathTo(h, d.x, d.y);   // (it is taken on arrival, by walking over it)
+          return true;
+        }
+        if (m.k === 'toss') {
+          const i = m.slot, x = Number.isInteger(i) && i >= 0 && i < h.items.length && h.items[i];
+          if (!x || h.dead || (m.uid !== undefined && m.uid !== x.uid)) return true;
+          if (!sim.worldDrop(h.x, h.y, x.id, { exact: true, keep: !!(D.ITEM[x.id] && D.ITEM[x.id].sec), mute: h.id })) return true;
+          h.items[i] = null; sim.recalc(h); h.dirty = true;
+          return true;
+        }
+        if (m.k === 'swap') {
+          const a = m.a, b = m.b, n = h.items.length;
+          if (h.dead || a === b || !Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0 || a >= n || b >= n) return true;
+          const t = h.items[a]; h.items[a] = h.items[b]; h.items[b] = t; h.dirty = true;
           return true;
         }
         if (m.k === 'wtravel') {
