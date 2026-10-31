@@ -254,9 +254,10 @@ function sectionPack() {
   const dr = sim.groundDrops[sim.groundDrops.length - 1];
   check(dr.item === rare[0].id && hyp(dr.x - h.x, dr.y - h.y) < 120, "it lies at the hero's feet");
   const had = h.items.filter(Boolean).length;
-  run(sim, 2); check(sim.groundDrops.includes(dr) && h.items.filter(Boolean).length === had, 'the one who set it down does not scoop it up again while standing there');
-  put(h, OPEN[0] + 400, OPEN[1]); run(sim, 0.5); put(h, dr.x, dr.y); run(sim, 0.3);
-  check(!sim.groundDrops.includes(dr) && h.items.some(x => x && x.id === rare[0].id), 'walking away and back takes it up');
+  run(sim, 2); check(sim.groundDrops.includes(dr) && h.items.filter(Boolean).length === had, 'standing on it does not scoop it up again');
+  put(h, OPEN[0] + 400, OPEN[1]); run(sim, 0.5); put(h, dr.x, dr.y); run(sim, 0.3); check(sim.groundDrops.includes(dr), 'nor does walking away and back');
+  sim.intent('p1', { k: 'pick', id: dr.id }); run(sim, 0.1);
+  check(!sim.groundDrops.includes(dr) && h.items.some(x => x && x.id === rare[0].id), 'a right-click takes it up');
   // a class piece stays what it is; a fallen hero tosses and swaps nothing; bad slots add nothing
   const ms = h.items.findIndex(x => x && x.id === mine.id); sim.intent('p1', { k: 'toss', slot: ms });
   const dm = sim.groundDrops[sim.groundDrops.length - 1]; check(h.items[ms] === null && dm.item === mine.id, 'a class piece tossed stays that item');

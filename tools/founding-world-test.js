@@ -86,8 +86,10 @@ console.log('Picking up:');
   const d1 = sim.worldDrop(SPOT[0], SPOT[1], plain.id);
   put(sim, bas, d1.x + 300, d1.y); run(sim, 0.5);
   check(sim.groundDrops.includes(d1), 'a hero three hundred away does not take it');
-  put(sim, bas, d1.x + TN.pickR - 6, d1.y); run(sim, 0.2);
-  check(!sim.groundDrops.includes(d1) && bas.items.some(x => x && x.id === plain.id), 'walking over a drop takes it into the pack');
+  put(sim, bas, d1.x + 20, d1.y); run(sim, 0.5);
+  check(sim.groundDrops.includes(d1) && !bas.items.some(Boolean), 'walking over a drop takes nothing (no picking up by accident)');
+  sim.intent(bas.id, { k: 'pick', id: d1.id }); run(sim, 0.1);
+  check(!sim.groundDrops.includes(d1) && bas.items.some(x => x && x.id === plain.id), 'a right-click takes it into the pack');
   check(evs(sim, 'dr').some(e => e[1] === bas.id && e[2] === plain.id) && evs(sim, 'wpk').length === 1, 'dr and wpk events tell everyone');
   // a Ranger's item
   const d2 = sim.worldDrop(SPOT[0] + 200, SPOT[1], rangerOnly.id);
@@ -97,7 +99,7 @@ console.log('Picking up:');
   sim.log.ev.length = 0; sim.intent(bas.id, { k: 'pick', id: d2.id }); run(sim, 0.3);
   check(sim.groundDrops.includes(d2) && !bas.path, 'the pick intent for another class\'s item does nothing');
   put(sim, bas, SPOT[0] - 400, SPOT[1]); put(sim, cle, SPOT[0] - 400, SPOT[1] - 60);
-  put(sim, ran, d2.x, d2.y); run(sim, 0.2);
+  put(sim, ran, d2.x, d2.y); sim.intent(ran.id, { k: 'pick', id: d2.id }); run(sim, 0.2);
   check(!sim.groundDrops.includes(d2) && ran.items.some(x => x && x.id === rangerOnly.id), 'the Ranger takes it');
   // a party without a Ranger: its item is swapped for a plain one of the same rarity
   const two = makeSim(2, 13, null, ['bastion', 'cleric']); run(two, 0.2);
@@ -106,13 +108,12 @@ console.log('Picking up:');
   // a full pack
   fill(sim, bas); const goldA = bas.gold;
   const d3 = sim.worldDrop(SPOT[0] + 400, SPOT[1], plain.id);
-  sim.log.ev.length = 0; put(sim, bas, d3.x, d3.y); run(sim, 1);
+  sim.log.ev.length = 0; put(sim, bas, d3.x, d3.y); sim.intent(bas.id, { k: 'pick', id: d3.id }); run(sim, 1);
   check(sim.groundDrops.includes(d3), 'a full pack leaves it on the ground');
   check(evs(sim, 'wfull').length === 1 && evs(sim, 'wfull')[0][1] === bas.id, 'and says so once (a quiet "your pack is full")');
   check(bas.gold === goldA, 'with no gold in its place');
-  run(sim, 4.2); check(evs(sim, 'wfull').length >= 2 && evs(sim, 'wfull').length <= 3, 'the note repeats slowly, not every tick (' + evs(sim, 'wfull').length + ' in five seconds)');
-  bas.items[2] = null; run(sim, 0.2);
-  check(!sim.groundDrops.includes(d3), 'a freed slot takes it');
+  bas.items[2] = null; sim.intent(bas.id, { k: 'pick', id: d3.id }); run(sim, 0.2);
+  check(!sim.groundDrops.includes(d3), 'with a slot freed, a right-click takes it');
   // right-click: the pick intent walks there
   bas.items.fill(null);
   const d4 = sim.worldDrop(SPOT[0] + 600, SPOT[1] + 30, plain.id);
@@ -120,7 +121,10 @@ console.log('Picking up:');
   check(bas.path && bas.path.length > 0, 'right-clicking a drop sets the hero walking to it');
   run(sim, 8, () => !sim.groundDrops.includes(d4));
   check(!sim.groundDrops.includes(d4) && bas.items.some(Boolean), 'and the drop is in the pack on arrival');
-  const d5 = sim.worldDrop(bas.x + 20, bas.y, plain.id); d5.x = Math.round(bas.x + 44); d5.y = Math.round(bas.y);   // just out of walking range, within reach
+  bas.items.fill(null); const d4b = sim.worldDrop(SPOT[0] + 600, SPOT[1] - 90, plain.id);
+  put(sim, bas, d4b.x - 420, d4b.y); sim.intent(bas.id, { k: 'pick', id: d4b.id }); run(sim, 0.3); sim.intent(bas.id, { k: 'move', x: d4b.x + 60, y: d4b.y }); run(sim, 6);
+  check(sim.groundDrops.includes(d4b) && !bas.items.some(Boolean), 'another order on the way calls the pick off: walking on past it takes nothing');
+  bas.items.fill(null); const d5 = sim.worldDrop(bas.x + 20, bas.y, plain.id); d5.x = Math.round(bas.x + 44); d5.y = Math.round(bas.y);   // within reach
   sim.log.ev.length = 0; sim.intent(bas.id, { k: 'pick', id: d5.id });
   check(!sim.groundDrops.includes(d5), 'a right-click from beside it takes it at once');
   fill(sim, bas); const d6 = sim.worldDrop(SPOT[0] + 700, SPOT[1], plain.id); put(sim, bas, d6.x - 500, d6.y); sim.log.ev.length = 0; sim.intent(bas.id, { k: 'pick', id: d6.id }); run(sim, 0.1);
@@ -146,7 +150,7 @@ console.log('Time:');
   put(sim, sim.heroes[0], a.x, a.y); sim.heroes[0].items.fill(null); run(sim, 0.1);
   const b = sim.worldDrop(SPOT[0] - 500, SPOT[1], plain.id); away(sim, sim.heroes[0]);
   run(sim, TN.life + 0.3);   // b is due; a hero stepping on it now gets nothing
-  put(sim, sim.heroes[1], b.x, b.y); sim.heroes[1].items.fill(null); run(sim, 0.2);
+  put(sim, sim.heroes[1], b.x, b.y); sim.heroes[1].items.fill(null); sim.intent(sim.heroes[1].id, { k: 'pick', id: b.id }); run(sim, 0.2);
   check(sim.groundDrops.includes(b) && !sim.heroes[1].items.some(Boolean), 'while it fades it can no longer be taken');
   away(sim, sim.heroes[1]); run(sim, TN.fade + 0.4);
   check(!sim.groundDrops.includes(b) && evs(sim, 'wgone').some(e => e[1] === b.id), 'and it is gone after the fade');
@@ -164,8 +168,8 @@ console.log('Time:');
   const piece = ch.groundDrops.find(d => d.item === LINK.item);
   check(piece && piece.keep && hyp(piece.x - 2560, piece.y - 2480) < 30, 'a chain link that falls leaves its piece on the ground where it fell, never fading');
   check(ch.heroes.every((h, i) => h.items.filter(Boolean).length === before[i]), 'and puts nothing into a pack by itself');
-  run(ch, 0.3); const taker = ch.heroes[1]; put(ch, taker, piece.x, piece.y); run(ch, 0.2);
-  check(taker.items.some(x => x && x.id === LINK.item), 'whoever walks over it has it');
+  run(ch, 0.3); const taker = ch.heroes[1]; put(ch, taker, piece.x, piece.y); ch.intent(taker.id, { k: 'pick', id: piece.id }); run(ch, 0.2);
+  check(taker.items.some(x => x && x.id === LINK.item), 'whoever right-clicks it has it');
 }
 
 // ---------------------------------------------------------------- 4. the headless pilots keep their old hands

@@ -26,7 +26,7 @@ const FoundingSim = (() => {
   const HEARTH = M.P.hearth, CAMP_R = M.CAMP_R;
   const HERO_R = 16;
   const SLOWAT = typeof M.slowAt === 'function' ? (x, y) => M.slowAt(x, y) : null;   // shallow water and thick woods slow whatever walks there (the terrain agent's map; absent = no slow)
-  const RECALL = { secs: 4, cd: 45, cancelCd: 4, minFrom: 140 }, PING_GAP = 2, GNAW_PARK = 12, ALERT = { gap: 20, far: 500, gate: 0.4 };
+  const RECALL = { secs: 4, cd: 45, cancelCd: 4, minFrom: 140 }, DASH = { dist: 160, dur: 0.18, cd: 12 }, PING_GAP = 2, GNAW_PARK = 12, ALERT = { gap: 20, far: 500, gate: 0.4 };
   const QT = D.QUEST_TUNE, GATE = { x: M.P.gate[0], y: M.P.gate[1], x0: M.P.gate[0] - 295, x1: M.P.gate[0] + 335 }, HALL = { x: M.P.hall[0], y: M.P.hall[1] };
   const HAUL_IDS = ['beacon', 'graves', 'stonegate', 'roof'];
   const CARRY_CODE = { warm: 1, jar: 2, bier: 3, stone: 4, timber: 5 };   // fds hero row [11], fdp cr
@@ -129,10 +129,11 @@ const FoundingSim = (() => {
       if (this.st !== 'live') return;
       const h = this.hmap[pid]; if (!h) return;
       switch (m.k) {
-        case 'move': if (num(m.x) && num(m.y) && !h.dead) { h.target = null; h.pending = null; h.auto = true; h.chan = null; h.talk = null; this.pathTo(h, clamp(m.x, 20, M.W - 20), clamp(m.y, 20, M.H - 20)); } break;
-        case 'stop': h.path = null; h.pending = null; h.target = null; h.chan = null; h.talk = null; break;
-        case 'attack': { const e = this.enemyById(m.id); if (e && !h.dead && !e.under) { h.target = e; h.pending = null; h.path = null; h.chan = null; h.talk = null; } break; }
-        case 'talk': this.talkTo(h, m.id); break;
+        case 'move': if (num(m.x) && num(m.y) && !h.dead) { h.fetch = null; h.target = null; h.pending = null; h.auto = true; h.chan = null; h.talk = null; this.pathTo(h, clamp(m.x, 20, M.W - 20), clamp(m.y, 20, M.H - 20)); } break;
+        case 'stop': h.fetch = null; h.path = null; h.pending = null; h.target = null; h.chan = null; h.talk = null; break;
+        case 'attack': { const e = this.enemyById(m.id); if (e && !h.dead && !e.under) { h.fetch = null; h.target = e; h.pending = null; h.path = null; h.chan = null; h.talk = null; } break; }
+        case 'talk': h.fetch = null; this.talkTo(h, m.id); break;
+        case 'fetch': if (num(m.x) && num(m.y) && !h.dead) { h.target = null; h.pending = null; h.auto = true; h.chan = null; h.talk = null; h.fetch = { x: m.x, y: m.y }; this.pathTo(h, m.x, m.y); } break;
         case 'cast': if (!h.dead && SLOT[m.s] !== undefined) this.tryCast(h, m.s, m); break;
         case 'learn': this.learn(h, m.s); break;
         case 'buy': if (typeof m.up === 'string') this.buyUp(h, m.up); else if (typeof m.item === 'string') this.buyItem(h, m.item); break;
@@ -143,6 +144,7 @@ const FoundingSim = (() => {
         case 'drop': this.dropCarry(h); break;
         case 'aim': if (num(m.x) && num(m.y)) h.aim = { x: m.x, y: m.y }; break;   // the cursor, for Guided Stars
         case 'recall': this.startRecall(h); break;
+        case 'dash': if (num(m.x) && num(m.y)) this.startDash(h, m.x, m.y); break;
         case 'ping': this.ping(h, m); break;
         case 'sell': this.sellItem(h, m.slot); break;
       }
@@ -174,7 +176,7 @@ const FoundingSim = (() => {
       const h = K.h; delete this.kept[k];
       this.players.push({ id: newId, name: K.name, hero: h.hero, ready: true });
       this.stats[newId] = this.stats[K.oldId] || { kills: 0, dmg: 0, heal: 0, dth: 0, gold: 0 }; if (K.oldId !== newId) delete this.stats[K.oldId];
-      h.id = newId; h.name = K.name; h.dead = false; h.respT = 0; h.hp = Math.max(h.hp, Math.round(h.max * 0.6)); h.invul = 3; h.stun = 0; h.rootT = 0; h.slowT = 0; h.rcCd = 0; h.awayT = 0;
+      h.id = newId; h.name = K.name; h.dead = false; h.respT = 0; h.hp = Math.max(h.hp, Math.round(h.max * 0.6)); h.invul = 3; h.stun = 0; h.rootT = 0; h.slowT = 0; h.rcCd = 0; h.dashCd = 0; h.dash = null; h.awayT = 0;
       const pt = this.nearestWalkable(M.P.spring[0] + 50, M.P.spring[1] - 30); h.x = pt[0]; h.y = pt[1]; h.dirty = true; h.lastSheet = -99;
       this.heroes.push(h); this.hmap[newId] = h; this.ev(['hu', h.id, Math.round(h.x), Math.round(h.y)]);
       this.sendSheet(h);
@@ -214,7 +216,7 @@ const FoundingSim = (() => {
         ranks: [0, 0, 0, 0, 0], xpAll: 0, cdT: [0, 0, 0, 0], ch: [1, 1, 1, 1], chMax: [1, 1, 1, 1], ups: {}, items: new Array(D.ITEM_SLOTS).fill(null), boons: {}, offers: null, flask: 0,
         S: null, dmgMul: 1, asMul: 1, msMul: 1, cdrMul: 1, healMul: 1, rangeMul: 1,
         path: null, pi: 0, target: null, auto: true, pending: null, cast: null, atkT: 0, repathT: 0, lockT: 0, braceT: 0, stun: 0, rootT: 0, slowT: 0, slowM: 1, hasteT: 0, rallyT: 0, springT: 0, drinkT: 0, stillT: 0,
-        shield: 0, shieldT: 0, invul: 0, hots: [], healAcc: 0, carry: null, carryQ: null, chan: null, brand: 0, rage: 0, runT: 0, lastHit: -99, lsReady: 0, awayT: 0, inCamp: true, blessed: false, rcCd: 0, rcOn: false, pingT: -99, pages: [], offerQ: [], dig: null, aim: null, echoN: 0, tagged: 0, dirty: true, lastSheet: 0,
+        shield: 0, shieldT: 0, invul: 0, hots: [], healAcc: 0, carry: null, carryQ: null, chan: null, brand: 0, rage: 0, runT: 0, lastHit: -99, lsReady: 0, awayT: 0, inCamp: true, blessed: false, rcCd: 0, rcOn: false, dashCd: 0, dash: null, pingT: -99, pages: [], offerQ: [], dig: null, aim: null, echoN: 0, tagged: 0, dirty: true, lastSheet: 0,
         st: { petals: 3, pt: 0, streak: 0, hot: false, hotN: 0, last: null, stacks: 0, count: 0 }, traps: [], bannerZ: null, sanctZ: null, bounty: 0 };
     }
     recalc(h) {
@@ -431,6 +433,7 @@ const FoundingSim = (() => {
     }
     updateHero(h, dt) {
       if (h.rcCd > 0) { h.rcCd -= dt; if (h.rcCd <= 0) h.dirty = true; }
+      if (h.dashCd > 0) { h.dashCd -= dt; if (h.dashCd <= 0) h.dirty = true; }
       if (h.rcOn && (!h.chan || h.chan.kind !== 'recall' || h.stun > 0)) { if (h.chan && h.chan.kind === 'recall') h.chan = null; this.recallCancel(h); }   // a hit, a move, a cast, a stun or a fall ends it
       if (h.dead) { h.respT -= dt; if (h.respT <= 0) { if (h.blessed) { h.blessed = false; this.respawn(h, h.x, h.y, 0.6, 2); } else this.respawn(h, M.P.spring[0] + 50, M.P.spring[1] - 30, 1, 0); } return; }
       if (h.stun > 0) h.stun -= dt; if (h.rootT > 0) h.rootT -= dt; if (h.slowT > 0) h.slowT -= dt; if (h.hasteT > 0) h.hasteT -= dt; if (h.rallyT > 0) h.rallyT -= dt;
@@ -459,6 +462,7 @@ const FoundingSim = (() => {
       if (h.hero === 'cleric' && h.st.petals < 3) { h.st.pt += dt * (inFount ? 4 : 1); if (h.st.pt >= this.petalOf(h).t) { h.st.pt = 0; h.st.petals++; h.dirty = true; } }
       // casting
       if (h.cast) { h.cast.t += dt; if (h.cast.t >= h.cast.wind) { const f = h.cast.fn; h.cast = null; f(); } if (h.cast && !h.cast.mobile) { h.stillT = 0; return; } }
+      if (h.dash) { if (h.stun > 0 || h.rootT > 0 || h.lockT > 0) h.dash = null; else { this.stepDash(h, dt); h.stillT = 0; return; } }
       if (h.stun > 0 || h.lockT > 0) return;
       if (h.chan) { if (this.stepChan(h, dt)) { h.stillT += dt; h.runT = 0; return; } }
       // a skill waiting for the hero to come into range
@@ -466,6 +470,7 @@ const FoundingSim = (() => {
       // walking
       let moving = false;
       if (h.path && h.rootT <= 0) moving = this.walkPath(h, this.heroSpeed(h), dt);
+      if (h.fetch) { if (hyp(h.x - h.fetch.x, h.y - h.fetch.y) <= 60) { h.fetch = null; h.path = null; moving = false; this.interact(h); } else if (!h.path) h.fetch = null; }   // (sent by a right-click: arrived, it does what G would)
       h.stillT = moving ? 0 : h.stillT + dt; h.runT = moving ? h.runT + dt : 0;
       // attacking
       if (!moving && !h.path && !h.cast && !h.pending) this.stepAttack(h, dt);
@@ -577,6 +582,24 @@ const FoundingSim = (() => {
       if (hyp(h.x - M.P.spring[0], h.y - M.P.spring[1]) < RECALL.minFrom) return;   // already home
       h.path = null; h.pending = null; h.target = null; h.cast = null; h.chan = { kind: 'recall', t: 0, need: RECALL.secs }; h.rcOn = true; h.dirty = true;
       this.ev(['rc', h.id, 1]);
+    }
+    // the dash (the hotbar's Dash key, Space by default): a short burst toward the cursor on its own cooldown. It breaks a recall or a
+    // channel, stops at anything solid, and the hero walks on to where it was going.
+    startDash(h, x, y) {
+      if (h.dead || h.dash || h.dashCd > 0 || h.stun > 0 || h.rootT > 0 || h.lockT > 0 || (h.cast && !h.cast.mobile)) return;
+      let dx = x - h.x, dy = y - h.y, d = hyp(dx, dy); if (d < 4) { dx = Math.cos(h.face || 0); dy = Math.sin(h.face || 0); d = 1; }
+      const ux = dx / d, uy = dy / d; let L = 0;
+      while (L + 8 <= DASH.dist && M.walkable(h.x + ux * (L + 8), h.y + uy * (L + 8), 12)) L += 8;
+      if (L < 16) return;
+      if (h.rcOn) this.recallCancel(h);
+      const to = h.path && h.path.length ? h.path[h.path.length - 1] : null;
+      h.chan = null; h.pending = null; h.talk = null; h.path = null; h.face = Math.atan2(uy, ux);
+      h.dash = { ux, uy, left: L, v: DASH.dist / DASH.dur, to }; h.dashCd = DASH.cd; h.dirty = true;
+      this.ev(['dsh', h.id, Math.round(h.x), Math.round(h.y), Math.round(h.x + ux * L), Math.round(h.y + uy * L)]);
+    }
+    stepDash(h, dt) {
+      const o = h.dash, s = Math.min(o.left, o.v * dt); h.x += o.ux * s; h.y += o.uy * s; o.left -= s;
+      if (o.left <= 0.5) { h.dash = null; if (o.to) this.pathTo(h, o.to[0], o.to[1]); }
     }
     recallCancel(h) { if (!h.rcOn) return; h.rcOn = false; h.rcCd = Math.max(h.rcCd || 0, RECALL.cancelCd); h.dirty = true; this.ev(['rc', h.id, 0]); }
     recallArrive(h) {
@@ -818,7 +841,7 @@ const FoundingSim = (() => {
         case 'camp': return this.camp.hp > 0;
         case 'pal': return !!this.pal && this.pal.hp > 0;
         case 'cart': return t.hp > 0 && !t.gone;
-        case 'smith': return !!this.smith && this.smith.hp > 0;
+        case 'smith': return !!this.smith && this.smith.hp > 0 && this.q.fire.st === 1;
         case 'dig': return !!this.dig;
         case 'wall': return !t.dead && e.wallT > this.time - 1.0;
         case 'ally': return !t.dead && hyp(t.x - e.x, t.y - e.y) < Math.max(e.def.aggro, 140) * 1.8 + (t.r || 0);
@@ -846,7 +869,7 @@ const FoundingSim = (() => {
       let obj = null, od = def.runner ? 9999 : def.aggro + 60;
       const consider = o => { const d = hyp(o.x - ax, o.y - ay); if (d < od && (def.runner ? true : e.divert ? this.lineClear(ax, ay, o.x, o.y, 8) : true)) { od = d; obj = o; } };
       for (const c of this.carts) if (!c.gone && c.hp > 0) consider(c);
-      if (this.smith && this.smith.hp > 0 && (def.runner || (e.lane === 1 && e.divert && e.pi >= this.fordIdx - 6))) { od = def.runner ? od : 9999; consider(this.smith); }
+      if (this.smith && this.smith.hp > 0 && this.q.fire.st === 1 && (def.runner || (e.lane === 1 && e.divert && e.pi >= this.fordIdx - 6))) { od = def.runner ? od : 9999; consider(this.smith); }
       if (this.dig && def.runner) consider({ tk: 'dig', x: this.dig.x, y: this.dig.y, r: 30 });
       if (obj && obj.tk === 'dig') obj = this.digTarget;
       if (obj && (def.runner && !(hero && hd < 50))) { e.tgt = obj; return; }
@@ -905,7 +928,7 @@ const FoundingSim = (() => {
         case 'camp': if (this.camp.hp > 0) { dmg = Math.max(1, Math.round(dmg * D.CAMP_TAKE)); this.camp.hp = Math.max(0, this.camp.hp - dmg); this.ev(['h', 2, 0, dmg, 0, Math.round(a ? a.cx : t.x), Math.round(a ? a.cy : t.y)]); } break;
         case 'pal': if (!this.pal) break; this.pal.hp -= dmg; this.ev(['h', 3, 0, dmg, 0, Math.round(t.x), Math.round(t.y)]); if (this.pal.hp <= 0) { this.pal = null; this.markProps(); this.ev(['pal', 0]); } break;
         case 'cart': if (!a || hyp(a.cx - t.x, a.cy - t.y) < a.R + t.r + 10) { t.hp -= dmg; if (t.hp <= 0) { t.gone = true; this.ev(['cart', t.id, 0]); this.markProps(); } } break;
-        case 'smith': if (!a || hyp(a.cx - t.x, a.cy - t.y) < a.R + t.r + 10) { t.hp -= dmg; this.markProps(); if (t.hp <= 0) { this.smith = null; this.fireFail(); } } break;
+        case 'smith': if (this.q.fire.st === 1 && (!a || hyp(a.cx - t.x, a.cy - t.y) < a.R + t.r + 10)) { t.hp -= dmg; this.markProps(); if (t.hp <= 0) { this.smith = null; this.fireFail(); } } break;
         case 'dig': if (this.dig && (!a || hyp(a.cx - t.x, a.cy - t.y) < a.R + 70)) { this.dig.prog = Math.max(0, this.dig.prog - 0.06); this.markProps(); } break;
         case 'wall': t.hp -= dmg; t.sh = 1; break;
         case 'ally': if (!t.dead && (!a || hyp(a.cx - t.x, a.cy - t.y) < a.R + (t.r || 0) + 10)) t.hurt(dmg, e); break;
@@ -1372,7 +1395,8 @@ const FoundingSim = (() => {
       this.ev(['q', id, 3]); this.markProps();
       this.qNextAt = this.time + D.QUEST_FLOW.pause;
     }
-    fireFail() { this.smith = null; this.forge = 0; if (this.q.fire.st === 1) { this.q.fire.st = 3; this.ev(['q', 'fire', 3]); this.qNextAt = this.time + D.QUEST_FLOW.pause; } this.markProps(); }
+    // (only while the fire is catching: once the forge is lit it stays lit, whatever befalls the Smith after)
+    fireFail() { if (this.q.fire.st === 2) return; this.smith = null; this.forge = 0; if (this.q.fire.st === 1) { this.q.fire.st = 3; this.ev(['q', 'fire', 3]); this.qNextAt = this.time + D.QUEST_FLOW.pause; } this.markProps(); }
     judge(id) { const q = this.q[id]; if (q.st !== 1) return; if (id === 'gate' && this.carts.some(c => c.arrived)) { this.finishQuest(id); return; } this.failQuest(id); }
 
     // ================================================================ Day one's secrets (state only; the client draws them faintly)
@@ -1555,7 +1579,7 @@ const FoundingSim = (() => {
       const pts = h.level - this.spent(h);
       const ps = h.hero === 'bastion' ? [h.braceT > 0 ? 1 : 0] : h.hero === 'cleric' ? [h.st.petals, Math.round(h.st.pt / this.petalOf(h).t * 100)] : h.hero === 'pyromancer' ? [h.st.streak, h.st.hot ? 1 : 0] : [h.st.stacks, h.st.count % this.keenOf(h).every];
       this.emitTo(h.id, { t: 'fdp', hero: h.hero, gold: h.gold, xp: Math.round(h.xp), need: h.level >= D.LEVELS.max ? 0 : D.LEVELS.need(h.level), lv: h.level, pts, rk: [0, 1, 2, 3, 4].map(i => h.ranks[i] | 0), cd, cm, ch: h.ch.slice(), cx: h.chMax.slice(), up: Object.keys(h.ups),
-        it: h.items.map(x => x ? [x.uid, x.id] : 0), bn: Object.keys(h.boons), bo: h.offers || 0, ps, fl: h.flask, hp: [Math.round(h.hp), h.max], sh: Math.round(h.shield), st: h.dead ? Math.round(h.respT) : 0, shop: this.forge === 2 ? 2 : 1, dm: r2(h.dmgMul), ms: Math.round(this.heroSpeed(h)), br: h.brand > 9000 ? 999 : Math.round(Math.max(0, h.brand)), cr: CARRY_CODE[h.carry] || 0, pg: h.pages.slice(), bq: h.offerQ.length, rc: Math.ceil(Math.max(0, h.rcCd || 0)), ...(this.mods.length ? this.hookSheet(h) : null) });
+        it: h.items.map(x => x ? [x.uid, x.id] : 0), bn: Object.keys(h.boons), bo: h.offers || 0, ps, fl: h.flask, hp: [Math.round(h.hp), h.max], sh: Math.round(h.shield), st: h.dead ? Math.round(h.respT) : 0, shop: this.forge === 2 ? 2 : 1, dm: r2(h.dmgMul), ms: Math.round(this.heroSpeed(h)), br: h.brand > 9000 ? 999 : Math.round(Math.max(0, h.brand)), cr: CARRY_CODE[h.carry] || 0, pg: h.pages.slice(), bq: h.offerQ.length, rc: Math.ceil(Math.max(0, h.rcCd || 0)), ds: r1(Math.max(0, h.dashCd || 0)), ...(this.mods.length ? this.hookSheet(h) : null) });
     }
   }
 

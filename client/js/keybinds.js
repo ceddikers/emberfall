@@ -24,14 +24,14 @@ const Keybinds = (() => {
     // The Founding's own (founding/client.js): its Q W E R and Tab are the hotbar's first four slots and Next enemy above
     { id: 'fdTent', def: 't', name: 'Supply tent', mode: 'founding' }, { id: 'fdRecall', def: 'b', name: 'Recall to the camp', mode: 'founding' }, { id: 'fdForge', def: 'f', name: 'Forge', mode: 'founding' }, { id: 'fdBuild', def: 'h', name: "Builder's board", mode: 'founding' },
     { id: 'fdFlask', def: 'v', name: 'Drink the flask', mode: 'founding' }, { id: 'fdUse', def: 'g', name: 'Pick up or dig', mode: 'founding' },
-    { id: 'fdDrop', def: 'x', name: 'Put down', mode: 'founding' }, { id: 'fdCenter', def: ' ', name: 'Centre on your hero', mode: 'founding' },
+    { id: 'fdDrop', def: 'x', name: 'Put down', mode: 'founding' }, { id: 'fdCenter', def: 'c', name: 'Centre on your hero', mode: 'founding' },
     { id: 'fdPassive', def: 'd', name: 'Learn the passive', mode: 'founding' }, { id: 'fdMeter', def: 'm', name: 'Damage meter', mode: 'founding' },
     ...[1, 2, 3, 4, 5, 6].map(i => ({ id: 'fdItem' + i, def: String(i), name: `Use item ${i}`, mode: 'founding' })),
   ];
   const CLASS_KEYS = { alembist: { name: 'Alembist', note: 'Number keys mark a vial for Throw; the party moves to F1-F4.' },
-    founding: { name: 'The Founding', note: 'Skills use your first four hotbar keys; Shift with one ranks it up, and Learn the passive ranks up the passive. Alt + left-click pings a spot for your party.' } };
+    founding: { name: 'The Founding', note: 'Skills use your first four hotbar keys and Dash; Shift with one ranks it up, and Learn the passive ranks up the passive. Alt + left-click pings a spot for your party.' } };
   // a mode's keys (The Founding) are never live in town or a raid, and clash only with each other and the keys that mode borrows
-  const MODE_SHARES = { founding: new Set(['s0', 's1', 's2', 's3', 'cycle']) };
+  const MODE_SHARES = { founding: new Set(['s0', 's1', 's2', 's3', 's6', 'cycle']) };
   const live = (a, cls) => !a.mode && (!a.cls || a.cls === cls) && a.not !== cls;
   const modeClash = (m, o) => o.mode === m || MODE_SHARES[m].has(o.id);
   const clash = (a, b) => (a.mode ? modeClash(a.mode, b) : b.mode ? modeClash(b.mode, a) : a.cls ? live(b, a.cls) : b.cls ? live(a, b.cls) : true);
@@ -48,6 +48,8 @@ const Keybinds = (() => {
       if (v && typeof v === 'object') for (const a of ACTIONS) if (typeof v[a.id] === 'string' && v[a.id].length <= 12 && !RESERVED.has(v[a.id])) binds[a.id] = v[a.id];
       // (The Founding's Supply tent moved from B to T when Recall took B: a saved old default follows)
       if (v && typeof v === 'object' && !('fdRecall' in v) && v.fdTent === 'b') binds.fdTent = 't';
+      // (The Founding's Centre moved from Space to C when it took the Dash key: a saved old default follows)
+      if (binds.fdCenter === ' ' && binds.s6 === ' ') binds.fdCenter = ACTIONS.some(o => binds[o.id] === 'c' && (o.mode === 'founding' || MODE_SHARES.founding.has(o.id))) ? '' : 'c';
       // (an action newer than the saved keys starts unbound if its default is already taken by one it clashes with)
       if (v && typeof v === 'object') for (const a of ACTIONS) if (!(a.id in v) && ACTIONS.some(o => o !== a && binds[o.id] === a.def && clash(o, a))) binds[a.id] = '';
     } catch (e) { /* the defaults */ }
