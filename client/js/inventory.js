@@ -552,7 +552,7 @@ const Inventory = (() => {
     ['hp', 'HP', 'Your maximum health.'],
     ['phys', 'Physical', 'Physical classes deal more damage (and heal more): each point is +0.1%.'],
     ['mag', 'Magical', 'Magical classes deal more damage and heal more: each point is +0.1%.'],
-    ['def', 'Defense', 'Each point reduces the damage you take by 0.1% (up to 10%).'],
+    ['def', 'Defense', 'Each point reduces the damage you take by 0.1%.'],
     ['haste', 'Haste', 'Shortens your global cooldown and cast times.'],
     ['crit', 'Critical', 'Chance for attacks and heals to hit 50% harder.'],
   ];

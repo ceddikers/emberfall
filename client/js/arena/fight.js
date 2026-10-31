@@ -129,8 +129,8 @@ class FightSim {
     // gear (humans only, already capped by the host): flat HP and a little damage reduction
     if (p.cls === 'kenseier') this.postureOn = true;   // (a Kenseier in the party: the boss carries Posture, KENSEI_HOST at the end of this file)
     const gear = p.gear || {};
-    const maxHp = Math.round((playerBaseHp(p.role) + Math.max(0, Math.min(210, gear.hp || 0))) * (1 + (this.hpPct || 0)));   // (items.js GEAR_CAPS)
-    this.ps.set(p.id, { id: p.id, role: p.role, hp: maxHp, maxHp, alive: true, def: Math.max(0, Math.min(0.12, (gear.def || 0) / 1000)), shield: 0, shieldEnd: 0, shieldMax: 0, shieldFrom: null, shieldTag: null, shields: [],
+    const maxHp = Math.round((playerBaseHp(p.role) + Math.max(0, gear.hp || 0)) * (1 + (this.hpPct || 0)));   // (no cap on gear HP or DEF: items.js sanitizeGear holds them to what real items give)
+    this.ps.set(p.id, { id: p.id, role: p.role, hp: maxHp, maxHp, alive: true, def: Math.max(0, (gear.def || 0) / 1000), shield: 0, shieldEnd: 0, shieldMax: 0, shieldFrom: null, shieldTag: null, shields: [],
       mits: [], vuln: 0, vulnEnd: 0, dmgDownEnd: 0, weakEnd: 0, hots: [], debuffs: {}, hist: [], diedAt: -99 });
     this.stats[p.id] = { damage: 0, healing: 0, overheal: 0, taken: 0, mitigated: 0, deaths: 0, avoidable: 0,
       // value counters (tools only, nothing reads them in a fight; credit(), mitCredit(), saveCredit()): what this player's own shields, cuts, heals and
