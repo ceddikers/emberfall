@@ -474,7 +474,8 @@ function sectionBeaconRoad() {
   let s = quiet(2, 71); jump(s, 5); const h = s.heroes[0], H = s.haul.beacon;
   check(s.q.beacon.st === 1 && H.left === 3 && H.need === 3, 'The Beacon is offered at wave 7 with three jars for two heroes');
   const s4 = quiet(4, 72); jump(s4, 5); check(s4.haul.beacon.need === 4, 'four jars for four heroes');
-  put(h, 200, 200); interact(s, 'p0'); check(!h.carry, 'a jar is only picked up at the camp depot');
+  put(h, 200, 200); interact(s, 'p0'); check(!h.carry, 'a jar is only picked up at the camp depot'); check(!s.useSpot(h), 'no G shows far from anything');
+  put(h, H.fx, H.fy); check((s.useSpot(h) || [])[0] === H.fx, 'standing at the oil, a G shows over it');
   put(h, H.fx, H.fy); const free = s.heroSpeed(h); interact(s, 'p0'); check(h.carry === 'jar' && H.left === 2, 'a jar is picked up');
   check(s.heroSpeed(h) < free * 0.85, 'carrying a jar slows you'); check(s.snapshot().h[0][6] & F.CARRY && s.snapshot().h[0][11] === 2, 'the carry flag and kind (jar = 2) are sent');
   s.intent('p0', { k: 'drop' }); check(!h.carry && s.drops.length === 1, 'a jar can be set down'); check(s.snapshot().props.qo.some(o => o[0] === 2 && o[3] === 1), 'the set-down jar is in props.qo');

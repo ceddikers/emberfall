@@ -672,6 +672,16 @@
           }
         }
       },
+      // where G would act (mirrors intent below), for the G over it when a hero stands close
+      useAt(h) {
+        if (C.over || h.dead) return null;
+        if (!C.rung && C.bell && sim.wave >= TUNE.bellFrom && hyp(h.x - C.bell[0], h.y - C.bell[1]) < 85) return C.bell;
+        if (C.oak && bonusOn(2) && hyp(h.x - C.oak[0], h.y - C.oak[1]) < 95) return C.oak;
+        if (bonusOn(3) && h.brand > 0 && hyp(h.x - LINKS[3].place[0], h.y - LINKS[3].place[1]) < 130) return LINKS[3].place;
+        if (bonusOn(4) && h.brand > 0 && C.acts.lantern && hyp(h.x - C.acts.lantern[0], h.y - C.acts.lantern[1]) < 90) return C.acts.lantern;
+        if (bonusOn(7) && C.acts.pile && hyp(h.x - C.acts.pile[0], h.y - C.acts.pile[1]) < 95) return C.acts.pile;
+        return null;
+      },
       intent(h, m) {
         if (m.k !== 'carry' || C.over || h.dead) return false;
         // the cracked bell on the Ledge

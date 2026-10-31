@@ -262,6 +262,7 @@ const FoundingSim = (() => {
       }
       if (this.st === 'live' || this.st === 'camp') {
         if (this.snapN++ % 2 === 0) this.sendSnapshot();
+        if (this.st === 'live' && this.tickN % 4 === 0) for (const h of this.heroes) { const p = this.useSpot(h), k = p ? Math.round(p[0]) + ',' + Math.round(p[1]) : ''; if (k !== (h.useK || '')) { h.useK = k; h.useAt = p ? [Math.round(p[0]), Math.round(p[1])] : 0; h.dirty = true; } }
         if (this.st === 'live') for (const h of this.heroes) if (h.dirty ? this.time - h.lastSheet >= 0.2 : this.time - h.lastSheet >= 2) this.sendSheet(h);
       }
       this.flushEvents();
@@ -1451,6 +1452,26 @@ const FoundingSim = (() => {
         if (s.n === 6 || s.n === 7) { s.st = 1; this.page(h, s.n); return; }
       }
     }
+    // where the use key (G) would act for this hero right now, or null: the same tests as interact (and the modules' useAt, in their
+    // intent order), so a hero standing close to something G does (a secret, a load, a fire, a giver) sees a G over it. Never sent from afar.
+    useSpot(h) {
+      if (h.dead || this.st !== 'live' || this.ending || h.chan || h.dig) return null;
+      for (const m of this.mods) if (m.useAt) { const p = m.useAt(h); if (p) return p; }
+      const near = (x, y, r) => hyp(h.x - x, h.y - y) <= r;
+      for (const id of this.qWait) { const g = this.giverAt(id); if (near(g[0], g[1], D.QUEST_FLOW.talkR)) return [g[0], g[1]]; }
+      if (h.brand > 0) for (const p of this.posts) if (!p.lit && near(p.x, p.y, 100)) return [p.x, p.y];
+      if (!h.carry) {
+        for (const d of this.drops) if (!d.gone && near(d.x, d.y, 80)) return [d.x, d.y];
+        for (const id of HAUL_IDS) { const H = this.haul[id]; if (this.q[id].st === 1 && H.left > 0 && near(H.fx, H.fy, QT.pickR) && !(id === 'stonegate' && this.sg)) return [H.fx, H.fy]; }
+      }
+      for (const fp of QT.fires) if (near(fp[0], fp[1], 100)) return [fp[0], fp[1]];
+      if (h.carry) return null;
+      if (this.q.road.st === 1) { let best = null, bd = 90; this.postSlots.forEach((s, i) => { if (this.posts.some(p => p.slot === i)) return; const d = hyp(h.x - s[0], h.y - s[1]); if (d < bd) { bd = d; best = s; } }); if (best) return [best[0], best[1]]; }
+      if (this.sg && this.q.stonegate.st === 1 && near(this.carvePt[0], this.carvePt[1], QT.carveRad)) return [this.carvePt[0], this.carvePt[1]];
+      if (this.q.cover.st === 1 && near(this.coverPt[0], this.coverPt[1], QT.coverRad)) return [this.coverPt[0], this.coverPt[1]];
+      for (const s of this.secrets) if (!s.st && near(s.x, s.y, 70) && [1, 2, 4, 6, 7, 8].includes(s.n)) return [s.x, s.y];
+      return null;
+    }
     page(h, n) { if (!h.pages.includes(n)) h.pages.push(n); h.dirty = true; this.ev(['pg', h.id, n]); }
     addSecret(n, x, y) { if (!this.secrets.some(s => s.n === n)) this.secrets.push({ n, x, y, st: 0 }); }
     dropCarry(h) {
@@ -1579,7 +1600,7 @@ const FoundingSim = (() => {
       const pts = h.level - this.spent(h);
       const ps = h.hero === 'bastion' ? [h.braceT > 0 ? 1 : 0] : h.hero === 'cleric' ? [h.st.petals, Math.round(h.st.pt / this.petalOf(h).t * 100)] : h.hero === 'pyromancer' ? [h.st.streak, h.st.hot ? 1 : 0] : [h.st.stacks, h.st.count % this.keenOf(h).every];
       this.emitTo(h.id, { t: 'fdp', hero: h.hero, gold: h.gold, xp: Math.round(h.xp), need: h.level >= D.LEVELS.max ? 0 : D.LEVELS.need(h.level), lv: h.level, pts, rk: [0, 1, 2, 3, 4].map(i => h.ranks[i] | 0), cd, cm, ch: h.ch.slice(), cx: h.chMax.slice(), up: Object.keys(h.ups),
-        it: h.items.map(x => x ? [x.uid, x.id] : 0), bn: Object.keys(h.boons), bo: h.offers || 0, ps, fl: h.flask, hp: [Math.round(h.hp), h.max], sh: Math.round(h.shield), st: h.dead ? Math.round(h.respT) : 0, shop: this.forge === 2 ? 2 : 1, dm: r2(h.dmgMul), ms: Math.round(this.heroSpeed(h)), br: h.brand > 9000 ? 999 : Math.round(Math.max(0, h.brand)), cr: CARRY_CODE[h.carry] || 0, pg: h.pages.slice(), bq: h.offerQ.length, rc: Math.ceil(Math.max(0, h.rcCd || 0)), ds: r1(Math.max(0, h.dashCd || 0)), ...(this.mods.length ? this.hookSheet(h) : null) });
+        it: h.items.map(x => x ? [x.uid, x.id] : 0), bn: Object.keys(h.boons), bo: h.offers || 0, ps, fl: h.flask, hp: [Math.round(h.hp), h.max], sh: Math.round(h.shield), st: h.dead ? Math.round(h.respT) : 0, shop: this.forge === 2 ? 2 : 1, dm: r2(h.dmgMul), ms: Math.round(this.heroSpeed(h)), br: h.brand > 9000 ? 999 : Math.round(Math.max(0, h.brand)), cr: CARRY_CODE[h.carry] || 0, pg: h.pages.slice(), bq: h.offerQ.length, rc: Math.ceil(Math.max(0, h.rcCd || 0)), ds: r1(Math.max(0, h.dashCd || 0)), ua: h.useAt || 0, ...(this.mods.length ? this.hookSheet(h) : null) });
     }
   }
 

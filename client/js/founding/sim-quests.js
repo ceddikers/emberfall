@@ -366,6 +366,13 @@
         if (S.bell) { for (const h of alive()) { h.shield = Math.max(h.shield, T.choice.shield); h.shieldT = Math.max(h.shieldT, T.choice.shieldT); h.dirty = true; } ev(['qxw', 1, 0]); }
         if (done.mill) for (const h of sim.heroes) { h.gold += T.mill.gold; if (sim.stats[h.id]) sim.stats[h.id].gold += T.mill.gold; h.dirty = true; ev(['qxw', 2, h.id]); }
       },
+      // where G would act (mirrors intent below), for the G over it when a hero stands close
+      useAt(h) {
+        if (h.dead) return null;
+        if (live.watchfires && S.fires && h.brand > 0) for (const f of S.fires.list) if (!f.lit && hyp(h.x - f.x, h.y - f.y) < T.fires.reach) return [f.x, f.y];
+        if (live.choice && S.choice && !S.choice.chosen && !h.carry && S.choice.left > 0 && hyp(h.x - X.PILE[0], h.y - X.PILE[1]) < T.choice.pickR) return X.PILE;
+        return null;
+      },
       // the core's `carry` key: a brand against an unlit fire starts the lighting; no brand and a free pair of hands takes a stone from the pile
       intent(h, m) {
         if (m.k !== 'carry' || h.dead) return;

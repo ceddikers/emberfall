@@ -1447,6 +1447,20 @@ const Founding = (() => {
   function waitingGivers() { const out = []; for (const w of (S.props && S.props.qw) || []) { const g = D.GIVER_AT[w[1]]; if (g && D.QUESTS[w[0]]) out.push({ id: w[0], key: w[1], x: g[0], y: g[1] }); } return out; }
   // a quest load or a pile of them under the cursor (props.qo rows [code, x, y, left]; not the camp fires, which a walk past should not light a brand at)
   function hoverQuestThing() { const m = S.mouse, qo = (S.props && S.props.qo) || []; let best = null, bd = 40; for (const o of qo) { if (o[0] === 8) continue; const d = Math.hypot(m.wx - o[1], m.wy - (o[2] - 12)); if (d < bd) { bd = d; best = o; } } return best; }
+  // the use key over whatever it would act on, while your hero stands close to it (the host decides: sheet.ua [x, y]); a secret shows it too, but only up close
+  function drawUse(c) {
+    const ua = S.sheet && S.sheet.ua, m = me(); if (!ua || !m || (m.f & FLAG.DEAD)) { S.useK = null; return; }
+    const k = ua[0] + ',' + ua[1]; if (S.useK !== k) { S.useK = k; S.useT0 = S.T; }
+    const a = eo((S.T - S.useT0) / 0.25), z = clamp(1 / S.cam.zoom, 0.85, 1.4), lab = keyLbl('fdUse');
+    c.save(); c.globalAlpha = a; c.translate(ua[0], ua[1] - 58 + Math.sin(S.T * 3) * 2.5 - 6 * (1 - a)); c.scale(z, z);
+    c.font = 'bold 13px system-ui'; const w = Math.max(24, c.measureText(lab).width + 14), hh = 24;
+    c.beginPath(); c.moveTo(-6, hh / 2 - 1); c.lineTo(0, hh / 2 + 6); c.lineTo(6, hh / 2 - 1); c.closePath(); c.fillStyle = '#c9a45c'; c.fill();
+    c.fillStyle = 'rgba(0,0,0,.4)'; c.beginPath(); c.roundRect(-w / 2 + 1, -hh / 2 + 3, w, hh, 5); c.fill();
+    c.fillStyle = '#1d1812'; c.strokeStyle = '#c9a45c'; c.lineWidth = 1.6; c.beginPath(); c.roundRect(-w / 2, -hh / 2, w, hh, 5); c.fill(); c.stroke();
+    c.strokeStyle = 'rgba(255,240,200,.14)'; c.lineWidth = 1; c.beginPath(); c.moveTo(-w / 2 + 4, -hh / 2 + 2.5); c.lineTo(w / 2 - 4, -hh / 2 + 2.5); c.stroke();
+    c.fillStyle = '#f0dca0'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(lab, 0, 1); c.textBaseline = 'alphabetic';
+    c.restore();
+  }
   function hoverGiver() { const m = S.mouse; let best = null, bd = 44; for (const g of waitingGivers()) { const d = Math.hypot(m.wx - g.x, m.wy - (g.y - 26)); if (d < bd) { bd = d; best = g; } } return best; }
   function drawGivers(c) {
     const W0 = waitingGivers(); if (!W0.length) return;
@@ -1948,6 +1962,7 @@ const Founding = (() => {
     drawCounts(c);
     drawRecall(c); drawPings(c);
     if (LAYERS.length) lay('top', c);
+    drawUse(c);
     drawMarks(c, state);
     // floating numbers, small and steady on screen
     const sc = clamp(1 / S.cam.zoom, 0.85, 1.35);

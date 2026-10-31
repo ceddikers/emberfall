@@ -155,11 +155,15 @@ function sectionWake() {
   place(sim, 3470, 524);
   sim.intent('p0', { k: 'carry' });
   check(!C.rung, 'the bell does nothing before wave 3');
+  { const h = sim.heroes[1], k0 = [h.x, h.y]; h.x = C.bell[0] + 20; h.y = C.bell[1]; check(!sim.useSpot(h), 'no G over the bell before it answers'); h.x = k0[0]; h.y = k0[1]; }
   sim.wave = 3;
   const far = sim.heroes[0]; const keep = [far.x, far.y]; far.x = 1200; far.y = 1900; sim.intent('p0', { k: 'carry' });
-  check(!C.rung, 'the bell is only rung up close'); far.x = keep[0]; far.y = keep[1];
+  check(!C.rung, 'the bell is only rung up close'); check(!sim.useSpot(far), 'and no G shows from afar'); far.x = keep[0]; far.y = keep[1];
   sim.heroes[1].x = C.bell[0] + 20; sim.heroes[1].y = C.bell[1];
+  { const u = sim.useSpot(sim.heroes[1]); check(u && u[0] === C.bell[0] && u[1] === C.bell[1], 'a hero beside the bell sees a G over it (useSpot)'); }
+  sim.heroes[1].dirty = true; for (let i = 0; i < 8; i++) sim.tick(DT); check(Array.isArray(sim.heroes[1].useAt) && sim.heroes[1].useAt[0] === C.bell[0], 'and the sheet carries it (ua)');
   sim.intent('p1', { k: 'carry' }); sim.tick(DT);
+  check(!sim.useSpot(sim.heroes[1]) || sim.useSpot(sim.heroes[1])[0] !== C.bell[0], 'once rung, the G over the bell goes');
   check(C.rung && evs(sim, 'chbell').length === 1, 'the bell rings from wave 3 (chbell)');
   for (let i = 0; i < 40; i++) sim.tick(DT);
   check(!C.boss, 'the Ram does not come at once');
