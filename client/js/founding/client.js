@@ -17,7 +17,7 @@
 // Input: the module adds capture-phase listeners on window (mouse on the canvas, keys everywhere) and acts only while active.
 // Keys: right-click move/attack, Q W E R cast, Shift+Q/W/E/R rank up (and the Learn-the-passive key, D, for the passive), Tab cycle target, left-click target/confirm aim, Esc cancel
 // aim/close a panel, T supply tent (near it), F forge (near it), B recall, Alt+click ping, 1-6 items, V flask, G pick up / dig, X put down,
-// Space centre camera (all of them the player's own keys: keybinds.js).
+// Space dash toward the cursor (the hotbar's Dash key), C centre camera (all of them the player's own keys: keybinds.js).
 
 const Founding = (() => {
   'use strict';
@@ -418,6 +418,7 @@ const Founding = (() => {
       case 'hd': { sndFor(ev[1], 'fd-hero-down', ev[2], ev[3]); const u = U('h' + ev[1]); if (u) { ftxt(ev[2], ev[3] - 30, 'Down', '#ff7a68', 13); burst(ev[2], ev[3], 8, { color: '#ff6a5a', spd: 80, dur: 0.4, size: 2, kind: 'dot' }); if (ev[1] === S.myId) { S.aim = null; shake(3, 0.2); } } break; }
       case 'hu': { sndFor(ev[1], 'fd-hero-rise', ev[2], ev[3]); ftxt(ev[2], ev[3] - 34, 'Raised', '#fff1b8', 13, 1.3); Fx.raise(ev[2], ev[3]); break; }
       case 'pb': evPerfectBlock(ev); break;
+      case 'dsh': { const u = U('h' + ev[1]); if (u) { u.an.dashT = S.T; faceTo(u, ev[4], ev[5], 0.3); } burst(ev[2], ev[3] + 8, 7, { ang: Math.atan2(ev[3] - ev[5], ev[2] - ev[4]), spread: 0.9, color: '#b9a585', spd: 70, dur: 0.45, size: 2.4, kind: 'dot' }); sndFor(ev[1], 'dash', ev[2], ev[3]); break; }
       case 't': S.tele.set(ev[1], { id: ev[1], shape: ev[2], x: ev[3], y: ev[4], a: ev[5], b: ev[6], w: ev[7], warn: Math.max(0.3, ev[8]), col: ev[9], t0: S.T, res: 0, boss: S.boss ? S.boss.eid : null }); teleStart(S.tele.get(ev[1])); break;
       case 'i': { const t = S.tele.get(ev[1]); if (t) { t.res = S.T; teleResolve(t); fxRing(ev[2], ev[3], 8, Math.max(40, t.a * 0.9), 0.3, t.col ? '140,190,255' : '255,120,90', 2, 0); if (t.shape === 0 && t.a > 60) { shake(2.5, 0.2); burst(ev[2], ev[3], 8, { color: '#6a5a48', spd: 90, dur: 0.5, size: 3, kind: 'dust' }); } } break; }
       case 'qa': { const Q = D.QUESTS[ev[1]]; if (Q) { say(Q.giver + ' has work for you.'); snd('fd-quest-offer', { vol: 0.55 }); } break; }   // a giver calls: a ! over them, and on the minimap once seen
@@ -511,6 +512,13 @@ const Founding = (() => {
     const m = me(); if (!S || S.phase !== 'live' || !m || (m.f & FLAG.DEAD) || S.ended || S.end || S.rc.has(S.myId)) return;
     const l = rcLeft(); if (l > 0) { say('Recall again in ' + Math.ceil(l) + ' s'); return; }
     send({ k: 'recall' });
+  }
+  // the dash: toward the cursor, on its own cooldown (the host decides how far; the sheet's ds is the seconds left)
+  const dsLeft = () => { const sh = S && S.sheet; return sh && sh.ds > 0 ? Math.max(0, sh.ds - (S.T - S.sheetT)) : 0; };
+  function tryDash() {
+    const m = me(); if (!S || S.phase !== 'live' || !m || (m.f & FLAG.DEAD) || S.ended || S.end) return;
+    if (dsLeft() > 0) return;
+    send({ k: 'dash', x: Math.round(S.mouse.wx), y: Math.round(S.mouse.wy) });
   }
   function sendPing(x, y) {
     if (!S || S.phase !== 'live' || S.ended || S.end || S.T - S.lastPing < 2) return;
@@ -1334,10 +1342,10 @@ const Founding = (() => {
       case 7: return ['The Covering', 'Stand in the ring and press ' + G + ' to help lay the capstone. More hands, less time.'];
     }
     switch (code) {
-      case 2: return ['Lamp oil', 'Press ' + G + ' beside it to take a jar. It slows you. ' + X + ' sets it down so you can fight.'];
-      case 3: return ['A fallen founder', 'Press ' + G + ' to lift the bier. ' + X + ' sets it down.'];
-      case 4: return ['Dressed stone', 'Press ' + G + ' to shoulder it. ' + X + ' sets it down.'];
-      case 5: return ['Timber', 'Press ' + G + ' to shoulder it. ' + X + ' sets it down.'];
+      case 2: return ['Lamp oil', 'Right-click it, or press ' + G + ' beside it, to take a jar. It slows you. ' + X + ' sets it down so you can fight.'];
+      case 3: return ['A fallen founder', 'Right-click, or press ' + G + ' beside it, to lift the bier. ' + X + ' sets it down.'];
+      case 4: return ['Dressed stone', 'Right-click, or press ' + G + ' beside it, to shoulder it. ' + X + ' sets it down.'];
+      case 5: return ['Timber', 'Right-click, or press ' + G + ' beside it, to shoulder it. ' + X + ' sets it down.'];
       case 8: return ['The camp fire', 'Press ' + G + ' beside it to light a brand. A brand relights a post that has gone dark.'];
     }
     return null;
@@ -1437,6 +1445,22 @@ const Founding = (() => {
   // ---- quest-givers (2026-10-31): quests keep their own pace. A founder with work waiting wears a ! overhead; right-click them, or press
   // the use key beside them, to take it. The minimap shows the ! once the party has laid eyes on that spot.
   function waitingGivers() { const out = []; for (const w of (S.props && S.props.qw) || []) { const g = D.GIVER_AT[w[1]]; if (g && D.QUESTS[w[0]]) out.push({ id: w[0], key: w[1], x: g[0], y: g[1] }); } return out; }
+  // a quest load or a pile of them under the cursor (props.qo rows [code, x, y, left]; not the camp fires, which a walk past should not light a brand at)
+  function hoverQuestThing() { const m = S.mouse, qo = (S.props && S.props.qo) || []; let best = null, bd = 40; for (const o of qo) { if (o[0] === 8) continue; const d = Math.hypot(m.wx - o[1], m.wy - (o[2] - 12)); if (d < bd) { bd = d; best = o; } } return best; }
+  // the use key over whatever it would act on, while your hero stands close to it (the host decides: sheet.ua [x, y]); a secret shows it too, but only up close
+  function drawUse(c) {
+    const ua = S.sheet && S.sheet.ua, m = me(); if (!ua || !m || (m.f & FLAG.DEAD)) { S.useK = null; return; }
+    const k = ua[0] + ',' + ua[1]; if (S.useK !== k) { S.useK = k; S.useT0 = S.T; }
+    const a = eo((S.T - S.useT0) / 0.25), z = clamp(1 / S.cam.zoom, 0.85, 1.4), lab = keyLbl('fdUse');
+    c.save(); c.globalAlpha = a; c.translate(ua[0], ua[1] - 58 + Math.sin(S.T * 3) * 2.5 - 6 * (1 - a)); c.scale(z, z);
+    c.font = 'bold 13px system-ui'; const w = Math.max(24, c.measureText(lab).width + 14), hh = 24;
+    c.beginPath(); c.moveTo(-6, hh / 2 - 1); c.lineTo(0, hh / 2 + 6); c.lineTo(6, hh / 2 - 1); c.closePath(); c.fillStyle = '#c9a45c'; c.fill();
+    c.fillStyle = 'rgba(0,0,0,.4)'; c.beginPath(); c.roundRect(-w / 2 + 1, -hh / 2 + 3, w, hh, 5); c.fill();
+    c.fillStyle = '#1d1812'; c.strokeStyle = '#c9a45c'; c.lineWidth = 1.6; c.beginPath(); c.roundRect(-w / 2, -hh / 2, w, hh, 5); c.fill(); c.stroke();
+    c.strokeStyle = 'rgba(255,240,200,.14)'; c.lineWidth = 1; c.beginPath(); c.moveTo(-w / 2 + 4, -hh / 2 + 2.5); c.lineTo(w / 2 - 4, -hh / 2 + 2.5); c.stroke();
+    c.fillStyle = '#f0dca0'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(lab, 0, 1); c.textBaseline = 'alphabetic';
+    c.restore();
+  }
   function hoverGiver() { const m = S.mouse; let best = null, bd = 44; for (const g of waitingGivers()) { const d = Math.hypot(m.wx - g.x, m.wy - (g.y - 26)); if (d < bd) { bd = d; best = g; } } return best; }
   function drawGivers(c) {
     const W0 = waitingGivers(); if (!W0.length) return;
@@ -1938,6 +1962,7 @@ const Founding = (() => {
     drawCounts(c);
     drawRecall(c); drawPings(c);
     if (LAYERS.length) lay('top', c);
+    drawUse(c);
     drawMarks(c, state);
     // floating numbers, small and steady on screen
     const sc = clamp(1 / S.cam.zoom, 0.85, 1.35);
@@ -1981,8 +2006,8 @@ const Founding = (() => {
     ctx.save(); wt(ctx, vc);
     const c = ctx, x0 = vc.x - W() / 2 / vc.zoom - 80, x1 = vc.x + W() / 2 / vc.zoom + 80, y0 = vc.y - H() / 2 / vc.zoom - 120, y1 = vc.y + H() / 2 / vc.zoom + 120;
     const inV = (x, y) => x > x0 && x < x1 && y > y0 && y < y1;
-    // the camp's edge, faint
-    c.setLineDash([10, 12]); ell(c, M.P.hearth[0], M.P.hearth[1], M.CAMP_R, M.CAMP_R * 0.92, 0, null, `rgba(${S.campFlash > 0 ? '255,120,80' : '230,201,138'},${0.16 + 0.5 * S.campFlash})`, 1.5 + 2 * S.campFlash); c.setLineDash([]);
+    // the camp's edge, faint: on the fence and its flags, the line the enemies strike the camp from
+    c.setLineDash([10, 12]); ell(c, M.P.hearth[0], M.P.hearth[1], M.CAMP_R, M.CAMP_R, 0, null, `rgba(${S.campFlash > 0 ? '255,120,80' : '230,201,138'},${0.16 + 0.5 * S.campFlash})`, 1.5 + 2 * S.campFlash); c.setLineDash([]);
     for (const z of S.zones.values()) if ((inV(z.x, z.y) || z.kind === ZONE.FLOOD) && z.kind !== ZONE.WALL) drawZoneGround(c, z);
     for (const k of S.corpses) if (inV(k.x, k.y) && visAt(k.x, k.y, k.r)) drawCorpse(c, k);
     for (const f of S.fx) if (f.layer === 0) f.draw(c);
@@ -2068,6 +2093,8 @@ const Founding = (() => {
     const m = me(); if (!m || (m.f & FLAG.DEAD)) return;
     const e = hoverEnemy(); S.openOnArrive = null;
     const gv = e ? null : hoverGiver();
+    const qo = e || gv ? null : hoverQuestThing();
+    if (qo) { S.rEnemy = false; S.rDown = false; send({ k: 'fetch', x: qo[1], y: qo[2] }); S.marker = { x: qo[1], y: qo[2], t: 0 }; return; }   // (walks over and does what the Use key would)
     if (gv) { S.rEnemy = false; S.rDown = false; send({ k: 'talk', id: gv.id }); S.marker = { x: gv.x, y: gv.y + 50, t: 0 }; return; }   // (no held-button walking after: it would call the hero off the talk)
     if (e) { S.tgt = e.id; S.rEnemy = true; send({ k: 'attack', id: e.id }); S.marker = { x: e.x, y: e.y, t: 0, c: '255,110,90' }; }
     else { S.rEnemy = false; send({ k: 'move', x: Math.round(S.mouse.wx), y: Math.round(S.mouse.wy) }); S.marker = { x: S.mouse.wx, y: S.mouse.wy, t: 0 }; }
@@ -2095,7 +2122,7 @@ const Founding = (() => {
     }
     // the keys are the player's own (keybinds.js: the hotbar's first four, Next enemy, and The Founding's section)
     const KB = typeof Keybinds !== 'undefined' && Keybinds.modeAction ? Keybinds : null;
-    const act = KB ? KB.modeAction(KB.keyOf(ev), 'founding') : ({ KeyQ: 's0', KeyW: 's1', KeyE: 's2', KeyR: 's3', Tab: 'cycle', KeyT: 'fdTent', KeyB: 'fdRecall', KeyF: 'fdForge', KeyV: 'fdFlask', KeyG: 'fdUse', KeyX: 'fdDrop', Space: 'fdCenter', KeyD: 'fdPassive' })[k] || (/^Digit[1-6]$/.test(k) ? 'fdItem' + k.slice(5) : null);
+    const act = KB ? KB.modeAction(KB.keyOf(ev), 'founding') : ({ KeyQ: 's0', KeyW: 's1', KeyE: 's2', KeyR: 's3', Tab: 'cycle', KeyT: 'fdTent', KeyB: 'fdRecall', KeyF: 'fdForge', KeyV: 'fdFlask', KeyG: 'fdUse', KeyX: 'fdDrop', Space: 's6', KeyC: 'fdCenter', KeyD: 'fdPassive' })[k] || (/^Digit[1-6]$/.test(k) ? 'fdItem' + k.slice(5) : null);
     const slotMap = { s0: 'q', s1: 'w', s2: 'e', s3: 'r' };
     if (S.phase !== 'live') { if (k === 'Escape') used = FoundingUI.closeTop(); else used = false; }
     else if (S.ended || S.end) { used = false; }
@@ -2112,6 +2139,7 @@ const Founding = (() => {
     else if (act === 'fdDrop') { if (!ev.repeat) send({ k: 'drop' }); }
     else if (act === 'fdPassive') { if (!ev.repeat) learn('p'); }
     else if (act === 'fdMeter') { if (!ev.repeat) FoundingUI.toggleMeter(); }
+    else if (act === 's6') { if (!ev.repeat) tryDash(); }
     else if (act === 'fdCenter') { S.cam.free = false; const m = me(); if (m) { S.cam.x = m.x; S.cam.y = m.y; } }
     else if (k.startsWith('Arrow')) { (S.keys || (S.keys = {}))[k] = true; }
     else used = false;
@@ -2143,7 +2171,7 @@ const Founding = (() => {
 
   // what ui.js may read and call
   const api = {
-    D, M, FLAG, SKILL_ICON, state: () => S, me, send, say, snd, clsOf, roleColor, heroIdx, leave, drawMini, miniTo, pressSkill, learn, canLearn, keyLabel, cdLeft, charges, hasUp, myStat, tryRecall, rcLeft, pingAt: sendPing, isRecalling: () => !!S && S.rc.has(S.myId), hoverQuest: id => { if (S) S.qhover = id || null; },
+    D, M, FLAG, SKILL_ICON, state: () => S, me, send, say, snd, clsOf, roleColor, heroIdx, leave, drawMini, miniTo, pressSkill, learn, canLearn, keyLabel, cdLeft, charges, hasUp, myStat, tryRecall, rcLeft, tryDash, dsLeft, pingAt: sendPing, isRecalling: () => !!S && S.rc.has(S.myId), hoverQuest: id => { if (S) S.qhover = id || null; },
     get dep() { return dep; }, get sim() { return sim; }, pause: setPause, canPause, isPaused: () => paused, meterRows, result: () => lastResult, isActive: () => active, tryShop, tryForge,
   };
 

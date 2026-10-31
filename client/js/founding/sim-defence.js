@@ -35,7 +35,7 @@
   const TOWER = {
     post: { name: 'Watch-post', cost: [45, 65, 100], hp: [250, 310, 380], sight: [340, 380, 430], range: [300, 310, 330], cd: [1.15, 1.1, 1.05], dmg: [9, 9, 10], arrows: [1, 2, 2], pierce: [0, 0, 1],
       text: ['Looses an arrow at the nearest enemy, or at whatever a hero has marked.', 'Looses two arrows at once.', 'Its arrows pierce in a line.'] },
-    brazier: { name: 'Brazier', cost: [50, 70, 100], hp: [240, 300, 370], sight: [300, 340, 400], range: [210, 220, 240], cd: [2.1, 2.0, 1.9], dmg: [15, 17, 19], blast: [48, 54, 60], light: [200, 230, 310],
+    brazier: { name: 'Brazier', cost: [50, 70, 100], hp: [240, 300, 370], sight: [300, 340, 400], range: [210, 220, 240], cd: [2.1, 2.0, 1.9], dmg: [15, 17, 19], blast: [48, 54, 60], light: [200, 230, 310], lob: 0.38,
       text: ['Throws fire in a small burst, and lights the ground around it at night.', 'Leaves burning ground where the fire lands.', 'A wider light, and nothing hides in it, not even a stalker.'] },
     bell: { name: 'Warding bell', cost: [40, 60, 90], hp: [230, 290, 350], sight: [340, 370, 410], ring: [2.6, 2.4, 2.2], radius: [200, 220, 240], slow: [0.55, 0.5, 0.5], slowT: [1.4, 1.5, 1.6],
       text: ['No damage. It rings on a beat and slows what is near.', 'Its ring shows hidden enemies.', 'Its ring also shields the nearest tower for a moment.'] },
@@ -236,10 +236,13 @@
           const tg = nearestOf(t.x, t.y, K.range[r], e => !hiddenFrom(e) && !e.def.inert);
           if (!tg) { t.cd = 0.2; if (t.rank >= 3) revealIn(t.x, t.y, K.light[r], 1.0); return; }
           t.cd = K.cd[r]; t.firedT = sim.time;
-          const bl = K.blast[r];
-          sim.ev(['twf', t.id, Math.round(tg.x), Math.round(tg.y), 2]);
-          for (const e of sim.inCircle(tg.x, tg.y, bl)) hitE(e, K.dmg[r] * towMul(t, TUNE.towDmg), { quiet: 1, aoe: 1 });
-          if (t.rank >= 2 && sim.time - t.burnT > 2.5) { t.burnT = sim.time; burnGround(tg.x, tg.y, 44, 3.6, 5 * towMul(t, TUNE.towDmg)); }
+          // the fire is lobbed (K.lob seconds in the air) at where the target will be, and burns only where it lands, when it lands
+          const bl = K.blast[r], mul = towMul(t, TUNE.towDmg), dmg = K.dmg[r] * mul, burn = t.rank >= 2 && sim.time - t.burnT > 2.5;
+          let lx = (tg.lvx || 0) * K.lob, ly = (tg.lvy || 0) * K.lob; const ld = hyp(lx, ly); if (ld > 60) { lx *= 60 / ld; ly *= 60 / ld; }
+          const ax = Math.round(tg.x + lx), ay = Math.round(tg.y + ly);
+          if (burn) t.burnT = sim.time;
+          sim.ev(['twf', t.id, ax, ay, 2]);
+          sim.after(K.lob, () => { for (const e of sim.inCircle(ax, ay, bl)) hitE(e, dmg, { quiet: 1, aoe: 1 }); if (burn) burnGround(ax, ay, 44, 3.6, 5 * mul); });
           return;
         }
         case 'bell': {
@@ -499,6 +502,8 @@
       },
       tick(dt) {
         scanTelegraphs();
+        // each enemy's pace over the last tick, for the brazier's lead (towerAct caps the lead, so a burrow or a knock never throws it far off)
+        if (dt > 0) for (const e of sim.enemies) { if (e.lx !== undefined) { e.lvx = (e.x - e.lx) / dt; e.lvy = (e.y - e.ly) / dt; } e.lx = e.x; e.ly = e.y; }
         quiet[0] = quiet[1] = true; if (soldiers.length) for (const e of sim.enemies) if (!e.dead && !e.def.inert && e.lane < 2) quiet[e.lane] = false;
         for (const sp of spires) spireTick(sp, dt);
         for (let i = 0; i < towers.length; i++) {

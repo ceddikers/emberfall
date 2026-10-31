@@ -248,6 +248,7 @@ function sectionQuests() {
   s = quiet(2, 15); jump(s, 3); runFor(s, 1);
   check(s.q.fire.st === 1 && s.smith && s.forge === 1, 'The First Fire lights at wave 3'); check(!s.shopStock().some(x => x.rar >= 2), 'the shop keeps only basics before the forge opens');
   runFor(s, 70); check(s.q.fire.st === 2 && s.forge === 2, 'The First Fire completes: the forge opens'); check(s.shopStock().some(x => x.rar >= 2), 'the shop stocks forged gear after');
+  if (s.smith) s.hurtObj(s.smith, 9999, null, null); check(s.forge === 2 && s.q.fire.st === 2, 'once lit, the forge stays lit: a blow at the Smith afterwards puts nothing out');
   s = quiet(2, 16); jump(s, 3); runFor(s, 1); s.hurtObj(s.smith, 9999, null, null);
   check(s.q.fire.st === 3 && s.forge === 0 && !s.smith, 'a fallen Smith misses The First Fire');
   // enemies divert to the Smith
@@ -473,12 +474,17 @@ function sectionBeaconRoad() {
   let s = quiet(2, 71); jump(s, 5); const h = s.heroes[0], H = s.haul.beacon;
   check(s.q.beacon.st === 1 && H.left === 3 && H.need === 3, 'The Beacon is offered at wave 7 with three jars for two heroes');
   const s4 = quiet(4, 72); jump(s4, 5); check(s4.haul.beacon.need === 4, 'four jars for four heroes');
-  put(h, 200, 200); interact(s, 'p0'); check(!h.carry, 'a jar is only picked up at the camp depot');
+  put(h, 200, 200); interact(s, 'p0'); check(!h.carry, 'a jar is only picked up at the camp depot'); check(!s.useSpot(h), 'no G shows far from anything');
+  put(h, H.fx, H.fy); check((s.useSpot(h) || [])[0] === H.fx, 'standing at the oil, a G shows over it');
   put(h, H.fx, H.fy); const free = s.heroSpeed(h); interact(s, 'p0'); check(h.carry === 'jar' && H.left === 2, 'a jar is picked up');
   check(s.heroSpeed(h) < free * 0.85, 'carrying a jar slows you'); check(s.snapshot().h[0][6] & F.CARRY && s.snapshot().h[0][11] === 2, 'the carry flag and kind (jar = 2) are sent');
   s.intent('p0', { k: 'drop' }); check(!h.carry && s.drops.length === 1, 'a jar can be set down'); check(s.snapshot().props.qo.some(o => o[0] === 2 && o[3] === 1), 'the set-down jar is in props.qo');
   interact(s, 'p0'); check(h.carry === 'jar' && s.drops.length === 0 && H.left === 2, 'a set-down jar can be picked up again');
   put(h, H.tx, H.ty); runFor(s, 0.2); check(H.got === 1 && !h.carry, 'a jar is delivered at the hill');
+  { const f = quiet(2, 75); jump(f, 5); const fh = f.heroes[0], FH = f.haul.beacon; put(fh, FH.fx - 300, FH.fy); f.intent('p0', { k: 'fetch', x: FH.fx, y: FH.fy }); runFor(f, 4);
+    check(fh.carry === 'jar' && FH.left === 2, 'a right-click on the oil walks over and takes a jar (' + fh.carry + ')');
+    const g = quiet(2, 76); jump(g, 5); const gh = g.heroes[0], GH = g.haul.beacon; put(gh, GH.fx - 300, GH.fy); g.intent('p0', { k: 'fetch', x: GH.fx, y: GH.fy }); runFor(g, 0.5); g.intent('p0', { k: 'move', x: GH.fx - 600, y: GH.fy }); runFor(g, 4);
+    check(!gh.carry && GH.left === 3, 'another order on the way calls it off'); }
   haulOne(s, 'p0', 'beacon'); check(H.got === 2, 'a second jar delivered');
   put(h, H.fx, H.fy); interact(s, 'p0'); s.killHero(h); check(s.drops.length === 1 && h.carry === null, 'a hero who falls drops what she carries'); s.respawn(h, H.fx, H.fy, 1, 0);
   put(h, s.drops[0].x, s.drops[0].y); interact(s, 'p0'); put(h, H.tx, H.ty); runFor(s, 0.2);
@@ -777,6 +783,16 @@ function sectionPass2() {
   put(s2.heroes[0], 2500, 2600); s2.intent('p0', { k: 'recall' }); runFor(s2, 5); check(rcEv.length === 2 && rcEv[0][2] === 1 && rcEv[1][2] === 2 && rcEv[1].length === 5, 'rc events: began 1 then arrived 2 with x and y (' + JSON.stringify(rcEv) + ')');
   put(s2.heroes[0], 2500, 2600); s2.heroes[0].rcCd = 0; rcEv.length = 0; s2.intent('p0', { k: 'recall' }); runFor(s2, 1); s2.intent('p0', { k: 'stop' }); s2.heroes[0].chan = null; runFor(s2, 0.2); check(rcEv.length === 2 && rcEv[1][2] === 0, 'rc 0 when it is cancelled');
   put(s2.heroes[0], M.P.spring[0] + 40, M.P.spring[1]); s2.heroes[0].rcCd = 0; s2.intent('p0', { k: 'recall' }); check(!s2.heroes[0].rcOn, 'no recall when already at the spring');
+  // the dash: a short burst toward the cursor, then on with the walk; one per cooldown; it breaks a recall
+  { const d = quiet(1, 206); runFor(d, 1); const dh = d.heroes[0]; put(dh, 2500, 2600); d.intent('p0', { k: 'move', x: 2500, y: 3000 });
+    const dEv = []; const od = d.emit; d.emit = m => { od(m); if (m.t === 'fdx') for (const e of m.ev) if (e[0] === 'dsh') dEv.push(e); };
+    runFor(d, 0.1); const y0 = dh.y; d.intent('p0', { k: 'dash', x: 2900, y: dh.y }); runFor(d, 0.3);
+    check(dh.x - 2500 > 120 && dh.x - 2500 < 175 && !dh.dash, 'a dash carries the hero a short way toward the cursor (' + Math.round(dh.x - 2500) + ')');
+    check(dEv.length === 1 && dEv[0][1] === 'p0', 'a dash sends a dsh event'); check(dh.dashCd > 10 && d.log.fdpLast.p0.ds > 10, 'the dash waits out its cooldown, and fdp.ds carries it');
+    const x1 = dh.x; d.intent('p0', { k: 'dash', x: 3400, y: dh.y }); runFor(d, 0.3); check(Math.abs(dh.x - x1) < 5, 'no second dash during the cooldown');
+    runFor(d, 1); check(dh.y > y0 + 60, 'after the dash the hero walks on to where it was going');
+    dh.dashCd = 0; put(dh, 2500, 2600); d.intent('p0', { k: 'recall' }); runFor(d, 1); d.intent('p0', { k: 'dash', x: 2900, y: 2600 }); runFor(d, 0.3); check(!dh.rcOn && dh.x > 2600, 'a dash breaks a recall');
+    dh.dashCd = 0; put(dh, 2500, 2600); dh.stun = 1; d.intent('p0', { k: 'dash', x: 2900, y: 2600 }); runFor(d, 0.3); check(!dh.dash && Math.abs(dh.x - 2500) < 5, 'no dash while stunned'); }
   // ping
   const pings = []; const op = s2.emit; s2.emit = m => { op(m); if (m.t === 'fdx') for (const e of m.ev) if (e[0] === 'pi') pings.push(e); };
   s2.intent('p0', { k: 'ping', x: 500, y: 600 }); s2.intent('p0', { k: 'ping', x: 510, y: 600 }); runFor(s2, 0.1); check(pings.length === 1 && pings[0][1] === 'p0' && pings[0][2] === 500 && pings[0][3] === 600, 'a ping is sent to everyone');

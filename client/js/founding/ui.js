@@ -202,7 +202,7 @@ const FoundingUI = (() => {
   function helpLine() {
     const KB = typeof Keybinds !== 'undefined' ? Keybinds : null, L = id => esc(KB ? KB.label(KB.keyFor(id)) || '—' : id);
     const skills = ['s0', 's1', 's2', 's3'].map(L).join(' ');
-    return `<b>Right-click</b> move or attack &middot; <b>${skills}</b> skills (aim, then click) &middot; <b>Shift</b> + skill rank up &middot; <b>${L('fdPassive')}</b> passive rank up<br><b>${L('cycle')}</b> target &middot; <b>${L('fdItem1')}-${L('fdItem6')}</b> items &middot; <b>${L('fdTent')}</b> tent &middot; <b>${L('fdForge')}</b> forge &middot; <b>${L('fdRecall')}</b> recall &middot; <b>Alt</b> + click ping &middot; <b>${L('fdFlask')}</b> flask &middot; <b>${L('fdUse')}</b> pick up, plant, relight, light a brand at a camp fire &middot; <b>${L('fdDrop')}</b> put down &middot; <b>${L('fdCenter')}</b> centre &middot; <b>${L('fdMeter')}</b> meter &middot; <b>Esc</b> cancel${(A.state() && A.state().players.length === 1) ? ', or pause' : ''}`;
+    return `<b>Right-click</b> move or attack &middot; <b>${skills}</b> skills (aim, then click) &middot; <b>Shift</b> + skill rank up &middot; <b>${L('fdPassive')}</b> passive rank up<br><b>${L('cycle')}</b> target &middot; <b>${L('fdItem1')}-${L('fdItem6')}</b> items &middot; <b>${L('fdTent')}</b> tent &middot; <b>${L('fdForge')}</b> forge &middot; <b>${L('fdRecall')}</b> recall &middot; <b>${L('s6')}</b> dash &middot; <b>Alt</b> + click ping &middot; <b>${L('fdFlask')}</b> flask &middot; <b>${L('fdUse')}</b> pick up, plant, relight, light a brand at a camp fire &middot; <b>${L('fdDrop')}</b> put down &middot; <b>${L('fdCenter')}</b> centre &middot; <b>${L('fdMeter')}</b> meter &middot; <b>Esc</b> cancel${(A.state() && A.state().players.length === 1) ? ', or pause' : ''}`;
   }
   function setH(id, v) { if (cache[id] !== v) { cache[id] = v; $(id).innerHTML = v; } }
   function setW(id, f) { const v = clamp(f, 0, 1).toFixed(3); if (cache[id] !== v) { cache[id] = v; $(id).style.transform = `scaleX(${v})`; } }
@@ -237,7 +237,7 @@ const FoundingUI = (() => {
         <div class="info"><div class="nm"><span id="fd-hname"></span><i class="rl" id="fd-hrole"></i></div><div class="sub"><span id="fd-hlvl"></span><span class="pts" id="fd-hpts"></span></div>
           <div class="fd-bar"><i id="fd-hbar"></i><span id="fd-htxt"></span></div><div class="fd-bar xp"><i id="fd-xbar"></i></div><div class="row" id="fd-hextra"></div></div></div>
       <div id="fd-skills" class="fd-pn"><div id="fd-slots"></div><div class="fd-sep"></div><div id="fd-items"></div></div>
-      <div id="fd-chips"><div class="chip rc" id="fd-rcchip"><img alt="" id="fd-rcico"><span id="fd-rctxt"></span></div><span id="fd-chipsdyn"></span></div>
+      <div id="fd-chips"><div class="chip rc" id="fd-rcchip"><img alt="" id="fd-rcico"><span id="fd-rctxt"></span></div><div class="chip ds" id="fd-dschip"><span id="fd-dstxt"></span></div><span id="fd-chipsdyn"></span></div>
       <div id="fd-help" class="fd-pn">${helpLine()}</div>
       <div id="fd-msg"></div>
       <div id="fd-banner"><div class="t"></div><div class="s"></div></div>
@@ -265,7 +265,7 @@ const FoundingUI = (() => {
     tip($('fd-hpts'), () => { const sh = S().sheet, any = sh && ['q', 'w', 'e', 'r', 'p'].some(A.canLearn); return '<b>Skill points</b>One a level. Spend one on a skill that glows: click its +, or hold Shift and press its key; the passive takes ' + esc(A.keyLabel('p')) + '. Q, W and E take five ranks, the ultimate three, the passive two, and each rank opens at its own level.' + (sh && sh.pts > 0 && !any ? '<div class="fd-t-n">Nothing opens yet: ' + nextOpening(sh) + '</div>' : ''); });
     const rc = $('fd-rcchip'); rc.addEventListener('mousedown', e => e.stopPropagation()); rc.addEventListener('click', () => A.tryRecall());
     tip(rc, () => { const KB = typeof Keybinds !== 'undefined' ? Keybinds : null, k = esc(KB ? KB.label(KB.keyFor('fdRecall')) || '?' : 'B'); return `<b>Recall</b><em>${k}</em>Hold still for four seconds and you are back at the spring. A blow, a step or a cast breaks it. It needs a rest before the next.`; });
-    tip($('fd-mini'), () => { const KB = typeof Keybinds !== 'undefined' ? Keybinds : null, k = esc(KB ? KB.label(KB.keyFor('fdCenter')) || '?' : 'Space'); return `<b>The valley</b>Drag to look elsewhere (${k} brings you back). Right-click sends your hero. <b>Alt</b> + click points a spot out to your party. Ground you have not walked is dark; only what your party sees shows enemies.`; });
+    tip($('fd-mini'), () => { const KB = typeof Keybinds !== 'undefined' ? Keybinds : null, k = esc(KB ? KB.label(KB.keyFor('fdCenter')) || '?' : 'C'); return `<b>The valley</b>Drag to look elsewhere (${k} brings you back). Right-click sends your hero. <b>Alt</b> + click points a spot out to your party. Ground you have not walked is dark; only what your party sees shows enemies.`; });
     $('fd-meter').addEventListener('click', e => { const t = e.target.closest('[data-m]'); if (t) { meterLoad(); meterMode = t.dataset.m === 'heal' ? 'heal' : 'dmg'; meterSave(); drawMeter(S()); } });
     $('fd-resume').addEventListener('click', () => A.pause(false));
     tip($('fd-top').querySelector('.fd-camp'), () => '<b>The camp</b>If its health runs out, the run is lost. It mends slowly while no enemy stands near the Hearth.');
@@ -565,7 +565,7 @@ const FoundingUI = (() => {
       const bc = s.bcast, on = !!bc && T - bc.t0 < bc.dur + 0.2; setShow('fd-bosscast', on);
       if (on) { setW('fd-bosscasti', (T - bc.t0) / bc.dur); setT('fd-bosscastt', bc.txt); }
     }
-    updateChips(s, sh); updateRecall();
+    updateChips(s, sh); updateRecall(); updateDash();
     updateQuests(s); updateBoons(s, sh); updateMsg(s, dt); updateBanner(dt);
     // panels follow the hero: walk away and they close
     const me = A.me();
@@ -664,6 +664,11 @@ const FoundingUI = (() => {
     const KB = typeof Keybinds !== 'undefined' ? Keybinds : null, ing = A.isRecalling(), cd = Math.ceil(A.rcLeft());
     setT('fd-rctxt', ing ? 'Recalling' : cd > 0 ? 'Recall ' + cd + ' s' : 'Recall ' + (KB ? KB.label(KB.keyFor('fdRecall')) || '' : 'B'));
     const k = (ing ? 'i' : '') + (cd > 0 ? 'c' : ''); if (cache.rck !== k) { cache.rck = k; const e = $('fd-rcchip'); e.classList.toggle('on', ing); e.classList.toggle('cd', cd > 0 && !ing); }
+  }
+  function updateDash() {
+    const KB = typeof Keybinds !== 'undefined' ? Keybinds : null, cd = Math.ceil(A.dsLeft());
+    setT('fd-dstxt', cd > 0 ? 'Dash ' + cd + ' s' : 'Dash ' + (KB ? KB.label(KB.keyFor('s6')) || '' : 'Space'));
+    if (cache.dsk !== cd > 0) { cache.dsk = cd > 0; $('fd-dschip').classList.toggle('cd', cd > 0); }
   }
   // brand and what is carried, above the hero frame
   const CARRY_NAME = { 1: 'A warm stone', 2: 'An oil jar', 3: 'A fallen founder', 4: 'Dressed stone', 5: 'Timber' };

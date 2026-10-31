@@ -114,6 +114,9 @@ function sectionKinds() {
   { const sim = makeSim(1, 24); run(sim, 1); rich(sim); hold(sim); const t = tower(sim, 'brazier', 1, [3000, 3000]); const L0 = sim.lights().length;
     check(sim.lights().some(l => l[0] === t.x && l[1] === t.y), 'a brazier lights the ground around it'); const es = [0, 1, 2].map(i => foe(sim, 'ashling', t.x + 120 + i * 12, t.y + i * 8, 600)); const h0 = es.map(e => e.hp); run(sim, 2.6);
     check(es.filter((e, i) => e.hp < h0[i]).length >= 2, 'a brazier burns a small crowd'); check(!sim.zones.some(z => z.kind === FoundingSim.ZONE.BURN), 'rank 1 leaves no burning ground'); }
+  { const sim = makeSim(1, 27); run(sim, 1); rich(sim); hold(sim); const t = tower(sim, 'brazier', 1, [3000, 3000]); const e = foe(sim, 'slagback', t.x + 120, t.y, 5000); let fireT = -1, hitT = -1;
+    for (let i = 0; i < 80 && hitT < 0; i++) { sim.tick(DT); if (fireT < 0 && sim.log.ev.some(v => v[0] === 'twf' && v[1] === t.id)) fireT = sim.time; if (fireT >= 0 && e.hp < 5000) hitT = sim.time; }
+    check(fireT >= 0 && hitT - fireT > TW.brazier.lob - 0.1 && hitT - fireT < TW.brazier.lob + 0.1, 'brazier fire hurts when it lands, not when it is thrown (' + (hitT - fireT).toFixed(2) + ' s)'); }
   { const sim = makeSim(1, 25); run(sim, 1); rich(sim); hold(sim); const t = tower(sim, 'brazier', 2, [3000, 3000]); foe(sim, 'slagback', t.x + 130, t.y, 5000); run(sim, 3); check(sim.zones.some(z => z.kind === FoundingSim.ZONE.BURN), 'rank 2 leaves burning ground'); }
   { const sim = makeSim(1, 26); run(sim, 1); rich(sim); hold(sim); const t = tower(sim, 'brazier', 3, [3000, 3000]); const lr = sim.lights().find(l => l[0] === t.x && l[1] === t.y);
     check(lr && lr[2] === TW.brazier.light[2] && TW.brazier.light[2] > TW.brazier.light[0], 'rank 3 has the widest light');

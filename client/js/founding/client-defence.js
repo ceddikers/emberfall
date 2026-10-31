@@ -18,7 +18,7 @@
   let K = null, S = null;
   const towers = new Map(), sol = new Map(), fxT = new Map(), corpses = [];
   const SPIRE = DEF.SPIRE, spires = (DEF.SPIRES || []).map(d => ({ d, x: d.x, y: d.y, hitAt: -9, fireAt: -9, flags: 0, wk: 0, seen: false, seenT: 0, tl: null }));   // the Ash Spires (see sim-defence.js)
-  const L = { last: performance.now(), placing: null, shift: false, sel: null, open: false, tab: 't', panel: null, tp: null, sig: '', tsig: '', lastVis: null, baseVis: null, board: null, hover: null, msgT: 0, prev: 0, mini: 0 };
+  const L = { last: performance.now(), down: false, over: null, placing: null, shift: false, sel: null, open: false, tab: 't', panel: null, sig: '', tsig: '', lastVis: null, baseVis: null, board: null, hover: null, msgT: 0, prev: 0, mini: 0 };
   const have = n => typeof Sound !== 'undefined' && Sound.has && Sound.has(n);
   const sfx = (...names) => { for (const n of names) if (have(n)) { K.snd(n); return; } };
   // the same, heard by how far (x, y) is from you (Founding sound by vicinity); a tower's or a soldier's sound is a place's, never the whole map's
@@ -667,7 +667,7 @@ const sm = t => t * t * (3 - 2 * t);
         case 'twf': if (t) {
           const tx = ev[2], ty = ev[3], v = ev[4], a = Math.atan2(ty - t.y, tx - t.x); t.aimA = a; t.firedAt = S.T;
           if (v === 0 || v === 1) { const ox = t.x + Math.cos(a) * 10, oy = towerTop(t); fxArrow(ox, oy, tx, ty - 6, 0.12, '255,236,190', 1.6, 24); if (v === 1) fxArrow(tx, ty - 6, tx + Math.cos(a) * 90, ty - 6 + Math.sin(a) * 90, 0.12, '255,236,190', 1.2, 30); sfxAt(t.x, t.y, null, 'fd-arrow'); }
-          else if (v === 2) { fxLob(t.x, towerTop(t) + 6, tx, ty, 0.38, TW.brazier.blast[t.rank - 1]); sfxAt(t.x, t.y, null, 'fd-fireball-cast', 'fd-fireball-hit'); }
+          else if (v === 2) { fxLob(t.x, towerTop(t) + 6, tx, ty, TW.brazier.lob || 0.38, TW.brazier.blast[t.rank - 1]); sfxAt(t.x, t.y, null, 'fd-fireball-cast', 'fd-fireball-hit'); }
           else if (v === 3) { fxBolt(t.x + Math.cos(a) * 24, t.y - 22 + Math.sin(a) * 10, tx, ty - 8); sfxAt(t.x, t.y, null, 'fd-ballista', 'fd-pierce', 'fd-arrow'); K.shake(1.5, 0.12); }
         } break;
         case 'twr': if (t) { t.ringAt = S.T; fxRingGold(t.x, t.y, ev[2]); sfxAt(t.x, t.y, null, 'fd-bell-ring', 'fd-sanctum'); } break;
@@ -819,13 +819,14 @@ const sm = t => t * t * (3 - 2 * t);
 
   // ============================================================ DOM: the board and the tower panel
   function rootEl() { return document.getElementById('fd-root'); }
-  function mkPanel(id, cls) { let e = document.getElementById(id); if (!e) { const r = rootEl(); if (!r) return null; e = document.createElement('div'); e.id = id; e.className = cls; e.style.display = 'none'; r.appendChild(e); e.addEventListener('contextmenu', ev => ev.preventDefault()); e.addEventListener('mousedown', ev => ev.stopPropagation()); } return e; }
+  function mkPanel(id, cls) { let e = document.getElementById(id); if (!e) { const r = rootEl(); if (!r) return null; e = document.createElement('div'); e.id = id; e.className = cls; e.style.display = 'none'; r.appendChild(e); e.addEventListener('contextmenu', ev => ev.preventDefault()); e.addEventListener('mousedown', ev => { ev.stopPropagation(); L.down = true; });
+    e.addEventListener('mouseenter', () => { L.over = id; }); e.addEventListener('mouseleave', () => { if (L.over === id) L.over = null; }); } return e; }
   function setOpen(on) {
     L.open = on;
     const p = mkPanel('fd-build', 'fd-panel fd-pn'); if (!p) return;
     p.style.display = on ? '' : 'none'; if (on) { L.sig = ''; renderBoard(true); K.snd('ui-open'); closeTp(); L.sel = null; } else if (typeof Tip !== 'undefined' && Tip.hide) Tip.hide();
   }
-  function closeTp() { if (L.tp) L.tp.style.display = 'none'; L.tsig = ''; }
+  function closeTp() { const p = document.getElementById('fd-tpanel'); if (p && p.style.display !== 'none') p.style.display = 'none'; L.tsig = ''; if (L.over === 'fd-tpanel') L.over = null; }
   function miniCanvas(kind, rank, w, h) {
     const cv = document.createElement('canvas'); cv.width = w * 2; cv.height = h * 2; cv.style.width = w + 'px'; cv.style.height = h + 'px'; cv.dataset.kind = kind; cv.dataset.rank = rank; return cv;
   }
@@ -873,7 +874,7 @@ const sm = t => t * t * (3 - 2 * t);
   function renderBoard(force) {
     const p = document.getElementById('fd-build'); if (!p || !L.open) return;
     const P = (S && S.props) || {}, cap = P.tcap || [0, 6], sdu = P.sdu || [0, 0, 0], gold = myGold(), u = FUI(), coin = coinHtml();
-    const sig = JSON.stringify([L.tab, gold, cap, sdu, sol.size]); if (!force && sig === L.sig) return; L.sig = sig;
+    const sig = JSON.stringify([L.tab, gold, cap, sdu, sol.size]); if (!force && (sig === L.sig || L.down)) return; L.sig = sig;
     if (!L.bsel || !TW[L.bsel]) L.bsel = KINDS[0]; if (!L.ssel || !DEF.SOLDIER_UP[L.ssel]) L.ssel = DEF.UP_IDS[0];
     let shelf = '';
     if (L.tab === 't') {
@@ -887,11 +888,10 @@ const sm = t => t * t * (3 - 2 * t);
     p.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => { L.tab = b.dataset.t; L.sig = ''; renderBoard(true); }));
     p.querySelector('#fd-buildx').addEventListener('click', () => setOpen(false));
     iconHolder(p.querySelector('.shelf'));
-    p.querySelectorAll('.shelf [data-hv]').forEach(n => n.addEventListener('mouseenter', () => {
+    p.querySelectorAll('.shelf [data-hv]').forEach(n => n.addEventListener('click', () => {   // (a click picks; pointing at a tile changes nothing)
       if (L.tab === 't') { if (L.bsel === n.dataset.hv) return; L.bsel = n.dataset.hv; } else { if (L.ssel === n.dataset.hv) return; L.ssel = n.dataset.hv; }
-      p.querySelectorAll('.shelf .sel').forEach(e => e.classList.remove('sel')); n.classList.add('sel'); boardDetail(p, cap, sdu, gold);
+      p.querySelectorAll('.shelf .sel').forEach(e => e.classList.remove('sel')); n.classList.add('sel'); boardDetail(p, cap, sdu, gold); K.snd('ui-click');
     }));
-    p.querySelectorAll('.shelf [data-hv]').forEach(n => n.addEventListener('click', () => { if (L.tab === 't') { L.bsel = n.dataset.hv; p.querySelectorAll('.shelf .sel').forEach(e => e.classList.remove('sel')); n.classList.add('sel'); boardDetail(p, cap, sdu, gold); } }));
     boardDetail(p, cap, sdu, gold);
     p.querySelectorAll('canvas[data-kind]').forEach(cv => paintMini(cv, S.T));
   }
@@ -901,7 +901,7 @@ const sm = t => t * t * (3 - 2 * t);
     const gold = myGold(), me = K.me(), near = me && Math.hypot(me.x - t.x, me.y - t.y) <= TUNE.repairReach + TUNE.r;
     const P = (S && S.props) || {}, cap = P.tcap || [0, 99];
     const sig = JSON.stringify([t.id, t.rank, Math.round(t.hp / 4), t.rubble ? 1 : 0, gold, near ? 1 : 0, cap[0], t.flags & 16]);
-    if (sig !== L.tsig) {
+    if (sig !== L.tsig && !L.down) {
       L.tsig = sig; const T = TW[t.kind]; let h = '';
       if (t.rubble) {
         const c = t.inv;
@@ -914,15 +914,19 @@ const sm = t => t * t * (3 - 2 * t);
           <div class="tp-b">${t.rank < 3 ? `<button class="fd-btn buy" data-a="up" ${gold >= next ? '' : 'disabled'}>Upgrade &middot; ${next}</button>` : '<i class="own">Fully built</i>'}<button class="fd-btn buy" data-a="repair" ${hurt && near ? '' : 'disabled'}>${t.flags & 16 ? 'Mending' : 'Repair'}</button><button class="fd-btn buy" data-a="sell">Sell &middot; ${Math.floor(t.inv * TUNE.refund)}</button></div>`;
       }
       p.innerHTML = h;
-      p.querySelector('.x').addEventListener('click', () => { L.sel = null; closeTp(); });
+      p.querySelector('.x').addEventListener('mousedown', ev => { if (ev.button === 0) { L.sel = null; L.down = false; L.over = null; closeTp(); K.snd('ui-close'); } });
       p.querySelectorAll('button[data-a]').forEach(b => {
         const a = b.dataset.a; b.addEventListener('click', () => { if (a === 'up') K.send({ k: 'upTower', id: t.id }); else if (a === 'repair') K.send({ k: 'repair', id: t.id }); else if (a === 'sell') { K.send({ k: 'sellTower', id: t.id }); L.sel = null; closeTp(); } });
         if (a === 'repair') tip(b, () => t.rubble ? `<b>Rebuild</b>Stand beside the rubble. It costs half of what the tower cost.` : `<b>Repair</b>Stand beside it while nothing is hitting it or you. It mends over a few breaths for a little gold.`);
         if (a === 'sell') tip(b, () => `<b>Sell</b>${t.rubble ? 'Clears the rubble.' : 'Half of what was paid comes back to whoever paid it.'}`);
       });
     }
+    // it sits beside its tower and goes with it; once the tower is off the screen the panel closes rather than cling to the edge.
+    // While the pointer is on the panel it holds still, so a button is never pulled from under a click.
+    const cam = S.cam, sx = (t.x - cam.x) * cam.zoom + K.W() / 2, sy = (t.y - cam.y) * cam.zoom + K.H() / 2;
+    if ((sx < -30 || sx > K.W() + 30 || sy < -30 || sy > K.H() + 30) && L.over !== 'fd-tpanel') { L.sel = null; closeTp(); return; }
     p.style.display = '';
-    const cam = S.cam, k = K.W() / (K.W()), sx = (t.x - cam.x) * cam.zoom + K.W() / 2, sy = (t.y - cam.y) * cam.zoom + K.H() / 2;
+    if (L.over === 'fd-tpanel' && p.style.left) return;
     const w = p.offsetWidth || 230, hh = p.offsetHeight || 150;
     p.style.left = clamp(sx + 40, 8, K.W() - w - 8) + 'px'; p.style.top = clamp(sy - hh / 2 - 20, 60, K.H() - hh - 150) + 'px';
   }
@@ -957,7 +961,7 @@ function frameUpdate(dt) {
     const m = S.mouse, ht = L.placing ? null : towerAtPoint(m.wx, m.wy); L.hover = ht ? ht.id : null; L.hoverBoard = !L.placing && onBoard(m.wx, m.wy);
     L.prev += dt; if (L.open && L.prev > 0.15) { L.prev = 0; renderBoard(false); }
     if (L.open) { L.mini += dt; if (L.mini > 0.16) { L.mini = 0; const p = document.getElementById('fd-build'); if (p) p.querySelectorAll('canvas[data-kind]').forEach(cv => paintMini(cv, S.T)); } }
-    if (L.sel != null) renderTower(); else if (L.tp) closeTp();
+    if (L.sel != null) renderTower(); else closeTp();
     // soldiers and towers add to the party's sight: merge them over the host's circles
     const P = S.props; if (P) {
       if (P.vis !== L.lastVis) L.baseVis = Array.isArray(P.vis) ? P.vis : [];
@@ -987,6 +991,7 @@ function lightsOut(add) {
         else if (L.sel != null) { L.sel = null; closeTp(); ev.preventDefault(); ev.stopImmediatePropagation(); }
       }, true);
       window.addEventListener('keyup', ev => { if (ev.key === 'Shift') L.shift = false; }, true);
+      window.addEventListener('mouseup', () => { if (L.down) setTimeout(() => { L.down = false; }, 0); }, true);   // (after the click that press makes)
     },
     snap(m) { S = K.S; if (S) applySnap(m); },
     event(ev) { S = K.S; return onEvent(ev); },

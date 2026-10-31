@@ -1,5 +1,5 @@
 // The Founding: the valley's loose things, drawing (sim-world.js). A layer on Founding.addLayer (see docs/plans/founding-pass3.md).
-// Items that lie where they fell (a glow in the item's rarity colour with its icon on a plate; a right-click or a walk over it takes it;
+// Items that lie where they fell (a glow in the item's rarity colour with its icon on a plate; a right-click takes it, walking past does not;
 // pointing at one shows the supply tent's item card), and the seven waystones (painted standing stones with a rune that glows once a hero
 // has stood beside it; click a lit one, or press Shift+B anywhere, for the small picker that travels between lit stones and the camp).
 // Props from the host: wd [[id, itemId, x, y, expiresAt (run clock, 0 never)]], wy (bit mask of lit stones). Events: wdrop wpk wfull wgone wsl.
@@ -153,7 +153,7 @@
       let foot;
       if (!mine) foot = `<div class="dt-n"><b>Made for the ${hn}.</b> Only a ${hn} can take it.</div>`;
       else if (full) foot = '<div class="dt-f"><em class="no">Your pack is full.</em></div>';
-      else foot = '<div class="dt-f"><em class="go">Right-click it, or walk over it</em></div>';
+      else foot = '<div class="dt-f"><em class="go">Right-click it to take it</em></div>';
       const left = hover.d[4] ? hover.d[4] - now() : 999;
       if (left < 45 && left > 0) foot += '<div class="dt-n">It will not lie here much longer.</div>';
       return FoundingUI.itemDetail ? FoundingUI.itemDetail(it, foot) : `<b>${it.name}</b>`;
