@@ -183,8 +183,17 @@ const Founding = (() => {
     if (FoundingUI) FoundingUI.onSheet(S.prevSheet, m);
   }
 
+  // host: Founding gold owed to players who dropped during a run's ending beat (sim.finish `owed`, by lower-cased name), paid when they are back
+  const owedGold = Object.create(null);
+  function payOwed(id, name) {
+    const k = String(name || '').trim().toLowerCase(), g = owedGold[k];
+    if (!g || !dep || !dep.Net || !dep.Net.isHost) return false;
+    delete owedGold[k]; dep.Net.sendTo(id, { t: 'fdpay', g });
+    return true;
+  }
   function onEnd(m) {
     if (S.ended) return;
+    if (sim && m.owed) for (const k in m.owed) if (m.owed[k] > 0) owedGold[k] = (owedGold[k] || 0) + m.owed[k];
     S.ended = true; lastResult = m; S.endAt = S.T + (S.end ? 0.2 : 1.2);   // let the final fight frame play out a moment
     if (!m.won) snd('fd-defeat');
     if (!goldPaid) {
@@ -2193,7 +2202,7 @@ const Founding = (() => {
   };
 
   return {
-    init, enterAsHost, enter, leave, active: () => active, frame, playerLeft, __pause: setPause, __paused: () => paused, guestJoined, practice: false, api, addLayer,
+    init, enterAsHost, enter, leave, active: () => active, frame, playerLeft, __pause: setPause, __paused: () => paused, guestJoined, payOwed, practice: false, api, addLayer,
     // for tests and the browser pane, where the frame loop is unreliable
     __step(dt, n) { n = n || 1; for (let i = 0; i < n; i++) { if (sim) { sim.tick(0.05); } frame(dt); } },
     __fog(on) { if (S) S.noFog = !on; }, get __state() { return S; }, get __sim() { return sim; },

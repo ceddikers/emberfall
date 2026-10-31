@@ -170,7 +170,7 @@ const FoundingSim = (() => {
         h.dash = null; h.fetch = null; h.talk = null; h.dig = null; h.gone = true;   // (gone: her queued echoes and recasts hold their fire)
         if (this.child && this.child.follow === h) { this.child.st = 1; this.child.follow = null; this.markProps(); }
         this.hook('leave', h);
-        this.kept[this.nameKey(p.name)] = { h, oldId: pid, name: p.name };
+        this.kept[this.nameKey(p.name)] = { h, oldId: pid, name: p.name, late: !!this.ending };   // (late: gone during the ending beat, still paid: finish)
       }
       if (this.st === 'live' && !this.heroes.length) this.finish(!!this.ending);   // (the last one leaving during the end beat still wins)
     }
@@ -1540,8 +1540,10 @@ const FoundingSim = (() => {
       const questsDone = D.QUEST_ORDER.filter(id => this.q[id].st === 2).length, survived = won ? D.LAST_WAVE : Math.max(0, this.wave - 1);
       const parts = this.practice ? { waves: 0, quests: 0, hold: 0, chain: 0 } : this.hookVal('payout', D.payoutParts(survived, questsDone, won, 0)), pay = parts.waves + parts.quests + parts.hold + parts.chain, gold = {}, goldBy = {};
       for (const p of this.players) { gold[p.id] = pay; goldBy[p.id] = Object.assign({}, parts); }
+      // a player who dropped during the ending beat earned the run all the same: owed by name, the host pays it when they are back (client.js payOwed)
+      const owed = {}; if (pay > 0) for (const k in this.kept) if (this.kept[k].late) owed[k] = pay;
       const quests = {}; for (const id of D.QUEST_ORDER) quests[id] = this.q[id].st;
-      this.result = { t: 'fdend', won, wave: this.wave, quests, gold, goldBy, stats: this.stats, time: Math.round(this.time) };
+      this.result = { t: 'fdend', won, wave: this.wave, quests, gold, goldBy, stats: this.stats, time: Math.round(this.time) }; if (Object.keys(owed).length) this.result.owed = owed;
       this.sendSnapshot(); this.flushEvents(); this.emit(this.result);
     }
 

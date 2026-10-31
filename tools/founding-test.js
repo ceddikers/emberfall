@@ -829,6 +829,11 @@ function sectionPass2() {
   check(g.rejoin('z0', 'P0') && !gh.blessed && !gh.gone, 'a rejoin clears a stale blessing and the gone mark');
   let threw = null; try { for (const id of ['__proto__', 'constructor', 'toString']) { gh.ranks[0] = 1; gh.st.petals = 3; gh.ch[0] = gh.chMax[0]; g.intent('z0', { k: 'cast', s: 'q', id }); runFor(g, 1); } } catch (e) { threw = e; }
   check(!threw && g.st === 'live', 'a heal aimed at a prototype key mends the caster, no throw');
+  // a player who drops during the ending beat is still paid (owed by name; the host pays it when they are back)
+  const en = quiet(3, 208); runFor(en, 1); en.removePlayer('p2'); en.wave = D.LAST_WAVE - 1; en.nextWaveAt = en.time + 0.1; runFor(en, 2); check(!!en.ending, 'the ending beat begins');
+  en.removePlayer('p1'); runFor(en, 15); const ef = en.log.fdend[0];
+  check(en.st === 'won' && ef && ef.owed && ef.owed.p1 === ef.gold.p0 && ef.gold.p0 > 0, 'a drop during the ending is owed the same pay');
+  check(!('p2' in ef.owed) && ef.gold.p1 === undefined, 'a drop before the ending is not');
 }
 
 function sectionGnawWander() {

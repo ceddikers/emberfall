@@ -2052,7 +2052,9 @@
   if (typeof Founding !== 'undefined') {
     Founding.init({ canvas, ctx, DPR: () => DPR, W: () => W, H: () => H, Net, Save, Sound: () => SH, toast: m => toast(m), myName: () => player.name || 'Hero', onLeave: () => foundingLeaveScene() });
     Net.on('fdgo', msg => { if (raid) return; foundingEnterScene(); Founding.enter(msg); });
-    { const fdendPrev = Net.handlers.fdend; Net.on('fdend', m => { if (fdendPrev) fdendPrev(m); foundingRecord(m); }); }   // (the module shows the card; the record is the account's)
+    { const fdendPrev = Net.handlers.fdend; Net.on('fdend', m => { if (fdendPrev) fdendPrev(m); foundingRecord(m); if (Net.isHost && m.owed) for (const r of remotes.values()) Founding.payOwed(r.id, r.name); }); }   // (anyone owed who is already back in town)
+    // a run's gold for a player who dropped during its ending beat, paid by the host once they are back
+    Net.on('fdpay', m => { const g = Math.floor(+m.g || 0); if (Net.isHost || !(g > 0 && g <= 5000)) return; Inventory.addGold(g); toast(`The Founding paid you ${g} gold for the run you saw through.`); });   // (the module shows the card; the record is the account's)
   }
   // the Practice Hall: a guest's request to the host, the host's answer, and a loop about to restart
   Net.onHost('prreq', (pid, msg) => PracticeHall.onRequest(pid, msg));
@@ -4939,6 +4941,7 @@
     setTimeout(() => sendTitle(Pastimes.title()), 400);   // (and hears your title)
     // a run of The Founding is on: a hero kept under their name goes straight back in, anyone else is told it is underway (after their welcome)
     if (Net.isHost && scene === 'founding' && typeof Founding !== 'undefined' && Founding.guestJoined) setTimeout(() => Founding.guestJoined(msg.p.id, msg.p.name), 450);
+    if (Net.isHost && typeof Founding !== 'undefined' && Founding.payOwed) setTimeout(() => Founding.payOwed(msg.p.id, msg.p.name), 500);   // (gold from a run they dropped out of during its ending)
   });
   // the host's road, for whoever's in its game (see hostRoad)
   function sendRoad(id) {
