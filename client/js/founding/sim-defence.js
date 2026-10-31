@@ -164,7 +164,7 @@
     function pay(h, t, amt) { h.gold -= amt; h.dirty = true; t.paid[h.id] = (t.paid[h.id] || 0) + amt; t.inv += amt; }
     function doBuild(h, m) {
       if (h.dead) return;
-      const kind = m.kind; if (!TOWER[kind] || !num(m.x) || !num(m.y)) return;
+      const kind = m.kind; if (typeof kind !== 'string' || !KINDS.includes(kind) || !num(m.x) || !num(m.y)) return;
       const x = Math.round(m.x), y = Math.round(m.y);
       if (!heroNear(x, y, TUNE.buildReach)) return reply(h, 4);
       if (fits(x, y, towers, sim.buildProps())) return reply(h, 3);
@@ -338,11 +338,11 @@
     const ORDER = { knight: 0, cavalry: 1, archer: 2, cleric: 3 };   // front rank first
     function spawnSquad(lane) {
       const path = sim.paths[lane], last = path.length - 1, tier = tierNow(); let made = 0;
-      const base = squadAt(tier), stop = Math.round(last * TUNE.holdFrac), list = base.concat(owed[lane].splice(0)).sort((a, b) => ORDER[a] - ORDER[b]);
+      const back = owed[lane].splice(0), base = squadAt(tier), stop = Math.round(last * TUNE.holdFrac), list = base.concat(back).sort((a, b) => ORDER[a] - ORDER[b]);
       let inLane = 0; for (const o of soldiers) if (o.lane === lane) inLane++;
       const laneCap = base.length + TUNE.laneExtra;
       for (let i = 0; i < list.length; i++) {
-        if (soldiers.length >= TUNE.soldierCap || inLane >= laneCap) break;
+        if (soldiers.length >= TUNE.soldierCap || inLane >= laneCap) { for (const t of list.slice(i)) { const k = back.indexOf(t); if (k >= 0) { back.splice(k, 1); owed[lane].push(t); } } break; }   // (owed ones that found no room march next time)
         const type = list[i], K = SOLDIER[type], b = bodyOf(type, tier), row = (i / 4) | 0, off = ((i % 4) - 1.5) * 22;
         const q = path[Math.min(last, Math.max(0, last - 6 + row * 2 - (i % 2)))], wp = sim.nearestWalkable(q[0] - q[4] * off, q[1] + q[3] * off, 10), hx = wp[0], hy = wp[1];
         const s = { tk: 'ally', so: true, id: ++sid, type, ti: TYPES.indexOf(type), lane, x: hx, y: hy, r: K.r, face: -PI / 2, hp: b.hp, max: b.max, dmg: b.dmg, cd: b.cd, heal: b.heal, take: b.take, dead: false, atkT: 0.3 * i, thinkT: 0.1 * i, tgt: null, pi: Math.max(0, last - 6), stop, off, px: hx, py: hy, stuck: 0, go: false, idleT: 0, flash: 0, moving: false, hurtT: -99, healT: -9, ur: up.arm | (up.wpn << 2) | (up.heal << 4), charging: false, chargeCd: 0,
@@ -490,6 +490,13 @@
         if (sim.noSpawn) return;
         let made = 0; for (let lane = 0; lane < 2; lane++) made += spawnSquad(lane);
         if (made) sim.ev(['sob', n, made]);
+      },
+      // a hero who rejoins gets a new id: her share of each tower (refunds) and her repairs follow her
+      rejoin(h, oldId) {
+        for (const t of towers) {
+          if (t.paid[oldId] !== undefined) { t.paid[h.id] = (t.paid[h.id] || 0) + t.paid[oldId]; delete t.paid[oldId]; }
+          if (t.repBy === oldId) t.repBy = null;
+        }
       },
       intent(h, m) {
         switch (m.k) {

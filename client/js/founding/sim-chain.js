@@ -211,7 +211,7 @@
     // ------------------------------------------------------------ the chain's steps
     function startGap(i) {
       if (i >= BUILT || sim.wave >= D.LAST_WAVE) { C.over = true; C.cur = -1; log('chain over after ' + C.done); return; }
-      C.cur = i; C.st[i] = 'gap'; C.at = sim.time + TUNE.gapMin + rnd() * (TUNE.gapMax - TUNE.gapMin); C.bonusT = 0;
+      C.cur = i; C.st[i] = 'gap'; C.at = sim.time + TUNE.gapMin + rnd() * (TUNE.gapMax - TUNE.gapMin);   // (bonusT, the pond's lamp time, keeps what the party has already given it)
     }
     function announce(i) {   // the link wakes: a far sound and a rough direction, nothing else
       const L = LINKS[i]; C.st[i] = 'placed';
@@ -242,9 +242,11 @@
       for (const m of sim.enemies) if (m.chainMinion || m.chainX) m.dead = true;
       for (const t of C.live) sim.ev(['i', t.id, t.x, t.y]);
       C.live.length = 0; C.bodies = []; C.tw = null; C.pack = null; C.hold = 0; C.rage = 0; C.rageMul = 1; C.fightT = 0;
+      if (C.dim) { C.dim = 0; sim.ev(['chdim', 0]); } C.shape = -1;   // (the dark of the last link lifts when the fight ends, either way)
     }
     function despawn(e) {   // it slips back: a wipe, or everyone left; it waits where it was, whole
       e.dead = true; const i = e.chain; C.st[i] = 'placed'; C.boss = null; clearField();
+      if (i === 0) C.at = Infinity;   // (the bell's timer brought it the first time; from now on it waits to be found, like the rest)
       sim.ev(['chlose', i]); log('despawn ' + LINKS[i].id);
     }
     function award(i, at) {   // the found-only item goes to the hero with the fewest chain items who has room (in play it lies where the link fell, and never fades)
@@ -322,7 +324,7 @@
     function shareCenter(e, spec, tg) {
       if (spec.at === 'self') { const a = Math.atan2(tg.y - e.y, tg.x - e.x); return [e.x + Math.cos(a) * 90, e.y + Math.sin(a) * 90]; }
       if (spec.at === 'near') { const a = Math.atan2(tg.y - e.y, tg.x - e.x), p = walk(e.x + Math.cos(a) * 230, e.y + Math.sin(a) * 230, 16); return [p[0], p[1]]; }
-      const h = pickHero(e, 'any'); return [h.x, h.y];
+      const h = pickHero(e, 'any'); return h ? [h.x, h.y] : [e.x, e.y];
     }
     const CT = {   // the set-piece move types: begin(e, spec, m, tg) returns false if it cannot be used now; resolve(e, spec, m)
       gaze: {
@@ -613,8 +615,8 @@
       if (h.dead || pw !== 1) return;
       if (s === 'r' && wears(h, 'chain7')) { for (const u of sim.heroes) if (!u.dead && hyp(u.x - h.x, u.y - h.y) < 450) { u.hasteT = Math.max(u.hasteT, 6); u.rootT = 0; u.slowT = 0; u.dirty = true; } }
       if (!wears(h, 'choath')) return;
-      if (h.hero === 'pyromancer' && s === 'r') sim.after(1.1, () => { if (!h.dead && sim.st === 'live') orig(h, 'r', a, 0.6); });
-      if (h.hero === 'ranger' && s === 'q') sim.after(0.3, () => { if (!h.dead && sim.st === 'live') orig(h, 'q', a, 0.5); });
+      if (h.hero === 'pyromancer' && s === 'r') sim.after(1.1, () => { if (!h.dead && !h.gone && sim.st === 'live') orig(h, 'r', a, 0.6); });
+      if (h.hero === 'ranger' && s === 'q') sim.after(0.3, () => { if (!h.dead && !h.gone && sim.st === 'live') orig(h, 'q', a, 0.5); });
       if (h.hero === 'cleric' && s === 'q' && a.u) for (const u of sim.heroes) if (!u.dead && u !== a.u && hyp(u.x - a.u.x, u.y - a.u.y) < 220) sim.heal(u, D.rk(h.K.skills.q.heal, h.ranks[0]) * 0.35, h);
     });
     wrap('perfectBlock', (orig, h, src) => {
@@ -652,7 +654,7 @@
           if (C.st[i] === 'gap' && t >= C.at) announce(i);
           if (i === 0 && C.st[i] === 'placed' && !C.boss && t >= C.at) spawnBoss(0);
           if (C.st[i] === 'gap' || C.st[i] === 'placed') {
-            if (i >= 1 && C.st[i] === 'placed' && !C.boss) {
+            if ((i >= 1 || C.at === Infinity) && C.st[i] === 'placed' && !C.boss) {
               const near = nearestHero(L.place[0], L.place[1], L.wake || 340);
               if (near) spawnBoss(i);
             }
@@ -672,6 +674,7 @@
           }
         }
       },
+      rejoin(h, oldId) { if (C.items[oldId]) { C.items[h.id] = (C.items[h.id] || 0) + C.items[oldId]; delete C.items[oldId]; } },   // (the fair split of drops remembers her)
       // where G would act (mirrors intent below), for the G over it when a hero stands close
       useAt(h) {
         if (C.over || h.dead) return null;
@@ -683,7 +686,7 @@
         return null;
       },
       intent(h, m) {
-        if (m.k !== 'carry' || C.over || h.dead) return false;
+        if (m.k !== 'carry' || C.over || h.dead) return undefined;   // (undefined, never false: a false would undo another module's true in sim.hook)
         // the cracked bell on the Ledge
         if (!C.rung && C.bell && sim.wave >= TUNE.bellFrom && hyp(h.x - C.bell[0], h.y - C.bell[1]) < 85) {
           C.rung = true; C.cur = 0; C.st[0] = 'placed'; C.at = sim.time + TUNE.wakeDelay; sim.ev(['chbell', C.bell[0], C.bell[1]]); log('bell');
@@ -703,7 +706,7 @@
           if (!(h.cutT > sim.time)) { h.cutT = sim.time + 0.8; C.pile++; sim.ev(['chcut', C.acts.pile[0], C.acts.pile[1], C.pile, 2]); if (C.pile >= 2) setBonus(7); }
           return true;
         }
-        return false;
+        return undefined;
       },
       kill(e) {
         if (e.ai && e.ai.mv && e.ai.mv.ids && e !== C.boss) { e.ai.mv.ids.forEach((id, k) => resolveTele(id, e.ai.mv.pts[k] ? e.ai.mv.pts[k][0] : e.x, e.ai.mv.pts[k] ? e.ai.mv.pts[k][1] : e.y)); e.ai.mv = null; }   // a body that falls mid-wind takes its warning with it
@@ -730,7 +733,7 @@
         return m !== 1 ? a * m : undefined;
       },
       hurt(a, h) {   // the Hollow Heart: a quarter of a blow comes back four seconds later
-        if (wears(h, 'chain6') && a >= 4) { const back = a * 0.25; sim.after(4, () => { if (!h.dead && sim.st === 'live') sim.heal(h, back, { healMul: 1 }, true); }); }
+        if (wears(h, 'chain6') && a >= 4) { const back = a * 0.25; sim.after(4, () => { if (!h.dead && !h.gone && sim.st === 'live') sim.heal(h, back, { healMul: 1 }, true); }); }
       },
       props(p) {
         const i = C.cur, L = i >= 0 ? LINKS[i] : null;

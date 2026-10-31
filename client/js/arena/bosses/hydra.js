@@ -379,7 +379,10 @@ const HYDRA = {
       const e = rot()[0]; if (!e || !e.head) return;
       const left = e.t - f.t;
       if (left > 1.3 || left < 0.35) return;
-      const h = e.head, o = echoQ[0], src = o ? { x: slotPos(o.slot).x, y: slotPos(o.slot).y, el: o.el, lesser: false, surf: false } : h;
+      // the entry that will really answer next: a neck jerking back rears by itself when it lashes (lash), so it shows nothing here
+      const o = echoQ.find(q => !q.recoil || (heads.has(q.recoil.add.id) && f.adds.has(q.recoil.add.id) && !q.recoil.sunk));
+      if (o && o.recoil) return;
+      const h = e.head, src = o ? { x: slotPos(o.slot).x, y: slotPos(o.slot).y, el: o.el, lesser: false, surf: false } : h;
       if (f.t - (h.rearT ?? -9) < 4) return;
       h.rearT = f.t; rearAt = f.t + 0.3;
       f.emit({ t: 'propfx', k: 'rear', x: Math.round(src.x), y: Math.round(src.y), el: src.el, dur: +left.toFixed(2), s: src.lesser ? 0 : 1, st: o ? 1 : 0 });

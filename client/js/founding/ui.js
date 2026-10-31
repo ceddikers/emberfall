@@ -224,7 +224,7 @@ const FoundingUI = (() => {
 
   // ================================================================ mount
   function mount(api) {
-    A = api; D = api.D; M = api.M; FLAG = api.FLAG;
+    A = api; D = api.D; M = api.M; FLAG = api.FLAG; portKey = '';
     unmount();
     root = document.createElement('div'); root.id = 'fd-root';
     root.innerHTML = `
@@ -265,6 +265,7 @@ const FoundingUI = (() => {
     tip($('fd-hpts'), () => { const sh = S().sheet, any = sh && ['q', 'w', 'e', 'r', 'p'].some(A.canLearn); return '<b>Skill points</b>One a level. Spend one on a skill that glows: click its +, or hold Shift and press its key; the passive takes ' + esc(A.keyLabel('p')) + '. Q, W and E take five ranks, the ultimate three, the passive two, and each rank opens at its own level.' + (sh && sh.pts > 0 && !any ? '<div class="fd-t-n">Nothing opens yet: ' + nextOpening(sh) + '</div>' : ''); });
     const rc = $('fd-rcchip'); rc.addEventListener('mousedown', e => e.stopPropagation()); rc.addEventListener('click', () => A.tryRecall());
     tip(rc, () => { const KB = typeof Keybinds !== 'undefined' ? Keybinds : null, k = esc(KB ? KB.label(KB.keyFor('fdRecall')) || '?' : 'B'); return `<b>Recall</b><em>${k}</em>Hold still for four seconds and you are back at the spring. A blow, a step or a cast breaks it. It needs a rest before the next.`; });
+    tip($('fd-dschip'), () => `<b>Dash</b><em>${keyOf('s6', 'Space')}</em>A short burst toward the cursor. It breaks a recall, and you walk on to where you were going after.`);
     tip($('fd-mini'), () => { const KB = typeof Keybinds !== 'undefined' ? Keybinds : null, k = esc(KB ? KB.label(KB.keyFor('fdCenter')) || '?' : 'C'); return `<b>The valley</b>Drag to look elsewhere (${k} brings you back). Right-click sends your hero. <b>Alt</b> + click points a spot out to your party. Ground you have not walked is dark; only what your party sees shows enemies.`; });
     $('fd-meter').addEventListener('click', e => { const t = e.target.closest('[data-m]'); if (t) { meterLoad(); meterMode = t.dataset.m === 'heal' ? 'heal' : 'dmg'; meterSave(); drawMeter(S()); } });
     $('fd-resume').addEventListener('click', () => A.pause(false));
@@ -312,7 +313,7 @@ const FoundingUI = (() => {
       <div class="act">${s.isHost ? `<button class="fd-btn gold" id="fd-go" ${can ? '' : 'disabled'}>Begin</button>` : `<button class="fd-btn gold" id="fd-go" ${can && !me[3] ? '' : 'disabled'}>${me[3] ? 'Waiting for the host' : 'Ready'}</button>`}
       <button class="fd-btn" id="fd-lback">Back to town</button></div></div><div class="fd-hint">${can ? '' : 'Choose a hero.'}</div></div>`;
     L.querySelectorAll('.fd-hc').forEach(c => c.addEventListener('click', () => { if (c.classList.contains('taken')) return; A.send({ k: 'pick', hero: c.dataset.h }); }));
-    L.querySelectorAll('.sk span').forEach(sp => tip(sp, () => { const sk = D.KITS[sp.dataset.h].skills[sp.dataset.k]; return `<b>${esc(sk.name)}</b><em>${TYPE_TAG(sk)} &middot; ${sp.dataset.k.toUpperCase()}</em>${esc(sk.text)}`; }));
+    L.querySelectorAll('.sk span').forEach(sp => tip(sp, () => { const sk = D.KITS[sp.dataset.h].skills[sp.dataset.k]; return `<b>${esc(sk.name)}</b><em>${TYPE_TAG(sk)} &middot; ${slotKeyLabel(sp.dataset.k)}</em>${esc(sk.text)}`; }));
     L.querySelectorAll('.ps').forEach((p, i) => tip(p, () => { const k = D.KITS[D.HERO_IDS[i]]; return `<b>${esc(k.passive.name)}</b><em>Passive</em>${esc(k.passive.text)}`; }));
     $('fd-go').addEventListener('click', () => A.send({ k: 'ready' }));
     $('fd-lback').addEventListener('click', () => A.leave());
@@ -362,7 +363,7 @@ const FoundingUI = (() => {
       return h + (st ? '<div class="fd-t-c">' + esc(st) + '</div>' : '') + hintLine('p', A.canLearn('p'));
     }
     const i = 'qwer'.indexOf(k), r = sh.rk[i], mx = sk.maxRank, lock = k === 'r' && sh.lv < D.LEVELS.rLevel;
-    let h = `<b>${esc(sk.name)}</b><em>${TYPE_TAG(sk)} &middot; ${k.toUpperCase()} &middot; Rank ${r}/${mx}</em>${esc(sk.text)}`;
+    let h = `<b>${esc(sk.name)}</b><em>${TYPE_TAG(sk)} &middot; ${k === 'p' ? keyOf('fdPassive', 'D') + ' to rank up' : slotKeyLabel(k)} &middot; Rank ${r}/${mx}</em>${esc(sk.text)}`;
     if (lock) h += `<div class="fd-t-n">Opens at level ${D.LEVELS.rLevel}.</div>`;
     if (r === 0 && !lock) h += `<div class="fd-t-n">Not learned. Rank 1: ${esc(sk.rank(1))}</div>`;
     else if (r > 0) h += `<div class="fd-t-r">Now, rank ${r}: ${esc(sk.rank(r))}</div>`;
@@ -382,7 +383,7 @@ const FoundingUI = (() => {
     }
     const f = document.createElement('div'); f.className = 'fd-item flask'; f.style.display = 'none'; f.innerHTML = `<img alt="" draggable="false" src="${FI.hud('flask')}"><i class="key">${keyOf('fdFlask', 'V')}</i>`;
     f.addEventListener('mousedown', e => e.stopPropagation()); f.addEventListener('click', () => A.send({ k: 'use', slot: 'f' }));
-    tip(f, () => '<b>Carried Water</b><em>Flask, V</em>Drink it anywhere to heal. It refills at the fountain.'); host.appendChild(f);
+    tip(f, () => '<b>Carried Water</b><em>Flask, ' + keyOf('fdFlask', 'V') + '</em>Drink it anywhere to heal. It refills at the fountain.'); host.appendChild(f);
   }
   // an item's kind line (rarity, Use, the hero it is for) and its passive, in the same few words everywhere it shows
   const kindLine = d => `${D.RARITIES[d.rar]}${d.use ? ' &middot; Use' : ''}${d.hero && D.KITS[d.hero] ? ' &middot; ' + esc(D.KITS[d.hero].name) : ''}`;
@@ -742,7 +743,6 @@ const FoundingUI = (() => {
   // ================================================================ sheet changes
   function onSheet(prev, cur) {
     if (!root) return;
-    tentSig = ''; forgeSig = '';
     if (prev && cur.rk.some((r, i) => r > prev.rk[i])) A.snd('fd-rankup', { minGap: 0 });
     if (!prev && cur) { slotKey = ''; }
   }

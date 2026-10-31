@@ -83,8 +83,9 @@ class CombatActor {
   press(i) { return this.kit.press(i); }
   update() { this.kit.update(); }
   notify(type, data) { this.kit.notify(type, data); }
-  // the hero went down: the Ultimate keeps part of its charge and an open window ends (engine.js ultDeath)
-  onDeath() { this.kit.ultDeath(); }
+  // the hero went down: the Ultimate keeps part of its charge and an open window ends (engine.js ultDeath), and whatever was being
+  // cast or waiting in the queue is dropped (a bot's spell must not go off the moment it is raised; main.js does the same for a person)
+  onDeath() { const k = this.kit; k.ultDeath(); k.cast = null; k.queued = null; k.queuedO = null; if (k.inbuf) k.inbuf.length = 0; }
 
   dashReady(now) {
     while (this.dash.charges < this.dashMax && this.dash.next && now >= this.dash.next) {

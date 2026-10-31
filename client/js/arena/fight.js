@@ -199,6 +199,8 @@ class FightSim {
     }
     const cur = { ph, seams: [], o, done: false };
     this.layPhase = ph;
+    // a walled act laid out ahead (at the gate before it) holds its floor from now: the moments until it begins can't carry the boss past it
+    if (ph > this.phase && o.wall && o.until != null && this.wallHp == null) this.wallHp = Math.max(1, Math.floor(this.boss.maxHp * o.until));
     if (ph > this.phase) this.atKeep(from - 0.001, () => this.startCourse(cur));
     else this.startCourse(cur, true);
     let t = from;
@@ -527,7 +529,9 @@ class FightSim {
       if (s.alive) {
         s.hist.push([this.t, s.hp]);
         while (s.hist.length && s.hist[0][0] < this.t - 6) s.hist.shift();
-        if (ARENA.sd(p.x, p.y) > 14 && this.t > this.edgeGrace) this.damagePlayer(p, 9999999, { kind: 'fall' });
+        // (practice, can't die: a hero left standing off the floor is counted once per step off it, not once per tick)
+        if (ARENA.sd(p.x, p.y) > 14 && this.t > this.edgeGrace) { if (!s.offEdge) this.damagePlayer(p, 9999999, { kind: 'fall' }); if (this.cantDie) s.offEdge = true; }
+        else s.offEdge = false;
       }
     }
     for (const pl of this.healPools) {

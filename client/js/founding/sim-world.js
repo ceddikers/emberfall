@@ -149,7 +149,7 @@
           if (!takeable(h, d)) return true;
           if (hyp(h.x - d.x, h.y - d.y) <= TUNE.reachR) { take(h, d, false); return true; }
           if (sim.freeSlot(h) < 0) { sim.ev(['wfull', h.id]); return true; }
-          h.target = null; h.pending = null; h.auto = true; h.chan = null; sim.pathTo(h, d.x, d.y); h._wpick = d.id;   // (taken on arrival: tick)
+          h.target = null; h.pending = null; h.auto = true; h.chan = null; h.fetch = null; h.talk = null; sim.pathTo(h, d.x, d.y); h._wpick = d.id;   // (taken on arrival: tick)
           return true;
         }
         if (m.k === 'toss') {

@@ -507,7 +507,7 @@
         if (k) snd(k, u ? { vol: 0.8, at: { x: u.x, y: u.y }, reach: 1.5 } : { vol: 0.8 });   // (by vicinity, like the other bosses' moves: client.js snd)
         return true;
       }
-      case 'chdown': { ST.rage = 0; const m = K.me && K.me(); snd('down'); if (m) K.ftxt(m.x, m.y - 56, '+' + ev[2] + ' coin at the run’s end', '#f3dfa4', 12, 2.2); return true; }
+      case 'chdown': { ST.rage = 0; DIM.dim = 0; DIM.lampsT = 0; const m = K.me && K.me(); snd('down'); if (m) K.ftxt(m.x, m.y - 56, '+' + ev[2] + ' coin at the run’s end', '#f3dfa4', 12, 2.2); return true; }
       case 'chbonus': { K.say(BONUS_LINE[ev[1]] || ''); K.snd('fd-pickup'); return true; }
       case 'chcut': { if (ev[4] === 6) ST.cuts = ev[3]; K.ftxt(ev[1], ev[2] - 34, ev[3] + ' / ' + ev[4], '#f3dfa4', 13, 1.2); K.burst(ev[1], ev[2], 8, { color: '#a87c4a', spd: 90, dur: 0.5, size: 3, kind: 'chunk', g: 260 }); snd('cut'); return true; }
       case 'chsoak': K.fxRing(ev[1], ev[2], 20, ev[3] ? 110 : 170, 0.6, ev[3] ? '170,215,255' : '255,120,90', 3, 0); K.ftxt(ev[1], ev[2] - 30, ev[3] ? 'Shared' : 'It bursts', ev[3] ? '#aee0ff' : '#ff9a8a', 13, 1.2); if (ev[3]) snd('soak'); K.shake(ev[3] ? 1 : 4, 0.2); return true;
@@ -527,7 +527,7 @@
       case 'chhound': { for (const u of K.S.units.values()) if (u.kind === 'e' && u.eid === 'emberlord') { K.fxRing(u.x, u.y, 30, 130, 0.6, '255,150,70', 3, 0); K.burst(u.x, u.y, 12, { color: '#ff9040', spd: 120, dur: 0.6, size: 3, kind: 'dot' }); } K.snd('fd-wild-howl', { vol: 0.6 }); return true; }
       case 'chpost': K.ftxt(ev[4], ev[5] - 40, ev[2] + ' / ' + ev[3], '#f3dfa4', 13, 1.2); K.snd('fd-pickup', { vol: 0.8 }); K.fxRing(ev[4], ev[5], 8, 40, 0.5, '240,215,150', 2, 0); return true;
       case 'chcrown': { const u = K.U('h' + ev[1]); if (u) K.fxRing(u.x, u.y, 14, 54, 0.5, '190,210,235', 2, 0); return true; }
-      case 'chlose': ST.rage = 0; K.say('It slips back into the dark, and waits.'); return true;
+      case 'chlose': ST.rage = 0; DIM.dim = 0; DIM.lampsT = 0; K.say('It slips back into the dark, and waits.'); return true;
       case 'chend': return true;
     }
     return false;
@@ -535,6 +535,7 @@
 
   Founding.addLayer({
     init(kit) { K = kit; },
+    reset() { Object.assign(ST, { rungAt: -99, wakeAt: -99, wakeI: -1, cutAt: -99, cuts: 0, oakHit: 0, shapes: {}, rage: 0, rageAt: -99 }); Object.assign(DIM, { lamps: 0, lampsT: 0, dim: 0 }); ZONES.clear(); },
     event: onEvent,
     ground(c, inV) { if (!K) return; drawBell(c); drawPool(c, inV); drawOak(c, inV); drawCave(c, inV); twinLink(c); darkness(c); },
     units(L, inV) {

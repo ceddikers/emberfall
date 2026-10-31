@@ -220,6 +220,7 @@
   // ---------------------------------------------------------------- the layer
   const LAYER = {
     init(kit) { K = kit; },
+    reset() { seen.fill(false); lastSt.fill(0); corpses.length = 0; },
     snap() {
       const s = S(); if (!s) return;
       CAMPS.forEach((c, i) => { if (!seen[i] && K.visAt(c.x, c.y, 50)) seen[i] = true; });

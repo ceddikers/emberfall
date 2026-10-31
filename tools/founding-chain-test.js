@@ -304,6 +304,15 @@ function sectionAfterThree() {
     place(sim, 4210, 3400); for (let i = 0; i < 40; i++) sim.tick(DT);
     check(C.boss && C.boss.kind === 'pike' && C.boss.hp > C.boss.max * 0.99, 'it comes back whole when found again');
   }
+  // the Ram, left behind, waits to be found like the rest (the bell's timer brings it only the first time)
+  {
+    const sim = makeSim(4, 41), C = sim.chain; sim.wave = 3; place(sim, 3470, 524); sim.heroes[0].x = C.bell[0]; sim.heroes[0].y = C.bell[1]; sim.intent('p0', { k: 'carry' });
+    for (let i = 0; i < 90; i++) sim.tick(DT); check(C.boss && C.boss.kind === 'ram', 'the bell brings the Ram');
+    settle(sim); sim.heroes.forEach((hh, i) => { hh.x = 698 + i * 20; hh.y = 3880; hh.invul = 1e6; hh.path = null; }); const lose0 = evs(sim, 'chlose').length;
+    for (let i = 0; i < 20 * 50; i++) sim.tick(DT);
+    check(!C.boss && C.st[0] === 'placed' && evs(sim, 'chlose').length - lose0 === 1, 'left alone it slips back once, and stays gone (' + (evs(sim, 'chlose').length - lose0) + ' chlose in fifty seconds)');
+    place(sim, 3680, 600); for (let i = 0; i < 40; i++) sim.tick(DT); check(C.boss && C.boss.kind === 'ram', 'and comes back when the party walks up to it');
+  }
   // the oak: six cuts before the Stumpwarden arrives
   {
     const sim = makeSim(2, 41), C = sim.chain; sim.wave = 3; C.st[2] = 'dormant';

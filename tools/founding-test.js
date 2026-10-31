@@ -792,6 +792,10 @@ function sectionPass2() {
     const x1 = dh.x; d.intent('p0', { k: 'dash', x: 3400, y: dh.y }); runFor(d, 0.3); check(Math.abs(dh.x - x1) < 5, 'no second dash during the cooldown');
     runFor(d, 1); check(dh.y > y0 + 60, 'after the dash the hero walks on to where it was going');
     dh.dashCd = 0; put(dh, 2500, 2600); d.intent('p0', { k: 'recall' }); runFor(d, 1); d.intent('p0', { k: 'dash', x: 2900, y: 2600 }); runFor(d, 0.3); check(!dh.rcOn && dh.x > 2600, 'a dash breaks a recall');
+    dh.dashCd = 0; put(dh, 2500, 2600); d.intent('p0', { k: 'move', x: 2900, y: 2600 }); runFor(d, 0.1); d.intent('p0', { k: 'dash', x: 2900, y: 2600 }); d.intent('p0', { k: 'move', x: 2200, y: 2600 }); runFor(d, 2);
+    check(dh.x < 2450, 'an order given during a dash wins over the walk before it (' + Math.round(dh.x) + ')');
+    dh.dashCd = 0; put(dh, 2500, 2600); dh.dead = false; d.intent('p0', { k: 'dash', x: 2900, y: 2600 }); d.killHero(dh); runFor(d, 0.3); check(!dh.dash, 'a fall ends a dash');
+    d.respawn(dh, 2500, 2600, 1, 0);
     dh.dashCd = 0; put(dh, 2500, 2600); dh.stun = 1; d.intent('p0', { k: 'dash', x: 2900, y: 2600 }); runFor(d, 0.3); check(!dh.dash && Math.abs(dh.x - 2500) < 5, 'no dash while stunned'); }
   // ping
   const pings = []; const op = s2.emit; s2.emit = m => { op(m); if (m.t === 'fdx') for (const e of m.ev) if (e[0] === 'pi') pings.push(e); };
@@ -819,6 +823,12 @@ function sectionPass2() {
   s.intent('q9', { k: 'move', x: back.x + 100, y: back.y }); runFor(s, 1); check(back.x > M.P.spring[0] + 60 || back.path === null, 'her intents work under the new id'); check(!!s.stats.q9 && !s.stats.p1, 'her stats follow');
   s.camp.hp = 0; runFor(s, 1); check(s.st === 'lost' && s.log.fdend[0].gold.q9 !== undefined && s.log.fdend[0].gold.p1 === undefined, 'fdend pays the player under the new id');
   const c = new FoundingSim({ players: [{ id: 'a', name: 'A' }], emit() {}, emitTo() {}, seed: 3 }); check(c.rejoin('b', 'B') === false, 'rejoin only works in a live run');
+  // what a leaver leaves behind: no dig finishes, no blessing carries over, no queued echo fires in her name; a prototype key is no hero
+  const g = quiet(2, 207, ['cleric', 'bastion']); runFor(g, 1); const gh = g.heroes[0]; gh.dig = 3; gh.blessed = true;
+  g.removePlayer('p0'); check(gh.dig === null && gh.gone, 'a leaver drops her dig and is marked gone');
+  check(g.rejoin('z0', 'P0') && !gh.blessed && !gh.gone, 'a rejoin clears a stale blessing and the gone mark');
+  let threw = null; try { for (const id of ['__proto__', 'constructor', 'toString']) { gh.ranks[0] = 1; gh.st.petals = 3; gh.ch[0] = gh.chMax[0]; g.intent('z0', { k: 'cast', s: 'q', id }); runFor(g, 1); } } catch (e) { threw = e; }
+  check(!threw && g.st === 'live', 'a heal aimed at a prototype key mends the caster, no throw');
 }
 
 function sectionGnawWander() {

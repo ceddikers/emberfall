@@ -97,6 +97,13 @@ function sectionPlacement() {
   two.intent('p1', { k: 'sellTower', id: tt.id }); const refund0 = Math.floor(TW.post.cost[0] / 2), refund1 = Math.floor(TW.post.cost[1] / 2);
   check(two.defence.towers.length === 0 && two.hmap.p0.gold === 5000 - TW.post.cost[0] + refund0 && two.hmap.p1.gold === g1 - TW.post.cost[1] + refund1, 'selling pays each payer half of what they paid');
   check(!two.allies.includes(tt), 'a sold tower leaves sim.allies');
+  // a payer who leaves and rejoins (a new id) still gets her share back
+  const re = makeSim(2, 16); run(re, 1); rich(re); const rp = spot(re, 3000, 3040); const rt = build(re, 'p1', 'post', rp[0], rp[1]); run(re, 3);
+  re.removePlayer('p1'); check(re.rejoin('z1', 'P1'), 'the builder rejoins'); const rg = re.hmap.z1.gold; re.intent('z1', { k: 'sellTower', id: rt.id });
+  check(re.hmap.z1.gold === rg + Math.floor(TW.post.cost[0] / 2), 'after a rejoin, selling still pays her share back');
+  // a tower kind named after an object key is refused, not thrown on
+  let threw = null; try { for (const kind of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) re.intent('z1', { k: 'build', kind, x: rp[0], y: rp[1] }); } catch (e) { threw = e; }
+  check(!threw && re.defence.towers.length === 0, 'a build with an odd kind is refused without a throw');
 }
 
 // ------------------------------------------------------------------ the four kinds

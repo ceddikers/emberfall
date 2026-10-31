@@ -286,7 +286,7 @@ if (typeof Founding !== 'undefined' && Founding.addLayer) (() => {
     T.fogWas = !!K.S.noFog; K.S.noFog = true; K.S.inIntro = true;   // (inIntro: the film is on, client-defence.js keeps the spires out of it)                      // no fog for the film (and the enemies are not drawn: drawEnemy below)
     const cam = K.S.cam; cam.free = true;
     // the trials layer speaks the Steward's line when the run starts: here the Steward says it in his own beat
-    const tr = K.S.__trials || (K.S.__trials = { queue: [], cur: null, t: 0, heardPart: -1, heardStart: 0, chipSig: '', pgN: -1 });
+    const tr = K.S.__trials || (K.S.__trials = { queue: [], cur: null, t: 0, heardPart: -1, heardStart: 0, chipSig: '', pgN: -1, seen: {}, led: {} });
     tr.heardStart = 1;
     const root = document.getElementById('fd-root'); if (root) { root.classList.remove('fd-intro-out'); root.classList.add('fd-intro'); }
     build(T);
@@ -352,6 +352,7 @@ if (typeof Founding !== 'undefined' && Founding.addLayer) (() => {
     c.restore();
   }
   Founding.addLayer({
+    first: true,   // (the opening film eats keys and clicks before any other layer sees them)
     init(kit) {
       K = kit;
       // Esc votes to skip (before anything else sees it)

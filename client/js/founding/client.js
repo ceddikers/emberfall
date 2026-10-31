@@ -304,6 +304,7 @@ const Founding = (() => {
     paused = false;
     FoundingArt.build();
     S = freshState(msg); goldPaid = false; lastResult = null;
+    if (LAYERS.length && !(msg && msg.rejoin)) lay('reset');   // (each layer clears what it keeps between runs)
     active = true;
     document.body.classList.add('in-founding');
     FoundingUI.mount(api);
@@ -398,10 +399,12 @@ const Founding = (() => {
   // ================================================================ events from the host (run a moment late, in step with the picture)
   // ================================================================ feature layers (client-*.js): Founding.addLayer({ ... })
   // hooks: event(ev) -> true if handled, snap(m), update(dt), ground(c, inV) world under units, units(L, inV) push [y, 9, {draw(c)}],
-  // top(c) world over the fog, screen(ctx), mini(g, kx, ky), key(act, ev) -> true, click(wx, wy, button) -> true, vis(add(x, y, r)), lights(add(x, y, r, k))
+  // top(c) world over the fog, screen(ctx), mini(g, kx, ky), key(act, ev) -> true, click(wx, wy, button) -> true, vis(add(x, y, r)), lights(add(x, y, r, k)),
+  // reset() when a new run starts. key and click stop at the first layer that takes them (a layer made with `first: true` is asked before the rest).
   const LAYERS = [];
-  function addLayer(o) { LAYERS.push(o); if (o.init) o.init(kit()); return o; }
-  function lay(name, a, b, c) { let r; for (const L of LAYERS) if (L[name]) { try { const v = L[name](a, b, c); if (v) r = v; } catch (err) { if (!L._err) { L._err = 1; console.error('Founding layer', name, err); } } } return r; }
+  function addLayer(o) { if (o.first) LAYERS.unshift(o); else LAYERS.push(o); if (o.init) o.init(kit()); return o; }
+  const TAKES = { key: 1, click: 1 };
+  function lay(name, a, b, c) { let r; for (const L of LAYERS) if (L[name]) { try { const v = L[name](a, b, c); if (v) { r = v; if (TAKES[name]) return r; } } catch (err) { if (!L._err) { L._err = 1; console.error('Founding layer', name, err); } } } return r; }
   function kit() { return { get S() { return S; }, D, M, FLAG, ZONE, send, snd, sndAt, sndFor, ell, glowAt, burst, fxRing, fxAdd, fxBlast, ftxt, shake, say: (t) => say(t), visAt, U: (k) => U(k), qfocus: () => S.qf || [], qhover: () => S.qhover || null, me: () => me(), W, H, dep, mus: (slot, o) => mus(slot, o), toast: (t) => dep.toast && dep.toast(t), clamp, lerp, eo, TAU, PI }; }
   function doEv(ev) {
     const tag = ev[0];
@@ -415,7 +418,7 @@ const Founding = (() => {
       case 'a': evAuto(ev); break;
       case 'h': evHit(ev); break;
       case 'd': evDeath(ev); break;
-      case 'hd': { sndFor(ev[1], 'fd-hero-down', ev[2], ev[3]); const u = U('h' + ev[1]); if (u) { ftxt(ev[2], ev[3] - 30, 'Down', '#ff7a68', 13); burst(ev[2], ev[3], 8, { color: '#ff6a5a', spd: 80, dur: 0.4, size: 2, kind: 'dot' }); if (ev[1] === S.myId) { S.aim = null; shake(3, 0.2); } } break; }
+      case 'hd': { sndFor(ev[1], 'fd-hero-down', ev[2], ev[3]); if (ev[1] === S.myId) S.openOnArrive = null; const u = U('h' + ev[1]); if (u) { ftxt(ev[2], ev[3] - 30, 'Down', '#ff7a68', 13); burst(ev[2], ev[3], 8, { color: '#ff6a5a', spd: 80, dur: 0.4, size: 2, kind: 'dot' }); if (ev[1] === S.myId) { S.aim = null; shake(3, 0.2); } } break; }
       case 'hu': { sndFor(ev[1], 'fd-hero-rise', ev[2], ev[3]); ftxt(ev[2], ev[3] - 34, 'Raised', '#fff1b8', 13, 1.3); Fx.raise(ev[2], ev[3]); break; }
       case 'pb': evPerfectBlock(ev); break;
       case 'dsh': { const u = U('h' + ev[1]); if (u) { u.an.dashT = S.T; faceTo(u, ev[4], ev[5], 0.3); } burst(ev[2], ev[3] + 8, 7, { ang: Math.atan2(ev[3] - ev[5], ev[2] - ev[4]), spread: 0.9, color: '#b9a585', spd: 70, dur: 0.45, size: 2.4, kind: 'dot' }); sndFor(ev[1], 'dash', ev[2], ev[3]); break; }
@@ -423,8 +426,8 @@ const Founding = (() => {
       case 'i': { const t = S.tele.get(ev[1]); if (t) { t.res = S.T; teleResolve(t); fxRing(ev[2], ev[3], 8, Math.max(40, t.a * 0.9), 0.3, t.col ? '140,190,255' : '255,120,90', 2, 0); if (t.shape === 0 && t.a > 60) { shake(2.5, 0.2); burst(ev[2], ev[3], 8, { color: '#6a5a48', spd: 90, dur: 0.5, size: 3, kind: 'dust' }); } } break; }
       case 'qa': { const Q = D.QUESTS[ev[1]]; if (Q) { say(Q.giver + ' has work for you.'); snd('fd-quest-offer', { vol: 0.55 }); } break; }   // a giver calls: a ! over them, and on the minimap once seen
       case 'q': if (FoundingUI) FoundingUI.questEvent(ev[1], ev[2]); snd(ev[2] === 0 ? 'fd-quest-offer' : ev[2] === 2 ? 'fd-quest-done' : 'fd-quest-missed'); if (ev[2] === 2) { fxRing(M.P.hearth[0], M.P.hearth[1], 40, 160, 0.9, '255,230,160', 3, 0); } break;
-      case 'cart': { const c = (S.props.ct || []).find(x => x[0] === ev[1]); if (c) ftxt(c[1], c[2] - 30, ev[2] ? 'Delivered' : 'Lost', ev[2] ? '#9ed7a6' : '#ff7a68', 12, 1.3); snd(ev[2] ? 'fd-deliver' : 'fd-gate-break', ev[2] ? undefined : { vol: 0.6 }); break; }
-      case 'pal': { const g = FoundingArt.GATE; burst(g.x, g.y, 24, { color: '#7a5a38', spd: 160, dur: 0.8, size: 3.5, kind: 'chunk', g: 300 }); burst(g.x, g.y, 8, { color: '#5a4a38', spd: 80, dur: 1, size: 4, kind: 'dust' }); shake(4, 0.3); ftxt(g.x, g.y - 40, 'The palisade breaks', '#ffb36b', 12, 1.5); sndAt('fd-gate-break', g.x, g.y, { reach: 1.8 }); break; }
+      case 'cart': { const c = ev.length > 4 ? [ev[1], ev[3], ev[4]] : (S.props.ct || []).find(x => x[0] === ev[1]); if (c) ftxt(c[1], c[2] - 30, ev[2] ? 'Delivered' : 'Lost', ev[2] ? '#9ed7a6' : '#ff7a68', 12, 1.3); snd(ev[2] ? 'fd-deliver' : 'fd-gate-break', ev[2] ? undefined : { vol: 0.6 }); break; }
+      case 'pal': { const g = FoundingArt.GATE; if (ev[1] === 1) { burst(g.x, g.y, 14, { color: '#9a9282', spd: 90, dur: 0.9, size: 3.5, kind: 'dust', vy: -30 }); ftxt(g.x, g.y - 40, 'The Stone Gate stands', '#e6c98a', 12, 1.6); break; } burst(g.x, g.y, 24, { color: '#7a5a38', spd: 160, dur: 0.8, size: 3.5, kind: 'chunk', g: 300 }); burst(g.x, g.y, 8, { color: '#5a4a38', spd: 80, dur: 1, size: 4, kind: 'dust' }); shake(4, 0.3); ftxt(g.x, g.y - 40, 'The palisade breaks', '#ffb36b', 12, 1.5); sndAt('fd-gate-break', g.x, g.y, { reach: 1.8 }); break; }
       case 'up': { const u = U('h' + ev[1]); const up = D.UPGRADES[ev[2]]; if (u) { ftxt(u.x, u.y - 40, up ? up.name : 'Upgrade', '#e6c98a', 12, 1.3); fxRing(u.x, u.y, 8, 44, 0.5, '255,230,160', 2, 0); } if (ev[1] === S.myId) snd('fd-buy'); break; }
       case 'fg': sndFor(ev[1], ev[3] ? 'fd-hyperforge' : 'fd-forge', M.P.forge[0], M.P.forge[1], { reach: ev[3] ? 1.6 : 1 }); forgeFlash(!!ev[3]); if (ev[1] === S.myId) FoundingUI.forgeResult(ev[2], ev[3]); else { const u = U('h' + ev[1]); const it = D.ITEM[ev[2]]; if (u && it) ftxt(u.x, u.y - 40, it.name, D.RARITY_COLORS[it.rar], 12, 1.5); } break;
       case 'dr': { const u = U('h' + ev[1]); const it = D.ITEM[ev[2]]; if (u && it) { ftxt(u.x, u.y - 40, it.name, D.RARITY_COLORS[it.rar], 12, 1.6); burst(u.x, u.y, 8, { color: D.RARITY_COLORS[it.rar], spd: 70, dur: 0.8, size: 2.4, kind: 'dot', vy: -50, g: -30 }); } if (ev[1] === S.myId) { say('Found: ' + (it ? it.name : 'an item')); snd('ui-gold'); } break; }
@@ -511,7 +514,7 @@ const Founding = (() => {
   function tryRecall() {
     const m = me(); if (!S || S.phase !== 'live' || !m || (m.f & FLAG.DEAD) || S.ended || S.end || S.rc.has(S.myId)) return;
     const l = rcLeft(); if (l > 0) { say('Recall again in ' + Math.ceil(l) + ' s'); return; }
-    send({ k: 'recall' });
+    S.openOnArrive = null; send({ k: 'recall' });
   }
   // the dash: toward the cursor, on its own cooldown (the host decides how far; the sheet's ds is the seconds left)
   const dsLeft = () => { const sh = S && S.sheet; return sh && sh.ds > 0 ? Math.max(0, sh.ds - (S.T - S.sheetT)) : 0; };
@@ -2065,7 +2068,7 @@ const Founding = (() => {
   function miniTo(fx, fy, move, ping) {
     if (!S) return; const x = fx * M.W, y = fy * M.H;
     if (ping) { sendPing(x, y); return; }
-    if (move) { send({ k: 'move', x: Math.round(x), y: Math.round(y) }); S.marker = { x, y, t: 0 }; }
+    if (move) { S.openOnArrive = null; send({ k: 'move', x: Math.round(x), y: Math.round(y) }); S.marker = { x, y, t: 0 }; }
     else { S.cam.free = true; S.cam.x = x; S.cam.y = y; }
   }
 
@@ -2079,6 +2082,7 @@ const Founding = (() => {
     if (paused || S.phase !== 'live' || S.ended || S.end) return;
     if (LAYERS.length && !ev.altKey && lay('click', S.mouse.wx, S.mouse.wy, ev.button)) return;
     if (ev.button === 0) { if (ev.altKey) sendPing(S.mouse.wx, S.mouse.wy); else leftClick(); } else if (ev.button === 2) rightClick(); else if (ev.button === 1) S.pan = { x: ev.clientX, y: ev.clientY };
+    else if (typeof Keybinds !== 'undefined' && Keybinds.modeAction) { const act = Keybinds.modeAction('mouse' + ev.button, 'founding'); if (act) doAct(act, '', ev); }   // (a side button bound in Options)
   }
   function leftClick() {
     if (S.aim) { const slot = S.aim.slot; S.aim = null; castAt(slot, S.mouse.wx, S.mouse.wy); return; }
@@ -2100,9 +2104,10 @@ const Founding = (() => {
     else { S.rEnemy = false; send({ k: 'move', x: Math.round(S.mouse.wx), y: Math.round(S.mouse.wy) }); S.marker = { x: S.mouse.wx, y: S.mouse.wy, t: 0 }; }
     S.rDown = true; S.rT = 0.2;
   }
-  function onMouseUp(ev) { if (!active || !S) return; if (ev.button === 2) S.rDown = false; if (ev.button === 1) S.pan = null; }
+  function onMouseUp(ev) { if (!active || !S) return; if (ev.button === 2) S.rDown = false; if (ev.button === 1) S.pan = null; if (ev.button > 2) ev.preventDefault(); }   // (a side button never steps the browser back mid-run)
   function onMouseMove(ev) {
     if (!active || !S) return;
+    S.mouse.in = ev.target === dep.canvas;   // (the canvas tooltips show only while the pointer is over the field, not over a panel)
     if (ev.target === dep.canvas || S.pan) mouseXY(ev);
     if (S.pan) { S.cam.free = true; S.cam.x -= (ev.clientX - S.pan.x) / S.cam.zoom; S.cam.y -= (ev.clientY - S.pan.y) / S.cam.zoom; S.pan = { x: ev.clientX, y: ev.clientY }; }
   }
@@ -2118,16 +2123,23 @@ const Founding = (() => {
     if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
     if (paused) {   // held: only Esc does anything (it resumes); the rest of the keys are eaten so nothing reaches the town behind
       if (k === 'Escape') { if (!ev.repeat) setPause(false); }
+      if (/^F\d+$/.test(ev.key || '')) return;
       ev.preventDefault(); ev.stopImmediatePropagation(); return;
     }
     // the keys are the player's own (keybinds.js: the hotbar's first four, Next enemy, and The Founding's section)
     const KB = typeof Keybinds !== 'undefined' && Keybinds.modeAction ? Keybinds : null;
     const act = KB ? KB.modeAction(KB.keyOf(ev), 'founding') : ({ KeyQ: 's0', KeyW: 's1', KeyE: 's2', KeyR: 's3', Tab: 'cycle', KeyT: 'fdTent', KeyB: 'fdRecall', KeyF: 'fdForge', KeyV: 'fdFlask', KeyG: 'fdUse', KeyX: 'fdDrop', Space: 's6', KeyC: 'fdCenter', KeyD: 'fdPassive' })[k] || (/^Digit[1-6]$/.test(k) ? 'fdItem' + k.slice(5) : null);
-    const slotMap = { s0: 'q', s1: 'w', s2: 'e', s3: 'r' };
     if (S.phase !== 'live') { if (k === 'Escape') used = FoundingUI.closeTop(); else used = false; }
-    else if (S.ended || S.end) { used = false; }
+    else if (S.ended || S.end) { used = k === 'Escape' && FoundingUI.closeTop(); }   // (the end beat: Esc still closes a panel left open)
     else if (k === 'Escape') { if (FoundingUI.closeTop()) { /* closed a panel */ } else if (S.aim) S.aim = null; else if (canPause()) { if (!ev.repeat) setPause(true); } else used = false; }
-    else if (LAYERS.length && lay('key', act, ev)) { /* a feature layer took it */ }
+    else used = doAct(act, k, ev);
+    if (used) { ev.preventDefault(); ev.stopImmediatePropagation(); }
+  }
+  // one action from the player's own keys (a keyboard key, or a mouse's side button): true if it was used
+  function doAct(act, k, ev) {
+    const slotMap = { s0: 'q', s1: 'w', s2: 'e', s3: 'r' };
+    let used = true;
+    if (LAYERS.length && lay('key', act, ev)) { /* a feature layer took it */ }
     else if (slotMap[act]) { if (!ev.repeat) { if (ev.shiftKey) learn(slotMap[act]); else pressSkill(slotMap[act]); } }
     else if (act === 'cycle') cycleTarget(ev.shiftKey ? -1 : 1);
     else if (act === 'fdTent') { if (!ev.repeat) { if (FoundingUI.isOpen('tent')) FoundingUI.closeTop(); else tryShop(); } }
@@ -2141,12 +2153,12 @@ const Founding = (() => {
     else if (act === 'fdMeter') { if (!ev.repeat) FoundingUI.toggleMeter(); }
     else if (act === 's6') { if (!ev.repeat) tryDash(); }
     else if (act === 'fdCenter') { S.cam.free = false; const m = me(); if (m) { S.cam.x = m.x; S.cam.y = m.y; } }
-    else if (k.startsWith('Arrow')) { (S.keys || (S.keys = {}))[k] = true; }
+    else if (k && k.startsWith('Arrow')) { (S.keys || (S.keys = {}))[k] = true; }
     else used = false;
-    if (used) { ev.preventDefault(); ev.stopImmediatePropagation(); }
+    return used;
   }
   function onKeyUp(ev) { if (S && S.keys && S.keys[ev.code]) { S.keys[ev.code] = false; } }
-  function onBlur() { if (S) { S.rDown = false; S.pan = null; S.keys = null; } }
+  function onBlur() { if (S) { S.rDown = false; S.pan = null; S.keys = null; S.mouse.in = false; } }
   function bindInput() {
     if (bound) return; bound = true;
     window.addEventListener('mousedown', onMouseDown, true); window.addEventListener('mouseup', onMouseUp, true); window.addEventListener('mousemove', onMouseMove, true);
@@ -2166,8 +2178,13 @@ const Founding = (() => {
     if (rawDt > 0.4) for (const u of S.units.values()) u.tr.settle();
     const dt = clamp(rawDt, 0, 0.1);
     if (paused && !(sim && sim.isPaused())) setPause(false);   // (a second player came back in: the hold is over)
-    try { if (paused) render(); else { update(dt); render(); FoundingUI.update(dt); } } catch (e) { console.error(e); }
+    if (!paused) try { update(dt); } catch (e) { frameErr(e); }
+    try { render(); } catch (e) { frameErr(e); const c = dep.ctx; if (c) { if (c.reset) c.reset(); else c.setTransform(1, 0, 0, 1, 0, 0); } }   // (a throw mid-draw leaves saves unbalanced: start the canvas clean)
+    if (!paused) try { FoundingUI.update(dt); } catch (e) { frameErr(e); }
   }
+
+  const errSeen = new Set();
+  function frameErr(e) { const k = String(e && e.message); if (errSeen.size < 50 && !errSeen.has(k)) { errSeen.add(k); console.error(e); } }
 
   // what ui.js may read and call
   const api = {

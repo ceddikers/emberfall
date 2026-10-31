@@ -44,7 +44,7 @@ const FoundingSim = (() => {
       this.autoLoot = !!o.autoLoot;   // headless pilots (tests, the tuner) have no hands: drops go straight to a hero with room, as before sim-world.js put them on the ground
       this.players = []; for (const p of (o.players || []).slice(0, 4)) this.players.push({ id: p.id, name: p.name || 'Hero', hero: null, ready: false });
       this.st = 'camp'; this.time = 0; this.tickN = 0; this.wave = 0; this.nextWaveAt = -1;
-      this.heroes = []; this.hmap = {}; this.enemies = []; this.emap = new Map(); this.eid = 0; this.tid = 0; this.zid = 0; this.uid = 0;
+      this.heroes = []; this.hmap = Object.create(null); this.enemies = []; this.emap = new Map(); this.eid = 0; this.tid = 0; this.zid = 0; this.uid = 0;
       this.spawnQ = []; this.zones = []; this.projs = []; this.timers = []; this.events = [];
       this.paths = [M.LANES[0].path, M.LANES[1].path];
       this.palIdx = M.near(this.paths[0], M.P.gate[0], M.P.gate[1]).i; this.fordIdx = M.near(this.paths[1], M.P.ford[0], M.P.ford[1]).i;
@@ -61,7 +61,7 @@ const FoundingSim = (() => {
       this.night = 0; this.peak = 1; this.beaconLit = false; this.longWay = false; this.routeLong = null; this.roofDone = false; this.hearthCovered = false; this.covering = false;
       this.blessing = 0; this.graves = 0; this.cap = 0; this.sg = null; this.posts = []; this.drops = []; this.did = 0; this.haul = {}; this.postSlots = []; this.shut = false; this.ending = null; this.gnawDown = false;
       this._lt = -1; this._lights = [];
-      this.snuffed = []; this.kept = {};   // a guest who left mid-run: the hero's whole state by the player's name, waiting for sim.rejoin()
+      this.snuffed = []; this.kept = Object.create(null);   // a guest who left mid-run: the hero's whole state by the player's name, waiting for sim.rejoin()
       this.alertT = [-99, -99]; this.tier = 0;
       this.allies = [];   // towers, soldiers: things enemies can target and hurt (tk 'ally'; each has x, y, r, dead and hurt(dmg, e))
       this.mods = (FoundingSim.mods || []).map(fn => fn(this)).filter(Boolean);   // feature modules (sim-*.js), see hook()
@@ -120,6 +120,7 @@ const FoundingSim = (() => {
     intent(pid, m) {
       const p = this.players.find(q => q.id === pid); if (!p || !m || typeof m.k !== 'string') return;
       if (this.paused && this.isPaused()) return;   // (held: the host's tab sends nothing, and a stray intent changes nothing)
+      if (this.st === 'live' && this.introActive && this.introActive() && m.k !== 'skipIntro') return;   // (the opening scene holds every hand but the skip vote)
       if (this.st === 'live' && this.hmap[pid] && this.hook('intent', this.hmap[pid], m)) return;
       if (this.st === 'camp') {
         if (m.k === 'pick') { if (D.HERO_IDS.includes(m.hero) && !this.players.some(q => q !== p && q.hero === m.hero)) { p.hero = m.hero; p.ready = false; this.lobby(); } }
@@ -134,7 +135,7 @@ const FoundingSim = (() => {
         case 'attack': { const e = this.enemyById(m.id); if (e && !h.dead && !e.under) { h.fetch = null; h.target = e; h.pending = null; h.path = null; h.chan = null; h.talk = null; } break; }
         case 'talk': h.fetch = null; this.talkTo(h, m.id); break;
         case 'fetch': if (num(m.x) && num(m.y) && !h.dead) { h.target = null; h.pending = null; h.auto = true; h.chan = null; h.talk = null; h.fetch = { x: m.x, y: m.y }; this.pathTo(h, m.x, m.y); } break;
-        case 'cast': if (!h.dead && SLOT[m.s] !== undefined) this.tryCast(h, m.s, m); break;
+        case 'cast': if (!h.dead && typeof m.s === 'string' && Object.prototype.hasOwnProperty.call(SLOT, m.s)) this.tryCast(h, m.s, m); break;
         case 'learn': this.learn(h, m.s); break;
         case 'buy': if (typeof m.up === 'string') this.buyUp(h, m.up); else if (typeof m.item === 'string') this.buyItem(h, m.item); break;
         case 'forge': this.forgeItems(h, m.a, m.b); break;
@@ -163,10 +164,15 @@ const FoundingSim = (() => {
       if (h) {   // the hero leaves the field, but everything she has is kept under the player's name (see rejoin)
         if (h.carry) this.dropCarry(h);
         h.chan = null; h.cast = null; h.pending = null; h.path = null; h.target = null; h.rcOn = false;
-        this.heroes.splice(this.heroes.indexOf(h), 1); delete this.hmap[pid]; for (const e of this.enemies) if (e.tgt === h) e.tgt = null;
+        this.heroes.splice(this.heroes.indexOf(h), 1); delete this.hmap[pid];
+        for (const e of this.enemies) { if (e.tgt === h) e.tgt = null; if (e.taunter === h) { e.taunter = null; e.tauntT = 0; } if (e.ai && e.ai.tgt === h) e.ai.tgt = null; }
+        for (const z of this.zones) if (z.owner === h) z.dead = true;   // (a banner left behind would keep calling enemies to an empty spot)
+        h.dash = null; h.fetch = null; h.talk = null; h.dig = null; h.gone = true;   // (gone: her queued echoes and recasts hold their fire)
+        if (this.child && this.child.follow === h) { this.child.st = 1; this.child.follow = null; this.markProps(); }
+        this.hook('leave', h);
         this.kept[this.nameKey(p.name)] = { h, oldId: pid, name: p.name };
       }
-      if (this.st === 'live' && !this.heroes.length) this.finish(false);
+      if (this.st === 'live' && !this.heroes.length) this.finish(!!this.ending);   // (the last one leaving during the end beat still wins)
     }
     nameKey(n) { return String(n || '').trim().toLowerCase(); }
     // a guest whose name matches a kept hero joins the running run again: the hero returns at the spring with all she had. Returns true.
@@ -176,7 +182,8 @@ const FoundingSim = (() => {
       const h = K.h; delete this.kept[k];
       this.players.push({ id: newId, name: K.name, hero: h.hero, ready: true });
       this.stats[newId] = this.stats[K.oldId] || { kills: 0, dmg: 0, heal: 0, dth: 0, gold: 0 }; if (K.oldId !== newId) delete this.stats[K.oldId];
-      h.id = newId; h.name = K.name; h.dead = false; h.respT = 0; h.hp = Math.max(h.hp, Math.round(h.max * 0.6)); h.invul = 3; h.stun = 0; h.rootT = 0; h.slowT = 0; h.rcCd = 0; h.dashCd = 0; h.dash = null; h.awayT = 0;
+      h.id = newId; h.name = K.name; h.dead = false; h.respT = 0; h.hp = Math.max(h.hp, Math.round(h.max * 0.6)); h.invul = 3; h.stun = 0; h.rootT = 0; h.slowT = 0; h.rcCd = 0; h.dashCd = 0; h.dash = null; h.awayT = 0; h.blessed = false; h.gone = false;
+      if (K.oldId !== newId) this.hook('rejoin', h, K.oldId);   // (what modules keep by her old id: tower shares, chain drops)
       const pt = this.nearestWalkable(M.P.spring[0] + 50, M.P.spring[1] - 30); h.x = pt[0]; h.y = pt[1]; h.dirty = true; h.lastSheet = -99;
       this.heroes.push(h); this.hmap[newId] = h; this.ev(['hu', h.id, Math.round(h.x), Math.round(h.y)]);
       this.sendSheet(h);
@@ -522,12 +529,12 @@ const FoundingSim = (() => {
     }
     pyroRoll(h) { const crit = this.rand() < this.critChance(h); this.streak(h, crit); return crit; }
     respawn(h, x, y, hpFrac, invul) {
-      h.dead = false; h.hp = Math.max(1, Math.round(h.max * hpFrac)); [h.x, h.y] = this.nearestWalkable(x, y); h.path = null; h.invul = invul || 0; h.target = null; h.dirty = true;
+      h.dead = false; h.blessed = false; h.dash = null; h.hp = Math.max(1, Math.round(h.max * hpFrac)); [h.x, h.y] = this.nearestWalkable(x, y); h.path = null; h.invul = invul || 0; h.target = null; h.dirty = true;   // (a raise before the blessing's own rising spends it)
       this.ev(['hu', h.id, h.x, h.y]);
       if (h.boons.bluebellbloom) { h.invul = Math.max(h.invul, 2); for (const o of this.heroes) if (!o.dead && hyp(o.x - h.x, o.y - h.y) < 250) this.heal(o, 40, { healMul: 1 }); this.ev(['bb', h.id, Math.round(h.x), Math.round(h.y)]); }
     }
     killHero(h) {
-      h.hp = 0; h.dead = true; h.deaths++; h.respT = Math.min(D.TUNE.respawnMax, D.TUNE.respawn + D.TUNE.respawnPer * (h.deaths - 1)); h.cast = null; h.pending = null; h.path = null; h.target = null; h.carry && this.dropCarry(h);
+      h.hp = 0; h.dead = true; h.dash = null; h.fetch = null; h.deaths++; h.respT = Math.min(D.TUNE.respawnMax, D.TUNE.respawn + D.TUNE.respawnPer * (h.deaths - 1)); h.cast = null; h.pending = null; h.path = null; h.target = null; h.carry && this.dropCarry(h);
       h.chan = null;
       if (this.blessing > 0) { this.blessing--; h.respT = 2.5; h.blessed = true; this.ev(['bl', h.id]); }   // The First Graves: once, a fallen hero rises by themselves
       for (const o of this.heroes) if (o !== h && !o.dead && o.boons.lastrites && hyp(o.x - h.x, o.y - h.y) < 500) { o.rage = 8; o.dirty = true; }
@@ -587,20 +594,21 @@ const FoundingSim = (() => {
     // the dash (the hotbar's Dash key, Space by default): a short burst toward the cursor on its own cooldown. It breaks a recall or a
     // channel, stops at anything solid, and the hero walks on to where it was going.
     startDash(h, x, y) {
-      if (h.dead || h.dash || h.dashCd > 0 || h.stun > 0 || h.rootT > 0 || h.lockT > 0 || (h.cast && !h.cast.mobile)) return;
+      if (h.dead || h.dash || h.dashCd > 0 || h.stun > 0 || h.rootT > 0 || h.lockT > 0 || (h.cast && !h.cast.mobile && h.cast.slot !== 4)) return;   // (a basic swing still winding up gives way to a dash)
       let dx = x - h.x, dy = y - h.y, d = hyp(dx, dy); if (d < 4) { dx = Math.cos(h.face || 0); dy = Math.sin(h.face || 0); d = 1; }
       const ux = dx / d, uy = dy / d; let L = 0;
       while (L + 8 <= DASH.dist && M.walkable(h.x + ux * (L + 8), h.y + uy * (L + 8), 12)) L += 8;
       if (L < 16) return;
       if (h.rcOn) this.recallCancel(h);
       const to = h.path && h.path.length ? h.path[h.path.length - 1] : null;
-      h.chan = null; h.pending = null; h.talk = null; h.path = null; h.face = Math.atan2(uy, ux);
+      if (h.cast && h.cast.slot === 4) h.cast = null;
+      h.chan = null; h.pending = null; h.dig = null; h.path = null; h.face = Math.atan2(uy, ux);   // (a walk to a giver goes on after: h.talk stays)
       h.dash = { ux, uy, left: L, v: DASH.dist / DASH.dur, to }; h.dashCd = DASH.cd; h.dirty = true;
       this.ev(['dsh', h.id, Math.round(h.x), Math.round(h.y), Math.round(h.x + ux * L), Math.round(h.y + uy * L)]);
     }
     stepDash(h, dt) {
       const o = h.dash, s = Math.min(o.left, o.v * dt); h.x += o.ux * s; h.y += o.uy * s; o.left -= s;
-      if (o.left <= 0.5) { h.dash = null; if (o.to) this.pathTo(h, o.to[0], o.to[1]); }
+      if (o.left <= 0.5) { h.dash = null; if (o.to && !h.path && !h.target && !h.pending && !h.chan) this.pathTo(h, o.to[0], o.to[1]); }   // (an order given during the dash wins over the old walk)
     }
     recallCancel(h) { if (!h.rcOn) return; h.rcOn = false; h.rcCd = Math.max(h.rcCd || 0, RECALL.cancelCd); h.dirty = true; this.ev(['rc', h.id, 0]); }
     recallArrive(h) {
@@ -736,7 +744,7 @@ const FoundingSim = (() => {
     release(h, s, a, pw) {
       if (h.dead) return; const i = SLOT[s];
       this.casts++; SK[h.hero + '.' + s].call(this, h, h.ranks[i], a, pw);
-      if (pw === 1 && h.S.echo && ++h.echoN % 4 === 0) this.after(0.7, () => { if (!h.dead && !(a.e && a.e.dead)) SK[h.hero + '.' + s].call(this, h, h.ranks[i], a, 0.5); });
+      if (pw === 1 && h.S.echo && ++h.echoN % 4 === 0) this.after(0.7, () => { if (!h.dead && !h.gone && !(a.e && a.e.dead)) SK[h.hero + '.' + s].call(this, h, h.ranks[i], a, 0.5); });
       if (s === 'r' && h.boons.bellows) for (let k = 0; k < 3; k++) if (h.ch[k] < h.chMax[k]) h.cdT[k] *= 0.5;
       if (s === 'r' && h.boons.capstoneward) for (const o of this.heroes) if (!o.dead && hyp(o.x - h.x, o.y - h.y) < 250) { o.shield = Math.max(o.shield, 35); o.shieldT = 6; o.dirty = true; }
       h.dirty = true;
@@ -928,7 +936,7 @@ const FoundingSim = (() => {
       switch (t.tk) {
         case 'camp': if (this.camp.hp > 0) { dmg = Math.max(1, Math.round(dmg * D.CAMP_TAKE)); this.camp.hp = Math.max(0, this.camp.hp - dmg); this.ev(['h', 2, 0, dmg, 0, Math.round(a ? a.cx : t.x), Math.round(a ? a.cy : t.y)]); } break;
         case 'pal': if (!this.pal) break; this.pal.hp -= dmg; this.ev(['h', 3, 0, dmg, 0, Math.round(t.x), Math.round(t.y)]); if (this.pal.hp <= 0) { this.pal = null; this.markProps(); this.ev(['pal', 0]); } break;
-        case 'cart': if (!a || hyp(a.cx - t.x, a.cy - t.y) < a.R + t.r + 10) { t.hp -= dmg; if (t.hp <= 0) { t.gone = true; this.ev(['cart', t.id, 0]); this.markProps(); } } break;
+        case 'cart': if (!a || hyp(a.cx - t.x, a.cy - t.y) < a.R + t.r + 10) { t.hp -= dmg; if (t.hp <= 0) { t.gone = true; this.ev(['cart', t.id, 0, Math.round(t.x), Math.round(t.y)]); this.markProps(); } } break;
         case 'smith': if (this.q.fire.st === 1 && (!a || hyp(a.cx - t.x, a.cy - t.y) < a.R + t.r + 10)) { t.hp -= dmg; this.markProps(); if (t.hp <= 0) { this.smith = null; this.fireFail(); } } break;
         case 'dig': if (this.dig && (!a || hyp(a.cx - t.x, a.cy - t.y) < a.R + 70)) { this.dig.prog = Math.max(0, this.dig.prog - 0.06); this.markProps(); } break;
         case 'wall': t.hp -= dmg; t.sh = 1; break;

@@ -16,7 +16,7 @@
     ballista: 'A slow heavy bolt. Elites and bosses first.',
   };
   let K = null, S = null;
-  const towers = new Map(), sol = new Map(), fxT = new Map(), corpses = [];
+  const towers = new Map(), sol = new Map(), fxT = new Map(), corpses = [], solGone = new Map();   // solGone: soldiers just gone from the snapshot, for their fall (events run a moment late)
   const SPIRE = DEF.SPIRE, spires = (DEF.SPIRES || []).map(d => ({ d, x: d.x, y: d.y, hitAt: -9, fireAt: -9, flags: 0, wk: 0, seen: false, seenT: 0, tl: null }));   // the Ash Spires (see sim-defence.js)
   const L = { last: performance.now(), down: false, over: null, placing: null, shift: false, sel: null, open: false, tab: 't', panel: null, sig: '', tsig: '', lastVis: null, baseVis: null, board: null, hover: null, msgT: 0, prev: 0, mini: 0 };
   const have = n => typeof Sound !== 'undefined' && Sound.has && Sound.has(n);
@@ -648,7 +648,8 @@ const sm = t => t * t * (3 - 2 * t);
         s.ti = r[1]; s.tx = r[2]; s.ty = r[3]; s.tf = r[4] / 10; if (r[5] < s.hp - 0.5) s.hit = 0.16; s.hp = r[5]; s.moving = !!(r[6] & 2); s.ur = (r[6] >> 2) & 63; s.chg = !!(r[6] & 256); s.lane = r[7];
         if (r[6] & 1 && s.flash <= 0) { kick(s, s.ti === 2 ? 0.35 : 0.25); if ((s.ti === 0 || s.ti === 3) && K.visAt(s.x, s.y, 10)) K.sndAt('fd-soldier-swing', s.x, s.y, { minGap: 0.12 }); }
       }
-      for (const id of sol.keys()) if (!seen.has(id)) sol.delete(id);
+      for (const [id, s] of sol) if (!seen.has(id)) { solGone.set(id, { s, at: S.T }); sol.delete(id); }
+      for (const [id, g] of solGone) if (S.T - g.at > 2) solGone.delete(id);
       // the squad's first knight carries the standard (and when they fall, the next takes it up)
       const first = new Map(); for (const s of sol.values()) if (s.ti === 0 && !(first.get(s.sq) < s.id)) first.set(s.sq, s.id);
       for (const s of sol.values()) s.bear = s.ti === 0 && first.get(s.sq) === s.id;
@@ -673,7 +674,7 @@ const sm = t => t * t * (3 - 2 * t);
         case 'twr': if (t) { t.ringAt = S.T; fxRingGold(t.x, t.y, ev[2]); sfxAt(t.x, t.y, null, 'fd-bell-ring', 'fd-sanctum'); } break;
         case 'twd': if (t) { t.hpPrev = 0; } fxDust(ev[2], ev[3], 18); K.burst(ev[2], ev[3] - 20, 10, { color: '#5c4128', spd: 140, dur: 0.8, size: 3.4, kind: 'dust', vy: -50, g: 160 }); K.shake(3, 0.25); sfxAt(ev[2], ev[3], { reach: 1.5 }, 'fd-tower-fall', 'fd-gate-break'); break;
         case 'twx': { const o = byId(ev[1]); if (o) { fxDust(ev[2], ev[3], 6); towers.delete(ev[1]); if (L.sel === ev[1]) L.sel = null; } break; }
-        case 'tws': { const o = byId(ev[1]); if (o) { K.burst(ev[2], ev[3] - 20, 8, { color: '#f0cf72', spd: 90, dur: 0.8, size: 2.4, kind: 'spark', vy: -50 }); K.ftxt(ev[2], ev[3] - 40, 'Sold', '#f0cf72', 11, 0.9); fxDust(ev[2], ev[3], 8); towers.delete(ev[1]); if (L.sel === ev[1]) L.sel = null; sfxAt(ev[2], ev[3], null, 'fd-sell'); } break; }
+        case 'tws': { K.burst(ev[2], ev[3] - 20, 8, { color: '#f0cf72', spd: 90, dur: 0.8, size: 2.4, kind: 'spark', vy: -50 }); K.ftxt(ev[2], ev[3] - 40, 'Sold', '#f0cf72', 11, 0.9); fxDust(ev[2], ev[3], 8); towers.delete(ev[1]); if (L.sel === ev[1]) L.sel = null; sfxAt(ev[2], ev[3], null, 'fd-sell'); break; }
         case 'twre': if (t) { t.bornAt = S.T; fxDust(t.x, t.y, 10); sfxAt(t.x, t.y, null, 'fd-post-plant', 'fd-setdown'); } break;
         case 'twno': if (ev[1] === S.myId) { K.say(ERR[ev[2]] || 'Cannot do that.'); } break;
       }
@@ -685,7 +686,7 @@ const sm = t => t * t * (3 - 2 * t);
         case 'sob': sfx('fd-march', 'fd-wave'); break;
         case 'sof': { const s = sol.get(ev[1]); if (s) { kick(s, 0.25); if (K.visAt(s.x, s.y, 10)) K.sndAt('fd-soldier-shot', s.x, s.y, { minGap: 0.12 }); fxArrow(s.x + (Math.cos(s.face) >= 0 ? 12 : -12), s.y - 24, ev[2], ev[3] - 6, 0.1, '255,236,190', 1.2, 14); } break; }
         case 'soh': { const s = sol.get(ev[1]); if (s) { kick(s, 0.35); if (K.visAt(s.x, s.y, 10)) K.sndAt('fd-soldier-heal', s.x, s.y, { minGap: 0.3 }); const x1 = ev[2], y1 = ev[3]; K.fxAdd({ dur: 0.45, draw(c) { const k = this.t / 0.45; K.glowAt(c, s.x + (x1 - s.x) * K.eo(k), s.y - 34 + (y1 - 12 - s.y + 34) * K.eo(k), 14, '255,240,170', 1 - k * 0.6); } }); K.burst(x1, y1 - 10, 4, { color: '#bff2c4', spd: 30, dur: 0.7, size: 2, kind: 'dot', vy: -36 }); } break; }
-        case 'sod': { const s = sol.get(ev[1]); if (s && corpses.length < 40) corpses.push({ ti: s.ti, ur: s.ur, x: s.x, y: s.y, dir: Math.cos(s.face) >= 0 ? 1 : -1, t: 0 }); K.burst(ev[2], ev[3] - 8, 6, { color: '#a89878', spd: 60, dur: 0.6, size: 3, kind: 'dust', vy: -20 }); sol.delete(ev[1]); break; }
+        case 'sod': { const s = sol.get(ev[1]) || (solGone.get(ev[1]) || {}).s; solGone.delete(ev[1]); if (s && corpses.length < 40) corpses.push({ ti: s.ti, ur: s.ur, x: s.x, y: s.y, dir: Math.cos(s.face) >= 0 ? 1 : -1, t: 0 }); K.burst(ev[2], ev[3] - 8, 6, { color: '#a89878', spd: 60, dur: 0.6, size: 3, kind: 'dust', vy: -20 }); sol.delete(ev[1]); break; }
         case 'soc': { const s = sol.get(ev[1]); if (s) kick(s, 0.25); K.burst(ev[2], ev[3] - 6, 9, { color: '#d9c9a0', spd: 140, dur: 0.45, size: 2.4, kind: 'spark' }); K.burst(ev[2], ev[3], 5, { color: '#a89878', spd: 70, dur: 0.6, size: 3, kind: 'dust', vy: -16 }); K.fxRing(ev[2], ev[3], 4, 34, 0.3, '240,225,190', 2); if (K.visAt(ev[2], ev[3], 10)) K.sndAt('fd-soldier-swing', ev[2], ev[3], { minGap: 0.1 }); break; }
         case 'sou': if (ev[1] === S.myId) sfx('fd-buy'); break;
       }
@@ -804,8 +805,8 @@ const sm = t => t * t * (3 - 2 * t);
     return 0;
   }
   const towerList = () => { const a = []; for (const t of towers.values()) a.push(t); return a; };
-  function startPlacing(kind) { L.placing = kind; L.sel = null; closeTp(); setOpen(false); K.snd('ui-open'); }
-  function cancelPlacing() { L.placing = null; }
+  function startPlacing(kind) { L.placing = kind; if (S) S.placing = kind; L.sel = null; closeTp(); setOpen(false); K.snd('ui-open'); }
+  function cancelPlacing() { L.placing = null; if (S) S.placing = null; }
   function towerAtPoint(wx, wy) {
     let best = null, bd = 1e9;
     for (const t of towers.values()) {
@@ -980,6 +981,7 @@ function lightsOut(add) {
     for (const sp of spires) if (sp.seen) add(sp.x, sp.y - 70, 66, 0.4 + 0.2 * sp.wk);   // (under the radius that opens the fog)
 }
   Founding.addLayer({
+    reset() { towers.clear(); sol.clear(); solGone.clear(); fxT.clear(); corpses.length = 0; L.sel = null; L.placing = null; L.down = false; L.over = null; if (L.open) setOpen(false); closeTp(); for (const sp of spires) { sp.seen = false; sp.seenT = 0; sp.flags = 0; sp.wk = 0; sp.hitAt = sp.fireAt = -9; } },
     init(kit) {
       K = kit; S = kit.S;
       window.addEventListener('keydown', ev => {

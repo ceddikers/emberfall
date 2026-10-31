@@ -342,6 +342,7 @@
 
   Founding.addLayer({
     init(kit) { K = kit; },
+    reset() { qx = {}; prevQ = {}; now = 0; lastT = null; Object.assign(fx, { bell: -9, ring: {}, hit: {}, stake: [-9, -9, -9, -9], lit: [-9, -9, -9], snuff: [-9, -9, -9], gather: {} }); smoke.length = 0; },
     event: ev,
     snap(m) {
       qx = m.qx || {}; const s = S();

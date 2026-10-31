@@ -153,7 +153,8 @@
       for (const e of raiders) if (e.qr && e.qr.qid === qid) { if (!e.dead) { e.dead = true; ev(['d', e.id, rd(e.x), rd(e.y), 0, 0, 0, 0]); } raiders.delete(e); }
     }
     function hurtThing(o, dmg, e) {
-      if (o.dead) return; o.hp -= dmg; o.hitT = sim.time; ev(['qxh', rd(o.x), rd(o.y - 14), rd(dmg)]);
+      if (o.dead || o.hp <= 0) return; o.hp -= dmg;   // (a fire put out stays alive to be relit: a blow already falling must not put it out twice)
+      o.hitT = sim.time; ev(['qxh', rd(o.x), rd(o.y - 14), rd(dmg)]);
       if (o.hp <= 0) { o.hp = 0; o.dead = true; if (o.onDie) o.onDie(); }
     }
     const thing = (x, y, r, hp, onDie) => { const o = { tk: 'ally', x, y, r, hp, max: hp, dead: false, hitT: -99, onDie, hurt(dmg, e) { hurtThing(o, dmg, e); } }; return o; };
@@ -350,7 +351,7 @@
         if (done.stakes) for (const e of sim.enemies) { if (e.dead || e.under || e.def.boss) continue; if (hyp(e.x - HEARTH[0], e.y - HEARTH[1]) < M.CAMP_R + T.stakes.slowR) sim.slowE(e, T.stakes.slow, 0.25); }
         if (done.watchfires && S.fires) for (const h of sim.heroes) { if (h.dead || h.hp >= h.max) continue; for (const f of S.fires.list) if (hyp(h.x - f.x, h.y - f.y) < T.fires.mendR) { h.hp = Math.min(h.max, h.hp + T.fires.mend * dt); break; } }
         if (S.ward && sim.camp.hp > 0) { const c = sim.camp; if (S.campHp !== undefined && c.hp < S.campHp) c.hp = Math.min(c.max, c.hp + (S.campHp - c.hp) * T.choice.ward); S.campHp = c.hp; }
-        if (S.raidCleanup === undefined && sim.wave >= 29) { S.raidCleanup = 1; for (const id of IDS) dismiss(id); }
+        if (sim.wave >= 29 && raiders.size) for (const id of IDS) dismiss(id);   // (every tick from then on: a raid set off late, at a fire nobody guards, never holds up the end)
         // boons that need the clock
         for (const h of sim.heroes) {
           if (h.dead) continue; const b = h.boons; if (!b || !Object.keys(b).length) continue; const q = st(h);

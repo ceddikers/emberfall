@@ -201,7 +201,7 @@ body:not(.in-founding) #fd-ways, body:not(.in-founding) #fd-world-hit { display:
     if (typeof Tip !== 'undefined') Tip.set(hit, tipHtml);
     hit.addEventListener('contextmenu', e => e.preventDefault());
     hit.addEventListener('mousemove', e => { const s = S(), r = cv().getBoundingClientRect(); s.mouse.sx = e.clientX - r.left; s.mouse.sy = e.clientY - r.top; const w = mouseWorld(); s.mouse.wx = w[0]; s.mouse.wy = w[1]; });
-    hit.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); if (hover) activate(hover); });
+    hit.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); const c = cv(); if (c) c.dispatchEvent(new MouseEvent('mousedown', e)); });   // (the field's own handler decides: a tower being placed, a ping, a right-click to take)
     hit.addEventListener('wheel', e => { e.preventDefault(); cv().dispatchEvent(new WheelEvent('wheel', e)); }, { passive: false });
     panel.addEventListener('mousedown', e => e.stopPropagation()); panel.addEventListener('contextmenu', e => e.preventDefault());
     panel.addEventListener('wheel', e => e.stopPropagation(), { passive: true });
@@ -257,6 +257,7 @@ body:not(.in-founding) #fd-ways, body:not(.in-founding) #fd-world-hit { display:
   // ---------------------------------------------------------------- the layer
   const LAYER = {
     init(kit) { K = kit; },
+    reset() { seen.fill(false); flash.fill(-9); born.clear(); known.clear(); goneAt.clear(); snapT = 0; snapTm = 0; litWas = 0; hover = null; closePicker(); },
     snap(m) { const s = S(); snapT = s.T; snapTm = m.tm; },
     event(ev) {
       const tag = ev[0], s = S();

@@ -564,7 +564,9 @@ class Kit {
         this.cast = null;
         this.lockUntil = now + ENGINE.CAST_LOCK_EXTRA;
         this._fromCast = true;   // (a raise from a finished cast is the light raise sickness: raise())
-        try { this.resolve(c.ab, this.needsTarget(c.ab) ? (this.env.target(c.ab) || c.target) : null); } finally { this._fromCast = false; }
+        // a raise lands on the one it was started on while they are still down (a selection moved mid-cast must not turn it into a heal on someone else)
+        const keep = c.ab.allowDead && typeof c.target === 'number' && this.env.isDead && this.env.isDead(c.target);
+        try { this.resolve(c.ab, this.needsTarget(c.ab) ? (keep ? c.target : (this.env.target(c.ab) || c.target)) : null); } finally { this._fromCast = false; }
       }
     }
     for (const slot of ['queued', 'queuedO']) {
