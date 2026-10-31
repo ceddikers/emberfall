@@ -21,75 +21,75 @@ const SPEC_TOLERANCE = 0.05;  // a specialization's pro DPS may differ this much
 // Normal is meant to take a real group several wipes, so a bot party only has to clear one run in RAID_RUNS
 const RAID_RUNS = 3;
 // bot raids: every boss, and every spec somewhere, with a fixed line-up so the result doesn't depend on a random spec
-const RAIDS = [   // [boss name, boss id, tank, healer, two DPS, optional 'gear=...' (bot-raid.js buildGear levels; set 2 Normal runs as a party with all of set 1 cleared: gear=post1), optional 'runs=N' (more tries than RAID_RUNS)]
-  ['Grubnak', 'grubnak', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm'],
-  ['Skitterra', 'skitterra', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer'],
-  ['Volkar', 'volkar', 'bloodreaver:berserker', 'chronomancer:accelerant', 'ranger:venomstrike', 'pyromancer:base'],
-  ['Volkar', 'volkar', 'bloodreaver:hemomancer', 'cleric:inquisitor', 'shadowblade:nightstalker', 'pyromancer:sigilmancer'],
-  ['the Hollow King', 'hollowking', 'bastion:sentinel', 'grovekeeper:lifebinder', 'ranger:base', 'pyromancer:cataclysm'],
-  ['the Hollow King', 'hollowking', 'bastion:crusader', 'chronomancer:echoist', 'shadowblade:base', 'ranger:sharpshooter'],
-  ['the Hollow King', 'hollowking', 'runeguard:spellwarden', 'cleric:base', 'ranger:venomstrike', 'shadowblade:nightstalker'],
+const RAIDS = [   // [boss name, boss id, tank, healer, two DPS, optional 'gear=...' (bot-raid.js buildGear levels: each set's Normal tuning gear, set 1 gear=fresh, set 2 gear=post1 as a party with all of set 1 cleared), optional 'runs=N' (more tries than RAID_RUNS)]
+  ['Grubnak', 'grubnak', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=fresh'],
+  ['Skitterra', 'skitterra', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=fresh'],
+  ['Volkar', 'volkar', 'bloodreaver:berserker', 'chronomancer:accelerant', 'ranger:venomstrike', 'pyromancer:base', 'gear=fresh'],
+  ['Volkar', 'volkar', 'bloodreaver:hemomancer', 'cleric:inquisitor', 'shadowblade:nightstalker', 'pyromancer:sigilmancer', 'gear=fresh'],
+  ['the Hollow King', 'hollowking', 'bastion:sentinel', 'grovekeeper:lifebinder', 'ranger:base', 'pyromancer:cataclysm', 'gear=fresh'],
+  ['the Hollow King', 'hollowking', 'bastion:crusader', 'chronomancer:echoist', 'shadowblade:base', 'ranger:sharpshooter', 'gear=fresh'],
+  ['the Hollow King', 'hollowking', 'runeguard:spellwarden', 'cleric:base', 'ranger:venomstrike', 'shadowblade:nightstalker', 'gear=fresh'],
   // the advanced classes (classes-a): each spec somewhere
-  ['Grubnak', 'grubnak', 'bastion:sentinel', 'cleric:base', 'thermist:base', 'driftblade:base'],   // (the base Bastion cleared only 2 of 8 here, before and after the class rework: a marginal party, not a fault)
-  ['Skitterra', 'skitterra', 'runeguard:base', 'grovekeeper:base', 'thermist:pendulum', 'driftblade:orbit', 'runs=6'],   // (both advanced DPS together again since the Driftblade bot keeps moving; it clears about half the time, 7 of 12 before the 2026-10-26 pass and 6 of 12 after: six tries)
-  ['Volkar', 'volkar', 'bastion:base', 'cleric:base', 'thermist:zenith', 'driftblade:comet'],   // (with the reworked Volkar, an Accelerant plus two advanced DPS was too tight)
-  ['the Hollow King', 'hollowking', 'runeguard:base', 'cleric:aegis', 'thermist:base', 'driftblade:base'],
+  ['Grubnak', 'grubnak', 'bastion:sentinel', 'cleric:base', 'thermist:base', 'driftblade:base', 'gear=fresh'],   // (the base Bastion cleared only 2 of 8 here, before and after the class rework: a marginal party, not a fault)
+  ['Skitterra', 'skitterra', 'runeguard:base', 'grovekeeper:base', 'thermist:pendulum', 'driftblade:orbit', 'gear=fresh', 'runs=6'],   // (both advanced DPS together again since the Driftblade bot keeps moving; it clears about half the time, 7 of 12 before the 2026-10-26 pass and 6 of 12 after: six tries)
+  ['Volkar', 'volkar', 'bastion:base', 'cleric:base', 'thermist:zenith', 'driftblade:comet', 'gear=fresh'],   // (with the reworked Volkar, an Accelerant plus two advanced DPS was too tight)
+  ['the Hollow King', 'hollowking', 'runeguard:base', 'cleric:aegis', 'thermist:base', 'driftblade:base', 'gear=fresh'],
   // Alembist (classes-b): the base kit and each spec healing a boss
-  ['Grubnak', 'grubnak', 'bastion:base', 'alembist:base', 'ranger:base', 'pyromancer:base'],
-  ['Skitterra', 'skitterra', 'bastion:sentinel', 'alembist:volatile', 'ranger:base', 'shadowblade:base'],
-  ['Volkar', 'volkar', 'bastion:base', 'alembist:apothecary', 'ranger:base', 'pyromancer:base'],
-  ['the Hollow King', 'hollowking', 'bloodreaver:base', 'alembist:base', 'shadowblade:bladedancer', 'pyromancer:base', 'runs=6'],   // (this line-up clears the Hollow King about 60%, 15 of 24 on 2026-10-31: six tries)
+  ['Grubnak', 'grubnak', 'bastion:base', 'alembist:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['Skitterra', 'skitterra', 'bastion:sentinel', 'alembist:volatile', 'ranger:base', 'shadowblade:base', 'gear=fresh'],
+  ['Volkar', 'volkar', 'bastion:base', 'alembist:apothecary', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['the Hollow King', 'hollowking', 'bloodreaver:base', 'alembist:base', 'shadowblade:bladedancer', 'pyromancer:base', 'gear=fresh', 'runs=6'],   // (this line-up clears the Hollow King about 60%, 15 of 24 on 2026-10-31: six tries)
   // Gorgemaw and Oathbroker (tanks-2): the base kit and each spec tanking a boss
-  ['Grubnak', 'grubnak', 'gorgemaw:base', 'cleric:base', 'ranger:base', 'pyromancer:base'],
-  ['Skitterra', 'skitterra', 'gorgemaw:glutton', 'grovekeeper:base', 'ranger:base', 'shadowblade:base'],
-  ['Volkar', 'volkar', 'gorgemaw:gizzard', 'cleric:base', 'ranger:base', 'pyromancer:base'],
-  ['Grubnak', 'grubnak', 'oathbroker:guarantor', 'cleric:base', 'ranger:base', 'pyromancer:base'],
-  ['Volkar', 'volkar', 'oathbroker:base', 'grovekeeper:base', 'ranger:base', 'pyromancer:base'],
-  ['the Hollow King', 'hollowking', 'oathbroker:collector', 'cleric:base', 'shadowblade:base', 'pyromancer:base'],
-  ['the Hollow King', 'hollowking', 'gorgemaw:base', 'grovekeeper:base', 'ranger:base', 'pyromancer:base'],
+  ['Grubnak', 'grubnak', 'gorgemaw:base', 'cleric:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['Skitterra', 'skitterra', 'gorgemaw:glutton', 'grovekeeper:base', 'ranger:base', 'shadowblade:base', 'gear=fresh'],
+  ['Volkar', 'volkar', 'gorgemaw:gizzard', 'cleric:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['Grubnak', 'grubnak', 'oathbroker:guarantor', 'cleric:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['Volkar', 'volkar', 'oathbroker:base', 'grovekeeper:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['the Hollow King', 'hollowking', 'oathbroker:collector', 'cleric:base', 'shadowblade:base', 'pyromancer:base', 'gear=fresh', 'runs=8'],   // (this line-up clears the Hollow King about a third of the time, 4 of 12 on 2026-10-31 after the talent retune: eight tries)
+  ['the Hollow King', 'hollowking', 'gorgemaw:base', 'grovekeeper:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
 
   // Ironpalm (the combo-paced tank): the base kit and each spec tanking a boss
-  ['Grubnak', 'grubnak', 'ironpalm:base', 'cleric:base', 'ranger:base', 'pyromancer:base'],
-  ['Skitterra', 'skitterra', 'ironpalm:stillwater', 'grovekeeper:base', 'ranger:base', 'shadowblade:base'],
-  ['Volkar', 'volkar', 'ironpalm:avalanche', 'cleric:base', 'ranger:base', 'pyromancer:base'],
-  ['the Hollow King', 'hollowking', 'ironpalm:base', 'cleric:aegis', 'ranger:base', 'pyromancer:base'],
+  ['Grubnak', 'grubnak', 'ironpalm:base', 'cleric:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['Skitterra', 'skitterra', 'ironpalm:stillwater', 'grovekeeper:base', 'ranger:base', 'shadowblade:base', 'gear=fresh'],
+  ['Volkar', 'volkar', 'ironpalm:avalanche', 'cleric:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['the Hollow King', 'hollowking', 'ironpalm:base', 'cleric:aegis', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
   // Threadweaver and Marionettist (classes-c): the base kit and each spec, and the two together
-  ['Grubnak', 'grubnak', 'bastion:base', 'threadweaver:base', 'ranger:base', 'pyromancer:base'],
-  ['Volkar', 'volkar', 'bastion:base', 'threadweaver:loomwright', 'ranger:base', 'pyromancer:base'],
-  ['the Hollow King', 'hollowking', 'bloodreaver:base', 'threadweaver:shears', 'shadowblade:base', 'pyromancer:base'],
-  ['Grubnak', 'grubnak', 'bastion:base', 'cleric:base', 'marionettist:base', 'ranger:base'],
-  ['Skitterra', 'skitterra', 'runeguard:base', 'grovekeeper:base', 'marionettist:cuttingline', 'shadowblade:base'],
-  ['the Hollow King', 'hollowking', 'bastion:base', 'cleric:aegis', 'marionettist:understudy', 'ranger:base'],
+  ['Grubnak', 'grubnak', 'bastion:base', 'threadweaver:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['Volkar', 'volkar', 'bastion:base', 'threadweaver:loomwright', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['the Hollow King', 'hollowking', 'bloodreaver:base', 'threadweaver:shears', 'shadowblade:base', 'pyromancer:base', 'gear=fresh'],
+  ['Grubnak', 'grubnak', 'bastion:base', 'cleric:base', 'marionettist:base', 'ranger:base', 'gear=fresh'],
+  ['Skitterra', 'skitterra', 'runeguard:base', 'grovekeeper:base', 'marionettist:cuttingline', 'shadowblade:base', 'gear=fresh'],
+  ['the Hollow King', 'hollowking', 'bastion:base', 'cleric:aegis', 'marionettist:understudy', 'ranger:base', 'gear=fresh'],
   // set 2: Vhalgrath, the Ember Wyrm
   ['Vhalgrath', 'wyrm', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post1'],
   ['Vhalgrath', 'wyrm', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1'],
   // set 2: Hrimgar, the Frost Titan
   ['Hrimgar', 'titan', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post1'],
   ['Hrimgar', 'titan', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post1', 'runs=8'],   // (this line-up clears Hrimgar about a third of the time, 10 of 30 after the 2026-10-26 pass: eight tries keep a chance miss rare)
-  ['Volkar', 'volkar', 'bastion:base', 'threadweaver:base', 'marionettist:base', 'pyromancer:base'],
+  ['Volkar', 'volkar', 'bastion:base', 'threadweaver:base', 'marionettist:base', 'pyromancer:base', 'gear=fresh'],
   // Gloomsworn (class 18): the base kit and each spec tanking a boss (a Hollow's saves: tools/hollow-test.js)
-  ['Grubnak', 'grubnak', 'gloomsworn:base', 'cleric:base', 'ranger:base', 'pyromancer:base'],
-  ['Skitterra', 'skitterra', 'gloomsworn:duskward', 'grovekeeper:base', 'ranger:base', 'shadowblade:base'],
-  ['Volkar', 'volkar', 'gloomsworn:duskreaver', 'cleric:base', 'ranger:base', 'pyromancer:base'],
-  ['the Hollow King', 'hollowking', 'gloomsworn:base', 'alembist:base', 'ranger:base', 'pyromancer:base'],
+  ['Grubnak', 'grubnak', 'gloomsworn:base', 'cleric:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['Skitterra', 'skitterra', 'gloomsworn:duskward', 'grovekeeper:base', 'ranger:base', 'shadowblade:base', 'gear=fresh'],
+  ['Volkar', 'volkar', 'gloomsworn:duskreaver', 'cleric:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['the Hollow King', 'hollowking', 'gloomsworn:base', 'alembist:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
   // Thresher (class 19): the base kit and each spec as the damage dealer
-  ['Grubnak', 'grubnak', 'bastion:base', 'cleric:base', 'thresher:base', 'pyromancer:base'],
-  ['Skitterra', 'skitterra', 'bastion:base', 'grovekeeper:base', 'thresher:dancer', 'ranger:base'],
-  ['Volkar', 'volkar', 'bastion:base', 'cleric:base', 'thresher:phantom', 'pyromancer:base'],
-  ['the Hollow King', 'hollowking', 'bastion:base', 'cleric:base', 'thresher:base', 'ranger:base'],
+  ['Grubnak', 'grubnak', 'bastion:base', 'cleric:base', 'thresher:base', 'pyromancer:base', 'gear=fresh'],
+  ['Skitterra', 'skitterra', 'bastion:base', 'grovekeeper:base', 'thresher:dancer', 'ranger:base', 'gear=fresh'],
+  ['Volkar', 'volkar', 'bastion:base', 'cleric:base', 'thresher:phantom', 'pyromancer:base', 'gear=fresh'],
+  ['the Hollow King', 'hollowking', 'bastion:base', 'cleric:base', 'thresher:base', 'ranger:base', 'gear=fresh'],
   // Tidecaller (class 20): the base kit and each spec healing a boss
-  ['Grubnak', 'grubnak', 'bastion:base', 'tidecaller:base', 'ranger:base', 'pyromancer:base'],
-  ['Skitterra', 'skitterra', 'bastion:base', 'tidecaller:springtide', 'ranger:base', 'shadowblade:base', 'runs=12'],   // (this line-up clears Skitterra about a quarter of the time at base gear: twelve tries)
-  ['Volkar', 'volkar', 'bastion:base', 'tidecaller:undertow', 'ranger:base', 'pyromancer:base'],
+  ['Grubnak', 'grubnak', 'bastion:base', 'tidecaller:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['Skitterra', 'skitterra', 'bastion:base', 'tidecaller:springtide', 'ranger:base', 'shadowblade:base', 'gear=fresh', 'runs=12'],   // (this line-up clears Skitterra about a quarter of the time at base gear: twelve tries)
+  ['Volkar', 'volkar', 'bastion:base', 'tidecaller:undertow', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
   // Lanternkeeper (class 21): the base kit and each spec healing a boss
-  ['Grubnak', 'grubnak', 'bastion:base', 'lanternkeeper:base', 'ranger:base', 'pyromancer:base'],
-  ['Skitterra', 'skitterra', 'bastion:base', 'lanternkeeper:beacon', 'ranger:base', 'shadowblade:base', 'runs=20'],   // (this line-up clears Skitterra about 15% at base gear: twenty tries, so a dry run is rare)
-  ['Volkar', 'volkar', 'bastion:base', 'lanternkeeper:wayfarer', 'ranger:base', 'pyromancer:base'],
+  ['Grubnak', 'grubnak', 'bastion:base', 'lanternkeeper:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['Skitterra', 'skitterra', 'bastion:base', 'lanternkeeper:beacon', 'ranger:base', 'shadowblade:base', 'gear=fresh', 'runs=20'],   // (this line-up clears Skitterra about 15% at base gear: twenty tries, so a dry run is rare)
+  ['Volkar', 'volkar', 'bastion:base', 'lanternkeeper:wayfarer', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
   // Kenseier (class 22): the base kit and each spec tanking a boss
-  ['Grubnak', 'grubnak', 'kenseier:base', 'cleric:base', 'ranger:base', 'pyromancer:base'],
-  ['Skitterra', 'skitterra', 'kenseier:deathblade', 'grovekeeper:base', 'ranger:base', 'shadowblade:base'],
-  ['Volkar', 'volkar', 'kenseier:warden', 'cleric:base', 'ranger:base', 'pyromancer:base'],
-  ['the Hollow King', 'hollowking', 'kenseier:base', 'alembist:base', 'ranger:base', 'pyromancer:base'],
+  ['Grubnak', 'grubnak', 'kenseier:base', 'cleric:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['Skitterra', 'skitterra', 'kenseier:deathblade', 'grovekeeper:base', 'ranger:base', 'shadowblade:base', 'gear=fresh'],
+  ['Volkar', 'volkar', 'kenseier:warden', 'cleric:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
+  ['the Hollow King', 'hollowking', 'kenseier:base', 'alembist:base', 'ranger:base', 'pyromancer:base', 'gear=fresh'],
 ];
 // set 2: Azerath, the Sunken Archmage (Boss VII)
 RAIDS.push(

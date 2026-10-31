@@ -671,18 +671,20 @@ const SPECS = {
       focus: 'Steady damage from anywhere. No positionals to chase, and Blade Fury spins through everything around you, but a lower peak.',
       passive: { name: 'Whirling Edge', desc: 'Your positionals always land, wherever you stand. Shadowstep becomes Blade Fury, a spinning flurry. Tempo: an Eviscerate at exactly 5 points, with no point spilled since your last one, adds a Tempo (up to 3); at 3 your next Blade Fury is a Flourish. A spilled point loses them all. Smoke Bomb readies both Blade Furies.' },
       gaugeTip: 'Strike gives 2 points (your positionals always land), Blade Fury 1. Eviscerate spends every point and hits for {d:115} more for each, with a {d:160} bonus at 5. A sixth point is lost, and so is your Tempo. The pips under the moons are Tempo.',
+      // (a lower peak and little to chase, which a raid's dodging and downtime cost it more than the dummy shows: it aims above its class here so its raid damage lands level)
+      balance: 1.11,
       build: () => ({
-        potMult: 0.81,
+        potMult: 0.88,
         positionalAlways: () => true,
         abilities: {
           step: {
             id: 'fury', replaces: 'step', name: 'Blade Fury', type: 'ogcd', target: 'enemy', range: SPEC_MELEE, charges: 2, cd: 15, anim: 'attack',
-            desc: 'Spin through everything around you: {d:260} and +1 combo point. Two charges. At 3 Tempo it is a Flourish instead: {d:650}, spending the Tempo.',
+            desc: 'Spin through everything around you: {d:260} and +1 combo point. Two charges. At 3 Tempo it is a Flourish instead: {d:1000}, spending the Tempo.',
             glow: k => k.stacks('tempo') >= 3 || (k.g.combo === 4 && !k.g.spilled),
             effect(k) {
               const fl = k.stacks('tempo') >= 3;
               if (fl) { k.clear('tempo'); k.fx('empower'); if (k.talent('shadowblade_encore')) k.buff('tempo', 60, {}, 3, 1); }   // (Encore, spec row VI: one Tempo stays)
-              k.damage(fl ? (k.talent('shadowblade_encore') ? 1250 : 650) : 260, { ab: this }); bladeCombo(k, k.perk('shadowblade_a2') ? 2 : 1); bladeStep(k, this);   // (Encore: the Flourish hits harder too)
+              k.damage(fl ? (k.talent('shadowblade_encore') ? 2000 : 1000) : 260, { ab: this }); bladeCombo(k, k.perk('shadowblade_a2') ? 2 : 1); bladeStep(k, this);   // (Encore: the Flourish hits harder too)
               if (k.perk('shadowblade_a4')) k.reduceCooldown('fury', 2);   // (the enhancement of Shadowstep's True North, which a Bladedancer never needs: it recharges sooner)
             },
             fx: { type: 'slash', color: '#e0c8ff', r: 60, span: 6.28 },
@@ -1008,7 +1010,7 @@ Object.assign(SPECS, {
           flare: { desc: '2s cast: a burst of fire for {d:400}. Turns the dial 2 toward Blaze. At +5 it\'s instant, always crits and lights a Corona, keeping you at the edge. The third leaves you On the Brink: if your next spell is fire too, you overheat.' },
           lance: { desc: '2s cast: a lance of ice for {d:400}. Turns the dial 2 toward Rime. At -5 it\'s instant, always crits and lights a Corona, keeping you at the edge. The third leaves you On the Brink: if your next spell is frost too, you get frostbite.' },
           equil: {
-            id: 'sunset', replaces: 'equil', icon: 'equil', name: 'Sunset', type: 'ogcd', target: 'self', cd: k => (k.talent('thermist_solarwind') ? 22 : 30), anim: 'cast',   // (Equilibrium's icon until thermist/sunset is painted, docs/art/spec-icons.md)
+            id: 'sunset', replaces: 'equil', icon: 'equil', name: 'Sunset', type: 'ogcd', target: 'self', cd: k => (k.talent('thermist_solarwind') ? 18 : 30), anim: 'cast',   // (Equilibrium's icon until thermist/sunset is painted, docs/art/spec-icons.md)
             desc: 'Every Corona you hold falls on the target as a star, {d:170} each. Then the dial snaps back to 0 behind a shield: {s:70} for every step it fell. The swing is kept, so your next spell across 0 still sets off a Thermal Shock (without the Corona). It also clears On the Brink.',
             glow: k => bossCasting(k) && (thermAt(k, 3) || k.stacks('corona') >= 2),
             effect(k) { thermSunset(k, this); },
@@ -1026,10 +1028,12 @@ Object.assign(SPECS, {
       blurb: 'Round and round, a little closer every time. The hawk never lands.',
       focus: 'Smooth circles. Circling your target builds Orbit, at full Orbit your sabre cuts on its own while you keep moving, and every whole loop ends in a diving strike.',
       passive: { name: 'Circling Hawk', desc: 'Every radian you circle round your target at close range adds a stack of Orbit (up to 5; they fade 5s after you stop circling). Hook Turn swings you half a circle: 3 stacks at once. At 5, Carve strikes on its own every 1.4s while you move. Full Circle: every whole loop you fly round it without stopping ends in a dive for {d:70} (up to 30% more with Drift) that gives 10 Drift. A Hook Turn is half a loop.' },
+      // (it must stay close and keep circling, which a raid denies it more than the dummy does: it aims above its class here so its raid damage lands level)
+      balance: 1.15,
       build: base => {
         const hookBase = base.abilities.find(a => a.id === 'hook');
         return {
-          potMult: 0.54, orbit: true,
+          potMult: 0.54 * 1.15, orbit: true,
           abilities: {
             hook: {
               desc: 'Swing round your target to its far side with a cut for {d:260}, up to 40% stronger with Drift. Above 70 Drift it always crits. Gives 15 Drift and gives back a dash charge. Half a circle: it gives 3 Orbit and counts as half a loop toward Full Circle.',

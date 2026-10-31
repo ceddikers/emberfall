@@ -48,8 +48,9 @@
 
 const VOLKAR = {
   id: 'volkar', name: 'Volkar', title: 'The Storm Titan',
-  hp: { normal: 3800000, hard: 3400000 },   // (Hard 4.6M before 2026-10-27; 4.4M until the Storm Unbound healed three bars, 2026-10-28)
-  hardDmg: 1.06,   // (1.02 until the heal: 96 runs HUMAN=dps GEAR=mid about 30% a pull, mean clear 556 s of 607; perfect bots 69%; Hard's damage multiplier, fight.js default 1.25, tuned for a human party rather than perfect bots, CLAUDE.md)
+  normalDmg: 1.08,   // (Normal's damage multiplier, fight.js default 1; 2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven))
+  hp: { normal: 4220000, hard: 3840000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 3800000 / 3400000; Hard 4.6M before 2026-10-27; 4.4M until the Storm Unbound healed three bars, 2026-10-28)
+  hardDmg: 1.23,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.06; 1.02 until the heal: 96 runs HUMAN=dps GEAR=mid about 30% a pull, mean clear 556 s of 607; perfect bots 69%; Hard's damage multiplier, fight.js default 1.25, tuned for a human party rather than perfect bots, CLAUDE.md)
   autoDmg: { normal: 1450, hard: 1550 },
   enrage: { normal: 592, hard: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
   enrageName: 'Skybreak',

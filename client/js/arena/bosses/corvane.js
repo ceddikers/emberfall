@@ -48,8 +48,9 @@
 
 const CORVANE = {
   id: 'corvane', name: 'Corvane', title: 'the Unburied Blade',
-  hp: { normal: 5450000, hard: 5125000 },   // (Normal 5.9M before 2026-10-27)
-  hardDmg: 1.30,   // (Hard's damage multiplier; fight.js default 1.25: 1.17 from 2026-10-27's retune for a human party; 1.33 before that, and before the 2026-10-26 fun pass, 1.42 before that: a numbers bump, part of that difficulty lives in the Hard-only skill moves below)
+  normalDmg: 1.1,   // (Normal's damage multiplier, fight.js default 1; 2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven))
+  hp: { normal: 7440000, hard: 7155000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 5450000 / 5125000; Normal 5.9M before 2026-10-27)
+  hardDmg: 1.66,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.3; Hard's damage multiplier; fight.js default 1.25: 1.17 from 2026-10-27's retune for a human party; 1.33 before that, and before the 2026-10-26 fun pass, 1.42 before that: a numbers bump, part of that difficulty lives in the Hard-only skill moves below)
   autoDmg: { normal: 2300, hard: 2050 },
   enrage: { normal: 590, hard: 585 },   // the cast starts here and lands 8 s later (9:58 / 9:48: a minute after the script's end, 45 s on Hard)
   enrageName: 'Last Light of the Pass',

@@ -40,13 +40,15 @@ function loadGame() {
 // ------------------------------------------------------------------------------------------------------------ worker
 if (process.argv[2] === '--worker') {
   loadGame();
+  // bots hold talents, the strongest build for the boss's set (combat/bot-builds.js); BOT_TALENTS=off plays base kits, BOT_TALENTS=<file> sets them
+  Object.assign(global, load('combat/talents.js'), ...(process.env.BOT_TALENTS ? [] : [load('combat/bot-builds.js')]));
   Object.assign(global, load('combat/actor.js'), load('arena/fight.js'), load('arena/bots.js'), load('arena/scoring.js'), load('arena/raid-host.js'));
   const { buildGear } = require('./lib/bot-gear.js');
   const DEFS = {};
   const dir = path.join(__dirname, '../client/js/arena/bosses');
   for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.js'))) for (const v of Object.values(load('arena/bosses/' + f))) if (v && v.id && v.name) DEFS[v.id] = v;
   let GEARSET = null;
-  const BOT_TALENTS = process.env.BOT_TALENTS ? JSON.parse(fs.readFileSync(process.env.BOT_TALENTS, 'utf8')) : null;   // (BOT_TALENTS=<file.json>: { "class" or "class:spec": [talent ids] } gives the bots those talents; off, they play the base kit)
+  const BOT_TALENTS = process.env.BOT_TALENTS && process.env.BOT_TALENTS !== 'off' ? JSON.parse(fs.readFileSync(process.env.BOT_TALENTS, 'utf8')) : null;   // (BOT_TALENTS=<file.json>: { "class" or "class:spec": [talent ids] } gives the bots those talents; off, they play the base kit)
   if (BOT_TALENTS) {
     const ow = RaidHost.prototype.botWorld;
     RaidHost.prototype.botWorld = function (bot) { const w = ow.call(this, bot), t = new Set(BOT_TALENTS[bot.spec ? `${bot.cls.id}:${bot.spec}` : bot.cls.id] || []); w.talents = () => t; return w; };
@@ -55,7 +57,13 @@ if (process.argv[2] === '--worker') {
   RaidHost.prototype.allPlayers = function () { return orig.call(this).map(p => (p.bot && GEARSET ? Object.assign(p, { gear: GEARSET.sets[p.id - 1000].host }) : p)); };
   process.on('message', (job) => {
     const hpMult = Number(process.env.BOSS_HP) || 1;   // (BOSS_HP=1.2: the boss has 20% more health on both difficulties, for finding a retune; off, unchanged)
-    const def = hpMult === 1 ? DEFS[job.boss] : Object.assign({}, DEFS[job.boss], { hp: typeof DEFS[job.boss].hp === 'object' ? Object.fromEntries(Object.entries(DEFS[job.boss].hp).map(([k, v]) => [k, Math.round(v * hpMult)])) : Math.round(DEFS[job.boss].hp * hpMult) });
+    let def = hpMult === 1 ? DEFS[job.boss] : Object.assign({}, DEFS[job.boss], { hp: typeof DEFS[job.boss].hp === 'object' ? Object.fromEntries(Object.entries(DEFS[job.boss].hp).map(([k, v]) => [k, Math.round(v * hpMult)])) : Math.round(DEFS[job.boss].hp * hpMult) });
+    const tune = process.env.TUNE && JSON.parse(fs.readFileSync(process.env.TUNE, 'utf8'))[job.boss + ':' + job.mode];   // (TUNE=<file.json>: { "boss:mode": { hp, dmg } } multiplies that difficulty's health and damage multiplier, for finding a retune)
+    if (tune) {
+      const hp = typeof def.hp === 'object' ? Object.assign({}, def.hp, { [job.mode]: Math.round(def.hp[job.mode] * (tune.hp || 1)) }) : Math.round(def.hp * (tune.hp || 1));
+      const k = job.mode === 'hard' ? 'hardDmg' : 'normalDmg';
+      def = Object.assign({}, def, { hp, [k]: (def[k] ?? (job.mode === 'hard' ? 1.25 : 1)) * (tune.dmg || 1) });
+    }
     GEARSET = buildGear(job.levels, job.comp);
     const pulls = [];
     for (let r = 0; r < job.runs; r++) {

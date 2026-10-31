@@ -830,7 +830,7 @@ Object.assign(PRO, {
     // Dead Centre (a Pendulum talent): Equilibrium keeps the Momentum alive when it is about to lapse
     if (k.talent('thermist_deadcentre') && ready(k, 'equil') && weaveOk(k) && (k.stacks('momentum') < 4 || k.remaining('momentum') < 2.5)) return I(k, 'equil');
     // Zenith with Solar Wind: Sunset on a full Corona (the stars), then light a fresh one at the edge
-    if (k.def.corona && ready(k, 'equil') && weaveOk(k) && k.stacks('corona') >= 3 && k.talent('thermist_solarwind')) return I(k, 'equil');
+    if (k.def.corona && ready(k, 'equil') && weaveOk(k) && k.stacks('corona') >= (k.has('redgiant') && k.remaining('redgiant') > 2 ? 5 : 3) && k.talent('thermist_solarwind')) return I(k, 'equil');   // (a swelled Red Giant waits for the 4th and 5th Corona)
     // Red Alert (Zenith): a boss cast with 2 or more Corona refills Sunset, so keep Sunset on cooldown going into each cast
     // (Sunset goes out inside the cast, once the cast has begun and refilled it; pressed earlier it would spend the Corona the refill needs)
     if (k.talent('thermist_alert') && ready(k, 'equil') && weaveOk(k) && k.stacks('corona') >= 2 && bossCasting(k)) return I(k, 'equil');

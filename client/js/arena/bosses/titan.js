@@ -39,9 +39,10 @@
 
 const TITAN = {
   id: 'titan', name: 'Hrimgar', title: 'Warden of the White Reach',
-  hp: { normal: 5000000, hard: 5550000 },
+  normalDmg: 1.1,   // (Normal's damage multiplier, fight.js default 1; 2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven))
+  hp: { normal: 6110000, hard: 6660000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 5000000 / 5550000)
   autoDmg: { normal: 1800, hard: 1980 },
-  hardDmg: 1.48,   // (Hard's blows land a little heavier than the usual 1.25: Hrimgar's seams and shuffles are kinder than they were, so his Hard has to bite. 1.56 before 2026-10-27's retune for a human party)
+  hardDmg: 1.6,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.48; Hard's blows land a little heavier than the usual 1.25: Hrimgar's seams and shuffles are kinder than they were, so his Hard has to bite. 1.56 before 2026-10-27's retune for a human party)
   enrage: { normal: 600, hard: 590 },   // the cast starts here and lands 8 s later (10:08 / 9:58)
   enrageName: 'Endless Winter',
   vuln: 0.5,

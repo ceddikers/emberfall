@@ -609,7 +609,11 @@ class RaidHost {
   // ---------------------------------------------------------------- the world as a bot sees it
   botWorld(bot) {
     const host = this;
+    // the talents a bot holds: the strongest build for as many rows as a party has by this boss's set (combat/bot-builds.js; none without it)
+    const set = host.def && (host.def.set || (typeof BOSSES !== 'undefined' && (BOSSES.find(b => b.id === host.def.id) || {}).set) || (typeof ULTIMATE_BOSS !== 'undefined' && ULTIMATE_BOSS.id === host.def.id && ULTIMATE_BOSS.set));   // (the fight's def has no set; data.js BOSSES and ULTIMATE_BOSS do)
+    const tal = typeof botTalentSet === 'function' && set ? botTalentSet(bot.cls.id, bot.spec, set, host.mode) : null;
     return {
+      talents: () => tal,
       now: () => host.sim.t,
       moving: () => bot.moving,
       canAuto: () => { const s = host.sim.ps.get(bot.id); return !!s && s.alive && host.sim.state === 'live'; },
