@@ -12,8 +12,10 @@
 //   Mythic     a build-defining effect (two per boss)
 
 // (raised for each set's step: set-1 gear alone tops out under the old 150/150/100/10/10, set 2 raised it to 180/160/160/110/12/12,
-// set 3 to the figures below; fight.js clamps HP and DEF to match)
-const GEAR_CAPS = { hp: 210, phys: 175, mag: 175, def: 120, haste: 13, crit: 13 };
+// set 3 to the figures below. HP and DEF have no cap (the user, 2026-10-31: 210 and 120 until then): a hero can stack them
+// as far as their items go, and the host only refuses more than the best real loadout can give (gearLimit below).)
+const GEAR_CAPS = { phys: 175, mag: 175, haste: 13, crit: 13 };
+const GEAR_STATS = ['hp', 'phys', 'mag', 'def', 'haste', 'crit'];
 const CLASS_MAIN = {
   bastion: 'phys', bloodreaver: 'phys', ranger: 'phys', shadowblade: 'phys',
   runeguard: 'mag', pyromancer: 'mag', cleric: 'mag', grovekeeper: 'mag', chronomancer: 'mag',
@@ -561,7 +563,7 @@ function slotsFor(inst) {
 function gearTotals(clsId, insts) {
   const t = { hp: 0, phys: 0, mag: 0, def: 0, haste: 0, crit: 0 };
   for (const inst of insts) if (inst) for (const [s, v] of Object.entries(itemStats(inst, clsId))) t[s] += v;
-  for (const s in t) t[s] = Math.min(GEAR_CAPS[s], t[s]);
+  for (const s in t) if (GEAR_CAPS[s] != null) t[s] = Math.min(GEAR_CAPS[s], t[s]);
   return t;
 }
 // ---------------------------------------------------------------- Forge fusion (forge.js)
@@ -608,10 +610,21 @@ function gearMods(clsId, t, insts = []) {
   }
   return { power: (t[main] || 0) / 1000, crit: (t.crit || 0) / 100, haste: (t.haste || 0) / 100, hp: t.hp || 0, def: (t.def || 0) / 1000, perks, fx };
 }
-// host side: never trust a client's numbers beyond the caps
+// the most of an uncapped stat (HP, DEF) any real loadout can carry: the best weapon, armour and two accessories for it
+let gearLimits = null;
+function gearLimit(stat) {
+  if (!gearLimits) {
+    const best = { weapon: {}, armor: {}, accessory: {} };
+    for (const key in ITEMS) { const st = itemStats({ key }), b = best[ITEMS[key].slot]; if (b) for (const s in st) b[s] = Math.max(b[s] || 0, st[s]); }
+    gearLimits = {};
+    for (const s of GEAR_STATS) gearLimits[s] = (best.weapon[s] || 0) + (best.armor[s] || 0) + 2 * (best.accessory[s] || 0);
+  }
+  return gearLimits[stat] || 0;
+}
+// host side: never trust a client's numbers beyond the caps, or beyond what real items can give
 function sanitizeGear(s) {
   const out = {};
-  for (const k of Object.keys(GEAR_CAPS)) { const v = s && Number(s[k]); out[k] = Number.isFinite(v) ? Math.max(0, Math.min(GEAR_CAPS[k], v)) : 0; }
+  for (const k of GEAR_STATS) { const v = s && Number(s[k]), max = GEAR_CAPS[k] ?? gearLimit(k); out[k] = Number.isFinite(v) ? Math.max(0, Math.min(max, v)) : 0; }
   return out;
 }
 
