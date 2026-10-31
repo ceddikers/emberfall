@@ -553,7 +553,7 @@
       ctx, t, r, k, out: master, rr: (a, b) => a + (b - a) * r(),
       g: v => { const g = ctx.createGain(); g.gain.value = v == null ? 1 : v; return g; },
       f: (type, f, q) => { const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = cf(f); b.Q.value = q == null ? (type === 'bandpass' ? 1 : 0) : q; return b; },
-      src: (buf, rate) => { const b = ctx.createBufferSource(); b.buffer = typeof buf === 'string' ? nbuf(ctx, buf) : buf; b.loop = true; b.playbackRate.value = rate || 1; b.start(t, r() * b.buffer.duration * 0.9); nodes.push(b); return b; },
+      src: (buf, rate, from) => { const b = ctx.createBufferSource(); b.buffer = typeof buf === 'string' ? nbuf(ctx, buf) : buf; b.loop = true; b.playbackRate.value = rate || 1; b.start(t, from != null ? from : r() * b.buffer.duration * 0.9); nodes.push(b); return b; },   // (from: a fixed start, for a loop the picture keeps time with)
       osc: (type, f, det) => { const o = osc({ ctx }, type, f * k, t); if (det) o.detune.value = det; o.start(t); nodes.push(o); return o; },
       lfo: (param, rate, depth, type) => { const o = osc({ ctx }, type || 'sine', rate, t), g = ctx.createGain(); g.gain.value = depth; o.connect(g); g.connect(param); o.start(t); nodes.push(o); return o; },
       c: (...ns) => { for (let i = 0; i < ns.length - 1; i++) ns[i].connect(ns[i + 1]); return ns[ns.length - 1]; },
@@ -829,8 +829,13 @@
     'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5, 'ult-kenseier': -1.5, 'ult-lanternkeeper': -2,
     'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1, 'ult-ranger': 3,
     'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4, 'ult-thermist': -1,
-    'ult-threadweaver': -1, 'ult-tidecaller': -2, 'wall-break': -1.5, 'wall-up': -3.5,
-    'waymark': 11.5, 'wipe': -2,
+    'ult-threadweaver': -1, 'ult-tidecaller': -2, 'wall-break': -1.5, 'wall-caelum-break': -1,
+    'wall-caelum-seal': -1.5, 'wall-caelum-vigil': -19.5, 'wall-corvane-kneel': -1.5, 'wall-corvane-rise': -1,
+    'wall-corvane-take': 1, 'wall-corvane-toll': -18.5, 'wall-hydra-break': -2, 'wall-hydra-heart': -11.5,
+    'wall-hydra-up': -3, 'wall-morrowoak-gulp': -13, 'wall-morrowoak-out': -0.5, 'wall-morrowoak-up': -2,
+    'wall-titan-break': -1, 'wall-titan-up': -3, 'wall-titan-wind': -5.5, 'wall-up': -3.5,
+    'wall-wyrm-close': -1.5, 'wall-wyrm-fall': -1.5, 'wall-wyrm-heart': -12, 'wall-wyrm-open': -3.5,
+    'wall-wyrm-rise': -0.5, 'wall-wyrm-storm': -11, 'waymark': 11.5, 'wipe': -2,
   };
   // @@TRIM-END
 
@@ -1215,6 +1220,341 @@
     S.pad({ at: 0.3, notes: [mf(50), mf(57), mf(62), mf(66)], type: 'tri', a: 0.1, dur: 1.9, lp: 2600, peak: 0.14 });
     [86, 90, 93].forEach((n, i) => S.glass({ at: 0.34 + i * 0.06, f: mf(n), dur: 1.2, peak: 0.05 }));
   });
+  // ---------------------------------------------------------------------------------------------- the walls' own moments (wall-fx.js, walls/<boss>.js)
+  // Each sealed boss has its own sounds for the seal going up, the held bed while it holds, and the break. Kept per boss in the slots below.
+  // @@WALL-wyrm
+  // Vhalgrath's Ember Heart: his chest splits open (a crust cracking, a gout of fire roaring up, the first great beat), the heart beating under the
+  // fight while he is sealed, and the Heart slamming shut (two last beats, the crust closing with a crack, steam). His Last Ember: the crater's
+  // fire drawn up into him on a rising storm, and the fall that ends it.
+  const wyrmHeartBuf = ctx => makeBuf(ctx, 'wyrmheart', 1.25, 1, (d, sr, r) => {
+    const beat = (at, f0, f1, dec, amp) => {
+      const i0 = Math.floor(at * sr), N = Math.floor(dec * 7 * sr); let ph = 0, lp = 0;
+      // (a body under the beat, and a soft knock on top so it still reads on small speakers)
+      for (let j = 0; j < N && i0 + j < d.length; j++) { const tt = j / sr, f = f1 + (f0 - f1) * Math.exp(-tt / 0.05); ph += TAU * f / sr; lp += 0.08 * ((r() * 2 - 1) - lp); d[i0 + j] += amp * (Math.sin(ph) + 0.25 * Math.sin(ph * 2.02) + 0.12 * Math.sin(ph * 3.9) * Math.exp(-tt / 0.04) + 1.6 * lp * Math.exp(-tt / 0.018)) * Math.exp(-tt / dec) * Math.min(1, j / 60); }
+    };
+    beat(0.01, 58, 30, 0.13, 1); beat(0.33, 66, 36, 0.1, 0.75);
+    normPeak(d, 0.95);
+  });
+  def('wall-wyrm-open', 'sting', S => {
+    S.space('cave', 0.55);
+    S.crack({ f: 900, peak: 0.42 });
+    S.crackle({ at: 0.02, f: 1800, dens: 1.4, dur: 0.6, peak: 0.22 });
+    S.thud({ at: 0.04, f: 62, f1: 26, dur: 1.6, drive: 3.4, peak: 0.85, sub: 0.35 });
+    S.noise({ at: 0.06, color: 'brown', bp: 120, bp1: 1700, q: 0.7, dur: 1.5, a: 0.15, pts: [[0.25, 1], [1.5, 0]], peak: 0.4 });
+    S.whoosh({ at: 0.05, color: 'brown', f: 180, f1: 2400, dur: 0.9, peakAt: 0.3, peak: 0.32 });
+    S.rumble({ at: 0.05, dur: 2.6, f: 120, peak: 0.3, a: 0.1 });
+    S.thud({ at: 0.75, f: 54, f1: 28, dur: 0.9, drive: 2.4, peak: 0.6, click: 0 });
+    S.thud({ at: 1.08, f: 62, f1: 32, dur: 0.7, drive: 2.2, peak: 0.42, click: 0 });
+    S.pad({ at: 0.1, notes: [mf(33), mf(40), mf(45)], type: 'saw', a: 0.4, dur: 2.6, det: 8, lpEnv: [300, 1400, 500, 0.4], peak: 0.16 });
+    S.choir({ at: 0.35, notes: [mf(45), mf(52)], vowel: 'o', dur: 2.2, a: 0.6, lp: 1600, peak: 0.07 });
+  });
+  loop('wall-wyrm-heart', 'loop', L => {
+    // the Ember Heart beating (period 1.25 s / 0.92: wall-fx's walls/wyrm.js keeps time with it from the first beat), a low fire breathing under it
+    L.c(L.src(wyrmHeartBuf(L.ctx), 0.92, 0), L.f('lowpass', 900, 0.5), L.g(1.0), L.out);
+    const fire = L.g(0.05); L.c(L.src('brown'), L.f('lowpass', 420), fire); L.lfo(fire.gain, 0.73, 0.03); L.c(fire, L.out);
+    const drone = L.g(0.05); [36.7, 37.1].forEach(f => L.c(L.osc('sine', f), drone)); L.c(drone, L.out);
+  }, 0.25);
+  def('wall-wyrm-close', 'imp', S => {
+    S.space('cave', 0.55);
+    S.thud({ f: 60, f1: 28, dur: 0.8, drive: 2.8, peak: 0.7, click: 0 });
+    S.thud({ at: 0.3, f: 70, f1: 30, dur: 1.3, drive: 3.4, peak: 0.85, sub: 0.3 });
+    S.crack({ at: 0.31, f: 700, peak: 0.45 });
+    S.crackle({ at: 0.32, f: 1200, dens: 0.9, dur: 0.5, peak: 0.2 });
+    S.metal({ at: 0.31, set: 'plate', f: 140, dur: 0.9, peak: 0.16 });
+    S.sizzle({ at: 0.38, dur: 1.6, pts: [[0.1, 1], [1.6, 0]], peak: 0.16 });
+    S.whoosh({ at: 0.36, color: 'white', f: 3000, f1: 900, dur: 1.4, peakAt: 0.12, peak: 0.12 });
+    S.rumble({ at: 0.3, dur: 1.6, f: 110, peak: 0.26, a: 0.03 });
+    S.pad({ at: 0.45, notes: [mf(38), mf(45), mf(50), mf(54)], type: 'tri', a: 0.15, dur: 1.9, lp: 1800, peak: 0.13 });
+  });
+  def('wall-wyrm-rise', 'sting', S => {
+    S.space('cave', 0.6);
+    S.whoosh({ color: 'brown', f: 90, f1: 700, dur: 0.7, peakAt: 0.6, peak: 0.4 });
+    S.thud({ at: 0.42, f: 48, f1: 26, dur: 1.2, drive: 2.6, peak: 0.55, click: 0 });
+    S.whoosh({ at: 0.9, color: 'brown', f: 90, f1: 700, dur: 0.6, peakAt: 0.6, peak: 0.32 });
+    S.noise({ at: 0.2, color: 'brown', bp: 200, bp1: 2600, q: 0.6, dur: 2.6, a: 2.2, pts: [[2.4, 1], [2.6, 0.6]], peak: 0.32 });
+    S.crackle({ at: 0.6, f: 2200, dens: 1.6, dur: 2.0, a: 1.6, peak: 0.16 });
+    S.pad({ at: 0.3, notes: [mf(36), mf(43), mf(48), mf(51)], type: 'saw', a: 2.0, swell: true, dur: 2.6, det: 10, lpEnv: [300, 2600, 900, 0.85], peak: 0.16 });
+  });
+  loop('wall-wyrm-storm', 'loop', L => {
+    // the Last Ember: a firestorm turning over the crater, crackling, a low wind under it
+    const roar = L.g(0.5), bp = L.f('bandpass', 380, 0.7); L.c(L.src('brown'), bp, roar, L.out); L.lfo(bp.frequency, 0.21, 120); L.lfo(roar.gain, 0.37, 0.15);
+    const cr = L.g(0.18); L.c(L.crackle(1.3), L.f('bandpass', 1900, 0.7), cr, L.out);
+    const lo = L.g(0.08); [43.6, 44.2].forEach(f => L.c(L.osc('sine', f), lo)); L.c(lo, L.out);
+  }, 1.2);
+  def('wall-wyrm-fall', 'imp', S => {
+    S.space('cave', 0.6);
+    S.thud({ f: 52, f1: 22, dur: 2.0, drive: 4, peak: 0.95, sub: 0.4 });
+    S.crack({ at: 0.01, f: 800, peak: 0.5 });
+    S.crackle({ at: 0.02, f: 1500, dens: 1.2, dur: 0.9, peak: 0.24 });
+    S.noise({ at: 0.02, color: 'brown', lp: 900, lp1: 160, fd: 2.4, dur: 2.6, a: 0.01, pts: [[0.05, 1], [2.6, 0]], peak: 0.42 });
+    S.rumble({ at: 0.02, dur: 3.0, f: 100, peak: 0.34, a: 0.02 });
+    S.choir({ at: 0.4, notes: [mf(45), mf(52), mf(57), mf(60)], vowel: 'a', vowel1: 'o', dur: 3.2, a: 0.4, lp: 3200, peak: 0.09 });
+    S.pad({ at: 0.3, notes: [mf(33), mf(45), mf(52), mf(57)], type: 'tri', a: 0.3, dur: 3.2, lp: 2000, peak: 0.16 });
+    [81, 76, 72].forEach((m, i) => S.bell({ at: 0.6 + i * 0.22, f: mf(m), dur: 2.2, peak: 0.05, lp: 5000 }));
+  });
+  // @@WALL-titan (its recipes go right under this line)
+  // Hrimgar's Plateau Tips: the glacier groans as the plateau tips under the fight (a great ice-sheet creaking, his fist on the ice, a crack running
+  // away across it, a cold chord from the aurora), the held bed of wind and singing ice while he is sealed, and the rime shell round him
+  // bursting (glass raining, the cold let go in one breath, the aurora's chord opening).
+  def('wall-titan-up', 'sting', S => {
+    S.space('hall', 0.6);
+    S.creak({ f: 24, f1: 9, res: [95, 190, 430], q: 9, dur: 2.2, a: 0.1, pts: [[0.4, 0.6], [1.3, 1], [2.2, 0]], lp: 1100, peak: 0.34 });
+    S.thud({ at: 0.04, f: 58, f1: 24, dur: 1.4, drive: 3.2, peak: 0.85, sub: 0.35 });
+    S.crack({ at: 0.05, f: 1300, peak: 0.45, dur: 0.18 });
+    S.crackle({ at: 0.08, dens: 3.5, f: 5600, dur: 1.4, pts: [[0.03, 1], [0.5, 0.7], [1.4, 0]], peak: 0.2 });
+    for (let i = 0; i < 6; i++) S.glass({ at: 0.1 + Math.pow(S.r(), 1.4) * 0.5, f: S.rr(2400, 6200), dur: S.rr(0.3, 0.6), peak: 0.07, pan: S.rr(-0.5, 0.5) });
+    S.whoosh({ at: 0.1, color: 'pink', f: 160, f1: 3000, dur: 1.2, peakAt: 0.45, peak: 0.3 });
+    S.tone({ at: 0.2, f: 78, f1: 34, dur: 1.9, a: 0.05, peak: 0.28 });
+    S.voice({ at: 0.25, f: 44, f1: 38, dur: 2.0, vowel: 'o', vowel1: 'a', breath: 5, peak: 0.22, lp: 2400, pts: [[0.35, 1], [2.0, 0]] });
+    S.pad({ at: 0.35, notes: [mf(45), mf(52), mf(57)], type: 'tri', a: 0.5, dur: 2.4, lp: 1800, peak: 0.13 });
+    [81, 86, 88].forEach((n, i) => S.glass({ at: 0.9 + i * 0.1, f: mf(n), dur: 1.5, peak: 0.05, am: [5, 0.3] }));
+  });
+  loop('wall-titan-wind', 'loop', L => {
+    // the sealed plateau: a cold wind over the ice, a thin whistle that comes and goes, the aurora's faint hum, and now and then the ice ticking
+    const wind = L.g(0.26), bp = L.f('bandpass', 700, 0.55); L.c(L.src('pink'), bp, wind, L.out); L.lfo(bp.frequency, 0.13, 260); L.lfo(wind.gain, 0.23, 0.1);
+    const wh = L.g(0.05), wb = L.f('bandpass', 2300, 7); L.c(L.src('white'), wb, wh, L.out); L.lfo(wb.frequency, 0.17, 700); L.lfo(wh.gain, 0.29, 0.04);
+    const hum = L.g(0.022); [174.6, 261.6, 349.2].forEach((f, i) => { L.c(L.osc('sine', f, i * 4 - 4), hum); }); L.lfo(hum.gain, 0.31, 0.012); L.c(hum, L.out);
+    const tk = L.g(0.1); L.c(L.crackle(0.35), L.f('bandpass', 5200, 1.2), tk, L.out);
+    const lo = L.g(0.04); [41.2, 41.6].forEach(f => L.c(L.osc('sine', f), lo)); L.c(lo, L.out);
+  }, 1.2);
+  def('wall-titan-break', 'imp', S => {
+    S.space('hall', 0.55);
+    S.thud({ f: 52, f1: 22, dur: 1.8, drive: 3.8, peak: 0.9, sub: 0.4 });
+    S.crack({ at: 0.01, f: 1500, peak: 0.5, dur: 0.2 });
+    for (let i = 0; i < 14; i++) S.glass({ at: Math.pow(S.r(), 1.5) * 0.45, f: S.rr(2000, 6800), dur: S.rr(0.3, 0.7), peak: 0.07, pan: S.rr(-0.6, 0.6) });
+    S.crackle({ at: 0.02, dens: 4, f: 6000, dur: 1.1, pts: [[0.03, 1], [1.1, 0]], peak: 0.22 });
+    S.noise({ at: 0.02, hp: 5000, dur: 0.7, grain: 0.8, pts: [[0.03, 1], [0.7, 0]], peak: 0.16 });
+    S.whoosh({ at: 0.06, color: 'white', f: 3600, f1: 700, dur: 1.5, peakAt: 0.15, peak: 0.2 });
+    S.rumble({ at: 0.02, dur: 2.8, f: 90, peak: 0.3, a: 0.03 });
+    S.choir({ at: 0.45, notes: [mf(45), mf(52), mf(57)], vowel: 'a', vowel1: 'o', dur: 3.0, a: 0.5, lp: 3000, peak: 0.08 });
+    [81, 86, 91, 93].forEach((n, i) => S.bell({ at: 0.5 + i * 0.16, f: mf(n), dur: 2.4, peak: 0.05, lp: 6000 }));
+  });
+
+  // @@WALL-hydra (its recipes go right under this line)
+  // The Mother's Heart: her chest opens on a gold light (a bronze gong, water thrown up round her, the first great beats), the Heart beating
+  // slow and wet under the fight while she is sealed (a drowned bronze hum under it), and the seal breaking (two last beats, the Heart slamming
+  // shut with a crack of brass, a wave thrown out over the pool, a long breath out).
+  const hydraHeartBuf = ctx => makeBuf(ctx, 'hydraheart', 1.848, 1, (d, sr, r) => {   // (1.848 s = 2 pi / 3.4, the beat of the glow in her chest: walls/hydra.js keeps time with it)
+    const beat = (at, f0, f1, dec, amp) => {
+      const i0 = Math.floor(at * sr), N = Math.floor(dec * 7 * sr); let ph = 0;
+      for (let j = 0; j < N && i0 + j < d.length; j++) { const tt = j / sr, f = f1 + (f0 - f1) * Math.exp(-tt / 0.06); ph += TAU * f / sr; d[i0 + j] += amp * (Math.sin(ph) + 0.2 * Math.sin(ph * 2.01)) * Math.exp(-tt / dec) * Math.min(1, j / 70); }
+    };
+    beat(0.01, 52, 28, 0.15, 1); beat(0.36, 58, 31, 0.11, 0.7);
+    // the water answering each beat: a slow, dark swell of brown noise behind it
+    let lp = 0;
+    for (const [at, amp] of [[0.03, 0.22], [0.38, 0.14]]) {
+      const i0 = Math.floor(at * sr), N = Math.floor(0.5 * sr);
+      for (let j = 0; j < N && i0 + j < d.length; j++) { const tt = j / sr; lp += 0.012 * ((r() * 2 - 1) - lp); d[i0 + j] += amp * lp * 9 * Math.sin(Math.PI * Math.min(1, tt / 0.5)) * Math.exp(-tt / 0.22); }
+    }
+    normPeak(d, 0.95);
+  });
+  def('wall-hydra-up', 'sting', S => {
+    S.space('hall', 0.65);
+    S.crack({ f: 800, peak: 0.4 });
+    S.thud({ at: 0.03, f: 58, f1: 24, dur: 1.7, drive: 3.2, peak: 0.85, sub: 0.32 });
+    S.metal({ at: 0.02, set: 'plate', f: 130, dur: 2.8, peak: 0.2 });
+    S.bell({ at: 0.04, f: mf(43), dur: 3.2, peak: 0.12, lp: 3200 });
+    S.noise({ at: 0.05, color: 'brown', bp: 140, bp1: 1900, q: 0.6, dur: 1.5, a: 0.1, pts: [[0.3, 1], [1.5, 0]], peak: 0.36 });
+    S.whoosh({ at: 0.04, color: 'pink', f: 300, f1: 3200, dur: 0.7, peakAt: 0.22, peak: 0.2 });
+    S.bubbles({ at: 0.12, n: 16, f: 260, f1: 1200, spread: 1.0, size: 0.05, peak: 0.1 });
+    S.rumble({ at: 0.05, dur: 2.6, f: 90, peak: 0.28, a: 0.1 });
+    S.thud({ at: 0.72, f: 52, f1: 27, dur: 0.9, drive: 2.4, peak: 0.6, click: 0 });
+    S.thud({ at: 1.06, f: 58, f1: 30, dur: 0.7, drive: 2.2, peak: 0.42, click: 0 });
+    S.pad({ at: 0.15, notes: [mf(31), mf(38), mf(43), mf(47)], type: 'tri', a: 0.5, dur: 2.6, lp: 1500, peak: 0.14 });
+    S.choir({ at: 0.45, notes: [mf(38), mf(45)], vowel: 'o', dur: 2.2, a: 0.7, lp: 1700, peak: 0.07 });
+  });
+  loop('wall-hydra-heart', 'loop', L => {
+    // the Mother's Heart beating (period 1.848 s: walls/hydra.js starts it on a beat of the glow in her chest and keeps time with it), the water
+    // moving slowly round her, and a drowned bronze hum under both
+    L.c(L.src(hydraHeartBuf(L.ctx), 1, 0), L.f('lowpass', 330), L.g(1.0), L.out);
+    const wet = L.g(0.1), wf = L.f('lowpass', 520, 0.7); L.c(L.src('brown'), wf, wet, L.out); L.lfo(wf.frequency, 0.16, 140); L.lfo(wet.gain, 0.23, 0.04);
+    const hum = L.g(0.045); [49, 49.4, 98.3].forEach(f => L.c(L.osc('sine', f), hum)); L.lfo(hum.gain, 0.11, 0.02); L.c(hum, L.out);
+    const br = L.g(0.012), bf = L.f('lowpass', 700, 0.8); [mf(50), mf(50) * 1.006, mf(57)].forEach(f => L.c(L.osc('triangle', f), br)); L.lfo(br.gain, 0.13, 0.006); L.c(br, bf, L.out);
+  }, 0.3);
+  def('wall-hydra-break', 'imp', S => {
+    S.space('hall', 0.65);
+    S.thud({ f: 56, f1: 28, dur: 0.8, drive: 2.8, peak: 0.7, click: 0 });
+    S.thud({ at: 0.3, f: 62, f1: 24, dur: 2.0, drive: 3.8, peak: 0.95, sub: 0.35 });
+    S.crack({ at: 0.3, f: 1600, peak: 0.5 });
+    S.metal({ at: 0.31, set: 'plate', f: 190, dur: 2.4, peak: 0.24 });
+    S.metal({ at: 0.32, set: 'plate', f: 540, dur: 1.0, peak: 0.12 });
+    for (let i = 0; i < 9; i++) S.glass({ at: 0.31 + i * 0.045 + S.rr(0, 0.03), f: S.rr(2200, 5400), dur: 0.5, peak: 0.07 + 0.03 * Math.random(), pan: S.rr(-0.8, 0.8) });
+    S.whoosh({ at: 0.3, color: 'pink', f: 500, f1: 4200, dur: 0.7, peakAt: 0.18, peak: 0.3 });
+    S.noise({ at: 0.31, color: 'pink', bp: 1400, bp1: 500, q: 0.7, dur: 1.2, a: 0.01, pts: [[0.06, 1], [1.2, 0]], peak: 0.3 });
+    S.bubbles({ at: 0.4, n: 26, f: 500, f1: 2400, spread: 1.4, size: 0.035, peak: 0.08, bias: 1.6 });
+    S.rumble({ at: 0.3, dur: 2.8, f: 80, peak: 0.3, a: 0.04 });
+    S.pad({ at: 0.45, notes: [mf(38), mf(45), mf(50), mf(54)], type: 'tri', a: 0.2, dur: 2.8, lp: 2200, peak: 0.14 });
+    S.choir({ at: 0.55, notes: [mf(45), mf(52), mf(57), mf(62)], vowel: 'a', vowel1: 'o', dur: 3.0, a: 0.5, lp: 3000, peak: 0.08 });
+    [81, 76, 73].forEach((m, i) => S.bell({ at: 0.8 + i * 0.22, f: mf(m), dur: 2.0, peak: 0.045, lp: 5000 }));
+  });
+
+  // @@WALL-corvane (its recipes go right under this line)
+  // Corvane's Vigil: he goes to a knee and the pass holds its breath (the wind drops away, the blade laid down, frost forming), a low bell tolling
+  // under the fight while he keeps his watch (walls/corvane.js keeps time with it), a flame taken for each wisp that reaches him, and the rime
+  // bursting off him as he rises with the blade drawn clean and the wind coming back.
+  const cvTollBuf = ctx => makeBuf(ctx, 'cvtoll', 4.0, 1, (d, sr, r) => {
+    // a low temple bell struck once a period (felt mallet, long tail that wraps round into the next strike)
+    const n = d.length, F = 147;
+    const part = (ratio, amp, dec) => { const w = TAU * F * ratio / sr, N = Math.floor(dec * 5 * sr); for (let j = 0; j < N; j++) d[j % n] += amp * Math.sin(w * j) * Math.exp(-j / sr / dec) * Math.min(1, j / 80); };
+    part(0.5, 0.55, 2.8); part(1, 0.8, 2.4); part(1.19, 0.4, 1.6); part(1.5, 0.28, 1.3); part(2, 0.34, 1.1); part(2.51, 0.14, 0.7); part(3.0, 0.1, 0.5); part(4.17, 0.05, 0.3);
+    part(0.5 * 1.004, 0.3, 2.4); part(1.003, 0.35, 2.0);   // (the slow beating of a real bell)
+    let lp = 0; for (let j = 0; j < Math.floor(0.06 * sr); j++) { lp += 0.08 * ((r() * 2 - 1) - lp); d[j] += lp * 1.2 * Math.exp(-j / sr / 0.014); }   // (the mallet)
+    normPeak(d, 0.9);
+  });
+  def('wall-corvane-kneel', 'sting', S => {
+    S.space('hall', 0.5);
+    S.whoosh({ color: 'pink', f: 2800, f1: 200, dur: 1.5, peakAt: 0.12, peak: 0.3, q: 0.9 });
+    S.noise({ at: 0.1, color: 'white', hp: 4200, dur: 1.4, a: 0.02, pts: [[0.05, 0.6], [1.4, 0]], grain: 0.5, peak: 0.06 });
+    S.metal({ at: 0.46, set: 'plate', f: 230, dur: 1.2, peak: 0.16, click: 0.3 });
+    S.metal({ at: 0.5, set: 'bar', f: 740, dur: 0.9, peak: 0.07 });
+    S.thud({ at: 0.5, f: 56, f1: 28, dur: 1.4, drive: 2.2, peak: 0.55, sub: 0.25, click: 0 });
+    S.rumble({ at: 0.5, dur: 2.2, f: 90, peak: 0.12, a: 0.05 });
+    [88, 93, 97].forEach((n, i) => S.glass({ at: 0.62 + i * 0.13, f: mf(n), dur: 1.6, peak: 0.06, pan: (i - 1) * 0.5 }));
+    S.choir({ at: 0.6, notes: [mf(50), mf(57)], vowel: 'u', dur: 2.6, a: 0.8, lp: 1500, peak: 0.07 });
+    S.pad({ at: 0.5, notes: [mf(38), mf(45), mf(50)], type: 'tri', a: 0.5, dur: 2.6, lpEnv: [900, 1200, 400, 0.8], peak: 0.13 });
+  });
+  loop('wall-corvane-toll', 'loop', L => {
+    // the Vigil's bell (period 4.0 s: walls/corvane.js keeps time from the first strike), a thin wind a long way off, a cold drone under both
+    L.c(L.src(cvTollBuf(L.ctx), 1, 0), L.f('lowpass', 2200), L.g(1.0), L.out);
+    const wind = L.g(0.09), bp = L.f('bandpass', 420, 0.8); L.c(L.src('brown'), bp, wind, L.out); L.lfo(bp.frequency, 0.09, 140); L.lfo(wind.gain, 0.13, 0.05);
+    const air = L.g(0.02); L.c(L.src('pink'), L.f('bandpass', 2600, 0.6), air, L.out); L.lfo(air.gain, 0.17, 0.014);
+    const drone = L.g(0.04); [73.5, 110.25].forEach(f => L.c(L.osc('sine', f), drone)); L.c(drone, L.out);
+  }, 0.05);
+  def('wall-corvane-take', 'hud', S => {
+    S.space('hall', 0.4);
+    S.glass({ f: mf(88), dur: 1.0, peak: 0.1 });
+    S.glass({ at: 0.08, f: mf(95), dur: 0.9, peak: 0.06, pan: 0.3 });
+    S.tone({ f: mf(45), f1: mf(40), dur: 0.7, a: 0.01, peak: 0.1 });
+    S.noise({ hp: 5200, dur: 0.4, a: 0.02, pts: [[0.1, 1], [0.4, 0]], peak: 0.03 });
+  });
+  def('wall-corvane-rise', 'imp', S => {
+    S.space('hall', 0.5);
+    S.crack({ f: 2600, peak: 0.5 });
+    S.thud({ at: 0.02, f: 70, f1: 28, dur: 1.5, drive: 3, peak: 0.6, sub: 0.25 });
+    S.bell({ at: 0.02, f: mf(45), dur: 3.0, peak: 0.2 });
+    for (let i = 0; i < 12; i++) S.glass({ at: 0.03 + i * 0.04 + S.rr(0, 0.03), f: S.rr(3000, 7000), dur: 0.5, peak: 0.08 + 0.04 * Math.random(), pan: S.rr(-0.8, 0.8) });
+    S.noise({ at: 0.06, bp: 1500, bp1: 7500, q: 3, dur: 0.4, a: 0.01, pts: [[0.05, 1], [0.4, 0]], peak: 0.2 });
+    S.metal({ at: 0.08, set: 'bar', f: 2100, dur: 1.4, peak: 0.14 });
+    S.metal({ at: 0.06, set: 'plate', f: 640, dur: 1.2, peak: 0.1 });
+    S.whoosh({ at: 0.15, color: 'white', f: 400, f1: 5200, dur: 1.4, peakAt: 0.25, peak: 0.26 });
+    S.rumble({ at: 0.04, dur: 1.6, f: 130, peak: 0.2, a: 0.04 });
+    S.choir({ at: 0.35, notes: [mf(57), mf(64), mf(69)], vowel: 'a', vowel1: 'o', dur: 2.8, a: 0.35, lp: 3000, peak: 0.08 });
+    S.pad({ at: 0.3, notes: [mf(45), mf(52), mf(57), mf(61)], type: 'tri', a: 0.2, dur: 2.6, lp: 2400, peak: 0.13 });
+    S.bell({ at: 0.45, set: 'hand', f: mf(81), dur: 2.0, peak: 0.05 });
+  });
+  //
+  //
+  //
+
+  // @@WALL-morrowoak (its recipes go right under this line)
+  // Morrow-Oak's Swallowing: the grove's own fall already has an eight-second cast sound (bm-morrowoak-the-swallowing), so these three only frame it.
+  // The seal going up (the world drawn in, one wooden gulp), the swallowing going on in him while the seal holds (a groan swelling to a low gulp
+  // every 2.6 s; walls/morrowoak.js runs a ring of light down his trunk in time with it), and the Hunger letting go as the limbs tear out of the dark.
+  const oakGulpBuf = ctx => makeBuf(ctx, 'oakgulp', 2.6, 1, (d, sr, r) => {
+    let ph = 0, pg = 0, walk = 0, lp = 0, lw = 0;
+    for (let i = 0; i < d.length; i++) {
+      const t = i / sr, tt = t - 1.5;
+      lp += ((r() * 2 - 1) - lp) * 0.04; lw += ((r() * 2 - 1) - lw) * 0.35;
+      if (t < 1.55) {   // the groan: a woody low tone swelling toward the gulp, its pitch shaken
+        walk = walk * 0.995 + (r() - 0.5) * 0.06;
+        ph += TAU * (58 + 30 * Math.pow(Math.min(1, t / 1.5), 2)) * (1 + walk) / sr;
+        d[i] += Math.pow(Math.min(1, t / 1.5), 1.6) * 0.3 * (Math.sin(ph) + 0.6 * Math.sin(ph * 2.01) + 0.4 * Math.sin(ph * 3.02) + 0.22 * Math.sin(ph * 4.03));
+      }
+      if (tt >= 0) {   // the gulp (a low wooden knock, a wet click), and the air going back out after it
+        pg += TAU * (40 + 48 * Math.exp(-tt / 0.05)) / sr;
+        d[i] += (Math.sin(pg) + 0.25 * Math.sin(pg * 2.02)) * Math.exp(-tt / 0.16) * Math.min(1, tt * 400);
+        d[i] += Math.sin(TAU * (120 + 70 * Math.exp(-tt / 0.03)) * tt) * Math.exp(-tt / 0.04) * 0.3 + lw * Math.exp(-tt / 0.03) * 0.25 + lp * Math.exp(-tt / 0.45) * 1.4;
+      }
+      d[i] *= Math.min(1, (d.length - i) / (0.15 * sr));
+    }
+    normPeak(d, 0.95);
+  });
+  def('wall-morrowoak-up', 'sting', S => {
+    S.space('hall', 0.6);
+    moVoid(S, 0, 0.9, 0.3, 800, 50);
+    moCreak(S, 0.05, 1.7, 0.12, 0, 16, 8);
+    S.thud({ at: 0.92, f: 50, f1: 22, dur: 1.7, drive: 3.2, peak: 0.8, sub: 0.3 });
+    S.wood({ at: 0.92, f: 210, dur: 0.2, peak: 0.3, lp: 1600 });
+    S.crack({ at: 0.92, f: 900, peak: 0.2, dur: 0.2 });
+    S.rumble({ at: 0.9, dur: 2.2, f: 60, peak: 0.24, a: 0.05 });
+    S.choir({ at: 1.0, notes: [mf(34), mf(41)], vowel: 'u', dur: 1.9, a: 0.5, lp: 700, peak: 0.06 });
+  });
+  loop('wall-morrowoak-gulp', 'loop', L => {
+    L.c(L.src(oakGulpBuf(L.ctx), 1, 0), L.f('lowpass', 800), L.g(1.0), L.out);   // (a fixed start: the ring of light on his trunk keeps time with it)
+    const air = L.g(0.05); L.c(L.src('brown'), L.f('lowpass', 360), air); L.lfo(air.gain, 0.31, 0.03); L.c(air, L.out);
+    const lv = L.g(0.025); L.c(L.src('pink'), L.f('highpass', 3000), lv, L.out); L.lfo(lv.gain, 0.43, 0.02);
+    const drone = L.g(0.05); [41.2, 41.7].forEach(f => L.c(L.osc('sine', f), drone)); L.c(drone, L.out);
+  }, 0.3);
+  def('wall-morrowoak-out', 'imp', S => {
+    S.space('hall', 0.7);
+    S.thud({ f: 48, f1: 20, dur: 1.8, drive: 3.6, peak: 0.85, sub: 0.3 });
+    S.crack({ f: 1100, peak: 0.36, dur: 0.25 });
+    [0.05, 0.16, 0.28, 0.4].forEach((at, i) => moRootTear(S, at, 0.3 + i * 0.02, (i - 1.5) * 0.5));   // (the limbs tearing out of the dark)
+    S.noise({ at: 0.1, color: 'brown', bp: 200, bp1: 1800, q: 0.7, dur: 1.8, a: 0.1, pts: [[0.3, 1], [1.8, 0]], peak: 0.3 });
+    S.whoosh({ at: 0.1, color: 'brown', f: 300, f1: 2600, dur: 1.2, peakAt: 0.3, peak: 0.26 });
+    moLeaves(S, 0.2, 2.0, 0.16);
+    S.rumble({ at: 0.05, dur: 2.6, f: 70, peak: 0.28, a: 0.05 });
+    S.pad({ at: 0.35, notes: [mf(38), mf(45), mf(50), mf(57)], type: 'tri', a: 0.3, dur: 2.6, lp: 2000, peak: 0.14 });
+    S.choir({ at: 0.45, notes: [mf(50), mf(57)], vowel: 'o', vowel1: 'a', dur: 2.4, a: 0.5, lp: 1800, peak: 0.07 });
+    [79, 74, 70].forEach((m, i) => S.bell({ at: 0.7 + i * 0.2, f: mf(m), dur: 2.0, peak: 0.04, lp: 4500 }));
+  });
+
+  // @@WALL-caelum (its recipes go right under this line)
+  // Caelum's Starwyrm: the seal as a held breath (the sky drawn in, a thin glass chime closing, then the light letting go: walls/caelum.js lays the flare of
+  // the sky coming loose right after it), a bed of starlight twinkling while he is sealed (eight pings in a 6 s loop; walls/caelum.js lights a star of his
+  // ring on each), and the ring coming apart in silver glass as the stars go back up.
+  const caelumVigilBuf = ctx => makeBuf(ctx, 'caelumvigil', 6.0, 1, (d, sr) => {
+    // [time, midi note]: keep in step with PINGS in walls/caelum.js
+    const P = [[0.6, 88], [1.25, 91], [1.95, 93], [2.55, 86], [3.3, 96], [4.05, 98], [4.6, 94], [5.4, 84]];
+    for (const [at, n] of P) {
+      const f = mf(n), i0 = Math.floor(at * sr), N = Math.floor(3.2 * sr);
+      for (let j = 0; j < N && i0 + j < d.length; j++) {
+        const tt = j / sr, e = Math.min(1, j / 80) * Math.exp(-tt / 0.5);
+        d[i0 + j] += e * (Math.sin(TAU * f * tt) + 0.35 * Math.sin(TAU * f * 2.76 * tt) * Math.exp(-tt / 0.18) + 0.12 * Math.sin(TAU * f * 5.4 * tt) * Math.exp(-tt / 0.08));
+      }
+    }
+    normPeak(d, 0.9);
+  }, 22050);
+  def('wall-caelum-seal', 'sting', S => {
+    S.space('hall', 0.75);
+    // the breath in: the air pulled toward him and a glass shimmer swelling, then the chime that closes the seal (the sky's own flare follows)
+    S.whoosh({ f: 6800, f1: 800, dur: 0.42, peakAt: 0.85, peak: 0.2, q: 1.2 });
+    S.pad({ notes: [mf(81), mf(88), mf(93)], type: 'sine', a: 0.28, swell: true, dur: 0.7, lp: 6000, peak: 0.08 });
+    S.thud({ at: 0.3, f: 58, f1: 26, dur: 1.3, drive: 2, peak: 0.42, click: 0 });
+    [[81, 0.3, 0.18], [88, 0.33, 0.12], [93, 0.37, 0.09]].forEach(([n, at, pk], i) => S.glass({ at, f: mf(n), dur: 2.6, peak: pk, pan: (i - 1) * 0.35 }));
+    S.bell({ at: 0.3, f: mf(69), dur: 2.8, peak: 0.07, lp: 3500 });
+    S.rumble({ at: 0.3, dur: 1.8, f: 70, peak: 0.12, a: 0.1 });
+    for (let i = 0; i < 9; i++) S.tone({ at: 0.45 + i * 0.13 + S.rr(0, 0.05), f: S.rr(3200, 7600), dur: 0.5, a: 0.003, peak: 0.028, pan: S.rr(-0.7, 0.7) });
+  });
+  loop('wall-caelum-vigil', 'loop', L => {
+    // the sky held still: starlight twinkling over a hush (the buffer starts at a fixed offset so the picture keeps time with its pings)
+    const tw = L.g(0.7); L.c(L.src(caelumVigilBuf(L.ctx), 1, 0), tw, L.out); L.verb('hall', 0.35, tw);
+    const pad = L.g(0.05); [mf(57), mf(64)].forEach(f => L.c(L.osc('sine', f), L.f('lowpass', 900), pad)); L.lfo(pad.gain, 0.17, 0.025); L.c(pad, L.out);
+    const air = L.g(0.015), bp = L.f('bandpass', 5200, 4); L.c(L.src('white'), bp, air, L.out); L.lfo(bp.frequency, 0.11, 900); L.lfo(air.gain, 0.19, 0.009);
+    const lo = L.g(0.07); L.c(L.osc('sine', mf(31)), lo, L.out); L.lfo(lo.gain, 0.13, 0.03);
+  }, 1.4);
+  def('wall-caelum-break', 'imp', S => {
+    S.space('hall', 0.6);
+    // the ring of glass coming apart and the stars going back up: a crack, silver shards scattering, a struck chord, a rising release
+    S.crack({ f: 3400, peak: 0.42 });
+    S.thud({ at: 0.02, f: 72, f1: 30, dur: 1.2, drive: 2.2, peak: 0.5, sub: 0.2 });
+    for (let i = 0; i < 14; i++) S.glass({ at: 0.01 + i * 0.03 + S.rr(0, 0.025), f: S.rr(2600, 7000), dur: 0.55, peak: 0.08 + 0.05 * Math.random(), pan: S.rr(-0.8, 0.8) });
+    S.whoosh({ at: 0.04, f: 600, f1: 7200, dur: 0.75, peakAt: 0.25, peak: 0.26 });
+    [[81, 0.06, 0.16], [88, 0.1, 0.12], [93, 0.15, 0.1]].forEach(([n, at, pk], i) => S.glass({ at, f: mf(n), dur: 2.4, peak: pk, pan: (i - 1) * 0.4 }));
+    S.bell({ at: 0.06, f: mf(69), dur: 2.6, peak: 0.1, lp: 3800 });
+    for (let i = 0; i < 10; i++) S.tone({ at: 0.2 + i * 0.08 + S.rr(0, 0.04), f: 2400 * Math.pow(2.7, i / 9) * S.rr(0.97, 1.03), dur: 0.45, a: 0.003, peak: 0.04, pan: S.rr(-0.7, 0.7) });
+    S.pad({ at: 0.2, notes: [mf(57), mf(64), mf(69), mf(76)], type: 'tri', a: 0.12, dur: 2.2, lp: 3000, peak: 0.13 });
+    S.choir({ at: 0.25, notes: [mf(69), mf(76)], vowel: 'a', dur: 2.4, a: 0.35, lp: 2600, peak: 0.05 });
+  });
+  //
+  //
+  //
+
+  // @@WALL-sovereign (its recipes go right under this line)
+  //
+  //
+  //
+
   def('ult-window-end', 'hud', S => {
     [84, 79, 76, 72].forEach((n, i) => S.glass({ at: i * 0.09, f: mf(n), dur: 0.6, peak: 0.08 }));
     S.whoosh({ f: 3000, f1: 500, dur: 0.6, peak: 0.1 });

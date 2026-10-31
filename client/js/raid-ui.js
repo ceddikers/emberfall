@@ -302,7 +302,6 @@ const RaidUI = (() => {
     layeredHp(raid, now, dt, fm);
     q('#boss-bar').classList.toggle('untargetable', !!b.u);
     q('#boss-bar').classList.toggle('walled', !!raid.wallLabel);   // sealed at a gate (fight.js raiseWall)
-    setText(q('.bb-seal'), raid.wallLabel || '');   // (its name on the bar while the seal holds)
     posture(raid, now, dt);
     gateTicks(raid);
     q('#boss-bar').classList.toggle('stopped', paused(raid, now));   // a Time Stop (fight.js pauseBoss)

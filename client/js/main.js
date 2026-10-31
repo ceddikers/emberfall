@@ -1866,7 +1866,7 @@
       player.spec = trialPrevSpec; trialPrevSpec = undefined;
       if (player.cls) Net.send({ t: 'cls', id: player.cls.id, spec: player.spec, sv: svOf(player.cls.id) });
     }
-    raid = null;
+    raid = null; WallFx.reset();
     PracticeHall.tag(null);
     scene = 'town';
     townObjective();
@@ -2201,6 +2201,7 @@
     if (msg.stats) raid.meter = { ft: msg.time, d: Object.entries(msg.stats).map(([id, st]) => Scoring.pack(Number(id), st)) };   // (the meter ends on the final tally)
     if ((msg.s === 'clear' || msg.s === 'wipe') && msg.stats && !raid.def.trial && !raid.practice && !raid.fightLogged) { raid.fightLogged = true; Pastimes.logFight(msg, raid.def.id); }   // (the Logbook's Fights tab)
     raid.state = msg.s; raid.result = msg; raid.resultAt = now + (msg.s === 'clear' ? 3.4 : 2.8) * practiceSlowK();   // [boss presentation] (after his fall / the wipe's beat)
+    if (msg.s === 'clear' || msg.s === 'wipe') WallFx.reset();   // (a wall's held sound and muffled music end with the fight)
     if (msg.s === 'clear' && raid.boss) raid.boss.hp = 0;   // (the health stream stops with the fight: the bar would keep the last reading short of zero)
     if (SH && (msg.s === 'clear' || msg.s === 'wipe')) { SH.castEnd(); const svEnd = raid.def.id === 'sovereign'; if (!svEnd) SH.play(msg.s, { vol: 1 }); if (!svEnd || msg.s === 'wipe') SH.music(msg.s === 'clear' ? 'mus-victory' : 'mus-wipe', { fade: 1, loop: false }); SH.vo(msg.s === 'clear' ? 'boss-death' : 'boss-wipe', { bossId: raid.def.id }); if (msg.s === 'clear') SH.vo('clear', { bossId: raid.def.id, classId: player.cls ? player.cls.id : null }); }   // (the Ultimate's kill and wipe are played by its own beats: sound-hooks.js sovereignRoom, the night tune already playing)
     if (player.cls && !raid.def.trial && !raid.practice && msg.s === 'clear') Journal.won(player.cls.id, raid.def.id);
@@ -2280,19 +2281,20 @@
     if (msg.ph != null && msg.ph !== raid.ph) { const first = raid.ph == null; raid.ph = msg.ph; if (SH && raid.state === 'live') { SH.phase(raid.def.id, msg.ph); if (!first) SH.vo('boss-phase', { bossId: raid.def.id, n: msg.ph }); } }
   });
   // A wall (fight.js raiseWall) goes up when the host's wall label appears and breaks when it clears while the fight is live (fb 'wl'; a wipe or a
-  // clear ends the fight first, so neither counts as a break). Presentation only: the title and bar (wall-fx.js), the shake, flash and shards, and the sounds.
-  // One label replacing another is a break and a new wall. Replayed or hidden frames (a snapshot, a hidden tab: FX.muted) only keep the state.
+  // clear ends the fight first, so neither counts as a break). Presentation only, and never told in words: the boss's own moment (wall-fx.js and its
+  // walls/<boss>.js), the camera, the music and the sounds. One label replacing another is a break and a new wall. Replayed or hidden frames (a
+  // snapshot, a hidden tab: FX.muted) only keep the state. A wall that ends with the fight lets its held sound and muffled music go (WallFx.reset).
   function wallEdge(label, was) {
     if (!raid) return;
     const quiet = raid.state !== 'live' || FX.muted;
-    const duck = (a, s) => { try { if (typeof Sound !== 'undefined' && Sound.music && Sound.music.duck) Sound.music.duck(a, s); } catch (e) { /* (the music is only a mood) */ } };
+    const env = { bossId: raid.def.id, hard: raid.mode === 'hard', sound: !!SH };
     if (was) {
-      if (!quiet) { WallFx.broke(raid.bossDraw, was, RAID_BOSS_SCALE); if (SH) { SH.play('wall-break', { vol: 1, key: 'wall-break', minGap: 0.5 }); duck(0.3, 0.9); } }
+      if (!quiet) WallFx.broke(raid.bossDraw, was, RAID_BOSS_SCALE, env); else WallFx.reset();
       raid.wallAt = null;
     }
     if (label) {
       raid.wallAt = quiet ? -9 : now;
-      if (!quiet) { WallFx.up(raid.bossDraw, label, RAID_BOSS_SCALE); if (SH) { SH.play('wall-up', { vol: 1, key: 'wall-up', minGap: 0.5 }); duck(0.5, 2.2); } }
+      if (!quiet) WallFx.up(raid.bossDraw, label, RAID_BOSS_SCALE, env); else WallFx.hold(raid.bossDraw, label, RAID_BOSS_SCALE, env);
     }
   }
   // a set piece begins (fight.js setPiece): kept on the raid state for the waves that play it (raid.setpiece), and for Immune on the boss
@@ -3550,6 +3552,13 @@
       cam.x = bx - sx * zoom / z1; cam.y = by - sy * zoom / z1;
       zoom = z1;
     }
+    const lp = leanNow();   // (a wall's lean toward the boss: the same again, smaller and held a little: wall-fx.js)
+    if (lp > 0.0005 && scene === 'arena' && raid && raid.bossDraw) {
+      if (!punchCam) punchCam = { x: cam.x, y: cam.y };
+      const z1 = zoom * (1 + lp), bx = raid.bossDraw.x, by = raid.bossDraw.y, sx = bx - cam.x, sy = by - cam.y;
+      cam.x = bx - sx * zoom / z1; cam.y = by - sy * zoom / z1;
+      zoom = z1;
+    }
   }
   // how far down the screen the boss plate reaches (px), checked twice a second
   let plateAt = -1, plateH = 0;
@@ -4006,7 +4015,7 @@
     VFX.draw(ctx, 'ground');
     Lamps.drawFloor(ctx, now, { entById, me: Net.id, party: units });   // lantern glows: faint, and under every telegraph (lanterns.js)
     Kennel.drawFloor(ctx, now, { entById, me: Net.id, boss: bd });   // a Houndmaster's position arcs round the boss: faint, under every telegraph (kennel.js)
-    if (raid.wallLabel && !raid.pvp) WallFx.floor(ctx, bd.x, bd.y, now, RAID_BOSS_SCALE, now - (raid.wallAt ?? -9));   // the seal's rune ring on the floor: under every telegraph (wall-fx.js)
+    if (raid.wallLabel && !raid.pvp) WallFx.floor(ctx, bd, now, now - (raid.wallAt ?? -9));   // the seal's rune ring on the floor: under every telegraph (wall-fx.js)
     ArenaView.drawTelegraphs(ctx, raid.tgs, now, tellEnv);
     BossTells.drawRollers(ctx, raid.rollers, now, tellEnv);
     BossTells.drawSweeps(ctx, raid.sweeps, now, tellEnv);
@@ -4057,7 +4066,7 @@
           if (sk) ctx.restore();
           if (sk) SK_FX.thread(ctx, bd, sk);
         }
-        if (raid.wallLabel) WallFx.shell(ctx, bd.x, bd.y, now, RAID_BOSS_SCALE, now - (raid.wallAt ?? -9));   // (a thin skin of glass: wall-fx.js)
+        if (raid.wallLabel) WallFx.body(ctx, bd, now, now - (raid.wallAt ?? -9));   // (the seal on his body: wall-fx.js)
       } else if (e.kind === 'knight') {
         const k = e.k, a = Math.min(1, (now - k.born) / 0.6) * (k.gone ? Math.max(0, 1 - (now - k.gone) / 0.8) : 1);
         drawEchoKnight(ctx, k.x, k.y, k.f, k.st, a * (1 - 0.3 * raid.nightK));
@@ -4137,7 +4146,17 @@
     return punch.a * (q < 0.18 ? easeOut(q / 0.18) : 1 - easeOut((q - 0.18) / 0.82));
   }
   function hitStop(dur = 0.1) { hitStopUntil = Math.max(hitStopUntil, now + Math.min(0.2, dur)); }
-  FX.cam = { flash: screenFlash, dim: screenDim, punch: zoomPunch, stop: hitStop };
+  // lean(amount, rise, hold, fall): the camera leans in on the boss mid-fight (a wall going up or breaking) and lets go. Kept small (at most
+  // 0.06) and short, so a telegraph at the room's edge never leaves the screen for long
+  let leanMo = null;
+  function lean(amount = 0.04, rise = 0.5, hold = 0.8, fall = 1.2) { leanMo = { a: Math.min(0.06, amount), rise: Math.max(0.05, rise), hold: Math.min(2, hold), fall: Math.max(0.1, fall), t0: now }; }
+  function leanNow() {
+    if (!leanMo) return 0;
+    const L = leanMo, q = now - L.t0;
+    if (q < 0 || q >= L.rise + L.hold + L.fall) { leanMo = null; return 0; }
+    return L.a * (q < L.rise ? easeOut(q / L.rise) : q < L.rise + L.hold ? 1 : 1 - easeOut((q - L.rise - L.hold) / L.fall));
+  }
+  FX.cam = { flash: screenFlash, dim: screenDim, punch: zoomPunch, stop: hitStop, lean };
   // ---- the boss's fall: the clock the screen shows crawls for a beat and eases back, and the camera leans in on him.
   // Cosmetic only: it scales the dt this client's frame() feeds to `now` / update() (animation, effects, timers), by real
   // time (rnow). The host's sim ticks off its own timer (raidHost.tick) and the network never reads `now`, so neither slows.

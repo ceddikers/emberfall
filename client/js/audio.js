@@ -35,7 +35,7 @@ const Sound = (() => {
   function persist() { safe(() => { if (typeof Save !== 'undefined') Save.setSetting('audio', Object.assign({}, cfg)); }); }
 
   // ---------------------------------------------------------------- the graph
-  let ctx = null, master = null, limiter = null, musicDuck = null, noiseBuf = null;
+  let ctx = null, master = null, limiter = null, musicDuck = null, musicLP = null, noiseBuf = null;
   const bus = {};
   let unlocked = false, suspended = false;
   const S = {
@@ -58,7 +58,8 @@ const Sound = (() => {
     master.connect(limiter); limiter.connect(ctx.destination);
     for (const b of BUSES) { bus[b] = ctx.createGain(); bus[b].gain.value = busLevel(b); }
     musicDuck = ctx.createGain(); musicDuck.gain.value = 1;
-    bus.music.connect(musicDuck); musicDuck.connect(master);
+    musicLP = ctx.createBiquadFilter(); musicLP.type = 'lowpass'; musicLP.frequency.value = 20000; musicLP.Q.value = 0.7;   // (open: a wall muffles it, music.muffle)
+    bus.music.connect(musicDuck); musicDuck.connect(musicLP); musicLP.connect(master);
     for (const b of BUSES) if (b !== 'music') bus[b].connect(master);
     // one shared 2 s white-noise buffer for every recipe that needs noise
     const n = Math.floor(ctx.sampleRate * 2);
@@ -405,6 +406,22 @@ const Sound = (() => {
     g.cancelScheduledValues(t);
     g.setTargetAtTime(clamp(1 - amount, 0, 1), t, 0.06);
     g.setTargetAtTime(1, duckUntil, 0.35);
+  });
+  // a boss sealed at a wall: the music heard as if from inside him, low-passed to `hz` over `secs` (null or 0: opened again)
+  music.muffle = (hz, secs = 1) => safe(() => {
+    if (!ctx || !musicLP) return;
+    const t = ctx.currentTime, f = musicLP.frequency, to = hz > 0 ? clamp(hz, 120, 20000) : 20000;
+    f.cancelScheduledValues(t); f.setValueAtTime(Math.max(20, f.value), t);
+    f.exponentialRampToValueAtTime(to, t + Math.max(0.02, secs));
+  });
+  // the music surges for a moment (a seal breaking): up by `amount` (at most 0.4) and back over `secs`; a duck still wins
+  music.swell = (amount = 0.25, secs = 1.6) => safe(() => {
+    if (!ctx || !musicDuck) return;
+    const t = ctx.currentTime, g = musicDuck.gain;
+    if (t < duckUntil) return;
+    g.cancelScheduledValues(t);
+    g.setTargetAtTime(1 + clamp(amount, 0, 0.4), t, 0.05);
+    g.setTargetAtTime(1, t + secs * 0.35, secs * 0.25);
   });
   music.has = id => (Array.isArray(id) ? id.some(hasTrack) : hasTrack(id));   // is this track in the manifest (a boss's '-hard' music is used only if it is)
   S.music = music;
