@@ -789,8 +789,11 @@ const thermStepOf = (k, id) => {
   // the element and dial change of a Thermist spell right now (for the planner): el +1 fire / -1 frost
   const t = k.g.temp, sb = k.def.stepBonus || 0, ab = abOf(k, id);
   if (!ab) return null;
-  if (ab.id === 'thermocline' && ab.hold) return { el: t > 0 ? 1 : -1, to: t };   // (a Zenith's: the held element, the dial stays)
-  if (ab.id === 'thermocline') { const el = t > 0 ? -1 : t < 0 ? 1 : -1; return { el, to: t + el * 2 }; }
+  if (ab.id === 'thermocline') {   // (the bolt of the way the swing is going; a Zenith's lights a Corona at its own edge, the dial staying)
+    if (ab.hold && thermEdgeLit(k)) return { el: t > 0 ? 1 : -1, to: t, safe: true };
+    let el = thermDir(k); if (Math.abs(t + el * (1 + sb)) > 5) el = -el;
+    return { el, to: t + el * (1 + sb) };
+  }
   if (ab.id === 'zero') return { el: -1, to: -5, safe: true };
   const el = id === 'cinder' || id === 'flare' ? 1 : -1, big = id === 'flare' || id === 'lance';
   if (big && thermEdgeCast(k, el)) return { el, to: t, edge: true };
@@ -847,24 +850,23 @@ Object.assign(PRO, {
     }
     // Thermocline (a Zenith's, in Cinder Bolt's place): held at the edge it lights a Corona by itself, once every 4s (taken to start a Corona: an edge cast is worth more than a bolt once one is lit)
     const tcA = abOf(k, 'cinder');
-    if (tcA && tcA.hold && Math.abs(t) === 5 && k.usable(tcA) && k.readyIn(tcA) <= 0.0001 && k.glows(tcA) && k.stacks('corona') < 1 && !thermOverloads(k, 'cinder')) return I(k, 'cinder');
+    if (tcA && tcA.hold && Math.abs(t) === 5 && k.usable(tcA) && k.readyIn(tcA) <= 0.0001 && thermEdgeLit(k) && k.stacks('corona') < 1) return I(k, 'cinder');
     const plan = thermPlan(k), dir = plan === 'cinder' || plan === 'flare' ? 1 : -1;
     // Absolute Zero from high up is a swing of up to 10
     if (abOf(k, 'rime').id === 'zero' && ready(k, 'rime') && t >= 3 && castOk(k, ctx, k.castTime(abOf(k, 'rime')))) return I(k, 'rime');
     const order = [plan, dir > 0 ? 'cinder' : 'rime', dir > 0 ? 'flare' : 'lance', 'rime', 'cinder', 'lance', 'flare'];
     // (Latent Heat: the window is short, a big spell would land after it closed: swing back with the instant one)
     if (k.g.lwin) order.unshift(dir > 0 ? 'cinder' : 'rime');
-    // Thermocline: on the move, the quick way down from a high dial is a 2-step instant bolt, not a Rime Shard's single step
-    // (Pendulum and Zenith already swing far enough: the bolt only overshoots there)
-    if (k.talent('thermist_thermocline') && dir < 0 && Math.abs(t) >= 3 && !k.def.corona) order.splice(1, 0, 'cinder');
+    // Thermocline (Q): the quick bolt of either side, stronger than Rime Shard, so it takes the quick steps of both
+    if (tcA && tcA.id === 'thermocline') for (let i = 0; i < order.length; i++) if (order[i] === 'rime') order[i] = 'cinder';
     // Flicker: a quick spell, then the big one instant. Pendulum and Zenith swing faster that way and play it throughout; the base
     // kit does it only to keep casting through a coming move
     if (k.talent('thermist_flicker') && !k.has('flicker') && (plan === 'flare' || plan === 'lance') && (k.def.stepBonus || k.def.corona || ctx.moveSoon(ctx.t, 3) || ctx.state.moving)) order.unshift(dir > 0 ? 'cinder' : 'rime');
     for (const id of [...new Set(order)]) {
       const ab = abOf(k, id);
-      if (!ab || ab.id === 'zero' || ab.hold || !k.usable(ab) || k.readyIn(ab) > 0.0001 || thermOverloads(k, id)) continue;
-      // Thermocline swings away from the side you're on: only when that's the way the plan goes
-      if (ab.id === 'thermocline' && (thermStepOf(k, id).el !== dir || Math.abs(t) < 1)) continue;
+      if (!ab || ab.id === 'zero' || !k.usable(ab) || k.readyIn(ab) > 0.0001 || thermOverloads(k, id)) continue;
+      // (a Zenith's Thermocline at its edge is the Corona press above, not a step)
+      if (ab.id === 'thermocline' && ab.hold && thermEdgeLit(k)) continue;
       const ct = k.castTime(ab);
       if (ct > 0 && !castOk(k, ctx, ct)) continue;
       return I(k, id);

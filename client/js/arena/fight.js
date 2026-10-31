@@ -2250,7 +2250,7 @@ Object.assign(FightSim.prototype, {
     const l = list.slice(0, LAMP_HOST.MAX).filter(o => o && typeof o === 'object').map(o => {
       const on = o.on === 'c' ? 'c' : o.on === 'self' ? pid : Number.isFinite(o.on) ? o.on : null;
       return { id: n(o.id, 0, 1e9), x: n(o.x, -2000, 2000), y: n(o.y, -2000, 2000), r: n(o.r, 0, LAMP_HOST.R), h: n(o.h, 0, LAMP_HOST.HEAL), w: n(o.w, 0, 100), k: n(o.k, 0, 5),
-        on, ox: n(o.ox, -200, 200), oy: n(o.oy, -200, 200), all: o.all ? 1 : 0, st: o.st ? 1 : 0, ln: o.ln ? 1 : 0, sg: o.sg ? 1 : 0, wd: o.wd ? 1 : 0, hh: n(o.hh, 0, LAMP_HOST.HEAL) };
+        on, ox: n(o.ox, -200, 200), oy: n(o.oy, -200, 200), all: o.all ? 1 : 0, st: o.st ? 1 : 0, ln: o.ln ? 1 : 0, sg: o.sg ? 1 : 0, wd: o.wd ? 1 : 0, hh: n(o.hh, 0, LAMP_HOST.HEAL), ll: n(o.ll, 0, LAMP_HOST.HEAL) };
     });
     this.lamps.set(pid, { l, at: this.t, next: old ? old.next : this.t + LAMP_HOST.PULSE, inside: old ? old.inside : new Map(), lastAt: old ? old.lastAt : -999 });
   },
@@ -2351,6 +2351,13 @@ Object.assign(FightSim.prototype, {
           if (!inside.includes(p)) { L.inside.set(key, 0); continue; }
           if (was + LAMP_HOST.PULSE >= LAMP_HOST.HEARTH) { this.applyHeal(pid, p.id, l.hh); L.inside.set(key, 0); } else L.inside.set(key, was + LAMP_HOST.PULSE);
         }
+      }
+      // Last Light: every second the most hurt ally, wherever they stand, heals a little more
+      const ll = mine.reduce((m, [, l]) => Math.max(m, l.ll || 0), 0);
+      if (ll) {
+        let best = null, bf = 0.95;
+        for (const p of al) { const f = p.s.hp / p.s.maxHp; if (f < bf) { bf = f; best = p; } }
+        if (best) { this.applyHeal(pid, best.id, ll); n++; lit.add(best.id); }
       }
       // Signal Fire: the line between two Great Beacons
       const sig = mine.filter(([, l]) => l.sg && l.k === 1);

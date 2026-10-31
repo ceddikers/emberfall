@@ -563,8 +563,8 @@ const SPECS = {
           if (k.env.moving() && k.now < (k.g.windHold || 0)) { k.g.still = 0; return; }   // (Read the Wind: a steadied aim survives 4s of moving)
           if (k.env.moving()) {
             if (k.has('aim')) {
-              // Parting Shot (spec row VI): the stacks you carry are loosed as you break from your stance
-              if (k.talent('ranger_parting') && k.stacks('aim') >= 3) { k.damage(70 * k.stacks('aim'), { ab: k.abById('aimed') }); k.fx('volley'); }
+              // Parting Shot (spec row VI): the stacks you carry are loosed as you break from your stance, and you break away fresh
+              if (k.talent('ranger_parting') && k.stacks('aim') >= 3) { k.damage(100 * k.stacks('aim'), { ab: k.abById('aimed') }); rangerKeen(k); rangerKeen(k); k.refill('aimed'); k.gain('focus', 40); k.fx('volley'); }
               k.clear('aim');
             }
             k.g.still = 0; return;
@@ -588,9 +588,9 @@ const SPECS = {
               const keen = k.consume('keen');
               let r, pot = 760;
               if (keen) {
-                r = k.damage(760, { ab: this }); k.refundCharge('aimed');
+                r = k.damage(760, rangerShot(k, this)); k.refundCharge('aimed');
                 if (k.perk('ranger_w2')) { k.damage(250, { ab: this }); k.fx('empower'); }
-              } else { pot = k.stacks('aim') >= 5 ? 850 : 620; r = k.damage(pot, { ab: this }); if (pot === 850) k.fx('empower'); }   // (a full breath: the still shot)
+              } else { pot = k.stacks('aim') >= 5 ? 850 : 620; r = k.damage(pot, rangerShot(k, this)); if (pot === 850) k.fx('empower'); }   // (a full breath: the still shot)
               rangerPierce(k, keen, r, pot);
               if (pot === 850 && k.talent('ranger_deadeye')) { rangerKeen(k); k.fx('empower'); }   // (Dead Eye, spec row VII: the still shot lights Keen Eye)
             },
@@ -637,7 +637,7 @@ const SPECS = {
                 addAcid(k, (barr ? 3 : 1) + (k.talent('ranger_poisonmark') && k.has('markself') ? 1 : 0), this);   // (Poisoned Mark, spec row VII)
                 if (k.rng() < rangerKeenChance(k)) rangerKeen(k); else rangerNoKeen(k);
                 rangerRhythm(k, this, barr, 200);
-                rangerQuickAfter(k, this, r);
+                rangerQuickAfter(k, this, r, 200);
               },
             },
             pierce: {
@@ -647,7 +647,7 @@ const SPECS = {
               effect(k) {
                 const n = k.g.acid; k.g.acid = 0; k.dots.delete('acid');
                 const keen = k.consume('keen');
-                const pot = 120 + 36 * n + 60 * Math.max(0, n - 5) + (keen ? 100 : 0), r = k.damage(pot, { ab: this });
+                const pot = 120 + 36 * n + 60 * Math.max(0, n - 5) + (keen ? 100 : 0), r = k.damage(pot, rangerShot(k, this));
                 if (keen) { k.refundCharge('caustic'); if (k.perk('ranger_w2')) { k.damage(250, { ab: this }); k.fx('empower'); } }
                 rangerPierce(k, keen, r, pot);
                 if (k.talent('ranger_seep') && n > 0) addAcid(k, 2, this);   // (Seep, spec row VI: two stacks stay burning)
@@ -680,9 +680,9 @@ const SPECS = {
           step: {
             id: 'fury', replaces: 'step', name: 'Blade Fury', type: 'ogcd', target: 'enemy', range: SPEC_MELEE, charges: 2, cd: 15, anim: 'attack',
             desc: 'Spin through everything around you: {d:260} and +1 combo point. Two charges. At 3 Tempo it is a Flourish instead: {d:1000}, spending the Tempo.',
-            glow: k => k.stacks('tempo') >= 3 || (k.g.combo === 4 && !k.g.spilled),
+            glow: k => k.stacks('tempo') >= (k.talent('shadowblade_eye') ? 2 : 3) || (k.g.combo === 4 && !k.g.spilled),   // (Eye of the Storm: two Tempo are enough)
             effect(k) {
-              const fl = k.stacks('tempo') >= 3;
+              const fl = k.stacks('tempo') >= (k.talent('shadowblade_eye') ? 2 : 3);
               if (fl) { k.clear('tempo'); k.fx('empower'); if (k.talent('shadowblade_encore')) k.buff('tempo', 60, {}, 3, 1); }   // (Encore, spec row VI: one Tempo stays)
               k.damage(fl ? (k.talent('shadowblade_encore') ? 2000 : 1000) : 260, { ab: this }); bladeCombo(k, k.perk('shadowblade_a2') ? 2 : 1); bladeStep(k, this);   // (Encore: the Flourish hits harder too)
               if (k.perk('shadowblade_a4')) k.reduceCooldown('fury', 2);   // (the enhancement of Shadowstep's True North, which a Bladedancer never needs: it recharges sooner)
@@ -751,11 +751,13 @@ const SPECS = {
       gaugeTip: 'Fireball gives 12, Meteor 20 (10 with Hot Streak) and Fire Blast 6. Every point of Heat adds 0.3% damage. At 100 you overheat: you lose 15% of your HP, Heat resets and you deal 20% less damage for 5s. Heat cools slowly while you aren\'t casting. Vent spends it all (at 90 or more it also lights Hot Streak), and brings a falling Meteor down at once with your Heat burning in its crater. While Smolder is up it can\'t boil over: it stops at 99.',
       focus: 'Huge single hits. Pyroblast becomes Meteor: a rune circle on the boss, then a meteor smashes it 1.5s later and leaves a burning crater.',
       passive: { name: 'Meteor', desc: 'Pyroblast becomes Meteor: it lands 1.5s after you cast it, hits for {d:700}, and leaves a burning crater. Hot Streak still makes it instant.' },
+      // (the lowest spec in a raid, level with its class on the dummy: a standing 3s cast costs it more among a raid's moving and dodging, so it aims above its class here and its Meteor casts a little quicker)
+      balance: 1.09,
       build: base => {
         // Meteor counts as Pyroblast for crits and Hot Streak (its crater burn doesn't)
         const asPyro = o => (o && o.ab && o.ab.id === 'meteor' && !o.dot ? Object.assign({}, o, { ab: { id: 'pyro' } }) : o);
         return {
-          potMult: 0.773,
+          potMult: 0.773 * 1.09,
           init: () => Object.assign(base.init(), { meteors: [] }),
           critMod: (k, o) => base.critMod(k, asPyro(o)),
           onDamage: (k, amt, crit, o) => base.onDamage(k, amt, crit, asPyro(o)),
@@ -766,8 +768,8 @@ const SPECS = {
           abilities: {
             pyro: {
               id: 'meteor', replaces: 'pyro', name: 'Meteor', type: 'gcd', target: 'enemy', range: SPEC_RANGED, anim: 'cast',
-              cast: k => (k.has('hotstreak') ? 0 : 3.0),
-              desc: '3s cast: a rune circle on the target, and 1.5s later a meteor smashes it for {d:700} and leaves a burning crater ({d:50} every 3s for 9s). With Hot Streak it\'s instant and hits for {d:800}. Vent (or Phoenix Flight) while it falls and it comes down at once, the Heat you vented burning in its crater ({d:10} more a tick for every 10 Heat).',
+              cast: k => (k.has('hotstreak') ? 0 : 2.8),
+              desc: '2.8s cast: a rune circle on the target, and 1.5s later a meteor smashes it for {d:700} and leaves a burning crater ({d:50} every 3s for 9s). With Hot Streak it\'s instant and hits for {d:800}. Vent (or Phoenix Flight) while it falls and it comes down at once, the Heat you vented burning in its crater ({d:10} more a tick for every 10 Heat).',
               glow: k => k.has('hotstreak'),
               effect(k) {
                 const hs = k.consume('hotstreak'), ab = this;
@@ -808,13 +810,18 @@ const SPECS = {
         return {
           potMult: 0.952,
           init: () => Object.assign(base.init(), { circle: null }),
-          dmgMod: (k, o) => base.dmgMod(k, o) + (inCircle(k) ? 0.15 : 0),
+          dmgMod: (k, o) => base.dmgMod(k, o) + (inCircle(k) ? 0.15 + (k.g.circle.flared ? 0.3 : 0) : 0),   // (Long Burn: once the circle has burned 8s it flares, and you hit 30% harder still inside it)
           haste: k => (inCircle(k) ? 0.8 : 1),
           // a short buff that stays lit while you stand inside, so the HUD shows it
           tick(k) {
             base.tick(k);
             const inn = inCircle(k), c = k.g.circle, live = !!c && k.now < c.end;
             if (inn) k.buff('incircle', 0.3);
+            if (live) {
+              // the seconds you stood inside (Afterburn's blast counts them), and Long Burn's flare at 8s
+              c.inside = (c.inside || 0) + (inn ? Math.min(0.25, k.now - (c.seen ?? k.now)) : 0); c.seen = k.now;
+              if (!c.flared && k.talent('pyromancer_longburn') && k.now - c.at >= 8) { c.flared = true; if (inn) k.fx('flashpoint'); }
+            }
             // Rekindle (spec row VI): stepping back into the circle after leaving it flares it, and readies an instant Fireball
             if (inn && k.g.wasOut && k.talent('pyromancer_rekindle') && k.now >= (k.g.rekAt || 0)) {
               k.g.rekAt = k.now + 6; k.damage(350, { ab: k.abById('circle'), extra: true }); k.refundCharge('fireblast'); k.buff('haze', 8); k.fx('flashpoint');
@@ -831,7 +838,7 @@ const SPECS = {
               effect(k) {
                 const p = k.env.pos ? k.env.pos() : { x: 0, y: 0 };
                 const dur = (k.perk('pyromancer_a4') ? 26 : 20) + (k.talent('pyromancer_longburn') ? 7 : 0);
-                k.g.circle = { x: p.x, y: p.y, r: k.talent('pyromancer_longburn') ? 119 : 95, end: k.now + dur };   // (Long Burn: 25% wider too)
+                k.g.circle = { x: p.x, y: p.y, r: k.talent('pyromancer_longburn') ? 119 : 95, at: k.now, end: k.now + dur };   // (Long Burn: 25% wider too)
                 if (k.perk('pyromancer_w3')) k.refill('fireblast');
                 pyroBurst(k, dur);
               },
@@ -1296,10 +1303,10 @@ Object.assign(SPECS, {
       focus: 'Teamwork. Two smaller Dolls, and the triangle between you and them is the Stage: an enemy standing in it takes more damage from everyone.',
       passive: { name: 'The Stage', desc: 'You work two Dolls, each hitting for a little over half. The triangle between you and both Dolls is the Stage: an enemy inside it takes 10% more damage from the whole party. W flings the Doll nearest you to where you aim; Swap trades places with the Doll nearest where you aim.' },
       // (its own damage is a little lower: the Stage pays the rest to the party)
-      // (a raid lifts it back: in a real pull its own damage came out under the field)
-      balance: 0.93 * 1.06,
+      // (a raid lifts it back: in a real pull its own damage came out under the field, and by set 3 its late rows paid less than the field's, so a second lift)
+      balance: 0.93 * 1.06 * 1.08,
       build: base => ({
-        potMult: base.potMult * 0.9035 * 1.06,
+        potMult: base.potMult * 0.9035 * 1.06 * 1.08,
         dolls: 2, dollMult: 0.58,
         // (each Doll hits at 58%: the numbers here are per Doll)
         abilities: {
@@ -1484,6 +1491,7 @@ SPECS.lanternkeeper = [
   },
   {
     id: 'wayfarer', name: 'Wayfarer', title: 'The Road Lamp', accent: '#ff9f5a',
+    balance: 1.1,   // (Trim the Wick grows with every lantern lit, and the Wayfarer keeps more of them lit than the base kit: tools/check.js)
     gaugeTip: 'Embers light your lanterns. One comes back every 5s, and every third Trim the Wick gives one more. Lamplighter\'s Stride and Hand Lantern cost one, Relight two.',
     blurb: 'Lights trail behind you as you move: healing on the go.',
     focus: 'Small lights fall wherever you walk. Lead the party through the fight and the light follows, and the walking itself mends whoever is hurt most; Trailblaze drags every light along with you.',

@@ -562,6 +562,14 @@ const BotAI = {
     for (let i = 0; i < negs; i++) pen -= 450;
     return pen + a + b >= bs;
   },
+  // a Lanternkeeper's glow draws a melee fighter in only where they can still reach the boss, or when they are hurt (at full health a fighter stays where the damage is)
+  lampLure(bot, view, px, py) {
+    if (bot.role === 'healer' || !bot.cls || !this.isMelee(bot.cls)) return true;
+    const b = view.boss;
+    if (b && hypot2(px - b.x, py - b.y) <= 150) return true;
+    const me = view.players.find(p => p.id === bot.id);
+    return !me || me.hp / me.maxHp < 0.85;
+  },
   danger(bot, px, py, view, a = 0, b = 0, bs = NaN) {
     let pen = 0;
     const wall = ARENA.sd(px, py) + 45;   // how far past "45 from the wall" this spot is
@@ -860,7 +868,7 @@ const BotAI = {
     if (bounded && this.past(pen, negs, a, b, bs)) return pen;
     // a friendly healing pool (Moonwell): worth stepping into if it's close, for everyone but the tank
     // (a Lanternkeeper's glows count once however many overlap, so stacked lights never outweigh a telegraph)
-    if (bot.role !== 'tank') { let lit = false; for (const pl of view.pools || []) if (hypot2(pl.x - px, pl.y - py) < pl.r - 25 && hypot2(pl.x - bot.x, pl.y - bot.y) < pl.r + 260) { if (pl.lamp) { if (lit) continue; lit = true; } pen -= 450; } }
+    if (bot.role !== 'tank') { let lit = false; for (const pl of view.pools || []) if (hypot2(pl.x - px, pl.y - py) < pl.r - 25 && hypot2(pl.x - bot.x, pl.y - bot.y) < pl.r + 260) { if (pl.lamp) { if (lit || !this.lampLure(bot, view, px, py)) continue; lit = true; } pen -= 450; } }
     if (bounded && this.past(pen, 0, a, b, bs)) return pen;   // (the pool bonuses are all in now)
     // the closing edge: be well inside where the wall is about to jump to
     const en = view.edgeNext;
@@ -1425,6 +1433,8 @@ const BotAI = {
       if (a.id === 'step' && k.def.spec === 'nightstalker' && BotAI.dollDanger(view, bot.x, bot.y, 0.8)) return i;
       // Shadow Dodge: the Shadowstep slips a blow only if it is taken as the cast ends (the last second and a half), so it waits for that
       if (a.id === 'step' && k.talent('shadowblade_dodge') && !(view.bossCast && view.bossCast.left < 1.5) && k.charges(a) < 2) continue;
+      // a Bladedancer keeps Blade Fury for the Flourish (three Tempo, two with Eye of the Storm), or for the point that makes a perfect finisher, and never lets both charges sit
+      if (a.id === 'fury' && k.stacks('tempo') < (k.talent('shadowblade_eye') ? 2 : 3) && k.charges(a) < 2 && !(k.g.combo === 4 && !k.g.spilled)) continue;
       if (k.gcdRemaining() < 0.65 && !k.cast) continue;
       if (a.target === 'ally' || (hotAndHurt && a.id === 'fireblast')) continue;
       if (bot.role === 'tank' && BotAI.tankHold(k, a)) continue;   // (a tank talent's move with its own timing: BotAI.tankTalents)
@@ -1436,8 +1446,8 @@ const BotAI = {
       if ((a.id === 'rapid' || a.id === 'explosive') && k.talent('ranger_focusfire') && !k.has('markself')) continue;
       // Explosive Shot: a Piercing Arrow right after planting feeds the charge (as the simulator's pro does)
       if (a.id === 'pierce' && k.g.charge && k.talent('ranger_explosive') && (k.stacks('keen') || k.charges(a) === 2 || k.has('markself'))) return i;
-      // (Disengage leaps 150 away from the boss: not into a telegraph about to land there)
-      if (a.id === 'cloak' && (k.talent('ranger_lightfoot') || k.talent('ranger_disengage')) && k.g.focus <= 55 && !(k.talent('ranger_disengage') && (() => { const b = view.boss, dx = bot.x - b.x, dy = bot.y - b.y, d = hypot2(dx, dy) || 1; return BotAI.danger(bot, bot.x + dx / d * 150, bot.y + dy / d * 150, view) >= 400; })())) return i;
+      // (Disengage leaps 150 away from the boss: not with floor about to land, as for a Shadowstep)
+      if (a.id === 'cloak' && (k.talent('ranger_lightfoot') || k.talent('ranger_disengage')) && k.g.focus <= 55 && !(k.talent('ranger_disengage') && view.mechs.some(m => ['aoe', 'safe', 'tower', 'proximity', 'gale', 'drop', 'gaze', 'stack', 'spread'].includes(m.type) && m.resolveAt - view.t < 2.5))) return i;
       // Firestep (a Pyromancer's blink, in Smolder's place): kept for the moment a mechanic sends the bot walking, for the instant Fireball on the way
       if (a.id === 'firestep' && !moving) continue;
       const defensive = a.id !== 'blossom' && a.id !== 'firestep' && /mitigate|party takes|less damage|immune|shield/i.test(a.desc) && !/Burst/.test(a.desc);   // (Death Blossom's smoke is a rider on a burst, not a reason to wait for damage)
@@ -1461,7 +1471,7 @@ const BotAI = {
       if (a.id === 'shift') {
         const groupHurt = hurt.filter(h => h.f < 0.8).length >= 2;
         // (Haste heals the whole party: go early when party-wide damage is coming and people are already hurt)
-        if (k.g.stance === 'slow' && ((k.g.flux >= 95 && !(k.talent('chronomancer_overwound') && raidSoon && !(view.bossCast && RAID_CASTS.test(view.bossCast.name)))) || (groupHurt && k.g.flux >= (raidSoon ? 25 : 40)) ||
+        if (k.g.stance === 'slow' && ((k.g.flux >= 95 && !(k.talent('chronomancer_overwound') && (!groupHurt || (raidSoon && !(view.bossCast && RAID_CASTS.test(view.bossCast.name)))))) || (groupHurt && k.g.flux >= (raidSoon ? 25 : 40)) ||
           (k.def.spec === 'echoist' && view.bossCast && RAID_CASTS.test(view.bossCast.name) && view.bossCast.left > 1.2 && k.g.flux >= 25) ||
           (BotAI.graceWindow(view).prep && BotAI.graceWindow(view).at < 4 && k.g.flux >= 40) || (view.bossCast && view.bossCast.name === 'Nightfall' && k.g.flux >= 20))) return i;   // (an Echoist's echoes come 3s after the Bolt: begin as the cast does. Grace Withdrawn: Haste as the party drops to 1 HP, so every Bolt heals all of them for Nightfall)
         // (back to Slow before the Flux runs dry, for Paradox)
@@ -1524,7 +1534,7 @@ const BOT_CLASS = {
       }
       // Thermocline (a Zenith's, in Cinder Bolt's place): held at the edge it lights a Corona by itself, once every 4s
       const tcI = idx('cinder'), tcA = tcI >= 0 ? k.abilities[tcI] : null;
-      if (tcA && tcA.hold && Math.abs(t) === 5 && k.stacks('corona') < 1 && ok(tcI) && k.glows(tcA)) return tcI;
+      if (tcA && tcA.hold && Math.abs(t) === 5 && k.stacks('corona') < 1 && ok(tcI) && thermEdgeLit(k)) return tcI;
       // Absolute Zero (in Rime Shard's place): not a step on the way, a plunge. From 4 or more on the hot side (a Zenith with its Corona built) it is the Shock; otherwise it waits
       const azI = idx('rime'), azA = azI >= 0 ? k.abilities[azI] : null;
       if (azA && azA.id === 'zero' && t >= 4 && (!k.def.corona || k.stacks('corona') >= 2) && ok(azI)) return azI;
@@ -1533,12 +1543,14 @@ const BOT_CLASS = {
       // (Latent Heat: the window is short, a big spell would land after it closed: swing back with the instant one)
       const order = [plan, dir > 0 ? 'cinder' : 'rime', 'rime', 'cinder', 'lance', 'flare'];
       if (k.g.lwin) order.unshift(dir > 0 ? 'cinder' : 'rime');
+      // Thermocline (Q): the quick bolt of either side, stronger than Rime Shard, so it takes the quick steps of both
+      if (tcA && tcA.id === 'thermocline') for (let i = 0; i < order.length; i++) if (order[i] === 'rime') order[i] = 'cinder';
       for (const id of [...new Set(order)]) {
         const i = idx(id), a = k.abilities[i];
-        if (!ok(i) || a.hold || a.id === 'zero' || (moving && k.castTime(a))) continue;   // (Absolute Zero is pressed above, never as an ordinary rime step)
-        const el = a.el || 0, big = id === 'flare' || id === 'lance';
-        // Thermocline (a Pendulum's or the base kit's, in Cinder Bolt's place) swings two steps AWAY from the side the dial is on: only when that is the way the plan goes
-        if (a.id === 'thermocline' && (Math.abs(t) < 1 || (t > 0 ? -1 : 1) !== dir)) continue;
+        if (!ok(i) || a.id === 'zero' || (a.hold && thermEdgeLit(k)) || (moving && k.castTime(a))) continue;   // (Absolute Zero is pressed above, never as an ordinary rime step; a Zenith's Thermocline at its edge is the Corona press above)
+        let el = a.el || 0; const big = id === 'flare' || id === 'lance';
+        // Thermocline (Q): a bolt of the way the swing is going; it turns back at the edge by itself
+        if (a.id === 'thermocline') { el = thermDir(k); if (Math.abs(t + el * (1 + sb)) > 5) el = -el; }
         if (el && brink === el) continue;
         if (el && !(big && thermEdgeCast(k, el)) && Math.abs(t + el * ((big ? 2 : 1) + sb)) > 5) continue;
         return i;
@@ -1738,11 +1750,12 @@ BotAI.topDps = function (bot, view, def) {
 // buff or a vulnerability on the boss), or on cooldown for a long party burst of its own (Accelerando). Never while
 // someone is low, and a heal that shields (Benediction) waits while a tankbuster is coming.
 BotAI.allyBuff = function (bot, k, view, hurt, moving, busterSoon) {
-  if (hurt.length && hurt[0].f < 0.6) return null;
+  if (hurt.length && hurt[0].f < 0.3) return null;
   for (let i = 0; i < k.abilities.length; i++) {
     const a = k.abilities[i], def = a.allyBuff && ALLY_BUFFS[a.allyBuff];
     if (!def || !k.usable(a) || k.readyIn(a) > 0.0001) continue;
-    const long = k.recast(a) >= 60;
+    if (hurt.length && hurt[0].f < 0.6 && a.id !== 'warp') continue;   // (Time Warp is a damage window for the party, a good one is put up on cooldown unless someone is nearly gone)
+    const long = k.recast(a) >= 60 || a.id === 'warp';   // (a held oGCD's recast shrinks a little with gear: Time Warp is still a long burst)
     if (!long && (!view.burst || busterSoon || hurt.filter(h => h.f < 0.8).length >= 2)) continue;
     // a move that is also the tank's shield (Benediction) keeps a charge back, or waits if a tankbuster is due before it's back
     const nb = (view.next || []).find(([n]) => BUSTER_CASTS.test(n));
@@ -1814,6 +1827,16 @@ BotAI.healerTalents = function (bot, k, view, c) {
       if (who && ready(ri)) { bot.barkAt = view.t; return to(ri, who.p); }
     }
   } else {
+    // Second Chance: a Recall is a strike and a window of doubled Bolts as well as a heal, so it goes out each time it is back, on whoever is lowest (a standing cast: on the move only where standing is as safe as the plan)
+    const ri = idx('recall');
+    if (k.talent('chronomancer_secondchance') && ri >= 0 && gcdFree && low && low.f < 0.92 && ready(ri)) {
+      const was = bot.healTarget; bot.healTarget = low.p.id;
+      if (ready(ri)) {
+        if (!moving) return ri;
+        if (BotAI.stillOk(bot, view) && BotAI.danger(bot, bot.x, bot.y, view) < 400) { bot.stillUntil = view.t + (k.castTime(k.abilities[ri]) || 0) + 0.15; return ri; }
+      }
+      bot.healTarget = was;
+    }
     // Time Bubble: on the tank as a buster comes in, else where most of the party stands as a raidwide does
     const bi = idx('stasis');
     if (bi >= 0 && k.abilities[bi].id === 'bubble' && view.t - (bot.bubbleAt ?? -99) > 8 && ready(bi)) {
@@ -2684,17 +2707,17 @@ BOT_CLASS.thresher = {
     // (a finisher locks 0.55s inside a 1.0s GCD, so a gate of "lock over and 0.4s of GCD left" was one 0.05s tick wide: ok() already
     // waits for the lock, so all that is asked of the GCD is that one is running, for a window of about 0.4s)
     // the talents that use the Blink (the dash: two charges, 12s each; the bot walks, so it blinks in place and the kit is told where from and to). Through the
-    // telegraph on its feet (Step Through, Flicker); a swing added to a short string (Unbroken Step); a slash through the boss whenever a charge is spare (Moonrise).
+    // telegraph on its feet (Step Through, Flicker, Unbroken Step); a swing added to a short string (Unbroken Step); a slash through the boss whenever a charge is spare (Moonrise).
     // A charge is kept for the dodge.
     if (bot.actor.dashReady(k.now) && (k.talent('thresher_step') || k.talent('thresher_flicker') || k.talent('thresher_unbroken') || k.talent('thresher_moonrise'))) {
       const spare = bot.actor.dash.charges >= 2, from = { x: bot.x, y: bot.y }, bb = view.boss, fl = Math.atan2(bb.y - bot.y, bb.x - bot.x);
-      if (BotAI.dollDanger(view, bot.x, bot.y, 1.0) && (k.talent('thresher_step') || k.talent('thresher_flicker'))) {
+      if (BotAI.dollDanger(view, bot.x, bot.y, k.talent('thresher_flicker') || k.talent('thresher_unbroken') ? 2.2 : 1.0) && (k.talent('thresher_step') || k.talent('thresher_flicker') || k.talent('thresher_unbroken'))) {   // (Flicker and Unbroken Step pay for a Blink through the red, so a bot holding them blinks early out of it as a person would)
         // (it leaves the ring: a Blink that stays in it is dodged by nothing, and Flicker's charge back would only be spent in it again)
         const to = view.t - (bot.rpDodge ?? -9) > 1.5 ? reapEscape(bot, view) : null;
         if (to) { bot.rpDodge = view.t; bot.actor.useDash(k.now, { from, to, through: true }); bot.x = to.x; bot.y = to.y; }
       }
-      else if (spare && k.talent('thresher_unbroken') && open && n >= 1 && n < 3 && bot.rpUnb !== k.g.str.start) { bot.rpUnb = k.g.str.start; bot.actor.useDash(k.now, { from, to: from, through: false }); }
-      else if (spare && k.talent('thresher_moonrise') && Math.hypot(bb.x - bot.x, bb.y - bot.y) < 260) bot.actor.useDash(k.now, { from, to: { x: bot.x + Math.cos(fl) * 200, y: bot.y + Math.sin(fl) * 200 }, through: false });
+      else if (spare && k.talent('thresher_unbroken') && open && n >= 1 && n < 3 && bot.rpUnb !== k.g.str.start) { bot.rpUnb = k.g.str.start; const slash = k.talent('thresher_moonrise') && Math.hypot(bb.x - bot.x, bb.y - bot.y) < 260; bot.actor.useDash(k.now, { from, to: slash ? { x: bot.x + Math.cos(fl) * 200, y: bot.y + Math.sin(fl) * 200 } : from, through: false }); }   // (the spare charge goes into a string already swinging; with Moonrise it is a slash through the boss as well)
+      else if (spare && k.talent('thresher_moonrise') && !k.talent('thresher_unbroken') && Math.hypot(bb.x - bot.x, bb.y - bot.y) < 260) bot.actor.useDash(k.now, { from, to: { x: bot.x + Math.cos(fl) * 200, y: bot.y + Math.sin(fl) * 200 }, through: false });
     }
     if (!open && k.gcdRemaining() > 0.1 && !k.cast) {
       if (ok(frenzy) && view.burst) return frenzy;

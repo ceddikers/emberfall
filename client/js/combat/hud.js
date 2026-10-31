@@ -106,8 +106,8 @@ GAUGE_TIPS.ironpalm = {
 
 // talents whose proc shows in the tracker (named after the talent)
 Object.assign(BUFF_NAMES, { answer: 'Answering Rune', beat: 'Skipped Beat', feint: 'Feint', haze: 'Heat Haze', pinned: 'Pinning Shot', quickmend: 'Quick Mend',
-  secondwind: 'Second Wind', sharpen: 'Sharpened Shadows', steady: 'Steady Hands', unbreak: 'Unbreakable', sprinted: 'Shadow Sprint', tempo: 'Tempo', oncue: 'Stage Cross', smoulder: 'Smoulder', stalk: 'Stalking' });
-Object.assign(BUFF_ICON, { sprinted: 'step', tempo: 'fury', oncue: 'swap', smoulder: 'smolder', stalk: 'step', answer: 'strike', beat: 'bolt', feint: 'strike', haze: 'fireball', pinned: 'quick', quickmend: 'mend', secondwind: 'cloak', sharpen: 'evis', steady: 'brace', unbreak: 'bulwark' });
+  secondwind: 'Second Wind', sharpen: 'Sharpened Shadows', relent: 'Relentless', flickstar: 'Flicker', steady: 'Steady Hands', unbreak: 'Unbreakable', sprinted: 'Shadow Sprint', tempo: 'Tempo', oncue: 'Stage Cross', smoulder: 'Smoulder', stalk: 'Stalking' });
+Object.assign(BUFF_ICON, { sprinted: 'step', tempo: 'fury', oncue: 'swap', smoulder: 'smolder', stalk: 'step', answer: 'strike', beat: 'bolt', feint: 'strike', haze: 'fireball', pinned: 'quick', quickmend: 'mend', secondwind: 'cloak', sharpen: 'evis', relent: 'dance', flickstar: 'star', steady: 'brace', unbreak: 'bulwark' });
 
 // what each buff does while it's up, for its hover text. n(id) is the move's name as this hero has it (a spec may rename it).
 const BUFF_TIPS = {
@@ -128,7 +128,7 @@ const BUFF_TIPS = {
   smoulder: () => 'Your Heat can\'t boil over: it stops at 99.',
   oncue: n => `Your next ${n('cross')} cuts twice as hard and gives 1 more Encore.`,
   strung: () => 'Each String still tied to the Doll gives you 5% more damage (8% with Slack Line) and makes its Jabs just as much faster. A torn String takes its share with it.',
-  tempo: n => `At three Tempo your next ${n('step')} is a Flourish. A spilled combo point loses them all.`,
+  tempo: (n, k) => (k && k.talent && k.talent('shadowblade_eye') ? `At two Tempo your next ${n('step')} is a Flourish. A spilled combo point costs one.` : `At three Tempo your next ${n('step')} is a Flourish. A spilled combo point loses them all.`),
   stalk: n => `Your next ${n('evis')} hits 6% harder.`,
   barrage: n => `Your next ${n('quick')} hits three times as hard and gives triple Focus.`,
   falconHunt: () => 'Your falcon is hunting: every Keen Eye you light sends it diving at the boss.',
@@ -138,9 +138,11 @@ const BUFF_TIPS = {
   truenorth: () => 'Every hit counts as a positional, wherever you stand.',
   dance: n => `Your attacks are faster, every positional lands, and ${n('evis')} hits 25% harder.`,
   poised: n => `You entered Shadow Dance at 5 points: your first ${n('evis')} in it keeps them.`,
-  feint: n => `Your next ${n('evis')} hits 12% harder. After a Strike from the front it also lands as a hit from ${n('evis') === 'Backstab' ? 'behind' : 'the side'}, wherever you stand.`,
+  feint: (n, k) => `Your next ${n('evis')} hits ${k && k.def && k.def.spec === 'bladedancer' ? 20 : 12}% harder. After a Strike from the front it also lands as a hit from ${n('evis') === 'Backstab' ? 'behind' : 'the side'}, wherever you stand.`,
   sprinted: () => 'Your next Strike hits 80% harder.',
-  sharpen: n => `Every combo point you gain sharpens your next ${n('evis')} by 2.5% (up to 12.5%), and a point that spills sharpens it 12%. Each stack is 2.5%.`,
+  relent: () => 'You act 12% faster.',
+  flickstar: n => `Your next ${n('star')} is ready and hits half again as hard.`,
+  sharpen: (n, k) => `Every combo point you gain sharpens your next ${n('evis')} by ${k && k.def && k.def.spec === 'nightstalker' ? '6% (up to 30%), and its chance to crit by 9% (up to 45%). A point that spills sharpens it 30%. Each stack is 6%.' : '5% (up to 25%), and its chance to crit by 5% (up to 25%). A point that spills sharpens it 24%. Each stack is 5%.'}`,
   combust: () => 'Everything you cast is a critical hit.',
   heating: n => `Your next critical hit gives you Hot Streak. A ${n('fireball')} or ${n('pyro')} that doesn't crit loses it.`,
   hotstreak: n => `Your next ${n('pyro')} is instant and hits harder.`,

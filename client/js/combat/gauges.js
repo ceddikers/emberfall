@@ -136,12 +136,12 @@ const GAUGES = {
     }
     // Bladedancer's Tempo: three small pips down at the left; all three lit, Blade Fury is a Flourish
     if (k.def.spec === 'bladedancer') {
-      const n = k.stacks('tempo');
+      const n = k.stacks('tempo'), full = k.talent('shadowblade_eye') ? 2 : 3;   // (Eye of the Storm: a Flourish at two)
       for (let i = 0; i < 3; i++) {
         const x = cx - 54 + i * 11, y = cy + 20, on = i < n;
-        poly(c, [x, y - 5, x + 4, y, x, y + 5, x - 4, y], on ? (n >= 3 ? '#fff0ff' : '#d6b3ff') : '#1e1a28', on ? '#ffffff' : '#4a4060', 1);
+        poly(c, [x, y - 5, x + 4, y, x, y + 5, x - 4, y], on ? (n >= full ? '#fff0ff' : '#d6b3ff') : '#1e1a28', on ? '#ffffff' : '#4a4060', 1);
       }
-      if (n >= 3) glow(c, cx - 43, cy + 20, 16, '#e0c8ff', 0.4 + Math.sin(t * 6) * 0.15);
+      if (n >= full) glow(c, cx - 43, cy + 20, 16, '#e0c8ff', 0.4 + Math.sin(t * 6) * 0.15);
     }
     if (k.has('dance')) label(c, '✦', cx, cy - 34, '#e0a8ff', 18, 'system-ui');
   },

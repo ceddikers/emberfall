@@ -282,8 +282,11 @@ function drift(m, secs) {
   // King of the Pack: the spectral hounds stay 10s more
   const m3 = make({ seed: 53, talents: ['houndmaster_kingofpack'] });
   m3.engage(); m3.kit.g.ult = 100; m3.kit.press(T); m3.step(18);
-  check(m3.kit.g.hounds.some(h => h.spectral) && m3.kit.g.all, 'King of the Pack: they stay 10s past the window, and the free finisher with them');
-  m3.step(4);
+  check(m3.kit.g.hounds.some(h => h.spectral) && m3.kit.g.all, 'King of the Pack: they stay 15s past the window, and the free finisher with them');
+  m3.st.emits.length = 0; m3.kit.press(E); m3.step(0.5);
+  const kf = m3.dmg('finisher')[0];
+  check(kf && near(kf.potency, 1050, 2), `and that finisher hits half again as hard (${kf && kf.potency})`);
+  m3.step(9);
   check(!m3.kit.g.hounds.some(h => h.spectral), 'and then go');
   // the loot: the pack opens with a pounce
   const m4 = make({ seed: 54 });
@@ -418,13 +421,17 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   const run3 = (talents, a, b) => { const m = make({ seed: 61, talents }); m.engage(); put(m, a, b); press3(m); m.step(1); return m; };
   const mn = run3([TN('heelnip')], 'left', 'left'), m0 = run3(null, 'left', 'left');
   check(m0.kit.g.pair === null, 'without Heel Nip two hounds on one side stay a Snap');
-  check(mn.kit.g.pair === 'rend' && (mn.kit.stats.nips || 0) === 1, `Heel Nip: the third hit sends one hound across, and the pair is a Rend (${mn.kit.g.pair}, ${mn.hs().map(h => h.goal)})`);
+  check(mn.kit.g.pair === 'rend' && (mn.kit.stats.nips || 0) >= 1, `Heel Nip: the hits send one hound across, and the pair is a Rend (${mn.kit.g.pair}, ${mn.hs().map(h => h.goal)})`);
   const ms = run3([TN('heelnip')], 'left', 'right');
-  check(ms.kit.g.pair === 'rend' && ms.kit.stats.nips === 1 && ms.hs().map(h => h.goal).join() === 'left,right', 'Heel Nip: a pair that already stands is left where it is, and the pack bites again');
+  check(ms.kit.g.pair === 'rend' && ms.kit.stats.nips >= 1 && ms.hs().map(h => h.goal).join() === 'left,right', 'Heel Nip: a pair that already stands is left where it is, and the pack bites again');
   const mf = run3([TN('heelnip')], 'front', 'front');
   check(mf.kit.g.pair === 'hamstring', `two hounds in front: the nip makes a Hamstring (${mf.kit.g.pair})`);
-  const mh = make({ seed: 61, talents: [TN('heelnip')] }); mh.engage(); put(mh, 'left', 'left'); mh.kit.press(R); press3(mh);
-  check(!mh.kit.stats.nips, 'and a Hold is respected');
+  const mh = make({ seed: 61, talents: [TN('heelnip')] }); mh.engage(); put(mh, 'left', 'left'); mh.kit.press(R); const nips0 = mh.kit.stats.nips || 0; press3(mh);
+  check((mh.kit.stats.nips || 0) === nips0, 'and a Hold is respected');
+  // (the Pack Leader: every knife hit marks a heel, and the next finisher hits 20% harder for each)
+  const mk = make({ seed: 61, talents: [TN('heelnip')] }); mk.engage(); put(mk, 'left', 'right'); mk.kit.press(Q); mk.step(2.6); mk.kit.g.bond = 100; mk.st.emits.length = 0; mk.kit.press(E); mk.step(0.5);
+  const fh = mk.dmg('finisher')[0];
+  check(fh && near(fh.potency, 420 * 1.4, 1) && !mk.kit.g.heel, `Heel Nip: two knife hits mark two heels, and the Rend hits 40% harder (${fh && fh.potency})`);
 }
 {
   // Scent Line: the Whistle's hound bites for 120 on its way through the boss
@@ -456,6 +463,9 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   const sh = go([TN('guarddog')]).st.emits.find(e => e.type === 'shield' && e.target === 'self'), none = go(null).st.emits.find(e => e.type === 'shield');
   check(sh && sh.target === 'self' && sh.dur === 8 && sh.amount > 50, `Guard Dog: a shield on you for 8s (${JSON.stringify(sh)})`);
   check(!none, 'and Call Off alone gives none');
+  const gd = go([TN('guarddog')]); gd.step(3.5);
+  const gb = gd.dmg('bite').filter(d => near(d.potency, 165, 1));
+  check(gb.length === 2, `and the pack bites once each as it goes back, for three times as much (${gb.length})`);
 }
 {
   // Fetch: Call Off drags you toward the nearest hound, up to 150, never into the boss
@@ -484,6 +494,8 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   check(m.kit.press(W), 'Howl');
   const pb = m.st.emits.find(e => e.type === 'partyBuff');
   check(pb && pb.kind === 'dmg' && near(pb.value, 0.08) && pb.dur === 8, `the party deals 8% more for 8s (${JSON.stringify(pb)})`);
+  const hb = m.dmg('howl');
+  check(hb.length === 2 && hb.every(d => near(d.potency, 275, 1)), `Howl: both hounds bite at once for five times as much (${hb.map(d => d.potency)})`);
   check(m.fx('howl').length === 1 && hdHolding(m.kit) && m.hs().every(h => h.mode === 'hold'), 'and the hounds hold');
   check(m.kit.label(m.kit.abilities[R]) === 'Pounce', 'so the Hold button says Pounce');
   check(m.kit.readyIn(ab) > 19 && m.kit.readyIn(ab) <= 20, `a 20s cooldown (${m.kit.readyIn(ab).toFixed(1)})`);
@@ -543,6 +555,13 @@ const press3 = m => { for (let i = 0; i < 3; i++) { m.kit.press(Q); m.step(2.6);
   m.step(3);
   check(m.kit.g.pair === 'bringdown', `and it ends in a Bring Down pair (${m.kit.g.pair})`);
   check(m.kit.readyIn(ab) > 40, `a 45s cooldown (${m.kit.readyIn(ab).toFixed(1)})`);
+  // the lap ties a 6s Mark, so Cornered rides it: a pounce from both when it ends
+  const mc = make({ seed: 72, talents: [TN('longchase'), TN('cornered')] });
+  mc.engage(); put(mc, 'left', 'right'); mc.kit.press(F); mc.st.emits.length = 0;
+  mc.run(5);
+  check(mc.dmg('pounce').length === 0 && mc.kit.g.markUntil > mc.st.t, 'the Long Chase ties a Mark: no pounce while it lasts');
+  mc.run(2.5);
+  check(mc.fx('pounce').length === 1 && mc.dmg('pounce').length === 2, `and Cornered pounces when it ends (${mc.dmg('pounce').length})`);
 }
 {
   // Alpha: a Bring Down is a sure crit with both hounds' own Bond full

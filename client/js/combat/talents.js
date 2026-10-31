@@ -147,14 +147,17 @@ const TALENTS = {
   // ======================================================================= DPS
   ranger: [
     [
-      { id: 'ranger_rhythm', name: 'Fletcher\'s Rhythm', ab: 'quick', text: 'Every third Quick Shot looses a second arrow for 70% damage, and that arrow can light Keen Eye too.' },
+      { id: 'ranger_rhythm', name: 'Fletcher\'s Rhythm', ab: 'quick', text: 'Every second Quick Shot looses a second arrow for 70% damage. It always crits and always lights Keen Eye.',
+        spec: { sharpshooter: 'Every second Quick Shot or Aimed Shot looses a second arrow for 70% of a Quick Shot. It always crits; after a Quick Shot it always lights Keen Eye, after an Aimed Shot it can.' } },
       { id: 'ranger_ricochet', name: 'Ricochet', ab: 'pierce', text: 'A Piercing Arrow glances off the boss and strikes again for a quarter as much (up to {d:100}). If it crits, it also gives its charge back and lights Keen Eye.',
         spec: { sharpshooter: 'An Aimed Shot glances off the boss and strikes again for a quarter as much (up to {d:100}). If it crits, it also gives its charge back and lights Keen Eye.', venomstrike: 'A Caustic Arrow glances off the boss and strikes again for a quarter as much (up to {d:100}). If it crits, it also gives its charge back and lights Keen Eye.' } },
-      { id: 'ranger_steady', name: 'Steady Breath', ab: 'quick', text: 'A Quick Shot loosed after standing still for 2s lights Keen Eye far more often (65%).' },
+      { id: 'ranger_steady', name: 'Steady Breath', ab: 'quick', text: 'A Quick Shot or Piercing Arrow loosed after standing still for 2s always lights Keen Eye (a Piercing Arrow that cashes one does not).',
+        spec: { sharpshooter: 'A Quick Shot or Aimed Shot loosed after standing still for 2s always lights Keen Eye. An Aimed Shot that cashes one lights it again too, once every 6s.', venomstrike: 'A Quick Shot or Caustic Arrow loosed after standing still for 2s always lights Keen Eye (a Caustic Arrow that cashes one does not).' } },
     ],
     [
-      { id: 'ranger_disengage', name: 'Disengage', ab: 'cloak', text: 'Hunter\'s Cloak now also leaps you backwards, clear of whatever is at your feet, loosing a snap shot of {d:500} that always crits as you go. You cannot be touched for 1s, and the Cloak comes back 10s sooner.' },
-      { id: 'ranger_secondwind', name: 'Second Wind', ab: 'quick', text: 'When you drop below 50% HP, your next Quick Shot also heals you for 20% of your HP and you take 20% less damage for 4s (once every 40s).' },
+      { id: 'ranger_disengage', name: 'Disengage', ab: 'cloak', text: 'Hunter\'s Cloak now also leaps you backwards, clear of whatever is at your feet, loosing a snap shot of {d:500} that always crits as you go. You cannot be touched for 1s, you land with Keen Eye lit twice and both Piercing Arrow charges back, and the Cloak comes back 10s sooner. Every critical hit takes 2s off the Cloak.',
+        spec: { sharpshooter: 'Hunter\'s Cloak now also leaps you backwards, clear of whatever is at your feet, loosing a snap shot of {d:500} that always crits as you go. You cannot be touched for 1s, you land with Keen Eye lit twice and both Aimed Shot charges back, and the Cloak comes back 10s sooner. Every critical hit takes 2s off the Cloak.', venomstrike: 'Hunter\'s Cloak now also leaps you backwards, clear of whatever is at your feet, loosing a snap shot of {d:500} that always crits as you go. You cannot be touched for 1s, you land with Keen Eye lit twice and both Caustic Arrow charges back, and the Cloak comes back 10s sooner. Every critical hit takes 2s off the Cloak.' } },
+      { id: 'ranger_secondwind', name: 'Second Wind', ab: 'quick', text: 'When you drop below 50% HP, your next Quick Shot also heals you for 20% of your HP and you take 20% less damage for 4s (once every 40s). Rapid Fire and Explosive Shot are a breath too: each lights Keen Eye and gives back 15 Focus.' },
       { id: 'ranger_lightfoot', name: 'Light Feet', ab: 'pierce', text: 'Each Piercing Arrow takes 4s off Hunter\'s Cloak\'s cooldown and gives 4 Focus. While Cloaked, your crit chance is 20% higher.',
         spec: { sharpshooter: 'Each Aimed Shot takes 4s off Hunter\'s Cloak\'s cooldown and gives 4 Focus. While Cloaked, your crit chance is 20% higher.', venomstrike: 'Each Caustic Arrow takes 4s off Hunter\'s Cloak\'s cooldown and gives 4 Focus. While Cloaked, your crit chance is 20% higher.' } },
     ],
@@ -167,7 +170,8 @@ const TALENTS = {
     ],
     [
       { id: 'ranger_longhunt', name: 'Long Hunt', ab: 'mark', text: 'Hunter\'s Mark lasts 5s longer.', spec: { venomstrike: 'Hunter\'s Mark lasts 4s longer.' } },
-      { id: 'ranger_pin', name: 'Pinning Shot', ab: 'pierce', text: 'Lighting Keen Eye pins the boss: your next two Quick Shots are critical hits (once every 6s).' },
+      { id: 'ranger_pin', name: 'Pinning Shot', ab: 'pierce', text: 'Lighting Keen Eye pins the boss: your next two Quick Shots are critical hits (once every 6s), and so is your next Piercing Arrow (once every 8s).',
+        spec: { sharpshooter: 'Lighting Keen Eye pins the boss: your next two Quick Shots are critical hits (once every 6s), and so is your next Aimed Shot (once every 8s).', venomstrike: 'Lighting Keen Eye pins the boss: your next two Quick Shots are critical hits (once every 6s), and so is your next Caustic Arrow (once every 8s).' } },
       { id: 'ranger_deathmark', name: 'Marked for Death', ab: 'mark', text: 'When Hunter\'s Mark ends, it bursts on the boss for {d:300}, a sure critical hit, plus {d:400} for every Keen Eye you lit while it lasted (up to 6).' },
     ],
     [
@@ -175,8 +179,8 @@ const TALENTS = {
         text: 'Barrage becomes Falcon (30s): your falcon dives onto the boss and harries it for 10s, striking every 2s for {d:130}. It dives at once, lighting Keen Eye, and every Keen Eye you light while it hunts sends it into a diving strike for {d:300}.' },
       { id: 'ranger_storm', name: 'Storm Arrow', ab: 'pierce', text: 'A Keen Eye Piercing Arrow now calls down lightning: it arcs into the boss three times more, each strike 15% as strong.',
         spec: { sharpshooter: 'A Keen Eye Aimed Shot now calls down lightning: it arcs into the boss three times more, each strike 15% as strong.', venomstrike: 'A Keen Eye Caustic Arrow now calls down lightning: it arcs into the boss three times more, each strike 15% as strong.' } },
-      { id: 'ranger_volley', name: 'Wild Volley', ab: 'quick', text: 'Every Quick Shot or Piercing Arrow crit now calls a volley of arrows down on the boss for {d:150}.',
-        spec: { sharpshooter: 'Every Quick Shot or Aimed Shot crit now calls a volley of arrows down on the boss for {d:150}.', venomstrike: 'Every Quick Shot or Caustic Arrow crit now calls a volley of arrows down on the boss for {d:150}.' } },
+      { id: 'ranger_volley', name: 'Wild Volley', ab: 'quick', text: 'Every Quick Shot or Piercing Arrow crit now calls a volley of arrows down on the boss for {d:150} plus half the shot\'s own damage, and gives 8 Focus.',
+        spec: { sharpshooter: 'Every Quick Shot or Aimed Shot crit now calls a volley of arrows down on the boss for {d:150} plus half the shot\'s own damage, and gives 8 Focus.', venomstrike: 'Every Quick Shot or Caustic Arrow crit now calls a volley of arrows down on the boss for {d:150} plus half the shot\'s own damage, and gives 8 Focus.' } },
     ],
   ],
 
@@ -184,9 +188,9 @@ const TALENTS = {
     [
       { id: 'shadowblade_feint', name: 'Feint', ab: 'strike', text: 'Every Strike sets up a feint: your next Eviscerate hits 12% harder. A Strike from the front is no longer wasted: it gives 2 combo points as from behind and your next Eviscerate lands as a hit from the side wherever you stand.',
         spec: { nightstalker: 'Every Strike sets up a feint: your next Backstab hits 12% harder. A Strike from the front is no longer wasted: it gives 2 combo points as from behind and your next Backstab lands as a hit from behind wherever you stand.',
-          bladedancer: 'Every Strike sets up a feint: your next Eviscerate hits 12% harder.' } },
-      { id: 'shadowblade_opportunist', name: 'Opportunist', ab: 'evis', text: 'An Eviscerate while the boss is casting is always a critical hit.',
-        spec: { nightstalker: 'A Backstab while the boss is casting is always a critical hit.' } },
+          bladedancer: 'Every Strike sets up a feint: your next Eviscerate hits 20% harder.' } },
+      { id: 'shadowblade_opportunist', name: 'Opportunist', ab: 'evis', text: 'An Eviscerate or a Strike while the boss is casting is always a critical hit, and 25% harder.',
+        spec: { nightstalker: 'A Backstab or a Strike while the boss is casting is always a critical hit, and 10% harder.' } },
       { id: 'shadowblade_ambush', name: 'Ambush', ab: 'step', text: 'Shadowstep now strikes as you arrive: a stab from behind for {d:20} and a combo point.',
         spec: { bladedancer: 'Blade Fury\'s spin now gives a second combo point, but never one past 5 (your Tempo is safe), and hits {d:300} harder.' } },
     ],
@@ -202,9 +206,9 @@ const TALENTS = {
       { id: 'shadowblade_rupture', name: 'Rupture', ab: 'venom', grants: true,
         text: 'Venom Blade becomes Rupture: it cuts the boss open for {d:100} and gives a combo point, then it bleeds {d:110} every 2s for 16s. While it bleeds, Eviscerate hits 20% harder (your poison gives 15%).',
         spec: { nightstalker: 'Venom Blade becomes Rupture: it cuts the boss open for {d:100} and gives a combo point, then it bleeds {d:130} every 2s for 16s. While it bleeds, Backstab hits 20% harder (your poison gives 15%).' } },
-      { id: 'shadowblade_relentless', name: 'Relentless', ab: 'evis', text: 'A 5-point Eviscerate gives back 2 combo points.', spec: { nightstalker: 'A 5-point Backstab has an even chance to give back 1 combo point.' } },
-      { id: 'shadowblade_sharpen', name: 'Sharpened Shadows', ab: 'strike', text: 'Every combo point you gain sharpens your next Eviscerate by 2.5% (up to 12.5%). A point that would spill past 5 sharpens it 12% instead.',
-        spec: { nightstalker: 'Every combo point you gain sharpens your next Backstab by 2.5% (up to 12.5%). A point that would spill past 5 sharpens it 12% instead.' } },
+      { id: 'shadowblade_relentless', name: 'Relentless', ab: 'evis', text: 'A 5-point Eviscerate gives back 2 combo points. An Eviscerate of 4 or more points quickens you: 12% faster for 6s.', spec: { nightstalker: 'A 5-point Backstab gives back 1 combo point. A Backstab of 4 or more points quickens you: 12% faster for 6s.', bladedancer: 'A 5-point Eviscerate gives back 2 combo points. An Eviscerate of 4 or more points quickens you: 12% faster for 6s, and a spilled point costs no Tempo meanwhile.' } },
+      { id: 'shadowblade_sharpen', name: 'Sharpened Shadows', ab: 'strike', text: 'Every combo point you gain sharpens your next Eviscerate by 5% and its chance to crit by 5%, up to 25% each. A point that would spill past 5 sharpens it 24% and 25% instead.',
+        spec: { nightstalker: 'Every combo point you gain sharpens your next Backstab by 6% and its chance to crit by 9%, up to 30% and 45%. A point that would spill past 5 sharpens it 30% and 45% instead.' } },
     ],
     [
       { id: 'shadowblade_clone', name: 'Shadow Clone', ab: 'dance', text: 'Shadow Dance now calls a shadow that repeats your Eviscerates at 30%.', spec: { nightstalker: 'Shadow Dance now calls a shadow that repeats your Backstabs at 30%.' } },
@@ -239,10 +243,10 @@ const TALENTS = {
       { id: 'pyromancer_flashpoint', name: 'Flashpoint', ab: 'fireblast', text: 'A Fire Blast at 85 Heat or more now vents 30 Heat into the boss as a second blast for {d:650}, a sure critical hit, instead of adding more.' },
     ],
     [
-      { id: 'pyromancer_afterburn', name: 'Afterburn', ab: 'combust', text: 'When Combustion ends, it goes out in a blast of {d:700}, and you get Hot Streak and both Fire Blast charges back.', spec: { sigilmancer: 'When Ember Circle fades, you get Hot Streak and both Fire Blast charges back.' } },
+      { id: 'pyromancer_afterburn', name: 'Afterburn', ab: 'combust', text: 'When Combustion ends, it goes out in a blast of {d:700}, and you get Hot Streak and both Fire Blast charges back.', spec: { sigilmancer: 'When Ember Circle fades, it goes out in a blast of {d:80} for every second you stood inside it (up to {d:1600}), and you get Hot Streak and both Fire Blast charges back.' } },
       { id: 'pyromancer_wildfire', name: 'Wildfire', ab: 'combust', text: 'Every crit during Combustion now leaves a flame on the boss that burns for {d:60} every 2s for 6s (up to 3 at once).',
         spec: { sigilmancer: 'Every crit while you stand in Ember Circle now leaves a flame on the boss that burns for {d:120} every 2s for 6s (up to 3 at once).' } },
-      { id: 'pyromancer_longburn', name: 'Long Burn', ab: 'combust', text: 'Combustion lasts 4s longer.', spec: { sigilmancer: 'Ember Circle lasts 7s longer and is 25% wider.' } },
+      { id: 'pyromancer_longburn', name: 'Long Burn', ab: 'combust', text: 'Combustion lasts 4s longer.', spec: { sigilmancer: 'Ember Circle lasts 7s longer and is 25% wider. Once it has burned for 8s it flares, and from then on you hit 30% harder while you stand in it.' } },
     ],
     [
       { id: 'pyromancer_phoenix', name: 'Phoenix Flight', ab: 'vent', grants: true,
@@ -332,9 +336,11 @@ const TALENTS = {
     ],
     [
       { id: 'chronomancer_bubble', name: 'Time Bubble', ab: 'stasis', grants: true,
-        text: 'Stasis becomes Time Bubble (40s): wrap an ally in a bubble of slowed time for 8s. It follows them, and everyone inside takes 30% less damage.' },
+        text: 'Stasis becomes Time Bubble (40s): wrap an ally in a bubble of slowed time for 8s. It follows them, and everyone inside takes 30% less damage. Every 2s the bubble turns and strikes the boss for {d:230}.',
+        spec: { echoist: 'Stasis becomes Time Bubble (40s): wrap an ally in a bubble of slowed time for 8s. It follows them, and everyone inside takes 30% less damage. Every 2s the bubble turns and strikes the boss for {d:322}.' } },
       { id: 'chronomancer_borrowed', name: 'Borrowed Time', ab: 'bolt', text: 'In Haste, a Bolt that crits gives back 12 Flux.' },
-      { id: 'chronomancer_overwound', name: 'Overwound', ab: 'shift', text: 'Flux that would spill past 100 in Slow now flows out as healing for every 3 Flux: {h:160} on your linked ally and {h:60} on the whole party.' },
+      { id: 'chronomancer_overwound', name: 'Overwound', ab: 'shift', text: 'Flux that would spill past 100 in Slow now flows out for every 3 Flux: {h:160} of healing on your linked ally, {h:60} on the whole party, and a {d:100} strike on the boss.',
+        spec: { echoist: 'Flux that would spill past 100 in Slow now flows out for every 3 Flux: {h:160} of healing on your linked ally, {h:60} on the whole party, and a {d:140} strike on the boss.' } },
     ],
     [
       { id: 'chronomancer_hourglass', name: 'Hourglass Ward', ab: 'rewind', text: 'Rewind now also slows time around its target: they and everyone beside them take 30% less damage for 8s.' },
@@ -344,11 +350,12 @@ const TALENTS = {
     ],
     [
       { id: 'chronomancer_warp', name: 'Time Warp', ab: 'accel', grants: true,
-        text: 'Accelerando becomes Time Warp (60s): a great clock hangs over the party for 15s. Everyone acts 10% faster, and the ally you aim it at is Quickened: 12% faster still for 15s. Every 3s its hands strike the boss for {d:70} and heal the whole party for {h:55}. You gain 40 Flux.',
-        spec: { echoist: 'Echo Chamber becomes Time Warp (60s): a great clock hangs over the party for 15s. Everyone acts 10% faster and your echoes are full strength, and the ally you aim it at is Quickened: 12% faster still for 15s. Every 3s its hands strike the boss for {d:70} and heal the whole party for {h:55}. You gain 40 Flux.',
-          accelerant: 'Accelerando becomes Time Warp (60s): a great clock hangs over the party for 20s. Everyone acts 15% faster, and the ally you aim it at is Quickened: 12% faster still for 15s. Every 3s its hands strike the boss for {d:70} and heal the whole party for {h:55}. You gain 40 Flux.' } },
+        text: 'Accelerando becomes Time Warp (60s): a great clock hangs over the party for 15s. Everyone acts 10% faster, and the ally you aim it at is Quickened: 12% faster still for 15s. Every 3s its hands strike the boss for {d:70} and heal the whole party for {h:55}. While it hangs, every Bolt is joined by a second strike from the clock, at 40% of its strength. You gain 40 Flux.',
+        spec: { echoist: 'Echo Chamber becomes Time Warp (60s): a great clock hangs over the party for 15s. Everyone acts 10% faster and your echoes are full strength, and the ally you aim it at is Quickened: 12% faster still for 15s. Every 3s its hands strike the boss for {d:70} and heal the whole party for {h:55}. While it hangs, every Bolt is joined by a second strike from the clock, at 40% of its strength. You gain 40 Flux.',
+          accelerant: 'Accelerando becomes Time Warp (60s): a great clock hangs over the party for 20s. Everyone acts 15% faster, and the ally you aim it at is Quickened: 12% faster still for 15s. Every 3s its hands strike the boss for {d:70} and heal the whole party for {h:55}. While it hangs, every Bolt is joined by a second strike from the clock, at 40% of its strength. You gain 40 Flux.' } },
       { id: 'chronomancer_future', name: 'Future Sight', ab: 'bolt', text: 'Your Bolts now mark the boss with a rune of the future. 6s after the first, it bursts for half of every Bolt that fed it and heals the whole party for a third of that, and a new rune can form 6s later.' },
-      { id: 'chronomancer_secondchance', name: 'Second Chance', ab: 'recall', text: 'A Recall now leaves its target in a ward of {s:400} for 8s and heals the whole party for {h:150}; an ally it raises is also healed for {h:1400} a moment later.' },
+      { id: 'chronomancer_secondchance', name: 'Second Chance', ab: 'recall', text: 'A Recall now leaves its target in a ward of {s:400} for 8s, heals the whole party for {h:150} and strikes the boss for {d:600}; for those 8s every Bolt is joined by a second strike at 80% of its strength. An ally it raises is also healed for {h:1400} a moment later.',
+        spec: { echoist: 'A Recall now leaves its target in a ward of {s:400} for 8s, heals the whole party for {h:150} and strikes the boss for {d:840}; for those 8s every Bolt is joined by a second strike at 80% of its strength. An ally it raises is also healed for {h:1400} a moment later.' } },
     ],
   ],
 };
@@ -369,13 +376,13 @@ Object.assign(TALENTS, {
       { id: 'thermist_skin', name: 'Thermal Skin', ab: 'invert', text: 'Every Thermal Shock now also wraps you in a shield worth 30% of its strength.' },
     ],
     [
-      { id: 'thermist_thermocline', name: 'Thermocline', ab: 'cinder', grants: true, text: 'New move on Q, in place of Cinder Bolt. Thermocline: an instant {d:250} bolt that swings the dial 2 steps toward the other side and counts as that element. It hits 8% harder for every step from 0 you started, and a Thermal Shock it sets off hits 60% harder.', spec: { zenith: 'New move on Q, in place of Cinder Bolt. Thermocline: an instant {d:250} bolt of the element you hold. At the edge it lights a Corona like an edge cast would, without the Brink (once every 4s).' } },
+      { id: 'thermist_thermocline', name: 'Thermocline', ab: 'cinder', grants: true, text: 'New move on Q, in place of Cinder Bolt. Thermocline: an instant {d:250} bolt of the way your swing is going (the glowing way), moving the dial as far as a Cinder Bolt or Rime Shard does. It hits 8% harder for every step from 0 you started, and a Thermal Shock it sets off hits 60% harder. After any Thermal Shock the air runs fast: your spells come 15% quicker for 5s (once every 15s).', spec: { zenith: 'New move on Q, in place of Cinder Bolt. Thermocline: an instant {d:250} bolt of the way your swing is going (the glowing way), moving the dial one step. It hits 8% harder for every step from 0 you started, and a Thermal Shock it sets off hits 60% harder. Held at your own edge it lights a Corona instead, without the Brink (once every 4s). After any Thermal Shock the air runs fast: your spells come 15% quicker for 5s (once every 15s).' } },
       { id: 'thermist_latent', name: 'Latent Heat', ab: 'flare', text: 'Pushing past the edge opens 5s of Latent Heat instead of overloading you (once every 30s): cast on past the edge freely. Swing back inside it in time and the heat is banked, so your next Thermal Shock is twice as strong. Still past the edge when it closes, you overload as normal and nothing is banked.' },
       { id: 'thermist_rebound', name: 'Rebound', ab: 'lance', text: 'After a Thermal Shock, your next spell is now instant and 70% harder (within 10s).' },
     ],
     [
       { id: 'thermist_vortex', name: 'Polar Vortex', ab: 'invert', text: 'Inversion now leaves a vortex on the target that strikes for {d:220} every 1.5s for 12s.', spec: { zenith: 'Inversion, or Red Giant in its place, now leaves a vortex on the target that strikes for {d:220} every 1.5s for 12s.' } },
-      { id: 'thermist_pulse', name: 'Equilibrium Pulse', ab: 'equil', text: 'Equilibrium now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far.', spec: { zenith: 'Sunset now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far. With Solar Wind it sets it off without moving the dial.' } },
+      { id: 'thermist_pulse', name: 'Equilibrium Pulse', ab: 'equil', specMods: { pendulum: { cd: { equil: -10 } } }, text: 'Equilibrium now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far.', spec: { pendulum: 'Equilibrium now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far, 50% harder. Equilibrium recharges 10s faster.',  zenith: 'Sunset now sets off the heat it snaps away: from 3 or more steps out, a Thermal Shock as if you had swung that far. With Solar Wind it sets it off without moving the dial.' } },
       { id: 'thermist_solstice', name: 'Solstice', ab: 'invert', text: 'Inversion now flips the dial back 5s later: a Shock at 85% strength if it\'s still far enough from 0.', spec: { zenith: 'Inversion now flips the dial back 5s later: a Shock at 85% strength if it\'s still far enough from 0. That Shock leaves your Corona for the next one. With Red Giant in its place, the dial flips once, when Red Giant ends.' } },
     ],
     [
@@ -403,9 +410,9 @@ Object.assign(TALENTS, {
       { id: 'driftblade_hover', name: 'Hover', ab: 'carve', text: 'A Carve you make while standing still now gives 25 Drift and holds your Drift for 4s.' },
     ],
     [
-      { id: 'driftblade_galeforce', name: 'Galeforce', ab: 'gale', text: 'Gale Run now looses a free blade of wind at the target when it begins, {d:100} plus {d:60} for every 10 Drift you hold, and another when it ends: {d:100} plus {d:80} for every 10 Drift. Both always crit and spend nothing. Roost loosed them the same way over its 10s; Starfall leaves a wind behind for 5s and looses the second when it dies.' },
+      { id: 'driftblade_galeforce', name: 'Galeforce', ab: 'gale', text: 'Gale Run now looses a free blade of wind at the target when it begins, {d:100} plus {d:60} for every 10 Drift you hold, and another when it ends: {d:100} plus {d:80} for every 10 Drift. Every Passing Strike while it blows looses one more: {d:25} plus {d:15} for every 10 Drift. All always crit and spend nothing. Roost loosed them the same way over its 10s; Starfall leaves a wind behind for 5s and looses the second when it dies.', spec: { orbit: 'Gale Run now looses a free blade of wind at the target when it begins, {d:100} plus {d:60} for every 10 Drift you hold, and another when it ends: {d:100} plus {d:80} for every 10 Drift. Every Passing Strike, in a run or out of it, looses one more: {d:25} plus {d:15} for every 10 Drift. All always crit and spend nothing. Roost loosed them the same way over its 10s; Starfall leaves a wind behind for 5s and looses the second when it dies.' } },
       { id: 'driftblade_jet', name: 'Jetstream', ab: 'slip', text: 'A Slipstream through an enemy now gives its charge back (once every 6s), the Passing Strike hits twice as hard, and you take 20% less damage for 2s.' },
-      { id: 'driftblade_hurricane', name: 'Hurricane', ab: 'gale', text: 'During Gale Run, each Passing Strike now makes it last 2s longer (up to 10s) and gives 10 more Drift. Roost lasts longer the same way, and Starfall leaves a 5s wind that Passing Strikes stretch and feed too (Drift cannot drain while it blows).' },
+      { id: 'driftblade_hurricane', name: 'Hurricane', ab: 'gale', text: 'During Gale Run, each Passing Strike now makes it last 2s longer (up to 10s) and gives 10 more Drift. Roost lasts longer the same way, and Starfall leaves a 5s wind that Passing Strikes stretch and feed too (Drift cannot drain while it blows).', spec: { orbit: 'Every Passing Strike now gives 10 more Drift and takes 1.5s off Hook Turn and Slipstream, in a run or out of it. During Gale Run each one also makes it last 2s longer (up to 10s). Roost lasts longer the same way, and Starfall leaves a 5s wind that Passing Strikes stretch and feed too (Drift cannot drain while it blows).' } },
     ],
     [
       { id: 'driftblade_tailspin', name: 'Tailspin', ab: 'still', grants: true, text: 'New move on D, in place of Stillpoint. Tailspin: whirl in place, parrying like Stillpoint and cutting the nearest enemy three times for {d:115} each, then spring 150 px the way you\'re heading.' },
@@ -570,7 +577,7 @@ Object.assign(TALENTS, {
     ],
     [
       { id: 'marionettist_curtainrise', name: 'Red Curtain', ab: 'swap', grants: true, text: 'New move on D, in place of Swap. Red Curtain: a red curtain round you for 8s; allies inside take 15% less damage, the Dolls bow where they stand, and your next Cross-Cut within 6s cuts twice as hard and gives 1 more Encore, as after a Swap (30s).' },
-      { id: 'marionettist_twin', name: 'Twin Strings', ab: 'cross', text: 'Cross-Cut\'s line now lingers for 3s and cuts whatever still crosses it for {d:45} every second.', spec: { understudy: 'Cross-Cut\'s lines now linger for 3s and cut whatever still crosses them for {d:32} every second. Crossfire\'s line between the Dolls lingers too, for {d:56}.' } },
+      { id: 'marionettist_twin', name: 'Twin Strings', ab: 'cross', text: 'Cross-Cut\'s line now lingers for 3s and cuts whatever still crosses it for {d:45} every second.', spec: { understudy: 'Cross-Cut\'s lines now linger for 3s and cut whatever still crosses them for {d:46} every second. Crossfire\'s line between the Dolls lingers too, for {d:78}.' } },
       { id: 'marionettist_bow', name: 'Final Bow', ab: 'finale', text: 'Nothing can touch the Doll while Grand Finale plays, and a blow it dances through during the show builds 1 Encore, as under Pirouette. The last beat of the show hits twice as hard.' },
     ],
   ],
@@ -680,8 +687,8 @@ Object.assign(TALENTS, {
 TALENTS.tidecaller = [
   [
     { id: 'tidecaller_spindrift', name: 'Spindrift', ab: 'spray', text: 'Salt Spray breaks twice: a moment later the spray strikes again for {d:100}, and with the tide above half the second break also heals the most hurt ally for {h:100}.' },
-    { id: 'tidecaller_foam', name: 'Foam', ab: 'sip', text: 'A Sip on the ally who wears your Riptide Mark, or on any ally under half health, foams over: the most hurt other ally heals {h:180}, and the foam keeps healing them {h:50} every 2s for 8s. With Maelstrom, any Sip while the whirlpool is open foams over.', spec: { springtide: 'A Swell on the ally who wears your Riptide Mark, or on any ally under half health, foams over: the most hurt other ally heals {h:180}, and the foam keeps healing them {h:50} every 2s for 8s. With Maelstrom, any Swell while the whirlpool is open foams over.' } },
-    { id: 'tidecaller_lowwater', name: 'Low Water', ab: 'sip', text: 'When the water touches the floor (the ebb, or a Surge or Sip that drains it), your next Sip costs no tide and heals half again as much.', spec: { undertow: 'When the water touches the floor (the ebb, or an Undertow or Sip that drains it), your next Sip costs no tide and heals half again as much.', springtide: 'When the water touches the floor (the ebb, or a Surge that drains it), your next Swell heals half again as much and runs on to the most hurt other ally at half.' } },
+    { id: 'tidecaller_foam', name: 'Foam', ab: 'sip', text: 'A Sip on the ally who wears your Riptide Mark, or on any ally under half health, foams over: the most hurt other ally heals {h:180}, and the foam keeps healing them {h:50} every 2s for 8s. With Maelstrom, any Sip while the whirlpool is open foams over. The foam stings the boss for {d:120} as it forms and every time it heals.', spec: { springtide: 'A Swell on the ally who wears your Riptide Mark, or on any ally under half health, foams over: the most hurt other ally heals {h:180}, and the foam keeps healing them {h:50} every 2s for 8s. With Maelstrom, any Swell while the whirlpool is open foams over. The foam stings the boss for {d:120} as it forms and every time it heals.' } },
+    { id: 'tidecaller_lowwater', name: 'Low Water', ab: 'sip', text: 'When the water touches the floor (the ebb, or a Surge or Sip that drains it), your next Sip costs no tide and heals half again as much. The backwash also strikes the boss for {d:500}.', spec: { undertow: 'When the water touches the floor (the ebb, or an Undertow or Sip that drains it), your next Sip costs no tide and heals half again as much. The backwash also strikes the boss for {d:500}.', springtide: 'When the water touches the floor (the ebb, or a Surge that drains it), your next Swell heals half again as much and runs on to the most hurt other ally at half. The backwash also strikes the boss for {d:500}.' } },
   ],
   [
     { id: 'tidecaller_kelp', name: 'Kelp Bind', ab: 'riptide', text: 'Riptide Mark also binds its ally in kelp: they take 15% less damage until the mark pops (or runs out). With Maelstrom, the whirlpool covers 30% instead of 20%.' },
@@ -713,7 +720,7 @@ TALENTS.lanternkeeper = [
     { id: 'lanternkeeper_emberward', name: 'Ember Ward', ab: 'set', text: 'A lantern set down while the boss is casting pulses as the cast lands: a shield of {s:60} on everyone in its glow. Lantern Festival\'s floating lanterns each do the same.', spec: { beacon: 'A Great Beacon raised while the boss is casting pulses as the cast lands: a shield of {s:170} on everyone in its glow, and your other Great Beacon pulses a heal and the same shield too.', wayfarer: 'Every light of a Lamplighter\'s Stride dropped while the boss is casting pulses as the cast lands: a shield of {s:60} on everyone in its glow.' } },
   ],
   [
-    { id: 'lanternkeeper_ward', name: 'Lantern Ward', ab: 'hand', text: 'Whoever carries your Hand Lantern takes 15% less damage for as long as it hangs on them, and at least 12s.' },
+    { id: 'lanternkeeper_ward', name: 'Lantern Ward', ab: 'hand', text: 'Whoever carries your Hand Lantern takes 15% less damage for as long as it hangs on them, and at least 12s. The lantern burns brighter too: its glow reaches farther and pulses {h:120}.' },
     { id: 'lanternkeeper_longtoss', name: 'Long Toss', ab: 'carry', text: 'Carry the Flame reaches twice as far, and the lantern lands with a pulse: everyone in its new glow heals {h:250}.', spec: { beacon: 'Call the Beacon reaches twice as far, tops its wick up to full, lights it for 6s longer and pulses {h:250} as it lands.', wayfarer: 'Trailblaze dashes twice as far and drops a small light where it ends, which pulses {h:150} as it lands.' } },
     { id: 'lanternkeeper_nightwalk', name: 'Night Walk', ab: 'carry', text: 'Carrying a lantern carries you too: you dash a short way on in the direction you are heading, and nothing can touch you while you slide.', spec: { beacon: 'Calling a Beacon carries you too: you dash a short way on in the direction you are heading, and nothing can touch you while you slide.', wayfarer: 'Trailblaze also tops every light it drags up to full and lets each burn 3s longer.' } },
   ],
@@ -728,10 +735,10 @@ TALENTS.lanternkeeper = [
     { id: 'lanternkeeper_shadow', name: 'Shadow Catch', ab: 'flare', text: 'Flare first draws every lantern left more than 100 paces from you in to 80 paces, and each one it draws bursts a second time for {h:240}.' },
   ],
   [
-    { id: 'lanternkeeper_eternal', name: 'Eternal Lamp', ab: 'set', text: 'Lighthouse leaves a lantern that never burns down, hung over you so it drifts with you, healing {h:45} every second in a wide glow for the rest of the pull.' },
+    { id: 'lanternkeeper_eternal', name: 'Eternal Lamp', ab: 'set', text: 'A lantern that never burns down hangs over the most hurt ally from the start of the pull, moving on when someone else is clearly worse off, and heals everyone near it {h:50} every second in a wide glow. Lighthouse makes it burn brighter for the rest of the pull: wider, and {h:80} every second.' },
     { id: 'lanternkeeper_festival', name: 'Lantern Festival', ab: 'set', grants: true, text: 'New move on W, in place of Set Lantern. Lantern Festival (12s), 1 Ember: release five floating lanterns that follow your allies for 15s, one over each and the fifth over the most hurt, each healing everyone near it {h:40} every second. They never dim.',
       spec: { beacon: 'The first Great Beacon you raise in any 12s also lets loose three floating lanterns that follow your allies for 12s, each healing everyone near it {h:25} every second. Great Beacon stays where it is.', wayfarer: 'The first Lamplighter\'s Stride you begin in any 12s also lets loose three floating lanterns that circle you for 12s, each healing everyone under it {h:25} every second. Stride keeps its place.' } },
-    { id: 'lanternkeeper_lastlight', name: 'Last Light', ab: 'relight', text: 'If Relight\'s heal, the Will-o\'-Wisp that takes its place, or a Hand Lantern hung on them reaches an ally under 20% health, they can\'t fall for 4s (once every 40s).' },
+    { id: 'lanternkeeper_lastlight', name: 'Last Light', ab: 'relight', text: 'If Relight\'s heal, the Will-o\'-Wisp that takes its place, or a Hand Lantern hung on them reaches an ally under 20% health, they can\'t fall for 4s (once every 40s). Your lanterns also look after the weakest: every second the most hurt ally, wherever they stand, heals {h:100} more.' },
   ],
 ];
 
@@ -865,7 +872,7 @@ const SPEC_TALENTS = {
 SPEC_TALENTS.ranger = {
   sharpshooter: [
     [
-      { id: 'ranger_parting', name: 'Parting Shot', ab: 'pierce', text: 'Move with 3 or more Steady Aim and the stacks are loosed as a parting shot, {d:70} for each stack, before they are gone as usual.' },
+      { id: 'ranger_parting', name: 'Parting Shot', ab: 'pierce', text: 'Move with 3 or more Steady Aim and the stacks are loosed as a parting shot, {d:100} for each stack, before they are gone as usual. You break away with Keen Eye lit twice, both Aimed Shot charges back and 40 Focus.' },
       { id: 'ranger_wind', name: 'Read the Wind', ab: 'pierce', text: 'Whenever the boss begins a cast, you draw a steadying breath: full Steady Aim and a lit Keen Eye at once, moving or not, and for 4s moving does not break your aim.' },
     ],
     [
@@ -942,7 +949,7 @@ SPEC_TALENTS.shadowblade = {
     ],
     [
       { id: 'shadowblade_curtain', name: 'Curtain Call', ab: 'dance', text: 'When Shadow Dance ends you close it with one last spin: {d:2200} on the boss, a sure critical hit.' },
-      { id: 'shadowblade_eye', name: 'Eye of the Storm', ab: 'step', text: 'The blades turn blows aside: you take 8% less damage for each Tempo you hold (up to 24%), until the Flourish is spent.' },
+      { id: 'shadowblade_eye', name: 'Eye of the Storm', ab: 'step', text: 'The blades turn blows aside: you take 8% less damage for each Tempo you hold (up to 24%), until the Flourish is spent. Two Tempo are enough for a Flourish, and a spilled point costs you one Tempo instead of all of them.' },
     ],
   ],
   nightstalker: [
@@ -989,14 +996,14 @@ SPEC_TALENTS.thermist = {
       { id: 'thermist_counterweight', name: 'Counterweight', ab: 'equil', text: 'Every crossing of 0 wraps you in a shield of {s:100} for each Momentum you hold, for 6s. It adds to what is left of the last one (up to {s:800}).' },
     ],
     [
-      { id: 'thermist_bell', name: 'Tolling Bell', ab: 'invert', text: 'Whenever the boss begins a cast, the dial swings two steps toward the other side by itself.' },
+      { id: 'thermist_bell', name: 'Tolling Bell', ab: 'invert', text: 'Whenever the boss begins a cast, the dial swings two steps toward the other side by itself, the bell rings out on the boss for {d:260}, and your next Flare or Glacier Lance is instant (within 8s).' },
       { id: 'thermist_deadcentre', name: 'Dead Centre', ab: 'equil', text: 'Equilibrium now counts as a crossing of 0: it fills Momentum to 5 and holds it 3s longer, and Counterweight wraps you in its shield as for any crossing, on top of the shield Equilibrium gives.' },
     ],
   ],
   zenith: [
     [
       { id: 'thermist_solarwind', name: 'Solar Wind', ab: 'equil', text: 'Sunset no longer moves the dial: the stars fall 130% harder and the shield comes up as if it had dropped to 0, but you stay at the edge with one Corona left burning, free to light more. Sunset comes back in 18s.' },
-      { id: 'thermist_slag', name: 'Slag Plate', ab: 'flare', text: 'Each Corona you light cools over you as slag: a shield of {s:150} for 8s, adding to what is left.' },
+      { id: 'thermist_slag', name: 'Slag Plate', ab: 'flare', text: 'Each Corona you light cools over you as slag: a shield of {s:150} for 8s, adding to what is left. The slag that flies off strikes the boss for {d:140}.' },
     ],
     [
       { id: 'thermist_redgiant', name: 'Red Giant', ab: 'invert', grants: true,
@@ -1178,7 +1185,7 @@ Object.assign(SPEC_TALENTS, {
       ],
       [
         { id: 'thresher_danse', name: 'Danse Macabre', ab: 'snap', text: 'A Full Harvest leaves a dancing scythe behind: it swings twice more, a moment apart, for {d:340} each.' },
-        { id: 'thresher_unbroken', name: 'Unbroken Step', ab: 'string', text: 'A Blink adds a swing to the string you hold, and that swing cuts at once for {d:220}.' },
+        { id: 'thresher_unbroken', name: 'Unbroken Step', ab: 'string', text: 'A Blink adds a swing to the string you hold, and that swing cuts at once for {d:300}. Through a telegraph it adds two, and the string is held for 5s, so the dodge never costs it.' },
       ],
     ],
     // Phantom, The Vanishing Edge: Blink chains
@@ -1188,7 +1195,7 @@ Object.assign(SPEC_TALENTS, {
         { id: 'thresher_shade', name: 'Shade Step', ab: 'veil', text: 'A Blink leaves a dark field where you stood for 6s: what stands in it takes 5% more damage from you, and adds that cross it move at half pace.' },
       ],
       [
-        { id: 'thresher_flicker', name: 'Flicker', ab: 'veil', text: 'Blinking through a telegraph gives the charge back.' },
+        { id: 'thresher_flicker', name: 'Flicker', ab: 'veil', text: 'Blinking through a telegraph gives the charge back, readies Void Star at once and makes the next one hit half again as hard.' },
         { id: 'thresher_vanishing', name: 'Vanishing Point', ab: 'star', text: 'Void Star opens where you last blinked from, and again at your target, and comes back 8s sooner.' },
       ],
     ],
@@ -1341,20 +1348,21 @@ TALENTS.kenseier = [
 // kits.js). The talents act on the hounds and the pair they hold (kits.js hd* helpers).
 TALENTS.houndmaster = [
   [
-    { id: 'houndmaster_heelnip', name: 'Heel Nip', ab: 'knife', text: 'The third knife hit also sends whichever hound is nearer to the place that would make a pair with the other one, and it bites at once for twice as much. If they already hold a pair, both hounds bite again instead. Nothing happens if they are on guard.',
+    { id: 'houndmaster_heelnip', name: 'Heel Nip', ab: 'knife', text: 'Every knife hit also sends whichever hound is nearer to the place that would make a pair with the other one, and it bites at once for twice as much (three times on the third hit). If they already hold a pair, both hounds bite again instead. Nothing happens if they are on guard. Each knife hit also marks a heel (up to 3, for 12s): your next finisher hits 20% harder for each.',
       spec: { lonewolf: 'The third knife hit also calls Greyfang to the place that makes a pair with where you stand, and it bites at once for twice as much. If you already make a pair, Greyfang bites again instead. Nothing happens if Greyfang is on guard.' } },
     { id: 'houndmaster_scentline', name: 'Scent Line', ab: 'flank', text: 'Whistle: Flank sends the hound straight through the boss, and it bites on the way for {d:120} (at most once every 2.5s).',
       spec: { lonewolf: 'Ride Down sends Greyfang straight through the boss as you leap, and it bites on the way for {d:300} and gives 10 Bond.' } },
     { id: 'houndmaster_echobark', name: 'Echo Bark', ab: 'finisher', text: 'A finisher echoes a moment later at 25% of its strength, 50% when it is a different pair from the one before.' },
   ],
   [
-    { id: 'houndmaster_guarddog', name: 'Guard Dog', ab: 'calloff', text: 'Call Off also sets a hound between you and the next hit: a {s:250} shield on you for 8s, and a {s:150} shield on every ally (once per Call Off), and the pack is back at work in 3s.' },
+    { id: 'houndmaster_guarddog', name: 'Guard Dog', ab: 'calloff', text: 'Call Off also sets a hound between you and the next hit: a {s:250} shield on you for 8s, and a {s:150} shield on every ally (once per Call Off), and the pack is back at work in 3s, each hound biting once as it goes back for {d:165}.',
+      spec: { lonewolf: 'Call Off also sets Greyfang between you and the next hit: a {s:250} shield on you for 8s, and a {s:150} shield on every ally (once per Call Off), and it is back at work in 3s, biting once as it goes back for {d:248}.' } },
     { id: 'houndmaster_fetch', name: 'Fetch', ab: 'calloff', text: 'Call Off also drags you 150 toward the nearest hound as it sets off to you, and each hound bites once, hard, as it sets off. It never takes you into the boss.' },
     { id: 'houndmaster_thickcoat', name: 'Thick Coat', ab: 'calloff', text: 'Once every 20s a hit that would down a hound leaves it on one health. A hound that does go down is back on its feet after 4s instead of 10s, and its first bite on rising hits three times as hard.' },
   ],
   [
     { id: 'houndmaster_sharedkill', name: 'Shared Kill', ab: 'finisher', text: 'A finisher gives back 6 Bond, and 20 Bond when the boss is below 30% health.' },
-    { id: 'houndmaster_howl', name: 'Howl', ab: 'flank', grants: true, text: 'New move on W, in place of Whistle: Flank. Howl (20s): both hounds throw back their heads. The whole party deals 8% more damage for 8s, and both hounds hold where they stand (a second press of the Hold button pounces).',
+    { id: 'houndmaster_howl', name: 'Howl', ab: 'flank', grants: true, text: 'New move on W, in place of Whistle: Flank. Howl (20s): both hounds throw back their heads and bite at once for {d:275} each. The whole party deals 8% more damage for 8s, the pack bites twice as fast for as long, and both hounds hold where they stand (a second press of the Hold button pounces).',
       spec: { lonewolf: 'Mount stays. When the ride ends, Greyfang throws back its head in a howl: the whole party deals 5% more damage for 8s.' } },
     { id: 'houndmaster_runningbond', name: 'Running Bond', ab: 'finisher', text: 'Bond fills while a hound runs to a new place: 5 a second for each one that is on the move.' },
   ],
@@ -1364,9 +1372,9 @@ TALENTS.houndmaster = [
     { id: 'houndmaster_cornered', name: 'Cornered', ab: 'quarry', text: 'When the Mark ends, both hounds pounce at once and land behind the boss, three times as hard, and the pounce gives 50 Bond.' },
   ],
   [
-    { id: 'houndmaster_kingofpack', name: 'King of the Pack', ab: 'finisher', text: 'The spectral hounds of Wild Hunt stay for 10s after it ends, and the free finisher stays with them.' },
-    { id: 'houndmaster_longchase', name: 'The Long Chase', ab: 'quarry', grants: true, text: 'New move on F, in place of Mark the Quarry. The Long Chase (45s): the pack runs a lap round the boss. Each quarter it passes bites for {d:300} and gives 4 Bond, and the lap ends with the boss taking 5% more damage for 10s and both hounds behind it: a Bring Down.',
-      spec: { lonewolf: 'New move on F, in place of Mark the Quarry. The Long Chase (45s): Greyfang runs a lap round the boss. Each quarter it passes bites for {d:450} and gives 6 Bond, and the lap ends with the boss taking 5% more damage for 10s and Greyfang behind it.' } },
+    { id: 'houndmaster_kingofpack', name: 'King of the Pack', ab: 'finisher', text: 'The spectral hounds of Wild Hunt stay for 15s after it ends and bite twice as fast, and the free finisher stays with them, hitting half again as hard.' },
+    { id: 'houndmaster_longchase', name: 'The Long Chase', ab: 'quarry', grants: true, text: 'New move on F, in place of Mark the Quarry. The Long Chase (45s): the pack runs a lap round the boss. Each quarter it passes bites for {d:300} and gives 4 Bond, and the lap ends with the boss taking 5% more damage for 10s and both hounds behind it: a Bring Down. The lap also ties a Mark for 6s, as Mark the Quarry does (the pack bites 50% faster, Bond comes doubled), and Blood Scent, Drive and Cornered ride it.',
+      spec: { lonewolf: 'New move on F, in place of Mark the Quarry. The Long Chase (45s): Greyfang runs a lap round the boss. Each quarter it passes bites for {d:450} and gives 6 Bond, and the lap ends with the boss taking 5% more damage for 10s and Greyfang behind it. The lap also ties a Mark for 6s, as Mark the Quarry does (Greyfang bites 50% faster, Bond comes doubled), and Blood Scent, Drive and Cornered ride it.' } },
     { id: 'houndmaster_alpha', name: 'Alpha', ab: 'finisher', text: 'A Bring Down is a sure critical hit that hits 25% harder, and gives 15 Bond, when it follows a pounce that formed the pair (within 10s), or when both hounds have their own Bond full.' },
   ],
 ];

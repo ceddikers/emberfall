@@ -292,6 +292,7 @@ const KITS = {
     init: () => ({ focus: 0 }),
     critMod: k => (k.has('markself') ? 0.1 : 0) + (k.has('cloaked') && k.talent('ranger_lightfoot') ? 0.2 : 0),   // (Light Feet: a Cloaked hunter shoots sharper)
     tick: k => rangerTrack(k),
+    onDamage(k, amt, crit, opts) { if (crit && !opts.dot && k.talent('ranger_disengage')) k.reduceCooldown('cloak', 2); },   // (Disengage: a critical hit shaves the Cloak)
     signature: 'Keen Eye procs',
     floor: 'Press Q, press W when it glows, E when Focus is full. R and F together every minute.',
     ceiling: [
@@ -322,10 +323,10 @@ const KITS = {
           const keen = k.consume('keen');
           let r;
           if (keen) {
-            r = k.damage(290, { ab: this }); k.refundCharge('pierce');
+            r = k.damage(290, rangerShot(k, this)); k.refundCharge('pierce');
             if (k.perk('ranger_w2')) { k.damage(250, { ab: this }); k.fx('empower'); }
           }
-          else r = k.damage(160, { ab: this });
+          else r = k.damage(160, rangerShot(k, this));
           rangerPierce(k, keen, r, keen ? 290 : 160);
         },
         fx: { type: 'line', color: '#ffd27a', range: 440 },
@@ -338,6 +339,7 @@ const KITS = {
         effect(k) {
           k.spend('focus', rangerRapidCost(k));
           k.damage((k.has('markself') ? 760 : 360) * (k.perk('ranger_a4') ? 1.15 : 1), { ab: this }); if (k.perk('ranger_a2')) k.gain('focus', 10);
+          if (k.talent('ranger_secondwind')) { rangerKeen(k); k.gain('focus', 15); }   // (Second Wind: Rapid Fire is a breath)
         },
         fx: { type: 'zone', style: 'arrows', color: '#e8d9a0', r: 60, range: RANGED, dur: 0.9 },
       },
@@ -354,7 +356,7 @@ const KITS = {
       {
         id: 'cloak', name: "Hunter's Cloak", type: 'ogcd', target: 'self', cd: 90, anim: 'cast',
         desc: 'The whole party takes 10% less damage for 10s, and you gain 40 Focus.',
-        effect(k) { k.mitigate('party', 0.1, 10, { ab: this }); k.buff('cloaked', 10); k.gain('focus', 40); if (k.talent('ranger_disengage')) { kitMove(k, 'back', { d: 150 }); k.damage(500, { ab: this, autoCrit: true }); k.mitigate('self', 1, 1, { ab: this, kind: 'invuln' }); k.reduceCooldown('cloak', 10); } },   // (cloaked: Starfall Volley's mending)
+        effect(k) { k.mitigate('party', 0.1, 10, { ab: this }); k.buff('cloaked', 10); k.gain('focus', 40); if (k.talent('ranger_disengage')) { kitMove(k, 'back', { d: 150 }); k.damage(500, { ab: this, autoCrit: true }); k.mitigate('self', 1, 1, { ab: this, kind: 'invuln' }); k.reduceCooldown('cloak', 10); const pa = abBase(k, 'pierce'); if (pa) k.refill(pa.id); rangerKeen(k); rangerKeen(k); } },   // (Disengage: you land with a Keen Eye lit twice and the Piercing Arrow charged)   // (cloaked: Starfall Volley's mending)
         fx: { type: 'ring', color: '#9fdc8a', r: 150 },
       },
       {
@@ -374,7 +376,7 @@ const KITS = {
     auto: { kind: 'stab', potency: 40, range: MELEE },  // passive auto-attack (see ENGINE.AUTO_EVERY)
     gauge: { kind: 'moon', key: 'combo', max: 5, label: 'Combo' },
     init: () => ({ combo: 0 }),
-    haste: k => (k.has('dance') ? 0.8 : 1),
+    haste: k => (k.has('dance') ? 0.8 : 1) * (k.has('relent') ? BLADE_TALENT.RELENT_HASTE : 1),   // (Relentless: a perfect finisher quickens you a while)
     positionalAlways: k => k.has('dance'),
     tick: k => bladeTick(k),   // (spec rows VI-VII: Curtain Call, Eye of the Storm)
     signature: 'Positionals',
@@ -391,7 +393,7 @@ const KITS = {
         id: 'strike', name: 'Strike', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
         desc: 'Stab: {d:220} and +1 combo point. From behind: {d:280} and +2 points.',
         effect(k) {
-          const r = k.damage(220, { ab: this, positional: 'rear', posBonus: 60, mult: k.consume('sprinted') ? 1.8 : 1 });   // (Shadow Sprint: the Strike after a Shadowstep)
+          const r = k.damage(220, { ab: this, positional: 'rear', posBonus: 60, mult: (k.consume('sprinted') ? 1.8 : 1) * (k.talent('shadowblade_opportunist') && bossCasting(k) ? bladeOpp(k) : 1), autoCrit: k.talent('shadowblade_opportunist') && bossCasting(k) });   // (Opportunist: a Strike in the boss's cast is a sure critical hit too, and harder)   // (Shadow Sprint: the Strike after a Shadowstep)
           let n = r.posHit ? 2 : 1;
           // (Feint: every Strike sets up a feint, the next finisher 12% harder. A Strike from the front is no longer wasted: it hits and gives as
           // from behind, and the finisher lands its positional wherever you stand (not a Bladedancer, whose positionals always land))
@@ -1249,6 +1251,7 @@ function runeGlyphguardEnd(k, d) {
 }
 
 // ----------------------------------------------------------------- Ranger
+const rangerStill = k => k.now - (k.g.movedAt ?? -99) >= 2;
 // moving and standing still (Steady Breath), and Second Wind's trigger; every spec's tick runs it
 function rangerTrack(k) {
   if (k.env.moving()) k.g.movedAt = k.now;
@@ -1257,10 +1260,15 @@ function rangerTrack(k) {
 function rangerKeenChance(k) {
   if (k.has('starfall')) return 1;   // (under Starfall Volley every Quick Shot lights it)
   const w1 = k.perk('ranger_w1') ? 0.1 : 0, c = (k.has('markself') ? 0.55 : 0.35) + w1;
-  return k.talent('ranger_steady') && k.now - (k.g.movedAt ?? -99) >= 2 ? Math.max(c, 0.65 + w1) : c;   // (the enhancement adds to Steady Breathing's floor too)
+  return k.talent('ranger_steady') && rangerStill(k) ? 1 : c;   // (Steady Breath: standing still for 2s, a Quick Shot always lights it)
 }
 const rangerFocusFire = k => k.talent('ranger_focusfire') && k.g.focus >= 100;
-function rangerShot(k, ab) { const o = { ab }; if (k.talent('ranger_pin') && k.consume('pinned')) o.autoCrit = true; return o; }
+// Pinning Shot: the Quick Shots it pins, and the one Piercing Arrow (or its spec's version) it steadies, are sure crits
+function rangerShot(k, ab) {
+  const o = { ab };
+  if (k.talent('ranger_pin') && k.consume(ab.id === 'quick' ? 'pinned' : 'pinnedP')) o.autoCrit = true;
+  return o;
+}
 const rangerFocus = (k, barr) => 10 * (barr ? 3 : 1) + (k.talent('ranger_tracking') ? 2 * Math.min(7, k.g.track || 0) : 0);
 // Rapid Fire's (and Explosive Shot's) price: half inside Hunter's Mark, so Focus pooled for the Mark buys twice the volleys
 const rangerRapidCost = k => (k.has('markself') ? k.def.markRapid || 25 : 50);   // (Sharpshooter: 20)
@@ -1270,6 +1278,7 @@ function rangerKeen(k) {
   k.buff('keen', 15, {}, 2, 1); k.g.track = k.talent('ranger_tracking') ? Math.floor((k.g.track || 0) / 2) : 0;
   // Pinning Shot: lighting Keen Eye (from any source) pins the boss, once every 6s
   if (k.talent('ranger_pin') && k.now >= (k.g.pinAt || 0)) { k.g.pinAt = k.now + 6; k.buff('pinned', 15, {}, 2, 2); }
+  if (k.talent('ranger_pin') && k.now >= (k.g.pinPAt || 0)) { k.g.pinPAt = k.now + 8; k.buff('pinnedP', 15); }
   k.ultGain(RANGER_ULT.GAIN_KEEN);   // (Starfall Volley)
   if (k.has('markself')) k.g.markKeens = (k.g.markKeens || 0) + 1;
   if (k.has('falconHunt')) { k.damage(300, { ab: abBase(k, 'barrage') }); k.fx('falconDive'); }
@@ -1277,28 +1286,36 @@ function rangerKeen(k) {
 function rangerNoKeen(k) { if (k.talent('ranger_tracking')) k.g.track = (k.g.track || 0) + 1; }
 function rangerRhythm(k, ab, barr, pot) {
   if (barr) return;
+  rangerSecond(k, ab, pot);
+}
+// Fletcher's Rhythm: every second shot (a Quick Shot; an Aimed Shot counts too) looses a second arrow that always crits. A Quick Shot's
+// always lights Keen Eye; an Aimed Shot's rolls for it as a Quick Shot does
+function rangerSecond(k, ab, pot) {
   k.g.quicks = (k.g.quicks || 0) + 1;
-  if (k.talent('ranger_rhythm') && k.g.quicks % 3 === 0) {
-    k.damage(pot * 0.7, { ab });
-    if (k.rng() < rangerKeenChance(k)) rangerKeen(k); else rangerNoKeen(k);   // (the second arrow rolls Keen Eye as well)
-  }
+  if (!k.talent('ranger_rhythm') || k.g.quicks % 2) return;
+  k.damage(pot * 0.7, { ab, autoCrit: true });
+  if (ab.id !== 'aimed') rangerKeen(k);
+  else if (k.rng() < rangerKeenChance(k)) rangerKeen(k); else rangerNoKeen(k);
 }
 // a shot that lands feeds a waiting Explosive Shot
 function rangerFeed(k) { if (k.g.charge) { k.g.charge.pot *= 1.35; k.g.charge.n++; } }
 // after a Quick Shot (r: its hit): Explosive Shot, Second Wind, Wild Volley
-function rangerQuickAfter(k, ab, r) {
+function rangerQuickAfter(k, ab, r, pot = 230) {
   rangerFeed(k);
   if (k.consume('secondwind')) { k.g.windAt = k.now + 40; k.healRaw('self', k.env.maxHp() * 0.2, { ab }); k.mitigate('self', 0.2, 4, { ab }); k.fx('secondWind'); }
-  if (r.crit) rangerVolley(k, ab);
+  if (r.crit) rangerVolley(k, ab, pot);
 }
 // Wild Volley: a crit from a Quick Shot or a Piercing Arrow calls the volley down
-function rangerVolley(k, ab) { if (k.talent('ranger_volley')) { k.after(0.3, () => k.damage(150, { ab })); k.fx('volley'); } }
+function rangerVolley(k, ab, pot) { if (k.talent('ranger_volley')) { k.after(0.3, () => k.damage(150 + pot / 2, { ab })); k.gain('focus', 8); k.fx('volley'); } }
 // after Piercing Arrow and its spec versions (r: its hit, pot: its strength)
 function rangerPierce(k, keen, r, pot) {
   const ab = abBase(k, 'pierce');
   if (ab.id !== 'caustic') rangerFeed(k);   // (Explosive Shot grows on Piercing Arrow and Aimed Shot, not on Caustic Arrow's bursts)
   if (k.talent('ranger_lightfoot')) { k.reduceCooldown('cloak', 4); k.gain('focus', 4); }
-  if (r && r.crit) rangerVolley(k, ab);
+  if (ab.id === 'aimed') rangerSecond(k, ab, 230);   // (Fletcher's Rhythm: an Aimed Shot's second arrow is a Quick Shot's size)
+  // Steady Breath: a shot loosed after standing still lights Keen Eye (an Aimed Shot that cashed one lights it again once every 6s)
+  if (k.talent('ranger_steady') && rangerStill(k) && (!keen || (ab.id === 'aimed' && k.now >= (k.g.reAt || 0) && (k.g.reAt = k.now + 6)))) rangerKeen(k);
+  if (r && r.crit) rangerVolley(k, ab, pot);
   // a banked Keen Eye (cashed with a second still waiting) inside Hunter's Mark readies Barrage again
   if (keen && k.has('keen') && k.has('markself')) { const bar = abBase(k, 'barrage'); if (bar) { if (k.cdRemaining(bar) <= 0) k.wasted('barrage'); k.resetCooldown(bar); k.fx('empower'); } }
   // Ricochet: the arrow glances off the boss and strikes again; a crit also sends the charge home and lights Keen Eye
@@ -1315,18 +1332,31 @@ function rangerMark(k, ab, dur) {
 }
 
 // ----------------------------------------------------------------- Shadowblade
+// talent numbers: Sharpened Shadows (a point sharpens the finisher by SHARP%, to SHARP_CAP; a spilled one by SHARP_SPILL; SHARP_MAX in all), Relentless (haste 12% for 5s), Eye of the Storm (damage per Tempo)
+const BLADE_TALENT = { RELENT_HASTE: 0.88, RELENT_DUR: 6, FEINT_BD: 1.2, OPP: 1.25, OPP_NS: 1.1 };
+const bladeOpp = k => (k.def.spec === 'nightstalker' ? BLADE_TALENT.OPP_NS : BLADE_TALENT.OPP);   // (Opportunist: the blow in the cast is also this much harder)
+const BLADE_SHARP = {   // a point sharpens by `pt`% up to `cap`%, a spilled one by `spill`% (`max`% in all); the crit chance rises `crit` for each 1% of edge, up to `critCap`
+  default: { pt: 5, cap: 25, spill: 24, max: 50, crit: 1, critCap: 0.25 },
+  nightstalker: { pt: 6, cap: 30, spill: 30, max: 60, crit: 1.5, critCap: 0.45 },
+};
+const bladeSharp = k => BLADE_SHARP[k.def.spec] || BLADE_SHARP.default;
 function bladeCombo(k, n) {
   const over = (k.g.combo || 0) + n - 5;
   // (Sharpened Shadows: every point you gain sharpens the next finisher 2.5% (up to 12.5%); a point that spills sharpens it 12% instead (up to 30% in all))
   if (k.talent('shadowblade_sharpen')) {
     if (!k.has('sharpen')) k.g.shN = k.g.shS = 0;
     const gained = Math.max(0, n - Math.max(0, over));
-    k.g.shN = Math.min(12.5, (k.g.shN || 0) + 2.5 * gained);
-    k.g.shS = (k.g.shS || 0) + 12 * Math.max(0, over);
-    k.g.shP = Math.min(30, k.g.shN + k.g.shS);
-    if (gained > 0 || over > 0) { k.buff('sharpen', 20, {}, 12, 1); k.buffs.get('sharpen').stacks = Math.max(1, Math.round(k.g.shP / 2.5)); }
+    const sh = bladeSharp(k);
+    k.g.shN = Math.min(sh.cap, (k.g.shN || 0) + sh.pt * gained);
+    k.g.shS = (k.g.shS || 0) + sh.spill * Math.max(0, over);
+    k.g.shP = Math.min(sh.max, k.g.shN + k.g.shS);
+    if (gained > 0 || over > 0) { k.buff('sharpen', 20, {}, 12, 1); k.buffs.get('sharpen').stacks = Math.max(1, Math.round(k.g.shP / sh.pt)); }
   }
-  if (over > 0 && !bladeThousand(k)) { k.g.spilled = true; k.clear('tempo'); }   // (Bladedancer's Tempo: a spilled point breaks it)
+  if (over > 0 && !bladeThousand(k) && !(k.has('relent') && k.def.spec === 'bladedancer')) {   // (Bladedancer's Tempo: a spilled point breaks it; Eye of the Storm: it costs one Tempo, not all; Relentless: not while its haste lasts)
+    k.g.spilled = true;
+    const tb = k.talent('shadowblade_eye') && k.has('tempo') ? k.buffs.get('tempo') : null;
+    if (tb && tb.stacks > 1) tb.stacks--; else k.clear('tempo');
+  }
   k.gain('combo', n, 5);
 }
 // Poised: Shadow Dance entered at 5 points; the first finisher in it keeps them. A buff for the Dance's length, so the keep is seen
@@ -1340,9 +1370,9 @@ function bladeTempo(k, cp) {
 // the finisher's multiplier from your poison or Rupture, and Sharpened Shadows (spent)
 function bladeMult(k) {
   let m = k.dotRemaining('rupture') > 0 ? 1.2 : k.dotRemaining('poison') > 0 ? 1.15 : 1;   // (Rupture's bleed opens the boss wider than the poison does)
-  if (k.has('sharpen')) { m *= 1 + (k.g.shP || 0) / 100; k.clear('sharpen'); k.g.shN = k.g.shS = k.g.shP = 0; }
+  if (k.has('sharpen')) { m *= 1 + (k.g.shP || 0) / 100; k.g.shBite = (k.g.shP || 0) / 100; k.clear('sharpen'); k.g.shN = k.g.shS = k.g.shP = 0; }   // (the edge it was sharpened to also raises the finisher's critical chance: bladeOpts)
   // (Feint: every Strike sets up the finisher 12% harder; bladeOpts spends the feint)
-  if (k.talent('shadowblade_feint') && k.has('feint')) m *= 1.12;
+  if (k.talent('shadowblade_feint') && k.has('feint')) m *= k.def.spec === 'bladedancer' ? BLADE_TALENT.FEINT_BD : 1.12;   // (a Bladedancer has no front to hide, so its feint is a plain 20%)
   return m;
 }
 // the finisher's damage options: its positional, unless a Feint lands it anyway; Opportunist's crit
@@ -1350,7 +1380,8 @@ function bladeOpts(k, ab, positional, posBonus, mult) {
   const fb = k.talent('shadowblade_feint') && k.has('feint') ? k.buffs.get('feint') : null, pos = !!(fb && fb.data && fb.data.pos);
   if (fb) k.consume('feint');
   const o = pos ? { ab, mult, feint: true } : { ab, positional, posBonus, mult };
-  if (k.talent('shadowblade_opportunist') && bossCasting(k)) o.autoCrit = true;
+  if (k.talent('shadowblade_opportunist') && bossCasting(k)) { o.autoCrit = true; o.mult = (o.mult || 1) * bladeOpp(k); }
+  if (k.g.shBite) { const sh = bladeSharp(k); o.crit = Math.min(sh.critCap, k.g.shBite * sh.crit); k.g.shBite = 0; }   // (Sharpened Shadows: the sharper the blade, the more often it crits: as much as the edge, up to 25%; a Nightstalker's bites deeper, 9% for each 6%, up to 45%)
   return o;
 }
 // after a finisher (Eviscerate / Backstab)
@@ -1358,7 +1389,10 @@ function bladeFinisher(k, ab, cp, full) {
   k.ultGain(BLADE_ULT.GAIN_CP * cp);   // (Thousand Cuts: every combo point a finisher spends)
   bladeTempo(k, cp);
   if (k.g.poised) { k.g.poised = false; k.clear('poised'); if (k.has('dance')) { k.g.combo = Math.max(k.g.combo || 0, cp); k.fx('empower'); } }
-  if (cp >= 5 && k.talent('shadowblade_relentless')) { if (k.def.spec === 'nightstalker') { if (k.rng() < 0.5) k.gain('combo', 1, 5); } else k.gain('combo', 2, 5); }   // (Relentless: a perfect finisher gives back 2 points; a Nightstalker's is an even chance of 1)
+  if (k.talent('shadowblade_relentless')) {   // (Relentless: a perfect finisher gives back 2 points, a Nightstalker's 1; a finisher of 4 or more quickens you a while)
+    if (cp >= 5) k.gain('combo', k.def.spec === 'nightstalker' ? 1 : 2, 5);
+    if (cp >= 4) k.buff('relent', BLADE_TALENT.RELENT_DUR);
+  }
   if (k.talent('shadowblade_toxic')) {
     let burst = 0;
     for (const id of ['poison', 'rupture']) {
@@ -1424,6 +1458,7 @@ function pyroBurst(k, dur) {
     const b = k.buffs.get('combust');
     if (b && b.end > k.now + 0.02) { k.after(b.end - k.now, out); return; }
     if (!('circle' in k.g)) k.damage(700, { ab: k.abById('combust'), extra: true });
+    else if (k.g.circle && k.g.circle.inside > 0) k.damage(Math.round(80 * Math.min(20, k.g.circle.inside)), { ab: k.abById('circle'), extra: true });   // (a Sigilmancer's circle goes out in a blast: 80 for every second you stood inside, up to 20)
     pyroLight(k); k.refill('fireblast'); k.fx('flashpoint');
   };
   k.after(dur, out);
@@ -1643,7 +1678,7 @@ function chronoFlux(k, drain) {
     const add = 3 * dt, over = k.g.flux + add - 100;
     if (over > 0 && k.talent('chronomancer_overwound')) {
       k.g.wound = (k.g.wound || 0) + over;
-      if (k.g.wound >= 3) { k.g.wound = 0; k.heal(k.g.link ?? k.env.defaultLink(), 160, { ab: k.abById('shift') }); k.heal('party', 60, { ab: k.abById('shift') }); }   // (and a little for everyone)
+      if (k.g.wound >= 3) { k.g.wound = 0; k.heal(k.g.link ?? k.env.defaultLink(), 160, { ab: k.abById('shift') }); k.heal('party', 60, { ab: k.abById('shift') }); k.damage(chronoStrike(k, CHRONO_RIDER.WOUND), { ab: k.abById('shift'), extra: true }); k.stats.wounds = (k.stats.wounds || 0) + 1; }   // (and a little for everyone, and the spring uncoils into the boss)
     }
     k.gain('flux', add);
   } else {
@@ -1661,6 +1696,10 @@ function chronoFlux(k, drain) {
 // Paradox: shifting from Haste back to Slow (not stumbling out of it) cashes in the Flux that Haste spent: an instant
 // hit, and half of it heals the whole party
 const CHRONO_PARADOX = 14;   // potency per Flux spent
+// the damage riders of the row III and V picks that are not Future Sight (share of a Bolt's strength; potency per strike)
+const CHRONO_RIDER = { WARP: 0.4, CHANCE: 0.8, CHANCE_WINDOW: 8, CHANCE_STRIKE: 600, BUBBLE: 230, WOUND: 100, ECHOIST: 1.4 };
+// (a flat strike is sized for the Accelerant's Bolt; an Echoist's is weaker per hit, its echoes make up the rest, so its strikes are 40% bigger: the talent texts give both)
+const chronoStrike = (k, n) => n * (k.def.spec === 'echoist' ? CHRONO_RIDER.ECHOIST : 1);
 function chronoParadox(k, ab) {
   const spent = k.g.paraFlux || 0;
   k.g.paraFlux = 0;
@@ -1708,6 +1747,9 @@ function chronoBolt(k, ab, share, party, link, to) {
   else if (k.g.stance === 'haste') k.healRaw('party', r.amount * party, { ab });
   else k.healRaw(to ?? k.g.link ?? k.env.defaultLink(), r.amount * link, { ab });   // (to: an Echoist's echo, sent to the most hurt ally when the link is healthy)
   if (k.g.stance === 'haste' && r.crit && k.talent('chronomancer_borrowed')) k.gain('flux', 12);
+  // (Time Warp: under the clock every Bolt hit is joined by the clock's hand; Second Chance: while the ward holds, by a second chance of the same Bolt. Damage only: they heal nothing)
+  const rid = (k.has('warp') ? CHRONO_RIDER.WARP : 0) + (k.has('chance') ? CHRONO_RIDER.CHANCE : 0);
+  if (rid) k.damage(280 * share * rid, { ab: k.has('warp') ? (k.abById('warp') || ab) : ab, extra: true });
   if (k.talent('chronomancer_future')) {
     if (!k.g.future && k.now >= (k.g.futureAt || 0)) { const f = k.g.future = { pot: 0 }; k.after(6, () => { k.g.future = null; k.g.futureAt = k.now + 6; const fr = k.damage(f.pot * 0.5, { ab }); k.healRaw('party', fr.amount / 3, { ab }); k.fx('futureBurst'); }); k.fx('futureMark'); }   // (Future Sight: half of every Bolt that fed it, and a third of that heals the party)
     if (k.g.future) k.g.future.pot += 280 * share;
@@ -1729,6 +1771,8 @@ const chronoAccel = (k, dur) => dur;
 function chronoSecondChance(k, ab, t, raised) {
   if (!k.talent('chronomancer_secondchance')) return;
   k.shield(t, 400, 8, { ab, tag: 'item' }); k.heal('party', 150, { ab });
+  k.buff('chance', CHRONO_RIDER.CHANCE_WINDOW);   // (the Recall is a second chance at the boss too: a strike now, and the Bolts of the next 8s hit again)
+  k.damage(chronoStrike(k, CHRONO_RIDER.CHANCE_STRIKE), { ab, extra: true });
   if (raised) k.after(0.6, () => { k.heal(t, 1400, { ab }); k.fx('secondChance', { to: typeof t === 'number' ? t : null }); });
 }
 
@@ -2367,12 +2411,14 @@ function kitHoleClamp(from, dest, inHole, blink) {
 // a Thermal Shock sized by the whole swing (the peak plus how far past 0 it landed): +5 down to -1 is a swing of 6.
 // Pushing past ±5 overloads you: Overheat (fire locked for 3s, and you burn) or Frostbite (casts 30% slower for 3s).
 // Zenith (k.def.corona) holds the edge for a run of crits, building Corona. Pendulum (k.def.stepBonus) moves it a step further.
-const THERMIST = { STEP: 0.08, EDGE: 5, SHOCK_MIN: 3, SHOCK_BASE: -120, SHOCK_PER: 105 };
+const THERMIST = { STEP: 0.08, EDGE: 5, SHOCK_MIN: 3, SHOCK_BASE: -120, SHOCK_PER: 105, TOLL: 260 };
 // Zenith: every edge cast adds a Corona and keeps you at the edge; the one that fills it (3, or 5 in Red Giant) leaves you
 // On the Brink. The next Thermal Shock spends them all (+25% each); Sunset drops them as falling stars. They fade 12s after the last edge cast.
-const CORONA = { MAX: 3, GIANT: 5, SHOCK: 0.25, FADE: 12, STAR: 170, SLAG: 150, GIANT_DUR: 12, GIANT_CD: 40, GIANT_HIT: 3 };
+const CORONA = { MAX: 3, GIANT: 5, SHOCK: 0.25, FADE: 12, STAR: 170, SLAG: 150, SPIT: 140, GIANT_DUR: 12, GIANT_CD: 40, GIANT_HIT: 3 };
 const coronaCap = k => (k.has('redgiant') ? CORONA.GIANT : Math.max(CORONA.MAX, k.stacks('corona')));   // (Red Giant ending with 4 or 5 held: they stay, they are not clamped back to 3)
 const THERM_SHOCK = { id: 'shock', name: 'Thermal Shock' };
+// Thermocline (talent): after a Shock the air is in flow for FLOW s, spells are 15% faster (hasteMult SPEED), once every CD s
+const THERMOCLINE = { FLOW: 5, SPEED: 0.85, CD: 15 };
 const thermAt = (k, n) => Math.abs(k.g.temp) >= n;
 // a spell's bonus from where the dial stands: +8% per step on its own side (both sides count while Attuned)
 function thermMult(k, el) {
@@ -2384,7 +2430,7 @@ const thermEdgeCast = (k, el) => k.g.temp === el * THERMIST.EDGE;
 // a big Thermist spell's cast time (Cinder Bolt and Rime Shard are always instant): instant after a Shock with Rebound,
 // at its own edge, or after a quick spell with Flicker. Only looks: asking must never spend Rebound (thermSpell does).
 function thermCast(k, el, base, edge) {
-  if (k.has('rebound') || k.has('flicker') || (edge && thermEdgeCast(k, el))) return 0;
+  if (k.has('rebound') || k.has('flicker') || k.has('toll') || (edge && thermEdgeCast(k, el))) return 0;
   return base;
 }
 
@@ -2395,7 +2441,7 @@ function thermSpell(k, ab, el, steps, pot, o = {}) {
   const edge = !!o.edge && thermEdgeCast(k, el);
   const rebound = k.consume('rebound');   // (Rebound: the spell after a Shock is instant and 25% harder; Flicker: the big one after a quick one is instant and 30% harder)
   let flicker = false;
-  if (o.edge) flicker = k.consume('flicker');
+  if (o.edge) { flicker = k.consume('flicker'); k.consume('toll'); }   // (Tolling Bell: the big spell after the bell is instant)
   else if (o.quick && k.talent('thermist_flicker')) k.buff('flicker', 6);   // Flicker: a quick spell readies an instant big one
   thermBrink(k, el);
   // (Red Giant: the edge casts past the usual three, the 4th and 5th, burn half again as hot)
@@ -2427,6 +2473,7 @@ function thermCorona(k, el, noBrink) {
     const left = (k.g.slagEnd || 0) > k.now ? k.g.slagAmt || 0 : 0;
     k.g.slagAmt = left + CORONA.SLAG; k.g.slagEnd = k.now + 8;
     k.shield('self', k.g.slagAmt, 8, { ab: abBase(k, 'flare'), tag: 'item' });   // (tagged: never replaces a larger live shield, an Equilibrium's above all)
+    k.damage(CORONA.SPIT, { ab: abBase(k, 'flare'), extra: true });   // (and the slag that flies off strikes the boss)
   }
   if (!noBrink && k.stacks('corona') >= cap) k.buff('brink', 6, { el });
 }
@@ -2489,6 +2536,7 @@ function thermShock(k, swing, mult = 1, to = 1, o = {}) {
   if (k.g.embers) { const n = k.g.embers; k.g.embers = 0; k.after(0.3, () => { for (let i = 0; i < n; i++) k.damage(200, { ab: THERM_SHOCK, extra: true }); k.fx('embers', { n }); }); }
   if (k.talent('thermist_skin')) k.shield('self', pot * 0.3, 6, { ab: THERM_SHOCK, tag: 'item' });   // (tagged: a Shock right after an Equilibrium must not swap its bigger shield for this one)
   if (k.talent('thermist_rebound')) k.buff('rebound', 10);
+  if (k.talent('thermist_thermocline') && k.now >= (k.g.flowAt || 0)) { k.g.flowAt = k.now + THERMOCLINE.CD; k.buff('cline', THERMOCLINE.FLOW); }   // (Thermocline: the Shock leaves the air in flow, spells come faster; once every 15s)
   if (k.talent('thermist_conduct')) k.after(1, () => { k.damage(pot * 0.35, { ab: THERM_SHOCK, extra: true }); k.fx('shock', { s: 3, c: to, echo: 1 }); });
   return r;
 }
@@ -2524,7 +2572,7 @@ function thermTick(k) {
   thermLatentTick(k);
   // Tolling Bell (Pendulum's spec row VII): the boss begins a cast and the dial swings two steps toward the other side
   const cast = bossCasting(k);
-  if (k.talent('thermist_bell') && cast && !g.bellSeen) { const s = Math.sign(g.temp) || (g.side || 1); thermMove(k, -2 * s); k.fx('invert'); }
+  if (k.talent('thermist_bell') && cast && !g.bellSeen) { const s = Math.sign(g.temp) || (g.side || 1); thermMove(k, -2 * s); k.buff('toll', 8); k.damage(THERMIST.TOLL, { ab: THERM_SHOCK, extra: true }); k.fx('invert'); }   // (and the next big spell is instant, and the bell rings out on the boss)
   // Red Alert (Zenith's spec row VII): the boss begins a cast while you hold 2 or more Corona, and Sunset is ready at once
   if (k.talent('thermist_alert') && cast && !g.bellSeen && k.stacks('corona') >= 2) { k.refill('sunset'); k.g.alertStar = true; k.fx('empower'); }   // (and the stars of that Sunset fall 60% harder)
   g.bellSeen = cast;
@@ -2537,13 +2585,13 @@ function thermEquil(k, ab, o = {}) {
   k.shield('self', wrap, 8, { ab });
   k.clear('brink');
   // (Solar Wind: the dial stays, but Equilibrium Pulse still sets the heat off; the swing stays armed too, so this is on top of the Shock a later crossing brings)
-  if (o.stay) { thermUtility(k, ab, o.big); if (fell >= THERMIST.SHOCK_MIN && k.talent('thermist_pulse')) thermShock(k, fell, 1, -from); return; }
+  if (o.stay) { thermUtility(k, ab, o.big); if (fell >= THERMIST.SHOCK_MIN && k.talent('thermist_pulse')) thermShock(k, fell, 1, -from); return; }   // (a Pendulum's Pulse Shock is 50% harder, below)
   // the dial snaps to 0 but the swing is kept: side and peak stay, so the next spell across 0 still detonates a Shock
   // sized by the stored peak (unless Equilibrium Pulse sets that heat off right here)
   k.g.temp = 0;
   if (k.talent('thermist_deadcentre')) { k.buff('momentum', 9, {}, 5, 5); k.fx('empower'); if (k.talent('thermist_counterweight')) thermCounterweight(k, wrap, 8); }   // (Dead Centre, Pendulum's spec row VII: it counts as a crossing for Momentum, and for Counterweight, whose shield rides on Equilibrium's)
   thermUtility(k, ab, o.big ?? fell >= 3);
-  if (fell >= THERMIST.SHOCK_MIN && k.talent('thermist_pulse')) { Object.assign(k.g, { side: 0, peak: 0 }); thermShock(k, fell, 1, -from); }
+  if (fell >= THERMIST.SHOCK_MIN && k.talent('thermist_pulse')) { Object.assign(k.g, { side: 0, peak: 0 }); thermShock(k, fell, k.def.stepBonus ? 1.5 : 1, -from); }   // (Pendulum: Equilibrium Pulse's Shock hits 50% harder, and Equilibrium comes back 10s sooner: talents.js specMods)
 }
 // Sunset (Zenith, in Equilibrium's place): every Corona falls on the target as a star, then it is Equilibrium
 function thermSunset(k, ab) {
@@ -2571,19 +2619,26 @@ function thermInvert(k, ab) {
   if (k.talent('thermist_vortex')) k.dot('vortex', 220, 12, 1.5, { ab });
   if (k.talent('thermist_solstice')) k.after(5, () => { const t = k.g.temp; if (t) { k.g.temp = -t; thermSettle(k, -t, 0.85, { keep: true }); k.fx('invert'); } });
 }
+// Zenith's Thermocline at its own edge: a Corona can be lit now (once every 4s, none that would fill it with Brink up)
+const thermEdgeLit = k => Math.abs(k.g.temp) === THERMIST.EDGE && k.now >= (k.g.clineAt || 0) && k.stacks('corona') < coronaCap(k) && !k.has('brink');
+// the way the swing is going: +1 toward Blaze, -1 toward Rime (the glowing button's side; Thermocline follows it)
+function thermDir(k) {
+  const t = k.g.temp, s = Math.sign(t);
+  const brink = k.has('brink') ? k.buffs.get('brink').data.el : 0;
+  let dir = brink ? -brink : Math.abs(t) === THERMIST.EDGE ? -s : (k.g.dir || 1);
+  if (dir > 0 && k.has('overheat')) dir = -1;
+  return dir;
+}
 // which spell keeps the swing going (the glowing button): the edge spell, the big step, or the small step
 function thermPlan(k) {
   const t = k.g.temp, sb = k.def.stepBonus || 0, s = Math.sign(t);
   const brink = k.has('brink') ? k.buffs.get('brink').data.el : 0;
-  // (a Zenith's Thermocline takes Cinder Bolt's key and does not move the dial: it climbs the last step with a Rime Shard from 4, then Flare)
-  const noCinder = !!k.def.corona && k.talent('thermist_thermocline');
   if (Math.abs(t) === THERMIST.EDGE && !brink && !(s > 0 && k.has('overheat'))) return s > 0 ? 'flare' : 'lance';
   let dir = brink ? -brink : Math.abs(t) === THERMIST.EDGE ? -s : (k.g.dir || 1);
   if (dir > 0 && k.has('overheat')) dir = -1;
   for (let pass = 0; pass < 2; pass++, dir = -dir) {
     if (Math.abs(t + dir * (2 + sb)) <= THERMIST.EDGE) return dir > 0 ? 'flare' : 'lance';
-    if (noCinder && dir > 0) { if (t === 4) return 'rime'; }
-    else if (Math.abs(t + dir * (1 + sb)) <= THERMIST.EDGE) return dir > 0 ? 'cinder' : 'rime';
+    if (Math.abs(t + dir * (1 + sb)) <= THERMIST.EDGE) return dir > 0 ? 'cinder' : 'rime';
   }
   return 'lance';
 }
@@ -2593,7 +2648,7 @@ KITS.thermist = {
   auto: { kind: 'thermo', potency: 25, range: RANGED },  // passive auto-attack (see ENGINE.AUTO_EVERY)
   gauge: { kind: 'dial', key: 'temp', max: 5, label: 'Temperature' },
   init: () => ({ temp: 0, side: 0, peak: 0, dir: 1, embers: 0, latent: 0 }),
-  haste: k => (k.has('frostbite') ? 1.3 : 1),
+  haste: k => (k.has('frostbite') ? 1.3 : 1) * (k.has('cline') ? THERMOCLINE.SPEED : 1),
   tick: k => thermTick(k),
   // (On the Brink simply runs out after 6s: only casting the same element again overloads you)
   signature: 'Thermal Shock',
@@ -2721,13 +2776,17 @@ function driftPass(k, tg, mult = 1) {
   k.damage((eye ? (DRIFT_ULT.LINE + DRIFT_ULT.LINE_D * driftK(k)) * (gale ? 2 : 1) : 90 * (1 + driftK(k)) * (gale ? 3 : k.has('roost') ? 2 : 1)) * mult, { ab: DRIFT_PASS, tgt, ult: !!eye });   // (Eye of the Gale's gale line is the Ultimate's hit)
   k.stats.passes = (k.stats.passes || 0) + 1;
   const run = gale ? 'gale' : k.has('roost') ? 'roost' : k.has('starwind') ? 'starwind' : null;   // (Hurricane: Gale Run, or Roost, or the wind Starfall leaves, whichever is up)
-  driftAdd(k, DRIFT.PASS + (run && k.talent('driftblade_hurricane') ? 10 : 0));
+  const hurricane = k.talent('driftblade_hurricane');
+  driftAdd(k, DRIFT.PASS + (hurricane && (run || k.def.orbit) ? 10 : 0));   // (Hurricane: an Orbit's Passing Strikes feed it run or no run, and each also shaves 1.5s off Hook Turn and Slipstream)
+  if (hurricane && k.def.orbit) for (const id of ['hook', 'gyre', 'slip']) k.reduceCooldown(id, 1.5);
   // Gust Guard: running through the boss while the wind shield holds tops it back up, once
   if (k.g.gust && k.g.gust.top && k.now < k.g.gust.end && k.now >= k.g.gust.from && k.talent('driftblade_gust')) { k.g.gust.top = false; k.shield('self', 200, 6, { ab: k.abById('slip') || DRIFT_PASS }); k.fx('empower'); }
   k.fx(eye ? 'drift-gale' : 'pass', { g: gale ? 1 : 0 });
   k.ultGain(DRIFT_ULT.GAIN_PASS);
   if (k.talent('driftblade_razor')) { k.g.razor = Math.min(3, (k.dots.has('razor') ? k.g.razor || 0 : 0) + 1); k.dots.delete('razor'); k.dot('razor', 22 * k.g.razor, 6, 2, { ab: DRIFT_PASS, tgt }); }
   if (run && k.talent('driftblade_hurricane') && (k.g.galeAdd || 0) < 10) { k.g.galeAdd = (k.g.galeAdd || 0) + 2; k.buffs.get(run).end += 2; }
+  // Galeforce: every Passing Strike while a run blows looses a blade of wind after it (25 + 1.5 per Drift, always a crit, spends nothing); an Orbit's, run or no run
+  if ((run || k.def.orbit) && k.talent('driftblade_galeforce')) { k.damage(25 + 1.5 * (k.g.drift || 0), { ab: DRIFT_PASS, tgt, extra: true, autoCrit: true }); k.fx('galeforce'); }
 }
 // Orbit: every radian you circle round your target close in is a stack (up to 5, gone 5s after you stop);
 // at 5, Carve cuts on its own every 1.4s while you keep moving
@@ -2926,22 +2985,23 @@ KITS.driftblade = {
 // ability it `replaces` (specs.js kitFor), over that slot's spec version. The icon falls back to the replaced move's.
 const TALENT_ABILITIES = {};
 (() => {
-  // (Pendulum's: a swing bolt)
-  const thermocline = {
-    id: 'thermocline', replaces: 'cinder', icon: 'cinder', name: 'Thermocline', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast', recastGcd: 1.5,
-    desc: 'Instant: a {d:250} bolt that swings the dial 2 steps toward the other side (toward Rime from 0). It counts as the element it swings toward, and hits 8% harder for every step from 0 you started. A Thermal Shock it sets off hits 60% harder.',
-    glow: k => thermAt(k, 3) && !(k.has('brink') && k.buffs.get('brink').data.el === -Math.sign(k.g.temp)),
-    effect(k) { const t = k.g.temp, el = t > 0 ? -1 : t < 0 ? 1 : -1; k.g.cline = true; thermSpell(k, this, el, k.def.stepBonus ? 1 : 2, 250, { quick: true, mult: 1 + THERMIST.STEP * Math.abs(t) }); k.g.cline = false; },
+  // (a quick bolt of the way the swing is going: Cinder Bolt and Rime Shard in one. A Zenith's, held at its own edge, lights a Corona instead of swinging off it, once every 4s)
+  const thermoclineBolt = zen => ({
+    id: 'thermocline', replaces: 'cinder', icon: 'cinder', name: 'Thermocline', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast', recastGcd: 1.5, hold: !!zen,
+    desc: 'Instant, 1.5s recast: a {d:250} bolt of the way your swing is going (the glowing way), moving the dial ' + (zen ? 'one step' : 'as far as a Cinder Bolt or Rime Shard does') + '. It hits 8% harder for every step from 0 you started, and a Thermal Shock it sets off hits 60% harder.' +
+      (zen ? ' Held at your own edge it lights a Corona instead, without the Brink (once every 4s).' : '') + ' After any Thermal Shock the air runs fast: your spells come 15% quicker for 5s (once every 15s).',
+    glow: k => (zen && thermEdgeLit(k)) || ['cinder', 'rime'].includes(thermPlan(k)),
+    effect(k) {
+      const t = k.g.temp;
+      if (zen && thermEdgeLit(k)) { thermSpell(k, this, Math.sign(t), 0, 250, { quick: true, hold: true }); return; }
+      let el = thermDir(k);
+      const n = 1;
+      if (Math.abs(t + el * (n + (k.def.stepBonus || 0))) > THERMIST.EDGE) el = -el;   // (never carried past the edge)
+      k.g.cline = true; thermSpell(k, this, el, n, 250, { quick: true, mult: 1 + THERMIST.STEP * Math.abs(t) }); k.g.cline = false;
+    },
     fx: { type: 'projectile', color: '#e4a8ff', range: RANGED, speed: 1000 },
-  };
-  // (Zenith's: an edge-aware bolt of the element held; the dial stays, and at the edge it lights a Corona without the Brink, once every 4s)
-  const thermoclineZenith = {
-    id: 'thermocline', replaces: 'cinder', icon: 'cinder', name: 'Thermocline', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast', recastGcd: 1.5, hold: true,
-    desc: 'Instant: a {d:250} bolt of the element you hold (Rime from 0). It does not move the dial. At the edge it lights a Corona like an edge cast would, without the Brink (once every 4s).',
-    glow: k => thermAt(k, 5) && k.now >= (k.g.clineAt || 0) && k.stacks('corona') < coronaCap(k) && !k.has('brink'),
-    effect(k) { const t = k.g.temp, el = t > 0 ? 1 : -1; thermSpell(k, this, el, 0, 250, { quick: true, hold: true }); },
-    fx: { type: 'projectile', color: '#e4a8ff', range: RANGED, speed: 1000 },
-  };
+  });
+  const thermocline = thermoclineBolt(false), thermoclineZenith = thermoclineBolt(true);
   TALENT_ABILITIES.thermist_thermocline = { cls: 'thermist', ab: thermocline, spec: { pendulum: thermocline, zenith: thermoclineZenith } };
   TALENT_ABILITIES.thermist_zero = { cls: 'thermist', ab: {
     id: 'zero', replaces: 'rime', icon: 'rime', name: 'Absolute Zero', type: 'gcd', target: 'enemy', range: RANGED, cd: 30, anim: 'big', el: -1,
@@ -3135,6 +3195,7 @@ talentMoves('ranger', {
     glow: k => !k.g.charge && (k.g.focus >= 90 || (k.has('markself') && k.g.focus >= rangerRapidCost(k))),
     effect(k, t) {
       k.spend('focus', rangerRapidCost(k)); if (k.perk('ranger_a2')) k.gain('focus', 10);
+      if (k.talent('ranger_secondwind')) { rangerKeen(k); k.gain('focus', 15); }   // (Second Wind: Explosive Shot is a breath)
       const c = k.g.charge = { pot: (k.has('markself') ? 860 : 400) * (k.perk('ranger_a4') ? 1.15 : 1), n: 0 }, ab = this, en = t && t.id;
       k.after(2.5, () => { k.damage(c.pot, { ab }); k.fx('explode', { en, n: c.n }); if (k.g.charge === c) k.g.charge = null; });
     },
@@ -3274,13 +3335,16 @@ talentMoves('grovekeeper', {
 talentMoves('chronomancer', {
   chronomancer_bubble: {
     id: 'bubble', replaces: 'stasis', icon: 'stasis', name: 'Time Bubble', type: 'ogcd', target: 'ally', cd: 40, anim: 'big', talent: true,
-    desc: 'Wrap an ally in a bubble of slowed time for 8s. It follows them, and everyone inside takes 30% less damage.',
-    effect(k, t) { k.env.emit({ type: 'splash', target: t, r: 0, pr: 90, ticks: 4, interval: 2, pct: 0.3, fol: 1, ab: this }); },
+    desc: 'Wrap an ally in a bubble of slowed time for 8s. It follows them, and everyone inside takes 30% less damage. Every 2s the bubble turns and strikes the boss.',
+    effect(k, t) {
+      k.env.emit({ type: 'splash', target: t, r: 0, pr: 90, ticks: 4, interval: 2, pct: 0.3, fol: 1, ab: this });
+      for (let i = 1; i <= 4; i++) k.after(2 * i, () => { k.damage(chronoStrike(k, CHRONO_RIDER.BUBBLE), { ab: this, extra: true }); k.fx('clockStrike'); });   // (every turn of the bubble strikes the boss)
+    },
     fx: { type: 'ring', style: 'rewind', color: '#9ff4ff', r: 60, onTarget: true },
   },
   chronomancer_warp: {
     id: 'warp', replaces: 'accel', icon: 'accel', name: 'Time Warp', type: 'ogcd', target: 'ally', cd: 60, anim: 'big', talent: true, allyBuff: 'quickened',
-    desc: 'Party burst: a great clock hangs over the party for 15s (20s as an Accelerant). Everyone acts 10% faster (15% as an Accelerant; an Echoist\'s echoes are full strength), and the ally you aim it at is Quickened: 12% faster still for 15s. Every 3s its hands strike the boss for {d:70} and heal the whole party for {h:55}. You gain 40 Flux.',
+    desc: 'Party burst: a great clock hangs over the party for 15s (20s as an Accelerant). Everyone acts 10% faster (15% as an Accelerant; an Echoist\'s echoes are full strength), and the ally you aim it at is Quickened: 12% faster still for 15s. Every 3s its hands strike the boss for {d:70} and heal the whole party for {h:55}. While it hangs, every Bolt is joined by a second strike from the clock, at 40% of its strength. You gain 40 Flux.',
     effect(k, t) {
       const acc = k.def.spec === 'accelerant', dur = acc ? 20 : 15, ab = this;
       k.partyBuff('haste', acc ? 0.15 : 0.1, dur, { ab });
@@ -3318,7 +3382,7 @@ TALENT_ABILITIES.alembist_quicksilver = { cls: 'alembist', ab: Object.assign(ale
   { replaces: 'salt', icon: 'salt', talent: true }) };
 
 if (typeof module !== 'undefined') Object.assign(module.exports, { kitMoveDest, kitSegDist, kitHoleClamp, THERMIST, CORONA, thermCorona, thermSunset, thermSpell, thermMove, thermSettle, thermShock, thermBrink, thermMult, thermAt,
-  thermEdgeCast, thermEquil, thermUtility, thermInvert, thermPlan, thermTick, thermOverload, thermLatentTick, thermLatentReady, LATENT, DRIFT, DRIFT_BODY, DRIFT_NEAR, DRIFT_REACH, driftAdd, driftTick, driftPass, driftK, driftMax,
+  thermEdgeCast, thermEquil, thermUtility, thermInvert, thermPlan, thermDir, thermEdgeLit, thermTick, thermOverload, thermLatentTick, thermLatentReady, LATENT, DRIFT, DRIFT_BODY, DRIFT_NEAR, DRIFT_REACH, driftAdd, driftTick, driftPass, driftK, driftMax,
   driftSpend, driftHook, driftRiposte, driftLoop, TALENT_ABILITIES });
 
 // ===================================================================================================================
@@ -5014,7 +5078,7 @@ function mariTick(k) {
     const L = g.linger;
     L.next += 1; L.left--;
     const crossing = e ? L.lines.filter(s => kitSegDist(e.x, e.y, s[0], s[1], s[2], s[3]) <= mariER(e) + 10).length : 0;   // (each line that still crosses cuts)
-    if (crossing) k.damage((L.dmg || (k.def.dolls === 2 ? 32 : 45 * L.m)) * crossing, { ab: abBase(k, 'cross'), tgt: e.id, extra: true });
+    if (crossing) k.damage((L.dmg || (k.def.dolls === 2 ? 46 : 45 * L.m)) * crossing, { ab: abBase(k, 'cross'), tgt: e.id, extra: true });
     if (L.left <= 0) g.linger = null;
   }
   mariStrung(k);
@@ -5412,7 +5476,7 @@ talentMoves('marionettist', {
     glow: k => mariChordOn(k),
     effect(k) {
       const e = mariEnemy(k);
-      if (k.talent('marionettist_twin') && k.g.dolls.length >= 2) k.g.linger = { lines: [[k.g.dolls[0].x, k.g.dolls[0].y, k.g.dolls[1].x, k.g.dolls[1].y]], next: k.now + 1, left: 3, m: 1, dmg: 56 };   // (Twin Strings: the line between the Dolls lingers and cuts)
+      if (k.talent('marionettist_twin') && k.g.dolls.length >= 2) k.g.linger = { lines: [[k.g.dolls[0].x, k.g.dolls[0].y, k.g.dolls[1].x, k.g.dolls[1].y]], next: k.now + 1, left: 3, m: 1, dmg: 78 };   // (Twin Strings: the line between the Dolls lingers and cuts)
       if (!e || !mariChordOn(k)) { k.stats.misses = (k.stats.misses || 0) + 1; mariMissBack(k, this); return; }   // (a miss keeps On Cue and gets its cooldown back, as Cross-Cut)
       const cue = k.consume('oncue');
       k.damage(640 * (cue ? 2 : 1), { ab: this, tgt: e.id !== 'dummy' ? e.id : undefined });
@@ -6073,7 +6137,7 @@ const REAP = {
   BLINK_HOLD: 0.9,
   GATE: { DUR: 8, MAX: 5, GCD: 1.0, EMP: 1.5, LIMIT: 3.2, GB: 0.25, LOCK: 1.0 },   // Arcane Gate: five swings, empowered marks pop 1.5x, four inside LIMIT s = Gatebreaker
   U_TRICKLE: 0.35, SIM_PHANTOM: 80,
-  AGED: 1.75, QUICK: 4, QUICK_MOON: 20,   // (Patient Death: the marks of a Full Harvest pop AGED x, and its burst; Quick Harvest: the one mark pops QUICK x and fills the crescent by QUICK_MOON)
+  UNBROKEN_HOLD: 5, UNBROKEN_CUT: 300, FLICKER_STAR: 1.5, AGED: 1.75, QUICK: 4, QUICK_MOON: 20,   // (Patient Death: the marks of a Full Harvest pop AGED x, and its burst; Quick Harvest: the one mark pops QUICK x and fills the crescent by QUICK_MOON)
 };
 const reapMax = k => (k.ultWin ? REAP.GATE.MAX : REAP.MAX);
 const reapDur = k => (k.talent('thresher_patient') ? 34 : REAP.MARK_DUR);
@@ -6318,6 +6382,7 @@ function reapStarHit(k, ab, cx, cy, scale, primId, again) {
   if (k.talent('thresher_linger') && !again) k.after(2, () => reapStarHit(k, ab, cx, cy, scale * 1.75, primId, true));   // (Lingering Star: it collapses a second time, on the marks the first one seeded)
 }
 function reapStar(k, ab, scale) {
+  if (k.has('flickstar')) { k.clear('flickstar'); scale *= REAP.FLICKER_STAR; }   // (Flicker: the Star it readied hits half again as hard)
   const t = k.env.target(ab);
   let cx = t && t.x != null ? t.x : 0, cy = t && t.y != null ? t.y : 0;
   const van = k.talent('thresher_vanishing') && k.g.lastBlink, tx = cx, ty = cy;
@@ -6341,12 +6406,18 @@ function reapBlink(k, info) {
   // a blink keeps the string (and with Unbroken Step adds a swing to it)
   if (s && s.n > 0 && now < s.until) {
     s.until = Math.max(s.until, now + REAP.BLINK_HOLD);
-    if (k.talent('thresher_unbroken') && s.n < REAP.MAX) { s.n++; k.damage(220, { ab: reapAb(k, 'string'), hit: true, extra: true }); k.fx('swing', { n: s.n - 1 }); }   // (Unbroken Step: the swing the Blink adds cuts at once)
+    if (k.talent('thresher_unbroken')) {   // (Unbroken Step: the swing the Blink adds cuts at once; through a telegraph the string is also held, so the dodge never costs it)
+      for (let i = info.through ? 2 : 1; i > 0 && s.n < REAP.MAX; i--) { s.n++; k.damage(REAP.UNBROKEN_CUT, { ab: reapAb(k, 'string'), hit: true, extra: true }); k.fx('swing', { n: s.n - 1 }); }
+      if (info.through) s.until = Math.max(s.until, now + REAP.UNBROKEN_HOLD);
+    }
   }
   k.buff('blinked', 4);
   if (info.through) {
     if (k.talent('thresher_step')) { k.buff('stepthrough', 8); k.mitigate('self', 0.15, 3, { ab: reapAb(k, 'string') }); }   // (Step Through: and 15% less damage for 3s)
-    if (k.talent('thresher_flicker') && k.env.refundDash) k.env.refundDash();
+    if (k.talent('thresher_flicker')) {   // (Flicker: the charge comes back, and Void Star is ready at once and half again as strong)
+      if (k.env.refundDash) k.env.refundDash();
+      const st = reapAb(k, 'star'); if (st) { k.resetCooldown(st); k.buff('flickstar', 30); }
+    }
   }
   if (k.talent('thresher_afterimage')) k.buff('afterimage', 8);
   if (k.talent('thresher_shade')) {   // (Shade Step: a dark field where you stood; what stands in it takes 5% more from you, and adds that cross it are slowed)
@@ -6574,11 +6645,17 @@ function tideGain(k, n) {
   k.g.tide = Math.min(100, (k.g.tide || 0) + n);
   if (k.g.tphase === 'rise' && k.g.tide >= 100) tideCrest(k);
 }
+// Low Water: the floor is touched (by the ebb, or by a wave that drained it): the next Sip is free and stronger, and the backwash strikes the boss
+function tideFloor(k) {
+  if (!k.talent('tidecaller_lowwater')) return;
+  k.g.lowWater = true;
+  if (k.now >= (k.g.lwAt || 0)) { k.g.lwAt = k.now + 4; k.damage(500, { ab: abBase(k, 'sip') }); }
+}
 function tideSpend(k, n) {
   if (tideFlood(k)) return;
   k.g.tide = Math.max(0, (k.g.tide || 0) - n);
   if (k.g.tphase === 'hold') k.g.tphase = 'ebb';
-  if (k.g.tide <= 0) { k.g.tide = 0; k.g.tphase = 'rise'; if (k.talent('tidecaller_lowwater')) k.g.lowWater = true; }   // (Low Water: the floor, by the ebb or by a wave that drained it)
+  if (k.g.tide <= 0) { k.g.tide = 0; k.g.tphase = 'rise'; tideFloor(k); }   // (Low Water: the floor, by the ebb or by a wave that drained it)
 }
 function tideTick(k) {
   const dt = Math.max(0, Math.min(0.5, k.now - (k.g.tAt ?? k.now))); k.g.tAt = k.now;
@@ -6609,7 +6686,7 @@ function tideTick(k) {
     k.g.tide -= 100 / TIDE.EBB * dt;
     if (k.g.tide <= 0) {
       k.g.tide = 0; k.g.tphase = 'rise';
-      if (k.talent('tidecaller_lowwater')) k.g.lowWater = true;
+      tideFloor(k);
       k.fx('slack');
     }
   }
@@ -6695,6 +6772,7 @@ function tideSip(k, ab, t, pot, cost) {
   if (k.talent('tidecaller_foam') && ((tideMarked(k) && k.g.mark.t === t) || k.now < (k.g.whirlUntil || 0) || (af != null && af < 0.5))) {   // (Foam: a Sip on the marked ally, any Sip while your Maelstrom is open, or on one under half health: the most hurt other ally heals at once, and the foam lingers on them)
     k.env.emit({ type: 'heal', target: 'lowest', not: t, ab, amount: k.healAmount(180, { ab }).amount });
     k.env.emit({ type: 'hot', target: 'lowest', not: t, ab, id: 'foam', amount: k.healAmount(50, { ab }).amount, ticks: 4, interval: 2 });
+    for (let i = 0; i <= 4; i++) k.after(i * 2, () => k.damage(120, { ab }));   // (the foam stings the boss as it forms and each time it heals)
   }
   if (walled) k.shield(t, cost < 0 ? 120 : 100, 6, { ab });
   k.ultGain(1.5);
@@ -6947,6 +7025,8 @@ function lkNearest(k, p, filter = lkFloor, not) {
 }
 function lkTick(k) {
   const g = k.g, dt = Math.max(0, Math.min(0.5, k.now - (g.tAt ?? k.now))); g.tAt = k.now;
+  // Eternal Lamp: the lamp hangs over you from the start of the pull (Lighthouse makes it burn brighter, kits.js ULTIMATES.lanternkeeper)
+  if (k.talent('lanternkeeper_eternal') && !g.eternalLit && k.env.pos) { g.eternalLit = true; if (!g.lan.some(l => l.kind === 'eternal')) lkAdd(k, 'eternal', { r: 150, pot: 50, end: Infinity, on: 'self', oy: -22 }); }
   // Embers: one every 5s
   if (g.emb < lkEmbMax(k) || k.talent('lanternkeeper_hoard')) { g.embAt += dt; if (g.embAt >= LANTERN.EMB_EVERY) { g.embAt = 0; lkEmber(k); } } else g.embAt = 0;
   // where you walk: Lamplighter's Stride drops a small light every 60 units; Road Worn and Pilgrim's Pace watch how long you have moved or stood
@@ -6978,6 +7058,12 @@ function lkTick(k) {
       if (l.kind === 'small' && g.stillFor >= 3 && l === smalls[smalls.length - 1]) l.wick -= dt * 0.4;
       l.wick = Math.max(0, l.wick);
     }
+    // Eternal Lamp: the lamp hangs over the most hurt ally (it keeps its place unless someone else is clearly worse off, or its ally has fallen)
+    if (l.kind === 'eternal' && k.now >= (l.hopAt || 0)) {
+      l.hopAt = k.now + 1;
+      const al = lkAllies(k);
+      if (al) { const cur = al.find(a => a.id === l.on); if (!cur || al[0].hp < cur.hp - 0.08) l.on = al[0].id; }
+    }
     if (l.kind === 'float') {
       const a = k.now * 0.6 + l.ph;
       if (typeof l.on === 'number') {   // (Lantern Festival: a floater hung over an ally drifts in a small ring over their head; if they fall it goes to the most hurt who stands)
@@ -6998,6 +7084,7 @@ function lkTick(k) {
 function lkShare(k) {
   if (!k.env.lamps) return;
   const st = !!k.def.steadyGlow, lean = k.talent('lanternkeeper_keeper'), sig = k.talent('lanternkeeper_signal'), ward = k.talent('lanternkeeper_ward');
+  const ll = k.talent('lanternkeeper_lastlight') ? Math.round(lkPulse(k, { pot: 100, wick: 1 }) / (lkLight(k) ? 2 : 1)) : 0;   // (Last Light: every second the most hurt ally heals this much more)
   const hh = k.talent('lanternkeeper_hearth') ? lkPulse(k, { pot: 180, wick: 1 }) / (lkLight(k) ? 2 : 1) : 0;   // (Hearth: 180 for every 6s in a Great Beacon's glow)
   k.env.lamps(k.g.lan.map(l => {
     let h = lkPulse(k, l);
@@ -7007,6 +7094,7 @@ function lkShare(k) {
     if (l.kind === 'small' && k.def.roadWorn) o.st = 1;   // (Road Worn: a Wayfarer's lights shelter like a Beacon's glow)
     if (l.kind === 'beacon') { if (st) o.st = 1; if (lean) o.ln = 1; if (sig) o.sg = 1; if (hh) o.hh = Math.round(hh); }
     if (lkLight(k)) o.all = 1;
+    if (ll) o.ll = ll;
     if (l.kind === 'hand' && ward) o.wd = 1;   // (Lantern Ward)
     return o;
   }));
@@ -7077,9 +7165,9 @@ KITS.lanternkeeper = {
   abilities: [
     {
       id: 'trim', name: 'Trim the Wick', type: 'gcd', target: 'enemy', range: RANGED, anim: 'cast',
-      desc: 'Instant: a bolt of ember at the boss for {d:270}. Tops up the wick of your nearest lantern a little, and every third bolt gives an Ember.',
+      desc: 'Instant: a bolt of ember at the boss for {d:270}, 5% more for every lantern you have lit (up to 4). Tops up the wick of your nearest lantern a little, and every third bolt gives an Ember.',
       effect(k) {
-        k.damage(270, { ab: this });
+        k.damage(270 * (1 + 0.05 * Math.min(4, k.g.lan.filter(l => l.kind !== 'eternal').length)), { ab: this });
         const p = lkPos(k), n = lkNearest(k, p, l => l.kind !== 'eternal');
         if (n) {
           n.l.wick = Math.min(1, n.l.wick + LANTERN.TRIM);
@@ -7113,7 +7201,7 @@ KITS.lanternkeeper = {
       effect(k, t) {
         if (typeof t === 'number' && k.env.isDead && k.env.isDead(t)) { k.g.emb -= 1; k.g.raiseAt = k.now + LK_RAISE_CD; k.raise(t, { ab: this }); k.ultGain(2); k.fx('lk-hang', { to: t }); return; }   // (the raise rides on the Hand Lantern, the one move aimed at an ally: it has no button of its own)
         k.g.emb -= 1;
-        lkAdd(k, 'hand', { on: typeof t === 'number' ? t : 'self', r: LANTERN.HAND_R, pot: 80, end: k.now + LANTERN.HAND_LIFE + (k.perk('lanternkeeper_w2') ? 3 : 0), ox: 0, oy: -6 });
+        lkAdd(k, 'hand', { on: typeof t === 'number' ? t : 'self', r: k.talent('lanternkeeper_ward') ? 130 : LANTERN.HAND_R, pot: k.talent('lanternkeeper_ward') ? 120 : 80, end: k.now + LANTERN.HAND_LIFE + (k.perk('lanternkeeper_w2') ? 3 : 0), ox: 0, oy: -6 });
         // Last Light: a Hand Lantern hung on an ally under 20% health holds them up for 4s, as Relight's heal would. It goes out BEFORE the lantern's own heal, so the host judges their health as it was (fight.js 'mit', ev.last)
         if (k.talent('lanternkeeper_lastlight')) k.env.emit({ type: 'mit', target: typeof t === 'number' ? t : 'self', pct: 0, dur: 4, kind: 'living', last: 1, ab: this });
         k.heal(t, 400, { ab: this });   // (hanging it heals them at once)
@@ -7202,8 +7290,10 @@ ULTIMATES.lanternkeeper = {
   effect(k) {
     k.g.lightUntil = k.now + LANTERN.LIGHT;
     k.refill('flare');
-    if (k.talent('lanternkeeper_eternal') && !k.g.lan.some(l => l.kind === 'eternal')) {
-      const l = lkAdd(k, 'eternal', { r: 170, pot: 45, end: Infinity, on: 'self' });   // (hung over you, wide: you stand among the party, and it drifts with you)
+    if (k.talent('lanternkeeper_eternal')) {
+      let l = k.g.lan.find(o => o.kind === 'eternal');
+      if (!l) l = lkAdd(k, 'eternal', { on: 'self', end: Infinity });   // (hung over you, wide: you stand among the party, and it drifts with you)
+      l.r = 190; l.pot = 80;   // (Lighthouse makes it burn brighter for the rest of the pull)
       k.fx('lk-eternal', { x: Math.round(l.x), y: Math.round(l.y) });
     }
     k.fx('lk-lighthouse');
@@ -7948,6 +8038,10 @@ function hdCallOff(k, ab) {
   }
   if (k.talent('houndmaster_guarddog') && hdLiveReal(k).length) { k.shield('party', 150, 8, { ab }); k.shield('self', 250, 8, { ab, tag: 'houndblock' }); k.fx('houndShield', { hound: hdLiveReal(k)[0].id }); }   // (Guard Dog: a hound takes the next hit)
   const stand = k.talent('houndmaster_guarddog') ? 3 : HOUND.GUARD;   // (Guard Dog: the pack is back at work in 3s)
+  if (k.talent('houndmaster_guarddog')) k.after(stand + 0.1, () => {   // (Guard Dog: and each hound bites once as it goes back, for three times as much, from wherever it stands)
+    const en = hdEnemy(k);
+    if (en) for (const h of hdLiveReal(k)) if (h.mode !== 'pounce') hdBite(k, h, en, { big: true, mult: 3 });
+  });
   g.guardUntil = k.now + stand;
   for (const h of hdLiveReal(k)) { h.mode = 'guard'; h.slot = null; h.safe = Math.max(h.safe, k.now + stand + 0.2); if (k.perk('houndmaster_a2')) h.shield = true; }   // (Call Off's enhancement: a small shield on each)
   k.mitigate('self', HOUND.GUARD_DR, HOUND.GUARD, { ab });
@@ -7967,7 +8061,10 @@ function hdFinish(k, ab) {
   // (Alpha: a Bring Down is a sure crit, and gives 10 Bond, when it follows a pounce that formed the pair, or with both hounds' own Bond full)
   const alpha = key === 'bringdown' && k.talent('houndmaster_alpha') && (k.now < (g.alphaUntil || 0) || hdFullBond(k));
   g.alphaUntil = 0;
-  k.damage(pot * (alpha ? 1.25 : 1), { ab, tgt, autoCrit: alpha });   // (Alpha: a sure crit that hits 25% harder)
+  const heels = k.now < (g.heelUntil || 0) ? g.heel || 0 : 0;   // (Heel Nip: each heel the knife marked makes this finisher hit 20% harder)
+  g.heel = 0;
+  const king = wild && k.now < (g.kingUntil || 0) && !(k.ultWin && k.ultWin.ab.id === 'wildhunt');   // (King of the Pack: the free finisher while the hounds stay hits half again as hard)
+  k.damage(pot * (alpha ? 1.25 : 1) * (king ? HDS.KING_PUNCH : 1) * (1 + 0.2 * heels), { ab, tgt, autoCrit: alpha });   // (Alpha: a sure crit that hits 25% harder)
   if (wild || key === 'rend') {
     k.dot('rend', HOUND.REND_TICK, 6, 1.5, { ab: HD_BLEED, tgt });
     k.buff('rendbite', 6);   // (the loot: a bleed makes the bites hit harder)
@@ -7999,20 +8096,29 @@ function hdFullBond(k) {
 const HD_MATE = { left: ['right'], right: ['left'], front: ['behind'], behind: ['front', 'behind'] };
 // (the Lone Wolf: Greyfang goes to the place that makes the pair with where you stand; you on a flank with it behind is a Bring Down too)
 const HD_MATE_SOLO = { left: ['right', 'behind'], right: ['left', 'behind'], front: ['behind'], behind: ['front', 'behind'] };
-function hdNip(k) {
+function hdNip(k, step = 2) {
   const e = hdEnemy(k), live = hdLiveReal(k), solo = !!k.def.solo;
+  if (solo && step !== 2) return;   // (Greyfang nips on the third hit only; the Pack Leader's pack on every hit)
   if (!e || live.length !== (solo ? 1 : 2) || hdWild(k) || hdHolding(k) || live.some(h => h.mode === 'guard' || h.mode === 'pounce')) return;
   const F = hdFace(k, e), goal = h => h.goal || (h.ring != null ? hdSlotOf(h.ring, F) : null);
   const mine = solo ? hdYourSlot(k, e) : null;
   const ga = goal(live[0]), gb = solo ? mine : goal(live[1]);
   if (!ga || !gb) return;
-  if (solo ? hdPairIn(k, [ga, gb]) : hdPairOf([ga, gb])) { for (const h of live) hdBite(k, h, e, { big: true, mult: 2 }); k.stats.nips = (k.stats.nips || 0) + 1; return; }   // (the pair already stands: the pack bites again, for twice as much)
+  const nipM = solo || step < 2 ? 2 : 3;   // (the Pack Leader's third-hit nip bites three times as hard; Greyfang's stays as it was)
+  if (solo ? hdPairIn(k, [ga, gb]) : hdPairOf([ga, gb])) { for (const h of live) hdBite(k, h, e, { big: true, mult: nipM }); k.stats.nips = (k.stats.nips || 0) + 1; return; }   // (the pair already stands: the pack bites again, for twice as much)
   let best = null;
   for (const [h, mates] of solo ? [[live[0], HD_MATE_SOLO[mine]]] : [[live[0], HD_MATE[goal(live[1])]], [live[1], HD_MATE[goal(live[0])]]]) for (const s of mates) {
     const d = Math.abs(hdWrap(F + HD_OFF[s] - Math.atan2(h.y - e.y, h.x - e.x)));
     if (!best || d < best.d) best = { h, s, d };
   }
-  if (best) { hdOrder(k, best.h, best.s); k.stats.nips = (k.stats.nips || 0) + 1; hdBite(k, best.h, e, { big: true, mult: 2 }); }   // (and the hound it sends bites at once, for twice as much)
+  if (best) { hdOrder(k, best.h, best.s); k.stats.nips = (k.stats.nips || 0) + 1; hdBite(k, best.h, e, { big: true, mult: nipM }); }   // (and the hound it sends bites at once, for twice as much)
+}
+// the Mark on the boss (Mark the Quarry, and the Long Chase's lap for a shorter one): its length, and the riders of row IV
+function hdMark(k, base, hold) {
+  const len = base + (k.talent('houndmaster_bloodscent') ? 5 : 0);   // (Blood Scent: the Mark lasts 5s longer)
+  k.g.markUntil = k.now + len; k.buff('quarry', len);
+  if (k.talent('houndmaster_drive') && (hold || hdPairNow(k))) hdHoldAll(k, k.g.markUntil, true);   // (Drive: the hounds hold their places for the whole Mark)
+  if (k.talent('houndmaster_cornered')) k.after(len, () => { if (hdLiveReal(k).length) { hdPounce(k, 3); k.gain('bond', 50, 100); } });   // (Cornered: the Mark ends in a pounce from both hounds, and 50 Bond)
 }
 // Fetch: Call Off drags you up to 150 toward the nearest hound, and never into the enemy
 function hdFetch(k, ab) {
@@ -8052,6 +8158,7 @@ function hdChase(k, ab) {
     if (live.length && en) hdBite(k, live[(q - 1) % live.length], en, { mult: 300 / HOUND.BITE, bond: 4, big: true, ab });
     if (q === 4 && en) k.debuffTarget('vuln', HOUND.HAM_VULN, HOUND.HAM_DUR, { ab });   // (the lap ends with Hamstring's weakness on the boss)
   });
+  hdMark(k, HDS.CHASE_MARK, true);   // (the lap ties a short Mark, so row IV rides it)
   k.stats.chases = (k.stats.chases || 0) + 1;
   k.fx('longchase');
 }
@@ -8125,7 +8232,7 @@ function hdTick(k) {
     if (e && h.mode !== 'guard' && h.mode !== 'pounce' && now >= h.biteAt) {
       if (engaged && Math.hypot(h.x - e.x, h.y - e.y) <= er + HOUND.REACH) {
         hdBite(k, h, e);
-        h.biteAt = now + (h.spectral ? HOUND.WILD_EVERY : HOUND.BITE_EVERY) / (hdQuarry(k) ? HOUND.QUARRY_FAST : 1) * k.hasteMult();
+        h.biteAt = now + (h.spectral ? HOUND.WILD_EVERY : HOUND.BITE_EVERY) / (hdQuarry(k) ? HOUND.QUARRY_FAST : 1) / (now < (g.howlUntil || 0) && !h.spectral ? HDS.HOWL_BITE : 1) / (h.spectral && now < (g.kingUntil || 0) ? 2 : 1) * k.hasteMult();
       } else h.biteAt = now + 0.25;
     }
   });
@@ -8165,7 +8272,8 @@ KITS.houndmaster = {
       effect(k) {
         const step = hdStep(k);
         k.damage([160, 180, 230][step], { ab: this });
-        if (step === 2) { hdBiteAll(k, { bond: HOUND.KNIFE_BOND, big: true }); if (k.talent('houndmaster_heelnip')) hdNip(k); k.g.step = 0; } else k.g.step = step + 1;
+        if (k.talent('houndmaster_heelnip') && !k.def.solo) { k.g.heel = Math.min(3, (k.now < (k.g.heelUntil || 0) ? k.g.heel || 0 : 0) + 1); k.g.heelUntil = k.now + 12; }   // (Heel Nip, the Pack Leader: every knife hit marks a heel for the next finisher)
+        if (step === 2) { hdBiteAll(k, { bond: HOUND.KNIFE_BOND, big: true }); if (k.talent('houndmaster_heelnip')) hdNip(k, 2); k.g.step = 0; } else { k.g.step = step + 1; if (k.talent('houndmaster_heelnip')) hdNip(k, step); }
         k.g.comboUntil = k.now + 15;
       },
       fx: { type: 'slash', color: '#c9b18a', r: 52, span: 1.5 },
@@ -8211,10 +8319,7 @@ KITS.houndmaster = {
       desc: `Tie a red cloth on the boss: for ${HOUND.QUARRY}s the hounds bite 50% faster and every Bond you gain is doubled. Both hounds bite at once as you do it.`,
       usable: k => !!hdEnemy(k),
       effect(k) {
-        const len = HOUND.QUARRY + (k.talent('houndmaster_bloodscent') ? 5 : 0);   // (Blood Scent: the Mark lasts 5s longer)
-        k.g.markUntil = k.now + len; k.buff('quarry', len);
-        if (k.talent('houndmaster_drive') && hdPairNow(k)) hdHoldAll(k, k.g.markUntil, true);   // (Drive: the hounds hold their places for the whole Mark)
-        if (k.talent('houndmaster_cornered')) k.after(len, () => { if (hdLiveReal(k).length) { hdPounce(k, 3); k.gain('bond', 50, 100); } });   // (Cornered: the Mark ends in a pounce from both hounds, and 10 Bond)
+        hdMark(k, HOUND.QUARRY, false);
         hdBiteAll(k);
         k.fx('quarry');
       },
@@ -8250,18 +8355,21 @@ ULTIMATES.houndmaster = {
   },
   window: {
     dur: HOUND.WILD_DUR,
-    onEnd(k) { k.g.spectralUntil = k.now + (k.talent('houndmaster_kingofpack') ? 10 : 0.01); if (k.talent('houndmaster_kingofpack')) k.g.kingUntil = k.now + 10; },   // (King of the Pack: the spectral hounds stay 4s more, and the free finisher with them)
+    onEnd(k) { k.g.spectralUntil = k.now + (k.talent('houndmaster_kingofpack') ? HDS.KING_STAY : 0.01); if (k.talent('houndmaster_kingofpack')) k.g.kingUntil = k.now + HDS.KING_STAY; },   // (King of the Pack: the spectral hounds stay 15s more, and the free finisher with them)
   },
 };
 
 // talents that grant a new move (row III's Howl in Whistle: Flank's place, row V's The Long Chase in Mark the Quarry's)
 TALENT_ABILITIES.houndmaster_howl = { cls: 'houndmaster', ab: {
   id: 'howl', replaces: 'flank', icon: 'howl', name: 'Howl', type: 'ogcd', target: 'none', cd: 20, lock: 0.4, anim: 'cast', talent: true,
-  desc: `Both hounds throw back their heads: the whole party deals 8% more damage for 8s, and both hounds hold where they stand (${HOUND.HOLD}s). Press the Hold button to pounce from there.`,
+  desc: `Both hounds throw back their heads and bite at once for {d:275} each: the whole party deals 8% more damage for 8s, the pack bites twice as fast for as long, and both hounds hold where they stand (${HOUND.HOLD}s). Press the Hold button to pounce from there.`,
   usable: k => hdLiveReal(k).length > 0,
   effect(k) {
     k.partyBuff('dmg', 0.08, 8, { ab: this });
     hdFreeze(k);
+    const en = hdEnemy(k);
+    if (en) for (const h of hdLiveReal(k)) if (h.mode !== 'guard' && h.mode !== 'pounce') hdBite(k, h, en, { big: true, mult: 5, ab: this });   // (the pack answers: each hound bites at once, for five times as much, from wherever it stands)
+    k.g.howlUntil = k.now + 8;   // (and bites twice as fast while the howl lasts: hdTick)
     k.fx('howl');
   },
   fx: { type: 'ring', color: '#fff4d0', r: 60 },
@@ -8270,13 +8378,13 @@ TALENT_ABILITIES.houndmaster_howl.spec = { lonewolf: null };   // (the Lone Wolf
 // (Long Chase, Lone Wolf: Greyfang's bites carry its 1.5x, so each quarter is 450, not the 300 the Pack Leader's hounds bite for: the tooltip says so)
 TALENT_ABILITIES.houndmaster_longchase = { cls: 'houndmaster', ab: {
   id: 'longchase', replaces: 'quarry', icon: 'longchase', name: 'The Long Chase', type: 'ogcd', target: 'none', cd: 45, lock: 0.4, anim: 'big', talent: true,
-  desc: 'Send the pack on a lap round the boss: each quarter it passes bites for {d:300} and gives 4 Bond, and the lap ends with the boss taking 5% more damage for 10s and both hounds behind it, which is a Bring Down pair.',
+  desc: 'Send the pack on a lap round the boss: each quarter it passes bites for {d:300} and gives 4 Bond, and the lap ends with the boss taking 5% more damage for 10s and both hounds behind it, which is a Bring Down pair. The lap also ties a Mark for 6s, as Mark the Quarry does (the pack bites 50% faster, Bond comes doubled), and Blood Scent, Drive and Cornered ride it.',
   usable: k => !!hdEnemy(k) && hdLiveReal(k).length > 0,
   effect(k) { hdChase(k, this); },
   fx: { type: 'aura', color: '#c46a3a', r: 46, dur: 1.5 },
 } };
 TALENT_ABILITIES.houndmaster_longchase.spec = { lonewolf: Object.assign({}, TALENT_ABILITIES.houndmaster_longchase.ab, {
-  desc: 'Send Greyfang on a lap round the boss: each quarter it passes bites for {d:450} and gives 6 Bond, and the lap ends with the boss taking 5% more damage for 10s and Greyfang behind it.',
+  desc: 'Send Greyfang on a lap round the boss: each quarter it passes bites for {d:450} and gives 6 Bond, and the lap ends with the boss taking 5% more damage for 10s and Greyfang behind it. The lap also ties a Mark for 6s, as Mark the Quarry does (Greyfang bites 50% faster, Bond comes doubled), and Blood Scent, Drive and Cornered ride it.',
 }) };
 
 // ---------------------------------------------------------------- Houndmaster: the specs (specs.js SPECS.houndmaster) and their talent rows VI-VII (talents.js SPEC_TALENTS.houndmaster)
@@ -8284,7 +8392,7 @@ TALENT_ABILITIES.houndmaster_longchase.spec = { lonewolf: Object.assign({}, TALE
 // Lone Wolf: Greyfang alone (k.def.hounds, solo, houndHp, houndMult), the pair is its place and yours, One Heart gives half as much Bond again for its bites
 //   (k.def.bondMult), and Whistle: Flank is Mount: for 6s Greyfang is under you, you run quicker (k.def.moveMult), the knife is a mounted charge,
 //   and the same button is Ride Down (the bar swaps to it, hdSyncBar), which ends the ride with a blow. The cooldown starts with the dismount.
-const HDS = { RELAY_SAFE: 1.6, LITTER: 0.25, HORN: 1.5, TAG: 20, ALPHA: 10, MOUNT: 6, PAUSE: 0.5, CHARGE: 260, RIDE: 550, LEAP: 220, SPEED: 1.5, HARMONY: 0.1 };
+const HDS = { CHASE_MARK: 6, HOWL_BITE: 2, KING_PUNCH: 1.5, KING_STAY: 15, RELAY_SAFE: 1.6, LITTER: 0.25, HORN: 1.5, TAG: 20, ALPHA: 10, MOUNT: 6, PAUSE: 0.5, CHARGE: 260, RIDE: 550, LEAP: 220, SPEED: 1.5, HARMONY: 0.1 };
 const hdMounted = k => k.now < (k.g.mountUntil || 0);
 const hdRelayed = k => (k.g.relayHold && k.now < k.g.relayHold.until ? k.g.relayHold.pair : null);
 
