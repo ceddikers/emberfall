@@ -53,6 +53,8 @@ const PartyBuffs = (() => {
       else for (let i = 0; i < b.length && !changed; i++) if (sigOf(was[i]) !== sigOf(b[i])) changed = true;
       if (!changed) for (let i = 0; i < b.length; i++) if (b[i][1] >= 0 && was[i][1] >= 0 && Math.abs(b[i][1] - (was[i][1] - dt)) > JUMP) timerOnly = true;   // (a timer refreshed, extended or cut)
     }
+    // a tooltip that changed with nothing else (a move renamed under it, e.g. Pyroblast as Phoenix Blast while the Ultimate is up) is a change too
+    if (!changed && st.tips) for (const e of b) if (bodies[e[0]] && st.tips[e[0]] !== bodies[e[0]]) { changed = true; break; }
     const due = first || dt >= (b.length ? REFRESH : REFRESH_IDLE);
     if (!changed && !timerOnly && !due) return null;
     if (!first && !st.full && dt < (changed ? GAP : timerOnly ? TIMER_GAP : GAP)) return null;   // (changes within a moment of each other go out together on the next scan; a timer alone can wait a little longer)

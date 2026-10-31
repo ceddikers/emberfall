@@ -46,17 +46,22 @@ if (process.argv[2] === '--worker') {
   const dir = path.join(__dirname, '../client/js/arena/bosses');
   for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.js'))) for (const v of Object.values(load('arena/bosses/' + f))) if (v && v.id && v.name) DEFS[v.id] = v;
   let GEARSET = null;
+  const BOT_TALENTS = process.env.BOT_TALENTS ? JSON.parse(fs.readFileSync(process.env.BOT_TALENTS, 'utf8')) : null;   // (BOT_TALENTS=<file.json>: { "class" or "class:spec": [talent ids] } gives the bots those talents; off, they play the base kit)
+  if (BOT_TALENTS) {
+    const ow = RaidHost.prototype.botWorld;
+    RaidHost.prototype.botWorld = function (bot) { const w = ow.call(this, bot), t = new Set(BOT_TALENTS[bot.spec ? `${bot.cls.id}:${bot.spec}` : bot.cls.id] || []); w.talents = () => t; return w; };
+  }
   const orig = RaidHost.prototype.allPlayers;
   RaidHost.prototype.allPlayers = function () { return orig.call(this).map(p => (p.bot && GEARSET ? Object.assign(p, { gear: GEARSET.sets[p.id - 1000].host }) : p)); };
   process.on('message', (job) => {
-    const def = DEFS[job.boss];
+    const hpMult = Number(process.env.BOSS_HP) || 1;   // (BOSS_HP=1.2: the boss has 20% more health on both difficulties, for finding a retune; off, unchanged)
+    const def = hpMult === 1 ? DEFS[job.boss] : Object.assign({}, DEFS[job.boss], { hp: typeof DEFS[job.boss].hp === 'object' ? Object.fromEntries(Object.entries(DEFS[job.boss].hp).map(([k, v]) => [k, Math.round(v * hpMult)])) : Math.round(DEFS[job.boss].hp * hpMult) });
     GEARSET = buildGear(job.levels, job.comp);
     const pulls = [];
     for (let r = 0; r < job.runs; r++) {
       try {
         const host = new RaidHost({ def, mode: job.mode, humans: () => [], bots: job.comp, seed: job.seed + r * 77, bond: GEARSET ? GEARSET.bond : undefined, emit: () => {} });
-        if (GEARSET) host.bots.forEach((b, i) => { b.actor.kit.env.gearMods = () => GEARSET.sets[i].mods; });
-        BotHuman.attach(host, job.human);
+        if (GEARSET) host.bots.forEach((b, i) => { b.actor.kit.env.gearMods = () => GEARSET.sets[i].mods; });        BotHuman.attach(host, job.human);
         const bd = job.breakdown ? BotBreakdown.make(host) : null;
         let hp480 = null;   // (breakdown=1: the boss's health 8 minutes in, the point the calibration against a real pull reads)
         while (host.sim.state === 'countdown' || host.sim.state === 'live') { host.tick(0.05); if (bd) { bd.sample(0.05); if (hp480 == null && host.sim.t >= 480) hp480 = host.sim.boss.hp / host.sim.boss.maxHp * 100; } if (host.sim.t > 900) break; }

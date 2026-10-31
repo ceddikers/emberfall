@@ -188,6 +188,8 @@ const KITS = {
     ],
     // a scab coming off gives back what was left of it; Blood Moon setting and Bloodlust (talents)
     onNotify(k, type, d) {
+      // the open wound stays open until the GCD it lands in is over (and a little reaction time), so a hit early in a GCD can still be answered warm
+      if (type === 'taken' && d.a >= k.env.maxHp() * REAVER.WOUND_HIT) k.g.woundTo = Math.max(k.g.woundTo || 0, k.now + Math.max(REAVER.WOUND, k.gcdRemaining() + 0.4));
       if (type === 'shieldEnd' && d.tag === 'scab') { const back = Math.round(20 * (1 - Math.max(0, Math.min(1, d.frac || 0)))); if (back > 0) reaverGain(k, back); }
       // Pain Is Fuel (Berserker, spec row VI): a heavy hit on you pours Rage into you
       if (type === 'taken' && k.talent('bloodreaver_painfuel') && d.a >= k.env.maxHp() * 0.1 && k.now >= (k.g.fuelAt || 0)) { k.g.fuelAt = k.now + 1.2; k.g.fuelWarm = k.now + 4; reaverGain(k, 35); k.fx('secondHelping'); }
@@ -1030,10 +1032,10 @@ const REAVER = { BANK: 6, GLOW: 0.2, DL_PER: 100, POT: 270, CAP: 700, SLOPE: 25,
 const reaverBank = k => k.env.recentDamage(Math.max(0, Math.min(REAVER.BANK, k.now - (k.g.drainAt ?? -99))));
 // The open wound: a hit of WOUND_HIT of your max HP or more in the last WOUND seconds, not yet cashed. A Drain into it
 // hits for WOUND_POT more (reaverDrainPot), and Drain glows while it's open.
-const reaverWound = k => k.env.recentDamage(Math.max(0, Math.min(REAVER.WOUND, k.now - (k.g.drainAt ?? -99)))) >= k.env.maxHp() * REAVER.WOUND_HIT || k.now < (k.g.fuelWarm || 0);   // (Pain Is Fuel: a heavy hit keeps your blood warm for 4s)
+const reaverWound = k => k.env.recentDamage(Math.max(0, Math.min(REAVER.WOUND, k.now - (k.g.drainAt ?? -99)))) >= k.env.maxHp() * REAVER.WOUND_HIT || k.now < (k.g.fuelWarm || 0) || k.now < (k.g.woundTo || 0);   // (Pain Is Fuel: a heavy hit keeps your blood warm for 4s; woundTo: the GCD a heavy hit lands in, onNotify)
 // (a bank cashed after its wound has closed has gone cold: its bonus counts for COLD of its worth)
 const reaverWarm = k => (k.g.wound ? 1 : REAVER.COLD);
-function reaverCash(k) { const lust = k.g.lust, t = lust != null ? lust : reaverBank(k); k.g.lust = null; if (lust != null) k.fx('bloodlust'); k.g.wound = lust != null || reaverWound(k) || !!k.g.warmNext; k.g.warmNext = false; k.g.fuelWarm = 0; k.g.drainAt = k.now; k.g.cashed = t; k.g.bank = 0; return t; }
+function reaverCash(k) { const lust = k.g.lust, t = lust != null ? lust : reaverBank(k); k.g.lust = null; if (lust != null) k.fx('bloodlust'); k.g.wound = lust != null || reaverWound(k) || !!k.g.warmNext; k.g.warmNext = false; k.g.fuelWarm = 0; k.g.woundTo = 0; k.g.drainAt = k.now; k.g.cashed = t; k.g.bank = 0; return t; }
 // a Drain's price: a free one (Frenzy's Gorged: +bonus), Undying's, War Cry's, or 40 Blood
 const reaverDrainOk = k => k.g.blood >= 40 || k.has('lust') || k.stacks('gorge') > 0 || k.has('deathless') || k.has('throes') || k.has('roar');
 const reaverDrainGlow = k => k.has('lust') || k.stacks('gorge') > 0 || k.has('deathless') || k.has('throes') || k.has('roar') || k.g.blood >= 90 || (k.g.blood >= 40 && (reaverBank(k) >= k.env.maxHp() * REAVER.GLOW || reaverWound(k)));
@@ -1327,8 +1329,8 @@ function bladeCombo(k, n) {
   if (over > 0 && !bladeThousand(k)) { k.g.spilled = true; k.clear('tempo'); }   // (Bladedancer's Tempo: a spilled point breaks it)
   k.gain('combo', n, 5);
 }
-// Shadow Dance entered at 5 combo points: the first finisher in it keeps them
-function bladePoise(k) { k.g.poised = k.g.combo >= 5; if (k.g.poised) k.fx('empower'); }
+// Poised: Shadow Dance entered at 5 points; the first finisher in it keeps them. A buff for the Dance's length, so the keep is seen
+function bladePoise(k, dur = 10) { k.g.poised = k.g.combo >= 5; if (k.g.poised) { k.fx('empower'); k.buff('poised', dur); } }
 // Bladedancer: a finisher at exactly 5 points with no point spilled since the last one adds a Tempo (up to 3)
 function bladeTempo(k, cp) {
   if (k.def.spec !== 'bladedancer') return;
@@ -1355,7 +1357,7 @@ function bladeOpts(k, ab, positional, posBonus, mult) {
 function bladeFinisher(k, ab, cp, full) {
   k.ultGain(BLADE_ULT.GAIN_CP * cp);   // (Thousand Cuts: every combo point a finisher spends)
   bladeTempo(k, cp);
-  if (k.g.poised) { k.g.poised = false; if (k.has('dance')) { k.g.combo = Math.max(k.g.combo || 0, cp); k.fx('empower'); } }
+  if (k.g.poised) { k.g.poised = false; k.clear('poised'); if (k.has('dance')) { k.g.combo = Math.max(k.g.combo || 0, cp); k.fx('empower'); } }
   if (cp >= 5 && k.talent('shadowblade_relentless')) { if (k.def.spec === 'nightstalker') { if (k.rng() < 0.5) k.gain('combo', 1, 5); } else k.gain('combo', 2, 5); }   // (Relentless: a perfect finisher gives back 2 points; a Nightstalker's is an even chance of 1)
   if (k.talent('shadowblade_toxic')) {
     let burst = 0;
@@ -2252,9 +2254,10 @@ KITS.alembist = {
     {
       id: 'throw', name: 'Throw', type: 'gcd', target: 'ally', allowDead: true, anim: 'cast', lock: 0.35, recastGcd: 1.25,
       label: k => { const i = alemPick(k); return i < 0 ? 'Throw' : (k.g.vials[i].parts ? 'Grand Blend' : alemInfo(k.g.vials[i].r).name); },
-      usable: k => k.g.vials.length > 0,
+      // (a bomb with no enemy in reach would only shatter on the floor: Throw waits, and the vial stays in the bandolier)
+      usable: k => { const i = alemPick(k); if (i < 0) return false; const v = k.g.vials[i]; return v.parts || alemInfo(v.r).kind !== 'bomb' || !!k.env.target({ target: 'enemy', range: RANGED }); },
       glow: k => alemOldestReady(k),
-      desc: 'Throw a vial at your heal target (1.25s): it shatters and splashes everyone close by; a bomb flies at the enemy instead. Throw takes the vial on the left, or the one you marked with its number key (the mark holds until you throw, then goes back to the first). Every vial that is not a bomb heats the Kiln by 1: at 3, your next Throw also launches a free Kiln Bomb for {d:900}. Vials grow 30% stronger over 10s, and spoil after 40s.',
+      desc: 'Throw a vial at your heal target (1.25s): it shatters and splashes everyone close by; a bomb flies at the enemy instead, and waits in the bandolier while no enemy is in reach. Throw takes the vial on the left, or the one you marked with its number key (the mark holds until you throw, then goes back to the first). Every vial that is not a bomb heats the Kiln by 1: at 3, your next Throw also launches a free Kiln Bomb for {d:900}. Vials grow 30% stronger over 10s, and spoil after 40s.',
       effect(k, t) {
         const i = alemPick(k); if (i < 0) return;
         const v = k.g.vials.splice(i, 1)[0];
@@ -5032,11 +5035,16 @@ function mariHit(k, ab, pot, o = {}) {
 }
 // Draw Tight (Cutting Line): the longer the line has been held across the enemy unbroken, the harder Cross-Cut and Grand Finale cut
 const mariDraw = k => k.def.bladed ? 1 + MARI.DRAW * Math.min(1, (k.g.held || 0) / MARI.HELD) : 1;
+// a cut that missed the enemy costs only its GCD: the cooldown comes back to 1.5s (a charge comes back whole), and On Cue and Held Breath stay
+function mariMissBack(k, ab) {
+  if (ab.charges) k.refundCharge(ab.id);
+  else if (k.cd[ab.id] > k.now + 1.5) k.cd[ab.id] = k.now + 1.5;
+}
 function mariCross(k, ab) {
   const e = mariEnemy(k), p = mariPos(k);
   if (!e || mariLimp(k)) return;
-  const R = mariER(e) + 12, m = k.def.dollMult || 1, lines = [], cue = k.consume('oncue');   // (On Cue: a Swap just before)
-  const breath = k.consume('heldbreath') ? 1.5 : 1;   // (Held Breath, Cutting Line spec row VI)
+  const R = mariER(e) + 12, m = k.def.dollMult || 1, lines = [], cue = k.has('oncue');   // (On Cue: a Swap just before; spent only by a cut that lands)
+  const breath = k.has('heldbreath') ? 1.5 : 1;   // (Held Breath, Cutting Line spec row VI)
   const draw = mariDraw(k);
   let hits = 0;
   for (const d of k.g.dolls) {
@@ -5045,8 +5053,8 @@ function mariCross(k, ab) {
   }
   k.fx('cut', { n: hits });
   if (hits && k.talent('marionettist_house') && mariInStage(k)) k.partyBuff('dmg', 0.05, 10, { ab });   // (Packed House, Understudy spec row VI)
-  if (hits) { mariEncore(k, 2 + (cue ? 1 : 0) + (k.perk('marionettist_w2') ? 1 : 0)); k.stats.cuts = (k.stats.cuts || 0) + 1; k.ultGain(MARI_ULT.GAIN_CUT); }   // (Curtain Call)
-  else k.stats.misses = (k.stats.misses || 0) + 1;
+  if (hits) { if (cue) k.consume('oncue'); if (breath > 1) k.consume('heldbreath'); mariEncore(k, 2 + (cue ? 1 : 0) + (k.perk('marionettist_w2') ? 1 : 0)); k.stats.cuts = (k.stats.cuts || 0) + 1; k.ultGain(MARI_ULT.GAIN_CUT); }   // (Curtain Call)
+  else { k.stats.misses = (k.stats.misses || 0) + 1; mariMissBack(k, ab); }
   if (k.talent('marionettist_twin')) k.g.linger = { lines, next: k.now + 1, left: 3, m };
 }
 // a telegraph about to land on a Doll (Pirouette glows: spin through it)
@@ -5394,13 +5402,14 @@ talentMoves('marionettist', {
   },
   marionettist_crossfire: {
     id: 'crossfire', replaces: 'cross', icon: 'cross', name: 'Crossfire', type: 'gcd', target: 'enemy', range: 640, cd: 8, anim: 'big', talent: true,
-    desc: 'The Dolls haul their strings taut between them, wherever you stand. With the enemy on that line it is a {d:640} cut and 2 Encore; otherwise it cuts nothing. A Swap just before doubles it, as for Cross-Cut.',
+    desc: 'The Dolls haul their strings taut between them, wherever you stand. With the enemy on that line it is a {d:640} cut and 2 Encore; otherwise it cuts nothing, and it is ready again in a moment with On Cue still waiting. A Swap just before doubles it, as for Cross-Cut.',
     usable: k => !mariLimp(k) && k.g.dolls.length >= 2,
     glow: k => mariChordOn(k),
     effect(k) {
-      const e = mariEnemy(k), cue = k.consume('oncue');
+      const e = mariEnemy(k);
       if (k.talent('marionettist_twin') && k.g.dolls.length >= 2) k.g.linger = { lines: [[k.g.dolls[0].x, k.g.dolls[0].y, k.g.dolls[1].x, k.g.dolls[1].y]], next: k.now + 1, left: 3, m: 1, dmg: 56 };   // (Twin Strings: the line between the Dolls lingers and cuts)
-      if (!e || !mariChordOn(k)) { k.stats.misses = (k.stats.misses || 0) + 1; return; }
+      if (!e || !mariChordOn(k)) { k.stats.misses = (k.stats.misses || 0) + 1; mariMissBack(k, this); return; }   // (a miss keeps On Cue and gets its cooldown back, as Cross-Cut)
+      const cue = k.consume('oncue');
       k.damage(640 * (cue ? 2 : 1), { ab: this, tgt: e.id !== 'dummy' ? e.id : undefined });
       mariEncore(k, 2 + (cue ? 1 : 0) + (k.perk('marionettist_w2') ? 1 : 0));
       k.stats.cuts = (k.stats.cuts || 0) + 1; k.ultGain(MARI_ULT.GAIN_CUT);
@@ -5631,7 +5640,7 @@ const GLOOM = {
   MAX: 100, HIT: 8, TAKEN: 6, TAKEN_GAP: 0.35,   // gains: a hit of yours, a hit you take (at most one every TAKEN_GAP s)
   REST: 6, DECAY: 2.5, DECAY_SLOW: 1,            // out of combat (nothing landed or taken for REST s): lost per second (a Sentinel: slower)
   STRIKE: 40, PALL: 30, MANTLE: 15, RITE_MIN: 20, // Gloom Strike and Black Pall spend; Black Mantle gives; Last Rite needs at least RITE_MIN and spends all
-  ECHO: 0.85, ECHO_DUR: 4,                        // Shade Step: the next two Gloom Strikes echo at 85%, for 4s
+  ECHO: 0.85, ECHO_DUR: 6,                        // Shade Step: the next two Gloom Strikes echo at 85%, for 6s (4s until 2026-10-31: a Strike's GCD let only a late weave land both)
   HOLLOW: 8, HOLLOW_LONG: 10, GRACE: 4, GRACE_LONG: 6, WATCH: 0.15, CD: 60, DMG: 0.3, WAKE: 0.25,   // (HOLLOW_HOST in fight.js clamps what the kit asks for)
   BRIM: 0.1, BRIM_EVERY: 1, DREGS: 40,         // a full vessel: 10% less damage taken while it stays full; a Hollow leaves 40 Gloom of dregs
   ULT_SPEND: 0.13, ULT_SAVE: 25, ULT_HIT: 800, ULT_HIT_G: 8, ULT_SH: 200, ULT_SH_G: 3, ULT_MIT: 0.1,
@@ -5782,7 +5791,7 @@ KITS.gloomsworn = {
     'Hollow: a blow that would kill you while your Gloom is full does not. For 8s you cannot fall below 1 HP, you deal 30% more damage, and all the damage you take is written down as a debt. Your healer must heal at least that much by the end of the 4s after, or you fall. Mitigation and barriers still cut the debt as they cut a hit.',
     'Hold the vessel full before the hits that could kill you (the tankbuster, the raidwide on a sagging tank). Hollow comes back once a minute. A full vessel is armour too: while it brims you take 10% less damage.',
     'When the Hollow lands the vessel breaks into its dregs: 40 Gloom, both Gloom Strikes back, and the shade behind them for the whole Hollow. Spend it all, 30% harder.',
-    'Shade Step closes the gap and gives your next two Gloom Strikes an echo for 4s: step when you hold the Gloom for both.',
+    'Shade Step closes the gap and gives your next two Gloom Strikes an echo for 6s: step when you hold the Gloom for both.',
     'Black Pall is the party\'s cooldown and costs Gloom you may want to keep: spend it on the raidwide that matters.',
   ],
   abilities: [
@@ -5830,7 +5839,7 @@ KITS.gloomsworn = {
     },
     {
       id: 'shade', name: 'Shade Step', type: 'ogcd', target: 'enemy', range: 320, cd: 15, lock: 0.4, anim: 'attack',
-      desc: 'Step through the dark to your target and cut it for {d:150}. For 4s your next two Gloom Strikes echo, hitting again for 85%. It glows when the vessel can pay for both.',
+      desc: 'Step through the dark to your target and cut it for {d:150}. For 6s your next two Gloom Strikes echo, hitting again for 85%. It glows when the vessel can pay for both.',
       glow: k => !k.has('shade') && (k.g.gloom || 0) >= 2 * gloomStrikeCost(k) && k.charges(gloomAb(k, 'strike')) >= 1,
       effect(k) {
         if (!k.env.target({ target: 'enemy', range: MELEE })) k.teleport('dash', { ab: this, d: 150 });
@@ -5967,7 +5976,7 @@ TALENT_ABILITIES.gloomsworn_wardmantle = { cls: 'gloomsworn', ab: {
 } };
 TALENT_ABILITIES.gloomsworn_pact = { cls: 'gloomsworn', ab: {
   id: 'pact', replaces: 'mantle', icon: 'pact', name: 'Dark Pact', type: 'ogcd', target: 'self', cd: 60, lock: 0.5, anim: 'big', talent: true,
-  desc: 'The vessel fills to the brim at once, and your next two Gloom Strikes within 4s echo, hitting again for 85%. The dark still closes round you as Black Mantle did: 40% less damage taken for 8s. It takes a tenth of your health for it. Needs more than a third of your health.',
+  desc: 'The vessel fills to the brim at once, and your next two Gloom Strikes within 6s echo, hitting again for 85%. The dark still closes round you as Black Mantle did: 40% less damage taken for 8s. It takes a tenth of your health for it. Needs more than a third of your health.',
   usable: k => hpOf(k) > 0.35,
   glow: k => (k.g.gloom || 0) < 40 && k.charges(k.abById('strike')) >= 2,
   effect(k) {
@@ -7034,6 +7043,8 @@ const LK_RAISE_CD = 30;
 const lkRaiseCast = k => (targetDown(k, 'hand') ? RAISE_CAST : 0);
 const lkHandUsable = k => k.g.emb >= 1 && (!targetDown(k, 'hand') || k.now >= (k.g.raiseAt || 0));
 function lkCarryReach(k) { const r = k.def.steadyGlow ? LANTERN.CALL_REACH : LANTERN.REACH; return k.talent('lanternkeeper_longtoss') ? r * 2 : r; }
+// the lantern Carry the Flame takes: the nearest in reach, skipping one already at your feet (carrying it would only spend the charge)
+function lkCarryPick(k, p) { return lkNearest(k, p, l => { const d = Math.hypot(l.x - p.x, l.y - p.y); return lkCarryable(k)(l) && d > 60 && d <= lkCarryReach(k); }); }
 
 KITS.lanternkeeper = {
   potMult: 1.09, // balance knob (tools/simulate.js)
@@ -7120,11 +7131,11 @@ KITS.lanternkeeper = {
     },
     {
       id: 'carry', name: 'Carry the Flame', type: 'ogcd', target: 'self', cd: 15, charges: 2, anim: 'cast',
-      desc: 'Pick up your nearest lantern (within a short throw) and set it down at your feet. It keeps its wick. Great Beacons stay put.',
-      usable: k => !!lkNearest(k, lkPos(k), l => lkCarryable(k)(l) && Math.hypot(l.x - lkPos(k).x, l.y - lkPos(k).y) <= lkCarryReach(k)),
-      glow: k => { const n = lkNearest(k, lkPos(k), lkCarryable(k)); return !!n && n.d > 130 && n.d <= lkCarryReach(k); },
+      desc: 'Pick up your nearest lantern (within a short throw, not one already at your feet) and set it down at your feet. It keeps its wick. Great Beacons stay put.',
+      usable: k => !!lkCarryPick(k, lkPos(k)),
+      glow: k => { const n = lkCarryPick(k, lkPos(k)); return !!n && n.d > 130; },
       effect(k) {
-        const p = lkPos(k), n = lkNearest(k, p, l => lkCarryable(k)(l) && Math.hypot(l.x - p.x, l.y - p.y) <= lkCarryReach(k));
+        const p = lkPos(k), n = lkCarryPick(k, p);
         if (!n) return;
         const fx = n.l.x, fy = n.l.y;
         n.l.x = p.x; n.l.y = p.y;

@@ -15,7 +15,7 @@ function paintedIcon(classId, abilityId) {
 
 const BUFF_NAMES = {
   oath: 'Oath of Valor', frenzy: 'Frenzy', gorge: 'Gorged', undying: 'Undying', overload: 'Runic Overload',
-  markself: "Hunter's Mark", keen: 'Keen Eye', barrage: 'Barrage', truenorth: 'Shadowstep', dance: 'Shadow Dance',
+  markself: "Hunter's Mark", keen: 'Keen Eye', barrage: 'Barrage', truenorth: 'Shadowstep', dance: 'Shadow Dance', poised: 'Poised',
   combust: 'Combustion', heating: 'Heating Up', hotstreak: 'Hot Streak', burnt: 'Burnt Out', growth: 'Wild Growth',
   awaken: 'Awakened', surge: 'Surge', lag: 'Time Lag', radiant: 'Radiant', verdict: 'Swift Verdict', chamber: 'Echo Chamber', moonlit: 'Moonlit', aim: 'Steady Aim', incircle: 'Ember Circle',
   // the advanced classes
@@ -27,7 +27,7 @@ const BAD_BUFFS = new Set(['burnt', 'lag', 'overheat', 'frostbite']);
 // which ability's icon a buff wears
 const BUFF_ICON = {
   oath: 'oath', frenzy: 'frenzy', gorge: 'drain', undying: 'undying', overload: 'overload', markself: 'mark', keen: 'pierce',
-  barrage: 'barrage', truenorth: 'step', dance: 'dance', combust: 'combust', heating: 'fireblast', hotstreak: 'pyro', burnt: 'vent',
+  barrage: 'barrage', truenorth: 'step', dance: 'dance', poised: 'evis', combust: 'combust', heating: 'fireblast', hotstreak: 'pyro', burnt: 'vent',
   growth: 'growth', awaken: 'bloom', surge: 'shift', lag: 'shift', radiant: 'edge', verdict: 'smite', chamber: 'accel', moonlit: 'growth', aim: 'pierce', incircle: 'combust',
   brink: 'flare', overheat: 'cinder', frostbite: 'rime', attuned: 'invert', momentum: 'equil', corona: 'flare', redgiant: 'invert', rebound: 'lance', flicker: 'rime', latentwin: 'flare',
   still: 'still', gale: 'gale', orbit: 'slip', tailwind: 'hook',
@@ -137,6 +137,7 @@ const BUFF_TIPS = {
   aim: () => 'You deal 4% more damage for each stack. Moving loses them all.',
   truenorth: () => 'Every hit counts as a positional, wherever you stand.',
   dance: n => `Your attacks are faster, every positional lands, and ${n('evis')} hits 25% harder.`,
+  poised: n => `You entered Shadow Dance at 5 points: your first ${n('evis')} in it keeps them.`,
   feint: n => `Your next ${n('evis')} hits 12% harder. After a Strike from the front it also lands as a hit from ${n('evis') === 'Backstab' ? 'behind' : 'the side'}, wherever you stand.`,
   sprinted: () => 'Your next Strike hits 80% harder.',
   sharpen: n => `Every combo point you gain sharpens your next ${n('evis')} by 2.5% (up to 12.5%), and a point that spills sharpens it 12%. Each stack is 2.5%.`,

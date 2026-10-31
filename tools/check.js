@@ -38,7 +38,7 @@ const RAIDS = [   // [boss name, boss id, tank, healer, two DPS, optional 'gear=
   ['Grubnak', 'grubnak', 'bastion:base', 'alembist:base', 'ranger:base', 'pyromancer:base'],
   ['Skitterra', 'skitterra', 'bastion:sentinel', 'alembist:volatile', 'ranger:base', 'shadowblade:base'],
   ['Volkar', 'volkar', 'bastion:base', 'alembist:apothecary', 'ranger:base', 'pyromancer:base'],
-  ['the Hollow King', 'hollowking', 'bloodreaver:base', 'alembist:base', 'shadowblade:bladedancer', 'pyromancer:base'],
+  ['the Hollow King', 'hollowking', 'bloodreaver:base', 'alembist:base', 'shadowblade:bladedancer', 'pyromancer:base', 'runs=6'],   // (this line-up clears the Hollow King about 60%, 15 of 24 on 2026-10-31: six tries)
   // Gorgemaw and Oathbroker (tanks-2): the base kit and each spec tanking a boss
   ['Grubnak', 'grubnak', 'gorgemaw:base', 'cleric:base', 'ranger:base', 'pyromancer:base'],
   ['Skitterra', 'skitterra', 'gorgemaw:glutton', 'grovekeeper:base', 'ranger:base', 'shadowblade:base'],

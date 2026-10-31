@@ -735,7 +735,7 @@ const SPECS = {
             },
             fx: { type: 'slash', color: '#ff3a5a', r: 52, span: 1.4 },
           },
-          dance: { desc: 'Burst: 14s of faster attacks, every positional lands, and Backstab hits 25% harder. Enter it at 5 combo points and the first Backstab in it keeps them.', effect(k) { bladePoise(k); k.buff('dance', 14); k.g.endless = 0; if (k.perk('shadowblade_w3')) k.gain('combo', 2, 5); if (k.talent('shadowblade_veil')) k.mitigate('party', 0.15, 14, { ab: this }); } },   // (Veil of Night, spec row VII)
+          dance: { desc: 'Burst: 14s of faster attacks, every positional lands, and Backstab hits 25% harder. Enter it at 5 combo points and the first Backstab in it keeps them.', effect(k) { bladePoise(k, 14); k.buff('dance', 14); k.g.endless = 0; if (k.perk('shadowblade_w3')) k.gain('combo', 2, 5); if (k.talent('shadowblade_veil')) k.mitigate('party', 0.15, 14, { ab: this }); } },   // (Veil of Night, spec row VII)
         },
         };
       },
@@ -1281,7 +1281,7 @@ Object.assign(SPECS, {
         potMult: base.potMult * 0.76 * 0.98,   // balance knob (Draw Tight lifts it)
         stretch: 400, bladed: true,
         abilities: {
-          cross: { type: 'ogcd', charges: 2, cd: 9, lock: 0.4, desc: 'Off the global cooldown, two charges: your strings become blades and cut along the line between you and the Doll. With the enemy on that line it\'s a {d:560} cut, up to 50% harder with a long unbroken line, and 2 Encore; otherwise it cuts nothing.' },
+          cross: { type: 'ogcd', charges: 2, cd: 9, lock: 0.4, desc: 'Off the global cooldown, two charges: your strings become blades and cut along the line between you and the Doll. With the enemy on that line it\'s a {d:560} cut, up to 50% harder with a long unbroken line, and 2 Encore; otherwise it cuts nothing, and the charge comes back with On Cue still waiting.' },
         },
       }),
     },
@@ -1301,7 +1301,7 @@ Object.assign(SPECS, {
         abilities: {
           cue: { desc: 'You snap your fingers: each Doll in reach lunges at once for a {d:104.4} stab, and their next six Jabs (three each) come twice as fast. Builds 1 Encore. On their own the Dolls jab for {d:23.2} each every 4s all through a fight while they have the enemy in reach, whatever you press (5% faster for each String still tied).' },
           pull: { desc: 'Fling the Doll nearest you to where you aim (within its strings\' reach). It cuts anything it passes through for {d:92.8}, and stays there until you pull it again or pick another target. Builds 1 Encore on a hit. Every pull also ties all three Strings back, and gets limp Dolls up at once. Two charges.' },
-          cross: { desc: 'Your strings become blades and cut along the lines between you and the Dolls. Each line with the enemy on it cuts for {d:324.8}, and a cut gives 2 Encore; otherwise it cuts nothing.' },
+          cross: { desc: 'Your strings become blades and cut along the lines between you and the Dolls. Each line with the enemy on it cuts for {d:324.8}, and a cut gives 2 Encore; otherwise it cuts nothing, and it is ready again in a moment with On Cue still waiting.' },
           swap: { desc: 'You and the Doll nearest where you aim trade places in a flutter of silk. It\'s your escape, and the Doll takes your spot. Stage Cross: your next Cross-Cut within 6s cuts twice as hard and gives 1 more Encore.' },
           pirouette: { desc: 'The Dolls spin, each cutting all around it for {d:174}, and nothing can touch them for 1.5s. Builds 1 Encore.' },
           finale: { desc: 'Spend 5 Encore: each Doll in reach performs a routine of five hits, each {d:146.7}. They can\'t move while it plays.' },
