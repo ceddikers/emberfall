@@ -1298,7 +1298,7 @@ const FoundingArt = (() => {
     S.forge = !!p.forge; S.smith = !!p.smith; S.carts = p.carts || EMPTY; S.night = clamp(+p.night || 0, 0, 1); S.beacon = p.beacon === true || p.beacon === 'lit' || p.beacon === 1;
     S.jars = p.jars | 0; S.postsArr = Array.isArray(p.posts) ? p.posts : null; S.postsOff = Array.isArray(p.postsOff) ? p.postsOff : EMPTY; S.lights = (state && state.lights) || EMPTY; S.nLights = (state && state.nLights) | 0; S.postsN = typeof p.posts === 'number' ? p.posts : 0; S.postSlots = !!p.postSlots;
     S.graves = p.graves === true ? 7 : clamp(p.graves | 0, 0, 7); S.roof = p.roof === true ? 1 : clamp(+p.roof || 0, 0, 1); S.cap = p.capstone === true ? 1 : clamp(+p.capstone || 0, 0, 1);
-    S.founders = p.founders || null; S.found = p.found | 0; S.glint = !!p.glint; S.prints = !!p.prints; S.labels = p.labels !== false;
+    S.founders = p.founders || null; S.qw = Array.isArray(p.qw) ? p.qw : EMPTY; S.found = p.found | 0; S.glint = !!p.glint; S.prints = !!p.prints; S.labels = p.labels !== false;
     return S;
   }
   const planted = i => S.postsArr ? S.postsArr.indexOf(i) >= 0 : i < S.postsN;
@@ -1363,7 +1363,7 @@ const FoundingArt = (() => {
     if (!pos) {
       if (f.id === 'steward') pos = [3700, 3700, Math.PI];
       else if (f.id === 'smith') { pos = [4160, 3834, -1.3]; act = S.smith; }
-      else if (f.id === 'digger') { if (S.spring === 'trickle') { pos = [2810, 4080, .3]; act = true; } else if (S.graves > 0 && S.graves < 7) { pos = [1430, 3850, 0]; act = true; } else pos = [2810, 4080, 0]; }
+      else if (f.id === 'digger') { if (S.spring === 'trickle') { pos = [2810, 4080, .3]; act = true; } else if (S.graves > 0 && S.graves < 7 && !S.qw.some(w => w[1] === 'digger')) { /* (with work to hand out she is back home, where her ! is) */ pos = [1430, 3850, 0]; act = true; } else pos = [2810, 4080, 0]; }
       else pos = [2996, 1970, Math.PI];
     } else act = pos[3];
     if (!inV(pos[0], pos[1], 40)) return;

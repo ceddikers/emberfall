@@ -100,7 +100,7 @@ function makeRun(N, seed, heroes) {
       }
     }
   };
-  sim = new FoundingSim({ players, emit, emitTo() {}, seed, autoLoot: true });   // (the pilots have no hands: drops go straight to a hero, as before sim-world.js)
+  sim = new FoundingSim({ players, emit, emitTo() {}, seed, autoLoot: true, autoQuest: true });   // (the pilots have no hands: drops go straight to a hero, as before sim-world.js)
   players.forEach((p, i) => sim.intent(p.id, { k: 'pick', hero: heroes[i] }));
   sim.intent('p0', { k: 'ready' });
   // account who hurts whom, and what the camp loses, by wave and by kind
@@ -127,7 +127,8 @@ class Team {
         else if (roll < H.questForget + H.questLate) { p.mode = 'late'; p.at = now + win * this.between(0.35, 0.6); }
         if (id === 'cover' && p.mode === 'forget') p.mode = 'late';   // the Covering is announced loudly; at worst it is late
       }
-      if (p.mode === 'forget' && now >= p.recheck) { if (this.rnd() < 0.4) { p.mode = 'go'; p.at = now + this.between(2, 6); } else p.recheck = 1e9; }
+      // (quests keep their own pace since 2026-10-31: one left alone holds back every quest after it, so a forgetful party comes back to it in the end)
+      if (p.mode === 'forget' && now >= p.recheck) { if (this.rnd() < 0.4) { p.mode = 'go'; p.at = now + this.between(2, 6); } else p.recheck = now + this.between(0.5, 1) * Math.max(D.WAVE_GAP, (Q.deadlineWave - Q.offerWave) * D.WAVE_GAP); }
       if (p.crew || p.mode === 'forget' || now < p.at) continue;
       // pick the crew: damage dealers first (a lone support hero is the quest hero only if nobody else is there)
       const live = this.pilots.filter(q => !q.h.dead);
@@ -523,12 +524,16 @@ function defendStep(sim, team, rnd, rec, N) {
   const lost = dd.towers.filter(t => t.rubble).length; if (lost > 0) rec.def.rubbleSeen = Math.max(rec.def.rubbleSeen || 0, lost);
 }
 
+const PILOT_CANT = ['stakes', 'mill', 'larder', 'choice', 'watchfires'];
 function playRun(N, seed, heroes, opts) {
   opts = opts || {};
   const t0 = Date.now(), { sim, rec, hazards } = makeRun(N, seed, heroes);
   sim.hazardsRef = hazards;
   const drnd = mulberry(seed * 101 + N * 13 + 5), rnd = mulberry(seed * 7919 + N * 104729 + 17), team = new Team(sim, rnd, N); team.noQuests = !!opts.noQuests;
   const skip = new Set(opts.skipQuests || []);
+  // the pilots have no play for the later module quests (sim-quests.js): left open they would hold back every quest after them now that
+  // quests keep their own pace (2026-10-31), so a pilot party lets each one go as soon as it is taken, as it used to miss them by the clock
+  { const orig = team.update.bind(team); team.update = function () { orig(); for (const id of PILOT_CANT) if (sim.q[id] && sim.q[id].st === 1) sim.failQuest(id); }; }
   if (skip.size) { const orig = team.update.bind(team); team.update = function () { orig(); for (const id of skip) if (this.plan[id]) { this.plan[id].crew = null; this.plan[id].mode = 'forget'; this.plan[id].recheck = 1e9; } }; }
   sim.heroes.forEach((h, i) => { const p = new Pilot(sim, h, i, team, mulberry(seed * 31 + i * 977 + N), rec); team.pilots.push(p); });
   { const order = { ranger: 0, pyromancer: 1, bastion: 2, cleric: 3 }, pick = team.pilots.slice().sort((a, b) => order[a.h.hero] - order[b.h.hero]).slice(0, N >= 4 ? 2 : 1); for (const p of pick) p.jgOK = true; }   // the damage dealers go hunting

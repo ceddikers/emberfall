@@ -27,49 +27,50 @@ const FOUNDING_STORY = (() => {
   // ---------------------------------------------------------------- spoken lines
   // quest lines are spoken by the quest's giver unless an entry names someone else
   const Q = {
-    spring: ['There is water under this. I can hear it thinking about coming up.', 'Warm as a hand. Do not ask me why. I did once, and the ground kept its counsel.', 'Only a trickle. It will do for drinking. It will not do for mending.'],
-    gate: ['A road wants a door in it. The stone is on its way up the hill.', 'A gate. Not much to look at yet. But now we can say which side of it we are on.', 'No gate, then. We keep the road open and our eyes on it.'],
-    fire: ['Give me a quiet hour and a bed of coals, and I will give you iron.', 'She is lit. Now we can make things worth the carrying.', 'Cold forge. I can still flatten a nail. That is about all.'],
-    beacon: ['Oil to the hill. The dark should have something to look at besides us.', 'Look at that. You can see it from the ford. So can anything else, I suppose. Worth it.', 'A dark hill and a dark night. Keep your lamps trimmed.'],
-    road: ['Light the road away from the Hearth. Whatever follows warmth can follow it the long way round.', 'A road that leads them off. Remember who walked it first.', 'They will come straight at us, then. We were slow.'],
-    graves: ['We lost some in the night. They get the meadow, and flowers, if I have to carry the seed in my teeth.', 'Bluebells. They will come up every spring after we are gone. I will see to it.', 'No flowers this year. I am sorry for it.'],
-    stonegate: ['Words on the gate. Whoever comes through should know what we meant by it.', 'Cut deep. Let the weather try.', 'Bare stone. We will have to mean it without saying it.'],
-    roof: ['A hall. Four walls, a roof, and the first thing in the valley that is not a tent.', 'The roof is on. It leaks in one corner, which makes it a proper building.', 'No roof yet. The rain gets in, and so do the tired.'],
-    stakes: ['The ground needs edges. Walk with me, and I will drive the stakes one by one.', 'Every stake holds. Now the camp has an edge, and a wanderer can know it.', 'No bounds, then. I will keep the edge in my head and call out when it is crossed.'],
-    mill: ['The wind on the west plain never tires. I mean to make it grind. Hold the frame with me.', 'It turns. Flour by the sack, and a little coin for everyone.', 'No sails, then. The wind will keep, and so will I.'],
-    larder: ['Winter will make the ground hard. Roots and grain, laid by, while we can still dig.', 'Full, and dry. We will not go hungry before spring.', 'Thin shelves. We will stretch what we have.'],
-    choice: ['One stone, two wishes. Carry it to the one you choose, and that one stands.', 'It is raised. Whichever it is, it was chosen by those who carried it.', 'Neither stands, then. The quarry will wait for us to agree.'],
-    watchfires: ['Fires on the far rises, so I see the dark before it sees us. Carry a brand to each.', 'Every rise burns. Nothing crosses the valley now without being counted.', 'Dark rises, then. I will count the shadows myself.'],
-    cover: ['Now the Hearth. We cover it, and we do not look in. Not today. Not ever.', 'It is covered. Let it be a floor. Let the floor be a town.', 'Open to the sky, then. Stand close to it.'],
+    // (everyday modern English, said plainly: no old-fashioned phrasing, no strings of metaphors; user, 2026-10-31)
+    spring: ["There's water under here, and it's warm. Keep those things off me while I dig.", "The spring's open. Warm water for everyone. Don't ask me why it's warm.", "Only a trickle. Fine for drinking, but it won't heal anyone."],
+    gate: ['The road needs a gate. The stone carts are on their way up the hill.', "We've got a gate. It's not much yet, but it's ours.", "No gate, then. We'll keep the road open and keep an eye on it."],
+    fire: ['Give me an hour and some hot coals, and I can make you real gear.', 'The forge is lit. Now I can make things worth having.', "The forge is cold. I can fix a nail, and that's about it."],
+    beacon: ["Let's get oil up to the beacon. We need a light on that hill.", "The beacon's lit. You can see it from the ford. Worth it.", 'The hill stays dark, so the nights will be darker.'],
+    road: ['Put lanterns along the North Road. If we light a longer way round, some of them will take it.', "The road's lit. Some of them will go the long way now.", "They'll come straight at us, then."],
+    graves: ['We lost people last night. They should be buried in the meadow, with flowers.', "Bluebells on every grave. They'll come up every spring.", "No flowers this year. I'm sorry about that."],
+    stonegate: ['I want words carved on the gate, so whoever comes through knows what this place is.', "The words are cut deep. They'll last.", 'Plain stone, then. It will have to do.'],
+    roof: ["We need a hall with a real roof. The first building here that isn't a tent.", "The roof's on. It leaks in one corner, but it's a building.", 'No roof yet. The rain gets in, and nobody sleeps well.'],
+    stakes: ['I want to mark where the camp ends. Walk with me while I put the stakes in.', "All the stakes are in. Anyone who crosses them knows it's our ground.", "No stakes, then. I'll watch the edge myself."],
+    mill: ["I'm building a mill on the west plain. The wind never stops out there. Help me hold the frame.", "The mill's turning. Flour to sell, and a bit of gold for everyone.", "No mill this time. We'll manage."],
+    larder: ["Winter's coming. We need roots and grain stored while we can still find them.", "The larder's full. We won't go hungry this winter.", "The shelves are thin. We'll make it stretch."],
+    choice: ["There's stone left for one thing, not two. Whichever one you carry it to, that's what we build.", "It's built. You picked it, and that's what we've got.", 'Nothing got built. The stone can wait.'],
+    watchfires: ['I want fires on the far hills so I can see what is coming. Light a brand at camp and carry it to each one.', "All the fires are burning. Nothing gets across the valley without me seeing it.", "The hills stay dark. I'll just have to watch harder."],
+    cover: ["Now the Hearth. We cover it up and we don't look inside. Not today, not ever.", "It's covered. We build on top of it now.", "It's still open. Stay close to it."],
   };
   const QBY = { spring: 'digger', gate: 'steward', fire: 'smith', beacon: 'steward', stakes: 'warden', road: 'steward', graves: 'digger', mill: 'smith', stonegate: 'steward', roof: 'smith', larder: 'digger', choice: 'steward', watchfires: 'warden', cover: 'steward' };
   // for a quest nobody wrote a line for: the giver's own way of saying it
   const GENERIC = {
-    steward: ['One thing more, and then another. That is how a place gets built.', 'Good. Another stone laid.', 'We will manage without it.'],
-    smith: ['Hands wanted. Mine are full.', 'Well made.', 'Next time, then.'],
-    digger: ['The ground wants turning.', 'That will hold.', 'The earth will wait. It always does.'],
-    warden: ['Eyes up. Something wants doing.', 'Counted, and done.', 'Noted.'],
+    steward: ["One more job. That's how a town gets built.", "Good. That's done.", "We'll manage without it."],
+    smith: ['I could use a hand. Mine are full.', 'Nice work.', 'Next time, then.'],
+    digger: ["There's digging to do.", "That'll hold.", "It can wait."],
+    warden: ['Something needs doing.', 'Done. I counted.', 'Noted.'],
   };
   const PART = [   // by the run's part, spoken as it begins (D.PARTS order)
-    ['warden', 'You are the first wardens. I will keep the count.'],
-    ['smith', 'The light is thin out there. Keep your backs to the fire.'],
-    ['digger', 'Morning. Everything is where we left it, and so are we.'],
-    ['warden', 'They have learned the road. So have we.'],
-    ['steward', 'Look at it. It is starting to be a place.'],
-    ['steward', 'The last of the dark. Hold, and the rest is a morning.'],
+    ['warden', "You're the first wardens. I'll keep count."],
+    ['smith', "It's getting dark out there. Stay near the fire."],
+    ['digger', "Morning. Everything's still here, and so are we."],
+    ['warden', 'They know the road now. So do we.'],
+    ['steward', "Look at it. It's starting to look like a town."],
+    ['steward', "This is the last night. Get through it and it's morning."],
   ];
   const BOSS = {   // the four main bosses, by enemy id; kept vague on purpose
-    tunnelmaw: ['digger', 'Something old is coming up through the road.'],
-    wickeater: ['smith', 'That one has been waiting a long time.'],
-    mirebull: ['warden', 'Big, and slow. Do not let it set the pace.'],
-    oldgnaw: ['steward', 'This is what the fire called. Hold the camp.'],
+    tunnelmaw: ['digger', 'Something big is coming up under the road.'],
+    wickeater: ['smith', "That one's been waiting a long time."],
+    mirebull: ['warden', "It's big and slow. Don't let it set the pace."],
+    oldgnaw: ['steward', 'This is what the fire brought here. Hold the camp.'],
   };
   const END = [   // the end beat: beaten, the gate shuts, the town is named
-    ['warden', 'It is down. It is down, and the camp is standing.'],
-    ['smith', 'Shut the gate. Let the road be a road.'],
+    ['warden', "It's down. It's down, and the camp's still standing."],
+    ['smith', "Shut the gate. We're done for tonight."],
     ['steward', 'Emberfall. A fire fell here, and we stayed.'],
   ];
-  const START = ['steward', 'The ember fell short of the hills. The valley is ours to hold, and nobody else is coming.'];
+  const START = ['steward', "The ember came down in this valley. It's ours to hold now, and nobody else is coming."];
 
   // ---------------------------------------------------------------- the thread between quests
   // A quest is offered, then done or missed; each of those moments can carry the camp's story on to the next job.
@@ -79,52 +80,52 @@ const FOUNDING_STORY = (() => {
   //               {S} is "The Steward" (whoever owns that job) when another founder says it, and "I" when the owner says it themselves,
   //               so lead lines keep to the past tense and to "will", which fit both.
   const OFFER = {
-    gate: ['Water in the camp, and now a door for the road. The stone is on its way up the hill.', 'A dry camp, then, and all the more reason for a door. The stone is on its way up the hill.', 'The Digger is still at the dig. Meanwhile the road wants a door, and the stone is on its way.'],
-    fire: ['A gate to hold, and now something to hold it with. Give me a quiet hour and a bed of coals.', 'No gate, so we need good iron more than ever. Give me a quiet hour and a bed of coals.', 'The stone is still climbing. I will light the forge while it does, if someone stands by me.'],
-    beacon: ['The forge is lit, and we have iron. Now a light for the hill, so the dark has something to look at.', 'No forge yet, and no matter. A light on the hill wants oil, not iron.', 'The Smith is still coaxing her coals. The hill wants a light meanwhile. Oil, up the slope.'],
-    stakes: ['The hill is lit, and now we can see how much ground we hold. I mean to mark where it ends.', 'The hill stays dark. Then I will mark the ground by hand, and count whatever stands inside it.', 'Oil is still going up the hill. Meanwhile I will walk the edge of the camp and drive stakes. Walk with me.'],
-    road: ['The bounds are marked. Now we make the road lead them away from the warmth, post by post.', 'Unmarked ground, then. All the more reason to give them a road that leads away from us.', 'The Warden is still driving stakes. I will have lanterns along the road, to lead them away from the warmth.'],
-    graves: ['The road bought us a quiet night, mostly. We lost some of us anyway. They get the meadow, and flowers.', 'They came straight at us, and we lost some in the night. They get the meadow, and flowers.', 'The lanterns are still going up. We lost some in the night, and they get the meadow, and flowers.'],
-    mill: ['The meadow is in bloom, so now to feed the living. The wind never stops on the west plain. A mill, then.', 'No flowers, and the camp is hungry anyway. The wind never stops on the west plain; I mean to put a mill there.', 'The bluebells are going in. Hands wanted anyway: the west plain wants a mill, and a mill wants builders.'],
-    stonegate: ['The mill turns, and the camp eats. Now the gate gets what it was owed: the Words, cut deep.', 'No flour, and thin porridge. The gate still wants its Words.', 'Whatever the mill does, the gate must have its Words. The dressed stone is waiting at the quarry.'],
-    roof: ['Words on the gate. Words do not keep rain off, though. Timber from past the ford, and a roof.', 'Bare stone, then. Words or no words, we need a roof. Timber from past the ford.', 'While the Steward carves, I will see to timber. A roof wants hauling from past the ford.'],
-    larder: ['A roof over us. Now something in the cupboard: roots, grain and dried fruit, before the long dark.', 'No roof, so we will eat damp. Let us at least have a full larder before the long dark.', 'The roof goes up slowly, and winter will not wait. Roots and grain, laid by, before the long dark.'],
-    choice: ['The larder is full. One stone is left in the quarry: a bell or a ward, not both. The Warden and the Smith are arguing it.', 'A lean winter, and one stone left. A bell or a ward, not both. The Warden and the Smith are already arguing.', 'Gather what you can. The last stone is spoken for twice: a bell, or a ward. Carry it, and the argument settles.'],
-    watchfires: ['The stone is raised. Good. Now I want fires on every far rise, so I see what is coming before it arrives.', 'The stone lies unused. Fine. We will see the dark coming by fire. Carry a brand to each far rise.', 'While the stone is argued over, I want fires on the far rises. Light them from the camp, and keep them lit.'],
-    cover: ['The far fires burn, and we can see the dark coming. Now the Hearth. Stand close while we lay the capstone.', 'The rises stay dark; we will trust our ears. Now the Hearth. Stand close while we lay the capstone.', 'Keep the fires burning, but come in when you can. The capstone is ready for the Hearth.'],
+    gate: ["We've got water. Now the road needs a gate, and the stone's on its way up.", 'No spring, so we need a gate even more. The stone is on its way up.', "The Digger's still at it. Meanwhile, the road needs a gate. The stone's on its way."],
+    fire: ["We've got a gate. Now we need gear to hold it. Give me an hour at the forge.", 'No gate, so we need good gear even more. Give me an hour at the forge.', "The stone's still coming up. I'll light the forge meanwhile, if someone stands guard."],
+    beacon: ["The forge is going. Now let's get a light on the hill. Oil, up the slope.", "No forge yet. That's fine, the beacon needs oil, not iron.", "The Smith's still working on the forge. The hill needs a light in the meantime."],
+    stakes: ["With the hill lit we can see how much ground we've got. I want to mark where it ends.", "The hill's dark, so I'll mark our ground by hand. Walk with me.", "Oil's still going up the hill. Meanwhile I'll mark the edge of camp. Walk with me."],
+    road: ["The edge is marked. Now let's light a road that leads them away from the Hearth.", "No stakes, so let's at least give them a road that leads away from us.", "The Warden's still out with the stakes. I want lanterns along the road meanwhile."],
+    graves: ['The road kept most of them off. We still lost people. They should go in the meadow, with flowers.', 'They came straight at us and we lost people. They should go in the meadow, with flowers.', 'The lanterns are still going up. We lost people last night. They should go in the meadow.'],
+    mill: ["The meadow's done. Now let's feed the living. I want a mill on the west plain.", "No flowers, and everyone's hungry anyway. I want a mill on the west plain.", "Hands wanted. I'm putting a mill up on the west plain."],
+    stonegate: ["The mill's running and we're eating. Now the gate gets its words, cut in stone.", "No flour, so it's thin soup. The gate still needs its words.", "Mill or no mill, the gate needs its words. The cut stone's waiting at the quarry."],
+    roof: ["The gate has its words. Words don't keep the rain off, though. I need timber from past the ford.", 'Plain gate, then. We still need a roof. Timber from past the ford.', "While the Steward carves, I'll need timber for a roof. It's past the ford."],
+    larder: ["We've got a roof. Now we need food stored: roots, grain, dried fruit, before winter.", "No roof, so we'll be damp. Let's at least have full shelves before winter.", "The roof's slow going, and winter won't wait. Let's get food stored."],
+    choice: ["The larder's full. There's one stone left: a bell or a ward, not both. The Warden and the Smith can't agree.", 'A lean winter, and one stone left. A bell or a ward. The Warden and the Smith are already arguing.', 'Keep gathering if you can. The last stone can be a bell or a ward. Carry it to one and that settles it.'],
+    watchfires: ["Good, it's built. Now I want fires on the far hills, so I can see what's coming.", 'Nothing got built. Fine. I want fires on the far hills, so we see them coming.', 'While they argue about the stone, I want fires lit on the far hills.'],
+    cover: ['The far fires are burning. Now the Hearth. Stay close while we put the capstone on.', "The hills are dark, so we'll listen instead. Now the Hearth. Stay close while we put the capstone on.", "Keep the fires going, but come back when you can. The capstone's ready."],
   };
   const REACT = {
-    spring: { done: ['smith', 'Water I can quench in. Good.'], missed: ['warden', 'A trickle still fills a cup. I will ration it.'] },
-    gate: { done: ['warden', 'Now there is a door to count people through.'], missed: ['digger', 'Open road. I have dug in worse places.'] },
-    fire: { done: ['warden', 'Sparks by the river. Every eye in the valley will see them.'], missed: ['digger', 'Cold iron keeps. The anvil will have its turn.'] },
-    beacon: { done: ['smith', 'A light is a promise. I hope we can keep it.'], missed: ['digger', 'The dark has kept this ground a long time. We will manage.'] },
-    stakes: { done: ['smith', 'Stakes in the ground. Now they know where our fire ends.'], missed: ['digger', 'Unmarked ground is still ground. We know where it ends.'] },
-    road: { done: ['smith', 'A road that leads them wrong. I would pay to see their faces.'], missed: ['warden', 'They will come straight. I will count the gate twice.'] },
-    graves: { done: ['steward', 'Bluebells in the meadow. We will remember who they were.'], missed: ['warden', 'I counted them anyway. I will keep counting.'] },
-    mill: { done: ['digger', 'Flour. A mill, and soon a town. Somebody will bake.'], missed: ['warden', 'No mill. We will eat what we can carry.'] },
-    stonegate: { done: ['digger', 'Words in stone. I hope we meant them.'], missed: ['warden', 'Bare stone. The Steward will carve it another day.'] },
-    roof: { done: ['warden', 'A roof. I will count heads from a dry bed.'], missed: ['steward', 'No roof. We will let the sky be our ceiling a while.'] },
-    larder: { done: ['smith', 'Full sacks. A hammer swings better on a full belly.'], missed: ['warden', 'A lean larder. Small portions, and no complaint.'] },
-    choice: { done: ['digger', 'A stone raised, whichever it is. The camp is standing.'], missed: ['smith', 'Neither bell nor ward. Then I will keep the hammer close.'] },
-    watchfires: { done: ['smith', 'Fires on every rise. Let the dark see us from afar.'], missed: ['digger', 'Dark rises. The dark has kept us company before.'] },
-    cover: { done: ['warden', 'The Hearth is covered, and the camp is standing. I counted.'], missed: ['smith', 'Uncovered, then. Mind the heat, and keep your head.'] },
+    spring: { done: ['smith', 'Water for the forge. Good.'], missed: ['warden', "A trickle still fills a cup. We'll ration it."] },
+    gate: { done: ['warden', "Now there's a door I can count people through."], missed: ['digger', "Open road. I've dug in worse spots."] },
+    fire: { done: ['warden', 'Sparks by the river. Everyone in the valley will see those.'], missed: ['digger', 'The anvil can wait. Iron keeps.'] },
+    beacon: { done: ['smith', 'Nice to see a light out there.'], missed: ['digger', "It's been dark here a long time. We'll cope."] },
+    stakes: { done: ['smith', 'Now everyone knows where our ground ends.'], missed: ['digger', 'We know where our ground ends, stakes or not.'] },
+    road: { done: ['smith', 'A road that sends them the wrong way. I like it.'], missed: ['warden', "They'll come straight in. I'll keep a closer eye on the gate."] },
+    graves: { done: ['steward', "Bluebells in the meadow. We'll remember them."], missed: ['warden', "I counted them anyway. I won't forget."] },
+    mill: { done: ['digger', "Flour. Somebody's going to bake bread."], missed: ['warden', "No mill. We'll eat what we've got."] },
+    stonegate: { done: ['digger', 'Words in stone. I hope we live up to them.'], missed: ['warden', 'Plain stone. The Steward can carve it another day.'] },
+    roof: { done: ['warden', "A roof. I'll sleep dry for once."], missed: ['steward', "No roof. We'll sleep under the sky a while longer."] },
+    larder: { done: ['smith', 'Full sacks. I work better on a full stomach.'], missed: ['warden', 'Small portions, then. Nobody complain.'] },
+    choice: { done: ['digger', "Something got built. The camp's still standing."], missed: ['smith', "No bell, no ward. I'll keep my hammer handy."] },
+    watchfires: { done: ['smith', 'Fires on every hill. Let them see us from far off.'], missed: ['digger', "Dark hills. We've been in the dark before."] },
+    cover: { done: ['warden', "The Hearth's covered and the camp's still standing. I checked."], missed: ['smith', 'Still open, then. Watch the heat.'] },
   };
   const LEAD = {
-    gate: { near: '{S} could use hands for the gate stone.', far: '{S} was out on the North Road again, measuring it for a door.' },
-    fire: { near: '{S} would be glad of a guard at the first forge.', far: '{S} kept looking at the river bank, and at the coals.' },
-    beacon: { near: '{S} will want oil carried up the hill.', far: '{S} was up on the hill, looking at all that dark.' },
-    stakes: { near: '{S} meant to mark the edge of the camp, and wanted company.', far: '{S} was pacing the edge of the camp, counting steps.' },
-    road: { near: '{S} will be asking for lanterns along the North Road.', far: '{S} was drawing a road in the dirt that bent away from the Hearth.' },
-    graves: { near: '{S} could use a hand in the meadow.', far: '{S} was looking at the meadow, and at the bluebell seed.' },
-    mill: { near: '{S} would be glad of builders on the west plain.', far: '{S} was watching the west wind as if it owed a debt.' },
-    stonegate: { near: '{S} will need the dressed stone hauled to the gate.', far: '{S} was standing at the gate with a chisel and a long face.' },
+    gate: { near: '{S} could use help with the gate stone.', far: '{S} was out on the North Road again, measuring it for a gate.' },
+    fire: { near: '{S} would like someone to guard the forge.', far: '{S} kept looking at the river bank and the coals.' },
+    beacon: { near: '{S} will want oil carried up the hill.', far: '{S} was up on the hill, looking out at the dark.' },
+    stakes: { near: '{S} wanted to mark the edge of the camp, with company.', far: '{S} was pacing the edge of the camp.' },
+    road: { near: '{S} will be asking for lanterns along the North Road.', far: '{S} was sketching a road in the dirt.' },
+    graves: { near: '{S} could use a hand in the meadow.', far: '{S} was looking out at the meadow.' },
+    mill: { near: '{S} could use builders on the west plain.', far: '{S} was watching the wind on the west plain.' },
+    stonegate: { near: '{S} will need the cut stone hauled to the gate.', far: '{S} was standing at the gate with a chisel.' },
     roof: { near: '{S} could use timber from past the ford.', far: '{S} was eyeing the trees past the ford.' },
-    larder: { near: '{S} will be asking for sacks gathered from the far corners.', far: '{S} was counting sacks again, and not liking the count.' },
-    choice: { near: '{S} will want stone carried, and a choice made.', far: '{S} was down at the quarry, looking at the last of the stone.' },
-    watchfires: { near: '{S} would be glad of fires on the far rises.', far: '{S} was looking at the far rises as if they were already lit.' },
-    cover: { near: '{S} will want everyone at the Hearth.', far: '{S} was standing over the Hearth, saying nothing.' },
+    larder: { near: '{S} will be asking for food gathered from the far corners.', far: '{S} was counting sacks again.' },
+    choice: { near: '{S} will want stone carried, and a choice made.', far: '{S} was down at the quarry, looking at the last stone.' },
+    watchfires: { near: '{S} would like fires on the far hills.', far: '{S} kept looking at the far hills.' },
+    cover: { near: '{S} will want everyone at the Hearth.', far: '{S} was standing by the Hearth, not saying much.' },
   };
-  const LEAD_ANY = { near: '{S} will want a hand with the next job.', far: '{S} was looking over what is left to build.' };
+  const LEAD_ANY = { near: '{S} will want a hand with the next job.', far: "{S} was looking over what's left to build." };
 
   const dataOf = () => { try { if (typeof FOUNDING_DATA !== 'undefined') return FOUNDING_DATA; if (typeof require !== 'undefined') return require('./data.js').FOUNDING_DATA; } catch (e) { /* no data: no thread */ } return null; };
   const giverOf = id => { const D = dataOf(), def = D && D.QUESTS && D.QUESTS[id]; return QBY[id] || byGiver(def ? def.giver : null); };
@@ -137,7 +138,7 @@ const FOUNDING_STORY = (() => {
     if (i < 0) return null;
     for (let k = i + 1; k < order.length; k++) {
       const n = order[k], s = st[n] | 0; if (s >= 2) continue;
-      return { id: n, timing: s === 1 || D.QUESTS[n].offerWave - wave <= 1 ? 'near' : 'far' };
+      return { id: n, timing: 'near' };   // (the quests come one after another at their givers, apart from the waves: the next is always near)
     }
     return null;
   }

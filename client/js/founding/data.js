@@ -287,8 +287,10 @@ const FOUNDING_DATA = (() => {
   const bossHpMul = n => BOSS_BASE * bySize(BOSS_SIZE, n), logHpMul = n => LOG_BASE * bySize(BOSS_SIZE, n), xpMul = n => bySize(XP_MUL, n);
 
   // ---------------------------------------------------------------- quests (Day one)
-  // states in fds: 0 not yet offered, 1 active, 2 done, 3 missed. A quest is offered when its wave spawns and judged when
-  // its deadline wave spawns (deadline 7 = the end of Day one).
+  // states in fds: 0 not yet taken, 1 active, 2 done, 3 missed. Quests keep their own pace, apart from the waves (2026-10-31): they come
+  // one at a time in QUEST_ORDER, each waiting at its giver (a ! over their head) until a hero walks up and takes it, and each ends only
+  // by its own work (done, or lost to what it guards). offerWave orders them and deadlineWave sets the tuner's window; neither is a clock
+  // in play. The Covering is the one tied to a moment: it is part of the siege, so its giver calls once the siege comes if nobody has yet.
   const QUESTS = {
     spring: { id: 'spring', name: 'The Spring', giver: 'The Digger', offerWave: 1, deadlineWave: 4, gold: 12, xp: 60,
       text: 'The Digger has struck warm water. Stand by the dig and keep the leakers off it until the well is open.',
@@ -330,6 +332,11 @@ const FOUNDING_DATA = (() => {
       boons: ['keeper', 'capstoneward', 'longnight'] },
   });
   const QUEST_ORDER = ['spring', 'gate', 'fire', 'beacon', 'road', 'graves', 'stonegate', 'roof', 'cover'];
+  // where each giver stands to hand out work (map-art.js stands them here while a quest waits), how close a hero must come, and the
+  // breath between one quest ending and the next giver calling
+  const GIVER_AT = { steward: [3700, 3700], smith: [4160, 3834], digger: [2810, 4080], warden: [2996, 1970] };
+  const giverKey = id => { const g = String((QUESTS[id] && QUESTS[id].giver) || '').toLowerCase(); for (const k in GIVER_AT) if (g.indexOf(k) >= 0) return k; return 'steward'; };
+  const QUEST_FLOW = { talkR: 120, pause: 8 };
   // feature modules (sim-quests.js) add their quests and boons at load: def as QUESTS above; it goes into QUEST_ORDER sorted by offerWave
   const addQuest = (def, boons) => { if (QUESTS[def.id]) return QUESTS[def.id]; QUESTS[def.id] = def; QUEST_ORDER.push(def.id); QUEST_ORDER.sort((x, y) => QUESTS[x].offerWave - QUESTS[y].offerWave); for (const b of boons || []) { b.quest = def.id; BOONS[b.id] = b; } return def; };
   const QUEST_TUNE = {
@@ -479,7 +486,7 @@ const FOUNDING_DATA = (() => {
   const TUNE = { nightPeak: 1, nightPeakLit: 0.82, siegeEnrage: 420, fountainR: 150, trickle: 3, full: 22, respawn: 8, respawnPer: 4, respawnMax: 30 };
 
   return { addEnemy, addItem, addQuest, passiveKeys, itemsFor, SLOTS, KITS, HERO_IDS, UPGRADES, UP_PRICE, UP_PRICE_R, upgradePrice, ENEMIES, ENEMY_IDS, WAVES, LAST_WAVE, PARTS, partOf, isNightWave, TIER_AT, tierOf, LANES, laneMods, stepKind, BOSS_WAVES, WAVE_TUNE, rebuildWaves, waveStartAt, forecast, nightFrac, WAVE_T0, WAVE_GAP, hpScale, HPS, campHp, CAMP_TAKE, bossHpMul, BOSS_BASE, LOG_BASE, BOSS_SIZE, logHpMul, xpMul, dmgScale, SOLO_DMG, SOLO_CAMP, NO_DPS_DMG, PARTY_DMG, SOLO_CLEAVE,
-    QUESTS, QUEST_ORDER, QUEST_TUNE, BOONS, RARITIES, RARITY_COLORS, ITEMS, ITEM, ITEM_SLOTS, HYPER_CHANCE, FORGE_MIN, canForge, canSell, sellPrice, forgeTargetRarity, dropWeights, LEVELS, GOLD, payout, payoutParts, TUNE, rk };
+    QUESTS, QUEST_ORDER, QUEST_TUNE, GIVER_AT, giverKey, QUEST_FLOW, BOONS, RARITIES, RARITY_COLORS, ITEMS, ITEM, ITEM_SLOTS, HYPER_CHANCE, FORGE_MIN, canForge, canSell, sellPrice, forgeTargetRarity, dropWeights, LEVELS, GOLD, payout, payoutParts, TUNE, rk };
 })();
 
 if (typeof module !== 'undefined') module.exports = { FOUNDING_DATA };

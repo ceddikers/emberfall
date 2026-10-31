@@ -231,7 +231,7 @@ const Founding = (() => {
 
   // ================================================================ the solo pause
   // Only the host's tab can hold the sim, and only with one human in the run (a second player's tab has nothing to hold). Esc pauses and resumes; the sim then ticks
-  // nothing, so every clock in it (the wave timer, quest deadlines, respawns, set pieces, the chain's gaps) stands still, and this tab stops its own frame update too.
+  // nothing, so every clock in it (the wave timer, the quest-givers' calls, respawns, set pieces, the chain's gaps) stands still, and this tab stops its own frame update too.
   let paused = false;
   const canPause = () => !!(sim && S && !S.ended && !S.end && S.phase === 'live' && S.st === 'live' && !(S.__intro && S.__intro.on) && sim.players.length === 1);
   function setPause(on) {
@@ -420,6 +420,7 @@ const Founding = (() => {
       case 'pb': evPerfectBlock(ev); break;
       case 't': S.tele.set(ev[1], { id: ev[1], shape: ev[2], x: ev[3], y: ev[4], a: ev[5], b: ev[6], w: ev[7], warn: Math.max(0.3, ev[8]), col: ev[9], t0: S.T, res: 0, boss: S.boss ? S.boss.eid : null }); teleStart(S.tele.get(ev[1])); break;
       case 'i': { const t = S.tele.get(ev[1]); if (t) { t.res = S.T; teleResolve(t); fxRing(ev[2], ev[3], 8, Math.max(40, t.a * 0.9), 0.3, t.col ? '140,190,255' : '255,120,90', 2, 0); if (t.shape === 0 && t.a > 60) { shake(2.5, 0.2); burst(ev[2], ev[3], 8, { color: '#6a5a48', spd: 90, dur: 0.5, size: 3, kind: 'dust' }); } } break; }
+      case 'qa': { const Q = D.QUESTS[ev[1]]; if (Q) { say(Q.giver + ' has work for you.'); snd('fd-quest-offer', { vol: 0.55 }); } break; }   // a giver calls: a ! over them, and on the minimap once seen
       case 'q': if (FoundingUI) FoundingUI.questEvent(ev[1], ev[2]); snd(ev[2] === 0 ? 'fd-quest-offer' : ev[2] === 2 ? 'fd-quest-done' : 'fd-quest-missed'); if (ev[2] === 2) { fxRing(M.P.hearth[0], M.P.hearth[1], 40, 160, 0.9, '255,230,160', 3, 0); } break;
       case 'cart': { const c = (S.props.ct || []).find(x => x[0] === ev[1]); if (c) ftxt(c[1], c[2] - 30, ev[2] ? 'Delivered' : 'Lost', ev[2] ? '#9ed7a6' : '#ff7a68', 12, 1.3); snd(ev[2] ? 'fd-deliver' : 'fd-gate-break', ev[2] ? undefined : { vol: 0.6 }); break; }
       case 'pal': { const g = FoundingArt.GATE; burst(g.x, g.y, 24, { color: '#7a5a38', spd: 160, dur: 0.8, size: 3.5, kind: 'chunk', g: 300 }); burst(g.x, g.y, 8, { color: '#5a4a38', spd: 80, dur: 1, size: 4, kind: 'dust' }); shake(4, 0.3); ftxt(g.x, g.y - 40, 'The palisade breaks', '#ffb36b', 12, 1.5); sndAt('fd-gate-break', g.x, g.y, { reach: 1.8 }); break; }
@@ -1431,6 +1432,34 @@ const Founding = (() => {
       const reach = f.step === 'dest' && f.R > 0 ? f.R : 30;
       if (f.tip && dm < reach && dm < best) { best = dm; S.tipTxt = [f.title, f.tip]; }
     }
+    drawGivers(c);
+  }
+  // ---- quest-givers (2026-10-31): quests keep their own pace. A founder with work waiting wears a ! overhead; right-click them, or press
+  // the use key beside them, to take it. The minimap shows the ! once the party has laid eyes on that spot.
+  function waitingGivers() { const out = []; for (const w of (S.props && S.props.qw) || []) { const g = D.GIVER_AT[w[1]]; if (g && D.QUESTS[w[0]]) out.push({ id: w[0], key: w[1], x: g[0], y: g[1] }); } return out; }
+  function hoverGiver() { const m = S.mouse; let best = null, bd = 44; for (const g of waitingGivers()) { const d = Math.hypot(m.wx - g.x, m.wy - (g.y - 26)); if (d < bd) { bd = d; best = g; } } return best; }
+  function drawGivers(c) {
+    const W0 = waitingGivers(); if (!W0.length) return;
+    const seen = S.gSeen || (S.gSeen = {}), hv = hoverGiver(), z = clamp(1 / S.cam.zoom, 0.85, 1.4);
+    for (const g of W0) {
+      if (visAt(g.x, g.y, 30)) seen[g.key] = true;
+      const on = !!hv && hv.id === g.id, y = g.y - 56 * z + Math.sin(S.T * 3) * 2.5;
+      c.save(); c.translate(g.x, y); c.scale(z, z);
+      glowAt(c, 0, 2, 26, '255,214,120', on ? 0.5 : 0.32);
+      c.font = 'bold 30px Cinzel, Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+      c.strokeStyle = 'rgba(14,10,6,.92)'; c.lineWidth = 5; c.strokeText('!', 0, 0); c.fillStyle = on ? '#fff1b8' : '#f0c850'; c.fillText('!', 0, 0);
+      c.restore();
+      if (on) S.tipTxt = [D.QUESTS[g.id].giver, D.QUESTS[g.id].name + '. Right-click to hear them out, or press ' + keyLbl('fdUse') + ' beside them.'];
+    }
+  }
+  function drawMiniGivers(g, kx, ky) {
+    const seen = S.gSeen || {};
+    for (const w of waitingGivers()) {
+      if (!seen[w.key]) continue; const x = w.x * kx, y = w.y * ky, r = Math.max(5.5, g.canvas.width / 34);   // a filled badge, so it stands apart from the rings
+      g.beginPath(); g.arc(x, y, r + 1.6, 0, TAU); g.fillStyle = 'rgba(0,0,0,.7)'; g.fill();
+      g.beginPath(); g.arc(x, y, r, 0, TAU); g.fillStyle = '#f0c850'; g.fill();
+      g.font = `bold ${Math.round(r * 1.6)}px Cinzel, Georgia, serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#2b1a0a'; g.fillText('!', x, y + 0.5);
+    }
   }
   function drawCounts(c) {
     for (const [id, ct] of S.counts) {
@@ -1985,7 +2014,7 @@ const Founding = (() => {
     drawScreenFx(ctx);
     if (S.hurtFlash > 0) { const k = ctx.canvas.width / W(); ctx.save(); ctx.setTransform(k, 0, 0, k, 0, 0); const g = ctx.createRadialGradient(W() / 2, H() / 2, H() * 0.35, W() / 2, H() / 2, H() * 0.85); g.addColorStop(0, 'rgba(140,0,0,0)'); g.addColorStop(1, `rgba(150,10,10,${0.35 * S.hurtFlash})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W(), H()); ctx.restore(); }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    dep.canvas.style.cursor = S.aim ? 'crosshair' : (hoverEnemy() ? 'pointer' : 'default');
+    dep.canvas.style.cursor = S.aim ? 'crosshair' : (hoverEnemy() || hoverGiver() ? 'pointer' : 'default');
   }
 
   // ================================================================ minimap (FoundingUI owns the canvas)
@@ -2003,6 +2032,7 @@ const Founding = (() => {
       const x = u.x * kx, y = u.y * ky;
       if (u.kind === 'e') { if ((u.f & FLAG.HIDDEN) || u.fogT === 0) continue; if (u.def.inert) { g.fillStyle = '#7ab8d8'; g.beginPath(); g.arc(x, y, 3, 0, TAU); g.fill(); continue; } if (u.f & FLAG.UNDER) { g.strokeStyle = '#d9a05a'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, 4, 0, TAU); g.stroke(); continue; } g.fillStyle = (u.f & FLAG.BOSS) ? '#ff8a2a' : (u.f & FLAG.ELITE) ? '#ff5a3a' : '#d84a3a'; const r = (u.f & FLAG.BOSS) ? 4.5 : (u.f & FLAG.ELITE) ? 3 : 1.7; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
     }
+    drawMiniGivers(g, kx, ky);
     for (const u of S.units.values()) if (u.kind === 'h') { const x = u.x * kx, y = u.y * ky, mine = u.id === S.myId; g.fillStyle = (u.f & FLAG.DEAD) ? '#777' : roleColor(u.hero); g.strokeStyle = mine ? '#fff' : '#000'; g.lineWidth = mine ? 1.8 : 1; g.beginPath(); g.arc(x, y, mine ? 4 : 3.2, 0, TAU); g.fill(); g.stroke(); }
     const cam = S.cam, vw = W() / cam.zoom * kx, vh = H() / cam.zoom * ky; g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 1; g.strokeRect(cam.x * kx - vw / 2, cam.y * ky - vh / 2, vw, vh);
     drawMiniAlerts(g, w, h, kx, ky);
@@ -2037,6 +2067,8 @@ const Founding = (() => {
     if (S.aim) { S.aim = null; return; }
     const m = me(); if (!m || (m.f & FLAG.DEAD)) return;
     const e = hoverEnemy(); S.openOnArrive = null;
+    const gv = e ? null : hoverGiver();
+    if (gv) { S.rEnemy = false; S.rDown = false; send({ k: 'talk', id: gv.id }); S.marker = { x: gv.x, y: gv.y + 50, t: 0 }; return; }   // (no held-button walking after: it would call the hero off the talk)
     if (e) { S.tgt = e.id; S.rEnemy = true; send({ k: 'attack', id: e.id }); S.marker = { x: e.x, y: e.y, t: 0, c: '255,110,90' }; }
     else { S.rEnemy = false; send({ k: 'move', x: Math.round(S.mouse.wx), y: Math.round(S.mouse.wy) }); S.marker = { x: S.mouse.wx, y: S.mouse.wy, t: 0 }; }
     S.rDown = true; S.rT = 0.2;

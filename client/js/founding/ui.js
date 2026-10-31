@@ -698,19 +698,24 @@ const FoundingUI = (() => {
     return D.QUESTS[id].text;
   }
   function updateQuests(s) {
-    const act = s.q.filter(q => q[1] !== 0), P = s.props || {};
-    let hk = ''; for (const id in s.hauls) hk += s.hauls[id].got; const key = act.map(q => q.join()).join('|') + s.wave + '/' + hk + '/' + (Array.isArray(P.posts) ? P.posts.length : 0) + '/' + Math.round((P.carved || 0) * 100) + '/' + Math.round((P.capstone || 0) * 100) + '/' + ((P.qd || []).length);
+    const act = s.q.filter(q => q[1] !== 0), P = s.props || {}, wait = (P.qw || []).filter(w => D.QUESTS[w[0]]);
+    let hk = ''; for (const id in s.hauls) hk += s.hauls[id].got; const key = act.map(q => q.join()).join('|') + '/w' + wait.map(w => w[0]).join(',') + '/' + hk + '/' + (Array.isArray(P.posts) ? P.posts.length : 0) + '/' + Math.round((P.carved || 0) * 100) + '/' + Math.round((P.capstone || 0) * 100) + '/' + ((P.qd || []).length);
     if (cache.qk === key) return; cache.qk = key;
-    const Q = $('fd-quests'); Q.style.display = act.length ? '' : 'none';
+    const Q = $('fd-quests'); Q.style.display = act.length || wait.length ? '' : 'none';
     const live = act.filter(q => q[1] === 1), over = act.filter(q => q[1] !== 1);
-    Q.innerHTML = '<div class="fd-h">QUESTS</div>' + live.map(q => {
-      const d = D.QUESTS[q[0]], left = d.deadlineWave - s.wave;
-      return `<div class="q act" data-q="${q[0]}"><img class="qi" alt="" draggable="false" src="${FI.quest(q[0])}"><div class="qb"><b>${esc(d.name)}</b><div class="qo">${esc(objective(s, q))}</div><div class="bar"><i style="width:${q[2]}%"></i></div></div><span class="dl${left <= 1 ? ' soon' : ''}"><small>by</small>wave ${d.deadlineWave}</span></div>`;
+    // (quests keep their own pace: no deadline to show. One waiting at its giver reads as the giver asking)
+    Q.innerHTML = '<div class="fd-h">QUESTS</div>' + wait.map(w => {
+      const d = D.QUESTS[w[0]];
+      return `<div class="q wait" data-q="${w[0]}"><img class="qi" alt="" draggable="false" src="${FI.quest(w[0])}"><div class="qb"><b>${esc(d.name)}</b><div class="qo">${esc(d.giver)} has work for you.</div></div><span class="dl ask">!</span></div>`;
+    }).join('') + live.map(q => {
+      const d = D.QUESTS[q[0]];
+      return `<div class="q act" data-q="${q[0]}"><img class="qi" alt="" draggable="false" src="${FI.quest(q[0])}"><div class="qb"><b>${esc(d.name)}</b><div class="qo">${esc(objective(s, q))}</div><div class="bar"><i style="width:${q[2]}%"></i></div></div></div>`;
     }).join('') + (over.length ? '<div class="qdone">' + over.map(q => `<span class="${q[1] === 2 ? 'ok' : 'no'}" data-q="${q[0]}">${q[1] === 2 ? '&#10003;' : '&#10007;'} ${esc(D.QUESTS[q[0]].name)}</span>`).join('') + '</div>' : '');
     // pointing at a quest's row calls out its place on the map (a larger marker and an arrow at the screen edge)
     Q.querySelectorAll('.q.act').forEach(n => { n.addEventListener('mouseenter', () => A.hoverQuest && A.hoverQuest(n.dataset.q)); n.addEventListener('mouseleave', () => A.hoverQuest && A.hoverQuest(null)); });
     if (A.hoverQuest) { const hv = Q.querySelector('.q.act:hover'); A.hoverQuest(hv ? hv.dataset.q : null); }   // (the rows were just rebuilt under the pointer)
     Q.querySelectorAll('.q.act').forEach(n => tip(n, () => { const d = D.QUESTS[n.dataset.q]; return `<b>${esc(d.name)}</b><em>${esc(d.giver)}</em>${esc(d.text)}<div class="fd-t-r">Done: ${esc(d.done)}</div><div class="fd-t-n">Missed: ${esc(d.missed)}</div>`; }));
+    Q.querySelectorAll('.q.wait').forEach(n => tip(n, () => { const d = D.QUESTS[n.dataset.q]; return `<b>${esc(d.name)}</b><em>${esc(d.giver)}</em>Waiting with a ! over their head. Walk over and right-click them to hear what they need.`; }));
     Q.querySelectorAll('.qdone span').forEach(n => tip(n, () => { const d = D.QUESTS[n.dataset.q], st = (S().q.find(q => q[0] === n.dataset.q) || [])[1]; return `<b>${esc(d.name)}</b><em>${st === 2 ? 'Done' : 'Missed'}</em>${esc(st === 2 ? d.done : d.missed)}`; }));
   }
 

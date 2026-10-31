@@ -32,13 +32,13 @@ const FoundingIntro = (() => {
 
   // The words. Each is a founder's own way of saying it, short, no teaching, no digits. The last is the line the run has always opened with.
   const CAPTIONS = [
-    { t0: 2.8, t1: 6.8, by: 'warden', text: 'That is all of us over the pass. I counted twice.' },
-    { t0: 7.2, t1: 11.2, by: 'smith', text: 'If this road ends soon, I will forgive it everything.' },
-    { t0: 14.0, t1: 18.4, by: 'digger', text: 'You can follow where it fell. The grass is still making up its mind.' },
-    { t0: 19.0, t1: 23.0, by: 'steward', text: 'The light is going. Keep walking, and keep close.' },
-    { t0: 27.4, t1: 31.4, by: 'digger', text: 'Here. The ground is warm. Come and put a hand on it.' },
-    { t0: 32.0, t1: 35.6, by: 'smith', text: 'Warm as a forge nobody lit.' },
-    { t0: 37.6, t1: 42.6, by: 'warden', text: 'Every one of us accounted for. I will take the first watch, up the road.' },
+    { t0: 2.8, t1: 6.8, by: 'warden', text: "That's everyone over the pass. I counted twice." },
+    { t0: 7.2, t1: 11.2, by: 'smith', text: 'I hope this road ends soon. My feet are done.' },
+    { t0: 14.0, t1: 18.4, by: 'digger', text: 'You can see where it came down. The grass is burned in a line.' },
+    { t0: 19.0, t1: 23.0, by: 'steward', text: "It's getting dark. Keep walking, and stay close." },
+    { t0: 27.4, t1: 31.4, by: 'digger', text: "Here. The ground's warm. Put your hand on it." },
+    { t0: 32.0, t1: 35.6, by: 'smith', text: "Warm like a forge, and nobody lit it." },
+    { t0: 37.6, t1: 42.6, by: 'warden', text: "Everyone's here. I'll take first watch up the road." },
     { t0: 45.4, t1: 49.2, by: 'warden', text: 'There, past the bend. Did something move?' },
     { t0: 50.8, t1: 56.4, by: 'steward', line: 'start' },
   ];

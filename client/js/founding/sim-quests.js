@@ -5,7 +5,7 @@
 //   The Last of the Stone (Steward, 22-26)  a choice: stone for a bell tower OR a ward-stone, carried to the one you pick
 //   The Watch-Fires  (Warden, 24-28)        light and guard at night: a brand from the camp fire lights three far fires, and the dark comes to snuff them
 // Each registers with D.addQuest (and three unique boons, all implemented below through the hooks), runs without pausing the waves, adds a
-// piece to the camp or the valley (client-quests.js draws it) and is judged by the core at its deadline wave. Dynamic state goes out in
+// piece to the camp or the valley (client-quests.js draws it) and ends by its own work: the core hands it out at its giver. Dynamic state goes out in
 // `fds.qx` (snapshot), the world's fixed places in FoundingSim.QUESTX. Events all start with `qx`:
 //   qxs i x y (stake driven) · qxh x y dmg (the Warden or a site is struck) · qxr kind (a raid arrives: 0 stake, 1 mill, 2 fire) x y
 //   qxm (a mill surge) · qxg i x y got need (a sack gathered) · qxp pid (stone taken) · qxd site got need x y (stone laid) · qxc site (the choice is made)
@@ -97,7 +97,10 @@
     const near = (x, y, R) => { for (const h of sim.heroes) if (!h.dead && hyp(h.x - x, h.y - y) < R) return true; return false; };
     const ev = a => sim.ev(a);
     const rd = v => Math.round(v);
-    const hpMul = () => D.hpScale(Math.max(1, sim.wave));
+    // a quest's raiders are as strong as its place in the story asks, never weaker for a party that got there early: quests keep their own
+    // pace (2026-10-31), so the wave they used to start at is the floor (waveAs also sets their blows, sim.js resolveAtk)
+    const waveOf = qid => Math.max(1, sim.wave, (D.QUESTS[qid] && D.QUESTS[qid].offerWave) || 1);
+    const hpMul = qid => D.hpScale(waveOf(qid));
     const dropVis = v => { const i = sim.extraVis.indexOf(v); if (i >= 0) sim.extraVis.splice(i, 1); };
 
     // ---------------------------------------------------------- raiders: ordinary kinds off the lanes, set on one thing
@@ -140,8 +143,8 @@
       for (const [kind, c] of list) for (let i = 0; i < c; i++) {
         const def = D.ENEMIES[kind]; if (!def) continue;
         const x = P[0] + (sim.rand() - 0.5) * 70, y = P[1] + (sim.rand() - 0.5) * 70, p = M.walkable(x, y, 12) ? [x, y] : P;
-        const e = sim.spawnAt(kind, p[0], p[1], RMOD, { hp: def.hp * hpMul(), tier: Math.min(3, sim.tier), face: Math.atan2(cy - p[1], cx - p[0]) });
-        e.qr = { obj, qid, aggro: 150 }; e.speed *= 0.95; raiders.add(e); n++;
+        const e = sim.spawnAt(kind, p[0], p[1], RMOD, { hp: def.hp * hpMul(qid), tier: Math.min(3, Math.max(sim.tier, D.tierOf(waveOf(qid)))), face: Math.atan2(cy - p[1], cx - p[0]) });
+        e.qr = { obj, qid, aggro: 150 }; e.waveAs = waveOf(qid); e.speed *= 0.95; raiders.add(e); n++;
       }
       ev(['qxr', kindTag, rd(P[0]), rd(P[1])]);
       return n;

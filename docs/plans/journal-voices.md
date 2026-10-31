@@ -12,6 +12,7 @@ Sources for every voice: the class tagline and gameplan (`client/js/data.js`), t
 - First person, past tense, as if written that night by the fire.
 - 1 to 3 sentences, at most about 45 words. Shorter is usually better.
 - One entry is about one move.
+- **Every entry reads fresh** (user, 2026-10-31). A hero's sign-off or pet phrase (the ones quoted below, like "Mostly unsinged." or "So noted.") appears at most once per boss journal; most entries simply stop. No sentence is said twice by the same hero, and a victory entry is about something only that fight had. `node tools/journal-repeats.js` checks it (and `journal-lint.js` runs it).
 
 **Content**
 - Every entry contains the **real, correct way to survive that move**: where to stand, when to move, who to stand with, what to break. A player who reads only the journal should be able to do it. Check the boss's own design notes (`docs/DESIGN.md`, `client/js/arena/bosses/*.js`) before you write; if the tactic is wrong, the voice doesn't matter.
@@ -177,7 +178,7 @@ Each sheet: who they are, how they sound, what they notice, their tics, and two 
 **Notices:** How long she can stand still before she must move, where the safe ground is to plant her feet and keep casting, and how bright everything is. Treats every move as an interruption of her performance.
 
 **Tics:**
-- Mentions her own hair, eyebrows or sleeves catching ("Mostly unsinged.").
+- Now and then (a handful of times over all the journals, never as a habit) mentions her own hair, eyebrows or sleeves catching ("Mostly unsinged.").
 - Resents having to move, then admits it was right.
 - Measures danger in brightness ("it glowed the colour of trouble").
 

@@ -22,7 +22,7 @@ function makeSim(N, seed, extra) {
   const players = []; for (let i = 0; i < N; i++) players.push({ id: 'p' + i, name: 'P' + i });
   const log = { ev: [], fds: null, fdp: {} };
   const emit = m => { if (m.t === 'fdx') for (const e of m.ev) log.ev.push(e); if (m.t === 'fds') log.fds = m; };
-  const sim = new FoundingSim(Object.assign({ players, emit, emitTo(id, m) { log.fdp[id] = m; }, seed, noSpawn: true }, extra || {}));
+  const sim = new FoundingSim(Object.assign({ players, emit, emitTo(id, m) { log.fdp[id] = m; }, seed, noSpawn: true, autoQuest: true }, extra || {}));
   const heroes = ['bastion', 'cleric', 'pyromancer', 'ranger'];
   players.forEach((p, i) => sim.intent(p.id, { k: 'pick', hero: heroes[i] }));
   sim.intent('p0', { k: 'ready' });
@@ -31,7 +31,9 @@ function makeSim(N, seed, extra) {
 const run = (sim, s, f) => { for (let i = 0, n = Math.round(s / DT); i < n && sim.st === 'live'; i++) { if (f) f(i); sim.tick(DT); } };
 const put = (h, x, y) => { h.x = x; h.y = y; h.path = null; h.target = null; };
 const tank = h => { h.S.armor = 0.6; h.max = h.hp = 9000; };
-function jump(s, n) { s.wave = n - 1; s.time = D.waveStartAt(n) - 0.1; s.nextWaveAt = s.time + 0.08; s.tick(DT); s.tick(DT); }
+// to a wave as if the party had kept the old pace: quests from before it are settled (skipped), and the one that wave used to bring is
+// handed out (quests keep their own pace since 2026-10-31: one at a time, each taken from its giver; autoQuest takes it at once)
+function jump(s, n) { s.wave = n - 1; s.time = D.waveStartAt(n) - 0.1; s.nextWaveAt = s.time + 0.08; for (const id of D.QUEST_ORDER) if (s.q[id].st === 0 && D.QUESTS[id].offerWave < n) s.q[id].st = 3; s.qNextAt = 0; s.tick(DT); s.tick(DT); }
 const evs = (sim, tag) => sim.log.ev.filter(e => e[0] === tag);
 // a hero in the thick of it: whatever raider comes within reach goes down
 const fight = sim => { for (const e of sim.enemies) if (!e.dead && e.qr) { const h = sim.heroes.find(x => !x.dead && hyp(x.x - e.x, x.y - e.y) < 300); if (h) sim.dmgE(e, 1e6, h, {}); } };
@@ -139,11 +141,11 @@ console.log('The Bounds:');
   // props: the client reads the state from the snapshot after it is done
   check(s.snapshot().qx.st[0] === 4, 'the finished stakes stay in the snapshot (4)');
   check(!s.allies.includes(null) && s.extraVis.every(v => v[2] > 0), 'no stray vision left behind');
-  // missed at the deadline
-  s = makeSim(2, 12); run(s, 0.2); jump(s, 7); run(s, 3); jump(s, 10); run(s, 1);
-  check(s.q.stakes.st === 1, 'still open on the wave before the deadline'); jump(s, 11); run(s, 1);
-  check(s.q.stakes.st === 3 && evs(s, 'q').some(e => e[1] === 'stakes' && e[2] === 3), 'missed at the deadline wave with a missed event');
-  check(s.heroes.every(h => !h.offers), 'a missed quest gives no boons'); check(![...s.enemies].some(e => !e.dead && e.qr), 'a missed quest leaves no raiders behind');
+  // no deadline: a quest nobody works waits, and the next waits behind it
+  s = makeSim(2, 12); run(s, 0.2); jump(s, 7); run(s, 3); jump(s, 12); run(s, 1);
+  check(s.q.stakes.st === 1 && !evs(s, 'q').some(e => e[1] === 'stakes' && e[2] === 3), 'still open well past its old deadline wave');
+  check(D.QUEST_ORDER.filter(id => D.QUESTS[id].offerWave >= 12).every(id => s.q[id].st === 0) && !s.qWait.length, 'and the next quest waits until it ends');
+  check(s.heroes.every(h => !h.offers), 'an open quest gives no boons yet');
   // the Warden falls: missed at once
   s = makeSim(2, 13); run(s, 0.2); jump(s, 7); run(s, 0.3); const sq = s.snapshot().qx.st;
   put(s.heroes[0], sq[1] + 30, sq[2]); put(s.heroes[1], sq[1] - 30, sq[2]);
@@ -180,8 +182,8 @@ console.log('The First Mill:');
   check(s.enemies.some(e => !e.dead && e.qr && e.qr.qid === 'mill'), 'a surge comes at the frame');
   put(hh, 3200, 4000); for (let k = 0; k < 600 && s.q.mill.st === 1; k++) { s.tick(DT); put(hh, 3200, 4000); }
   check(s.q.mill.st === 3, 'with nobody to hold it the frame is broken and the quest missed'); check(![...s.enemies].some(e => !e.dead && e.qr), 'its raiders are gone with it');
-  // missed by time
-  s = makeSim(2, 23); run(s, 0.2); jump(s, 13); jump(s, 17); run(s, 1); check(s.q.mill.st === 3, 'missed at the deadline (wave 17)');
+  // no deadline
+  s = makeSim(2, 23); run(s, 0.2); jump(s, 13); jump(s, 18); run(s, 1); check(s.q.mill.st === 1, 'still open past its old deadline (wave 17)');
 }
 
 // ---------------------------------------------------------------- The Winter Larder
@@ -202,7 +204,7 @@ console.log('The Winter Larder:');
     h.hp = h.max * 0.2; const before = h.hp; jump(s, 21); check(h.hp >= before + h.max * T.larder.meal - 1, 'a meal at the start of each wave mends a third (' + Math.round(before) + ' to ' + Math.round(h.hp) + ')'); check(evs(s, 'qxw').some(e => e[1] === 0), 'the client is told');
     // someone else can gather too
     const t = makeSim(3, 77); run(t, 0.2); jump(t, 20); put(t.heroes[2], X.LARDER[3][0], X.LARDER[3][1]); run(t, 0.3); check(t.snapshot().qx.lg[1] === 1, 'any hero can gather');
-    const m = makeSim(2, 78); run(m, 0.2); jump(m, 20); jump(m, 24); run(m, 1); check(m.q.larder.st === 3, 'missed at the deadline (wave 24)');
+    const m = makeSim(2, 78); run(m, 0.2); jump(m, 20); jump(m, 25); run(m, 1); check(m.q.larder.st === 1, 'still open past its old deadline (wave 24)');
   }
 }
 
@@ -241,7 +243,7 @@ console.log('The Last of the Stone:');
   for (let i = 0; i < need + T.choice.extra; i++) { put(b, X.PILE[0], X.PILE[1] + 20); s.intent('p0', { k: 'carry' }); if (b.carry) { s.dropCarry(b); } }
   s.drops.forEach(d => { d.gone = true; }); run(s, 0.3);
   check(s.q.choice.st === 3 && st0, 'if too much stone is lost the quest is missed'); check(!s.heroes.some(x => x.carryQ === 'choice') && !s.drops.some(d => d.q === 'choice' && !d.gone), 'and nothing is left carried or lying about');
-  s = prep(2, 43); jump(s, 25); run(s, 1); check(s.q.choice.st === 1, 'still open the wave before'); jump(s, 26); run(s, 1); check(s.q.choice.st === 3, 'missed at the deadline (wave 26)');
+  s = prep(2, 43); jump(s, 25); run(s, 1); check(s.q.choice.st === 1, 'still open later on'); jump(s, 27); run(s, 1); check(s.q.choice.st === 1, 'and past its old deadline (wave 26)');
 }
 
 // ---------------------------------------------------------------- The Watch-Fires
@@ -276,8 +278,8 @@ console.log('The Watch-Fires:');
   h.hp = 50; put(h, X.FIRES[2][0] + 30, X.FIRES[2][1]); run(s, 5); check(h.hp > 50 + 5 * (T.fires.mend - 1), 'standing by a fire mends (' + Math.round(h.hp) + ')');
   put(h, 3400, 4200); h.hp = 50; run(s, 2); check(h.hp < 52 + 2 * (h.S.reg || 0) + 1, 'and far from it does not');
   run(s, 60, () => put(h, 3400, 4200)); check(s.snapshot().qx.wf.every(f => f[0] === 1) && !s.enemies.some(e => !e.dead && e.qr), 'the fires stay lit for good and no raiders are left');
-  s = makeSim(2, 51); run(s, 0.2); jump(s, 24); jump(s, 28); run(s, 1); check(s.q.watchfires.st === 3, 'missed at the deadline (wave 28)');
-  check(s.snapshot().qx.wf.every(f => f[0] === 0), 'and the far rises stay dark');
+  s = makeSim(2, 51); run(s, 0.2); jump(s, 24); jump(s, 29); run(s, 1); check(s.q.watchfires.st === 1, 'still open past its old deadline (wave 28)');
+  check(s.snapshot().qx.wf.every(f => f[0] === 0), 'and the far rises stay dark while nobody lights them');
 }
 
 // ---------------------------------------------------------------- every boon
@@ -343,8 +345,35 @@ console.log('Pick and pay:');
   const snap = s.snapshot(true); check(snap.q.length === D.QUEST_ORDER.length, 'the snapshot lists them all (' + snap.q.length + ')'); check(JSON.stringify(snap).length < 12000, 'and stays small (' + JSON.stringify(snap).length + ' B)');
 }
 
-// ---------------------------------------------------------------- the whole run: bots do not touch the new quests, nothing breaks, nothing leaks
-console.log('A whole run with the quests open and nobody working them:');
+// ---------------------------------------------------------------- quests from the givers: their own pace, apart from the waves
+console.log('Quests from the givers:');
+{
+  const s = makeSim(2, 140, { autoQuest: false }); run(s, 0.2); const a = s.heroes[0], b = s.heroes[1];
+  check(!s.qWait.length && s.q.spring.st === 0, 'nobody calls before the first wave');
+  jump(s, 1); run(s, 0.2);
+  check(s.qWait.join() === 'spring' && s.q.spring.st === 0, 'with the first wave the Digger has work waiting (not started)');
+  check(evs(s, 'qa').some(e => e[1] === 'spring') && JSON.stringify(s.snapshot(true).props.qw) === '[["spring","digger"]]', 'the call is told (qa) and the ! rides in props.qw');
+  run(s, 30); check(s.q.spring.st === 0, 'it waits for as long as nobody comes');
+  const g = D.GIVER_AT.digger; put(a, g[0] + 900, g[1]);
+  s.intent('p1', { k: 'talk', id: 'gate' }); check(!b.talk, 'talking about work nobody is offering does nothing');
+  s.intent('p0', { k: 'talk', id: 'spring' }); check(a.talk === 'spring' && !!a.path, 'from afar, talking walks the hero over');
+  s.intent('p0', { k: 'move', x: a.x, y: a.y - 200 }); check(!a.talk, 'a new order calls the walk off');
+  s.intent('p0', { k: 'talk', id: 'spring' }); run(s, 25);
+  check(s.q.spring.st === 1 && !s.qWait.length && evs(s, 'qt').some(e => e[1] === 'spring' && e[2] === a.id), 'on arrival the quest is taken (qt), and the ! is gone');
+  check(evs(s, 'q').some(e => e[1] === 'spring' && e[2] === 0), 'and it starts as ever (q 0)');
+  // done: the next giver calls after a breath, not at once and not by the wave
+  s.finishQuest('spring'); run(s, 1); check(!s.qWait.length, 'right after a quest ends the next giver is not calling yet');
+  run(s, D.QUEST_FLOW.pause); check(s.qWait.join() === 'gate' && s.wave === 1, 'a moment later the Steward calls, still in the first wave');
+  const sg = D.GIVER_AT.steward; put(b, sg[0] + 40, sg[1] + 30); s.intent('p1', { k: 'carry' }); check(s.q.gate.st === 1, 'the use key beside a giver takes the work too');
+  // a quest nobody finishes holds the line: no deadline, the waves go on
+  jump(s, 9); run(s, 1); check(s.q.gate.st === 1 && !s.qWait.length, 'waves later it is still open and nothing new is called');
+  // the Covering is part of the siege: its giver calls when the siege comes, whatever else is open
+  const e = s.spawnEnemy('oldgnaw', 0); check(s.qWait.includes('cover') && s.q.gate.st === 1, 'the siege brings the Covering\'s call even with other work open'); e.dead = true; s.reap();
+  s.beginEnding(); check(!s.qWait.length, 'the ending clears every call');
+}
+
+// ---------------------------------------------------------------- the whole run: nobody works the quests, nothing breaks, nothing leaks
+console.log('A whole run with nobody working the quests:');
 {
   const s = makeSim(2, 130, { noSpawn: false }); run(s, 0.2); const hs = s.heroes;
   for (const h of hs) tank(h);
@@ -353,8 +382,7 @@ console.log('A whole run with the quests open and nobody working them:');
     s.camp.hp = s.camp.max;
   });
   check(s.wave >= 16, 'the run goes on through the middle waves (wave ' + s.wave + ')');
-  const open = NEW.filter(id => s.q[id].st === 1 && D.QUESTS[id].deadlineWave <= s.wave); check(open.length === 0, 'quests nobody works are missed at their deadline, never left open');
-  check(NEW.every(id => s.q[id].st === 3 || s.q[id].st === 0 || s.q[id].st === 2), 'every new quest is settled');
+  check(s.q.spring.st === 1 && D.QUEST_ORDER.every(id => id === 'spring' || s.q[id].st === 0), 'the first quest stays open while nobody works it, and the rest wait behind it (no deadlines)');
   check(!s.enemies.some(e => !e.dead && e.qr), 'and no raider is left alive');
 }
 

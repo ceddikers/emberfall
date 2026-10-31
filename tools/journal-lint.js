@@ -27,7 +27,7 @@ function lint() {
   const win = {};
   global.window = win;
   for (const b of BOSSES) {
-    const id = require.resolve(path.join(ROOT, 'client/js/journal', b + '.js'));
+    const id = require.resolve(path.join(process.env.JOURNAL_DIR || path.join(ROOT, 'client/js/journal'), b + '.js'));   // (JOURNAL_DIR: lint a working copy)
     delete require.cache[id];
     require(id);
     const d = win.JOURNAL_DATA && win.JOURNAL_DATA[b];
@@ -67,6 +67,8 @@ function lint() {
       if (!(d.moves || {})[m]) warnings.push(`${b}: cast "${m}" has no journal entry`);
     }
   }
+  // every entry reads fresh, within a boss and across bosses (tools/journal-repeats.js)
+  for (const r of require('./journal-repeats.js').check([])) problems.push('repeat: ' + r);
   return { problems, warnings, stats };
 }
 

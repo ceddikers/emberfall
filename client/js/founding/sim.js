@@ -50,6 +50,8 @@ const FoundingSim = (() => {
       this.palIdx = M.near(this.paths[0], M.P.gate[0], M.P.gate[1]).i; this.fordIdx = M.near(this.paths[1], M.P.ford[0], M.P.ford[1]).i;
       this.hHead = new Int32Array(HC * HR); this.hNext = new Int32Array(512);
       this.q = {}; for (const id of D.QUEST_ORDER) this.q[id] = { st: 0, prog: 0 };
+      this.qWait = []; this.qNextAt = 0;   // the quests waiting at their givers (a ! overhead), and when the next giver may call
+      this.autoQuest = !!o.autoQuest;   // headless pilots: a waiting quest is taken at once, as if someone walked straight over
       this.camp = { tk: 'camp', x: HEARTH[0], y: HEARTH[1], r: CAMP_R, hp: 0, max: 0 };
       this.props = {}; this.lastProps = ''; this.pal = null; this.carts = []; this.smith = null; this.dig = null; this.forge = 0; this.spring = 0; this.warm = false; this.luck = false;
       this.secrets = []; this.child = null; this.lastHurt = -99; this.dropN = 0; this.stats = {}; this.over = null; this.wipeT = 0; this.bossRef = null; this.casts = 0; this.snapN = 0;
@@ -127,9 +129,10 @@ const FoundingSim = (() => {
       if (this.st !== 'live') return;
       const h = this.hmap[pid]; if (!h) return;
       switch (m.k) {
-        case 'move': if (num(m.x) && num(m.y) && !h.dead) { h.target = null; h.pending = null; h.auto = true; h.chan = null; this.pathTo(h, clamp(m.x, 20, M.W - 20), clamp(m.y, 20, M.H - 20)); } break;
-        case 'stop': h.path = null; h.pending = null; h.target = null; h.chan = null; break;
-        case 'attack': { const e = this.enemyById(m.id); if (e && !h.dead && !e.under) { h.target = e; h.pending = null; h.path = null; h.chan = null; } break; }
+        case 'move': if (num(m.x) && num(m.y) && !h.dead) { h.target = null; h.pending = null; h.auto = true; h.chan = null; h.talk = null; this.pathTo(h, clamp(m.x, 20, M.W - 20), clamp(m.y, 20, M.H - 20)); } break;
+        case 'stop': h.path = null; h.pending = null; h.target = null; h.chan = null; h.talk = null; break;
+        case 'attack': { const e = this.enemyById(m.id); if (e && !h.dead && !e.under) { h.target = e; h.pending = null; h.path = null; h.chan = null; h.talk = null; } break; }
+        case 'talk': this.talkTo(h, m.id); break;
         case 'cast': if (!h.dead && SLOT[m.s] !== undefined) this.tryCast(h, m.s, m); break;
         case 'learn': this.learn(h, m.s); break;
         case 'buy': if (typeof m.up === 'string') this.buyUp(h, m.up); else if (typeof m.item === 'string') this.buyItem(h, m.item); break;
@@ -229,7 +232,7 @@ const FoundingSim = (() => {
 
     // ================================================================ tick
     // Solo pause (the host's tab only): with one human in the run the sim can be held; every clock in it is sim.time, so holding the ticks
-    // holds the wave timer, quest deadlines, respawns, set-piece timers and the chain's gaps. Returns whether the hold is on.
+    // holds the wave timer, the quest-givers' calls, respawns, set-piece timers and the chain's gaps. Returns whether the hold is on.
     setPaused(on) {
       if (on && (this.st !== 'live' || this.over || this.players.length !== 1 || (this.introActive && this.introActive()))) return false;
       this.paused = !!on; return this.paused;
@@ -280,10 +283,7 @@ const FoundingSim = (() => {
       if (def.boss && !this.noSpawn) this.spawnQ.push({ t: this.time + (def.bossAt || 5), kind: def.boss, lane: def.bossLane || 0 });
       this.ev(['w', n, def.boss ? 1 : 0, def.boss ? D.ENEMIES[def.boss].idx : -1, D.partOf(n)]);
       const tr = D.tierOf(n); if (tr > this.tier) { this.tier = tr; for (let lane = 0; lane < 2; lane++) this.ev(['step', tr, lane, D.stepKind(lane, tr)]); }   // once per lane per step
-      // quests: judge those whose deadline arrived, offer those that start now
-      for (const id of D.QUEST_ORDER) { const Q = D.QUESTS[id], q = this.q[id]; if (q.st === 1 && Q.deadlineWave <= n && !Q.judgeAt) this.judge(id); }
-      for (const id of D.QUEST_ORDER) if (D.QUESTS[id].offerWave === n && this.q[id].st === 0) this.offerQuest(id);
-      this.hook('wave', n);
+      this.hook('wave', n);   // (quests keep their own pace: flowQuests)
       if (n === 11) this.addSecret(4, 5126, 2326);   // a glint in the ford, only at dawn
       if (n === 13) { const s = this.secrets.find(x => x.n === 4); if (s && !s.st) s.st = 2; }
       if (n === 6) { const c = this.secrets.find(s => s.n === 5); if (c) { this.child = { x: c.x, y: c.y, st: 1, path: null, pi: 0, follow: null, repathT: 0 }; this.markProps(); } }
@@ -299,6 +299,7 @@ const FoundingSim = (() => {
         resume: false, stuck: 0, divert: lane === 1 && this.rand() < 0.6, dead: false, under: false, last: null, hitMask: 0, wallT: -9, ai: null, vuln: false, tier: 0, arm: 0 };
       if (!def.boss && !def.inert && !at) { const tr = D.tierOf(this.wave), mods = D.laneMods(lane, tr); e.tier = tr; e.arm = Math.min(0.5, mods.arm); e.speed = def.speed * (1 + mods.spd); }   // the lane's line-up has stepped up: stronger look, plate, pace
       if (def.boss) { e.ai = { ph: 'walk', t: 0, step: 0, gate: 0, next: 1, age: 0 }; this.bossRef = e; this.ev(['boss', e.id, def.idx]); }
+      if (kind === 'oldgnaw' && this.q.cover && this.q.cover.st === 0) this.callQuest('cover');   // the Covering is part of the siege: its giver calls now if nobody has reached it
       if (lane === 0 && this.longWay && !at && !def.boss && !def.inert && this.rand() < 0.4) { e.route = this.longRoute(); e.ri = 0; e.long = true; }   // The Road: part of every wave takes the long way round
       this.enemies.push(e); this.emap.set(e.id, e);
       return e;
@@ -892,7 +893,7 @@ const FoundingSim = (() => {
       if (a.tele) this.ev(['t', e.atk.id, 0, Math.round(cx), Math.round(cy), a.hitR, 0, 0, r2(a.wind), 0]);
     }
     resolveAtk(e) {
-      const a = e.atk, def = e.def.atk, t = a.tgt, dmg = def.dmg * D.dmgScale(this.wave); e.atk = null; e.acd = def.cd;
+      const a = e.atk, def = e.def.atk, t = a.tgt, dmg = def.dmg * D.dmgScale(Math.max(this.wave, e.waveAs || 0)); e.atk = null; e.acd = def.cd;
       for (const h of this.heroes) if (!h.dead && hyp(h.x - a.cx, h.y - a.cy) < a.R + h.r) this.hurtHero(h, dmg, e, { block: true });
       if (t && t.tk !== 'hero') this.hurtObj(t, dmg, e, a);
       if (e.def.elite) this.ev(['i', a.id, Math.round(a.cx), Math.round(a.cy)]);
@@ -1249,6 +1250,35 @@ const FoundingSim = (() => {
     // ================================================================ quests
     markProps() { /* props are diffed when a snapshot is sent */ }
     questState(id) { return this.q[id].st; }
+    // ---- the quests' own pace: one at a time in story order, each waiting at its giver until a hero walks up and takes it
+    giverAt(id) { return D.GIVER_AT[D.giverKey(id)]; }
+    callQuest(id) {
+      if (this.q[id].st !== 0 || this.qWait.includes(id)) return;
+      this.qWait.push(id); const g = this.giverAt(id); this.ev(['qa', id, g[0], g[1]]); this.markProps();
+    }
+    takeQuest(id, h) {
+      const i = this.qWait.indexOf(id); if (i < 0 || this.q[id].st !== 0) return false;
+      this.qWait.splice(i, 1); for (const o of this.heroes) if (o.talk === id) o.talk = null;
+      this.offerQuest(id); if (h) this.ev(['qt', id, h.id]); return true;
+    }
+    // a hero sent to a giver: taken on the spot when close, or walked over and taken on arrival (flowQuests)
+    talkTo(h, id) {
+      if (h.dead || this.ending || !this.qWait.includes(id)) return;
+      const g = this.giverAt(id); h.target = null; h.pending = null; h.chan = null;
+      if (hyp(h.x - g[0], h.y - g[1]) <= D.QUEST_FLOW.talkR) { h.path = null; this.takeQuest(id, h); return; }
+      h.talk = id; this.pathTo(h, g[0], g[1] + 50);
+    }
+    flowQuests() {
+      if (this.ending || this.wave < 1) return;
+      const busy = this.qWait.length || D.QUEST_ORDER.some(id => this.q[id].st === 1);
+      if (!busy && this.time >= this.qNextAt) { const id = D.QUEST_ORDER.find(k => this.q[k].st === 0); if (id) this.callQuest(id); }
+      if (this.autoQuest) { for (const id of this.qWait.slice()) this.takeQuest(id, null); return; }
+      for (const h of this.heroes) {
+        if (!h.talk) continue;
+        if (h.dead || !this.qWait.includes(h.talk)) { h.talk = null; continue; }
+        const g = this.giverAt(h.talk); if (hyp(h.x - g[0], h.y - g[1]) <= D.QUEST_FLOW.talkR) { h.path = null; this.takeQuest(h.talk, h); }
+      }
+    }
     offerQuest(id) {
       const q = this.q[id], N = this.scaleN(), T = D.QUEST_TUNE; q.st = 1; q.prog = 0; this.ev(['q', id, 0]);
       if (id === 'spring') { this.dig = { x: M.P.spring[0], y: M.P.spring[1], prog: 0, need: T.digSecs + T.digPerExtra * (N - 1) }; this.digTarget = { tk: 'dig', x: this.dig.x, y: this.dig.y, r: 30 }; this.spring = 1; }
@@ -1264,6 +1294,7 @@ const FoundingSim = (() => {
       this.markProps();
     }
     updateQuests(dt) {
+      this.flowQuests();
       const sp = this.q.spring, gt = this.q.gate, fr = this.q.fire;
       if (sp.st === 1 && this.dig) {
         const heroNear = this.heroes.some(h => !h.dead && hyp(h.x - this.dig.x, h.y - this.dig.y) < 260), foe = this.enemyNear(this.dig.x, this.dig.y, 220);
@@ -1328,6 +1359,7 @@ const FoundingSim = (() => {
       if (HAUL_IDS.includes(id)) this.clearHaul(id);
       for (const h of this.heroes) { if (h.offers) h.offerQ.push(Q.boons.slice()); else h.offers = Q.boons.slice(); this.addXp(h, Q.xp); h.dirty = true; }
       this.ev(['q', id, 2]); this.markProps(); this.hook('questDone', id);
+      this.qNextAt = this.time + D.QUEST_FLOW.pause;
     }
     failQuest(id) {
       const q = this.q[id]; if (q.st !== 1) return; q.st = 3;
@@ -1338,8 +1370,9 @@ const FoundingSim = (() => {
       if (id === 'stonegate') this.sg = null;
       if (id === 'cover') this.covering = false;
       this.ev(['q', id, 3]); this.markProps();
+      this.qNextAt = this.time + D.QUEST_FLOW.pause;
     }
-    fireFail() { this.smith = null; this.forge = 0; if (this.q.fire.st === 1) { this.q.fire.st = 3; this.ev(['q', 'fire', 3]); } this.markProps(); }
+    fireFail() { this.smith = null; this.forge = 0; if (this.q.fire.st === 1) { this.q.fire.st = 3; this.ev(['q', 'fire', 3]); this.qNextAt = this.time + D.QUEST_FLOW.pause; } this.markProps(); }
     judge(id) { const q = this.q[id]; if (q.st !== 1) return; if (id === 'gate' && this.carts.some(c => c.arrived)) { this.finishQuest(id); return; } this.failQuest(id); }
 
     // ================================================================ Day one's secrets (state only; the client draws them faintly)
@@ -1370,6 +1403,7 @@ const FoundingSim = (() => {
     interact(h) {
       if (h.dead || this.st !== 'live' || this.ending) return;
       const near = (x, y, r) => hyp(h.x - x, h.y - y) <= r;
+      for (const id of this.qWait) { const g = this.giverAt(id); if (near(g[0], g[1], D.QUEST_FLOW.talkR)) { this.takeQuest(id, h); return; } }   // a giver with work waiting
       // a brand in hand relights a dark post
       if (h.brand > 0) for (const p of this.posts) if (!p.lit && near(p.x, p.y, 100)) { h.chan = { kind: 'relight', t: 0, need: QT.relightSecs, post: p }; h.path = null; return; }
       if (!h.carry) {
@@ -1435,6 +1469,7 @@ const FoundingSim = (() => {
     // the end beat: the gate shuts, the Warden counts the heroes in, the Steward names the town
     beginEnding() {
       for (const id of D.QUEST_ORDER) if (this.q[id].st === 1) this.failQuest(id);
+      if (this.qWait.length) { this.qWait.length = 0; this.markProps(); }
       this.ending = { t: 0, step: 0, counted: 0 };
       for (const h of this.heroes) { h.chan = null; h.path = null; h.pending = null; h.target = null; if (h.dead) this.respawn(h, h.x, h.y, 1, 0); h.invul = 99; }
       this.ev(['end', 0]);
@@ -1499,7 +1534,7 @@ const FoundingSim = (() => {
         posts: this.posts.map(p => p.slot), postsOff: this.posts.filter(p => !p.lit).map(p => p.slot), postSlots: this.q.road.st === 1,
         graves: this.graves, roof: this.roofDone ? 1 : (this.q.roof.st === 1 && Hr && Hr.need ? r2(0.9 * Hr.got / Hr.need) : 0), capstone: this.cap >= 1 ? 1 : r2(this.cap),
         carved: this.sg ? r2(this.sg.carve) : this.q.stonegate.st === 2 ? 1 : 0, shut: this.shut, ending: this.ending ? 1 : 0, glint: this.secrets.some(s => s.n === 4 && !s.st),
-        qo, qd, ...(this.mods.length ? this.hookProps() : null) };
+        qo, qd, qw: this.qWait.map(id => [id, D.giverKey(id)]), ...(this.mods.length ? this.hookProps() : null) };
     }
     hookProps() { const p = {}; this.hook('props', p); return p; }
     heroFlags(h) {

@@ -98,16 +98,16 @@ const lastProps = sim => { const f = sim.log.fds.filter(m => m.props).pop(); ret
   }
   for (const id of order) for (const o of ['done', 'missed']) { const r = ST.THREAD.REACT[id] && ST.THREAD.REACT[id][o]; check(r && ST.FOUNDERS[r[0]] && r[0] !== giver(id), `${id} ${o}: a reaction from someone other than the giver`); }
 
-  // the hand-off only names a job that is open or about to be offered; further off it only hints
+  // the hand-off names the next job: quests keep their own pace (2026-10-31), so the next one is always the giver's to hand out soon,
+  // whatever the wave (the far lines stay written in THREAD.LEAD, unused)
   for (let i = 0; i < order.length - 1; i++) {
     const id = order[i], nxt = order[i + 1], at = Q[nxt].offerWave;
-    for (const [wave, st, want] of [[at - 3, {}, 'far'], [at - 2, {}, 'far'], [at - 1, {}, 'near'], [at, { [nxt]: 1 }, 'near']]) {
+    for (const [wave, st] of [[at - 3, {}], [at - 1, {}], [at, { [nxt]: 1 }]]) {
       const n = ST.nextAfter(id, ctxOf(st, wave));
-      check(n && n.id === nxt && n.timing === want, `after ${id} at wave ${wave}: ${nxt} is ${want} (${n && n.id} ${n && n.timing})`);
+      check(n && n.id === nxt && n.timing === 'near', `after ${id} at wave ${wave}: ${nxt} is next (${n && n.id} ${n && n.timing})`);
     }
-    const near = ST.thread('q', id, 2, ctxOf({ [nxt]: 1 }, at))[1], far = ST.thread('q', id, 2, ctxOf({}, at - 3))[1];
-    check(near.t.endsWith(ST.THREAD.LEAD[nxt].near.replace('{S}', ST.FOUNDERS[giver(nxt)].name)) || near.t.endsWith(ST.THREAD.LEAD[nxt].near.replace('{S}', 'I')), `${id}: an open job is named: ${near.t}`);
-    check(far.t.endsWith(ST.THREAD.LEAD[nxt].far.replace('{S}', ST.FOUNDERS[giver(nxt)].name)) && far.t !== near.t, `${id}: a far job is only hinted: ${far.t}`);
+    const near = ST.thread('q', id, 2, ctxOf({}, at - 3))[1];
+    check(near.t.endsWith(ST.THREAD.LEAD[nxt].near.replace('{S}', ST.FOUNDERS[giver(nxt)].name)) || near.t.endsWith(ST.THREAD.LEAD[nxt].near.replace('{S}', 'I')), `${id}: the next job is named: ${near.t}`);
     // a job already settled is skipped: the hand-off points at the next one still to do
     if (i + 2 < order.length) { const n2 = ST.nextAfter(id, ctxOf({ [nxt]: 2 }, at)); check(n2 && n2.id === order[i + 2], `after ${id} with ${nxt} settled the thread points at ${order[i + 2]}`); }
   }

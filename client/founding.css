@@ -169,6 +169,8 @@ body.in-founding #tip small { font-size: 13px; }
 #fd-quests .q .dl { flex: none; min-width: 46px; text-align: center; font: 700 11px/1.15 var(--fd-fantasy); color: #f3e6c4; background: #7a2a1c; padding: 4px 6px 10px; clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 84%, 0 100%); }
 #fd-quests .q .dl small { display: block; font: 500 11px/1.1 var(--fd-body); letter-spacing: .1em; text-transform: uppercase; opacity: .85; color: inherit; }
 #fd-quests .q .dl.soon { background: #b02a18; animation: fdsoon 1.6s ease-in-out infinite; } @keyframes fdsoon { 50% { background: #d4402a; } }
+#fd-quests .q .dl.ask { min-width: 28px; font-size: 15px; color: #2b1a0a; background: #d6a640; }   /* a giver with work waiting: the ! over their head */
+#fd-quests .q.wait { cursor: help; }
 #fd-quests .qdone { margin-top: 6px; padding-top: 6px; border-top: 1px dotted #7a5a2a77; display: flex; flex-direction: column; gap: 2px; font-size: 13px; } #fd-quests .qdone span { cursor: help; }
 #fd-quests .qdone .ok { color: #2f6a2f; } #fd-quests .qdone .no { color: #8a2a1a; }
 /* the hero frame and the skill bar */

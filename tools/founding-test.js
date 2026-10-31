@@ -37,7 +37,7 @@ function makeSim(N, seed, extra) {
     } else if (m.t === 'fdend') log.fdend.push(m);
   };
   const emitTo = (id, m) => { log.fdp++; log.fdpLast[id] = m; };
-  const sim = new FoundingSim(Object.assign({ players, emit, emitTo, seed, autoLoot: true }, extra || {}));
+  const sim = new FoundingSim(Object.assign({ players, emit, emitTo, seed, autoLoot: true, autoQuest: true }, extra || {}));
   sim.log = log;
   for (let i = 0; i < N; i++) sim.intent('p' + i, { k: 'pick', hero: (extra && extra.heroes ? extra.heroes : ['bastion', 'cleric', 'pyromancer', 'ranger'])[i] });
   sim.intent('p0', { k: 'ready' });
@@ -227,30 +227,31 @@ function sectionQuests() {
   s.intent('p0', { k: 'boon', id: 'springstep' }); check(h0.boons.springstep && !h0.offers, 'a boon can be picked once');
   // fountain: full heal rate vs trickle
   s.heroes[1].hp = 10; put(s.heroes[1], M.P.spring[0], M.P.spring[1] + 20); runFor(s, 3); check(s.heroes[1].hp > 40, 'the full fountain heals quickly (' + Math.round(s.heroes[1].hp) + ')');
-  // The Spring: missed
+  // The Spring: nobody digs (no deadline: it waits)
   s = quiet(2, 12); runFor(s, D.WAVE_T0 + 3 * D.WAVE_GAP + 2, () => { for (const x of s.heroes) put(x, 3200, 2200); });
-  check(s.q.spring.st === 3 && s.spring === 0, 'The Spring missed leaves the trickle'); s.heroes[1].hp = 10; put(s.heroes[1], M.P.spring[0], M.P.spring[1] + 20); runFor(s, 3); check(s.heroes[1].hp < 25, 'a missed Spring only trickles (' + Math.round(s.heroes[1].hp) + ')');
-  check(!s.heroes[0].offers || s.heroes[0].offers.every(id => !D.QUESTS.spring.boons.includes(id)), 'a missed quest gives no boons');
+  check(s.q.spring.st === 1 && s.spring !== 2, 'The Spring nobody digs stays open, and the fountain stays a trickle'); s.heroes[1].hp = 10; put(s.heroes[1], M.P.spring[0], M.P.spring[1] + 20); runFor(s, 3); check(s.heroes[1].hp < 25, 'a missed Spring only trickles (' + Math.round(s.heroes[1].hp) + ')');
+  check(!s.heroes[0].offers || s.heroes[0].offers.every(id => !D.QUESTS.spring.boons.includes(id)), 'an unfinished quest gives no boons');
+  check(s.q.gate.st === 0 && !s.qWait.length, 'and the next quest waits behind it');
   // Stone for the Gate: done
-  s = quiet(2, 13); runFor(s, D.WAVE_T0 + 1 * D.WAVE_GAP + 1);
+  s = quiet(2, 13); jump(s, 2); runFor(s, 1);
   check(s.q.gate.st === 1 && s.carts.length === 2, 'Stone for the Gate offers two carts for two heroes');
-  const s4 = quiet(4, 13); runFor(s4, D.WAVE_T0 + 1 * D.WAVE_GAP + 1); check(s4.carts.length === 3, 'three carts for four heroes');
+  const s4 = quiet(4, 13); jump(s4, 2); runFor(s4, 1); check(s4.carts.length === 3, 'three carts for four heroes');
   const c0 = s.carts[0].s; runFor(s, 5); check(s.carts[0].s === c0, 'a cart does not move without a hero beside it');
   let guard = 0; while (s.q.gate.st === 1 && guard++ < 3000) { const cs = s.carts.filter(c => !c.arrived), c = cs[0]; if (!c) break; const p = M.along('north', Math.max(c.s - 15, c.sGate)); put(s.heroes[1], p[0], p[1]); s.tick(DT); }
   check(s.q.gate.st === 2 && s.pal && s.pal.hp > 0, 'the carts arrive and the palisade stands (hp ' + (s.pal ? s.pal.hp : 0) + ')');
   // an enemy on the North Road has to break the palisade
   s.noSpawn = false; const e = s.spawnEnemy('ashling', 0); runFor(s, 80); check(s.pal && s.pal.hp < s.pal.max || !s.pal, 'North Road enemies attack the palisade'); check(e.pi >= 0, 'enemy walked');
-  // Stone for the Gate: missed
-  s = quiet(2, 14); runFor(s, D.WAVE_T0 + 5 * D.WAVE_GAP + 2);
-  check(s.q.gate.st === 3 && !s.pal, 'Stone for the Gate missed leaves the road open');
+  // Stone for the Gate: nobody walks the carts (no deadline: they wait on the road)
+  s = quiet(2, 14); jump(s, 2); runFor(s, 2); jump(s, 7); runFor(s, 1);
+  check(s.q.gate.st === 1 && !s.pal, 'Stone for the Gate waits while nobody walks the carts, and the road stays open');
   // The First Fire
-  s = quiet(2, 15); runFor(s, D.WAVE_T0 + 2 * D.WAVE_GAP + 1);
+  s = quiet(2, 15); jump(s, 3); runFor(s, 1);
   check(s.q.fire.st === 1 && s.smith && s.forge === 1, 'The First Fire lights at wave 3'); check(!s.shopStock().some(x => x.rar >= 2), 'the shop keeps only basics before the forge opens');
   runFor(s, 70); check(s.q.fire.st === 2 && s.forge === 2, 'The First Fire completes: the forge opens'); check(s.shopStock().some(x => x.rar >= 2), 'the shop stocks forged gear after');
-  s = quiet(2, 16); runFor(s, D.WAVE_T0 + 2 * D.WAVE_GAP + 1); s.hurtObj(s.smith, 9999, null, null);
+  s = quiet(2, 16); jump(s, 3); runFor(s, 1); s.hurtObj(s.smith, 9999, null, null);
   check(s.q.fire.st === 3 && s.forge === 0 && !s.smith, 'a fallen Smith misses The First Fire');
   // enemies divert to the Smith
-  s = quiet(2, 17); runFor(s, D.WAVE_T0 + 2 * D.WAVE_GAP + 1); s.noSpawn = false; const se = s.spawnEnemy('streak', 1, [4500, 2840]);   // west of the river, with a clear run to her
+  s = quiet(2, 17); jump(s, 3); runFor(s, 1); s.noSpawn = false; const se = s.spawnEnemy('streak', 1, [4500, 2840]);   // west of the river, with a clear run to her
   se.tgt = null; s.carts = []; runFor(s, 25); check(se.tgt === s.smith || s.smith.hp < s.smith.max || se.dead, 'a runner goes for the Smith');
 }
 
@@ -455,8 +456,9 @@ function sectionPerf() {
 }
 
 // ---------------------------------------------------------------- the later run
-// jump a quiet sim to the moment wave n arrives
-function jump(s, n) { s.wave = n - 1; s.time = D.waveStartAt(n) - 0.1; s.nextWaveAt = s.time + 0.08; s.tick(DT); s.tick(DT); }
+// jump a quiet sim to the moment wave n arrives, as if the party had kept the old pace: quests from before it are settled (skipped) and the
+// one that wave used to bring is handed out (quests keep their own pace since 2026-10-31: one at a time from its giver; autoQuest takes it)
+function jump(s, n) { s.wave = n - 1; s.time = D.waveStartAt(n) - 0.1; s.nextWaveAt = s.time + 0.08; for (const id of D.QUEST_ORDER) if (s.q[id].st === 0 && D.QUESTS[id].offerWave < n) s.q[id].st = 3; s.qNextAt = 0; s.tick(DT); s.tick(DT); }
 const interact = (s, pid) => s.intent(pid, { k: 'carry' });
 function haulOne(s, pid, id, still) {   // pick one up at the depot, carry it, put it down
   const h = s.hmap[pid], H = s.haul[id];
@@ -485,10 +487,11 @@ function sectionBeaconRoad() {
   runFor(s, 12); jump(s, 8); runFor(s, 40); check(s.peak < 0.9 && s.night > 0.6 && s.night < 0.9, 'a lit beacon makes the night lighter (' + s.night.toFixed(2) + ')');
   // the circlet is a run item found by the slab
   const hh = s.heroes[1]; put(hh, 1504, 1872); interact(s, 'p1'); check(hh.items.some(x => x && x.id === 'circlet') && s.secrets.find(x => x.n === 2).st === 1, 'the circlet is found at the foot of the hill');
-  // The Beacon: missed, and the night is darker
+  // The Beacon left undone, and the night is darker
   const m = quiet(2, 73); jump(m, 5); jump(m, 8); runFor(m, 40); const dark = m.night; jump(m, 10); runFor(m, 1);
-  check(m.q.beacon.st === 3 && !m.beaconLit && !m.heroes[0].offers, 'The Beacon missed leaves it cold'); check(dark > 0.95 && m.peak === 1, 'an unlit beacon makes the night darker (' + dark.toFixed(2) + ')');
-  check(m.drops.length === 0 && m.haul.beacon.left === 0, 'a missed haul leaves nothing lying about');
+  check(m.q.beacon.st === 1 && !m.beaconLit && !m.heroes[0].offers, 'The Beacon nobody carries for stays cold (and open)'); check(dark > 0.95 && m.peak === 1, 'an unlit beacon makes the night darker (' + dark.toFixed(2) + ')');
+  put(m.heroes[0], m.haul.beacon.fx, m.haul.beacon.fy); interact(m, 'p0'); m.dropCarry(m.heroes[0]); m.failQuest('beacon');
+  check(m.drops.length === 0 && m.haul.beacon.left === 0, 'a lost haul leaves nothing lying about');
 
   // The Road
   s = quiet(2, 74); jump(s, 9); const r = s.heroes[0];
@@ -508,9 +511,9 @@ function sectionBeaconRoad() {
   const a = s.spawnEnemy('ashling', 0), b = s.spawnEnemy('ashling', 0); a.route = null; a.long = false; b.route = s.longRoute(); b.ri = 0; b.long = true; a.speed = b.speed = 100;
   let ta = -1, tb = -1; for (let i = 0; i < 20 * 120 && (ta < 0 || tb < 0); i++) { s.tick(DT); if (ta < 0 && hyp(a.x - M.P.hearth[0], a.y - M.P.hearth[1]) < M.CAMP_R + 40) ta = s.time; if (tb < 0 && hyp(b.x - M.P.hearth[0], b.y - M.P.hearth[1]) < M.CAMP_R + 40) tb = s.time; }
   check(ta > 0 && tb > 0 && tb > ta + 6, `the long way arrives later (${ta.toFixed(0)} s vs ${tb.toFixed(0)} s)`);
-  // The Road: missed, and they all come straight
+  // The Road left undone, and they all come straight
   const mm = quiet(2, 75); jump(mm, 9); jump(mm, 13); runFor(mm, 0.5); mm.noSpawn = false;
-  check(mm.q.road.st === 3 && !mm.longWay, 'The Road missed leaves the way open'); let any = 0; for (let i = 0; i < 60; i++) if (mm.spawnEnemy('ashling', 0).route) any++; check(any === 0, 'every enemy comes straight when The Road is missed');
+  check(mm.q.road.st === 1 && !mm.longWay, 'The Road nobody plants leaves the way open'); let any = 0; for (let i = 0; i < 60; i++) if (mm.spawnEnemy('ashling', 0).route) any++; check(any === 0, 'every enemy comes straight until The Road is done');
 }
 
 function sectionGravesGate() {
@@ -525,7 +528,7 @@ function sectionGravesGate() {
   check(s.q.graves.st === 2 && s.blessing === 1, 'The First Graves complete: the meadow blesses the camp'); check(h.offers && h.offers.every(id => D.QUESTS.graves.boons.includes(id)), 'three Grave boons are offered');
   hh.hp = 5; s.killHero(hh); check(s.blessing === 0, 'the blessing is spent on the first fall'); runFor(s, 3.2); check(!hh.dead && hh.hp > 20 && hh.deaths === 1, 'a fallen hero rises by themselves, once'); check(s.log.tags.bl && s.log.tags.bl.length === 1, 'the blessing event is sent');
   s.killHero(hh); check(hh.respT >= D.TUNE.respawn, 'the second fall has the usual wait');
-  const mg = quiet(2, 82); jump(mg, 11); jump(mg, 15); runFor(mg, 0.5); check(mg.q.graves.st === 3 && mg.blessing === 0, 'The First Graves missed: no blessing');
+  const mg = quiet(2, 82); jump(mg, 11); jump(mg, 15); runFor(mg, 0.5); check(mg.q.graves.st === 1 && mg.blessing === 0, 'The First Graves undone: no blessing');
 
   // The Stone Gate
   s = quiet(2, 83); jump(s, 16); const g = s.heroes[0], G = s.haul.stonegate;
@@ -543,7 +546,7 @@ function sectionGravesGate() {
   const g2 = s.heroes[1]; put(g2, 2660, 1716); interact(s, 'p1'); check(g2.pages.includes(7), 'the word in another hand can be read');
   // the stone gate outlasts the palisade
   const palHp = D.QUEST_TUNE.palHp * 3 + D.QUEST_TUNE.palPerExtra; check(s.pal.max > palHp * 1.5, `the stone gate is far sturdier than the palisade (${s.pal.max} vs ${palHp})`);
-  const mm = quiet(2, 85); jump(mm, 16); jump(mm, 20); runFor(mm, 0.5); check(mm.q.stonegate.st === 3 && !mm.pal && !mm.sg, 'The Stone Gate missed: no stone gate');
+  const mm = quiet(2, 85); jump(mm, 16); jump(mm, 20); runFor(mm, 0.5); check(mm.q.stonegate.st === 1 && !mm.pal && !mm.sg, 'The Stone Gate undone: no stone gate');
 
   // The Roof
   s = quiet(2, 86); jump(s, 18); const r = s.heroes[0], R = s.haul.roof;
@@ -552,7 +555,7 @@ function sectionGravesGate() {
   check(s.q.roof.st === 2 && s.roofDone && s.snapshot().props.roof === 1, 'The Roof completes'); check(r.offers && r.offers.every(id => D.QUESTS.roof.boons.includes(id)), 'three Roof boons are offered');
   const base = quiet(2, 87); jump(base, 18); base.camp.hp = base.camp.max - 300; s.camp.hp = s.camp.max - 300; runFor(base, 3.2); runFor(s, 3.2);
   check(s.camp.hp > base.camp.hp + 20, `the roofed hall mends the camp between waves (${Math.round(s.camp.hp)} vs ${Math.round(base.camp.hp)})`);
-  const mm2 = quiet(2, 88); jump(mm2, 18); jump(mm2, 22); runFor(mm2, 0.5); check(mm2.q.roof.st === 3 && !mm2.roofDone, 'The Roof missed: no camp healing');
+  const mm2 = quiet(2, 88); jump(mm2, 18); jump(mm2, 22); runFor(mm2, 0.5); check(mm2.q.roof.st === 1 && !mm2.roofDone, 'The Roof undone: no camp healing');
 
   // The Covering
   s = quiet(2, 89); jump(s, 26); const c0 = s.heroes[0], c1h = s.heroes[1];
