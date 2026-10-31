@@ -937,11 +937,11 @@ SPEC_TALENTS.alembist = {
 SPEC_TALENTS.shadowblade = {
   bladedancer: [
     [
-      { id: 'shadowblade_encore', name: 'Encore', ab: 'step', text: 'A Flourish leaves one Tempo behind: the next one needs only two more perfect finishers. The Flourish itself hits for {d:1250} (was {d:650}).' },
+      { id: 'shadowblade_encore', name: 'Encore', ab: 'step', text: 'A Flourish leaves one Tempo behind: the next one needs only two more perfect finishers. The Flourish itself hits for {d:2000} (was {d:1000}).' },
       { id: 'shadowblade_pirouette', name: 'Pirouette', ab: 'step', text: 'Blade Fury now whirls you round the boss to its far side, and for 2s you take 30% less damage.' },
     ],
     [
-      { id: 'shadowblade_curtain', name: 'Curtain Call', ab: 'dance', text: 'When Shadow Dance ends you close it with one last spin: {d:1400} on the boss, a sure critical hit.' },
+      { id: 'shadowblade_curtain', name: 'Curtain Call', ab: 'dance', text: 'When Shadow Dance ends you close it with one last spin: {d:2200} on the boss, a sure critical hit.' },
       { id: 'shadowblade_eye', name: 'Eye of the Storm', ab: 'step', text: 'The blades turn blows aside: you take 8% less damage for each Tempo you hold (up to 24%), until the Flourish is spent.' },
     ],
   ],
@@ -995,13 +995,13 @@ SPEC_TALENTS.thermist = {
   ],
   zenith: [
     [
-      { id: 'thermist_solarwind', name: 'Solar Wind', ab: 'equil', text: 'Sunset no longer moves the dial: the stars fall 70% harder and the shield comes up as if it had dropped to 0, but you stay at the edge, free to light a fresh Corona. Sunset comes back in 22s.' },
+      { id: 'thermist_solarwind', name: 'Solar Wind', ab: 'equil', text: 'Sunset no longer moves the dial: the stars fall 130% harder and the shield comes up as if it had dropped to 0, but you stay at the edge with one Corona left burning, free to light more. Sunset comes back in 18s.' },
       { id: 'thermist_slag', name: 'Slag Plate', ab: 'flare', text: 'Each Corona you light cools over you as slag: a shield of {s:150} for 8s, adding to what is left.' },
     ],
     [
       { id: 'thermist_redgiant', name: 'Red Giant', ab: 'invert', grants: true,
-        text: 'Inversion becomes Red Giant (60s): for 10s you can hold up to 5 Corona at the edge instead of 3, the 4th and 5th edge casts hit 125% harder, and a Thermal Shock set off while it lasts is half again as strong. Pressed On the Brink with a full three, it lets you hold on.' },
-      { id: 'thermist_alert', name: 'Red Alert', ab: 'equil', text: 'Whenever the boss begins a cast while you hold 2 or more Corona, Sunset comes off cooldown at once.' },
+        text: 'Inversion becomes Red Giant (40s): for 12s you can hold up to 5 Corona at the edge instead of 3, the 4th and 5th edge casts hit 200% harder, and a Thermal Shock set off while it lasts is half again as strong. Pressed at the edge it lights a Corona at once, and pressed On the Brink with a full three, it lets you hold on.' },
+      { id: 'thermist_alert', name: 'Red Alert', ab: 'equil', text: 'Whenever the boss begins a cast while you hold 2 or more Corona, Sunset comes off cooldown at once, and the stars of that Sunset fall 60% harder.' },
     ],
   ],
 };
@@ -1173,12 +1173,12 @@ Object.assign(SPEC_TALENTS, {
     // Dancer, The Long Waltz: long strings, the four-swing finisher
     dancer: [
       [
-        { id: 'thresher_encore', name: 'Encore', ab: 'finish', text: 'After a four-swing finisher the next string starts at swing 2.' },
-        { id: 'thresher_pirouette', name: 'Pirouette', ab: 'string', text: 'The third swing spins and hits everything all round you, and hits 55% harder.' },
+        { id: 'thresher_encore', name: 'Encore', ab: 'finish', text: 'After a four-swing finisher the next string starts at swing 3, and its finisher hits 30% harder.' },
+        { id: 'thresher_pirouette', name: 'Pirouette', ab: 'string', text: 'The third swing spins and hits everything all round you, and hits 120% harder.' },
       ],
       [
-        { id: 'thresher_danse', name: 'Danse Macabre', ab: 'snap', text: 'A Full Harvest leaves a dancing scythe behind: it swings once more a moment later for {d:150}.' },
-        { id: 'thresher_unbroken', name: 'Unbroken Step', ab: 'string', text: 'A Blink adds a swing to the string you hold, and that swing cuts at once for {d:84}.' },
+        { id: 'thresher_danse', name: 'Danse Macabre', ab: 'snap', text: 'A Full Harvest leaves a dancing scythe behind: it swings twice more, a moment apart, for {d:340} each.' },
+        { id: 'thresher_unbroken', name: 'Unbroken Step', ab: 'string', text: 'A Blink adds a swing to the string you hold, and that swing cuts at once for {d:220}.' },
       ],
     ],
     // Phantom, The Vanishing Edge: Blink chains

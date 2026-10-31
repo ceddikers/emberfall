@@ -1511,6 +1511,8 @@ const BOT_CLASS = {
         if (k.talent('thermist_pulse') && Math.abs(t) >= 4) return eq;
         if (k.talent('thermist_deadcentre') && k.stacks('momentum') < 4) return eq;   // (Dead Centre: Equilibrium fills the Momentum)
         if (k.talent('thermist_alert') && k.stacks('corona') >= 2 && view.bossCast) return eq;   // (Red Alert: Sunset goes out inside a cast, after the cast has begun and refilled it; pressed earlier it would spend the Corona the refill needs)
+        // Solar Wind (Zenith): Sunset on a full Corona is the stars (and keeps the dial at the edge); a swelled Red Giant waits for the 4th and 5th
+        if (k.talent('thermist_solarwind') && k.def.corona && k.stacks('corona') >= (k.has('redgiant') && k.remaining('redgiant') > 2 ? 5 : 3)) return eq;
       }
       if (k.gcdRemaining() > 0 || k.cast || k.lockUntil > k.now) return null;
       // Latent Heat: past the edge opens a short window of free casts: fire the edge spell once more to open it, then swing back inside the edge before it closes

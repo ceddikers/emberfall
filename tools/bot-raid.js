@@ -21,6 +21,8 @@ const path = require('path');
 const load = (p) => require(path.join(__dirname, '../client/js', p));
 Object.assign(global, load('arena/shapes.js'), load('data.js'), load('combat/engine.js'), load('combat/kits.js'), load('combat/specs.js'),
   load('combat/actor.js'), load('arena/fight.js'), load('arena/bots.js'));
+// bots hold talents, the strongest build for the rows a party has by the boss's set (combat/bot-builds.js); BOT_TALENTS=off plays base kits
+Object.assign(global, load('combat/talents.js'), ...(process.env.BOT_TALENTS === 'off' ? [] : [load('combat/bot-builds.js')]));
 Object.assign(global, load('arena/scoring.js'), load('arena/raid-host.js'), load('hardplus.js'));   // (hardplus.js: the Hard+ modifiers, played with mods=all or MODS=shortfuse,heavyhands,... on a Hard run)
 const { GRUBNAK } = load('arena/bosses/grubnak.js');
 const { SKITTERRA } = load('arena/bosses/skitterra.js');

@@ -50,8 +50,9 @@
 
 const SKITTERRA = {
   id: 'skitterra', name: 'Queen Skitterra', title: 'Spider Broodmother',
-  hp: { normal: 3700000, hard: 3800000 },   // (Hard 4.3M before 2026-10-27, 4.0M before the Moth Queen heals a bar and a half as she emerges: the 15000 she gets back is this much less to kill first)
-  hardDmg: 1.09,   // (Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
+  normalDmg: 1.08,   // (Normal's damage multiplier, fight.js default 1; 2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven))
+  hp: { normal: 4095000, hard: 4410000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 3700000 / 3800000; Hard 4.3M before 2026-10-27, 4.0M before the Moth Queen heals a bar and a half as she emerges: the 15000 she gets back is this much less to kill first)
+  hardDmg: 1.45,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.09; Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
   autoDmg: { normal: 1800, hard: 1650 },
   enrage: { normal: 602, hard: 595 },   // the cast starts here and lands 8 s later (10:10 / 10:03)
   enrageName: 'Devour',

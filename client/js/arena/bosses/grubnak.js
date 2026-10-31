@@ -42,8 +42,9 @@
 
 const GRUBNAK = {
   id: 'grubnak', name: 'Grubnak', title: 'The Ogre Chef',
-  hp: { normal: 3900000, hard: 4000000 },   // (Hard: 4.35M before the Gorged form healed three bars (600k), so the same fight is as long as it was)
-  hardDmg: 1.15,   // (Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
+  normalDmg: 1.26,   // (Normal's damage multiplier, fight.js default 1; 2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven))
+  hp: { normal: 4215000, hard: 4580000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 3900000 / 4000000; Hard: 4.35M before the Gorged form healed three bars (600k), so the same fight is as long as it was)
+  hardDmg: 1.26,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.15; Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
   autoDmg: { normal: 1750, hard: 1750 },
   enrage: { normal: 592, hard: 622 },   // the cast starts here and lands 8 s later (10:00 / 10:30; Hard's is later since the Gorged form's three healed bars lengthen the fight)
   enrageName: 'Last Call',

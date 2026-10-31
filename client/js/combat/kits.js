@@ -1393,7 +1393,7 @@ function bladeStep(k, ab) {
 // every frame: Curtain Call (Bladedancer: Shadow Dance ends in a final spin), Eye of the Storm (a Flourish held ready turns blows aside)
 function bladeTick(k) {
   const dancing = k.has('dance');
-  if (k.g.wasDance && !dancing && k.talent('shadowblade_curtain')) { k.damage(1400, { ab: abBase(k, 'step'), autoCrit: true }); k.fx('empower'); }
+  if (k.g.wasDance && !dancing && k.talent('shadowblade_curtain')) { k.damage(2200, { ab: abBase(k, 'step'), autoCrit: true }); k.fx('empower'); }
   k.g.wasDance = dancing;
   if (k.talent('shadowblade_eye') && k.stacks('tempo') >= 1 && k.now >= (k.g.eyeAt || 0)) { k.g.eyeAt = k.now + 1; k.mitigate('self', 0.08 * Math.min(3, k.stacks('tempo')), 1.25, { ab: abBase(k, 'step'), tag: 'sus:eye' }); }   // (8% for each Tempo held; re-sent every second and kept as ONE cut by the host, never stacked on itself: 8% is what 7% in overlapping 1.1s cuts averaged)
 }
@@ -2370,7 +2370,7 @@ function kitHoleClamp(from, dest, inHole, blink) {
 const THERMIST = { STEP: 0.08, EDGE: 5, SHOCK_MIN: 3, SHOCK_BASE: -120, SHOCK_PER: 105 };
 // Zenith: every edge cast adds a Corona and keeps you at the edge; the one that fills it (3, or 5 in Red Giant) leaves you
 // On the Brink. The next Thermal Shock spends them all (+25% each); Sunset drops them as falling stars. They fade 12s after the last edge cast.
-const CORONA = { MAX: 3, GIANT: 5, SHOCK: 0.25, FADE: 12, STAR: 170, SLAG: 150, GIANT_DUR: 10, GIANT_HIT: 2.25 };
+const CORONA = { MAX: 3, GIANT: 5, SHOCK: 0.25, FADE: 12, STAR: 170, SLAG: 150, GIANT_DUR: 12, GIANT_CD: 40, GIANT_HIT: 3 };
 const coronaCap = k => (k.has('redgiant') ? CORONA.GIANT : Math.max(CORONA.MAX, k.stacks('corona')));   // (Red Giant ending with 4 or 5 held: they stay, they are not clamped back to 3)
 const THERM_SHOCK = { id: 'shock', name: 'Thermal Shock' };
 const thermAt = (k, n) => Math.abs(k.g.temp) >= n;
@@ -2526,7 +2526,7 @@ function thermTick(k) {
   const cast = bossCasting(k);
   if (k.talent('thermist_bell') && cast && !g.bellSeen) { const s = Math.sign(g.temp) || (g.side || 1); thermMove(k, -2 * s); k.fx('invert'); }
   // Red Alert (Zenith's spec row VII): the boss begins a cast while you hold 2 or more Corona, and Sunset is ready at once
-  if (k.talent('thermist_alert') && cast && !g.bellSeen && k.stacks('corona') >= 2) { k.refill('sunset'); k.fx('empower'); }
+  if (k.talent('thermist_alert') && cast && !g.bellSeen && k.stacks('corona') >= 2) { k.refill('sunset'); k.g.alertStar = true; k.fx('empower'); }   // (and the stars of that Sunset fall 60% harder)
   g.bellSeen = cast;
 }
 // Equilibrium: the dial snaps to 0 behind a shield sized by how far it fell
@@ -2549,10 +2549,13 @@ function thermEquil(k, ab, o = {}) {
 function thermSunset(k, ab) {
   const n = k.stacks('corona');
   k.clear('corona');
-  const star = CORONA.STAR * (k.talent('thermist_solarwind') ? 1.7 : 1);   // (Solar Wind: the stars hit 70% harder)
+  const star = CORONA.STAR * (k.talent('thermist_solarwind') ? 2.3 : 1) * (k.g.alertStar ? 1.6 : 1);   // (Solar Wind: the stars hit 130% harder; Red Alert: the Sunset it readied, 60% harder)
+  k.g.alertStar = false;
   for (let i = 0; i < n; i++) k.after(0.2 + 0.12 * i, () => k.damage(star, { ab, extra: true }));
   if (n) k.fx('sunset', { n });
   thermEquil(k, ab, { stay: k.talent('thermist_solarwind'), big: n >= 1 || Math.abs(k.g.temp) >= 3 });   // (Solar Wind, Zenith's spec row VI; Cold Front: a star or 3 steps)
+  // (Solar Wind: the wind carries a spark, one Corona is left burning at the edge, so the next climb starts a step up, whatever the fight did to the cast before)
+  if (k.talent('thermist_solarwind') && Math.abs(k.g.temp) === THERMIST.EDGE && k.stacks('corona') < coronaCap(k) - 1) thermCorona(k, Math.sign(k.g.temp));
 }
 // the Equilibrium / Sunset talents that don't depend on which one it is
 function thermUtility(k, ab, big) {
@@ -3201,13 +3204,15 @@ talentMoves('pyromancer', {
 // Thermist (Zenith's spec row VII: SPEC_TALENTS in talents.js)
 talentMoves('thermist', {
   thermist_redgiant: {
-    id: 'redgiant', replaces: 'invert', icon: 'invert', name: 'Red Giant', type: 'ogcd', target: 'self', cd: 60, anim: 'big', talent: true,
-    desc: `For ${CORONA.GIANT_DUR}s you swell: you can hold up to ${CORONA.GIANT} Corona at the edge instead of ${CORONA.MAX}, the 4th and 5th edge casts hit 125% harder, and a Thermal Shock set off while it lasts is half again as strong. If you're On the Brink with a full Corona, it lets you hold on.`,
+    id: 'redgiant', replaces: 'invert', icon: 'invert', name: 'Red Giant', type: 'ogcd', target: 'self', cd: CORONA.GIANT_CD, anim: 'big', talent: true,
+    desc: `For ${CORONA.GIANT_DUR}s you swell: you can hold up to ${CORONA.GIANT} Corona at the edge instead of ${CORONA.MAX}, the 4th and 5th edge casts hit 200% harder, and a Thermal Shock set off while it lasts is half again as strong. At the edge it lights a Corona at once, and if you're On the Brink with a full Corona, it lets you hold on.`,
     glow: k => thermAt(k, THERMIST.EDGE) && k.stacks('corona') >= 2,
     effect(k) {
       k.buff('redgiant', CORONA.GIANT_DUR);
       // a full three no longer fills the Corona: the Brink it set is lifted
       if (k.has('brink') && k.stacks('corona') < CORONA.GIANT) k.clear('brink');
+      // (swelling at the edge lights a Corona at once: the 4th comes a cast sooner, and a pause in the fight costs less of the window)
+      if (Math.abs(k.g.temp) === THERMIST.EDGE && k.stacks('corona') < CORONA.GIANT) thermCorona(k, Math.sign(k.g.temp));
       // (Polar Vortex and Solstice ride on Red Giant too: the vortex on the boss, the flip when the swelling ends)
       if (k.talent('thermist_vortex')) k.dot('vortex', 220, 12, 1.5, { ab: this });
       if (k.talent('thermist_solstice')) k.after(CORONA.GIANT_DUR, () => { const t = k.g.temp; if (t) { k.g.temp = -t; thermSettle(k, -t, 0.85, { keep: true }); k.fx('invert'); } });
@@ -6152,7 +6157,7 @@ function reapSwing(k, ab) {
   if (!s || s.n <= 0 || now >= s.until) {
     s = g.str = { n: 0, start: now, until: now };
     const stepped = k.consume('stepthrough'), tolled = k.consume('tollstep');
-    if (stepped || tolled || g.encore) { s.n = stepped || tolled ? 2 : 1; g.encore = false; }
+    if (stepped || tolled || g.encore) { s.n = stepped || tolled || k.talent('thresher_encore') ? 2 : 1; g.encore = false; if (g.encoreFin) { g.tollFin = true; g.encoreFin = false; } }
     if (stepped) g.stepFin = true;   // (Step Through: the string starts at swing 3 and its finisher hits twice as hard; Last Toll: swing 3 and 30% harder; Encore: swing 2)
     if (tolled) g.tollFin = true;
     if (gate) g.gateT0 = now;
@@ -6161,7 +6166,7 @@ function reapSwing(k, ab) {
   s.n = n + 1;
   s.until = now + (ab.lock || REAP.SWING_LOCK) + REAP.GAP * (k.def.gapMult || 1);
   if (rel) { reapRelease(k, ab); return; }
-  const round = n === 2 && k.talent('thresher_pirouette'), pot = REAP.SW[Math.min(n, 3)] * (n === 3 && k.perk('thresher_w1') ? 1.3 : 1) * (round ? 1.55 : 1);   // (Pirouette: the spin hits 55% harder)
+  const round = n === 2 && k.talent('thresher_pirouette'), pot = REAP.SW[Math.min(n, 3)] * (n === 3 && k.perk('thresher_w1') ? 1.3 : 1) * (round ? 2.2 : 1);   // (Pirouette: the spin hits 120% harder)
   const foes = reapFoes(k, prim, { round, span: REAP.SW_SPAN[Math.min(n, 3)] });
   reapHit(k, ab, prim, foes, pot, REAP.SW_SHARE);
   k.fx('swing', { n, x: prim && prim.x ? Math.round(prim.x) : undefined, y: prim && prim.y ? Math.round(prim.y) : undefined });
@@ -6209,7 +6214,7 @@ function reapFinish(k, ab) {
   }
   k.fx('finish', { n, x: prim && prim.x ? Math.round(prim.x) : undefined, y: prim && prim.y ? Math.round(prim.y) : undefined });
   // Encore: after the four-swing finisher the next string starts at swing 2
-  if (n === 4 && k.talent('thresher_encore')) g.encore = true;
+  if (n === 4 && k.talent('thresher_encore')) { g.encore = true; g.encoreFin = true; }
   k.fxGain(1);
   reapEnd(k, true);
 }
@@ -6278,7 +6283,7 @@ function reapSnap(k, ab, o = {}) {
       fulls++;
       k.after(i * 0.07 + 0.1, () => { k.damage(REAP.FULL * (moon ? 1.5 : 1) * (waited ? REAP.AGED : 1), { ab, extra: true, snap: true, gb: true, tgt: reapTg(e.id) }); k.fx('full-harvest', { id: e.id }); });
       k.ultGain(REAP.FULL_U);
-      if (k.talent('thresher_danse')) k.after(1.2, () => { k.damage(150, { ab, extra: true, tgt: reapTg(e.id) }); k.fx('danse', { id: e.id }); });   // (Danse Macabre: a dancing scythe swings once more)
+      if (k.talent('thresher_danse')) for (const dt of [1.2, 2.4]) k.after(dt, () => { k.damage(340, { ab, extra: true, tgt: reapTg(e.id) }); k.fx('danse', { id: e.id }); });   // (Danse Macabre: a dancing scythe swings twice more)
     }
     for (const kd of kinds) delete g.marks[e.id][kd];
   }
@@ -6336,7 +6341,7 @@ function reapBlink(k, info) {
   // a blink keeps the string (and with Unbroken Step adds a swing to it)
   if (s && s.n > 0 && now < s.until) {
     s.until = Math.max(s.until, now + REAP.BLINK_HOLD);
-    if (k.talent('thresher_unbroken') && s.n < REAP.MAX) { s.n++; k.damage(84, { ab: reapAb(k, 'string'), hit: true, extra: true }); k.fx('swing', { n: s.n - 1 }); }   // (Unbroken Step: the swing the Blink adds cuts at once)
+    if (k.talent('thresher_unbroken') && s.n < REAP.MAX) { s.n++; k.damage(220, { ab: reapAb(k, 'string'), hit: true, extra: true }); k.fx('swing', { n: s.n - 1 }); }   // (Unbroken Step: the swing the Blink adds cuts at once)
   }
   k.buff('blinked', 4);
   if (info.through) {

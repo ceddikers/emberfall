@@ -41,8 +41,9 @@
 
 const BRANNOC = {
   id: 'brannoc', name: 'Brannoc', title: 'the Undefeated',
-  hp: { normal: 5600000, hard: 5450000 },
-  hardDmg: 1.38,   // (Hard's damage multiplier; fight.js default 1.25; 1.52 before 2026-10-27's retune for a human party; a little up as the health came down, so hits still bite; 1.34 before the 2026-10-26 fix pass, 1.43 before the de-cook pass)
+  normalDmg: 0.95,   // (Normal's damage multiplier, fight.js default 1; 2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven))
+  hp: { normal: 7000000, hard: 7770000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 5600000 / 5450000)
+  hardDmg: 1.56,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.38; Hard's damage multiplier; fight.js default 1.25; 1.52 before 2026-10-27's retune for a human party; a little up as the health came down, so hits still bite; 1.34 before the 2026-10-26 fix pass, 1.43 before the de-cook pass)
   autoDmg: { normal: 2200, hard: 2050 },
   enrage: { normal: 607, hard: 632 },   // the cast starts here and lands 8 s later (10:15 / 10:40)
   enrageName: 'The Final Bell',

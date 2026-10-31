@@ -71,9 +71,9 @@ const AZ = {
 
 const AZERATH = {
   id: 'archmage', name: 'Azerath', title: 'Master of the Seven Circles',
-  hp: { normal: 5880000, hard: 6100000 },   // (Normal 6.1M and Hard 6.4M before 2026-10-27)
-  normalDmg: 0.76,   // (Normal's damage multiplier, fight.js default 1: 2026-10-27, tuned for a human party rather than perfect bots, CLAUDE.md)
-  hardDmg: 1.10,   // (Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
+  hp: { normal: 7185000, hard: 7830000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 5880000 / 6100000; Normal 6.1M and Hard 6.4M before 2026-10-27)
+  normalDmg: 0.87,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 0.76; Normal's damage multiplier, fight.js default 1: 2026-10-27, tuned for a human party rather than perfect bots, CLAUDE.md)
+  hardDmg: 1.19,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.1; Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
   autoDmg: { normal: 2000, hard: 1850 },
   enrage: { normal: 600, hard: 605 },   // the cast starts here and lands 8 s later
   enrageName: 'The Tide Rises',

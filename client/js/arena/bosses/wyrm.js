@@ -39,9 +39,9 @@
 const HD = 1.7;
 const WYRM = {
   id: 'wyrm', name: 'Vhalgrath', title: 'Tyrant of the Cinder Peaks',
-  hp: { normal: 5200000, hard: 5430000 },
-  normalDmg: 0.84,   // (Normal's damage multiplier, fight.js default 1: 2026-10-27, tuned for a human party rather than perfect bots, CLAUDE.md)
-  hardDmg: HD * 0.88,   // (2026-10-27: every Hard hit 12% lighter, tuned for a human party rather than perfect bots, CLAUDE.md)
+  hp: { normal: 6120000, hard: 6650000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 5200000 / 5430000)
+  normalDmg: 0.92,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 0.84; Normal's damage multiplier, fight.js default 1: 2026-10-27, tuned for a human party rather than perfect bots, CLAUDE.md)
+  hardDmg: HD * 1.038,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was HD * 0.88; 2026-10-27: every Hard hit 12% lighter, tuned for a human party rather than perfect bots, CLAUDE.md)
   autoDmg: { normal: 2300, hard: Math.round(2100 * 1.25 / HD) },
   enrage: { normal: 582, hard: 622 },   // the cast starts here and lands 8 s later (9:50 / 10:30)
   enrageName: 'Ashfall',

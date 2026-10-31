@@ -23,7 +23,7 @@
 
 const SOVEREIGN = {
   id: 'sovereign', name: 'The Cinder Sovereign', title: 'the Ember',
-  hp: { normal: 9000000, hard: 9000000 },   // (8.64M until 2026-10-29; 9.0M at GEAR=post5: perfect bots kill at about 14:30, the gates at about 3:20, 7:35 and 11:45; humans at about 16:00)
+  hp: { normal: 14000000, hard: 14000000 },   // (2026-10-31: bots and parties hold every talent row here, so 9.0M became 14.0M; 8.64M until 2026-10-29; 9.0M at GEAR=post5: perfect bots kill at about 14:30, the gates at about 3:20, 7:35 and 11:45; humans at about 16:00)
   normalDmg: 1, hardDmg: 1,   // (the dmg table below is the real number: tuned 2026-10-29 at GEAR=post5, default line-up, then ACT_DMG per act)
   autoDmg: { normal: 2400, hard: 2400 },   // (was 2600 at normalDmg 0.78)
   enrage: { normal: 1012, hard: 1012 },   // the cast starts here and lands 8 s later (17:00; the user, 2026-10-29: human parties need the time)
@@ -1929,7 +1929,8 @@ const SOVEREIGN = {
     };
     // Per-act damage (tuning): the `dmg` table (damage, not the adds' health, and not the plate, the Aftershock, Scatter, the catch, the burst or the raidwides (Kindling, Dirge, Rebirth, Nightfall), which must stay survivable: each takes under about 65% of a full-health hero's health) is scaled by the act's number at the act's start, so each act can be set to
     // its own rate with a human party (a practice start runs the onStart of the acts it passes over, so the act it begins in is the last set).
-    const ACT_DMG = [3.3, 3.5, 4.5, 4.4], dmg0 = Object.assign({}, dmg);
+    // (2026-10-31: [3.3, 3.5, 4.5, 4.4] until bots and parties held every talent row here; the health went 9.0M -> 14.0M with it.)
+    const ACT_DMG = [3.5, 3.85, 5.18, 4.95], dmg0 = Object.assign({}, dmg);
     const actDmg = n => { B.dmgUp = 0; for (const k in dmg0) dmg[k] = /Hp$|^(catch|burst|plate|anvil|anvilFail|after|scatter|kindling|dirge|rebirth|night)$/.test(k) ? dmg0[k] : Math.round(dmg0[k] * ACT_DMG[n - 1]); };
     actI(0);
 

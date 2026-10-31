@@ -31,10 +31,15 @@ const noHead = t => t.replace(/<em>[^<]*<\/em>/g, '');
 
 // ------------------------------------------------------------------------------------------------ the network: net.js tabs on an in-memory Peer (as rejoin-test.js)
 const peers = new Map();
+// messages wait in one queue, drained in order: on its own a moment later, and by the fight loop each step, so how fast the machine runs never changes what arrives when
+const inbox = [];
+let draining = false;
+const drain = () => { while (inbox.length) inbox.shift()(); draining = false; };
+const deliver = fn => { inbox.push(fn); if (!draining) { draining = true; setImmediate(drain); } };
 class Emitter { constructor() { this.h = {}; } on(e, f) { (this.h[e] = this.h[e] || []).push(f); return this; } emit(e, ...a) { for (const f of this.h[e] || []) f(...a); } }
 class Conn extends Emitter {
   constructor(peer) { super(); this.peer = peer; this.open = false; this.other = null; }
-  send(m) { if (!this.open) return; const copy = JSON.parse(JSON.stringify(m)), o = this.other; setTimeout(() => { if (o && o.open) o.emit('data', copy); }, 0); }
+  send(m) { if (!this.open) return; const copy = JSON.parse(JSON.stringify(m)), o = this.other; deliver(() => { if (o && o.open) o.emit('data', copy); }); }
   close() { if (!this.open) return; this.open = false; this.emit('close'); const o = this.other; if (o && o.open) { o.open = false; setTimeout(() => o.emit('close'), 0); } }
 }
 class Peer extends Emitter {
@@ -105,11 +110,12 @@ async function main() {
     now = i * 0.05;
     raid.tick(0.05); lone.tick(0.05);
     for (const s of raid.sim.ps.values()) if (s.id < 1000) { s.alive = true; s.hp = s.maxHp; }
+    for (const s of lone.sim.ps.values()) { s.alive = true; s.hp = s.maxHp; }   // (Ana's stand-in never falls: a dead kit's clock stops and her timers would drift from the frame's)
     // her hero's item effect, for the item path (an item buff the engine reports; name and flags ride along)
     if (i === 20 * 20) aKit.fxBuffs = new Map([['g_polar:0', { end: aKit.now + 40, stacks: 2, name: 'Test Charm', mods: {} }]]);
     const m = PartyBuffs.scan(aKit, 'ranger', stA, now);
     if (m) { m.t = 'pbf'; sent.A.push(m); a.send(m); }
-    await new Promise(r => setImmediate(r));   // (the Peer stub delivers a tick later)
+    await new Promise(r => setImmediate(r)); drain();   // (the Peer stub delivers a tick later; whatever is still queued arrives before the next step)
     // watching every owner's row each tick: when did it last change (the set, a stack, or a timer refreshed or cut)?
     const rows = new Map();
     for (const h of heroes()) {
@@ -122,6 +128,7 @@ async function main() {
     if (i % 10 === 5) for (const h of heroes()) {
       const row = rows.get(h.id), sig = sigOfRow(row);
       if (now - (lastChange.get(h.id) || 0) < 1.0) continue;   // (a change is still on its way: it was in the last second)
+      if (row.some(x => x.left != null && x.left >= 0 && x.left < 0.3)) continue;   // (a buff in its last moment: the frame may count it out a step before the row does)
       const v = PartyBuffs.view(store, h.id, h.actor.cls.id, now), frame = v.kit.concat(v.item);
       samples++;
       if (row.length) aBuffsSeen++;
