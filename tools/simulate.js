@@ -556,6 +556,8 @@ const PRO = {
     if (k.g.heat >= 84 && k.g.heat < 90 && ventIn < 0.5 && k.charges(fb) > 0 && k.readyIn(fb) <= 0.0001 && !k.has('heating') && !k.has('hotstreak') && weaveOk(k)) return I(k, 'fireblast');
     // Smolder: Heat can't boil over for 10s, so ride it at 99 through Combustion (or when Vent is far off)
     if (abOf(k, 'smolder').id === 'smolder' && ready(k, 'smolder') && weaveOk(k) && k.g.heat >= 70 && (k.has('combust') || (k.g.heat >= 87 && ventIn > 4))) return I(k, 'smolder');
+    // Heat Haze (talent): its Fireball goes at once, mid-GCD, and starts a fresh GCD, so it goes out the moment it is up (not over a Hot Streak)
+    if (k.g.hazeSkip && k.has('haze') && !k.cast && k.gcdRemaining() > 0.0001 && !k.has('hotstreak') && k.g.heat <= 88 && k.readyIn(abOf(k, 'fireball')) <= 0.0001) return I(k, 'fireball');
     if (k.gcdRemaining() > 0.0001 || k.cast) return null;
     const moving = ctx.state.moving || ctx.isMoveWindow(ctx.t + 1.4);
     if (k.has('hotstreak') && k.g.heat >= 90 && ready(k, 'vent')) return I(k, 'vent');
