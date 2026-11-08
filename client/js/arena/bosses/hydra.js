@@ -87,7 +87,7 @@ const HYDRA = {
     const slotPos = (k, r = HEAD_R, da = 0) => ({ x: Math.round(Math.cos(slotAng(k) + da) * r), y: Math.round(Math.sin(slotAng(k) + da) * r) });
     const columns = () => f.props.filter(p => p.kind === 'column');
     const CYC = H ? 16 : 17.5;        // seconds for every head to have had its turn (a longer round the more heads there are; see relay)
-    const GAP_MIN = H ? 3.7 : 3.4;      // the least time between one head's attack and the next
+    const GAP_MIN = H ? 3.8 : 4.8;      // the least time between one head's attack and the next (longer than the longest cast, so no bar is cut; Hard's casts run 15% shorter)
 
     // --- the heads ------------------------------------------------------------------------------------------
     // element: number (the head's mark), name of its attack, colour (journal and art), what it does (run: below)
@@ -392,16 +392,19 @@ const HYDRA = {
     // a body move that lands d after it starts never lands on top of a head: if one is about to, it starts a moment later, and
     // the heads' round keeps clear of the place it lands
     let bodyEnd = 0;                    // when the body's latest (or latest laid) cast ends: no body cast starts before it
-    const bodyAt = (d, go) => {
+    // (d0: an earlier landing of the same move, such as the Thrash's first ring, kept clear of the heads as well)
+    const bodyAt = (d, go, d0) => {
       let delay = Math.max(0, bodyEnd - f.t + 0.1);
+      const ls = d0 === undefined ? [d] : [d0, d];
       for (let i = 0; i < 4; i++) {
-        const land = f.t + delay + d, hit = headLands.find(x => Math.abs(x - land) < AVOID);
+        let hit, hl = d;
+        for (const l of ls) { hit = headLands.find(x => Math.abs(x - (f.t + delay + l)) < AVOID); if (hit !== undefined) { hl = l; break; } }
         if (hit === undefined) break;
-        delay = Math.max(delay, hit + AVOID - f.t - d + 0.05);
+        delay = Math.max(delay, hit + AVOID - f.t - hl + 0.05);
       }
       delay = Math.min(delay, 4);
       bodyEnd = f.t + delay + d;
-      const run = () => { avoid.push([f.t + d - AVOID, f.t + d + AVOID]); relay(rot()[0] ? rot()[0].t : undefined); go(); };
+      const run = () => { for (const l of ls) avoid.push([f.t + l - AVOID, f.t + l + AVOID]); relay(rot()[0] ? rot()[0].t : undefined); go(); };
       if (delay > 0.05) f.afterKeep(delay, run); else run();
     };
     // the heads hold their round for a while (Gaze and Tidal Dance run alone)
@@ -431,13 +434,13 @@ const HYDRA = {
     // ... and the water she flung out comes back: the Undertow, a ring just outside the first, lands a moment after it. Both
     // are drawn from the start; whoever stood out of the first has a breath, after it lands, to step in or out of the second.
     const thrash = () => {
-      const d = f.ct(2.8), gap = f.ct(H ? 1.2 : 1.45);
-      bodyAt(d + gap, () => {
+      const d = f.ct(2.8), gap = f.ct(H ? 1.2 : 1.8);
+      bodyAt(d + gap, () => {   // (guards the Undertow's landing and the first ring's)
         f.cast('Tail Thrash', d, 'maul');
         f.mech({ type: 'aoe', shape: { kind: 'circle', x: B.x, y: B.y, r: 230 }, delay: d, dmg: dmg.thrash, tag: 'thrash' });
         f.mech({ type: 'aoe', shape: { kind: 'donut', x: B.x, y: B.y, r: 372, r2: 230 }, delay: d + gap, dmg: dmg.undertow, tag: 'undertow' });
         f.afterKeep(d, () => { if (!paused) f.cast('Undertow', gap, 'maul'); });
-      });
+      }, d);
     };
     // Hydra's Gaze (Hard): the whole inside of the temple. Only the ground near the wall is left out.
     const hydraGaze = () => {

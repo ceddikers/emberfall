@@ -46,7 +46,7 @@ const HERO_GUIDE = {
     ],
   },
   shadowblade: {
-    passive: { name: 'Positionals', icon: 'step', desc: 'Strike from behind for 2 combo points; Eviscerate from the side for {d:80} more. The boss faces the tank, so pick your side.' },
+    passive: { name: 'Positionals', icon: 'step', desc: 'Strike from behind for 2 combo points; Eviscerate from the side or behind for {d:80} more. The boss faces the tank, so stay off its front.' },
     combos: [
       { keys: ['q', 'q', 'w'], text: 'From behind: two Strikes give 4 points, then Eviscerate.' },
       { keys: ['d', 'q', 'q', 'q', 'w'], text: 'Venom Blade first: poisoned targets take 15% more from Eviscerate.' },

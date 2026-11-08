@@ -471,11 +471,35 @@ const BotAI = {
       if (pr) return PROPS.shadowSpot(big.src.x, big.src.y, pr, 30 + (bot.slot || 0) % 2 * 25, 0);
     }
     if (bot.role === 'tank') return { x: b.x, y: b.y - 125 };
-    if (this.isMelee(bot.cls)) return { x: b.x + (idx % 2 ? 40 : -40), y: b.y + 115 };
+    if (this.isMelee(bot.cls)) return this.offHuman(bot, view, { x: b.x + (idx % 2 ? 40 : -40), y: b.y + 115 });
     // (Skitterra aims her Venom Spit and Fang Rush at whoever stands farthest from her: the healer stands nearer than the
     // damage dealers, so the party's one healer isn't the one they are aimed at)
-    if (bot.role === 'healer' && view.bossId === 'skitterra') return { x: b.x + (idx % 2 ? 150 : -150), y: b.y + 175 };
-    return { x: b.x + (idx % 2 ? 170 : -170), y: b.y + 250 };
+    if (bot.role === 'healer' && view.bossId === 'skitterra') return this.offHuman(bot, view, this.sideSpot(bot, view, 150, 175));
+    return this.offHuman(bot, view, this.sideSpot(bot, view, 170, 250));
+  },
+  // a ranged bot's usual spot, on the side its slot takes; the other side (a step further back, so two don't stack) when a human stands near the usual one
+  sideSpot(bot, view, dx, dy) {
+    const b = view.boss, s0 = (bot.slot || 0) % 2 ? 1 : -1, hs = view.players.filter(p => !p.bot && p.alive);
+    const near = s => Math.min(...hs.map(p => hypot2(p.x - (b.x + s * dx), p.y - (b.y + dy))));
+    if (hs.length && near(s0) < 160 && near(-s0) > near(s0) + 60) return { x: b.x - s0 * dx, y: b.y + dy + 55 };
+    return { x: b.x + s0 * dx, y: b.y + dy };
+  },
+  // keeps a bot off a human: with one within 60 of its spot, the spot moves about 70 away from them (the melee swing round the boss, to stay in reach),
+  // unless the new spot is under a telegraph (the same danger scoring as the spot itself; the tank's spot is never moved)
+  offHuman(bot, view, spot) {
+    let near = null, nd = 60;
+    for (const p of view.players) { if (p.bot || !p.alive) continue; const d = hypot2(p.x - spot.x, p.y - spot.y); if (d < nd) { nd = d; near = p; } }
+    if (!near) return spot;
+    const b = view.boss, ux = spot.x - near.x, uy = spot.y - near.y, ul = Math.hypot(ux, uy);
+    let to;
+    if (this.isMelee(bot.cls)) {
+      const rx = spot.x - b.x, ry = spot.y - b.y, rl = Math.hypot(rx, ry) || 1, th = 70 / rl;
+      let tx = -ry / rl, ty = rx / rl;
+      if (tx * ux + ty * uy < 0) { tx = -tx; ty = -ty; }
+      to = { x: b.x + rx * Math.cos(th) + tx * rl * Math.sin(th), y: b.y + ry * Math.cos(th) + ty * rl * Math.sin(th) };
+    } else to = ul < 1 ? { x: spot.x + 70, y: spot.y } : { x: spot.x + ux / ul * 70, y: spot.y + uy / ul * 70 };
+    ARENA.clamp(to, 50);
+    return this.danger(bot, to.x, to.y, view) < 400 ? to : spot;
   },
   // a spot kept out of every solid prop's footprint: danger() charges 9000 inside sd 16, so a home that lands in a cask or pillar leaves
   // the nearest candidate a ring step (60) away, and the bot parks there for as long as the boss stands still
@@ -1294,14 +1318,14 @@ const BotAI = {
         bot.healTarget = first.id;   // (aimed first: whether the raise is ready can depend on who it lands on, kits.js Intervention's lockout)
         if (r >= 0 && readyIdx(r) && !(hurt[0] && hurt[0].f < (asked ? 0.25 : 0.35))) {
           const ct = k.castTime(ab(r)) || 0;
-          if (!ct || BotAI.stillOk(bot, view)) { if (ct) bot.stillUntil = view.t + ct + 0.15; bot.raiseFor = { id: first.id, until: view.t + ct + 0.5 }; return r; }
+          if (BotAI.noticed(bot, first.id, view.t) && (!ct || BotAI.stillOk(bot, view))) { if (ct) bot.stillUntil = view.t + ct + 0.15; bot.raiseFor = { id: first.id, until: view.t + ct + 0.5 }; bot.raiseGo = first.id; return r; }
         }
         bot.healTarget = was;
         const rw = idx('rewind');
         // (Rewind only brings back someone who fell in the last few seconds, and not the one a Recall is already on)
         const dsn = bot.deadSince || (bot.deadSince = {}); for (const d of dead) { const e = dsn[d.id]; if (!e || view.t - e.last > 1) dsn[d.id] = { first: view.t, last: view.t }; else e.last = view.t; }
         const rwD = dead.filter(d => view.t - dsn[d.id].first < 3.4 && !(bot.raiseFor && bot.raiseFor.until > view.t && bot.raiseFor.id === d.id));
-        if (rw >= 0 && readyIdx(rw) && rwD.length) { bot.healTarget = (rwD.find(d => d.id === first.id) || rwD[0]).id; return rw; }
+        if (rw >= 0 && readyIdx(rw) && rwD.length) { const rt = rwD.find(d => d.id === first.id) || rwD[0]; if (BotAI.noticed(bot, rt.id, view.t)) { bot.healTarget = rt.id; bot.raiseGo = rt.id; return rw; } }
       }
       let low = hurt[0];
       // a Gloomsworn gone Hollow (held at 1 HP, its damage written down as a debt): heal it until the debt is covered
@@ -1891,7 +1915,8 @@ BotAI.alembist = function (bot, k, view) {
   // a fallen ally and a Draught (or anything that raises) ready to go: throw it on them
   if (dead.length && k.now >= k.g.raiseAt) {
     const ri = vials.findIndex(v => ['DD', 'DQ', 'DDD'].includes(v.r));
-    if (ri >= 0) return throwAt(ri, (BotAI.raiseFirst(dead, view) || dead[0]).id);
+    const rf = ri >= 0 ? (BotAI.raiseFirst(dead, view) || dead[0]) : null;
+    if (rf && BotAI.noticed(bot, rf.id, view.t)) { bot.raiseGo = rf.id; return throwAt(ri, rf.id); }
   }
   // pick the vial to throw now, if any: the bot's own choice (players mark theirs by hand; Throw alone takes the oldest)
   const cands = vials.map((v, i) => i);
@@ -2160,6 +2185,14 @@ BotAI.partnersOf = function (view, id) {
   return out;
 };
 // the fallen player a healer bot raises first: the earliest who asked for it from the Down screen (raid-host rezAsk), or null
+// A healer sees a fall a moment after it happens (1.2 to 2 s, from its own rng), then goes for the raise; false until then. The timer is
+// kept for as long as the raise keeps being asked about, and starts over for a body that has been left alone for a while.
+BotAI.noticed = function (bot, id, t) {
+  const m = bot.rezSeen || (bot.rezSeen = {}), e = m[id];
+  if (!e || t - e.last > 1.5) { m[id] = { at: t + 1.2 + (bot.rng ? bot.rng() : 0.5) * 0.8, last: t }; return false; }
+  e.last = t;
+  return t >= e.at;
+};
 BotAI.raiseFirst = function (dead, view) {
   for (const id of view.rezAsks || []) { const p = dead.find(q => q.id === id); if (p) return p; }
   return null;
@@ -2234,7 +2267,7 @@ BotAI.threadweaver = function (bot, k, view) {
     bot.healTarget = first.id;
     if (ready(mend)) {
       const ct = k.castTime(k.abilities[mend]) || 0;
-      if (!ct || BotAI.stillOk(bot, view)) { if (ct) bot.stillUntil = view.t + ct + 0.15; bot.raiseFor = { id: first.id, until: view.t + ct + 0.5 }; return mend; }
+      if (BotAI.noticed(bot, first.id, view.t) && (!ct || BotAI.stillOk(bot, view))) { if (ct) bot.stillUntil = view.t + ct + 0.15; bot.raiseFor = { id: first.id, until: view.t + ct + 0.5 }; bot.raiseGo = first.id; return mend; }
     }
     bot.healTarget = was;
   }
@@ -2354,7 +2387,7 @@ BotAI.tidecaller = function (bot, k, view) {
       bot.healTarget = first.id;
       if (ready(sip)) {
         const rct = k.castTime(k.abilities[sip]) || 0;
-        if (!rct || BotAI.stillOk(bot, view)) { if (rct) bot.stillUntil = view.t + rct + 0.15; bot.raiseFor = { id: first.id, until: view.t + rct + 0.5 }; return sip; }
+        if (BotAI.noticed(bot, first.id, view.t) && (!rct || BotAI.stillOk(bot, view))) { if (rct) bot.stillUntil = view.t + rct + 0.15; bot.raiseFor = { id: first.id, until: view.t + rct + 0.5 }; bot.raiseGo = first.id; return sip; }
       }
       bot.healTarget = was;
     }
@@ -2449,7 +2482,7 @@ BotAI.lanternkeeper = function (bot, k, view) {
       bot.healTarget = first.id;
       if (ready(hand)) {
         const rct = k.castTime(k.abilities[hand]) || 0;
-        if (!rct || BotAI.stillOk(bot, view)) { if (rct) bot.stillUntil = view.t + rct + 0.15; bot.raiseFor = { id: first.id, until: view.t + rct + 0.5 }; return hand; }
+        if (BotAI.noticed(bot, first.id, view.t) && (!rct || BotAI.stillOk(bot, view))) { if (rct) bot.stillUntil = view.t + rct + 0.15; bot.raiseFor = { id: first.id, until: view.t + rct + 0.5 }; bot.raiseGo = first.id; return hand; }
       }
       bot.healTarget = was;
     }
@@ -2941,6 +2974,9 @@ const HUMAN_DEFAULTS = {
   reengage: [0.30, 0.80],    // seconds before pressing again after a walk of more than 0.4 s
 };
 const BotHuman = {
+  // the mild preset for the damage bots that fill a human-led party (main.js startRaid; tools/bot-raid.js HUMAN=lively): a slower look at the floor, now and then a late dodge
+  // or a lost moment, but never the wrong way and never the filler button
+  LIVELY: { react: [0.25, 0.45], misjudge: 0.05, wrongWay: 0, fillerChance: 0, lapseChance: 0.04 },
   rand(h, r) { return r[0] + h.rng() * (r[1] - r[0]); },
   // who plays human: 'dps' | 'tank' | 'healer' | 'all' | 'none' (or a comma list); params override HUMAN_DEFAULTS
   attach(host, who, params) {

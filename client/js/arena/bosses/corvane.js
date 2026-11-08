@@ -73,7 +73,7 @@ const CORVANE = {
     const TAU = Math.PI * 2;
     const dmg = {
       gale: H ? 12250 : 14800, cut: H ? 18300 : 22000, guard: H ? 17000 : 20500, draw: H ? 19700 : 23800, sweep: H ? 20350 : 24600,
-      still: H ? 9600 : 9200, breath: H ? 2900 : 3000, crane: H ? 23700 : 28600, comet: H ? 21550 : 26000, part: H ? 21900 : 26400,
+      still: H ? 5200 : 3500, breath: H ? 2900 : 3000, crane: H ? 23700 : 28600, comet: H ? 21550 : 26000, part: H ? 21900 : 26400,
       sheathe: H ? 13900 : 16800, wispHp: 34000, last: H ? 14800 : 17800, answer: H ? 5500 : 6600,
     };
     const S = (...steps) => steps.filter(Boolean);
@@ -273,7 +273,7 @@ const CORVANE = {
       exclude.add(tgt.id);
       const sx = B.x, sy = B.y;
       const m = f.mech({ type: 'aoe', shape: { kind: 'rect', x: sx, y: sy, angle: Math.atan2(tgt.y - sy, tgt.x - sx), len: 1300, w: 150 }, delay: d, dmg: dmg.comet,
-        aimFromBoss: tgt.id, lockAt: 0.3, tag: 'cvComet', cover: true, src: { x: sx, y: sy }, chip: 'used', ddown: true,
+        aimFromBoss: tgt.id, lockAt: H ? 0.45 : 0.55, tag: 'cvComet', cover: true, src: { x: sx, y: sy }, chip: 'used', ddown: true,
         onResolve: () => {
           // he arrives at the wall at the end of the line
           const s = m.shape, L = toWall(s.x, s.y, s.angle) - 90, ex = s.x + Math.cos(s.angle) * L, ey = s.y + Math.sin(s.angle) * L;

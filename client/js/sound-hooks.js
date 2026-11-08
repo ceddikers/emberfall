@@ -211,7 +211,8 @@ const SoundHooks = (() => {
     });
   }
   // a telegraph landing
-  function impact(type, hitMe) {
+  function impact(type, hitMe, empty) {
+    if (empty) { play('boss-impact-empty', { vol: 0.5, key: 'bimp', minGap: 0.12 }); return; }   // (it landed on nobody: still something happened)
     const heavy = hitMe || type === 'raidwide' || type === 'buster' || type === 'tower' || type === 'stack';
     play(heavy ? 'boss-impact-heavy' : 'boss-impact-light', { vol: heavy ? 0.9 : 0.7, key: 'bimp', minGap: 0.12 });
   }
@@ -682,6 +683,18 @@ const SoundHooks = (() => {
   // ---------------------------------------------------------------- the scene's beds, once a frame
   let amb = null, hum = null, heart = null, wasLow = false, musicScene = null, lastStep = 0;
   const STEP = { grass: 'step-grass', stone: 'step-stone', wood: 'step-wood' }, STEP_O = { vol: 0.2 };   // (made once: nothing new per frame)
+  // what each room's floor is, as far as the three step recipes go (the soft crunch stands in for snow, sand, mud and leaves)
+  const ARENA_GROUND = { grubnak: 'wood', hydra: 'grass', morrowoak: 'grass', titan: 'grass', corvane: 'grass', brannoc: 'grass' };   // (any other room is stone)
+  // a footstep in the fight: yours at 0.12, anyone else's at 0.05 and placed where they stand; k is a landing's extra weight
+  function step(bossId, mine, e, k = 1) {
+    if (!has() || !e) return;
+    safe(() => {
+      const n = STEP[ARENA_GROUND[bossId] || 'stone'];
+      play(n, mine ? { vol: 0.12 * k, key: 'step-me', minGap: 0.06 } : { vol: 0.05 * k, at: e, key: 'step:' + (e.id == null ? '' : e.id), minGap: 0.08 });
+    });
+  }
+  // the boss's footfall (every other stride; main.js updateArena), low and placed at him
+  function bossStep(bd) { if (has() && bd) safe(() => play('boss-step', { vol: 0.25, at: bd, key: 'bstep', minGap: 0.3 })); }
   const inRect = (x, y, r) => x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h;
   function ground(x, y) {
     if (typeof TOWN === 'undefined') return 'grass';
@@ -781,7 +794,7 @@ const SoundHooks = (() => {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUI); else wireUI();
   }
 
-  return { sovereignRoom, sovereignSetPiece, sovereignBurn, play, vo, ability, auto, hollow, thresher, tidecaller, lanternkeeper, kenseier, houndmaster, castStart, castEnd, stacks, telegraph, bossCast, impact, music, foundingMusic, phase, bossTrack, tick, stopBeds, ground, TG };
+  return { step, bossStep, sovereignRoom, sovereignSetPiece, sovereignBurn, play, vo, ability, auto, hollow, thresher, tidecaller, lanternkeeper, kenseier, houndmaster, castStart, castEnd, stacks, telegraph, bossCast, impact, music, foundingMusic, phase, bossTrack, tick, stopBeds, ground, TG };
 })();
 
 if (typeof module !== 'undefined') module.exports = { SoundHooks };

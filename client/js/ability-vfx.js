@@ -663,8 +663,9 @@ const ABILITY_VFX = (() => {
           if (st === 1) { V.hit(c.tx, c.ty, '#cfe0ff', 0.85); V.spikeburst(c.tx, c.ty, { r: 36, n: 10, color: BAST_STEEL, core: '#ffffff', ink: BAST_INK, dur: 0.26 }); V.sparks(c.tx, c.ty, { color: BAST_DAWN, n: 7, angle: c.ang, spread: 0.7, speed: 360 }); return; }
           V.hit(c.tx, c.ty, '#ffe9a0', 0.7); });
         if (judg) c.later(d + 0.14, () => {
-          V.flash(c.tx, c.ty - 16, 56, BAST_GOLD, 0.2); V.spikeburst(c.tx, c.ty, { r: 56, n: 14, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', dur: 0.34 });
-          V.shock(c.tx, c.ty, { r: 84, color: '#ffe08a', dur: 0.38, w: 5, delay: 0.04 });
+          V.flash(c.tx, c.ty - 16, 56, BAST_GOLD, 0.2); // (life pass) the verdict's climax: a gold starburst two heroes wide that holds a beat, embers left after
+          V.climax(c.tx, c.ty, { shape: 'burst', r: 84, n: 14, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', dur: 0.5, hold: 0.1, z: 18, after: { embers: 0.5, smoke: 0.3, mark: 0.5 } });
+          V.shock(c.tx, c.ty, { r: 100, color: '#ffe08a', dur: 0.38, w: 5, delay: 0.04 });
           V.burst(c.tx, c.ty - 10, { color: BAST_DAWN, color2: '#ffffff', n: 9, speed: 220, kind: 'star', flash: false }); shake(3);
           if (c.ent.st && typeof hitStop === 'function') hitStop(c.ent.st, 0.05, FX.now); }); },
       // a glint on the sword, a big radiant blade thrown end over end with a gold wake, a golden starburst and a seal where it lands
@@ -685,17 +686,21 @@ const ABILITY_VFX = (() => {
         V.sparks(fx, fy, { color: '#cfe0ff', n: 6, angle: c.ang, spread: 0.7, speed: 220 }); V.smoke(c.x, c.y, { n: 3, color: '#c8c0b0', size: 18, a: 0.45, speed: 40 }); },
       // a shaft of light slams down (Divine Leap): a golden starburst, a seal on the floor, stones kicked up, then the aura
       oath: c => { V.lightfall(c.x, c.y, { color: '#ffe08a', r: 30, h: 240, dur: 0.8, feathers: 0 }); V.aura(c.ent, { color: '#ffd65a', dur: 15, r: 30, rate: 0.12 });
-        c.later(0.2, () => { V.ink(c.x, c.y, { r: 60, dur: 1.4 }); V.sigil(c.x, c.y, { r: 60, style: 'star4', color: '#ffd65a', dur: 1.4, spin: 1.5 }); V.spikeburst(c.x, c.y, { r: 66, n: 14, hole: 0.5, color: '#ffd65a', core: '#fffbe0', ink: '#4a3408', fill: '#8a6a10', dur: 0.4, layer: 'ground', z: 0, flat: 0.6 }); V.debris(c.x, c.y, { n: 6, color: '#8a7a68' }); shake(3); }); },
+        c.later(0.2, () => { V.ink(c.x, c.y, { r: 60, dur: 1.4 }); V.sigil(c.x, c.y, { r: 60, style: 'star4', color: '#ffd65a', dur: 1.4, spin: 1.5 }); V.climax(c.x, c.y, { shape: 'burst', r: 96, n: 14, color: '#ffd65a', core: '#fffbe0', ink: '#4a3408', dur: 0.55, hold: 0.1, layer: 'ground', flat: 0.65, after: { embers: 0.6, smoke: 0.5, mark: 0.6 } }); V.debris(c.x, c.y, { n: 6, color: '#8a7a68' }); shake(3); }); },
       // Rally Banner: a glint and a shaft of light where it goes in, then the banner itself stands behind the bastion for
       // its 12s, a small seal at its foot and a faint gold ring round it (the old full-strength floor star is gone)
       banner: c => { const a = c.ang || 0, bx = c.x - Math.cos(a) * 24, by = c.y - Math.sin(a) * 14 - 4;
         V.glint(bx, by, { color: '#ffe08a', size: 30, z: 80 }); V.lightfall(bx, by, { color: '#ffe08a', r: 22, h: 260, dur: 0.8, feathers: 3 });
         c.later(0.12, () => { bastionBanner(bx, by, 12); OP.rim(bx, by, 150, BAST_GOLD, 12, { settle: 0.16, ticks: 20, spin: 0.08 });
           V.sigil(bx, by, { r: 56, style: 'star5', color: '#f2c84b', dur: 1.1, spin: 1 }); V.shock(bx, by, { r: 160, color: '#ffe08a', dur: 0.6, w: 6 });
+          // (life pass) the banner goes in with a starburst of dawn round its foot
+          V.climax(bx, by, { shape: 'burst', r: 88, n: 16, color: '#ffd65a', core: '#fffbe0', ink: '#4a3408', dur: 0.55, hold: 0.1, layer: 'ground', flat: 0.65, after: { embers: 0.5, mark: 0.5 } });
           V.debris(bx, by, { n: 6, color: '#8a7a68', speed: 0.7 }); V.smoke(bx, by, { n: 4, color: '#c8c0b0', size: 22, a: 0.45, speed: 45 }); shake(3); }); },
       // Bulwark: a glint, a blue dome flaring up, then a faint dome of hex plates that holds over the bastion for the 10s
       bulwark: c => { V.glint(c.x, c.y, { color: '#cfe0ff', size: 30, z: 40 }); V.ink(c.x, c.y, { r: 62, dur: 1.2, flat: 0.5, follow: c.ent }); V.dome(c.ent, { color: '#8fc0ff', r: 48, dur: 1.1 });
         bastionDome(c.ent, 10, '#8fc0ff');
+        // (life pass) the dome's footprint: a steel-blue ring of light two heroes wide, held a beat, then settling
+        V.climax(c.x, c.y, { shape: 'ring', r: 86, color: '#7fb2ff', core: '#e8f2ff', ink: BAST_INK, dur: 0.6, hold: 0.1, layer: 'ground', flat: 0.65, after: { smoke: 0.3, embers: 0.4, mark: 0.4 } });
         V.shock(c.x, c.y, { r: 110, color: '#9fc4ff', dur: 0.5, w: 7 }); V.burst(c.x, c.y - 20, { color: '#cfe0ff', n: 12, speed: 220, kind: 'star' }); shake(2); },
       // Sentinel: the tower shield slams forward, a blue shockwave off its face, dust kicked up
       bash: c => {
@@ -707,7 +712,9 @@ const ABILITY_VFX = (() => {
       // Crusader: a consecrated dome of dawn light over a rune circle
       // (the dome of dawn flares, then a faint gold dome of plates holds for the guard's 10s)
       zeal: c => { V.glint(c.x, c.y - 30, { color: BAST_DAWN, size: 30, z: 40 }); V.dome(c.ent, { color: '#ffd65a', r: 46, dur: 1.2 }); bastionDome(c.ent, 10, '#ffd65a');
-        V.sigil(c.x, c.y, { r: 70, style: 'star4', color: '#ffe27a', dur: 1, spin: 2 }); V.shock(c.x, c.y, { r: 110, color: BAST_DAWN, dur: 0.5, w: 6 }); V.burst(c.x, c.y - 30, { color: '#fff2b0', color2: '#ffffff', n: 14, speed: 200, kind: 'star' }); shake(2); },
+        V.sigil(c.x, c.y, { r: 70, style: 'star4', color: '#ffe27a', dur: 1, spin: 2 }); V.shock(c.x, c.y, { r: 110, color: BAST_DAWN, dur: 0.5, w: 6 });
+        // (life pass) the consecrated circle's footprint in gold
+        V.climax(c.x, c.y, { shape: 'ring', r: 88, color: '#ffd65a', core: '#fffbe0', ink: '#4a3408', dur: 0.6, hold: 0.1, layer: 'ground', flat: 0.65, after: { embers: 0.5, mark: 0.4 } }); V.burst(c.x, c.y - 30, { color: '#fff2b0', color2: '#ffffff', n: 14, speed: 200, kind: 'star' }); shake(2); },
     },
     bloodreaver: {
       // Hack & Maul (heavy axe): a wide crimson-iron arc, a grit-and-spark bite and a small crack in the floor; Maul, the
@@ -721,7 +728,11 @@ const ABILITY_VFX = (() => {
         else { V.slash(c.x, c.y, c.ang, { r: R - 10, span: 2.4, color: '#ff3a3a', w: 0.55, flip: f });
           OP.smear(c.x, c.y, c.ang, { r: R, span: maul ? 2.9 : 2.6, w: maul ? 28 : 22, color: REAV_RED, core: '#f0dcd4', ink: REAV_INK, dur: maul ? 0.34 : 0.28, flip: f, lines: maul ? 3 : 2 }); }
         c.later(0.1, () => { const m = between(c, 0.72); V.splash(c.tx, c.ty, { n: maul ? 9 : 5 }); V.hit(c.tx, c.ty, '#ff6a5a', maul ? 0.9 : 0.7);
-          V.spikeburst(c.tx, c.ty, { r: maul ? 46 : 34, n: 10, color: '#c0202a', core: '#ffe0c0', ink: REAV_INK, dur: maul ? 0.28 : 0.22 });
+          // (life pass) Maul, the combo's finisher, lands as a blood-red starburst two heroes wide, held a beat; Gore rips up as a
+          // great dark blade of blood; Hack stays the small bite
+          if (gore) V.climax(c.tx, c.ty + 8, { shape: 'bolt', r: 80, angle: -Math.PI / 2, color: '#c0202a', core: '#ffe0c0', ink: REAV_INK, dur: 0.5, hold: 0.1, z: 0, after: { embers: 0.4, mark: 0.4 } });
+          else if (maul) V.climax(c.tx, c.ty, { shape: 'burst', r: 82, n: 12, color: '#c0202a', core: '#ffe0c0', ink: REAV_INK, dur: 0.5, hold: 0.1, z: 16, after: { smoke: 0.3, embers: 0.4, mark: 0.4 } });
+          else V.spikeburst(c.tx, c.ty, { r: 34, n: 10, color: '#c0202a', core: '#ffe0c0', ink: REAV_INK, dur: 0.22 });
           V.sparks(c.tx, c.ty, { color: '#ffb070', n: maul ? 8 : 5, angle: gore ? -Math.PI / 2 : c.ang, spread: 0.9, speed: 340 });
           if (gore) for (let i = 0; i < 8; i++) V.spawn({ x: c.tx + rnd(-10, 10), y: c.ty, z: 30, vx: rnd(-90, 90), vy: rnd(-30, 30), vz: rnd(240, 380), g: 900, life: rnd(0.45, 0.7), size: rnd(6, 10), color: '#b0102a', kind: 'drop', add: false });
           if (!maul) return;
@@ -742,12 +753,14 @@ const ABILITY_VFX = (() => {
           V.spikeburst(c.tx, c.ty, { r: 44, n: 12, color: '#d0203a', core: '#ffd0d0', ink: '#2a0408', dur: 0.28 }); }); },
       // power gathers, then a ground slam: a starburst, the floor cracks with glowing lava, rocks fly; the flame aura stays on
       frenzy: c => { V.charge(c.x, c.y, { color: '#ff5a2a', r: 50, n: 8, dur: 0.25, follow: c.ent }); V.aura(c.ent, { color: '#ff2a1a', style: 'flame', dur: 12, r: 30, rate: 0.3 });
-        c.later(0.18, () => { const x = c.ent.x, y = c.ent.y; reaverCracks(x, y, 120, 4); V.crater(x, y, { r: 72, color: '#ff4a1a', dur: 3.2, flames: 6, a: 0.7, cracks: 10 }); V.spikeburst(x, y, { r: 84, n: 16, color: '#ff3a1a', core: '#ffd070', ink: '#3a0806', dur: 0.42, layer: 'ground', z: 0, flat: 0.6 });   // (QA) under the reaver, not over it
+        c.later(0.18, () => { const x = c.ent.x, y = c.ent.y; reaverCracks(x, y, 120, 4); V.crater(x, y, { r: 72, color: '#ff4a1a', dur: 3.2, flames: 6, a: 0.7, cracks: 10 }); V.climax(x, y, { shape: 'burst', r: 112, n: 16, color: '#ff3a1a', core: '#ffd070', ink: '#3a0806', dur: 0.6, hold: 0.12, layer: 'ground', flat: 0.6, after: { smoke: 0.5, embers: 0.8, mark: 0.5 } });   // (QA) under the reaver, not over it; (life pass) held a beat, bigger, with an aftermath
           V.flash(x, y - 16, 48, '#ff6a2a', 0.18); V.flare(x, y, { color: '#ff3a1a', n: 18, r: 26 }); V.debris(x, y, { n: 10, hot: true, color: '#5a3a2a' }); V.shock(x, y, { r: 140, color: '#ff3a2a', dur: 0.5, w: 8 });
           V.smoke(x, y, { n: 5, r: 40, color: '#5a3a2a', size: 30, a: 0.4, speed: 50, life: 1.4 }); shake(6); }); },
       // a roar: a ring of red spikes bursts across the floor, shockwaves roll out, a dust cloud and embers settle
       warcry: c => { V.glint(c.x, c.y, { color: '#ffb08a', size: 26, z: 40 });
         c.later(0.1, () => { V.spikeburst(c.x, c.y, { r: 120, n: 22, hole: 0.62, color: '#ff4a1a', core: '#ffb070', ink: '#3a0806', fill: '#8a1a0a', dur: 0.55, layer: 'ground', z: 0, flat: 0.6 });
+          // (life pass) the roar's ring holds a beat: a dark-edged ring of fire inside the spikes, then the aftermath
+          V.climax(c.x, c.y, { shape: 'ring', r: 96, color: '#ff4a1a', core: '#ffb070', ink: '#3a0806', dur: 0.6, hold: 0.1, layer: 'ground', flat: 0.6, after: { smoke: 0.4, embers: 0.7, mark: 0.4 } });
           for (let i = 0; i < 2; i++) V.shock(c.x, c.y, { r: 160 + i * 50, color: '#ff8a5a', dur: 0.6, w: 6 - i * 2, delay: i * 0.12 }); shake(4); });
         // (polish) the roar's blood shield flashes up on the reaver; the rest of the party gets its flash from the shield
         // itself (KIT_VFX.partyWard, on every client)
@@ -756,6 +769,8 @@ const ABILITY_VFX = (() => {
       // a blood-red rune circle that stays under the reaver, a red dome flaring up, shadows rising
       // (QA) the red rune circle settles faint after its flare: at full strength for 8s it read as a danger zone
       undying: c => { vfxLingerSettle(V.ink(c.x, c.y, { r: 60, dur: 8, follow: c.ent, a: 0.3 }), 0.5, 1); vfxLingerSettle(V.sigil(c.x, c.y, { r: 60, style: 'runes', color: '#c01a2a', dur: 8, spin: -0.8, follow: c.ent }), 0.28, 1.2); V.aura(c.ent, { color: '#8a0010', style: 'shadow', dur: 8, r: 30, rate: 0.3 });
+        // (life pass) the rune circle is stamped on a held blood-red ring, then the dome rises
+        V.climax(c.x, c.y, { shape: 'ring', r: 90, color: '#c01a2a', core: '#ff8a8a', ink: REAV_INK, dur: 0.65, hold: 0.1, layer: 'ground', flat: 0.65, after: { smoke: 0.3, embers: 0.5, mark: 0.4 } });
         V.dome(c.ent, { color: '#ff2a3a', r: 44, dur: 1.4 }); c.later(1.2, () => V.motes(c.ent.x, c.ent.y, { color: '#ff2a3a', n: 8, r: 30 })); },
       // Berserker: a wild double swing of burning orange, the floor cracking and smoking where it lands
       rampage: c => {
@@ -794,7 +809,8 @@ const ABILITY_VFX = (() => {
       // spikes with a pillar of light through it and a kick of the screen)
       glyph: c => { V.ink(c.tx, c.ty, { r: 70, dur: 0.5 }); V.sigil(c.tx, c.ty, { r: 70, style: 'runes', color: RUNE_DEEP, dur: 0.5, spin: 8 });
         for (let i = 0; i < 3; i++) c.later(i * 0.05, () => V.missile(c.x, c.y - 24 - i * 4, c.tx, c.ty - 10, { style: 'orb', color: i === 1 ? RUNE_PALE : '#9aa4ff', speed: TRV('runeguard', 'glyph'), size: 0.5, onHit: () => {} }));
-        c.later(0.4, () => { V.flash(c.tx, c.ty - 20, 56, '#c8ceff', 0.2); V.crystals(c.tx, c.ty, { color: '#9aa4ff', n: 8, r: 50, h: 66 }); V.spikeburst(c.tx, c.ty, { r: 60, n: 14, color: RUNE_DEEP, core: '#eef1ff', ink: RUNE_INK, dur: 0.34 });
+        c.later(0.4, () => { V.flash(c.tx, c.ty - 20, 56, '#c8ceff', 0.2); V.crystals(c.tx, c.ty, { color: '#9aa4ff', n: 8, r: 50, h: 66 }); // (life pass) the spent Runes' climax: a cross of rune crystal two heroes wide, held a beat, a dim indigo scorch after
+          V.climax(c.tx, c.ty, { shape: 'cross', r: 90, color: RUNE_DEEP, core: '#eef1ff', ink: RUNE_INK, dur: 0.55, hold: 0.1, z: 14, after: { embers: 0.5, smoke: 0.3, mark: 0.5 } });
           V.pillar(c.tx, c.ty, { r: 22, h: 190, color: '#8e98ff', dur: 0.5 }); V.shock(c.tx, c.ty, { r: 110, color: RUNE_VIO, dur: 0.45, w: 6 });
           V.decal(c.tx, c.ty, { style: 'crack', r: 50, dur: 1.8, a: 0.55, seed: Math.random() * 6 }); shake(5); if (c.cam) c.cam.punch(0.03, 0.3); if (c.ent.st && typeof hitStop === 'function') hitStop(c.ent.st, 0.07, FX.now); }); },
       // runes spiral in, a rune circle, crackling bolts, a violet burst; motes drift off afterwards
@@ -804,7 +820,8 @@ const ABILITY_VFX = (() => {
       overload: c => { V.charge(c.x, c.y, { color: '#b8c0ff', r: 50, n: 8, dur: 0.3, follow: c.ent }); runeguardLoad(c.ent);
         V.ink(c.x, c.y, { r: 66, dur: 0.9, a: 0.3 }); V.sigil(c.x, c.y, { r: 66, style: 'runes', color: '#7c84ff', dur: 0.9, spin: 3, follow: c.ent });
         c.later(0.42, () => { const x = c.ent.x, y = c.ent.y; V.aura(c.ent, { color: '#7c84ff', style: 'runes', dur: 15, r: 32, rate: 0.2 });
-          V.spikeburst(x, y, { r: 50, n: 12, color: '#7c84ff', core: '#eef1ff', ink: RUNE_INK, dur: 0.32, z: 20 }); V.glint(x, y - 24, { color: '#ffffff', size: 34, z: 20 });
+          V.climax(x, y, { shape: 'ring', r: 84, color: '#7c84ff', core: '#e4e8ff', ink: RUNE_INK, dur: 0.5, hold: 0.1, z: 22, after: { embers: 0.5 } });   // (life pass) the snap: a ring two heroes wide round the guard, held a beat
+          V.glint(x, y - 24, { color: '#ffffff', size: 34, z: 20 });
           V.shock(x, y, { r: 96, color: '#e4e8ff', dur: 0.36, w: 5 }); V.flash(x, y - 20, 40, '#c8ceff', 0.16); shake(3); });
         c.later(1, () => V.motes(c.ent.x, c.ent.y, { color: '#b8c0ff', n: 6, r: 34 })); },
       // a great rune circle, a pillar of light, and a ring of rune stones bursting up round its edge
@@ -812,10 +829,13 @@ const ABILITY_VFX = (() => {
       // (QA: the flare whited out the middle) a slimmer pillar, indigo
       sanctum: c => { V.glint(c.x, c.y, { color: RUNE_PALE, size: 30, z: 40 }); V.ink(c.x, c.y, { r: 150, dur: 0.7, a: 0.25 }); V.sigil(c.x, c.y, { r: 150, style: 'runes', color: '#7c84ff', dur: 0.7, spin: 0.5 }); V.pillar(c.x, c.y, { r: 36, h: 160, color: '#7c84ff', dur: 1.1 });
         OP.rim(c.x, c.y, 150, '#7c84ff', 10, { style: 'runes', settle: 0.22, ticks: 24, spin: 0.12 }); V.shock(c.x, c.y, { r: 170, color: RUNE_PALE, dur: 0.55, w: 5 });
+        // (life pass) the circle is struck on a held ring of indigo light
+        V.climax(c.x, c.y, { shape: 'ring', r: 124, color: '#7c84ff', core: '#e4e8ff', ink: RUNE_INK, dur: 0.7, hold: 0.1, layer: 'ground', flat: 0.65, after: { embers: 0.6, smoke: 0.3, mark: 0.4 } });
         c.later(0.15, () => { for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; V.crystals(c.x + Math.cos(a) * 140, c.y + Math.sin(a) * 109, { color: '#9aa4ff', n: 3, r: 14, h: 40, dur: 1.6 }); } }); },
       // a glint on the mirror, a pane of rune-glass standing in front for the 3s hold, light sliding across it, shards
       // falling away when it goes
       mirror: c => { const fx = c.x + Math.cos(c.ang) * 30, fy = c.y + Math.sin(c.ang) * 30; V.glint(fx, fy, { color: '#ffffff', size: 34 }); V.shield(c.ent, { shape: 'front', color: RUNE_PALE, dur: 0.5, r: 44 });
+        V.climax(fx, fy, { shape: 'cross', r: 80, color: RUNE_VIO, core: '#ffffff', ink: RUNE_INK, dur: 0.5, hold: 0.1, z: 24, after: { embers: 0.4 } });   // (life pass) the pane lights as a held cross of rune-glass
         runeguardMirror(c.ent, 3); V.crystals(fx, fy, { color: '#e4e8ff', n: 5, r: 18, h: 40, dur: 0.6 }); V.sparks(fx, fy - 20, { color: RUNE_PALE, n: 6, speed: 200 });
         c.later(2.9, () => { const e = c.ent, a = e.angle || 0; V.crystals(e.x + Math.cos(a) * 32, e.y + Math.sin(a) * 26, { color: '#e4e8ff', n: 4, r: 16, h: 30, dur: 0.5 }); }); },
       // Runeblade: a rune-etched sword cut with a pale indigo trail (Carve, the second hit, cuts wider)
@@ -865,7 +885,9 @@ const ABILITY_VFX = (() => {
         c.later(d / 1500, () => { V.hit(c.tx, c.ty, keen ? '#fff2c0' : '#b0ffd0', keen ? 1.1 : 0.8);
           V.spikeburst(c.tx, c.ty, { r: keen ? 50 : 34, n: keen ? 12 : 9, color: keen ? RANG_GOLD : '#7dffb0', core: '#ffffff', ink: keen ? '#2a1c04' : '#0a2a14', dur: 0.28, z: 20 });
           V.sparks(c.tx, c.ty, { color: '#e8ffd0', n: keen ? 8 : 5, angle: ang, spread: 0.5, speed: 420 });
-          if (keen) { V.tornado(c.tx, c.ty, { color: '#fff6d8', h: 92, r: 28, dur: 0.6 }); rangerDust(c.tx, c.ty, 0.8); shake(2); } else rangerDust(c.tx, c.ty, 0.5); }); },
+          if (keen) { V.tornado(c.tx, c.ty, { color: '#fff6d8', h: 92, r: 28, dur: 0.6 }); rangerDust(c.tx, c.ty, 0.8); shake(2);
+            // (VFX pass) the Keen Eye shot is the sheet's one bold climax: a gold bolt of light 180 long driven through the target, ink-edged, held a beat
+            V.climax(c.tx - Math.cos(ang) * 70, c.ty - Math.sin(ang) * 70, { shape: 'bolt', angle: ang, r: 90, color: RANG_GOLD, core: '#fffbe8', ink: '#2a1c04', z: 20, flat: 0.75, dur: 0.5, after: { embers: 0.5 } }); } else rangerDust(c.tx, c.ty, 0.5); }); },
       // (online-refs pass: WoW Rapid Fire) a stream of arrows off the bow, a small tick on the boss for each and a pop on
       // the last; inside Hunter's Mark (its recipe stamps the hero) the stream runs longer and turns gold
       rapid: c => { const e = c.ent, marked = (e._rgMarkUntil || 0) > FX.now, n = marked ? 7 : 5, col = marked ? RANG_GOLD : RANG_GREEN, ang = Math.atan2(c.ty - c.y, c.tx - c.x), nx = -Math.sin(ang), ny = Math.cos(ang), b = ahead(c, 16);
@@ -883,7 +905,9 @@ const ABILITY_VFX = (() => {
         V.fx({ dur: 0.42, layer: 'air', draw: (cc, p, t, fx) => { const q = easeOut(Math.min(1, p / 0.5)), R = 90 - 52 * q, k = fx.a * (1 - Math.max(0, (p - 0.6) / 0.4)), L = 12;
           for (let i = 0; i < 4; i++) { const sx = i % 2 ? 1 : -1, sy = i < 2 ? -1 : 1, x = bx + sx * R, y = by + sy * R * 0.8;
             V.neonPath(cc, RANG_GOLD, 2.6, k, () => { cc.moveTo(x - sx * L, y); cc.lineTo(x, y); cc.lineTo(x, y - sy * L); }); } } });
-        c.later(0.22, () => { V.spikeburst(bx, c.ty, { r: 34, n: 10, color: '#ffc850', core: '#fffbe0', ink: '#4a2a08', dur: 0.28, z: 40 }); V.burst(bx, by, { color: '#ffd27a', n: 8, speed: 120, flash: false }); });
+        c.later(0.22, () => { V.spikeburst(bx, c.ty, { r: 34, n: 10, color: '#ffc850', core: '#fffbe0', ink: '#4a2a08', dur: 0.28, z: 40 }); V.burst(bx, by, { color: '#ffd27a', n: 8, speed: 120, flash: false });
+          // (VFX pass) the mark is a 60s cooldown: a gold ring of light snaps shut round the boss, ink-edged, held a beat
+          V.climax(bx, c.ty, { shape: 'ring', r: 84, color: '#ffc850', core: '#fff2c0', ink: '#4a2a08', z: 24, flat: 0.8, dur: 0.55 }); });
         // (polish) the reticle stays on the boss for the debuff's 15s, turning slowly, its four ticks closing in
         const rx = c.tx, ry = c.ty - 40;
         OP.linger(15, 'air', (cc, k, t) => { const R = 30 + 14 * Math.max(0, 1 - t / 0.35);
@@ -894,6 +918,8 @@ const ABILITY_VFX = (() => {
       // leaf slipping off now and then
       cloak: c => { V.dome(c.ent, { color: '#8fdf7a', r: 50, dur: 1.4 }); for (let i = 0; i < 12; i++) V.spawn({ x: c.x, y: c.y, z: 10 + Math.random() * 20, life: 1.2, size: 12, color: '#5fbf4a', kind: 'leaf', add: false, vr: 6, orbit: { x: c.x, y: c.y, a: i * 0.52, r: 20, w: 5, dr: 90, flat: 0.6 } });
         V.shock(c.x, c.y, { r: 150, color: '#8fdf7a', dur: 0.6, w: 5 }); const e = c.ent;
+        // (VFX pass) a 90s cooldown: a leaf-green ring springs up round the hero, ink-edged, held a beat, a few embers and leaf smoke after
+        V.climax(c.x, c.y, { shape: 'ring', r: 86, color: '#7fdc6a', core: '#e8ffc8', ink: '#0e2a0a', layer: 'ground', flat: 0.7, dur: 0.6, after: { smoke: 0.4, embers: 0.4 }, smokeColor: '#4a6a3a' });
         OP.linger(10, 'ground', (cc, k, t) => { V.neonRing(cc, e.x, e.y + 2, 30 + Math.sin(t * 2.4) * 2, '#8fdf7a', 1.6, k, 0.55); V.glowAt(cc, e.x, e.y - 10, 34, '#8fdf7a', 0.22 * k);
           for (let i = 0; i < 3; i++) { const a = t * 1.3 + i * TAU / 3; V.glowAt(cc, e.x + Math.cos(a) * 30, e.y + 2 + Math.sin(a) * 16, 5, '#d8ffb0', 0.8 * k); } },
           { peak: 0.9, settle: 0.4, hold: 1.4, tick: () => { if (Math.random() < 0.04) V.spawn({ x: e.x + rnd(-18, 18), y: e.y, z: rnd(30, 50), vz: rnd(-25, -10), vx: rnd(-15, 15), life: 1.3, size: 10, color: '#6fbf5a', kind: 'leaf', add: false, vr: rnd(-3, 3), flutter: 5 }); } }); },
@@ -942,6 +968,8 @@ const ABILITY_VFX = (() => {
           V.puddle(m.x, m.y, { r: 8 + 2 * cp, color: '#4a1430', dark: '#1a0612', dur: 1.2, bubbles: false, fumes: false });   // (online refs: a dark wine stain, never a red pool that reads as a telegraph)
           sbPips(c.tx, c.ty, cp, full ? '#fff0c8' : '#ff7aa8');
           if (cp >= 4) V.shock(c.tx, c.ty, { r: 54 + 14 * cp, color: '#ff4d9a', dur: 0.36, w: 2 + cp });
+          // (VFX pass) the finisher's climax: a crimson cross of cuts, ink-edged, held a beat on the target; it grows with the points spent (three and up)
+          if (cp >= 3) V.climax(c.tx, c.ty, { shape: 'cross', r: 64 + 7 * cp, tilt: ang + Math.PI / 4, color: full ? '#ff4d7a' : '#d01a3a', core: full ? '#ffffff' : '#ffe0e8', ink: '#2a0410', z: 20, dur: 0.5, after: { embers: full ? 0.5 : 0 } });
           if (full) { V.flash(c.tx, c.ty - 20, 96, '#ffe8f0', 0.2); shadowX(c.tx, c.ty, ang, 1.8); V.glint(c.tx, c.ty, { color: '#ffffff', size: 46, z: 24 }); V.shock(c.tx, c.ty, { r: 150, color: '#ffe8f0', dur: 0.3, w: 2, delay: 0.05 }); }
           if (cp >= 3) shake(cp - 2);
           if (full && c.mine && e.st && typeof hitStop === 'function') hitStop(e.st, 0.06, FX.now);
@@ -962,6 +990,8 @@ const ABILITY_VFX = (() => {
       dance: c => { const e = c.ent; V.swirl(c.x, c.y, { r: 64, color: '#5a2a8a', dur: 0.16, inward: true, follow: e });
         V.glint(c.x - 14, c.y, { color: '#e8e0ff', size: 20, z: 34 }); V.glint(c.x + 14, c.y, { color: '#e8e0ff', size: 20, z: 34 });
         c.later(0.12, () => { V.flash(e.x, e.y - 24, 40, '#e8e0ff', 0.12); V.shock(e.x, e.y, { r: 86, r0: 14, color: '#b070ff', dur: 0.3, w: 3.5 }); V.vortex(e.x, e.y, { r: 72, color: '#9a4dff', dur: 0.9, follow: e });
+          // (VFX pass) a 60s cooldown: a violet ring of shadow snaps out round the rogue, ink-edged, held a beat; smoke curls off it
+          V.climax(e.x, e.y, { shape: 'ring', r: 84, color: '#8a3dff', core: '#e0d0ff', ink: SHAD_INK, layer: 'ground', flat: 0.7, dur: 0.6, after: { smoke: 0.5 }, smokeColor: '#3a2858' });
           V.smoke(e.x, e.y, { n: 5, r: 10, color: '#2a1838', size: 24, a: 0.5, speed: 90, life: 0.8 }); shake(2); });
         V.aura(e, { color: '#b04dff', style: 'shadow', dur: 10, r: 30, rate: 0.25 });
         if (e.sbDouble) e.sbDouble.cut = true;
@@ -990,6 +1020,8 @@ const ABILITY_VFX = (() => {
       // haze with wisps and a violet edge that holds for the buff's 10s (low, so telegraphs read through it)
       // (QA: the pop whited out the middle of the cloud) a small pop flash
       smoke: c => { V.smokebomb(c.x, c.y, { r: 140, color: '#8a7a9a', dur: 2.2, a: 0.5, n: 18, sx: c.x + Math.cos(c.ang) * 10, sy: c.y - 6, flashR: 36 });
+        // (VFX pass) a 90s cooldown: the pop is a bold dusk-violet burst, ink-edged and held a beat (a muted core, so it never whites out the cloud)
+        c.later(0.18, () => V.climax(c.x, c.y, { shape: 'burst', r: 84, n: 10, color: '#6a4a9a', core: '#b8a0e0', ink: SHAD_INK, z: 16, flat: 0.8, dur: 0.5 }));
         const x = c.x, y = c.y, r = 140;
         OP.linger(10, 'ground', (cc, k) => { cc.globalAlpha = 0.12 * k; cc.fillStyle = '#2a1838'; cc.beginPath(); cc.ellipse(x, y, r, r * 0.78, 0, 0, TAU); cc.fill(); cc.globalAlpha = 1; V.neonRing(cc, x, y, r, '#8a5ac0', 1.4, k * 0.55, 0.78); },
           { peak: 0.7, settle: 0.45, hold: 2, tick: (p, dt, e) => { if (!e.cut && Math.random() < 0.3) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * r * 0.85;
@@ -1008,7 +1040,10 @@ const ABILITY_VFX = (() => {
       // a short scorch and a shake. Spent from Hot Streak (your own hero) it bursts straight off the hand instead: a ring of
       // flame kicks out round the mage, a fast fat fireball with a gold heart, and the same big hit
       pyro: c => { const h = ahead(c, 16), pr = pyroProcs(c), hs = !!pr && pr.prev === 2 && pr.now < 2;
-        const hit = (x, y) => { V.spikeburst(x, y, { r: 72, n: 16, color: '#ff6a1a', core: hs ? '#fff6d0' : '#fff0b0', dur: 0.42 }); pyroPillow(x, y, 40); V.flare(x, y, { n: 6, r: 22, size: 1.2, h: 1.2 }); V.shock(x, y, { r: 110, color: '#ff8a3a', dur: 0.5, w: 7 });
+        // (VFX pass) a Hot Streak Pyroblast is the fire sheet's one bold climax: an ink-edged flame burst 96 across with a white-hot core,
+        // held a beat, smoke and embers after (it replaces the starburst; the hard-cast one keeps its own)
+        const hit = (x, y) => { if (hs) V.climax(x, y, { shape: 'burst', r: 96, n: 14, color: '#ff6a1a', core: '#fff6d0', ink: '#3a0e04', z: 26, dur: 0.6, after: { smoke: 0.4, embers: 0.6 }, smokeColor: '#5a4a48' });
+          else V.spikeburst(x, y, { r: 72, n: 16, color: '#ff6a1a', core: '#fff0b0', dur: 0.42 }); pyroPillow(x, y, 40); V.flare(x, y, { n: 6, r: 22, size: 1.2, h: 1.2 }); V.shock(x, y, { r: 110, color: '#ff8a3a', dur: 0.5, w: 7 });
           V.flash(x, y - 18, 80, hs ? '#ffe08a' : '#ffb050', 0.22); V.debris(x, y, { n: 3, hot: true, color: '#4a3226' }); V.decal(x, y, { r: 40, embers: true, dur: 1.4 }); V.smoke(x, y, { n: 3, r: 26, color: '#5a4a48', size: 30, a: 0.42, speed: 50, life: 1.4 }); shake(hs ? 5 : 6); };
         if (hs) { V.glint(h.x, h.y, { color: '#fff2c0', size: 40, z: 26 }); V.shock(c.x, c.y, { r: 58, r0: 12, color: '#ffb040', dur: 0.3, w: 4 }); V.blaze(c.ent, { r: 34, dur: 0.45 });
           V.missile(h.x, h.y, c.tx, c.ty, { style: 'fire', color: '#ff7a1a', speed: TRV('pyromancer', 'pyro', 'instant'), arc: 12, size: 2.2, onHit: hit }); }
@@ -1025,11 +1060,15 @@ const ABILITY_VFX = (() => {
       // heat spirals in, then a fire spiral wraps the mage and flies apart into embers; the flame aura stays on
       combust: c => { V.charge(c.x, c.y, { color: '#ffb040', r: 50, n: 10, dur: 0.3, follow: c.ent }); V.sigil(c.x, c.y, { r: 66, style: 'star5', color: '#ff7a1a', dur: 1.2, spin: 2.5 }); V.blaze(c.ent, { r: 50, dur: 1.6 }); V.aura(c.ent, { color: '#ff6a1a', style: 'flame', dur: 10, r: 30, rate: 0.3 });
         // (polish, fire sheet) a ring of flame stands round the mage for the burst's 10s
-        c.later(0.25, () => { pyroFireRing(c.ent, 9.75); V.shock(c.ent.x, c.ent.y, { r: 90, color: '#ffb040', dur: 0.45, w: 5 }); }); },
+        c.later(0.25, () => { pyroFireRing(c.ent, 9.75); V.shock(c.ent.x, c.ent.y, { r: 90, color: '#ffb040', dur: 0.45, w: 5 });
+          // (VFX pass) a 60s cooldown: a bold ring of flame, ink-edged with a hot core, kicks out round the mage and holds a beat, embers after
+          V.climax(c.ent.x, c.ent.y, { shape: 'ring', r: 88, color: '#ff6a1a', core: '#ffe9a0', ink: '#3a0e04', layer: 'ground', flat: 0.7, dur: 0.6, after: { smoke: 0.3, embers: 0.6 }, smokeColor: '#5a4a48' }); }); },
       // a meteor called down on a rune circle: a cracked, burning crater is left behind
       vent: c => V.meteor(c.tx, c.ty, { r: 80, color: '#ffa040', wind: 0.32, fall: 0.28, onHit: () => shake(7) }),   // (r: the kit's 80; online-refs pass: an amber rune ring, never telegraph red)
       // a cone of fire breathed at the boss, then embers, scorch and a smoky haze over the party
       smolder: c => { const L = Math.min(240, Math.max(120, Math.hypot(c.tx - c.x, c.ty - c.y))); V.breath(c.x, c.y, Math.atan2(c.ty - c.y, c.tx - c.x), { len: L, span: 0.75 }); V.shock(c.x, c.y, { r: 130, color: '#ff8a5a', dur: 0.6 });
+        // (VFX pass) a 90s cooldown: the breath's climax is a bold ink-edged cone of flame, 120 long, with a hot core, held a beat
+        c.later(0.3, () => V.climax(c.x, c.y, { shape: 'cone', angle: Math.atan2(c.ty - c.y, c.tx - c.x), span: 0.8, r: 120, flat: 0.8, color: '#ff6a1a', core: '#ffe9a0', ink: '#3a0e04', z: 18, dur: 0.5, after: { embers: 0.5 } }));
         c.later(0.7, () => V.smoke(c.x, c.y, { n: 6, r: 60, color: '#5a3a4a', size: 34, speed: 40, a: 0.35, life: 1.8 }));
         // (polish) the boss smoulders for the debuff's 10s: embers circling its middle, a dark wisp rising off it
         const bx = c.tx, by = c.ty;
@@ -1081,7 +1120,9 @@ const ABILITY_VFX = (() => {
       // (online-refs pass: a party cooldown announces once, then gets out of the way, like Liturgy of the Bell / Temperance)
       // a gold bell hangs over the cleric and tolls twice, each toll a ring running out over the party; the hex flares
       // without a dark disc under the party, and only the thin rim holds
-      prayer: c => { const x = c.x, y = c.y; clericBell(c.ent, { dur: 1.3, tolls: [0.15, 0.6], later: c.later }); V.sigil(x, y, { r: 160, style: 'hex', color: '#ffe680', dur: 0.7, spin: 0.4 }); V.lightfall(x, y, { color: '#fff0b0', r: 40, h: 90, dur: 0.9, feathers: 5 });
+      prayer: c => { const x = c.x, y = c.y; clericBell(c.ent, { dur: 1.3, tolls: [0.15, 0.6], later: c.later });
+        // (VFX pass) a 60s cooldown: on the first toll a bold gold ring of light rolls out round the cleric, ink-edged, held a beat
+        c.later(0.2, () => V.climax(x, y, { shape: 'ring', r: 100, color: '#ffd65a', core: '#fff8dc', ink: '#3a2a08', layer: 'ground', flat: 0.7, dur: 0.6, after: { embers: 0.3 } })); V.sigil(x, y, { r: 160, style: 'hex', color: '#ffe680', dur: 0.7, spin: 0.4 }); V.lightfall(x, y, { color: '#fff0b0', r: 40, h: 90, dur: 0.9, feathers: 5 });
         OP.rim(x, y, 160, CLER_GOLD, 15, { style: 'hex', settle: 0.2, ticks: 24, spin: 0.1, tick: () => { if (Math.random() < 0.12) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 150; V.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.78, z: 0, vz: rnd(25, 50), life: 1.2, size: rnd(4, 7), size1: 0, color: CLER_PALE, kind: Math.random() < 0.3 ? 'star' : 'glow' }); } } }); },
       // a towering column of light and feathers, a holy seal under the ally, a white burst as they rise
       // (QA: lightfall + a white pillar stacked into a solid white column that hid the ally for 1.6s) one gold column,
@@ -1098,7 +1139,10 @@ const ABILITY_VFX = (() => {
       // (Thornlash is with the Wrath, Rejuvenate and Bloom in the Grovekeeper block of 'ULTIMATES · healers')
       // a shaft of green light, a flower circle under the ally, a swirl, and leaves drifting off as they rise
       rebirth: c => { V.lightfall(c.tx, c.ty, { color: '#a8ff9a', r: 40, h: 280, dur: 1.6, feathers: 0 }); V.grove(c.tx, c.ty, { r: 60, dur: 2.2, color: '#8fff7a', color2: '#ffd0e8', flowers: 5, rate: 0.4, tint: '#1a3a10' }); V.swirl(c.tx, c.ty, { r: 50, color: '#8fff7a', dur: 1.4 });
-        c.later(1.4, () => V.motes(c.tx, c.ty, { kind: 'leaf', color: '#8fff7a', n: 10, r: 40 })); },
+        c.later(1.4, () => V.motes(c.tx, c.ty, { kind: 'leaf', color: '#8fff7a', n: 10, r: 40 }));
+        // (VFX pass) a raise is a moment: when the shaft lands a bold green ring (ink edge, cream core) opens round them, holds a beat,
+        // and leaves a few motes rising
+        c.later(0.25, () => V.climax(c.tx, c.ty, { shape: 'ring', r: 92, color: '#7ee85a', core: '#f6ffd8', ink: '#0e2208', dur: 0.65, hold: 0.12, z: 6, after: { embers: 0.8 } })); },
       // Lifebinder: a small blooming circle under the ally, vines curling, flowers opening
       lifebind: c => { V.grove(c.tx, c.ty, { r: 44, dur: 1.8, color: '#6fffb0', color2: '#ffd0e8', flowers: 4, follow: c.tent, rate: 0.5 }); V.plus(c.tx, c.ty, { color: '#7dff9a', n: 3 }); },
     },
@@ -1133,6 +1177,8 @@ const KIT_VFX = {
   // (the block spends the guard (fight.js takes its Brace off), so once the flare has shown the plate comes down too)
   perfect: e => { const pl = e.bastionPlate; if (pl && !pl.cut) { pl.pb = true; OLD_PAINT.later(0.4, () => { pl.cut = true; if (e.bastionPlate === pl) e.bastionPlate = null; }); }
     VFX.flash(e.x + Math.cos(e.angle) * 36, e.y + Math.sin(e.angle) * 30 - 16, 64, '#ffe27a', 0.22); VFX.shock(e.x, e.y, { r: 130, color: '#9fc4ff', dur: 0.5, w: 4, delay: 0.06 });
+    // (life pass) the parry's climax: a great gold crescent shoved off the plate, two heroes out, held a beat
+    VFX.climax(e.x, e.y, { shape: 'crescent', r: 84, angle: e.angle, span: 1.9, color: '#ffd65a', core: '#fffbe0', ink: '#0e1a30', dur: 0.5, hold: 0.1, z: 20, after: { embers: 0.4 } });
     VFX.shock(e.x, e.y, { r: 90, color: '#ffe27a', dur: 0.4, w: 7 }); VFX.spawn({ x: e.x + Math.cos(e.angle) * 30, y: e.y + Math.sin(e.angle) * 30, z: 18, life: 0.3, size: 80, size1: 30, color: '#ffe27a', kind: 'star', vr: 5 }); VFX.sparks(e.x + Math.cos(e.angle) * 30, e.y + Math.sin(e.angle) * 30, { color: '#fff2b0', n: 12, angle: e.angle, spread: 1, speed: 420 }); vfxShake(4); },
   // Hold Fast held a Brace past its 3s (kits.js, data.d: the guard's real length): the plate just raised stays that long
   braceHold: (e, target, d) => { const pl = e.bastionPlate, dur = d && Number.isFinite(d.d) ? Math.max(0.5, Math.min(8, d.d)) : 0;
@@ -1148,7 +1194,9 @@ const KIT_VFX = {
     // (the blast grows with what the Ward soaked: a spent-out Ward is a small crack of runes, a full one a ring of spikes and
     // three rings, a pillar of light, a cracked floor and a kick of the screen)
     VFX.flash(w.x, w.y - 20, 30 + 60 * f, f > 0.8 ? '#ffffff' : '#c8ceff', 0.22);
-    VFX.spikeburst(w.x, w.y, { r: R * 0.9, n: 8 + Math.round(12 * f), hole: 0.5, color: '#6c74f2', core: '#eef1ff', ink: '#0c1236', fill: '#2a3070', dur: 0.4 + 0.1 * f, layer: 'ground', z: 0, flat: 0.6 });
+    // (life pass) a well-soaked Ward (half or more) goes off as the climax, a starburst of rune light 80+ wide, held a beat; a small one stays the small crack
+    if (f >= 0.5) VFX.climax(w.x, w.y, { shape: 'burst', r: Math.max(80, R * 0.9), n: 8 + Math.round(12 * f), color: '#6c74f2', core: '#eef1ff', ink: '#0c1236', dur: 0.55 + 0.1 * f, hold: 0.1, layer: 'ground', flat: 0.6, after: { embers: 0.5, mark: 0.5 * f } });
+    else VFX.spikeburst(w.x, w.y, { r: R * 0.9, n: 8 + Math.round(12 * f), hole: 0.5, color: '#6c74f2', core: '#eef1ff', ink: '#0c1236', fill: '#2a3070', dur: 0.4 + 0.1 * f, layer: 'ground', z: 0, flat: 0.6 });
     VFX.crystals(w.x, w.y, { color: '#9aa4ff', n: 3 + Math.round(7 * f), r: 26 + 40 * f, h: 26 + 44 * f, dur: 0.8 });
     VFX.shock(w.x, w.y, { r: R + 30, color: '#8e98ff', dur: 0.45, w: 3 + 5 * f });
     if (f > 0.4) VFX.shock(w.x, w.y, { r: (R + 30) * 0.7, color: '#e4e8ff', dur: 0.4, w: 3 + 3 * f, delay: 0.06 });
@@ -1167,6 +1215,8 @@ const KIT_VFX = {
   reflect: (e, target) => { if (target) VFX.beam(e.x, e.y, target.x, target.y, { color: '#e4e8ff', w: 12, dur: 0.4 }); VFX.burst(e.x, e.y, { color: '#ffffff', color2: '#dde3ff', n: 16, speed: 260, kind: 'star' }); },
   overheat: e => { VFX.flare(e.x, e.y, { n: 24, color: '#ff2a1a', r: 18 }); VFX.shock(e.x, e.y, { r: 90, color: '#ff3a1a', dur: 0.4 }); },
   dawnstar: (e, target) => { const t = target || e; /* (QA: whited out the boss) */ VFX.beam(t.x, t.y - 300, t.x, t.y, { color: '#ffe680', w: 11, dur: 0.45 }); VFX.burst(t.x, t.y, { color: '#ffe680', color2: '#ffffff', n: 20, speed: 320, kind: 'star', flashR: 44 }); VFX.sigil(t.x, t.y, { r: 90, style: 'star4', color: '#ffe680', dur: 0.9, spin: 4 });
+    // (VFX pass) the Dawnstar is the Smite chain's finisher: a standing cross of dawn light, ink-edged, held a beat on the boss
+    VFX.climax(t.x, t.y, { shape: 'cross', r: 88, color: '#ffd65a', core: '#fffbe8', ink: '#3a2a08', tilt: 0, z: 20, dur: 0.55, after: { embers: 0.5 } });
     // (online-refs pass: the one big hit of the filler loop, like Afflatus Misery after the Glares) a wide ring of gold
     // rays stamped round the boss's feet and a second, later ring, so it outlasts and outsizes a Smite
     VFX.spikeburst(t.x, t.y, { r: 120, n: 16, hole: 0.55, color: '#ffd65a', core: '#fffbe0', ink: '#3a2a08', dur: 0.5, layer: 'ground', z: 0, flat: 0.6 }); VFX.shock(t.x, t.y, { r: 170, color: '#fff0b0', dur: 0.6, w: 6, delay: 0.12 }); vfxShake(5); },
@@ -1503,13 +1553,13 @@ const DASH_VFX = (() => {
   // Kiln Bomb: a big orange kiln blast, hot shards, and a cracked crater glowing as it cools
   function alemKilnBlast(x, y) {
     V.flash(x, y - 14, 90, ALEM_KILN, 0.16);
-    V.spikeburst(x, y, { r: 96, n: 20, color: '#ff6a1a', core: '#fff0b0', ink: '#3a1006', dur: 0.45 });
+    // (VFX pass) the climax: one bold kiln burst, ink edge, orange body, white-hot core, held a beat, then smoke and embers
+    V.climax(x, y, { shape: 'burst', r: 118, n: 14, color: '#ff6a1a', core: '#fff6d0', ink: '#3a1006', dur: 0.6, hold: 0.1, after: { smoke: 0.7, embers: 0.7 }, smokeColor: '#3a2a2a' });
     V.spikeburst(x, y, { r: 54, n: 12, color: '#ffb040', core: '#ffffff', ink: '#3a1006', dur: 0.36, z: 18 });
-    V.flare(x, y, { n: 18, r: 30, color: '#ff5a1a' });
+    V.flare(x, y, { n: 12, r: 30, color: '#ff5a1a' });
     V.debris(x, y, { n: 10, hot: true, color: '#5a3a2a' });
-    V.shock(x, y, { r: 140, color: '#ff9a3a', dur: 0.5, w: 7 });
+    V.shock(x, y, { r: 150, color: '#ff9a3a', dur: 0.5, w: 7 });
     V.crater(x, y, { r: 80, color: ALEM_KILN, dur: 3, flames: 5, a: 0.65, cracks: 12 });
-    V.smoke(x, y, { n: 6, color: '#3a2a2a', size: 40, a: 0.5, speed: 60, life: 1.5 });
     shake(5);
   }
   ABILITY_VFX.alembist = {
@@ -1539,7 +1589,9 @@ const DASH_VFX = (() => {
     batch: c => { const cols = ['#ff7a2a', '#4fc8ff', '#efe6cf', '#ffd27a'];
       V.sigil(c.x, c.y, { r: 46, style: 'hex', color: '#ffd27a', dur: 0.75, spin: 2.5, follow: c.ent });
       for (let i = 0; i < 4; i++) c.later(i * 0.12, () => puff(c.ent, cols[i], 2, 1));
-      c.later(0.45, () => { const s = still(c.ent); V.shock(c.x, c.y, { r: 70, color: '#ffd27a', dur: 0.4, w: 3.5 }); V.motes(s.x, s.y, { color: '#ffd27a', n: 6, r: 18, kind: 'star' }); }); },
+      // (VFX pass) the finish: a bold brass ring flares round the alembist (ink edge, gold body, cream core), then drifts off in gold motes
+      c.later(0.45, () => { const s = still(c.ent); V.shock(c.x, c.y, { r: 110, color: '#ffd27a', dur: 0.4, w: 3.5 }); V.motes(s.x, s.y, { color: '#ffd27a', n: 6, r: 18, kind: 'star' });
+        V.climax(c.ent.x, c.ent.y, { shape: 'ring', r: 86, color: '#ffbe4a', core: '#fff2c4', ink: '#3a2408', dur: 0.55, hold: 0.1, z: 8, after: { embers: 0.6 } }); }); },
     // (online-refs pass) Grand Blend: two streams, gold and white, spiral in from either side into the still and pop
     // together there (a ring and one tinted wisp); the swirl at the feet kept, smaller
     blend: c => { const e = c.ent; V.swirl(c.x, c.y, { r: 30, color: '#ffe0a8', dur: 0.5, follow: e, inward: true });
@@ -1693,9 +1745,11 @@ const DASH_VFX = (() => {
       const go = (x, y) => {
         glass(x, y);
         if (kiln) { alemKilnBlast(x, y); return; }
-        if (pair) { V.spikeburst(x, y, { r: 76, n: 14, color: pair[0], core: '#ffffff', ink: '#1a1020', dur: 0.36 }); V.spikeburst(x, y, { r: 52, n: 12, color: pair[1], core: '#ffffff', ink: '#1a1020', dur: 0.32, z: 18 });
+        // (VFX pass) the two vials meet in one bold two-colour burst (ink edge, white core, held a beat); the inner one in the
+        // other reagent's colour rides on top. Each distinct recipe splashes once (a Blend of three bombs was four splashes).
+        if (pair) { V.climax(x, y, { shape: 'burst', r: 104, n: 13, color: pair[0], core: '#ffffff', ink: '#1a1020', dur: 0.55, hold: 0.1, after: { embers: 0.5 } }); V.spikeburst(x, y, { r: 56, n: 12, color: pair[1], core: '#ffffff', ink: '#1a1020', dur: 0.32, z: 18 });
           alemReactRune(x, y, 104, pair[0], pair[1], 1.8); }
-        for (const r of parts) burst(r, x, y, m, target && target !== e ? target : null, d.fol);
+        for (const r of (pair ? [...new Set(parts)] : parts)) burst(r, x, y, m, target && target !== e ? target : null, d.fol);
       };
       if (d.self) { V.spawn({ x: e.x, y: e.y, z: 20, life: 0.3, size: 50, size1: 10, color: '#ffb040' }); go(e.x, e.y); return; }
       const ca = Math.cos(e.angle || 0), sa = Math.sin(e.angle || 0), hx = e.x + ca * 12, hy = e.y + sa * 12;
@@ -2062,6 +2116,8 @@ const CAST_VFX = (() => {
       V.lightfall(c.x, c.y, { color: '#ffe08a', r: 28, h: 300, dur: 1.1, feathers: 8 });
       c.later(0.2, () => { wings(c.ent, dur, '#ffd65a'); V.aura(c.ent, { color: '#ffd65a', dur, r: 32, rate: 0.15 });
         // (QA) no flash of its own: the shaft of dawn is the bright beat, not a white-out over the hero
+        // (life pass) the wings open on a gold starburst held a beat round the hero's feet
+        V.climax(c.ent.x, c.ent.y, { shape: 'burst', r: 90, n: 16, color: '#ffd65a', core: '#fffbe0', ink: '#4a3408', dur: 0.55, hold: 0.1, layer: 'ground', flat: 0.65, after: { embers: 0.6, mark: 0.4 } });
         V.burst(c.ent.x, c.ent.y - 30, { color: '#ffe9a0', color2: '#ffffff', n: 24, speed: 300, kind: 'star', flash: false }); V.shock(c.ent.x, c.ent.y, { r: 160, color: '#ffe08a', dur: 0.6, w: 7 }); shake(5); }); },
   });
 
@@ -2081,6 +2137,7 @@ const CAST_VFX = (() => {
         c2.fillStyle = '#6a0810'; for (const [dx, dy, rr] of [[6, 5, 5], [-8, 2, 3.5], [2, -9, 3]]) { c2.beginPath(); c2.arc(mx + dx, my + dy, rr, 0, TAU); c2.fill(); }
         c2.globalAlpha = 1; V.neonRing(c2, mx, my, R + 2, '#ff4a5a', 2, k);
       }, tick: () => { if (Math.random() < 0.35) { const a = Math.random() * TAU; V.spawn({ x: ent.x + Math.cos(a) * 40, y: ent.y + Math.sin(a) * 22, z: 0, vz: rand(90, 140), vx: -Math.cos(a) * 20, life: 0.9, size: rand(5, 8), size1: 0, color: '#ff2a3a' }); } } });
+      V.climax(c.x, c.y, { shape: 'ring', r: 92, color: '#c01a2a', core: '#ff8a8a', ink: '#1a0406', dur: 0.65, hold: 0.1, layer: 'ground', flat: 0.65, after: { smoke: 0.3, embers: 0.5, mark: 0.4 } });   // (life pass)
       V.shock(c.x, c.y, { r: 140, color: '#ff2a3a', dur: 0.6, w: 6 }); shake(4); },
   });
 
@@ -2096,7 +2153,8 @@ const CAST_VFX = (() => {
         const k = fade(p, 0.05, 0.08) * e.a * (0.7 + 0.3 * Math.max(0, 1 - t / 1.2)), rise = Math.min(1, p * 15 / 0.5), a = ent.angle || 0;
         standingRune(c2, ent.x - Math.cos(a) * 22, ent.y - 40 - 30 * rise + Math.sin(t * 2) * 3, 46, '#9aa4ff', k, t);
       }, tick: () => { if (Math.random() < 0.2) { const a = ent.angle || 0; V.spawn({ x: ent.x - Math.cos(a) * 22 + rand(-10, 10), y: ent.y, z: 60, vz: rand(-20, 20), life: 0.8, size: 6, size1: 0, color: '#d8deff', kind: 'star' }); } } });
-      c.later(0.3, () => { V.spikeburst(ent.x, ent.y, { r: 66, n: 12, hole: 0.5, color: '#7c84ff', core: '#eef1ff', ink: '#0c1236', fill: '#2a3070', dur: 0.4, layer: 'ground', z: 0, flat: 0.6 }); shake(4); }); },
+      // (life pass) the rune stands up on a held burst of indigo
+      c.later(0.3, () => { V.climax(ent.x, ent.y, { shape: 'burst', r: 90, n: 12, color: '#6c74f2', core: '#eef1ff', ink: '#0c1236', dur: 0.55, hold: 0.1, layer: 'ground', flat: 0.65, after: { embers: 0.5, smoke: 0.3, mark: 0.4 } }); shake(4); }); },
   });
 
   Object.assign(ABILITY_VFX.ranger, {
@@ -3053,7 +3111,9 @@ function windLaneBoost(x, y, vx, vy, now) {
       for (const s of [-1, 1]) DP.windStrip(Array.from({ length: 17 }, (_, i) => { const a = c.ang + i / 16 * 5.4; return [c.x + Math.cos(a) * 44 * Math.cos(s * 0.7) - Math.sin(a) * 18 * Math.sin(s * 0.7), c.y + Math.cos(a) * 44 * Math.sin(s * 0.7) * 0.62 + Math.sin(a) * 18 * Math.cos(s * 0.7)]; }), { w: 5, color: s > 0 ? col : '#e8fff8', dur: 0.34, z: 20 });
       c.later(0.08, () => V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: col, speed: TRV('driftblade', 'cross'), size: 1.6, onHit: (x, y) => {
         for (const s of [-1, 1]) { DP.streaks(x, y, aim + s * 0.7, { n: sp >= 70 ? 3 : 2, back: 130 * q, on: 130 * q, w: 9.5 * q, gap: 9, color: col, dur: 0.44, stay: 1.4, leaves: sp >= 50 ? 2 : 1 }); dbSlit(x, y, aim + s * 0.7, 46 * q, col, { w: 5 * q, dur: 0.3 }); }
-        V.spikeburst(x, y, { r: 64 * q, n: Math.round(14 * q), color: col, core: '#ffffff', ink: '#0a2a24', dur: 0.32 }); shake(1 + 3 * q * q);
+        // (VFX pass) at full Drift the cut closes into a held cross of wind-blades, twice a hero across, with a dim scuff after
+        if (sp >= 70) V.climax(x, y, { shape: 'cross', r: 88, tilt: aim + Math.PI / 4, color: col, core: '#ffffff', ink: '#0a2a24', dur: 0.6, hold: 0.1, after: { smoke: 0.4, mark: 0.6 }, smokeColor: '#b8c8c0' });
+        else V.spikeburst(x, y, { r: 64 * q, n: Math.round(14 * q), color: col, core: '#ffffff', ink: '#0a2a24', dur: 0.32 }); shake(1 + 3 * q * q);
         FX.later(0.3, () => V.smoke(x, y, { n: 3, r: 30, color: '#c8d0c0', size: 22, a: 0.3, speed: 40, life: 1.3 })); } })); },
     // Stillpoint: the blade held flat across (a glint and the parry face), four little whirls round you bound by a ring seal,
     // a shaft of pale light down the middle; the seal goes faint and holds while it lasts
@@ -3062,6 +3122,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       c.later(0.12, () => { V.pillar(c.ent.x, c.ent.y, { r: 16, h: 185, color: '#d8fff0', dur: 0.5 }); V.shock(c.ent.x, c.ent.y, { r: 96, color: col, dur: 0.38, w: 3.5 }); DP.leaves(c.ent.x, c.ent.y, { n: 6, orbit: 64, dr: 10, follow: c.ent }); }); },
     // a gust spirals up round the duellist, streaks shoot out, and the wind aura stays on
     gale: c => { const col = windCol(c.ent); V.charge(c.x, c.y, { color: col, r: 60, n: 10, dur: 0.25, follow: c.ent }); V.tornado(c.x, c.y, { color: '#e8fff8', h: 120, r: 36, dur: 0.9 });
+      c.later(0.1, () => V.climax(c.ent.x, c.ent.y, { shape: 'ring', r: 90, color: col, core: '#f4fffa', ink: '#0a2a24', dur: 0.6, hold: 0.1, z: 14, after: { smoke: 0.3 }, smokeColor: '#c8d8d0' }));   // (VFX pass) the Gale opens as a held ring
       c.later(0.2, () => { V.shock(c.x, c.y, { r: 140, color: col, dur: 0.5, w: 6 }); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5; ribbon(line2(c.x + Math.cos(a) * 20, c.y + Math.sin(a) * 12, c.x + Math.cos(a) * 120, c.y + Math.sin(a) * 74, 6, 12), { color: col, w: 2, dur: 0.6 }); } });
       V.aura(c.ent, { color: col, dur: 12, r: 28, rate: 0.25 }); },
     // Comet's Impact: a gold glyph, a straight streak through the target, a burst, sparks thrown forward
@@ -3098,7 +3159,9 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.fx({ dur: 0.16, layer: 'ground', draw: (c, p, tt, fx) => { V.neonRing(c, t.x, t.y, R * 1.3 * (1 - p), to.color, 3, fx.a * p, 0.7); V.neonRing(c, t.x, t.y, R * 1.1 * (1 - p), other.color, 3, fx.a * p, 0.7); } });
       if (!echo) TP.steam(t.x, t.y, { n: 3, r: R * 0.8, size: 20, life: 0.8, a: 0.3 });
       FX.later(0.15, () => {
-        V.spikeburst(t.x, t.y, { r: R, n: 12 + Math.round(s), ...to, core: to === ICE ? '#bfe8ff' : '#ffd890', dur: 0.34 + s * 0.02 });
+        // (VFX pass) the Shock itself is a climax: a bold burst at least twice the mage with a held beat, then embers or frost-dust
+        if (echo) V.spikeburst(t.x, t.y, { r: R, n: 12 + Math.round(s), ...to, core: to === ICE ? '#bfe8ff' : '#ffd890', dur: 0.34 + s * 0.02 });
+        else V.climax(t.x, t.y, { shape: 'burst', r: Math.max(84, R * 1.05), n: 12 + Math.round(s), color: to.color, core: to === ICE ? '#e8f8ff' : '#fff0b8', ink: to.ink, dur: 0.6, hold: 0.1, after: { embers: to === FIRE ? 0.5 : 0.3, mark: 0.6 }, smokeColor: '#6a6a70' });
         V.spikeburst(t.x, t.y, { r: R * 1.35, n: 16, hole: 0.7, ...other, dur: 0.4, layer: 'ground', z: 0, flat: 0.7 });
         // (QA) the flash kept small and in the element's colour: with the starburst's white core a big white flash
         // whited out the boss on a large Shock
@@ -3107,7 +3170,7 @@ function windLaneBoost(x, y, vx, vy, now) {
         V.shock(t.x, t.y, { r: R * 2, color: to.color, dur: 0.5, w: 4 + s * 0.5 });
         if (to === ICE) V.crystals(t.x, t.y, { color: '#bfe6ff', n: 4 + Math.round(s / 2), r: R * 0.7, h: 30 + s * 4, dur: 1 }); else V.flare(t.x, t.y, { n: 6 + s, r: 14 + s, color: '#ff6a1a' });
         // both elements break out of it whichever way it swung: shards of ice and embers, rocks for a big one
-        TP.shards(t.x, t.y, { n: Math.min(12, 3 + Math.round(s / 2)), speed: 180 + s * 15 });
+        TP.shards(t.x, t.y, { n: Math.min(8, 3 + Math.round(s / 3)), speed: 180 + s * 15 });
         if (to === ICE) V.flare(t.x, t.y, { n: 3 + Math.round(s / 3), r: 10 + s, color: '#ff8a3a', size: 0.7 });
         if (!echo && s >= 6) V.debris(t.x, t.y, { n: Math.min(8, s - 2), hot: to === FIRE, color: '#4a3a32', speed: 0.8 });
         if (!echo) { shake(2 + s * 0.5); FX.text(t.x, t.y - 70, s >= 8 ? 'Thermal Shock!' : 'Shock', to.core, 11 + Math.min(8, s), 0.9); }
@@ -3143,6 +3206,8 @@ function windLaneBoost(x, y, vx, vy, now) {
       const col = windCol(e), a = e.angle || 0, t = target || e, gale = d && d.g;
       DRIFT_PAINT.streaks(t.x, t.y, a, { n: gale ? 4 : 3, back: 105, on: 130, w: gale ? 8.5 : 6.5, gap: 11, color: gale ? '#ffffff' : col, dur: 0.36, stay: 0.9, leaves: gale ? 3 : 2 });
       V.hit(t.x, t.y, col, gale ? 1 : 0.6); if (gale) shake(2);
+      // (VFX pass) the Gale Run strike: one long white-hot bolt of wind through the body, held a beat
+      if (gale) V.climax(t.x - Math.cos(a) * 62, t.y - Math.sin(a) * 62, { shape: 'bolt', angle: a, r: 82, flat: 1, color: '#c8fff0', core: '#ffffff', ink: '#0a2a24', dur: 0.5, hold: 0.1, z: 20 });
     }, { atTarget: true }),
     lane: e => { V.shock(e.x, e.y, { r: 30, color: windCol(e), dur: 0.25, w: 2 }); },
     // Gyre (kits.js k.fx('gyre', { n })): one cut round the target for every 25 Drift, 0.12s apart as the kit deals
@@ -3157,6 +3222,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     // Full Circle (Orbit): the loop closes and the hawk stoops: a steep pale streak down onto the target, a cut across it and a ring of wind
     stoop: Object.assign((e, target) => { const t = target || e, a = Math.atan2(t.y - e.y, t.x - e.x);
       DRIFT_PAINT.streaks(t.x, t.y - 30, Math.PI / 2 + (a > 0 ? -0.35 : 0.35), { n: 3, back: 120, on: 40, w: 6, gap: 9, color: '#e8fff2', dur: 0.28, stay: 0.5, leaves: 2 });
+      V.climax(t.x, t.y, { shape: 'bolt', angle: Math.PI / 2, r: 80, z: 140, color: '#a8f0c8', core: '#ffffff', ink: '#0a2a24', dur: 0.55, hold: 0.1, after: { smoke: 0.5, mark: 0.7 }, smokeColor: '#c8d8d0' });   // (VFX pass) the hawk falls as one held bolt
       OLD_PAINT.later(0.1, () => { V.slash(t.x, t.y + 8, a + Math.PI / 2, { r: 58, span: 1.8, color: '#a8f0c8', w: 0.45, dur: 0.24, sparks: 4 }); V.shock(t.x, t.y, { r: 64, color: '#a8f0c8', dur: 0.3, w: 2.5 }); V.hit(t.x, t.y, '#e8fff2', 0.7); }); }, { atTarget: true }),
     // (online refs: a Kaeshi echo) a wide pale smear swung the other way and a slit across the body
     crescent: Object.assign((e, target) => { const t = target || e, a = Math.atan2(t.y - e.y, t.x - e.x); V.slash(e.x, e.y, a, { r: 80, span: 2.8, color: windCol(e), w: 0.55, dur: 0.3, sparks: 5 });
@@ -3258,8 +3324,11 @@ function windLaneBoost(x, y, vx, vy, now) {
     // Stone Belly: grey stone crusts over it, chips falling
     stonebelly: c => { V.crystals(c.x, c.y, { color: '#b8b0a4', n: 8, r: 34, h: 40, dur: 1.2 }); V.shield(c.ent, { shape: 'hex', color: '#c8c0b0', dur: 2, r: 44 }); V.debris(c.x, c.y, { n: 6, color: '#8a8278' }); shake(3); },
     // Bottomless: the room is pulled toward the jaw: a great inward vortex, the floor's dust streaming in
-    bottomless: c => { const e = c.ent; if (e.st) { e.st.jawUntil = FX.now + 4; e.st.jawAll = FX.now + 4; } V.ink(c.x, c.y, { r: 170, dur: 4, follow: e, a: 0.25 }); V.vortex(c.x, c.y, { r: 170, color: '#ff8a3a', dur: 4, follow: e });
-      V.fx({ dur: 4, layer: 'ground', tick: () => { for (let i = 0; i < 2; i++) { const a = Math.random() * Math.PI * 2, d = rand(150, 320), x = e.x + Math.cos(a) * d, y = e.y + Math.sin(a) * d * 0.7;
+    // (climax pass) and at the pull's start one bold ring of the jaw gapes round the Gorgemaw, held a beat, then dust
+    bottomless: c => { const e = c.ent; if (e.st) { e.st.jawUntil = FX.now + 4; e.st.jawAll = FX.now + 4; }
+      V.climax(e.x, e.y, { shape: 'ring', r: 110, color: '#ff8a3a', core: '#ffe8c8', ink: '#1e0618', hold: 0.12, dur: 0.6, flat: 0.65, z: 18, after: { smoke: 0.4 } });
+      V.ink(c.x, c.y, { r: 170, dur: 4, follow: e, a: 0.25 }); V.vortex(c.x, c.y, { r: 170, color: '#ff8a3a', dur: 4, follow: e });
+      V.fx({ dur: 4, layer: 'ground', tick: () => { for (let i = 0; i < 1 + (Math.random() < 0.5 ? 1 : 0); i++) { const a = Math.random() * Math.PI * 2, d = rand(150, 320), x = e.x + Math.cos(a) * d, y = e.y + Math.sin(a) * d * 0.7;
         V.spawn({ x, y, z: 2, vx: (e.x - x) * 2.2, vy: (e.y - y) * 2.2, vz: 30, life: 0.45, size: rand(8, 12), size1: 2, color: i ? '#ffd0a0' : '#c87a4a', stretch: 3 }); } }, draw: () => {} });
       V.shock(c.x, c.y, { r: 200, color: '#ffb070', dur: 0.6, w: 7 }); shake(5); },
   };
@@ -3333,8 +3402,9 @@ function windLaneBoost(x, y, vx, vy, now) {
     // (QA) it read as a faint ring: now the seal on the book cracks (a burst of dark-red wax spikes and lilac light at
     // the knight's chest), torn pages flung high, then the ring and the smoke
     // (vfx2) and over it the contract itself: VOID stamped across it, torn in two
-    default: c => { voidSheet(c.ent); V.spikeburst(c.x, c.y, { r: 54, n: 12, color: '#c0485a', core: '#f0d8ff', ink: INK, dur: 0.32, z: 22 }); V.flash(c.x, c.y - 22, 46, LIL, 0.2);
-      pages(c.x, c.y, 14); V.shock(c.x, c.y, { r: 120, color: LIL, dur: 0.5, w: 6 }); V.smoke(c.x, c.y, { n: 6, color: '#6a6070', size: 26, a: 0.45, speed: 50 }); shake(4); },
+    // (climax pass) the cracked seal is one bold wax-and-lilac bloom, held a beat, then dust
+    default: c => { voidSheet(c.ent); V.climax(c.x, c.y, { shape: 'burst', r: 88, n: 14, color: '#c0485a', core: '#f0d8ff', ink: INK, hold: 0.12, dur: 0.6, flat: 0.75, z: 22, after: { smoke: 0.4, smokeColor: '#6a6070' } }); V.flash(c.x, c.y - 22, 46, LIL, 0.2);
+      pages(c.x, c.y, 12); V.shock(c.x, c.y, { r: 120, color: LIL, dur: 0.5, w: 6 }); shake(4); },
     // Foreclose: a great seal slams down onto the boss
     foreclose: c => { V.lightfall(c.tx, c.ty, { color: WAX, r: 34, h: 220, dur: 0.5, feathers: 0 }); c.later(0.2, () => { stamp(c.tx, c.ty, WAX, true); seal(c.tx, c.ty, 60, WAX, 1.8); pages(c.tx, c.ty, 10); shake(5); }); },
     // Moratorium: an hourglass seal, the Ledger held
@@ -3400,7 +3470,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       if (o.mine) shake(2);
     },
     bill(msg, e) { const big = msg.s; seal(e.x, e.y + 4, big ? 30 : 16 + Math.min(14, (msg.a || 0) / 8), big ? GOLD : WAX, 0.9); if (!big) V.flash(e.x, e.y - 10, 20, WAX, 0.15); },
-    default(msg, e, o) { if (msg.b > 0 && o.boss && FX.text) FX.text(o.boss.x, o.boss.y - 70, String(Math.round(msg.b)), '#ff9a7a', 14 + Math.min(10, msg.b / 400)); pages(e.x, e.y, 14); V.shock(e.x, e.y, { r: 110, color: LIL, dur: 0.45, w: 5 }); if (msg.b > 0 && o.boss) { stamp(o.boss.x, o.boss.y, WAX, true); pages(o.boss.x, o.boss.y, 8); } },
+    default(msg, e, o) { if (msg.b > 0 && o.boss && FX.text) FX.text(o.boss.x, o.boss.y - 70, String(Math.round(msg.b)), '#ff9a7a', 14 + Math.min(10, msg.b / 400)); pages(e.x, e.y, 14); V.shock(e.x, e.y, { r: 110, color: LIL, dur: 0.45, w: 5 }); if (msg.b > 0 && o.boss) { V.climax(o.boss.x, o.boss.y, { shape: 'burst', r: 84, n: 14, color: '#c0485a', core: '#f0d8ff', ink: INK, hold: 0.1, dur: 0.55, flat: 0.72, z: 14, after: { embers: 0.4 } }); seal(o.boss.x, o.boss.y, 30, WAX, 1.4); shake(3); pages(o.boss.x, o.boss.y, 8); } },   // (climax pass) the bill lands on the boss as one bold bloom
   };
 
   // the sparring dummy: the yard plays the host's part for the jaw and the Ledger
@@ -3533,10 +3603,11 @@ function windLaneBoost(x, y, vx, vy, now) {
       c.later(0.06, () => OLD_PAINT.thrust(c.tx, c.ty - 130, c.tx, c.ty - 14, { w: 13, color: col(c.ent), core: hot(c.ent), ink: '#2a1408', dur: 0.2, z: 16 }));
       c.later(0.18, () => {
         const k = col(c.ent); impact(c, 1.6, { reach: 60 }); stop(c, 0.14); crossRing(c.tx, c.ty, -Math.PI / 2, 80, hot(c.ent), { dur: 0.26, w: 3, z: 14, thin: 0.42 });
-        V.spikeburst(c.tx, c.ty, { r: 64, n: 14, color: k, core: hot(c.ent), ink: '#2a1408', dur: 0.36 });
+        // (climax pass) the heel lands as one bold bloom of saffron, held a beat, then dust
+        V.climax(c.tx, c.ty, { shape: 'burst', r: 90, n: 14, color: k, core: hot(c.ent), ink: '#2a1408', hold: 0.12, dur: 0.6, flat: 0.72, z: 10, after: { smoke: 0.4, smokeColor: '#a89880' } });
         V.decal(c.tx, c.ty, { style: 'crack', r: 60, dur: 2.4, a: 0.6, seed: Math.random() * 6 });
         V.shock(c.tx, c.ty, { r: 120, color: k, dur: 0.45, w: 7 });
-        V.debris(c.tx, c.ty, { n: 8, color: '#7a6a58' }); V.smoke(c.tx, c.ty, { n: 6, r: 30, color: '#a89880', size: 30, a: 0.45, speed: 60, life: 1.4 });
+        V.debris(c.tx, c.ty, { n: 8, color: '#7a6a58' });
         shake(6);
       }); },
     // Tiger Wall: a low stance; a shield of striped light across the front, dust swept out to the sides
@@ -3563,7 +3634,9 @@ function windLaneBoost(x, y, vx, vy, now) {
       crossRing(p.x, p.y, p.a, 44, hot(c.ent), { dur: 0.2, w: 3 }); crossRing(p.x, p.y, p.a, 74, k, { dur: 0.32, w: 3.4, delay: 0.04 });
       rush(c.tx, c.ty, p.a, { out: true, n: 5, dist: 70, len: 34, dur: 0.26, cone: 0.55, spread: 12, color: k, w: 2.6 });
       V.shock(c.tx, c.ty, { r: 90, color: k, dur: 0.4, w: 6, delay: 0.04 });
-      for (let i = 0; i < 6; i++) { const a = p.a + rand(-0.6, 0.6), sp = rand(120, 240); V.spawn({ x: c.tx, y: c.ty, z: 10, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.7, vz: rand(20, 60), drag: 0.06, life: 0.8, size: 18, size1: 34, color: '#c8b8a0', kind: 'smoke', add: false, a: 0.4 }); }
+      // (climax pass) the punch-through as one bold cone of saffron out the far side of the boss, held a beat
+      V.climax(c.tx, c.ty, { shape: 'cone', r: 105, angle: p.a, span: 0.9, color: k, core: hot(c.ent), ink: '#2a1408', hold: 0.1, dur: 0.5, flat: 1, z: 18, after: { smoke: 0.3, smokeColor: '#a89880' } });
+      for (let i = 0; i < 4; i++) { const a = p.a + rand(-0.6, 0.6), sp = rand(120, 240); V.spawn({ x: c.tx, y: c.ty, z: 10, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.7, vz: rand(20, 60), drag: 0.06, life: 0.8, size: 18, size1: 34, color: '#c8b8a0', kind: 'smoke', add: false, a: 0.4 }); }
     }); },
     // Iron Skin: the skin goes dark iron: a metal sheen ring, rivet sparks, a grey aura that stays the 10s
     skin: c => { V.glint(c.x, c.y, { color: '#e8eef6', size: 30, z: 30 }); V.aura(c.ent, { color: '#9aa8b8', dur: 10, r: 28, rate: 0.15 });
@@ -3606,7 +3679,8 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.shock(e.x, e.y, { r: b ? 110 : 70, color: b ? '#ffd27a' : '#e8f4ff', dur: 0.4, w: b ? 7 : 4 });
       V.sparks(x, y, { color: '#fff2c8', n: b ? 14 : 8, angle: e.angle || 0, spread: 1, speed: 360 });
       if (e.st) hitStop(e.st, b ? 0.18 : 0.08, FX.now);
-      if (b) { V.sigil(e.x, e.y, { r: 70, style: 'star4', color: '#ffd27a', dur: 0.8, spin: 3 }); vfxShake(4); }
+      // (climax pass) a perfect Read's counter: one bold gold cross-star over the monk, held a beat (it replaces the floor sigil)
+      if (b) { V.climax(e.x, e.y, { shape: 'cross', r: 90, color: '#ffd27a', core: '#fff6d8', ink: '#2a1408', hold: 0.12, dur: 0.6, flat: 0.8, z: 22, after: { embers: 0.4 } }); vfxShake(4); }
     },
     // Avalanche Fist: a dropped string staggers you: grit and a dull ring
     stagger: e => { V.smoke(e.x, e.y, { n: 4, color: '#8a7a68', size: 18, a: 0.5, speed: 30 }); V.shock(e.x, e.y, { r: 40, color: '#8a6a50', dur: 0.3, w: 3 }); },
@@ -3825,7 +3899,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       c.later(0.12, () => { weaveSnapBurst(w.x, w.y - 24, { r: 84, n: 16 }); V.sparks(w.x, w.y, { color: TW_ROSE, n: 7, speed: 280, z: 24 }); weaveDiamond(w.x, w.y, 72, 1.4, { peak: 0.8, settle: 0.32, w: 1.3 }); }); },
     // Shuttle (painted sheet): two threads loop over each other in figure-eights out to the boss with the gold shuttle
     // at their head; beads run down her threads (one strike per thread); crossed threads lie a moment where it strikes
-    shuttle: c => { runDown(c.ent, TW_ROSE); weaveShuttleLoops(c.x, c.y, c.tx, c.ty, (x, y) => { V.hit(x, y, TW_ROSE, 0.85); weaveSnapBurst(x, y - 20, { r: 50, n: 10 }); V.glint(x, y, { color: TW_GOLD, size: 30, z: 20 }); weaveFloorThreads(x, y, 4, 1.2); }); },
+    shuttle: c => { runDown(c.ent, TW_ROSE); weaveShuttleLoops(c.x, c.y, c.tx, c.ty, (x, y) => { V.hit(x, y, TW_ROSE, 0.85); V.climax(x, y, { shape: 'burst', n: 9, r: 82, color: TW_CRIM, core: TW_HOT, ink: '#2a0410', dur: 0.55, hold: 0.1, z: 20, after: { embers: 0.3 } }); V.glint(x, y, { color: TW_GOLD, size: 30, z: 20 }); weaveFloorThreads(x, y, 4, 1.2); }); },
     // Tapestry (painted sheet): a snapping starburst of thread, then a great woven diamond seal under her, ribbons of
     // crimson and gold wheeling out to the party (stagecraft.js draws the web itself while it lasts)
     tapestry: c => { weaveSnapBurst(c.x, c.y - 24, { r: 118, n: 18 }); weaveDiamond(c.x, c.y, 175, 2.4, { peak: 0.9, settle: 0.36, w: 1.4 });
@@ -3923,6 +3997,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     st.finAt = now;
     if (cam) { shake(3); cam.stop(0.045); }   // (your own Finale only: four Marionettists don't shake each other's screens)
     V.glint(st.tx, st.ty, { color: '#ffffff', size: 34, z: 20 });
+    V.climax(st.tx, st.ty, { shape: 'burst', n: 5, tilt: -Math.PI / 2, r: 92, color: C.GOLD, core: '#fff8e8', ink: C.INK, dur: 0.65, hold: 0.12, z: 18, after: { embers: 0.5, mark: 0.5 }, smokeColor: '#5a3a40' });   // (VFX pass) a five-pointed star, one point per cut
     V.shock(st.tx, st.ty, { r: 96, color: C.GOLD, dur: 0.45, w: 4 }); V.shock(st.tx, st.ty, { r: 64, color: '#ffe6a8', dur: 0.4, w: 2.5, delay: 0.06 });
     MP.petals(st.tx, st.ty, { n: 9, speed: 240, life: 1.3 });
     OLD_PAINT.later(0.12, () => { act(ent, 'spin'); V.glint(B.x, B.y, { color: '#ffe6a8', size: 26, z: 30 }); MP.petals(B.x, B.y, { n: 5, speed: 150, life: 1.1 }); });
@@ -4086,8 +4161,8 @@ function windLaneBoost(x, y, vx, vy, now) {
     swap: (e, t, d) => { const dl = dollsOf(e)[(d && d.i) | 0]; for (const w of dl ? [e, dl] : [e]) { V.glint(w.x, w.y, { color: '#ffffff', size: 24, z: 30 }); MARI_PAINT.petals(w.x, w.y, { n: 4, speed: 120, life: 1 }); } },
     // Grand Finale spends the Encore (data.e): that many gold stars burst up off the puppeteer and stream to the Doll
     finale: (e, t, d) => { const n = Math.max(1, Math.min(10, (d && d.e) | 0 || 5)), ds = dollsOf(e);
-      for (let i = 0; i < n; i++) { const to = ds.length ? ds[i % ds.length] : (t || e); OLD_PAINT.later(i * 0.05, () => V.missile(e.x, e.y - 20, to.x, to.y - 20, { style: 'orb', color: '#ffd27a', speed: 520, size: 0.5, arc: 50 + (i % 3) * 20, onHit: (x, y) => V.glint(x, y, { color: '#ffe6a8', size: 18, z: 20 }) })); }
-      V.burst(e.x, e.y - 30, { color: '#ffd27a', color2: '#ffffff', n: 8 + n, speed: 200, kind: 'star', flash: false }); },
+      for (let i = 0; i < Math.min(n, 4); i++) { const to = ds.length ? ds[i % ds.length] : (t || e); OLD_PAINT.later(i * 0.1, () => V.missile(e.x, e.y - 20, to.x, to.y - 20, { style: 'orb', color: '#ffd27a', speed: 520, size: 0.5, arc: 50 + (i % 3) * 20, onHit: (x, y) => V.glint(x, y, { color: '#ffe6a8', size: 18, z: 20 }) })); }
+      V.burst(e.x, e.y - 30, { color: '#ffd27a', color2: '#ffffff', n: 6 + n, speed: 200, kind: 'star', flash: false }); },
     mend: e => { for (const dl of dollsOf(e)) V.glint(dl.x, dl.y, { color: '#ffffff', size: 18, z: 26 }); },
     // (rework) the passive Jab, every couple of seconds: Jab's look without the puppeteer's gold twitch (the Doll jabs on
     // its own now): a straight crimson lunge, a pin-prick star and two petals. data.fast (the three quick Jabs after a
@@ -4218,8 +4293,9 @@ function windLaneBoost(x, y, vx, vy, now) {
       shake(9);
       // impact: the blade hits the floor in a white-gold blast, the stone splits, a column of dawn goes up
       V.flash(at.x, at.y - 24, 110, '#fff2c8', 0.3);
-      V.spikeburst(at.x, at.y, { r: 130, n: 22, color: GOLD, core: '#fffbe0', ink: '#4a3408', dur: 0.55, layer: 'ground', z: 0, flat: 0.6 });
-      V.spikeburst(at.x, at.y, { r: 58, n: 14, color: '#ffe680', core: '#ffffff', ink: '#4a3408', dur: 0.3, z: 34 });
+      // (life pass) the blade's climax: a great starburst on the floor and a second, brighter one at the hilt, each held a beat
+      V.climax(at.x, at.y, { shape: 'burst', r: 140, n: 22, color: GOLD, core: '#fffbe0', ink: '#4a3408', dur: 0.65, hold: 0.12, layer: 'ground', flat: 0.6, after: { smoke: 0.6, embers: 0.6, mark: 0.6 } });
+      V.climax(at.x, at.y, { shape: 'burst', r: 92, n: 14, color: '#ffe680', core: '#ffffff', ink: '#4a3408', dur: 0.45, hold: 0.1, z: 34 });
       V.pillar(at.x, at.y, { r: 30, h: 280, color: DAWN, dur: 0.7 });
       for (let i = 0; i < 3; i++) V.shock(at.x, at.y, { r: 170 + i * 70, color: i ? DAWN : '#ffffff', dur: 0.6 + i * 0.12, w: 9 - i * 2, delay: i * 0.08 });
       V.debris(at.x, at.y, { n: 14, color: '#8a7a68', speed: 1.3 });
@@ -4241,8 +4317,9 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.lightfall(t.x, t.y, { color: DAWN, r: 50, h: 360, dur: 0.6, feathers: 6 });
     V.flash(t.x, t.y - 30, 90, '#fff2c8', 0.24);
     // (QA) the starburst sits at the boss's feet and the seal settles low, so the boss and its next telegraph still read
-    V.spikeburst(t.x, t.y, { r: 140, n: 22, color: GOLD, core: '#fffbe0', ink: '#4a3408', dur: 0.5, z: 0, layer: 'ground', flat: 0.6 });
-    V.spikeburst(t.x, t.y, { r: 44, n: 12, color: '#ffe680', core: '#ffffff', ink: '#4a3408', dur: 0.22, z: 20 });
+    // (life pass) the slam's climax, held a beat: the starburst at the boss's feet and a bright one over it
+    V.climax(t.x, t.y, { shape: 'burst', r: 150, n: 22, color: GOLD, core: '#fffbe0', ink: '#4a3408', dur: 0.6, hold: 0.12, layer: 'ground', flat: 0.6, after: { smoke: 0.5, embers: 0.5, mark: 0.5 } });
+    V.climax(t.x, t.y, { shape: 'burst', r: 88, n: 12, color: '#ffe680', core: '#ffffff', ink: '#4a3408', dur: 0.4, hold: 0.1, z: 20 });
     V.shock(t.x, t.y, { r: 200, color: DAWN, dur: 0.6, w: 9 });
     V.shock(t.x, t.y, { r: 120, color: '#ffffff', dur: 0.45, w: 5, delay: 0.06 });
     vfxLingerSettle(V.sigil(t.x, t.y, { r: 100, style: 'star4', color: GOLD, dur: 2.6, spin: 1.2 }), 0.3, 0.7);
@@ -4310,7 +4387,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.glint(h.x, h.y, { color: ASH, size: 30, z: 24 });
     V.flash(h.x, h.y - 20, 30, EMBER, 0.16);
     V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: EMBER, speed: 1150, size: 1.7, arc: 10, onHit: (x, y) => {
-      V.spikeburst(x, y, { r: 56, n: 14, color: '#ffa030', core: '#fff6d0', ink: '#3a0e04', dur: 0.32, z: 20 });
+      V.climax(x, y, { shape: 'burst', r: 80, n: 14, color: '#ffa030', core: '#fff6d0', ink: '#3a0e04', z: 22, dur: 0.5, after: { embers: 0.4 } });   // (VFX pass) the window's lance lands as the Ultimate's burst, 80 wide
       V.shock(x, y, { r: 76, color: ASH, dur: 0.32, w: 4 });
       V.flare(x, y, { n: 6, r: 14, size: 0.9 });
       V.decal(x, y, { r: 24, embers: true, dur: 1.4, a: 0.35 });
@@ -4319,7 +4396,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     } });
   };
   ABILITY_VFX.pyromancer.phoenixblast = c => V.phoenix(c.x, c.y, c.tx, c.ty, { s: 0.85, dur: 0.42, onHit: (x, y) => {
-    V.spikeburst(x, y, { r: 58, n: 16, color: FIRE, core: '#fff6d0', ink: '#3a0e04', dur: 0.38, z: 26 });
+    V.climax(x, y, { shape: 'burst', r: 88, n: 16, color: FIRE, core: '#fff6d0', ink: '#3a0e04', z: 26, dur: 0.55, after: { embers: 0.4 } });   // (VFX pass) the window's phoenix lands as a bold burst, 88 wide
     V.spikeburst(x, y, { r: 100, n: 16, color: FIRE, core: ASH, dur: 0.4, layer: 'ground', z: 0, flat: 0.6 });   // (QA) at its feet
     pyroRing(x, y, { r: 50, n: 9, h: 28, dur: 0.75 });
     V.shock(x, y, { r: 130, color: '#ffa040', dur: 0.45, w: 6 });
@@ -4430,7 +4507,7 @@ function windLaneBoost(x, y, vx, vy, now) {
   Object.assign(KIT_VFX, {
     // a Passing Strike inside the eye: a long gale line along the way you were running (Gale Run makes it white-hot)
     'drift-gale': Object.assign((e, target, d) => { const t = target || e, col = d && d.g ? '#ffffff' : driftUltCol(e); driftUltGaleLine(t.x, t.y, e.angle || 0, col, { w: d && d.g ? 6 : 4 });
-      DRIFT_PAINT.streaks(t.x, t.y, e.angle || 0, { n: 3, back: 145, on: 180, w: 7, gap: 14, color: col, dur: 0.42, scuff: false, leaves: 2 }); if (d && d.g) shake(2); }, { atTarget: true }),
+      DRIFT_PAINT.streaks(t.x, t.y, e.angle || 0, { n: 3, back: 145, on: 180, w: 7, gap: 14, color: col, dur: 0.42, scuff: false, leaves: 2 }); if (d && d.g) { shake(2); const ga = e.angle || 0; V.climax(t.x - Math.cos(ga) * 62, t.y - Math.sin(ga) * 62, { shape: 'bolt', angle: ga, r: 82, flat: 1, color: '#c8fff0', core: '#ffffff', ink: '#0a2a24', dur: 0.5, hold: 0.1, z: 20 }); } }, { atTarget: true }),
     // the tempest that ends the window: a great twister on the target, gusts flung out, sized by the Drift you kept
     'drift-tempest': Object.assign((e, target, d) => {
       const t = target || e, col = driftUltCol(e), q0 = 0.6 + 0.4 * Math.min(1, ((d && d.d) || 0) / 100), q = q0 * DRIFT_ULT_SCALE * 0.9, cam = FX.camFor(e);
@@ -4610,7 +4687,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       MP.xcut(tx, ty, { r: R * 1.05, a: 0.62, w: 10 * SC, dur: 0.44, z: 14 });
       c.later(0.06, () => MP.xcut(tx, ty, { r: R * 0.85, a: 0.62 + Math.PI / 4, w: 7 * SC, dur: 0.38, z: 14, color: MU.ROSE2 }));
       V.flash(tx, ty - 20, 46 * SC, '#fff0e6', 0.18);
-      V.spikeburst(tx, ty, { r: 72 * SC, n: 18, color: MU.CRIM, core: '#fff0e6', ink: '#2a0410', dur: 0.4, z: 12 });
+      V.climax(tx, ty, { shape: 'burst', n: 18, r: 72 * SC, color: MU.CRIM, core: '#fff0e6', ink: '#2a0410', dur: 0.6, hold: 0.12, z: 12 });   // (VFX pass) the heart holds a beat before it dissolves
       V.shock(tx, ty, { r: 175 * SC, color: MU.ROSE2, dur: 0.55, w: 7 });
       V.shock(tx, ty, { r: 130 * SC, color: MU.GOLD, dur: 0.5, w: 4, delay: 0.06 });
       V.burst(tx, ty, { color: MU.GOLD, color2: '#ffffff', n: 12, speed: 320, kind: 'star', flash: false });
@@ -4685,17 +4762,17 @@ function windLaneBoost(x, y, vx, vy, now) {
     dmgUltLater(e, HIT, () => {
       V.flash(x, y - 30, 70 * q, '#ffffff', 0.16);
       V.flash(x, y - 20, 110 * q, '#ffc060', 0.24);
-      V.spikeburst(x, y, { r: 115 * q, n: 22, ...TH.FIRE, dur: 0.48 });
+      V.climax(x, y, { shape: 'burst', r: 115 * q, n: 22, color: TH.FIRE.color, core: '#fff6d0', ink: TH.FIRE.ink, dur: 0.7, hold: 0.12, after: { embers: 0.6, mark: 0.5 } });   // (VFX pass) held a beat, embers and a dim mark after
       V.spikeburst(x, y, { r: 140 * q, n: 20, hole: 0.68, ...TH.ICE, color: '#bfe6ff', dur: 0.48, layer: 'ground', z: 0, flat: 0.7 });   // (pale frost, not a blue floor shape)
       V.spikeburst(x, y, { r: 70 * q, n: 12, ...TH.ICE, dur: 0.32, z: 30 });
       V.pillar(x, y, { r: 34 * q, h: 300, color: '#ffb060', dur: 0.45 });
-      V.flare(x, y, { n: 16 + 2 * s, r: 40 * q, color: '#ff6a1a', size: 1.5, h: 1.6 });
-      TP.shards(x, y, { n: 18, speed: 360 * SC * 0.8, size: 1.5, z: 24 });
-      TP.shards(x, y, { n: 10, speed: 200 * SC * 0.8, size: 1.1, z: 40, color: '#cfeeff' });
+      V.flare(x, y, { n: 10 + s, r: 40 * q, color: '#ff6a1a', size: 1.5, h: 1.6 });
+      TP.shards(x, y, { n: 12, speed: 360 * SC * 0.8, size: 1.5, z: 24 });
+      TP.shards(x, y, { n: 6, speed: 200 * SC * 0.8, size: 1.1, z: 40, color: '#cfeeff' });
       V.shock(x, y, { r: 210 * qr, color: '#ff9a5a', dur: 0.6, w: 10 });
       V.shock(x, y, { r: 175 * qr, color: '#7ac0f0', dur: 0.6, w: 7, delay: 0.07 });
-      V.burst(x, y, { color: '#fff0b0', color2: '#8fd0ff', n: 16, speed: 320 * SC * 0.8, flash: false });
-      V.debris(x, y, { n: 12, hot: true, color: '#3a2a22', speed: 1.2 * SC * 0.8, size: 1.4 });
+      V.burst(x, y, { color: '#fff0b0', color2: '#8fd0ff', n: 10, speed: 320 * SC * 0.8, flash: false });
+      V.debris(x, y, { n: 8, hot: true, color: '#3a2a22', speed: 1.2 * SC * 0.8, size: 1.4 });
       V.smoke(x, y, { n: 8, r: 50 * q, color: '#b8b4b0', size: 34 * SC * 0.8, a: 0.42, speed: 90 * SC * 0.8, life: 1.4 });
     });
     // AFTERMATH: a scorched crater ringed with frost spikes, the heat cooling in its cracks, steam rising (kept to rims)
@@ -4758,12 +4835,12 @@ function windLaneBoost(x, y, vx, vy, now) {
       if (c.cam) { c.cam.stop(0.1); c.cam.punch(0.08, 0.55); c.cam.flash('#ffc8c0', 0.24, 0.36); }   // (online-refs pass: a pale flash, not a screen washed red: red reads as danger)
       shake(9);
       // the roar: a hot burst at the chest, a ring of dark-red spikes thrown out over the party, the moon flares
-      V.spikeburst(e.x, e.y, { r: 54, n: 14, color: '#ff3a2a', core: '#ffe6dc', ink: CLOT, dur: 0.3, z: 30 });
+      V.climax(e.x, e.y, { shape: 'burst', r: 96, n: 14, color: '#ff3a2a', core: '#ffe6dc', ink: CLOT, dur: 0.45, hold: 0.1, z: 30 });   // (life pass) held a beat, two heroes wide
       V.flash(e.x, e.y - 112, 80, '#ffd0c0', 0.3);
       // (QA: a full-strength red circle for 10s read as a boss danger zone) the rune circle flares, then holds faint
       vfxLingerSettle(V.ink(e.x, e.y, { r: 130, dur: 10, follow: e, a: 0.3 }), 0.5, 1.2);
       vfxLingerSettle(V.sigil(e.x, e.y, { r: 130, style: 'runes', color: BLOOD, dur: 10, spin: -0.5, follow: e }), 0.22, 1.3);
-      V.spikeburst(e.x, e.y, { r: 185, n: 26, hole: 0.6, color: '#ff3a2a', core: '#ffc0b0', ink: CLOT, dur: 0.65, layer: 'ground', z: 0, flat: 0.6 });
+      V.climax(e.x, e.y, { shape: 'burst', r: 185, n: 26, color: '#ff3a2a', core: '#ffc0b0', ink: CLOT, dur: 0.75, hold: 0.12, layer: 'ground', flat: 0.6, after: { smoke: 0.6, embers: 0.6, mark: 0.5 } });
       for (let i = 0; i < 3; i++) V.shock(e.x, e.y, { r: 190 + i * 60, color: i ? '#ff8a7a' : '#ffffff', dur: 0.6 + i * 0.12, w: 9 - i * 2, delay: i * 0.08 });
       V.splash(e.x, e.y, { n: 16, speed: 1.5 });
       V.decal(e.x, e.y, { style: 'crack', r: 70, dur: 4, a: 0.55, seed: Math.random() * 6 });
@@ -4788,8 +4865,8 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.ink(t.x, t.y, { r: 100 * s, dur: 4, a: 0.35 });
       V.flash(t.x, t.y - 26, 70 * s, '#ffd0c8', 0.24);
       V.pillar(t.x, t.y, { r: 32, h: 280, color: BLOOD, dur: 0.6 });   // (QA) slimmer, so the boss isn't whited out
-      V.spikeburst(t.x, t.y, { r: 140 * s, n: 22, color: '#d0203a', core: '#ffb0b8', ink: CLOT, dur: 0.55, layer: 'ground', z: 0, flat: 0.6 });   // (QA) on the floor round the boss, not a solid star over it
-      V.spikeburst(t.x, t.y, { r: 44, n: 12, color: '#ff3a4a', core: '#ffe6ea', ink: CLOT, dur: 0.22, z: 22 });
+      V.climax(t.x, t.y, { shape: 'burst', r: 150 * s, n: 22, color: '#d0203a', core: '#ffb0b8', ink: CLOT, dur: 0.65, hold: 0.12, layer: 'ground', flat: 0.6, after: { smoke: 0.5, embers: 0.5, mark: 0.5 } });   // (QA) on the floor round the boss, not a solid star over it; (life pass) held a beat
+      V.climax(t.x, t.y, { shape: 'burst', r: 88, n: 12, color: '#ff3a4a', core: '#ffe6ea', ink: CLOT, dur: 0.4, hold: 0.1, z: 22 });
       V.shock(t.x, t.y, { r: 190 * s, color: '#ff5a6a', dur: 0.6, w: 9 });
       V.shock(t.x, t.y, { r: 110 * s, color: '#ffffff', dur: 0.4, w: 4, delay: 0.06 });
       V.splash(t.x, t.y, { n: 18, speed: 1.6, size: 1.3 });
@@ -4833,8 +4910,9 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.flash(c.tx, c.ty - 30, 100, '#e8ecff', 0.28);
       for (let i = 0; i < 3; i++) { const a = i * Math.PI * 2 / 3 + rand(-0.3, 0.3), d = rand(20, 60); V.lightning(c.tx + Math.cos(a) * d, c.ty - 260, c.tx + Math.cos(a) * d * 0.4, c.ty + Math.sin(a) * d * 0.3, { color: i % 2 ? RUNE2 : '#ffffff', jag: 16, dur: 0.3 }); }
       // (QA: the starburst sits on the floor round the enemy, not over it; the circles flare then settle faint; all indigo)
-      V.spikeburst(c.tx, c.ty, { r: 150, n: 22, color: RUNE, core: RCORE, ink: RINK, dur: 0.55, layer: 'ground', z: 0, flat: 0.6 });
-      V.spikeburst(c.tx, c.ty, { r: 52, n: 12, color: RUNE2, core: '#ffffff', ink: RINK, dur: 0.24, z: 28 });
+      // (life pass) the stone's climax, held a beat: a great starburst on the floor and a bright cross of crystal over the enemy
+      V.climax(c.tx, c.ty, { shape: 'burst', r: 155, n: 22, color: RUNE, core: RCORE, ink: RINK, dur: 0.65, hold: 0.12, layer: 'ground', flat: 0.6, after: { smoke: 0.5, embers: 0.5, mark: 0.5 } });
+      V.climax(c.tx, c.ty, { shape: 'cross', r: 92, color: RUNE2, core: '#ffffff', ink: RINK, dur: 0.4, hold: 0.1, z: 28 });
       V.crystals(c.tx, c.ty, { color: '#9aa4ff', n: 10, r: 80, h: 110, dur: 1.6 });
       for (let i = 0; i < 2; i++) V.shock(c.tx, c.ty, { r: 190 + i * 60, color: i ? RUNE2 : '#ffffff', dur: 0.6, w: 9 - i * 3, delay: i * 0.08 });
       V.crater(c.tx, c.ty, { r: 76, color: RUNE2, core: RCORE, dur: 4, flames: 0, a: 0.55, cracks: 10 });
@@ -5073,8 +5151,10 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.shock(t.x, t.y, { r: 90 * S, color: k, dur: 0.55, w: 5, delay: 0.06 });
     for (let i = 0; i < 12; i++) { const ra = i / 12 * Math.PI * 2 + rand(-0.15, 0.15), d = rand(110, 150) * S;
       ironpalmHandFly(t.x + Math.cos(ra) * 18 * S, t.y + Math.sin(ra) * 12 * S, t.x + Math.cos(ra) * d, t.y + Math.sin(ra) * d * 0.62, rand(1.5, 1.9) * Math.sqrt(S), i % 2 ? h : k, 0.45, 0.03 + i * 0.01, 28); }
-    V.burst(t.x, t.y, { color: k, color2: '#ffffff', n: 16, speed: 280 * S, kind: 'star', flash: false });
-    V.debris(t.x, t.y, { n: 16, color: IP_ROCK, speed: 1.4, size: 1.3 });
+    // (climax pass) the blow's one bold shape in the air: a saffron bloom round the boss, white-hot core, ink edge, held a beat, then embers
+    V.climax(t.x, t.y, { shape: 'burst', r: 72 * S, n: 16, color: k, core: h, ink: '#2a1408', hold: 0.12, dur: 0.65, flat: 0.72, z: 12, after: { embers: 0.6 } });
+    V.burst(t.x, t.y, { color: k, color2: '#ffffff', n: 10, speed: 280 * S, kind: 'star', flash: false });
+    V.debris(t.x, t.y, { n: 12, color: IP_ROCK, speed: 1.4, size: 1.3 });
     V.smoke(t.x, t.y, { n: 6, r: 40 * S, color: '#a89880', size: 30 * S, a: 0.35, speed: 70 * S, life: 1.2 });
     // (ult impact pass) a dark wave under the bright rings for weight, a dust ring rolling out low and slow, and gold embers rising off the print
     V.shock(t.x, t.y, { r: 140 * S, color: '#2a1408', dur: 0.6, w: 12, delay: 0.02 });
@@ -5141,7 +5221,8 @@ function windLaneBoost(x, y, vx, vy, now) {
         });
       });
       // (QA: a solid gold star covered the boss's face) the finishing burst on the floor round its feet
-      c.later(0.12 + n * gap, () => { V.spikeburst(c.tx, c.ty, { r: 80 * M, n: 16, color: k, core: h, ink: '#2a1408', dur: 0.36, layer: 'ground', z: 0, flat: 0.6 }); V.shock(c.tx, c.ty, { r: 100 * M, color: k, dur: 0.4, w: 5 });
+      // (climax pass) held a beat on the floor round its feet, a little bigger, with embers after
+      c.later(0.12 + n * gap, () => { V.climax(c.tx, c.ty, { shape: 'burst', r: 88 * M, n: 16, color: k, core: h, ink: '#2a1408', hold: 0.12, dur: 0.6, flat: 0.6, z: 6, after: { embers: 0.5 } }); V.shock(c.tx, c.ty, { r: 100 * M, color: k, dur: 0.4, w: 5 });
         for (let i = 0; i < 5; i++) { const ra = c.ang + (i - 2) * 0.5; ironpalmHandFly(c.tx, c.ty, c.tx + Math.cos(ra) * 70 * M, c.ty + Math.sin(ra) * 44 * M, 0.9 * M, i % 2 ? h : k, 0.3, i * 0.015, 22); }   // the flurry bursting through
         V.debris(c.tx, c.ty, { n: 5, color: IP_ROCK, speed: 0.8 });
         V.burst(c.tx, c.ty, { color: k, color2: '#ffffff', n: 12, speed: 240 * M, kind: 'star', flashR: 50 * M }); stopE(c.ent, 0.1); shake(5); });
@@ -5329,10 +5410,12 @@ function windLaneBoost(x, y, vx, vy, now) {
         gorgemawMaw(ctx, c.tx, c.ty, R * (1.05 - 0.25 * q), a + Math.PI, 1.6 * (1 - q), k, { teeth: 24, thick: 0.24, bite: 0.8 + 0.4 * q });
       } });
       V.flash(c.tx, c.ty - 20, 60 * S, '#ffe0b0', 0.2);   // the bright core of the bite, brief
-      if (g) g.crumbs(c.tx, c.ty, 20 * S, '#c8a070', 14);
-      V.spikeburst(c.tx, c.ty, { r: 56 * S, n: 18, color: '#d0306a', core: '#ffe0b0', ink: GINK, dur: 0.3 });
+      if (g) g.crumbs(c.tx, c.ty, 20 * S, '#c8a070', 10);
+      // (climax pass) the bite's one bold shape: a great spiked bloom of teeth, white-hot at the core, an ink edge, held a beat,
+      // then dust and embers (it replaces the smaller magenta star that was here)
+      V.climax(c.tx, c.ty, { shape: 'burst', r: 78 * S, n: 14, color: '#d0306a', core: '#ffe0b0', ink: GINK, hold: 0.12, dur: 0.65, flat: 0.72, z: 10, after: { smoke: 0.5, embers: 0.6, smokeColor: '#4a3038' } });
       for (let i = 0; i < 2; i++) V.shock(c.tx, c.ty, { r: (110 + i * 40) * S, color: i ? TGLOW : '#ffffff', dur: 0.55, w: 8 - i * 3, delay: 0.08 + i * 0.08 });
-      V.debris(c.tx, c.ty, { n: 20, color: '#3a2a30', hot: true, speed: 1.7, size: 1.5 });
+      V.debris(c.tx, c.ty, { n: 14, color: '#3a2a30', hot: true, speed: 1.7, size: 1.5 });
       gorgemawScorch(c.tx, c.ty, R * 0.9, 4.5, { teeth: 24, delay: 0.3, cracks: 14, ink: 0.42, glow: 0.2, lw: 2 });
       // the warmth spills over the party: a gold ring off the Gorgemaw
       V.shock(e.x, e.y, { r: 170, color: '#ffd27a', dur: 0.7, w: 5, delay: 0.1 });
@@ -5426,11 +5509,13 @@ function windLaneBoost(x, y, vx, vy, now) {
       for (let i = 0; i < 4; i++) { const da = rand(-0.35, 0.35), sp = rand(160, 260); V.spawn({ x: q.x, y: q.y, z: q.z, vx: Math.cos(sa + da) * sp, vy: Math.sin(sa + da) * sp * 0.7, vz: rand(20, 80), g: 500, life: rand(0.25, 0.4), size: rand(4, 6), color: SLIME, kind: 'drop', add: false }); }
       for (let i = 0; i < 3; i++) V.spawn({ x: q.x + rand(-6, 6), y: q.y, z: q.z, vx: rand(-20, 20), vz: rand(-20, 30), g: 400, life: 0.45, size: rand(4, 6), color: SLIME, kind: 'drop', add: false });   // drool
       if (m === 'ring') gorgemawGlob(q, t, col, 1.2 * s, (x, y) => { for (let i = 0; i < (f ? 3 : 2); i++) V.shock(x, y, { r: (60 + i * 30) * s, color: col, dur: 0.45, w: 6, delay: i * 0.08 });
-        V.spikeburst(x, y, { r: 38 * s, n: 14, color: SLIME, core: '#f0ffb0', ink: '#14300a', dur: 0.3 }); V.splash(x, y, { n: 10, color: SLIME }); V.flash(x, y - 12, 26 * s, '#f0ffb0', 0.14); gorgemawPuddles(x, y, col, s * 1.35, 2.4); shake(2 * s); });
-      else if (m === 'lance') V.missile(q.x, q.y, t.x, t.y, { style: 'blade', color: col, speed: 1500, size: 1.4 * s, onHit: (x, y) => { V.spikeburst(x, y, { r: 36 * s, n: 10, color: col, core: '#ffffff', ink: '#0a2030', dur: 0.3 }); V.beam(q.x, q.y, x, y, { color: col, w: 6 * s, dur: 0.25 }); shake(2 * s); } });
+        // (climax pass) the glob bursts as one bold slime bloom, held a beat, with the Morsel's colour in its core
+        V.climax(x, y, { shape: 'burst', r: 62 * s, n: 13, color: SLIME, core: '#f0ffb0', ink: '#14300a', hold: 0.1, dur: 0.5, flat: 0.75, z: 8, after: { smoke: 0.3, smokeColor: '#3e5a28' } }); V.splash(x, y, { n: 8, color: SLIME }); V.flash(x, y - 12, 26 * s, '#f0ffb0', 0.14); gorgemawPuddles(x, y, col, s * 1.35, 2.4); shake(2 * s); });
+      else if (m === 'lance') V.missile(q.x, q.y, t.x, t.y, { style: 'blade', color: col, speed: 1500, size: 1.4 * s, onHit: (x, y) => { V.climax(x - Math.cos(sa) * 62 * s, y - Math.sin(sa) * 62 * s, { shape: 'bolt', r: 62 * s, angle: sa, color: col, core: '#ffffff', ink: '#0a2030', hold: 0.1, dur: 0.45, flat: 1, z: 16 }); V.beam(q.x, q.y, x, y, { color: col, w: 6 * s, dur: 0.25 }); shake(2 * s); } });
       else if (m === 'fang') { V.breath(q.x, q.y, Math.atan2(t.y - q.y, t.x - q.x), { len: Math.min(220, Math.hypot(t.x - q.x, t.y - q.y) + 20) * s, span: 0.6 * s, color: col });
+        V.climax(q.x, q.y, { shape: 'cone', r: 70 * s, angle: sa, span: 0.9, color: col, core: '#fff0d0', ink: '#2a1408', hold: 0.1, dur: 0.45, flat: 1, z: q.z });   // (climax pass) the cone of teeth, one bold shape
         FX.later(0.15, () => { g.chomp(t.x, t.y, 20, 1.2 * s, col, 0.3); V.splash(t.x, t.y, { n: 6, color: SLIME }); gorgemawPuddles((q.x + t.x) / 2, (q.y + t.y) / 2, col, 0.7 * s, 1.6); }); }
-      else V.missile(q.x, q.y, t.x, t.y, { style: 'meteor', color: col, speed: 900, arc: 30, size: 1.2 * s, onHit: (x, y) => { V.spikeburst(x, y, { r: 64 * s, n: 16, color: '#ffd23a', core: '#fffbe0', ink: '#3a2a08', dur: 0.4 }); V.crystals(x, y, { color: col, n: 6, r: 40 * s, h: 60 * s, dur: 0.9 }); V.shock(x, y, { r: 120 * s, color: col, dur: 0.5, w: 7 }); shake(5 * s); } });
+      else V.missile(q.x, q.y, t.x, t.y, { style: 'meteor', color: col, speed: 900, arc: 30, size: 1.2 * s, onHit: (x, y) => { V.climax(x, y, { shape: 'burst', r: 74 * s, n: 14, color: '#ffd23a', core: '#fffbe0', ink: '#3a2a08', hold: 0.12, dur: 0.55, flat: 0.75, z: 10, after: { embers: 0.4 } }); V.crystals(x, y, { color: col, n: 6, r: 40 * s, h: 60 * s, dur: 0.9 }); V.shock(x, y, { r: 120 * s, color: col, dur: 0.5, w: 7 }); shake(5 * s); } });
       if (f) FX.later(0.3, () => FX.text(t.x, t.y - 80, MAW.FUSION[m], '#fff0c8', 15, 0.9));
     };
     const n = (d && d.n) || 0; if (n) FX.later(n * 0.14, go); else go();
@@ -5448,7 +5533,9 @@ function windLaneBoost(x, y, vx, vy, now) {
     for (let i = 0; i < n; i++) { const a0 = i * Math.PI * 2 / Math.max(1, n), col = mcol(LETTER[letters[i]] || 'ring');
       gorgemawSpirit(p => { const a = a0 + p * 4.5, r = 80 * M * (1 - p) + 4; return { x: e.x + Math.cos(a) * r, y: e.y + Math.sin(a) * r * 0.6, z: 22 + 10 * (1 - p) }; }, col, 0.6, i * 0.06, 1.15); }
     gorgemawSpiral(e.x, e.y, 40 * M, 1.7, { follow: e, veins: true, ink: '#3a0a34', delay: 0.45, spin: 2.5, glow: 0.62 });
-    FX.later(0.5, () => { V.plus(e.x, e.y, { color: '#ffd8a0', n: 3 + n }); if (e.spec === 'gizzard' && n) V.shock(e.x, e.y, { r: 160, color: '#ffc070', dur: 0.6, w: 5 });
+    // (climax pass) the belly's moment of settling: one bold ring of the spiral flares round the Gorgemaw, held a beat
+    FX.later(0.5, () => { V.climax(e.x, e.y, { shape: 'ring', r: 70 * M, color: '#a04a9a', core: '#ffd8a0', ink: GINK, hold: 0.1, dur: 0.55, flat: 0.65, z: 12, after: { mark: 0.6 } });
+      V.plus(e.x, e.y, { color: '#ffd8a0', n: 3 + n }); if (e.spec === 'gizzard' && n) V.shock(e.x, e.y, { r: 160, color: '#ffc070', dur: 0.6, w: 5 });
       // (vfx2, after Purifying Brew) the purge: sour dark puffs blown off the body, then warm gold motes rising off it
       V.smoke(e.x, e.y, { n: 3 + Math.min(3, n), r: 12, color: '#4a4a24', size: 18, a: 0.45, speed: 90, life: 0.6 });
       V.motes(e.x, e.y, { color: '#ffd27a', n: 4 + Math.min(4, n), r: 22, kind: 'star' }); });
@@ -5606,15 +5693,17 @@ function windLaneBoost(x, y, vx, vy, now) {
       if (c.cam) { c.cam.stop(0.1); c.cam.punch(0.09, 0.55); c.cam.flash('#ffd27a', 0.26, 0.38); }   // (hit-stop kept at 0.1s)
       shake(11);
       V.flash(c.tx, c.ty - 20, 80 * S, '#fff6e0', 0.22);   // the white-hot core of the stamp's blow, brief
-      V.spikeburst(c.tx, c.ty, { r: 62 * S * 0.85, n: 18, color: WAXL, core: '#fff0d0', ink: INK, dur: 0.36 });   // (smaller: the gold ring below carries the size, a big red star read as danger)
+      // (climax pass) the stamp's one bold shape: a gold-and-wax bloom with a white-hot core and a dark wine edge, held a beat (gold, not red:
+      // a big red star in the air read as danger), then dust and embers
+      V.climax(c.tx, c.ty, { shape: 'burst', r: 74 * S, n: 16, color: '#e0a838', core: '#fff6e0', ink: '#3a0a14', hold: 0.12, dur: 0.7, flat: 0.72, z: 14, after: { smoke: 0.4, embers: 0.6, smokeColor: '#4a4050' } });
       // (ult impact pass) the blow throws a ring of gold and paper out over the floor, and the stone under the seal splits
       V.spikeburst(c.tx, c.ty, { r: 150 * S * 0.8, n: 26, hole: 0.55, color: GOLD, core: '#fff6d8', ink: INK, dur: 0.6, layer: 'ground', z: 0, flat: 0.6 });
       for (let i = 0; i < 3; i++) V.shock(c.tx, c.ty, { r: (120 + i * 45) * S, color: i ? GOLD : '#ffffff', dur: 0.6 + i * 0.1, w: 9 - i * 3, delay: i * 0.08 });
       V.decal(c.tx, c.ty, { style: 'crack', r: 100 * S * 0.8, dur: 4.5, a: 0.55, seed: Math.random() * 6 });
-      oathCoins(c.tx, c.ty, 18, { speed: 1.2 * S, size: 1.3 });
-      if (g) g.pages(c.tx, c.ty, 16);
-      V.debris(c.tx, c.ty, { n: 14, color: '#4a4050', speed: 1.5, size: 1.3 });
-      for (let i = 0; i < 9; i++) { const q = i / 9 * Math.PI * 2 + rand(-0.2, 0.2), d = 90 * S * rand(0.6, 1);
+      oathCoins(c.tx, c.ty, 14, { speed: 1.2 * S, size: 1.3 });
+      if (g) g.pages(c.tx, c.ty, 12);
+      V.debris(c.tx, c.ty, { n: 10, color: '#4a4050', speed: 1.5, size: 1.3 });
+      for (let i = 0; i < 6; i++) { const q = i / 6 * Math.PI * 2 + rand(-0.2, 0.2), d = 90 * S * rand(0.6, 1);
         V.spawn({ x: c.tx + Math.cos(q) * d, y: c.ty + Math.sin(q) * d * 0.6, z: rand(0, 14), vx: Math.cos(q) * rand(20, 50), vy: Math.sin(q) * rand(12, 30), vz: rand(8, 26), drag: 0.04, life: rand(1.4, 2.2), size: rand(22, 34), size1: rand(48, 64), color: '#3a3040', kind: 'smoke', add: false, a: 0.42, fadeIn: 0.1, fadePow: 2 }); }
       // the seal left: its wax kept faint, its gold rim and scales carrying it (red marks must not read as telegraphs)
       oathWaxSeal(c.tx, c.ty, 84 * S * 0.8, { dur: 4.5, a: 0.5, fill: 0.42, gold: 0.7, coins: 12, pages: 8 });
@@ -5664,7 +5753,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; V.spawn({ x, y, z: 26, life: 0.32, size: 9, color: GOLD, kind: 'petal', add: false, flutter: 11, orbit: { x, y, a, r: 44 * M, w: 9, dr: -100 * M, flat: 0.6 } }); }
       oathStamp(x, y, 24 * M, { fall: 0.28, hold: 0.2, h: 140 * M });
       c.later(0.28, () => {
-        V.spikeburst(x, y, { r: 44 * M, n: 14, color: WAXL, core: '#fff0d0', ink: INK, dur: 0.3 });
+        V.climax(x, y, { shape: 'burst', r: 64 * M, n: 14, color: '#d8a038', core: '#fff6d8', ink: '#3a0a14', hold: 0.1, dur: 0.55, flat: 0.72, z: 12, after: { embers: 0.5 } });   // (climax pass) the stamp lands as one bold gold bloom
         V.shock(x, y, { r: 90 * M, color: GOLD, dur: 0.4, w: 5 });
         oathCoins(x, y, 10, { size: 1.15 }); if (g) g.pages(x, y, 6);
         oathWaxSeal(x, y, 30 * M, { dur: 2.6, a: 0.5, fill: 0.7, gold: 0.6, coins: 5, pages: 3 });
@@ -5714,7 +5803,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     foreclose: c => { const g = O(), M = OATHBROKER_MOVE_SCALE, tx = c.tx, ty = c.ty;
       oathStamp(tx, ty, 30 * M, { fall: 0.24, hold: 0.24, h: 170 * M, from: c.ent, link: 11 });
       c.later(0.24, () => {
-        V.spikeburst(tx, ty, { r: 60 * M, n: 16, color: WAXL, core: '#fff0d0', ink: INK, dur: 0.34 });
+        V.climax(tx, ty, { shape: 'burst', r: 70 * M, n: 16, color: WAXL, core: '#fff0d0', ink: INK, hold: 0.12, dur: 0.6, flat: 0.72, z: 14, after: { smoke: 0.3, embers: 0.4, smokeColor: '#4a4050' } });   // (climax pass) the great stamp's one bold bloom
         V.shock(tx, ty, { r: 120 * M, color: GOLD, dur: 0.45, w: 5 });
         oathCoins(tx, ty, 8, { size: 1.1 }); if (g) g.pages(tx, ty, 8);
         oathWaxSeal(tx, ty, 40 * M, { dur: 2.2, a: 0.45, fill: 0.5, gold: 0.6, coins: 4, pages: 2 });
@@ -5775,8 +5864,11 @@ function windLaneBoost(x, y, vx, vy, now) {
       vfxLingerSettle(V.ink(at.x, at.y, { r: 170, dur: 12, a: 0.22 }), 0.5, 1.2);
       vfxLingerSettle(V.sigil(at.x, at.y, { r: 170, style: 'star5', color: SUN, dur: 12, spin: 0.2 }), 0.26, 1.4);
       vfxLingerSettle(V.sigil(at.x, at.y, { r: 110, style: 'petals', color: DAWN, dur: 12, spin: -0.35 }), 0.2, 1.4);
-      V.burst(at.x, at.y - 40, { color: DAWN, color2: '#ffffff', n: 26, speed: 320, kind: 'star', flash: false });
-      clericPetals(at.x, at.y, 16, 260);
+      // (VFX pass) the landing's silhouette: a great ink-edged cross of dawn light over the party, held a beat (the burst and petals
+      // are trimmed to keep the particle peak down)
+      V.climax(at.x, at.y, { shape: 'cross', r: 120, tilt: 0, color: SUN, core: '#ffffff', ink: '#4a3408', z: 24, flat: 0.7, dur: 0.65, after: { embers: 0.4 } });
+      V.burst(at.x, at.y - 40, { color: DAWN, color2: '#ffffff', n: 16, speed: 320, kind: 'star', flash: false });
+      clericPetals(at.x, at.y, 10, 260);
       // the dawn reaches every ally: a shaft of light falls on each (one after another out from the sun), feathers drift
       // down it, and three petals circle them for a moment, the regen taking hold
       ultParty(c.ent).forEach((w, i) => c.later(0.12 + i * 0.07, () => {
@@ -6152,15 +6244,15 @@ function windLaneBoost(x, y, vx, vy, now) {
   // Bloom: a golden lotus bursts open at the druid's feet, petals thrown out, and a mandala seal stays behind
   ABILITY_VFX.grovekeeper.bloom = c => {
     const x = c.x, y = c.y;
-    groveLotus(x, y, { r: 66, dur: 1.15 });
+    groveLotus(x, y, { r: 88, dur: 1.2 });   // (VFX pass: the lotus is the climax, now a good two heroes across)
     V.shock(x, y, { r: 190, color: GROVE_GOLD, dur: 0.5, w: 5, delay: 0.14 });
     c.later(0.14, () => {
       V.flash(x, y - 20, 70, GROVE_GOLD, 0.2);
-      V.spikeburst(x, y, { r: 84, n: 14, hole: 0.45, color: GROVE_GOLD, core: GROVE_CREAM, ink: '#3a2a08', dur: 0.36, layer: 'ground', z: 0, flat: 0.6 }); shake(3);
+      V.spikeburst(x, y, { r: 108, n: 14, hole: 0.45, color: GROVE_GOLD, core: GROVE_CREAM, ink: '#3a2a08', dur: 0.4, layer: 'ground', z: 0, flat: 0.6 }); shake(3);
       groveRays(x, y, { n: 8, r: 40, h: 110, color: GROVE_GOLD, dur: 0.6 });
       for (let i = 0; i < 16; i++) { const a = i * TAU / 16, sp = rand(140, 260); V.spawn({ x, y, z: 18, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rand(80, 200), g: 160, drag: 0.05, life: 1.3, size: 13, color: i % 3 ? GROVE_GOLD : (i % 2 ? GROVE_CREAM : LEAF), kind: i % 4 === 3 ? 'leaf' : 'petal', add: false, vr: 6, flutter: 6, fadeIn: 0.02 }); }
     });
-    groveMandala(x, y, { r: 122, dur: 1.7, delay: 0.7 });
+    groveMandala(x, y, { r: 122, dur: 1.7, delay: 0.7, a: 0.28 });   // (VFX pass: the seal's mark stays under 0.3)
   };
   // vines surging up out of the floor round a point: each a curling green tendril with a leaf or two
   function groveVines(x, y, o = {}) {
@@ -6642,6 +6734,8 @@ function windLaneBoost(x, y, vx, vy, now) {
       chronoTickRing(w.x, w.y - 30, { r: 34, color: CHRONO_GOLD, spin: -6, dur: 0.4 });
       V.shock(w.x, w.y, { r: 90, color: CHRONO_GOLD, dur: 0.45, w: 4 });
       V.plus(w.x, w.y, { color: CHRONO_PALE, n: 4 });
+      // (VFX pass) the moment: a bold gold dial-ring opens round them (ink edge, pale core), holds a beat, motes drift up
+      V.climax(w.x, w.y, { shape: 'ring', r: 96, color: CHRONO_GOLD, core: '#fff6dc', ink: CHRONO_INK, dur: 0.65, hold: 0.12, z: 10, after: { embers: 0.8 } });
     });
   };
   // Rewind: afterimages of light along the path back to the ally, small rings marking each step, a clock turning back
@@ -6667,7 +6761,8 @@ function windLaneBoost(x, y, vx, vy, now) {
     if (Math.hypot(w.x - c.x, w.y - c.y) > 40) chronoTrail(c.x, c.y, w, { n: 4, dur: 1.1 });
     chronoDial(w.x, w.y, { r: 62, dur: 1.05, spin: -6, a: 0.85, numerals: false, follow, rich: true });
     chronoArrows(w.x, w.y, { r: 52, n: 2, dur: 0.6, dir: -1, speed: 9, follow: follow || undefined, w: 0.8 });
-    c.later(0.45, () => { V.burst(w.x, w.y - 16, { color: CHRONO_PALE, color2: CHRONO_GOLD, n: 12, speed: 190, flashR: 60 }); V.shock(w.x, w.y, { r: 80, color: CHRONO_VIO, dur: 0.38, w: 4 }); V.fx({ dur: 0.35, layer: 'air', draw: (c, p, t, e) => chronoGhost(c, w.x, w.y, 1.35 + 0.4 * p, '#ffffff', e.a * (1 - p)) }); });
+    c.later(0.45, () => { V.burst(w.x, w.y - 16, { color: CHRONO_PALE, color2: CHRONO_GOLD, n: 12, speed: 190, flashR: 60 }); V.shock(w.x, w.y, { r: 80, color: CHRONO_VIO, dur: 0.38, w: 4 }); V.fx({ dur: 0.35, layer: 'air', draw: (c, p, t, e) => chronoGhost(c, w.x, w.y, 1.35 + 0.4 * p, '#ffffff', e.a * (1 - p)) });
+      V.climax(w.x, w.y, { shape: 'ring', r: 84, color: CHRONO_VIO, core: '#f2ecff', ink: CHRONO_INK, dur: 0.55, hold: 0.1, z: 10, after: { embers: 0.5 } }); });   // (VFX pass) the snap-back's bold ring
   };
   // thin rays of light flung out from a point, violet, gold and white
   function chronoRays(x, y, o = {}) {
@@ -6703,7 +6798,8 @@ function windLaneBoost(x, y, vx, vy, now) {
       c.setLineDash([8, 6]); V.neonPath(c, CHRONO_PALE, 1.4, k * 0.6, () => { corners.forEach((g, i) => { const P = at(g); i ? c.lineTo(P.x, P.y) : c.moveTo(P.x, P.y); }); c.closePath(); }); c.setLineDash([]);
       for (const g of corners) { const P = at(g); V.glowAt(c, P.x, P.y - 20, 22, g.col, k * 0.5); chronoGhost(c, P.x, P.y, 1.35, g.col, k * (1 - p * 0.4)); }
     }, done: () => {
-      V.spikeburst(t.x, t.y, { r: 90 * big, n: 18, color: CHRONO_VIO, core: '#ffffff', ink: CHRONO_INK, dur: 0.4, z: 14 });
+      // (VFX pass) the climax: one bold violet burst (ink edge, white core), at least two heroes across, held a beat
+      V.climax(t.x, t.y, { shape: 'burst', r: Math.max(84, 112 * big), n: 14, color: CHRONO_VIO, core: '#ffffff', ink: CHRONO_INK, dur: 0.6, hold: 0.1, z: 14, after: { embers: 0.6 } });
       chronoRays(t.x, t.y - 14, { n: 14, r: 145 * big, dur: 0.38 });
       V.burst(t.x, t.y - 14, { color: CHRONO_PALE, color2: CHRONO_GOLD, n: 14, speed: 300, kind: 'star', flash: false });
       chronoCrystals(t.x, t.y, { n: 6, speed: 240, size: 12, dur: 0.6 });
@@ -6766,6 +6862,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.flash(e.x, e.y - 28, 60, CHRONO_PALE, 0.2);
     V.burst(e.x, e.y - 28, { color: CHRONO_PALE, color2: CHRONO_GOLD, n: 14, speed: 260, kind: 'star', flash: false });
     V.shock(e.x, e.y, { r: 190, color: CHRONO_PALE, w: 6, dur: 0.6 });
+    V.climax(e.x, e.y, { shape: 'ring', r: 92, color: CHRONO_VIO, core: '#f2ecff', ink: CHRONO_INK, dur: 0.6, hold: 0.1, z: 28, after: { embers: 0.6 } });   // (VFX pass) the bubble bursts
     chronoCrystals(e.x, e.y, { n: 8, speed: 260, size: 12, dur: 0.6, cols: [CHRONO_VIO, CHRONO_PALE, CHRONO_GOLD] });
     chronoSeal(e.x, e.y, { r: 118, dur: 1.9 });
     V.motes(e.x, e.y, { color: '#fff2c8', n: 10, r: 70 });
@@ -7068,7 +7165,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     for (const w of weaveHealList(ent, F)) {
       V.lightfall(w.x, w.y, { color: '#ffd2b4', r: 24, h: 230, dur: 1.0, feathers: 3 });
       V.flash(w.x, w.y - 22, 30, HOT, 0.22);
-      for (let i = 0; i < 4; i++) V.spawn({ x: w.x + rand(-20, 20), y: w.y + rand(-6, 6), z: rand(70, 130), vz: rand(-60, -35), vx: rand(-18, 18), life: rand(1.1, 1.5), size: rand(8, 11), color: i % 2 ? ROSE : '#ffd0d8', kind: 'petal', add: false, vr: rand(-3, 3), flutter: 6, fadeIn: 0.1 });
+      for (let i = 0; i < 2; i++) V.spawn({ x: w.x + rand(-20, 20), y: w.y + rand(-6, 6), z: rand(70, 130), vz: rand(-60, -35), vx: rand(-18, 18), life: rand(1.1, 1.5), size: rand(8, 11), color: i % 2 ? ROSE : '#ffd0d8', kind: 'petal', add: false, vr: rand(-3, 3), flutter: 6, fadeIn: 0.1 });
       V.plus(w.x, w.y, { color: '#ffd0d8', n: 2 });
       V.fx({ dur: 1.6, layer: 'ground', draw: (c, p, t, e) => {
         const k = e.a * Math.min(1, p / 0.1) * (1 - Math.max(0, (p - 0.5) / 0.5)), R = 18 + 8 * easeOut(Math.min(1, p / 0.25));
@@ -7093,9 +7190,9 @@ function windLaneBoost(x, y, vx, vy, now) {
       shake(5);
       for (const [A, B] of weaveMine(c.ent)) {
         V.fx({ dur: 0.45, layer: 'air', draw: (cc, p, t, e) => { const k = (1 - p) * e.a; V.neonPath(cc, '#ff9aac', 4 * WS * (1 - p * 0.6), k, () => { cc.moveTo(A.x, A.y - 16); cc.lineTo(B.x, B.y - 16); }); } });
-        for (const w of [A, B]) V.burst(w.x, w.y - 16, { color: ROSE, color2: SEAM, n: 6, speed: 200, kind: 'star', flash: false });
+        for (const w of [A, B]) V.burst(w.x, w.y - 16, { color: ROSE, color2: SEAM, n: 3, speed: 200, kind: 'star', flash: false });
       }
-      F.anchors.forEach((a, i) => { V.sparks(a.x, a.y, { color: i % 2 ? SEAM : ROSE, n: 7, speed: 300, z: 30 });
+      F.anchors.forEach((a, i) => { V.sparks(a.x, a.y, { color: i % 2 ? SEAM : ROSE, n: 4, speed: 300, z: 30 });
         V.spikeburst(a.x, a.y - 30 * WS, { r: 30 * WS, n: 8, color: SEAM, core: HOT, ink: '#4a2a08', dur: 0.3 }); });
       // (Ult pass) the heal lands on every ally: a rose-gold pillar of light with silk petals drifting down, and a
       // small woven knot at the feet that lingers while the Tapestry forms
@@ -7112,7 +7209,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     weaveLater(e, 0.3, () => {
       const WS = WEAVE_ULT_SCALE;
       if (W) W.cross(t.x, t.y, { L: (150 + n * 20) * WS, w: 1.4 * WS, dur: 0.6 });
-      V.spikeburst(t.x, t.y, { r: (60 + n * 6) * WS, n: 14, color: CRIM, core: HOT, ink: '#2a0410', dur: 0.4, z: 16 });
+      V.climax(t.x, t.y, { shape: 'burst', n: 14, r: (60 + n * 6) * WS, color: CRIM, core: HOT, ink: '#2a0410', dur: 0.6, hold: 0.1, z: 16, after: { embers: 0.4, mark: 0.5 } });   // (VFX pass) the lances' crossing holds a beat
       V.shock(t.x, t.y, { r: 140 * WS, color: SEAM, dur: 0.5, w: 6 });
       shake(4);
     });
@@ -7297,8 +7394,10 @@ Object.assign(KIT_VFX, {
         cx.restore();
       } });
       c.later(0.22 * DUR + 0.16 * DUR, () => {
-        V.flash(tx, ty - 12, 46, '#ffffff', 0.12);
-        V.spikeburst(tx, ty, { r: 62, n: 16, color: VIO, core: GHO, ink: INK, dur: 0.38 });
+        // (vfx climax pass) the blow is one bold shape: an ink-edged star of violet with a pale core, held a beat; a full vessel
+        // breaks it into a cross, wider still
+        const full = gloomHeld(c) >= 55;
+        V.climax(tx, ty, { shape: full ? 'cross' : 'burst', r: full ? 108 : 86, n: 14, color: BRU, core: GHO, ink: INK, z: 14, hold: 0.1, dur: 0.6, after: { smoke: 0.5, embers: 0.4 }, smokeColor: '#1c1230' });
         V.shock(tx, ty, { r: 120, color: BRU, dur: 0.5, w: 7 }); V.shock(tx, ty, { r: 80, color: GHO, dur: 0.4, w: 3, delay: 0.06 });
         V.decal(tx, ty, { style: 'crack', r: 60, dur: 3, a: 0.45, seed: Math.random() * 6 });
         V.debris(tx, ty, { n: 8, color: '#2a2036', speed: 1 });
@@ -7403,8 +7502,7 @@ Object.assign(KIT_VFX, {
       V.glint(c.x, c.y - 30, { color: GHO, size: 26, z: 34 });
       V.missile(c.x, c.y, x, y, { style: 'orb', color: VIO, speed: 1100, size: 1.1, onHit: () => {} });
       c.later(Math.min(0.4, Math.hypot(x - c.x, y - c.y) / 1100) + 0.05, () => {
-        V.flash(x, y - 20, 70, GHO, 0.18);
-        V.spikeburst(x, y, { r: 78, n: 18, color: VIO, core: GHO, ink: INK, dur: 0.45 });
+        V.climax(x, y, { shape: 'burst', r: 92, n: 16, color: VIO, core: GHO, ink: INK, z: 14, hold: 0.1, dur: 0.6, after: { smoke: 0.6, embers: 0.5 }, smokeColor: '#1c1230' });
         V.pillar(x, y, { r: 30, h: 240, color: BRU, dur: 0.6 });
         V.flare(x, y, { n: 14, r: 34, color: '#5a2aa0', size: 1.5, h: 1.5 });
         V.shock(x, y, { r: 130, color: BRU, dur: 0.55, w: 7 }); V.shock(x, y, { r: 90, color: GHO, dur: 0.45, w: 3, delay: 0.06 });
@@ -7495,9 +7593,8 @@ Object.assign(KIT_VFX, {
     } });
     V.swirl(e.x, e.y, { r: R0, color: VIO, dur: DUR, follow: e, inward: true });
     later(e, DUR * 0.9, () => {
-      V.flash(e.x, e.y - 14, 46 + 30 * g, '#ffffff', 0.2);
+      V.climax(e.x, e.y, { shape: 'burst', r: 82 + 24 * g, n: 12, color: GHD, core: '#ffffff', ink: INK, z: 16, hold: 0.1, dur: 0.6, after: { embers: 0.5 } });
       V.shock(e.x, e.y, { r: 70 + 30 * g, color: GHO, dur: 0.45, w: 5 });
-      V.spikeburst(e.x, e.y, { r: 44 + 20 * g, n: 12, color: GHD, core: '#ffffff', ink: INK, dur: 0.3, z: 10 });
       V.plus(e.x, e.y, { color: GHO, n: 4 });
       shake(2 + 3 * g);
       shell(e, 8, 28);
@@ -7513,7 +7610,7 @@ Object.assign(KIT_VFX, {
       V.shock(e.x, e.y, { r: 260 * s, color: GHO, dur: 0.7, w: 9 }); V.shock(e.x, e.y, { r: 190 * s, color: BRU, dur: 0.6, w: 6, delay: 0.07 });
       V.beam(e.x, e.y - 100, t.x, t.y, { color: VIO, w: 18 * s, dur: 0.4 });
       V.pillar(t.x, t.y, { r: 36 * s, h: 320, color: BRU, dur: 0.6 });
-      V.spikeburst(t.x, t.y, { r: 96 * s, n: 22, color: VIO, core: GHO, ink: INK, dur: 0.5 });
+      V.climax(t.x, t.y, { shape: 'burst', r: 112 * s, n: 18, color: VIO, core: GHO, ink: INK, z: 16, hold: 0.12, dur: 0.7, after: { smoke: 0.8, embers: 0.6 }, smokeColor: '#1c1230' });
       V.shock(t.x, t.y, { r: 150 * s, color: GHO, dur: 0.6, w: 7, delay: 0.05 });
       V.decal(t.x, t.y, { style: 'crack', r: 80 * s, dur: 5, a: 0.5, seed: Math.random() * 6 });
       darkSmoke(t.x, t.y, 7, 46);
@@ -7540,7 +7637,7 @@ Object.assign(KIT_VFX, {
   function startMoment(e, d, g) {
     if (e.gloomStartAt && FX.now - e.gloomStartAt < 0.6) return; e.gloomStartAt = FX.now;
     const x = e.x, y = bodyY(e), ang = e.angle || 0;
-    V.flash(x, y, 70, GHO, 0.2); V.shock(e.x, e.y, { r: 110, color: GHO, dur: 0.55, w: 6 }); V.shock(e.x, e.y, { r: 70, color: INK, dur: 0.4, w: 9, delay: 0.04 });
+    V.climax(e.x, e.y, { shape: 'burst', r: 92, n: 14, color: GHD, core: '#ffffff', ink: INK, z: 18, hold: 0.1, dur: 0.65, after: { smoke: 0.4, embers: 0.5 }, smokeColor: '#1c1230' }); V.shock(e.x, e.y, { r: 110, color: GHO, dur: 0.55, w: 6 }); V.shock(e.x, e.y, { r: 70, color: INK, dur: 0.4, w: 9, delay: 0.04 });
     V.burst(x, y, { color: GHO, color2: LIL, n: 14, speed: 240, kind: 'star', flash: false });
     darkSmoke(e.x, e.y, 5, 24);
     V.fx({ dur: 0.9, layer: 'air', draw: (cx, p, t, fx) => {
@@ -7565,13 +7662,12 @@ Object.assign(KIT_VFX, {
     if (ok) {
       // the cracks seal: they close inward in a white flash, a ring and motes rising
       V.fx({ dur: 0.7, layer: 'air', draw: (cx, p, t, fx) => { const k = fx.a * Math.min(1, p / 0.05) * Math.max(0, 1 - Math.max(0, p - 0.3) / 0.7); cracks(cx, e.x, bodyY(e), k, 1 - easeOut(Math.min(1, p / 0.5)), 3, 1.4); } });
-      V.flash(x, y, 90, '#ffffff', 0.28); V.shock(e.x, e.y, { r: 130, color: '#ffffff', dur: 0.5, w: 6 }); V.shock(e.x, e.y, { r: 90, color: GHO, dur: 0.6, w: 4, delay: 0.08 });
+      V.climax(e.x, e.y, { shape: 'ring', r: 88, color: GHD, core: '#cffff4', ink: INK, z: 16, hold: 0.1, dur: 0.6, after: { embers: 0.5 } }); V.shock(e.x, e.y, { r: 130, color: '#ffffff', dur: 0.5, w: 6 }); V.shock(e.x, e.y, { r: 90, color: GHO, dur: 0.6, w: 4, delay: 0.08 });
       V.motes(e.x, e.y, { color: GHO, n: 12, r: 28, kind: 'star' }); V.plus(e.x, e.y, { color: GHO, n: 4 });
       shake(3);
     } else {
       // the shell breaks: dark shards and a pale burst thrown outward, smoke
-      V.flash(x, y, 60, GHO, 0.2);
-      V.spikeburst(e.x, e.y, { r: 90, n: 16, color: BRU, core: GHO, ink: INK, dur: 0.4, z: 10 });
+      V.climax(e.x, e.y, { shape: 'burst', r: 90, n: 16, color: BRU, core: GHO, ink: INK, z: 14, hold: 0.1, dur: 0.6, after: { smoke: 0.6, embers: 0.5 }, smokeColor: '#1c1230' });
       for (let i = 0; i < 14; i++) { const a = rnd(0, TAU), sp = rnd(120, 320); V.spawn({ x: e.x, y: e.y, z: 18, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.7, vz: rnd(40, 160), g: 500, drag: 0.03, life: rnd(0.5, 0.9), size: rnd(6, 11), color: i % 3 ? '#1c1230' : GHO, kind: 'shard', add: false, vr: rnd(-8, 8) }); }
       V.shock(e.x, e.y, { r: 150, color: BRU, dur: 0.6, w: 8 });
       darkSmoke(e.x, e.y, 7, 30); shake(5);
@@ -7922,6 +8018,7 @@ Object.assign(KIT_VFX, {
       crescent(c.x, c.y, a, { r: 150, span: 6.2, w: 30, tail: 0.5, dur: 0.6, flat: 0.8, z: 16, mid: GATE, rim: WHT });
       arcBolt(c.x, c.y, a, 150, 6.2, { flat: 0.8, color: WHT, amp: 7, dur: 0.55 });
       V.glint(h.x, h.y, { color: WHT, size: 32, z: 4 });
+      V.climax(c.x, c.y, { shape: 'ring', r: 100, color: GATE, core: '#cfc4ff', ink: INK, z: 16, flat: 0.8, hold: 0.1, dur: 0.6, after: { embers: 0.4 } });
       if (c.cam) c.cam.flash('#a8c8ff', 0.1, 0.3);
     }
   }
@@ -7963,6 +8060,8 @@ Object.assign(KIT_VFX, {
       const e = c.ent, h = hand(e);
       V.glint(h.x, h.y, { color: WHT, size: 24, z: 4 });
       V.flash(h.x, h.y, 26, ELEC, 0.2);
+      // (vfx climax pass) the snap rings out: one ink-edged ring of blue light round the Reaper, held a beat
+      V.climax(c.x, c.y, { shape: 'ring', r: 82, color: ELEC, core: '#bcd8ff', ink: INK, z: 14, flat: 0.7, hold: 0.1, dur: 0.5, after: { embers: 0.3 } });
       V.fx({ dur: 0.3, layer: 'air', draw: (cx, p, t, fx) => { const k = fx.a * (1 - p); cx.save(); cx.translate(h.x, h.y); V.neonRing(cx, 0, 0, 6 + 22 * easeOut(p), ELEC, 1.4, k, 1); cx.restore(); } });
       V.sparks(h.x, h.y + 14, { color: ELEC, n: 6, spread: Math.PI, speed: 170, up: 60 });
       puff(h.x, h.y + 6, 2, 6, 12);
@@ -8043,6 +8142,13 @@ Object.assign(KIT_VFX, {
     e._thFin = { n, at: FX.now };
     later(e, n === 2 ? 0.2 : 0.15, () => {
       inkHit(p.x, p.y, a, 1.1 + 0.1 * n);
+      // (vfx climax pass) each finisher is one bold ink-edged shape in the colour of the mark it lays: a rose scythe arc (Drain), a
+      // violet cross (Bind), a red lance (Death Mark), a pale star (Thread)
+      const ca = Math.cos(a), sa = Math.sin(a);
+      if (n === 1) V.climax(p.x - ca * 34, p.y - sa * 24, { shape: 'crescent', angle: a, span: 2.3, r: 84, color: KC.drain, core: '#ffe6f4', ink: INK, z: 18, flat: 0.8, hold: 0.1, dur: 0.55, after: { embers: 0.4 } });
+      else if (n === 2) V.climax(p.x, p.y, { shape: 'cross', tilt: Math.PI / 4, r: 92, color: KC.bind, core: '#efe0ff', ink: INK, z: 8, flat: 0.7, hold: 0.1, dur: 0.55, after: { smoke: 0.4, embers: 0.3 } });
+      else if (n === 3) V.climax(p.x - ca * 30, p.y - sa * 22, { shape: 'bolt', angle: a, r: 92, color: KC.death, core: '#ffd8d8', ink: INK, z: 16, flat: 0.8, hold: 0.1, dur: 0.5, after: { embers: 0.5 } });
+      else V.climax(p.x, p.y, { shape: 'burst', r: 98, n: 14, color: '#9ee8e0', core: WHT, ink: INK, z: 16, hold: 0.1, dur: 0.6, after: { smoke: 0.5, embers: 0.4 } });
       if (n === 1) { V.glint(p.x, p.y, { color: KC.drain, size: 24, z: 24 }); }
       else if (n === 3) { V.shock(p.x, p.y, { r: 60, color: ELEC, dur: 0.3, w: 3 }); stop(e, 0.04); shake(2); }
       else if (n === 4) { V.shock(p.x, p.y, { r: 120, color: ELEC, dur: 0.45, w: 5 }); V.spikeburst(p.x, p.y, { r: 56, n: 12, color: BLU, core: WHT, ink: INK, dur: 0.32, z: 16 }); stop(e, 0.07); shake(3.5); }
@@ -8138,7 +8244,8 @@ Object.assign(KIT_VFX, {
     later(e, 0.14, () => {
       const R = (f.boss ? f.r * 1.5 : 78);
       inkRings(f.x, f.y, R, f.boss ? f.r * 1.2 : 44);
-      V.flash(f.x, f.y - 20, 60, ELEC, 0.24); V.glint(f.x, f.y - 24, { color: WHT, size: 40, z: 14 });
+      V.climax(f.x, f.y, { shape: 'burst', r: f.boss ? 108 : 86, n: 16, color: BLU, core: WHT, ink: INK, z: 18, flat: 0.8, hold: 0.12, dur: 0.65, after: { smoke: 0.6, embers: 0.5 } });
+      V.glint(f.x, f.y - 24, { color: WHT, size: 40, z: 14 });
       V.burst(f.x, f.y - 20, { color: ELEC, color2: WHT, n: 12, speed: 220, kind: 'star', flash: false, size: 10 });
       for (let i = 0; i < 3; i++) V.lightning(f.x, f.y - 20, f.x + rnd(-70, 70), f.y - 20 + rnd(-40, 20), { color: ELEC, dur: 0.22, jag: 9 });
       shake(3); stop(e, 0.05);
@@ -8150,11 +8257,11 @@ Object.assign(KIT_VFX, {
     const cam = FX.camFor(e); if (cam) cam.flash('#7fb8ff', 0.14, 0.35);
     V.shock(e.x, e.y, { r: 110, color: ELEC, dur: 0.5, w: 4 });
     V.fx({ dur: 0.9, layer: 'air', draw: (c, p, t, fx) => {
-      const up = easeOut(Math.min(1, p / 0.25)), k = fx.a * Math.min(1, p / 0.08) * (1 - Math.max(0, (p - 0.4) / 0.6)), r = 26 * (0.5 + 0.5 * up), y = bodyY(e) - 38 - 22 * up;
+      const up = easeOut(Math.min(1, p / 0.25)), k = fx.a * Math.min(1, p / 0.08) * (1 - Math.max(0, (p - 0.4) / 0.6)), r = 80 * (0.5 + 0.5 * up), y = bodyY(e) - 70 - 34 * up;
       if (k < 0.02) return;
-      V.glowAt(c, e.x, y, r * 3, BLU, 0.55 * k);
+      V.glowAt(c, e.x, y, r * 1.7, BLU, 0.4 * k);
       c.save(); c.translate(e.x, y); c.globalAlpha = 0.9 * k; c.fillStyle = INK; moonPath(c, r * 1.12, -0.5); c.fill();
-      c.globalCompositeOperation = 'lighter'; c.globalAlpha = k; c.fillStyle = WHT; moonPath(c, r, -0.5); c.fill();
+      c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.75 * k; c.fillStyle = '#b8d4ff'; moonPath(c, r, -0.5); c.fill();
       c.globalAlpha = 0.8 * k; c.strokeStyle = ELEC; c.lineWidth = 2; moonPath(c, r * 1.05, -0.5); c.stroke();
       c.restore();
     } });
@@ -8213,7 +8320,8 @@ Object.assign(KIT_VFX, {
     const st = e._thStar, x = isFinite(d.x) ? d.x : st ? st.x : ahead(e, 200).x, y = isFinite(d.y) ? d.y : st ? st.y : ahead(e, 200).y;
     const g = G(), kit = g && isMe(e) && g.actor && g.actor.kit, twin = kit && kit.talent ? !!kit.talent('thresher_twin') : (FX.now - (e._thTwin || -9) < 2), s = twin ? 0.78 : 1, R = 130 * s, nm = Math.max(0, Math.min(8, d.marks | 0));
     if (st) st.at = FX.now;
-    V.flash(x, y - 14, 90 * s, WHT, 0.3); V.glint(x, y - 14, { color: ELEC, size: 56 * s, z: 0, life: 0.4 });
+    V.climax(x, y, { shape: 'burst', r: 100 * s, n: 16, color: BLU, core: WHT, ink: INK, z: 12, flat: 0.72, hold: 0.1, dur: 0.6, after: { smoke: 0.6, embers: 0.5, mark: 0.6 } });
+    V.glint(x, y - 14, { color: ELEC, size: 56 * s, z: 0, life: 0.4 });
     V.fx({ dur: 0.75, layer: 'ground', draw: (c, p, t, fx) => {
       const q = easeOut(Math.min(1, p / 0.55)), k = fx.a * (1 - Math.max(0, (p - 0.35) / 0.65)); if (k < 0.02) return;
       c.save(); c.translate(x, y); c.scale(1, 0.7); c.lineCap = 'round';
@@ -8241,7 +8349,7 @@ Object.assign(KIT_VFX, {
   KIT_VFX.frenzy = e => {
     snd(e, 'frenzy');
     const cam = FX.camFor(e); if (cam) { cam.flash('#c8283c', 0.1, 0.3); if (cam.punch) cam.punch(0.025, 0.4); }
-    V.flash(e.x, bodyY(e), 66, REDK, 0.26);
+    V.climax(e.x, e.y, { shape: 'burst', r: 82, n: 14, color: REDK, core: '#ffc8c8', ink: INK, z: 16, flat: 0.8, hold: 0.1, dur: 0.6, after: { smoke: 0.5, embers: 0.5 }, smokeColor: '#2a0a14' });
     V.fx({ dur: 0.7, layer: 'air', draw: (c, p, t, fx) => {
       const q = easeOut(Math.min(1, p / 0.5)), k = fx.a * (1 - Math.max(0, (p - 0.3) / 0.7)); if (k < 0.02) return;
       c.save(); c.translate(e.x, bodyY(e) + 8); c.scale(1, 0.55);
@@ -8393,7 +8501,7 @@ Object.assign(KIT_VFX, {
         for (let i = 0; i < n; i++) { if (hs(i, seed, 3) < 0.25) continue; const an = i * TAU / n + hs(i, 4) * 0.3, r0 = 14 + 10 * q, r1 = (60 + 70 * hs(i, 5)) * q + 20; bolt(c, jag(f.x + Math.cos(an) * r0, f.y - 22 + Math.sin(an) * r0 * 0.7, f.x + Math.cos(an) * r1, f.y - 22 + Math.sin(an) * r1 * 0.7, 6, 7, seed + i), i % 2 ? ELEC : WHT, 1.6, k * 0.9); }
         V.glowAt(c, f.x, f.y - 22, 60 + 40 * q, ELEC, 0.4 * k);
       } });
-      V.spikeburst(f.x, f.y, { r: 100, n: 22, color: BLU, core: WHT, ink: INK, dur: 0.5 });
+      V.climax(f.x, f.y, { shape: 'burst', r: 126, n: 20, color: GATE, core: WHT, ink: INK, z: 18, flat: 0.8, hold: 0.12, dur: 0.7, after: { smoke: 0.7, embers: 0.6 } });
       V.burst(f.x, f.y - 20, { color: ELEC, color2: WHT, n: 16, speed: 300, kind: 'star', flash: false, size: 12 });
       puff(f.x, f.y, 8, 50, 34);
       shake(8); stop(e, 0.07);
@@ -8719,6 +8827,9 @@ Object.assign(KIT_VFX, {
     const cam = FX.camFor(e);
     later(e, 0.05, () => {
       V.flash(e.x, bodyY(e), 50 + 50 * f, flood ? MOON : FOAM, 0.28);
+      // (climax pass) high water only: the swell stands up as ONE bold ring of water round the caster (ink edge, teal body, foam-white core),
+      // holds a beat, then breaks into mist. A low-water Surge stays the gentle swell
+      if (f >= 0.6 || full || flood) V.climax(e.x, e.y, { shape: 'ring', r: Math.round(84 + 26 * f), color: col, core: flood ? '#fff8dc' : FOAM, ink: DEEPER, z: 14, flat: 0.7, hold: 0.11, dur: 0.6, after: { smoke: 0.3 }, smokeColor: PEARL });
       waveWall(e.x, e.y, { r0: 18, r: R, h, dur: 1.0, color: col, grow: 0.55, out: 0.4, waves: 9 });
       rollRing(e.x, e.y, { r0: 16, r: R + 10, dur: 0.95, w: 3 + 5 * f, color: col });
       rollRing(e.x, e.y, { r0: 10, r: R * 0.7, dur: 0.8, w: 3, delay: 0.1, color: TEAL2, beads: false });
@@ -8840,6 +8951,9 @@ Object.assign(KIT_VFX, {
     later(e, 0.2, () => {
       if (cam) { cam.flash('#e8fbf6', 0.26, 0.5); cam.punch(0.06, 0.6); }
       V.flash(e.x, bodyY(e), 150, MOON, 0.34);
+      // (climax pass) the flood breaks as one great foam-and-moonlight starburst over the hero (more than twice their height), then pearl mist, a few
+      // drifting moon-motes and a dim wet mark that is gone in under two seconds
+      V.climax(e.x, e.y, { shape: 'burst', r: 118, n: 14, color: TEAL2, core: '#fff8dc', ink: DEEPER, z: 22, flat: 0.8, hold: 0.12, dur: 0.75, after: { smoke: 0.5, embers: 0.6, mark: 0.8 }, smokeColor: PEARL });
       waveWall(e.x, e.y, { r0: 18, r: 260, h: 70, dur: 1.2, color: TEAL, grow: 0.6, out: 0.4, waves: 12, span: TAU, a0: 0 });
       rollRing(e.x, e.y, { r0: 16, r: 280, dur: 1.2, w: 10, color: TEAL });
       rollRing(e.x, e.y, { r0: 10, r: 200, dur: 1.0, w: 5, delay: 0.12, color: MOON, beads: false });
@@ -9192,6 +9306,8 @@ Object.assign(KIT_VFX, {
   KIT_VFX['ken-perfect'] = (e, target, d) => {
     const bust = d && d.b, s = bust ? 1.45 : 1.15, p = front(e, 26);
     clash(p.x, p.y, { s, color: HOT, core: '#ffffff', spark: WGOLD, ring: WGOLD, n: 12 });
+    // (climax pass) the Perfect is ONE bold ember starburst where the blow was met (a tankbuster's is bigger), inked in soot, quick to clear
+    V.climax(p.x, p.y, { shape: 'burst', r: bust ? 100 : 80, n: 10, color: EMB, core: '#ffffff', ink: SOOT, z: 26, flat: 1, hold: 0.1, dur: 0.42, after: { embers: 0.4 } });
     V.shock(p.x, p.y - 26, { r0: 6, r: 56 * s, color: EMB, dur: 0.34, w: 2.2, layer: 'air', flat: 1, delay: 0.03 });
     V.glint(p.x, p.y, { color: '#ffffff', size: 26 * s, z: 26 });
     V.sparks(p.x, p.y, { color: EMB, n: 6, speed: 260, z: 26, up: 120, size: 7 });
@@ -9246,6 +9362,8 @@ Object.assign(KIT_VFX, {
     V.shock(b.x, b.y, { r: 120, color: GOLD, dur: 0.45, w: 5 }); V.shock(b.x, b.y, { r: 80, color: WGOLD, dur: 0.35, w: 2.4, delay: 0.05 });
     V.sparks(b.x, b.y, { color: GOLD, n: 14, speed: 380, z: 34, up: 140 });
     V.glint(b.x, b.y, { color: WGOLD, size: 34, z: 34 });
+    // (climax pass) the guard breaks open as one gold starburst on the boss (ink edge, gold body, white-gold core), then the crack holds
+    V.climax(b.x, b.y, { shape: 'burst', r: 100, n: 14, color: GOLD, core: WGOLD, ink: SOOT, z: 34, flat: 0.9, hold: 0.12, dur: 0.6, after: { embers: 0.5 } });
     e._kenCrack = breakCrack(secs);
     if (cam) { cam.punch(0.025, 0.3); cam.flash('#fff0c0', 0.1, 0.25); }
     shake(2.5);
@@ -9273,6 +9391,8 @@ Object.assign(KIT_VFX, {
     if (!u && e._kenCrack) { e._kenCrack.cut = true; e._kenCrack = null; }
     const R = BR(), cy = b.y - 34, ax = b.x - R * 1.35, ay = cy - R * 0.9, bx = b.x + R * 1.35, by = cy + R * 0.9;
     if (u) { kenUltBlow(e, b, R, cam); return; }
+    // (climax pass) the stroke itself is the climax: one bold ember blade the length of the slash, held a beat as the trail runs through it
+    V.climax(ax, ay, { shape: 'bolt', angle: Math.atan2(by - ay, bx - ax), r: Math.hypot(bx - ax, by - ay) / 2, color: EMB, core: '#ffffff', ink: SOOT, z: 0, flat: 1, hold: 0.1, dur: 0.55, after: { embers: 0.5 } });
     if (cam) cam.dim(0.16, 0.55);
     streak(ax, ay, bx, by, { dur: 1.1, run: 0.13, w: u ? 8 : 6, bow: 12, color: EMB, core: WGOLD, n: 22, embers: 0.7 });
     later(e, 0.07, () => {
@@ -9293,6 +9413,8 @@ Object.assign(KIT_VFX, {
       shake(8);
       streak(b.x + L * 0.8, cy - L * 0.5, b.x - L * 0.8, cy + L * 0.5, { dur: 1, run: 0.08, w: 8, bow: -10, color: EMB2, core: '#ffffff', n: 20, embers: 0.5 });
       V.flash(b.x, cy, 80, HOT, 0.22);
+      // (climax pass) a four-armed star of ember and white-gold stands on the boss where the two strokes cross: the one shape to read, then ash and embers
+      V.climax(b.x, cy, { shape: 'cross', tilt: 0.45, r: 135, color: EMB, core: '#ffffff', ink: SOOT, z: 0, flat: 1, hold: 0.12, dur: 0.7, after: { embers: 0.7, smoke: 0.5, mark: 0.8 }, smokeColor: ASH });
       V.spikeburst(b.x, b.y, { r: R * 1.5, n: 18, color: EMB, core: WGOLD, ink: SOOT, dur: 0.45, layer: 'ground', z: 0, flat: 0.6 });
       V.shock(b.x, b.y, { r: R * 2.8, color: WGOLD, dur: 0.6, w: 8 });
       V.shock(b.x, b.y, { r: R * 2, color: EMB, dur: 0.5, w: 5, delay: 0.06 });
@@ -9627,6 +9749,14 @@ Object.assign(KIT_VFX, {
         V.sparks(l.x, l.y, { color: GOLD, n: Math.round(8 * kk), speed: 250, up: 210 });
         flameLick(l.x, l.y, { h: 30 * kk, w: 7, z: l.hung ? 30 : 14 });
       }
+      // (climax pass) the bursting lanterns flare as one bold starburst each (the three biggest), larger when the Lighthouse carries the Flare to the
+      // whole room, which also stands a ring of light round the caster. Lantern glows themselves are not touched. A twin Flare stays small
+      if (!twin) {
+        const R0 = all ? 100 : 80;
+        if (spots.length) for (const l of spots.slice(0, 3)) V.climax(l.x, l.y, { shape: 'burst', r: R0, n: 12, color: AMBER, core: PALE, ink: IRON, z: l.hung ? 30 : 14, flat: 0.9, hold: 0.1, dur: 0.5, after: { embers: 0.4 } });
+        else V.climax(s.x, s.y, { shape: 'burst', r: R0, n: 12, color: AMBER, core: PALE, ink: IRON, z: 14, flat: 0.9, hold: 0.1, dur: 0.5, after: { embers: 0.4 } });
+        if (all) V.climax(e.x, e.y, { shape: 'ring', r: 130, color: GOLD, core: PALE, ink: IRON, z: 20, flat: 0.7, hold: 0.1, dur: 0.6 });
+      }
       if (!spots.length) ringOut(e.x, e.y, 90, { dur: 0.5 });
       for (const w of us) {
         let n = 0; for (const l of spots) if (all || Math.hypot(w.x - l.x, w.y - l.y) <= l.r) n++;
@@ -9695,6 +9825,9 @@ Object.assign(KIT_VFX, {
     const s0 = staff(e), us = party().slice(0, 8);
     if (cam) cam.flash('#fff2cf', 0.14, 0.4);
     V.flash(s0.x, s0.y - 20, 110, PALE, 0.3);
+    // (climax pass) the beam is struck as one bold blade of light straight up from the lantern (ink edge, gold body, white core), held a beat
+    // while the thin standing beam takes over; sparks drift off it
+    V.climax(s0.x, s0.y - 8, { shape: 'bolt', angle: -Math.PI / 2, r: 130, color: GOLD, core: '#ffffff', ink: IRON, z: 0, flat: 1, hold: 0.14, dur: 0.8, after: { embers: 0.6 } });
     // (Ult pass) as the beam stands up, a pillar of lantern-light falls on every ally in turn, nearest first, sparks for feathers
     for (const w of us) later(e, 0.25 + Math.min(0.35, Math.hypot(w.x - e.x, w.y - e.y) / 900), () => {
       V.lightfall(w.x, w.y, { color: GOLD, r: 20, h: 210, dur: 0.8, feathers: 0 });
@@ -9998,6 +10131,8 @@ Object.assign(KIT_VFX, {
     if (pair === 'rend') {
       // two bundles of claw lines crossing on the boss, bright gold, and a spray of gold with a few rust drops
       claws(b.x, cy, [a + 0.75, a - 0.75], { color: GOLD, core: '#fff8dc', len: R * 1.5, gap: 12 });
+      // (climax pass) the two bundles cross as one gold four-armed star on the boss, held a beat under the lines
+      V.climax(b.x, cy, { shape: 'cross', tilt: a - 0.75, r: 100, color: GOLD, core: '#fff8dc', ink: SOOT, z: 0, flat: 1, hold: 0.1, dur: 0.55, after: { embers: 0.5 } });
       later(e, 0.05, () => { V.hit(b.x, cy + 10, GOLD, 0.8); V.sparks(b.x, cy, { color: GOLD, n: 9, speed: 320, z: 30, up: 150 }); V.sparks(b.x, cy, { color: RUST, n: 4, speed: 200, z: 30, up: 60 }); shake(2.2); });
     } else if (pair === 'hamstring') {
       // a low cut across the boss's feet, then a stumble: dust kicked up and a short green ring that settles
@@ -10010,6 +10145,8 @@ Object.assign(KIT_VFX, {
       for (const h of hounds(e)) if (!h.spectral) pose(e, h.id, 'leap');
       later(e, 0.28, () => {
         thump(b.x, b.y + R * 0.2, 1.6, DUST); V.shock(b.x, b.y + R * 0.2, { r0: 14, r: R * 1.8, color: LILAC, dur: 0.55, w: 3.4 });
+        // (climax pass) the weight comes down as one lilac-and-bone starburst on the boss, then the dust settles
+        V.climax(b.x, cy + 12, { shape: 'burst', r: 100, n: 14, color: LILAC, core: BONE, ink: SOOT, z: 0, flat: 0.9, hold: 0.12, dur: 0.6, after: { smoke: 0.4 }, smokeColor: DUST });
         V.hit(b.x, cy + 12, LILAC, 1); V.sparks(b.x, cy, { color: BONE, n: 10, speed: 360, z: 30, up: 160 }); shake(4);
       });
       V.glint(b.x, cy, { color: LILAC, size: 38, z: 30 });
@@ -10029,7 +10166,9 @@ Object.assign(KIT_VFX, {
       pose(e, id, 'leap');
       const h = houndAt(e, id);
       if (h) { notes(me, { x: h.x, y: h.y }, 'pounce', { dir: i ? -1 : 1, dur: 0.6, bow: 22 }); V.smoke(h.x, h.y, { n: 2, r: 6, color: DUST, size: 12, a: 0.4, speed: 40 }); }
-      later(e, 0.5, () => { const h2 = houndAt(e, id); if (h2) { thump(h2.x, h2.y, 0.8, DUST); V.hit(h2.x, h2.y - 10, RUST2, 0.4); } });
+      later(e, 0.5, () => { const h2 = houndAt(e, id); if (h2) { thump(h2.x, h2.y, 0.8, DUST); V.hit(h2.x, h2.y - 10, RUST2, 0.4);
+        // (climax pass) each hound lands as one rust-and-bone starburst
+        V.climax(h2.x, h2.y, { shape: 'burst', r: 80, n: 10, color: RUST2, core: BONE, ink: SOOT, z: 14, flat: 0.9, hold: 0.1, dur: 0.45, after: { smoke: 0.3 }, smokeColor: DUST }); } });
       later(e, 0.05 + i * 0.04, () => { snd(e, 'bark', { hound: id, bold: 1 }); });
     });
     snd(e, 'pounce', null);
@@ -10157,7 +10296,8 @@ Object.assign(KIT_VFX, {
       shake(7);
       goals.forEach((g, i) => { const ang = Math.atan2(b.y - g.y, b.x - g.x) + 0.35; FX.later(i * 0.03, () => huntClaw(b.x, b.y, ang, R * 0.75, { w: 7, color: i % 2 ? SPECT : '#fff4d0' })); });
       V.flash(b.x, b.y - 26, 90, '#eaf7ff', 0.22);
-      V.spikeburst(b.x, b.y, { r: 78, n: 14, color: SPECT, core: '#ffffff', ink: '#14202a', dur: 0.42, z: 28 });
+      // (climax pass) the pale starburst on the boss is now the pack's one big shape (it was 78): ink edge, pale-blue body, white core, held a beat
+      V.climax(b.x, b.y, { shape: 'burst', r: 125, n: 16, color: SPECT, core: '#ffffff', ink: '#14202a', z: 28, flat: 0.85, hold: 0.12, dur: 0.7, after: { embers: 0.5 } });
       V.spikeburst(b.x, b.y, { r: R * 1.9, n: 22, hole: 0.6, color: GOLD, core: BONE, ink: SOOT, dur: 0.5, layer: 'ground', z: 0, flat: 0.6 });
       V.shock(b.x, b.y, { r: R * 2.6, color: GOLD, dur: 0.6, w: 8 }); V.shock(b.x, b.y, { r: R * 2, color: SPECT, dur: 0.5, w: 4, delay: 0.06 });
       V.debris(b.x, b.y, { n: 10, color: '#6a5e4c', speed: 1.2 });
@@ -10165,13 +10305,13 @@ Object.assign(KIT_VFX, {
       for (const h of hounds(e)) if (h.spectral) pose(e, h.id, 'howl');
       // AFTERMATH: claw scratches round the boss (ink lines, a pale edge), a pale mist drifting off
       const scr = goals.map(g => ({ x: b.x + (g.x - b.x) * 0.75, y: b.y + (g.y - b.y) * 0.75, a: Math.atan2(g.y - b.y, g.x - b.x) + Math.PI / 2 + rnd(-0.3, 0.3) }));
-      V.fx({ dur: 3.2, layer: 'ground', draw: (c, p, t, fx) => {
+      V.fx({ dur: 2, layer: 'ground', draw: (c, p, t, fx) => {
         const k = fx.a * Math.min(1, t / 0.1, (1 - p) / 0.4); if (k < 0.02) return;
         c.lineCap = 'round';
         for (const s of scr) for (let j = -1; j <= 1; j++) {
           const px = -Math.sin(s.a) * j * 9, py = Math.cos(s.a) * j * 6, L = 26 - Math.abs(j) * 5, x0 = s.x + px - Math.cos(s.a) * L, y0 = s.y + py - Math.sin(s.a) * L * 0.62, x1 = s.x + px + Math.cos(s.a) * L, y1 = s.y + py + Math.sin(s.a) * L * 0.62;
-          c.globalAlpha = 0.55 * k; c.strokeStyle = SOOT; c.lineWidth = 3.5; c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
-          c.globalAlpha = 0.45 * k; c.strokeStyle = '#eaf7ff'; c.lineWidth = 1; c.beginPath(); c.moveTo(x0, y0 - 1); c.lineTo(x1, y1 - 1); c.stroke();
+          c.globalAlpha = 0.28 * k; c.strokeStyle = SOOT; c.lineWidth = 3.5; c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
+          c.globalAlpha = 0.22 * k; c.strokeStyle = '#eaf7ff'; c.lineWidth = 1; c.beginPath(); c.moveTo(x0, y0 - 1); c.lineTo(x1, y1 - 1); c.stroke();
         }
         c.globalAlpha = 1;
       } });

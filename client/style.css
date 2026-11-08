@@ -67,6 +67,7 @@ ul.abilities .ab-icon.ogcd { border-radius: 50%; }
 /* the proc glow: a fixed shadow on its own layer whose opacity breathes (no box-shadow repaint every frame) */
 .slot .gl { position: absolute; inset: -2px; border-radius: inherit; pointer-events: none; z-index: 0; opacity: 0; box-shadow: 0 0 0 2px #ffe08a, 0 0 18px 5px #ffd65ad0; transition: opacity .15s; will-change: opacity; }
 .slot.glow .gl { opacity: 1; animation: glowpulse .9s ease-in-out infinite alternate; }
+.slot.glow-wait .gl { opacity: .35; }
 @keyframes glowpulse { from { opacity: .5; } to { opacity: 1; } }
 .slot .tip { display: none; position: absolute; bottom: 74px; left: 50%; transform: translateX(-50%); width: 240px; background: var(--panel); border: 1px solid var(--gold-dim); border-radius: 8px; padding: 8px 10px; font-size: 12px; z-index: 6; line-height: 1.4; text-align: left; cursor: default; }
 .slot:hover .tip { display: block; }
@@ -74,6 +75,7 @@ ul.abilities .ab-icon.ogcd { border-radius: 50%; }
 .tip em { display: block; font-style: normal; color: #9fc4ff; font-size: 11px; margin-bottom: 4px; }
 #cast-bar { position: relative; width: 260px; height: 16px; background: #0d0b12e0; border: 1px solid #8a6f35; border-radius: 8px; overflow: hidden; }
 #cast-bar .fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #c9a03f, #ffe08a); }
+#cast-bar .notch { position: absolute; top: 0; bottom: 0; width: 1px; background: #fff6e4; opacity: .6; pointer-events: none; }
 #cast-bar span { position: relative; display: block; text-align: center; font-size: 11px; font-weight: 700; line-height: 16px; color: #1a1208; text-shadow: 0 0 3px #fff8; }
 #buff-row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; max-width: 560px; min-height: 20px; }
 .buff { font-size: 11px; background: #1d2a1ae0; border: 1px solid #5fbf4a; color: #dfffd2; border-radius: 10px; padding: 1px 8px; }
@@ -307,6 +309,8 @@ ul.abilities em.meta { display: block; font-style: normal; font-size: 11px; colo
 .rr span { font-weight: 800; color: #fff3d8; }
 .rr small { color: var(--muted); }
 .res-actions { display: flex; gap: 10px; margin-top: 16px; align-items: center; }
+/* Try again stays in reach: the bar sticks to the foot of the scrolling card */
+.res-card .res-actions { position: sticky; bottom: 0; z-index: 2; margin: 16px -24px -20px; padding: 12px 24px 20px; background: #17131d; border-top: 1px solid var(--line-soft); border-radius: 0 0 12px 12px; }
 .res-actions .cta { width: auto; flex: 1; }
 .res-actions .btn2 { padding: 12px 20px; }
 .res-wait { flex: 1; margin: 0; color: var(--muted); font-size: 13px; }
@@ -1941,6 +1945,8 @@ body:has(#raid-ui.pf-strip:not(.hidden)) #captions { bottom: calc(var(--hud-top,
 #captions .cap.out { opacity: 0; transition-duration: .3s; }
 #captions .cap b { margin-right: 7px; font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
   color: color-mix(in srgb, var(--c) 62%, var(--muted)); }
+#captions .cap.minor { font-size: 12px; padding: 3px 10px 4px; color: var(--muted); }
+#captions .cap.minor.in { opacity: .72; }
 #captions .cap.boss { font-size: 15px; padding: 5px 14px 6px; border-color: color-mix(in srgb, var(--c) 30%, var(--line-soft, #2a231b)); }
 #captions .cap.boss b { font-family: var(--fantasy); font-size: 12px; color: color-mix(in srgb, var(--c) 72%, var(--muted)); }
 #captions .cap.boss span { font-style: italic; }
@@ -2277,3 +2283,27 @@ body.in-founding #combat-hud, body.in-founding #gold-hud, body.in-founding #bag-
 .pb.rest i { position: static; padding: 0; background: none; font-size: 9px; line-height: 1; color: inherit; }
 .pf.cleanse .pb.bad .bf-icon { border-color: #4fd8c8; }
 @media (prefers-reduced-motion: reduce) { .pb.gain .bf-icon, .pb.exp .bf-icon { animation: none; } }
+/* the chest is a reveal: each card lands in turn with a sweep in its rarity; Legendary and Mythic carry a ring */
+#loot .loot-card.land { animation: lc-in .34s cubic-bezier(.2, .7, .3, 1) var(--ld, 0ms) both; }
+#loot .loot-card.land::before { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: var(--rc); box-shadow: 0 0 14px 6px var(--rc); opacity: 0; pointer-events: none; animation: lc-sweep .55s ease-out var(--ld, 0ms) both; }
+#loot .loot-card.big { box-shadow: inset 0 0 0 1px var(--rc); }
+#loot .loot-card.mythic { box-shadow: inset 0 0 0 1px var(--rc), 0 0 12px -2px var(--rc); }
+#loot .loot-card.land.big::after { content: ''; position: absolute; inset: 0; border: 1px solid var(--rc); border-radius: 2px; pointer-events: none; animation: lc-ring .8s ease-out calc(var(--ld, 0ms) + 200ms) both; }
+@keyframes lc-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@keyframes lc-sweep { 0% { opacity: .9; left: 0; } 100% { opacity: 0; left: calc(100% - 2px); } }
+@keyframes lc-ring { 0% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.09, 1.35); } }
+/* the results card dropped to a strip: the room is unblurred and the chest in it is clickable */
+.res-hide { float: right; margin: 0 0 6px 10px; padding: 3px 12px; font: 600 11px/1.5 var(--fantasy); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 2px; cursor: pointer; }
+.res-hide:hover { color: var(--gold-hi); border-color: var(--gold-dim); }
+.res-strip { display: none; }
+#results.slim { inset: auto 0 132px 0; display: flex; justify-content: center; padding: 0 16px; background: none; backdrop-filter: none; pointer-events: none; animation: none; }
+#results.slim .res-card { display: none; }
+#results.slim .res-strip { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 14px; pointer-events: auto; background: var(--panel); border: 1px solid var(--line); border-top-color: var(--gold-dim); border-radius: 3px; box-shadow: 0 10px 28px #000a; }
+.res-strip .rs-t { margin-right: 8px; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.res-strip .rs-t b { margin-right: 8px; font-family: var(--fantasy); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
+.res-strip .rs-t b.win { color: var(--gold-hi); }
+.res-strip .rs-t b.lose { color: #ff9a8a; }
+.res-strip button[hidden] { display: none; }
+.res-strip .btn2, .res-strip .cta { width: auto; padding: 6px 14px; font-size: 12px; letter-spacing: .1em; }
+body:has(#loot:not(.hidden)) #results.slim { padding-bottom: 0; }
+@media (max-width: 700px) { .res-strip .rs-t { display: none; } }

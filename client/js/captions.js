@@ -45,13 +45,14 @@ const Captions = (() => {
     if (!text || !enabled()) return;
     const r = root();
     if (!r) return;
-    const st = styleFor(speaker, opts);
+    const st = styleFor(speaker, opts), minor = !!(opts && opts.minor);
     // the same line twice in a row (a retry, a double event) only refreshes it
     const last = live[live.length - 1];
     if (last && last.speaker === speaker && last.text === text) { clearTimeout(last.timer); last.timer = setTimeout(() => drop(last), hold(text, seconds)); return; }
-    while (live.length >= MAX) drop(live[0], true);
+    if (minor && live.length >= MAX) return;   // (a minor line waits its turn, and never bumps a boss or hero line)
+    while (live.length >= MAX) drop(live.find(x => x.minor) || live[0], true);   // (room is made of minor lines first)
     const el = document.createElement('div');
-    el.className = 'cap' + (st.boss ? ' boss' : '');
+    el.className = 'cap' + (st.boss ? ' boss' : '') + (minor ? ' minor' : '');
     if (st.color) el.style.setProperty('--c', st.color);
     if (speaker) {
       const b = document.createElement('b');
@@ -64,7 +65,7 @@ const Captions = (() => {
     r.appendChild(el);
     void el.offsetWidth;   // start the fade from 0
     el.classList.add('in');
-    const item = { el, speaker, text, timer: 0 };
+    const item = { el, speaker, text, timer: 0, minor };
     item.timer = setTimeout(() => drop(item), hold(text, seconds));
     live.push(item);
   }

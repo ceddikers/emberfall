@@ -1825,6 +1825,8 @@ const BOSS_VFX = (() => {
     if (sh.death || (t - sh.hitAt < 0.14 && k <= left + 0.1)) return;
     sh.hitAt = t; sh.hitK = Math.min(1, Math.max(k, left));
   }
+  // a foot lands (main.js updateArena, every other stride): his body settles 2 px (bodyPose)
+  function footfall(bd) { if (bd) SH(bd).stepAt = clk(); }
   // everyone else's blows: a faint flinch when his health drops by a real bite between two updates
   function bossHp(bd, hp, mx) {
     if (!bd || !(mx > 0)) return;
@@ -2391,6 +2393,12 @@ const BOSS_VFX = (() => {
     // hit flinch: a squash toward the camera and a white flash
     const hq = t - sh.hitAt, hk = hq < 0.18 && !sh.death ? sh.hitK * (1 - hq / 0.18) : 0;
     q.flash = hk; q.sx *= 1 + 0.05 * hk; q.sy *= 1 - 0.05 * hk; q.oy += 2.5 * hk;
+    // a slow breath for every boss, and a 2 px settle as each foot lands (footfall)
+    if (!sh.death) {
+      q.grow *= 1 + 0.008 * Math.sin(t * 1.4);
+      const fq = (t - (sh.stepAt == null ? -9 : sh.stepAt)) / 0.24;
+      if (fq >= 0 && fq < 1) q.oy += 2 * Math.sin(fq * Math.PI);
+    }
     // the enrage: he swells and shakes harder to the end, his rim pulsing red / violet
     if (sh.enrAt > 0 && !sh.death) {
       const ep = Math.min(1, (t - sh.enrAt) / sh.enrDur), a = 0.6 + 3 * ep;
@@ -2548,5 +2556,5 @@ const BOSS_VFX = (() => {
 
   return { timeStop, failed,propFx, stoveBurst, gazed, doomed, cure, knightMemory, knightRise, nightFall, polarityFlip, edgeClose, pulse, orbForm, orbHit, chain, meatballLand, meatballWall, meatballHit, scorchPool, silkSnap, silkFree, reelBite, snuff, hatch, threadShoot, threadSnap, floorFalls, impact, castStart, cocoonEnd, cocoonCracking, mothMend, auto, leap, roar, addSpawn, addDeath, addEnrage, fury, spit, husk, tetherSnap, playerDeath, playerRaised, partyBuff, victory, wipe,
     // [boss presentation]
-    drawBody, presence, bossHit, bossHp, enrageLand, behind, intro, bossDeath, setClock, roomFx };
+    drawBody, presence, bossHit, bossHp, footfall, enrageLand, behind, intro, bossDeath, setClock, roomFx };
 })();

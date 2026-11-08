@@ -167,7 +167,7 @@ const WYRM = {
       target = target || nonTank(); if (!target) return null;
       if (cast) f.cast('Ember Breath', delay, 'breath');
       const m = f.mech({ type: 'aoe', shape: { kind: 'cone', x: B.x, y: B.y, r: 760, arc: 0.95, angle: Math.atan2(target.y - B.y, target.x - B.x) }, delay, dmg: dmg.breath,
-        tag: 'breath', ddown: true, aimFromBoss: target.id, lockAt: 1.1,
+        tag: 'breath', ddown: true, aimFromBoss: target.id, lockAt: H ? 1.3 : 1.6,
         onResolve: () => {
           // the molten floor starts a little way out from him: the ground he stands on stays clear
           const s = m.shape, c = Math.cos(s.angle), sn = Math.sin(s.angle);
@@ -417,9 +417,9 @@ const WYRM = {
       const step = f.ct(2.0);
       order.forEach((i, j) => f.afterKeep(1.2 + j * step, () => f.aoe({ kind: 'circle', x: Math.round(SPOTS[i][0]), y: Math.round(SPOTS[i][1]), r: SCORCH_R }, f.ct(2.6), dmg.scorch, { tag: 'scorch' })));
       // the fire shows once the last mark has bloomed: everything but the island
-      f.afterKeep(1.2 + 2 * step + 0.2, () => {
+      f.afterKeep(1.2 + step + 0.2, () => {
         f.island = { x: last[0], y: last[1], r: hole };
-        f.aoe({ kind: 'donut', x: Math.round(last[0]), y: Math.round(last[1]), r: 1600, r2: hole }, d - (1.2 + 2 * step + 0.2), dmg.burn, { tag: 'heartburn' });
+        f.aoe({ kind: 'donut', x: Math.round(last[0]), y: Math.round(last[1]), r: 1600, r2: hole }, d - (1.2 + step + 0.2), dmg.burn, { tag: 'heartburn' });
       });
       f.afterKeep(d + 0.1, () => { f.island = null; });
     };
@@ -442,10 +442,10 @@ const WYRM = {
       starts.forEach((t, k) => f.afterKeep(t, () => heartWave(k), 'Heart Burn'));
       clawsAt.forEach(t => f.afterKeep(t, claws, 'Rending Claws'));
       if (H) { f.afterKeep(pounceAt, () => pounce(false, true), 'Pounce'); f.afterKeep(flareAt, heartFlare, 'Heart Flare'); }
-      // then a Roar as the last fire lands, and the Heart closes in the same breath as a buster, once the Roar has been cast (named in
+      // then a Roar just after the last fire lands (the burn's bar is over), and the Heart closes in the same breath as a buster, once the Roar has been cast (named in
       // the same tick, so the feed never runs short; the next act is laid out at once)
-      const lastLands = starts[waves - 1] + burn, end = Math.max(lastLands + 1, lastLands - 3 + f.ct(4.5) + 0.1);
-      f.afterKeep(lastLands - 3, roar, "Tyrant's Roar");
+      const lastLands = starts[waves - 1] + burn, end = Math.max(lastLands + 1, lastLands + 0.1 + f.ct(4.5) + 0.1);
+      f.afterKeep(lastLands + 0.1, roar, "Tyrant's Roar");
       f.afterKeep(end, claws, 'Rending Claws');
       f.afterKeep(end, () => f.wallDown(), 'The Heart Closes');
     };
@@ -521,8 +521,8 @@ const WYRM = {
       until: 0.03, push: true, onStart: groundStart,
       wall: { label: 'Last Ember', run: finale, until: 'resolved', timeout: 35 },
       sets: mix([S([0.01, null, 'Rending Claws'])], [
-        S([G, twinBreath, 'Twin Breath']),
-        S([G, clawsTail, 'Rending Claws', 5]),
+        S([G - 3.5, twinBreath, 'Twin Breath']),   // (the Heart closes once its Roar has been cast, so the first beat here comes a little sooner)
+        S([G - 3.5, clawsTail, 'Rending Claws', 5]),
       ], [], 14),
       closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, twinBreath, 'Twin Breath']],
       ramp: 0.08,

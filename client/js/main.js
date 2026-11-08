@@ -226,7 +226,7 @@
     // auto-attacks pause while you're down, dashing or knocked back, and outside a live fight
     canAuto: () => !amDead() && !linkLost() && !player.dashMove && !player.kb && (!inArena() || raid.state === 'live'),
     findEnemy: (a, ab) => {
-      const range = ab.range === 'melee' ? 75 : (ab.range || 420);
+      const range = ab.range === 'melee' ? 105 : (ab.range || 420);   // (melee: a step out of a boss-centred telegraph keeps the hit; raid-host.js and pvp-bots.js keep their own 75)
       if (inArena()) {
         // the enemy you clicked if it's in range, otherwise the nearest one in range (boss or add); before the pull
         // the boss can be hit too (that's what pulls it)
@@ -335,7 +335,7 @@
     inCombat: () => (inArena() ? raid.state === 'live' : null),
   };
 
-  // --- ally targeting: party frame under the mouse > clicked ally > ally nearest the cursor > yourself
+  // --- ally targeting: party frame under the mouse > clicked ally > ally nearest the cursor > most hurt ally > yourself
   function allyList() {
     if (inArena()) return raid.roster.map(r => ({ id: r.id, ent: entById(r.id) })).filter(c => c.ent);
     return [{ id: Net.id, ent: player }, ...[...remotes.values()].filter(r => r.scene === 0).map(r => ({ id: r.id, ent: r }))];
@@ -352,7 +352,7 @@
     let best = null, bd = 70;
     for (const c of allyList()) {
       const d = Math.hypot(c.ent.x - m.x, c.ent.y - m.y);
-      if (d < bd && validAlly(c.id, ab)) { bd = d; best = c.id; }
+      if (d < bd && validAlly(c.id)) { bd = d; best = c.id; }   // (living only: a raise needs a hover, a lock or a frame, never the nearest body)
     }
     return best;
   }
@@ -364,11 +364,24 @@
   }
   // ` locks the most hurt ally; pressing it again quickly moves on to the next most hurt
   let hurtCycleAt = -9;
-  function lockMostHurt() {
-    const list = partyOrder().filter(id => validAlly(id)).map(id => {
+  function hurtList() {
+    return partyOrder().filter(id => validAlly(id)).map(id => {
       const s = inArena() ? raid.party.get(id) : null;
       return { id, f: s && s.maxHp > 1 ? s.hp / s.maxHp : 1 };
     }).sort((a, b) => a.f - b.f || a.id - b.id);
+  }
+  // the most hurt living ally within the move's reach, or null when everyone is at full health (the heal's default target)
+  function mostHurtAlly(ab) {
+    const reach = ab && typeof ab.range === 'number' ? ab.range : Infinity;
+    for (const x of hurtList()) {
+      if (x.f >= 0.995) return null;
+      const e = entById(x.id);
+      if (e && Math.hypot(e.x - player.x, e.y - player.y) <= reach) return x.id;
+    }
+    return null;
+  }
+  function lockMostHurt() {
+    const list = hurtList();
     if (!list.length) return;
     const i = list.findIndex(x => x.id === lockedAlly);
     lockedAlly = now - hurtCycleAt < 1.5 && i >= 0 ? list[(i + 1) % list.length].id : list[0].id;
@@ -388,7 +401,10 @@
     // a tank (Spellwarden) is usually pointing at the boss, not an ally: only a frame or a locked ally counts
     if (player.cls && player.cls.role === 'tank') return Net.id;
     const s = softAlly(ab);
-    return s != null ? s : Net.id;
+    if (s != null) return s;
+    // nothing pointed at or locked: the most hurt ally, yourself only when everyone is at full health
+    const h = mostHurtAlly(ab);
+    return h != null ? h : Net.id;
   }
   function mouseoverOn() { return Save.setting('mouseover', true) !== false; }
   function selfBarOn() { return Save.setting('selfbar', true) !== false; }   // (on unless turned off in Options)
@@ -439,6 +455,12 @@
     return o;
   }
   let failAt = 0;
+  // a cast stops the held right-click steering (castStart sets mouse.holdOff); once the cast is over, a button still held walks on to the cursor
+  function resumeSteer() {
+    if (!mouse.holdOff || (actor && actor.kit.cast)) return;
+    mouse.holdOff = false;
+    if (mouse.rightDown && started && mouse.x != null && !player.dashMove) moveTo(mouseWorld(), false);
+  }
 
   function onKitEvent(ev) {
     switch (ev.type) {
@@ -456,6 +478,7 @@
         FX.cast(player, ab, tx, ty, { mine: true, tent: ally != null ? entById(ally) : null, step: ev.st });
         if (SH) { SH.castEnd(); SH.ability(player.cls.id, ab, true, null, Net.id); if (ab.ult) SH.vo('hero-ult', { classId: player.cls.id, ability: ab.id }); }
         Net.send(Object.assign({ t: 'cast', i, a: ab.fxId || ab.id, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +rnow.toFixed(3) }, Number.isInteger(ev.st) ? { st: ev.st } : null));
+        resumeSteer();   // (a cast that just finished: a right button still held walks you on)
         break;
       }
       case 'auto': {
@@ -487,6 +510,7 @@
         Net.send({ t: 'castStop' });
         if (SH) SH.castEnd();
         FX.text(player.x, player.y - 60, 'Interrupted', '#ff9a8a', 14, 1, { kind: 'call' });
+        resumeSteer();
         break;
       case 'fail':
         if (now - failAt < 0.6 || ev.reason === 'cooldown') break;
@@ -607,6 +631,9 @@
       if (tgt === 'boss' && !ev.dot && ev.amount > 0 && raid.state === 'live' && !immune) BOSS_VFX.bossHit(raid.bossDraw, ultHit ? 1 : ev.crit ? 0.75 : ev.auto ? 0.3 : 0.45);
       const at = enemyNow(tgt) || { x: raid.boss.x, y: raid.boss.y };
       if (immune) { if (!ev.dot) FX.text(at.x, at.y - 70, 'Immune', '#cfd6e8', 12, 0.7, { kind: 'quiet' }); return; }
+      // your blow lands: a quiet confirm at the enemy (an auto already sounds at the press; a pitch lower for a bigger hit), and a crit that tops your usual gets a 2 px shake and a beat of stop
+      if (SH && !ev.auto && ev.amount > 0) SH.play('hit-confirm', { vol: ev.dot ? 0.18 : ev.crit ? 0.5 : 0.3, rate: clamp(1 / Math.sqrt(sc), 0.8, 1.1), at, key: ev.dot ? 'hitc-dot' : 'hitc', minGap: ev.dot ? 0.4 : 0.07 });
+      if (ev.crit && !ev.dot && !ev.auto && sc > 1.15) { FX.addShake(2, true); hitStop(0.04); }
       FX.text(at.x, at.y - (tgt === 'boss' ? 70 : 34), txt, col, tgt === 'boss' ? big : big - 2, 0.9, tk);
       return;
     }
@@ -1049,12 +1076,13 @@
     if (!started || panelOpen()) return;
     if (!actor) { toast('Pick a hero first.'); return; }
     if (amDead() || linkLost() || (inArena() && raid.state !== 'live' && raid.state !== 'countdown' && raid.state !== 'prepull')) return;
-    Hud.pressed(i);   // (the slot lights, or shakes if it's still cooling: hud.js)
+    if (i === 6 || (i === 7 && (Hud.bare || Hud.held))) Hud.pressed(i);   // (the slot lights, or shakes if it's still cooling: hud.js)
     if (i === 6) { doDash(); return; }
     if (i === 7 && Hud.bare) { FX.text(player.x, player.y - 56, 'Bare Hands', '#cfd6e8', 12, 0.7, { kind: 'quiet' }); return; }   // (Hard+ Bare Hands: no Ultimate this pull)
     if (i === 7 && Hud.held) return;   // (T into an Immune boss: held, set piece)
     // T (slot 7): the Ultimate (engine.js; kits without one have nothing there yet)
-    actor.press(i);
+    // (the slot lights only if the engine took the press, queued or fired; a press it dropped shakes the slot)
+    Hud.pressed(i, !!actor.press(i));
   }
 
   // the taunt's look: the hero rears up, a shout ring, and a chain of the class's colour to whatever was taunted
@@ -1152,7 +1180,15 @@
     }, 33);
   }
 
-  function pickBots(humans) {
+  // The fill-in party is drawn from botSeed (the lobby shows the party that will go in), and each raid that starts takes the seed
+  // (it seeds the host too) and leaves a fresh one for the next setup.
+  let botSeed = (Math.random() * 1e9) | 0;
+  let lastPartySeed = null;   // (the party the last pull went in with: a retry keeps it, so the same four become characters)
+  function seededRng(seed) {
+    let s = seed >>> 0;
+    return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+  function pickBots(humans, rng = seededRng(botSeed ^ 0x9e3779b9)) {
     const slots = ['tank', 'healer', 'dps', 'dps'];
     for (const h of humans) {
       const i = slots.indexOf(h.role);
@@ -1162,7 +1198,7 @@
     const prefs = { tank: ['bastion', 'runeguard', 'bloodreaver'], healer: ['cleric', 'grovekeeper', 'chronomancer'], dps: ['ranger', 'pyromancer', 'shadowblade'] };
     const out = [];
     for (const role of slots.slice(0, Math.max(0, 4 - humans.length))) {
-      const c = prefs[role].find(id => !taken.has(id)) || prefs[role][0];
+      const free = prefs[role].filter(id => !taken.has(id)), c = free.length ? free[Math.floor(rng() * free.length)] : prefs[role][0];   // (a random free class of the role)
       taken.add(c); out.push(c);
     }
     return out;
@@ -1195,14 +1231,20 @@
     const bond = bondCounts(humans);   // gear party bonuses, fixed for the fight (gear is locked inside a raid)
     // fill-in bots wear the gear this fight is tuned for (bot-gear.js: a party that cleared everything before it), and their
     // pieces count toward the party bonus like anyone's
-    const botCls = fill ? pickBots(humans) : [], taken = new Set();
+    // a retry (the same boss and mode, straight from its results) keeps the party it just fought with; the fight's own seed is fresh, so Hard's draws are new
+    const again = !!(raid && raid.result && raid.def && raid.def.id === def.id && raid.mode === mode && lastPartySeed != null);
+    const partySeed = again ? lastPartySeed : botSeed; lastPartySeed = partySeed;
+    const botCls = fill ? pickBots(humans, seededRng(partySeed ^ 0x9e3779b9)) : [], taken = new Set();
+    const raidSeed = again ? (Math.random() * 1e9) | 0 : botSeed; botSeed = (Math.random() * 1e9) | 0;   // (the next setup draws another party)
     let botGear = [];
     try {
       const lv = BotGear.levelFor(def.id, mode);
       botGear = botCls.map(cid => { const s = BotGear.slotFor((CLASSES.find(c => c.id === cid) || {}).role, taken); taken.add(s); return lv ? BotGear.forHero(lv, cid, s) : null; });
       for (const g of botGear) if (g) for (const t of g.src) bond[t] = (bond[t] || 0) + 1;
     } catch (e) { console.warn('bot gear', e); botGear = []; }
-    raidHost = new RaidHost({ def, mode, humans: hostHumans, bots: botCls, botGear, seed: (Math.random() * 1e9) | 0, emit: m => Net.broadcastAll(m), bond: partyBonus(bond), waitPull: true, practiceFrom, px, mods: hpMods });
+    raidHost = new RaidHost({ def, mode, humans: hostHumans, bots: botCls, botGear, seed: raidSeed, emit: m => Net.broadcastAll(m), bond: partyBonus(bond), waitPull: true, practiceFrom, px, mods: hpMods });
+    // the fill-in damage bots play a little like people (a slower look at the floor, the odd lost moment); the tank and healer stay exact
+    if (fill && typeof BotHuman !== 'undefined') BotHuman.attach(raidHost, 'dps', BotHuman.LIVELY);
     const roster = [...humans, ...raidHost.bots.map(b => ({ id: b.id, name: b.name, cls: b.cls.id, spec: b.spec, role: b.role, bot: true }))];
     for (const b of raidHost.bots) spawns[b.id] = [rnd(b.x), rnd(b.y)];
     // (rid names this run; the start message is kept so a rejoining or resyncing player can be put in it: hostSendSnapshot)
@@ -1287,6 +1329,7 @@
     dropItem: uid => Inventory.drop(uid),
     escrow: uid => Inventory.escrow(uid), settle: key => Inventory.settle(key), unescrow: key => Inventory.unescrow(key), unescrowAll: () => Inventory.unescrowAll(),
     itemTip: (key, cls) => itemKeyTip(key, cls),
+    sound: (name, o) => { if (SH) SH.play(name, o); },
   });
   // the boss bursts into the chest
   Net.on('chest', m => {
@@ -1587,7 +1630,10 @@
   function hostPullIn(pid) { if (raidHost && hostRoster.some(h => h.id === pid && !h.left)) raidHost.pullIn(5); }
   Net.onHost('pci', hostPullIn);
   Net.on('pcd', msg => { if (raid && raid.state === 'prepull') raid.pullAt = now + (Number(msg.n) || 5); });
-  function startPullCountdown() { if (!raid || raid.state !== 'prepull' || raid.pullAt) return; if (Net.isHost) hostPullIn(Net.id); else Net.send({ t: 'pci' }); }
+  Net.on('pcx', () => { if (raid && raid.state === 'prepull') raid.pullAt = null; });   // (the host called the countdown off)
+  function cancelPull() { if (Net.isHost && raidHost && raid && raid.state === 'prepull' && raid.pullAt) raidHost.pullOut(); }
+  // the clock: starts the countdown; on the host, clicking it again (or Esc) calls it off
+  function startPullCountdown() { if (!raid || raid.state !== 'prepull') return; if (raid.pullAt) { cancelPull(); return; } if (Net.isHost) hostPullIn(Net.id); else Net.send({ t: 'pci' }); }
   // the ready check before a pull (raid-host.js readyCheck): anyone calls it ('rcq'), humans answer ('rcr'); the host relays
   // 'rc' (opened), 'rca' (an answer) and 'rce' (closed: all ready starts the pull countdown, or who wasn't)
   const hostInRaid = pid => !!raidHost && hostRoster.some(h => h.id === pid && !h.left);
@@ -1755,6 +1801,9 @@
     hostSendSnapshot(pid, null);
   });
 
+  // the last real pull, for the town to remark on when the party is back (this session only; wipes in a row per boss + mode)
+  let lastPull = null;
+  const pullStreak = {};
   // going in or out of a raid fades up from black instead of cutting straight to the new room
   const sceneVeil = document.createElement('div');
   sceneVeil.id = 'scene-veil';
@@ -1771,12 +1820,17 @@
       if (scene === 'town' && def && !def.trial) toast(`Your party went into the raid: ${def.name}.`);
       return;
     }
+    // a retry: the same fight again, straight from its results card. No entrance (title card, intro effects, voice, sting), the
+    // music plays on, and the host's pull countdown starts by itself (cancel: the clock again, or Esc)
+    const retry = !msg.pvp && !def.trial && scene === 'arena' && !!raid && !!raid.result && !raid.pvp && !raid.def.trial && raid.def.id === def.id
+      && raid.mode === msg.mode && (raid.practice || 0) === (Number(msg.practice) || 0) && (msg.rid || 0) !== raid.rid;
     closePanels();
     RaidUI.hideResults(); WallFx.reset();
     resetRaidInput();
     FX.clear(); VFX.clear(); clearTimers();
     ARENA.use(def.id);
-    if (SH && msg.pvp) { SH.castEnd(); SH.play('portal-enter', { vol: 0.8 }); SH.music('mus-pull', { fade: 2 }); }   // (the ring: no boss, no intro)
+    if (retry) { if (SH) SH.castEnd(); }
+    else if (SH && msg.pvp) { SH.castEnd(); SH.play('portal-enter', { vol: 0.8 }); SH.music('mus-pull', { fade: 2 }); }   // (the ring: no boss, no intro)
     else if (SH) { SH.castEnd(); SH.play('portal-enter', { vol: 0.8 }); SH.music('mus-pull', { fade: 2 }); later(0.6, () => { SH.play(def.id + '-intro', { vol: 0.9 }); SH.vo('boss-intro', { bossId: def.id }); }); }
     sceneFade();
     const sp = def.spawn || { x: 0, y: -40 };
@@ -1786,7 +1840,8 @@
       // pull: no countdown, the fight starts on the first blow on the boss ('prepull' till then)
       state: msg.pull ? 'prepull' : 'countdown', countdownEnd: now + (msg.pvp ? msg.pvp.cd : 8), fightTime: 0, marks: {},
       prog: null, practice: Number(msg.practice) || 0, px: msg.pr ? PracticeHall.clean(msg.pr) : null, deaths: [], meter: null, pullAt: null, tl: { hp: [], casts: [] },
-      introAt: msg.pvp ? 0 : now + 0.6,   // the title card, once the room has faded in
+      introAt: msg.pvp ? 0 : now + (retry ? 0.3 : 0.6), retry,   // the title card, once the room has faded in (a retry: the name plate alone)
+      autoPullAt: retry && Net.isHost && msg.pull ? now + 1.2 : 0,   // (a retry's pull countdown, started by the host)
       boss: { x: sp.x, y: sp.y, f: Math.PI / 2, hp: 1, mx: 1, u: 0, v: 0, tg: null },
       bossDraw: { x: sp.x, y: sp.y, f: Math.PI / 2, st: newSt(), lastX: sp.x, lastY: sp.y, fade: 1 },
       bossTrack: new Track(sp.x, sp.y, Math.PI / 2), ghosts: [],
@@ -1866,6 +1921,9 @@
       player.spec = trialPrevSpec; trialPrevSpec = undefined;
       if (player.cls) Net.send({ t: 'cls', id: player.cls.id, spec: player.spec, sv: svOf(player.cls.id) });
     }
+    // (a real pull that ended: town remarks on it when the party is back)
+    lastPull = raid && raid.result && !raid.def.trial && !raid.practice && !raid.pvp && (raid.result.s === 'clear' || raid.result.s === 'wipe')
+      ? { boss: raid.def.id, win: raid.result.s === 'clear', deaths: Math.min(4, (raid.deaths || []).length), streak: raid.streak || 0, first: !!raid.firstClear } : null;
     raid = null; WallFx.reset();
     PracticeHall.tag(null);
     scene = 'town';
@@ -1887,6 +1945,7 @@
     setSceneUI();
     updateCamera(0, true);
     lastSentKey = '';
+    if (lastPull) TownLife.remarkPull(lastPull);
   }
 
   function setSceneUI() {
@@ -2200,7 +2259,7 @@
     }
     if (msg.stats) raid.meter = { ft: msg.time, d: Object.entries(msg.stats).map(([id, st]) => Scoring.pack(Number(id), st)) };   // (the meter ends on the final tally)
     if ((msg.s === 'clear' || msg.s === 'wipe') && msg.stats && !raid.def.trial && !raid.practice && !raid.fightLogged) { raid.fightLogged = true; Pastimes.logFight(msg, raid.def.id); }   // (the Logbook's Fights tab)
-    raid.state = msg.s; raid.result = msg; raid.resultAt = now + (msg.s === 'clear' ? 3.4 : 2.8) * practiceSlowK();   // [boss presentation] (after his fall / the wipe's beat)
+    raid.state = msg.s; raid.result = msg; raid.resultAt = now + (msg.s === 'clear' ? 6 : 2.8) * practiceSlowK();   // [boss presentation] (after his fall / the wipe's beat)
     if (msg.s === 'clear' || msg.s === 'wipe') WallFx.reset();   // (a wall's held sound and muffled music end with the fight)
     if (msg.s === 'clear' && raid.boss) raid.boss.hp = 0;   // (the health stream stops with the fight: the bar would keep the last reading short of zero)
     if (SH && (msg.s === 'clear' || msg.s === 'wipe')) { SH.castEnd(); const svEnd = raid.def.id === 'sovereign'; if (!svEnd) SH.play(msg.s, { vol: 1 }); if (!svEnd || msg.s === 'wipe') SH.music(msg.s === 'clear' ? 'mus-victory' : 'mus-wipe', { fade: 1, loop: false }); SH.vo(msg.s === 'clear' ? 'boss-death' : 'boss-wipe', { bossId: raid.def.id }); if (msg.s === 'clear') SH.vo('clear', { bossId: raid.def.id, classId: player.cls ? player.cls.id : null }); }   // (the Ultimate's kill and wipe are played by its own beats: sound-hooks.js sovereignRoom, the night tune already playing)
@@ -2218,6 +2277,10 @@
     // a real pull (not a trial or a practice run) goes on the progression record
     if ((msg.s === 'clear' || msg.s === 'wipe') && !raid.def.trial && !raid.practice && msg.maxHp > 0) {
       const pct = msg.s === 'clear' ? 0 : Math.max(0, Math.min(100, Math.round(msg.hp / msg.maxHp * 1000) / 10));
+      // (town remembers this pull: lastPull is filled on leaving; the wipe streak per boss lives for the session)
+      const sk = raid.def.id + ':' + raid.mode, before = progOf(raid.def.id, raid.mode);
+      raid.firstClear = msg.s === 'clear' && !before.fast && !(before.pulls || []).some(p => p.clear);
+      pullStreak[sk] = msg.s === 'wipe' ? (pullStreak[sk] || 0) + 1 : 0; raid.streak = pullStreak[sk];
       raid.prog = progRecord(raid.def.id, raid.mode, { pct, ph: Number(msg.ph) || 1, time: Math.floor(msg.time || 0), clear: msg.s === 'clear' ? 1 : 0, at: Date.now() });
     }
     fadeTelegraphs(); raid.tethers.clear(); Stagecraft.endFight(); Lamps.reset(); Kennel.endFight(); raid.lunges = []; raid.eggs = null; raid.rollers.clear(); raid.reels.clear(); player.reel = null;
@@ -2238,6 +2301,13 @@
         e.st.react = { kind: msg.s === 'clear' ? 'cheer' : 'slump', t0 };
         if (msg.s === 'clear') e.st.action = { type: 'big', t0: t0 + 0.05, dur: ANIM_DUR.big };
       }
+    }
+    // the fill-in bots, after the cheer: each waves in turn a second or two on, and one says a word (voice-lines.js botSay)
+    if (msg.s === 'clear') {
+      const R = raid, standing = [...R.bots.values()].filter(b => b.st && b.cls && (R.party.get(b.id) || {}).alive);
+      standing.forEach((b, k) => later(1 + k * 0.4 + Math.random() * 0.4, () => { if (raid === R && b.st) Pastimes.emote(b, 'wave', now); }));
+      const talker = standing[Math.floor(Math.random() * standing.length)];
+      if (SH && talker) SH.vo('bot-bark', { kind: 'victory', classId: talker.cls.id, name: talker.name, delay: 2.5 });
     }
     if (msg.s === 'clear' && player.cls && raid.def.trial) {
       Save.recordTrial(player.cls.id, raid.def.trial);
@@ -2341,7 +2411,7 @@
     if (msg.x) return;   // (taken off the floor before it landed: fight.js cancel)
     BOSS_VFX.impact(tg, msg, { entById, boss: raid.def.id, pol: raid.pol, units: raidUnits(), props: raid.room.props, room: raid.room, bossDraw: raid.bossDraw });
     if (msg.fail) BOSS_VFX.failed(tg);
-    if (SH && tg.type !== 'safe') SH.impact(tg.type, !!(msg.hits && msg.hits.includes(Net.id)));
+    if (SH && tg.type !== 'safe') SH.impact(tg.type, !!(msg.hits && msg.hits.includes(Net.id)), !!(msg.hits && !msg.hits.length && !msg.fail));   // (the third: it landed on nobody)
     if (msg.hits && msg.hits.includes(Net.id) && tg.type === 'aoe') FX.shake = Math.max(FX.shake, 5);
   });
   // Azerath: a shape that joins two heroes (a stack halfway between the Rune bearers, the bolt from one to the other) moves with them until it locks
@@ -2439,6 +2509,7 @@
       if (!(st.action && st.action.t0 > now - 0.6)) st.action = { type: 'attack', t0: now - 0.45, dur: 1.0 };
       const tgt = raid.boss.tg != null ? entById(raid.boss.tg) : null;
       later(0.08, () => raid && BOSS_VFX.auto(raid.bossDraw, tgt));
+      if (SH) { const mine = raid.boss.tg === Net.id; SH.play('boss-auto', { vol: mine ? 0.6 : 0.5, rate: mine ? 0.88 : 1, at: { x: raid.boss.x, y: raid.boss.y }, key: 'boss-auto', minGap: 0.5 }); }   // (the swing: heavier when it is on you)
     }
     else if (msg.name === 'ladle') { raid.props.held = 'ladle'; raid.propsUntil.held = now + msg.dur + 0.3; later(msg.dur - 0.5, () => { if (raid) { raid.props.spin = true; raid.propsUntil.spin = now + 0.9; } }); }
     else if (msg.name === 'lid') { raid.props.held = 'lid'; raid.propsUntil.held = now + msg.dur + 0.2; }
@@ -2736,13 +2807,20 @@
     }
     // (left of the body, clear of the name tag; what your shield ate beside it in muted blue: msg.sh, fight.js)
     const hy = player.y - (player.lift || 0) - 18;
-    if (msg.a > 0) FX.text(player.x, hy, '-' + rnd(msg.a), msg.dd ? '#ff4a3a' : '#ff8a7a', msg.a > 400 ? 18 : 14, 1, { kind: 'taken' });
+    // (the bite as a share of your health: a number's size, the sound's weight and the flush follow it; a tick or a chip is a number and a quiet sound, no red)
+    const mx = ps && ps.maxHp > 1 ? ps.maxHp : 0, share = mx ? msg.a / mx : 0, chip = chipHit(msg, ps);
+    if (msg.a > 0) FX.text(player.x, hy, '-' + rnd(msg.a), msg.dd ? '#ff4a3a' : '#ff8a7a', (mx ? share > 0.25 : msg.a > 400) ? 18 : 14, 1, { kind: 'taken' });
     if (msg.sh >= 1) FX.text(player.x, hy, rnd(msg.sh) + ' absorbed', '#9cc4ec', 12, 1, { kind: 'absorb' });
-    if (SH && msg.a > 0) SH.play(ps && ps.maxHp > 1 && msg.a > ps.maxHp / 3 ? 'hit-heavy' : 'hit-light', { vol: 0.85, key: 'hit', minGap: 0.08 });
+    if (SH && msg.a > 0) SH.play(chip ? 'hit-light' : share > 1 / 3 ? 'hit-heavy' : 'hit-light', { vol: chip ? 0.3 : 0.85, key: 'hit', minGap: 0.08 });
     if (SH && msg.sh >= 1 && msg.a > 0) SH.play('shield-break', { vol: 0.7, key: 'shield-break', minGap: 0.4 });   // (it ate what it could and broke)
     if (msg.dd) FX.shake = Math.max(FX.shake, 4);
+    // a blow of more than 60% of your health: the music dips for a beat, a stop and a heavier shake, yours alone
+    if (share > 0.6 && !chip) {
+      try { if (typeof Sound !== 'undefined' && Sound.music) { Sound.music.muffle(1200, 0.03); setTimeout(() => Sound.music.muffle(0, 0.3), 150); } } catch (e) { /* (the music is only a mood) */ }
+      FX.cam.stop(0.04); FX.addShake(4, true);
+    }
     // the screen's edge flushes red, harder the bigger the bite out of your health
-    if (msg.a > 0 && ps && ps.maxHp > 1) {
+    if (msg.a > 0 && ps && ps.maxHp > 1 && !chip) {
       const k = clamp(msg.a / ps.maxHp * 2.2, 0.25, 1);
       raid.hurtK = now - (raid.hurtAt ?? -9) < 0.35 ? Math.max(raid.hurtK, k) : k; raid.hurtAt = now;
     }
@@ -2755,7 +2833,7 @@
     if (msg.k === 'death') raid.doom.delete(msg.id);
     if (msg.k === 'raised' && e) BOSS_VFX.playerRaised(e);
     if (msg.k === 'raised' && raid.rezAsks) delete raid.rezAsks[msg.id];   // (the ask is answered: askRaise)
-    if (SH && e && (msg.k === 'death' || msg.k === 'raised')) { const mine = msg.id === Net.id; SH.play(msg.k === 'death' ? 'death' : 'revive', { vol: 0.9, remote: !mine, at: mine ? null : e }); SH.vo(msg.k === 'death' ? 'hero-down' : 'hero-revive', { id: msg.id, classId: e.cls ? e.cls.id : null, mine, local: mine }); }
+    if (SH && e && (msg.k === 'death' || msg.k === 'raised')) { const mine = msg.id === Net.id; SH.play(msg.k === 'death' ? 'death' : 'revive', { vol: 0.9, remote: !mine, at: mine ? null : e }); SH.vo(msg.k === 'death' ? 'hero-down' : 'hero-revive', { id: msg.id, classId: e.cls ? e.cls.id : null, mine, local: mine, bot: !!e.bot, ally: !mine && !e.bot, name: e.name }); }   // (a teammate's fall or return: a small line on the party's murmur budget)
     // a Time Stop on the boss (Time Reversal, fight.js pauseBoss): it freezes mid-pose, frosted, under a stopped clock
     if (msg.k === 'pause' && msg.dur > 0) { const d = Math.min(2.5, +msg.dur); raid.bossPause = { at: now, end: now + d }; BOSS_VFX.timeStop(raid.bossDraw, d); }
     if (msg.k === 'brandHit') { VFX.setScale(msg.id === Net.id ? 1 : 0.6); try { KIT_VFX.brandHit(e, { x: raid.boss.x, y: raid.boss.y }); } finally { VFX.setScale(1); } }
@@ -2776,6 +2854,11 @@
     if (msg.k === 'death') { actor.kit.cast = null; actor.kit.queued = null; actor.kit.queuedO = null; actor.kit.inbuf.length = 0; player.target = null; player.dashMove = null; }
   });
   // the Threadweavers' threads, their snaps, and every Marionettist's Dolls (classes-c, stagecraft.js)
+  // a fill-in bot speaks (raid-host.js bark: kind low | ult | raise): a caption in its own name, throttled in voice-lines.js
+  Net.on('bark', msg => {
+    const e = raid && raid.bots.get(msg.id), s = e && raid.party.get(msg.id);
+    if (SH && e && e.cls && s && s.alive) SH.vo('bot-bark', { kind: msg.k, classId: e.cls.id, name: e.name });
+  });
   Net.on('thr', msg => { if (raid) Stagecraft.onThreads(msg, now); });
   Net.on('thrs', msg => { if (raid) Stagecraft.onSnaps(msg, now, entById); });
   Net.on('dolls', msg => { if (raid) Stagecraft.onDolls(msg, now, Net.id); });
@@ -3087,6 +3170,8 @@
     if (e.key === 'Escape' && Journal.isOpen()) { Journal.close(); return; }
     if (e.key === 'Escape' && Tutorial.isOpen()) { Tutorial.close(); return; }
     if (e.key === 'Escape' && TownLife.isTalking()) { TownLife.endTalk(); return; }
+    // the results card: Esc drops it to a strip (and back), Enter is Try again for the host (raid-ui.js resultsKey)
+    if ((e.key === 'Escape' || e.key === 'Enter') && !e.repeat && RaidUI.resultsOpen() && RaidUI.resultsKey(e.key, !!(document.activeElement && document.activeElement.closest && document.activeElement.closest(e.key === 'Enter' ? 'input, textarea, select, button, [contenteditable="true"]' : 'input, textarea, select, [contenteditable="true"]')))) { e.preventDefault(); return; }
     if (e.key === 'Escape' && Loot.isOpen()) { Loot.close(); return; }
     if (e.key === 'Escape' && Pastimes.anyOpen()) { Pastimes.closeAll(); return; }
     if (e.key === 'Escape' && Keybinds.isArranging()) { Keybinds.arrange(false); return; }
@@ -3102,6 +3187,7 @@
     }
     if (document.activeElement && document.activeElement.closest && document.activeElement.closest('input, textarea, select, [contenteditable="true"]')) return;
     if (e.key === 'Escape' && placingMark) { placeMark(null); return; }
+    if (e.key === 'Escape' && Net.isHost && inArena() && raid.state === 'prepull' && raid.pullAt) { cancelPull(); return; }   // (the host calls a pull countdown off)
     // Esc: back out of a page, close a panel, drop your targets, and with nothing left to close, open the menu
     if (e.key === 'Escape') { if (selOpen()) selBack(); else if (panelOpen()) closePanels(); else if (lockedAlly != null || lockedEnemy != null) { lockedAlly = null; lockedEnemy = null; } else if (started && !e.repeat) openOptions(); return; }
     // (Shift turns 5 into %, ; into :, ...: a bound symbol key still works with Shift through its physical key)
@@ -3407,7 +3493,13 @@
     bd.f += df * Math.min(1, dt * 9);
     bd.fade += ((b.u ? 0.55 : 1) - bd.fade) * Math.min(1, dt * 5);   // fades out and back in when untargetable
     bd.st.t = raid.bossPause && now < raid.bossPause.end ? raid.bossPause.at : now; bd.st.raid = true;   // (a Time Stop holds its pose)
-    bd.st.moving = Math.hypot(bd.x - bd.lastX, bd.y - bd.lastY) > 20 * dt;
+    const stepD = Math.hypot(bd.x - bd.lastX, bd.y - bd.lastY);
+    bd.st.moving = stepD > 20 * dt;
+    // a walking boss puts a foot down every other stride: a low footfall and a 2 px settle (no jump or teleport counts, nor a boss that is not there)
+    if (bd.st.moving && dt > 0 && stepD < 900 * dt && raid.state === 'live' && now - (bd.stepAt ?? -9) > 0.9 && BOSS_VFX.presence(bd) > 0.6) {
+      bd.stepAt = now; BOSS_VFX.footfall(bd);
+      if (SH) SH.bossStep(bd);
+    }
     bd.lastX = bd.x; bd.lastY = bd.y;
     // wind-up before each auto-attack (it only lands on the tank, in melee range)
     const tank = b.tg != null ? entById(b.tg) : null;
@@ -3517,9 +3609,14 @@
     RaidUI.readyCheck(raid, now, Net.id);
     if (!raid.pvp) Journal.tick(now, raid.state === 'live' && !amDead());
     if ((raid.state === 'clear' || raid.state === 'wipe') && !raid.pagesTaken) { raid.pagesTaken = true; raid.newPages = Journal.newPages(); }
+    if (raid.autoPullAt && now >= raid.autoPullAt) {   // (a retry: the host's pull countdown starts by itself once the room is up)
+      raid.autoPullAt = 0;
+      if (raid.state === 'prepull' && !raid.pullAt && (!raid.rc || raid.rc.res)) startPullCountdown();
+    }
     if (raid.introAt && now >= raid.introAt) {
       raid.introAt = 0;
-      if (!raid.def.trial) {
+      if (!raid.def.trial && raid.retry) RaidUI.intro(raid.def, raid.mode, false, true);   // (a retry: the name plate alone)
+      else if (!raid.def.trial) {
         BOSS_VFX.intro(raid.def.id, raid.bossDraw);   // [boss presentation] his entrance, in time with the title card
         let met = {};
         try { met = JSON.parse(localStorage.getItem('emberfall.met') || '{}') || {}; } catch (e) { /* first time for everything */ }
@@ -3644,11 +3741,15 @@
   }
   // a hero taking a real hit flinches (heroes.js heroPose: a white flash and a 2-3px recoil away from the blow), you,
   // friends and bots alike. Damage-over-time ticks and chip damage don't; a tankbuster rocks them hardest.
+  // a tick or a chip, not a real blow (a bleed, static or tithe tick, or under 3% of their health; a tankbuster never): no flinch, no red flush
+  function chipHit(msg, ps) {
+    return !!ps && ps.maxHp > 1 && msg.k !== 'buster' && (msg.a / ps.maxHp < 0.03 || msg.k === 'bleed' || msg.k === 'static' || msg.k === 'tithe');
+  }
   function heroFlinch(msg, ps) {
     const e = msg.a > 0 && raid ? entById(msg.id) : null;
     if (!e || !e.st || !ps || !(ps.maxHp > 1)) return;
     const frac = msg.a / ps.maxHp, buster = msg.k === 'buster';
-    if (!buster && (frac < 0.03 || msg.k === 'bleed' || msg.k === 'static' || msg.k === 'tithe')) return;
+    if (chipHit(msg, ps)) return;
     const k = buster ? 1.15 : clamp(0.35 + frac * 3, 0.35, 0.9);
     const b = raid.bossDraw, dx = e.x - b.x, dy = e.y - b.y, d = Math.hypot(dx, dy);
     e.st.hurt = { t0: now, k, ax: d > 1 ? dx / d : -Math.cos(e.angle), ay: d > 1 ? dy / d : -Math.sin(e.angle) };
@@ -3683,6 +3784,8 @@
     if (perfect) { ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'lighter'; glow(ctx, cx, cy, R0 * 1.5, '#ffd27a', 0.28 * fade); }
     ctx.restore();
   }
+  // the dust a foot lifts in each room (stone grey when a room is not listed)
+  const ARENA_DUST = { grubnak: '#c8b690', hydra: '#8fa890', morrowoak: '#a4b07c', titan: '#e6eef6', corvane: '#e6eef6', brannoc: '#d8bc84' };
   function drawEntity(e) {
     switch (e.kind) {
       case 'hero': drawHero(ctx, e.cls, e.x, e.y, e.angle, e.st, HERO_SCALE); break;
@@ -3718,16 +3821,23 @@
           for (const b of raid.abuffs) if (b.to === id && b.end > now && !buffs.includes(b.id)) buffs.push(b.id);
           drawHeroStatus(ctx, e.x, e.y - (e.lift || 0), heroScale(), e.cls, ps, buffs, now);
         }
-        // town footsteps: a faint puff of dust under each foot as it lands
-        if (scene === 'town' && e.st.stride != null) {
+        // footsteps: a faint puff of dust under each foot as it lands (in town and in the fight, where each step also sounds, softly)
+        const arenaFt = scene === 'arena' && !!raid;
+        if ((scene === 'town' || arenaFt) && e.st.stride != null) {
           const n = Math.floor(e.st.stride / Math.PI + 0.5);
           if (e._step !== n) {
             if (e._step != null && e.st.moving && e.st.walkK > 0.5 && !e.dashMove) {
               const side = n % 2 ? 1 : -1, a = e.angle + Math.PI / 2;
-              FX.add({ type: 'step', x: e.x + Math.cos(a) * side * 7 + Math.cos(e.angle) * 3, y: e.y + 7 + Math.sin(a) * side * 4, color: '#dccca4', dur: 0.55 });
+              FX.add({ type: 'step', x: e.x + Math.cos(a) * side * 7 + Math.cos(e.angle) * 3, y: e.y + 7 + Math.sin(a) * side * 4, color: arenaFt ? ARENA_DUST[raid.def.id] || '#bdb6aa' : '#dccca4', dur: arenaFt ? 0.45 : 0.55 });
+              if (arenaFt && SH) SH.step(raid.def.id, e === player, e);
             }
             e._step = n;
           }
+        }
+        // a dash ends: its landing puff is fx.js's ('land'); in the fight the landing also sounds, a soft heavier footfall
+        if (arenaFt && e.st.dashT != null && e._landT !== e.st.dashT && now - e.st.dashT > 0.08 && now - e.st.dashT < 0.5) {
+          e._landT = e.st.dashT;
+          if (SH) SH.step(raid.def.id, e === player, e, 1.5);
         }
         break;
       }
@@ -3840,7 +3950,7 @@
   // While you cast a heal, a thread of light runs from you to them.
   function drawAllyTarget() {
     if (!healerish()) return;
-    const ab = actor.abilities.find(a => a.target === 'ally');
+    const ab = actor.abilities.find(a => a.target === 'ally' && !a.allowDead) || actor.abilities.find(a => a.target === 'ally');   // (the heal, not the raise: they pick differently)
     const c = actor.kit.cast;
     const id = c && c.ab.target === 'ally' && typeof c.target === 'number' ? c.target : allyTargetId(ab);
     const e = entById(id);
@@ -4211,11 +4321,21 @@
     VFX.motes(player.x, player.y, { color: '#fff2c8', n: 8, r: 26, rise: 0.8, life: 1.1 });
   }
   // a red flush round the screen's edge for a moment when you're hit (stronger for a bigger hit)
-  let hurtGrad = null, hurtFor = '';
+  let hurtGrad = null, hurtFor = '', lowHp = false, lowDull = false, lowK = 0;
+  // below 30% of your health (until you are back above 35%): the edge holds a slow red pulse and the music dulls to 4 kHz
+  function lowHealth() {
+    const ms = myState(), f = ms && ms.maxHp > 0 ? ms.hp / ms.maxHp : 1;
+    lowHp = !!ms && ms.alive && raid.state === 'live' && (lowHp ? f < 0.35 : f < 0.3);
+    lowK += ((lowHp ? 1 : 0) - lowK) * 0.1;
+    if (lowHp !== lowDull) { lowDull = lowHp; try { if (typeof Sound !== 'undefined' && Sound.music) Sound.music.rest(lowHp ? 4000 : 0); } catch (e) { /* (the music is only a mood) */ } }
+  }
   function hurtVignette() {
+    lowHealth();
     const age = now - (raid.hurtAt ?? -9);
-    if (age > 0.4) return;
-    const a = raid.hurtK * (1 - age / 0.4) * 0.55;
+    // (edge only, like the flush: the gradient is clear over the middle of the screen, so no telegraph is covered; Reduce flashes holds it steady)
+    const low = lowK > 0.01 ? lowK * (FX.flashK < 1 ? 0.12 : 0.16 + 0.04 * Math.sin(now * TAU / 1.1)) : 0;
+    const a = Math.max(age > 0.4 ? 0 : raid.hurtK * (1 - age / 0.4) * 0.55, low);
+    if (a < 0.004) return;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     if (hurtFor !== W + 'x' + H) {
       hurtFor = W + 'x' + H;
@@ -5025,6 +5145,7 @@
     let tx = msg.tx, ty = msg.ty, tent = null;
     if (msg.ally != null) { tent = entById(msg.ally); if (tent) { tx = tent.x; ty = tent.y; } }
     FX.cast(e, ab, tx, ty, { tent, step: msg.st });   // (st: its combo step, engine.js fxStep)
+    if (!e.bot && ab.ult && SH && inArena()) SH.vo('bot-bark', { kind: 'ult', classId: e.cls.id, name: e.name, ally: true });   // (a teammate's Ultimate: their class's shout, as a small caption)
     if (SH) SH.ability(e.cls.id, ab, false, e, msg.id);
   });
   // a teammate's buffs for their party frame (party-buffs.js; a bot's come from the host the same way), and the host asking for everyone's again
@@ -5077,6 +5198,8 @@
     rrect(ctx, x0, y0, w, 8, 1.5, 'rgba(255,255,255,0.08)');
     rrect(ctx, x0, y0, w * f, 8, 1.5, broke ? '#c8463a' : e.cls.accent || '#e8c15a');
     if (!broke && el >= c.dur) rrect(ctx, x0, y0, w, 8, 1.5, `rgba(255,248,226,${(0.6 * (1 - q)).toFixed(3)})`);   // (the completion flash)
+    // the hairline where moving stops cancelling your cast (its last ENGINE.SLIDECAST seconds)
+    if (e === player && !broke && c.dur > ENGINE.SLIDECAST) rrect(ctx, Math.round(x0 + w * (1 - ENGINE.SLIDECAST / c.dur)), y0, 1, 8, 0, 'rgba(255,246,228,0.6)');
     ctx.font = '600 9.5px system-ui, sans-serif'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
     ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(10,8,6,0.9)';
     const outlined = (s, x, y, col) => { ctx.strokeText(s, x, y); ctx.fillStyle = col; ctx.fillText(s, x, y); };
@@ -5266,6 +5389,33 @@
   // sound once a frame (sound-hooks.js): the listener, the scene's beds and music, the pull countdown's drum, an
   // Ultimate window opening and closing, and the cast hum ending with its bar
   let sndCount = -1, sndUltWin = false;
+  // the enrage's approach: one low bell and a swell of the music when the 60 s status shows on the boss, then a soft tick a second for the last ten before the cast
+  function enrageCues() {
+    if (!inArena() || raid.state !== 'live') return;
+    const enr = raidEnrageAt(raid);
+    if (!enr) return;
+    const ft = (raid.fightTime || 0) - (raid.fightPaused || 0), left = Math.ceil(enr + 8 - ft), n = Math.ceil(enr - ft);   // (the cast is 8 s long: raid-ui.js shows the status from 60 s left)
+    const c = raid.sndEnr || (raid.sndEnr = { left: null, n: 99 });
+    if (c.left != null && c.left > 60 && left <= 60 && left > 0) {
+      SH.play('enrage-bell', { vol: 0.7, key: 'enrage-bell', minGap: 5 });
+      if (typeof Sound !== 'undefined' && Sound.music) Sound.music.swell(0.25, 1.5);
+    }
+    c.left = left;
+    if (n >= 1 && n <= 10 && n < c.n) SH.play('pull-count', { vol: 0.28, key: 'enrage-tick', minGap: 0.5 });
+    if (n < c.n) c.n = n;
+  }
+  // a teammate under a third of their health says a word, once a dip (bots do the same from the host: raid-host.js 'bark')
+  function allyLowCues() {
+    if (!inArena() || raid.state !== 'live' || !raid.party) return;
+    const m = raid.lowSaid || (raid.lowSaid = {});
+    for (const [id, s] of raid.party) {
+      if (id === Net.id || !s || !(s.maxHp > 0)) continue;
+      const e = entById(id); if (!e || e.bot || !e.cls) continue;
+      const f = s.hp / s.maxHp;
+      if (s.alive && f < 0.3 && !m[id]) { m[id] = true; SH.vo('bot-bark', { kind: 'low', classId: e.cls.id, name: e.name, ally: true }); }
+      else if (f > 0.55) m[id] = false;
+    }
+  }
   function soundTick() {
     if (!SH) return;
     try {
@@ -5275,6 +5425,8 @@
       const left = !inArena() ? -1 : raid.state === 'countdown' ? raid.countdownEnd - now : raid.state === 'prepull' && raid.pullAt ? raid.pullAt - now : -1;
       const n = left > 0 ? Math.ceil(left) : -1;
       if (n !== sndCount) { if (n > 0) SH.play(n === 1 ? 'pull-count-last' : 'pull-count', { vol: n === 1 ? 1 : 0.8 }); if (n > 0 && sndCount <= 0) SH.vo('countdown', { bossId: raid.def.id, seconds: left }); sndCount = n; }
+      if (lowDull && !inArena()) { lowHp = false; lowDull = false; lowK = 0; if (typeof Sound !== 'undefined' && Sound.music) Sound.music.rest(0); }   // (out of the fight: the music opens again)
+      enrageCues(); allyLowCues();
       const w = !!(actor && actor.kit.ultWin);
       if (w !== sndUltWin) { sndUltWin = w; SH.play(w ? 'ult-window' : 'ult-window-end', { vol: 0.7 }); }
       const cb = player.castBar;

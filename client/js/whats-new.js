@@ -2,6 +2,71 @@
 const WhatsNew = (() => {
   const LOG = [
     {
+      id: '2026-11-01', title: 'Wall moments and talent buffs', date: 'November 1',
+      groups: [
+        ['Raids', [
+          'Health walls are felt, not told: each boss has its own moment when a wall seals and when it breaks, in the picture and the sound.',
+        ]],
+        ['Class changes', [
+          'Talents that trailed the rest of their row were lifted after a raid re-measure. Nothing strong was trimmed.',
+          "Heat Haze's instant Fireball can fire at once, even in the middle of the global cooldown.",
+        ]],
+      ],
+    },
+    {
+      id: '2026-10-31', title: 'Retuned for talents, and Founding fixes', date: 'October 31',
+      groups: [
+        ['Raids', [
+          'Every boss and the Ultimate are retuned for parties that bring talents, and bots now hold talents by set. Three weak specs were lifted.',
+          'Fixes for raises, deaths and tells in the raid.',
+        ]],
+        ['The Founding', [
+          'Quests at your own pace from founders marked with a !, and plainer founder talk.',
+          'A G prompt shows over whatever the use key would act on, while your hero stands close. Items now drag and drop, and sound follows distance.',
+          'Fixes for leaving and rejoining mid-run, and a player who drops during the ending is still paid.',
+        ]],
+      ],
+    },
+    {
+      id: '2026-10-30', title: 'The Founding, Hard+ and the Practice Hall', date: 'October 30',
+      groups: [
+        ['New modes', [
+          'The Founding: a hero defense mode that tells how Emberfall was founded. Open it from the town.',
+          'Hard+: once a boss is beaten on Hard you can arm heat modifiers for a harder pull. Heat pays extra gold, and your best heat is kept.',
+          'A bigger Practice Hall: train a fight from the phase you choose, with aids like slow time and a Loop.',
+        ]],
+        ['Interface', [
+          "Your party's buffs are shared, so teammates' frames show what you gave them. New comfort settings are in Options.",
+        ]],
+      ],
+    },
+    {
+      id: '2026-10-29', title: 'The Ultimate, and a better end to every pull', date: 'October 29',
+      groups: [
+        ['The Ultimate raid', [
+          'The Cinder Sovereign: a raid in acts, built to be learned over many pulls. It follows a readthrough pass, tank and healer buffs, and class fixes inside the raid.',
+        ]],
+        ['Before and after a pull', [
+          'Ready check: anyone calls it, the party answers, and when all are ready the pull countdown starts.',
+          'The kill has a moment of its own: slow motion, a push-in and a Defeated banner with your clear time. Fastest clears are kept on the results card, the progress widget and the boss panel.',
+          'On the results card, click a player to see which moves did their damage and healing, one bar per move. A wipe adds a What got us block, and the Logbook keeps your bests.',
+        ]],
+      ],
+    },
+    {
+      id: '2026-10-28', title: 'Retuned for people, and bigger Ultimates', date: 'October 28',
+      groups: [
+        ['Raids', [
+          'Every boss is tuned for a human party rather than a perfect bot. Fill-in bots wear the gear each fight expects.',
+          'Boss health is drawn in stacked bars with a ghost trailing the last hit.',
+        ]],
+        ['Class changes', [
+          'Weak classes and talents were lifted, and every talent now plays as written. Held skill keys wait before repeating and never spend a second charge.',
+          'Ultimates hit harder on screen, with big class-coloured numbers. Screen flashes are softer.',
+        ]],
+      ],
+    },
+    {
       id: '2026-10-25b', title: 'Every raid reworked, and status icons', date: 'October 25',
       groups: [
         ['Raids', [

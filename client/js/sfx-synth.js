@@ -737,11 +737,12 @@
     'bm-volkar-storm-roll': 2.5, 'bm-volkar-storm-unbound': -1, 'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2,
     'bm-volkar-thunder-crash': 1, 'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5, 'bm-volkar-titan-fist': -1.5,
     'bm-volkar-twin-fall': -1.5, 'bm-wyrm-cinder-rain': 7.5, 'bm-wyrm-ember-breath': 3.5, 'bm-wyrm-intro': -4,
-    'bm-wyrm-pounce': 0.5, 'bm-wyrm-take-flight': 3.5, 'bm-wyrm-twin-breath': 3.5, 'boss-death': -2.5,
-    'boss-enrage': -2.5, 'boss-impact-heavy': 0.5, 'boss-impact-light': 7, 'boss-intro': -1.5,
-    'buff-on': -0.5, 'chest-drop': 3.5, 'chest-open': -5, 'cleanse': -5,
-    'clear': -4.5, 'crit': 4, 'dash': 6.5, 'debuff-on': -1,
-    'dummy-hit': 3, 'emote-cheer': -6.5, 'emote-laugh': -2, 'emote-wave': 2,
+    'bm-wyrm-pounce': 0.5, 'bm-wyrm-take-flight': 3.5, 'bm-wyrm-twin-breath': 3.5, 'boss-auto': 2.5,
+    'boss-death': -2.5, 'boss-enrage': -2.5, 'boss-impact-empty': 7, 'boss-impact-heavy': 0.5,
+    'boss-impact-light': 7, 'boss-intro': -1.5, 'boss-step': 6, 'buff-on': -0.5,
+    'chest-drop': 3.5, 'chest-open': -5, 'cleanse': -5, 'clear': -4.5,
+    'crit': 4, 'dash': 6.5, 'debuff-on': -1, 'dummy-hit': 3,
+    'emote-cheer': -6.5, 'emote-laugh': -2, 'emote-wave': 2, 'enrage-bell': 3,
     'fd-alert': -6, 'fd-arrow': 7, 'fd-auto-cast': 7, 'fd-auto-ember': 12.5,
     'fd-auto-hit-arrow': 8.5, 'fd-auto-hit-ember': 16, 'fd-auto-hit-holy': 11, 'fd-auto-hit-melee': 7.5,
     'fd-auto-holy': 9, 'fd-auto-melee': -1, 'fd-auto-shot': 8.5, 'fd-ballista': 1,
@@ -777,65 +778,66 @@
     'fd-wild-wolf': -5, 'feast-chew': 6.5, 'feast-clink': -5.5, 'feast-serve': -3.5,
     'feast-sting': -2.5, 'fish-bite': 3, 'fish-cast': 1.5, 'fish-catch': -3,
     'fish-lost': -0.5, 'fish-reel': -0.5, 'gloom-hollow-off': -2, 'gloom-hollow-on': 2,
-    'heal-land': -2.5, 'hit-heavy': 5, 'hit-light': 9, 'hm-bark-ash': -0.5,
-    'hm-bark-ghost': 3.5, 'hm-bark-greyfang': 0.5, 'hm-bark-rust': 0.5, 'hm-bite': 8,
-    'hm-bite-big': 2.5, 'hm-bringdown': -3, 'hm-calloff': 1.5, 'hm-down': 3,
-    'hm-hamstring': 1, 'hm-horn': -6, 'hm-howl': -3.5, 'hm-longchase': 1.5,
-    'hm-mount': -1, 'hm-quarry': 6.5, 'hm-relay': 4, 'hm-rend': 0.5,
-    'hm-ridedown': 2.5, 'hm-snap': 7, 'hm-up': 2.5, 'hm-whistle-hold': -7.5,
-    'hm-whistle-pounce': -7, 'ken-blaze': 0.5, 'ken-break': -0.5, 'ken-deathblow': -2,
-    'ken-good': 8, 'ken-iai': 2.5, 'ken-miss': 7.5, 'ken-off': 4.5,
-    'ken-pass': 6.5, 'ken-perfect': 2, 'ken-pommel': 6.5, 'ken-redirect': 1,
-    'lamp-drop': 11, 'lamp-ember': 14.5, 'lamp-end': 6.5, 'lamp-eternal': 0.5,
-    'lamp-pilgrim': 4.5, 'lamp-pillar': 3, 'lamp-snuff': 5.5, 'lamp-sparks': 5,
-    'lb-fire': -1.5, 'lb-ready': -5, 'loot-take': -2, 'low-hp': -4.5,
-    'npc-talk': -6, 'ping': 2.5, 'pip-up': 12, 'portal-enter': -3,
-    'portal-hum': -22.5, 'pull-count': 0.5, 'pull-count-last': -3.5, 'pull-go': -2,
-    'reaper-blink': 5.5, 'reaper-danse': 5, 'reaper-finish1': 4.5, 'reaper-finish2': -0.5,
-    'reaper-finish3': 1, 'reaper-finish4': -2, 'reaper-frenzy': -2.5, 'reaper-gate-bloom': -2.5,
-    'reaper-gate-close': -1, 'reaper-gate-open': 3.5, 'reaper-gate-tone': 8, 'reaper-gatebreaker': 1.5,
-    'reaper-harvest': -1, 'reaper-moon': 1.5, 'reaper-pop-bind': 4.5, 'reaper-pop-death': 3,
-    'reaper-pop-drain': 4, 'reaper-pop-thread': 9, 'reaper-rune': 12.5, 'reaper-rune-emp': 6,
-    'reaper-slack': 14.5, 'reaper-slash': 2.5, 'reaper-star-collapse': -2, 'reaper-star-open': 0.5,
-    'reaper-swing': 12, 'reaper-veil': -0.5, 'revive': -2, 'shield-break': 5,
-    'shield-up': -4, 'stack-1': 8, 'stack-2': -2.5, 'step-grass': 8,
-    'step-stone': 8.5, 'step-wood': 1.5, 'story-page': 3.5, 'sv-anvil-rise': 3.5,
-    'sv-anvil-strike': -1.5, 'sv-bite': 1, 'sv-boil': 3.5, 'sv-burnback': 0.5,
-    'sv-call-archmage': 0.5, 'sv-call-brannoc': 2.5, 'sv-call-corvane': -1, 'sv-call-grubnak': 0.5,
-    'sv-call-hollowking': 1.5, 'sv-call-hydra': -3, 'sv-call-morrowoak': 0.5, 'sv-call-skitterra': 3,
-    'sv-call-titan': 1, 'sv-call-volkar': 1, 'sv-call-wyrm': -3, 'sv-crescent-fan': -0.5,
-    'sv-crumble': -3.5, 'sv-cut': -2, 'sv-dance-cut': 0.5, 'sv-dance-cut2': 1,
-    'sv-dance-image': -1, 'sv-descent': -1.5, 'sv-dive-fall': -2, 'sv-dive-line': 1,
-    'sv-drift-loop': -11, 'sv-emberfall-below': -1, 'sv-everyname': -0.5, 'sv-fore-ghost': 0.5,
-    'sv-gutter': 1, 'sv-head-rise': -2, 'sv-heart-breath': 6, 'sv-heart-loop': -14,
-    'sv-hole-fall': -4.5, 'sv-hole-town': 0.5, 'sv-lance-dash': -1, 'sv-lantern-down': 0.5,
-    'sv-lantern-fly': 7, 'sv-lie-bell': -2.5, 'sv-pillar': -2, 'sv-proc-burst': -1,
-    'sv-pyre-cut': 1.5, 'sv-rebirth-blast': -1, 'sv-rebirth-choir': -1.5, 'sv-rebirth-draw': -1.5,
-    'sv-rebirth-halo': -1, 'sv-rebirth-sky': -2, 'sv-relight': -0.5, 'sv-sapling-arrive': -3,
-    'sv-sapling-creak': 2.5, 'sv-sapling-die': -4, 'sv-seal-shatter': -1.5, 'sv-seed-burst': -1.5,
-    'sv-seed-pulse': 2, 'sv-signal': -3, 'sv-stance-comet': -1, 'sv-stance-crane': 0.5,
-    'sv-stance-parting': 4, 'sv-steam-burst': -1, 'sv-twin-bloom': -2, 'sv-twin-bolt': 3.5,
-    'sv-twin-fire': -0.5, 'sv-twin-meet': -0.5, 'sv-twin-shift': 3.5, 'sv-twin-void': -0.5,
-    'sv-wall-fire': -0.5, 'sv-wall-out': 0.5, 'sv-water-hiss': -1.5, 'sv-wheel-clang': 3,
-    'sv-wheel-loop': -10, 'sv-wheel-throw': 1, 'sv-wipe-chord': -1.5, 'tg-aoe': 1.5,
-    'tg-buster': 1, 'tg-charge': 0.5, 'tg-gaze': 0.5, 'tg-knockback': 2.5,
-    'tg-raidwide': -0.5, 'tg-spread': 5.5, 'tg-stack': 1.5, 'tide-bell': 1,
-    'tide-crash': -1.5, 'tide-crest': 4.5, 'tide-gull': 9.5, 'tide-pop': 1.5,
-    'tide-slack': 10.5, 'tide-wave': 2.5, 'title-sting': -3, 'ui-bounty': 0.5,
-    'ui-buy': -6, 'ui-click': 2, 'ui-close': -0.5, 'ui-equip': -2.5,
-    'ui-error': -3, 'ui-feat': -7, 'ui-gold': -4, 'ui-hover': 13,
-    'ui-secret': -6, 'ult-alembist': 0.5, 'ult-bastion': 1.5, 'ult-bloodreaver': 1,
-    'ult-driftblade': 6.5, 'ult-fire': -1.5, 'ult-gloomsworn': -1, 'ult-gorgemaw': 1,
-    'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5, 'ult-kenseier': -1.5, 'ult-lanternkeeper': -2,
-    'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1, 'ult-ranger': 3,
-    'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4, 'ult-thermist': -1,
-    'ult-threadweaver': -1, 'ult-tidecaller': -2, 'wall-break': -1.5, 'wall-caelum-break': -1,
-    'wall-caelum-seal': -1.5, 'wall-caelum-vigil': -19.5, 'wall-corvane-kneel': -1.5, 'wall-corvane-rise': -1,
-    'wall-corvane-take': 1, 'wall-corvane-toll': -18.5, 'wall-hydra-break': -2, 'wall-hydra-heart': -11.5,
-    'wall-hydra-up': -3, 'wall-morrowoak-gulp': -13, 'wall-morrowoak-out': -0.5, 'wall-morrowoak-up': -2,
-    'wall-titan-break': -1, 'wall-titan-up': -3, 'wall-titan-wind': -5.5, 'wall-up': -3.5,
-    'wall-wyrm-close': -1.5, 'wall-wyrm-fall': -1.5, 'wall-wyrm-heart': -12, 'wall-wyrm-open': -3.5,
-    'wall-wyrm-rise': -0.5, 'wall-wyrm-storm': -11, 'waymark': 11.5, 'wipe': -2,
+    'heal-land': -2.5, 'hit-confirm': 5.5, 'hit-heavy': 5, 'hit-light': 9,
+    'hm-bark-ash': -0.5, 'hm-bark-ghost': 3.5, 'hm-bark-greyfang': 0.5, 'hm-bark-rust': 0.5,
+    'hm-bite': 8, 'hm-bite-big': 2.5, 'hm-bringdown': -3, 'hm-calloff': 1.5,
+    'hm-down': 3, 'hm-hamstring': 1, 'hm-horn': -6, 'hm-howl': -3.5,
+    'hm-longchase': 1.5, 'hm-mount': -1, 'hm-quarry': 6.5, 'hm-relay': 4,
+    'hm-rend': 0.5, 'hm-ridedown': 2.5, 'hm-snap': 7, 'hm-up': 2.5,
+    'hm-whistle-hold': -7.5, 'hm-whistle-pounce': -7, 'ken-blaze': 0.5, 'ken-break': -0.5,
+    'ken-deathblow': -2, 'ken-good': 8, 'ken-iai': 2.5, 'ken-miss': 7.5,
+    'ken-off': 4.5, 'ken-pass': 6.5, 'ken-perfect': 2, 'ken-pommel': 6.5,
+    'ken-redirect': 1, 'lamp-drop': 11, 'lamp-ember': 14.5, 'lamp-end': 6.5,
+    'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5, 'lamp-pillar': 3, 'lamp-snuff': 5.5,
+    'lamp-sparks': 5, 'lb-fire': -1.5, 'lb-ready': -5, 'loot-take': -2,
+    'low-hp': -4.5, 'npc-talk': -6, 'ping': 2.5, 'pip-up': 12,
+    'portal-enter': -3, 'portal-hum': -22.5, 'pull-count': 0.5, 'pull-count-last': -3.5,
+    'pull-go': -2, 'reaper-blink': 5.5, 'reaper-danse': 5, 'reaper-finish1': 4.5,
+    'reaper-finish2': -0.5, 'reaper-finish3': 1, 'reaper-finish4': -2, 'reaper-frenzy': -2.5,
+    'reaper-gate-bloom': -2.5, 'reaper-gate-close': -1, 'reaper-gate-open': 3.5, 'reaper-gate-tone': 8,
+    'reaper-gatebreaker': 1.5, 'reaper-harvest': -1, 'reaper-moon': 1.5, 'reaper-pop-bind': 4.5,
+    'reaper-pop-death': 3, 'reaper-pop-drain': 4, 'reaper-pop-thread': 9, 'reaper-rune': 12.5,
+    'reaper-rune-emp': 6, 'reaper-slack': 14.5, 'reaper-slash': 2.5, 'reaper-star-collapse': -2,
+    'reaper-star-open': 0.5, 'reaper-swing': 12, 'reaper-veil': -0.5, 'revive': -2,
+    'shield-break': 5, 'shield-up': -4, 'stack-1': 8, 'stack-2': -2.5,
+    'step-grass': 8, 'step-stone': 8.5, 'step-wood': 1.5, 'story-page': 3.5,
+    'sv-anvil-rise': 3.5, 'sv-anvil-strike': -1.5, 'sv-bite': 1, 'sv-boil': 3.5,
+    'sv-burnback': 0.5, 'sv-call-archmage': 0.5, 'sv-call-brannoc': 2.5, 'sv-call-corvane': -1,
+    'sv-call-grubnak': 0.5, 'sv-call-hollowking': 1.5, 'sv-call-hydra': -3, 'sv-call-morrowoak': 0.5,
+    'sv-call-skitterra': 3, 'sv-call-titan': 1, 'sv-call-volkar': 1, 'sv-call-wyrm': -3,
+    'sv-crescent-fan': -0.5, 'sv-crumble': -3.5, 'sv-cut': -2, 'sv-dance-cut': 0.5,
+    'sv-dance-cut2': 1, 'sv-dance-image': -1, 'sv-descent': -1.5, 'sv-dive-fall': -2,
+    'sv-dive-line': 1, 'sv-drift-loop': -11, 'sv-emberfall-below': -1, 'sv-everyname': -0.5,
+    'sv-fore-ghost': 0.5, 'sv-gutter': 1, 'sv-head-rise': -2, 'sv-heart-breath': 6,
+    'sv-heart-loop': -14, 'sv-hole-fall': -4.5, 'sv-hole-town': 0.5, 'sv-lance-dash': -1,
+    'sv-lantern-down': 0.5, 'sv-lantern-fly': 7, 'sv-lie-bell': -2.5, 'sv-pillar': -2,
+    'sv-proc-burst': -1, 'sv-pyre-cut': 1.5, 'sv-rebirth-blast': -1, 'sv-rebirth-choir': -1.5,
+    'sv-rebirth-draw': -1.5, 'sv-rebirth-halo': -1, 'sv-rebirth-sky': -2, 'sv-relight': -0.5,
+    'sv-sapling-arrive': -3, 'sv-sapling-creak': 2.5, 'sv-sapling-die': -4, 'sv-seal-shatter': -1.5,
+    'sv-seed-burst': -1.5, 'sv-seed-pulse': 2, 'sv-signal': -3, 'sv-stance-comet': -1,
+    'sv-stance-crane': 0.5, 'sv-stance-parting': 4, 'sv-steam-burst': -1, 'sv-twin-bloom': -2,
+    'sv-twin-bolt': 3.5, 'sv-twin-fire': -0.5, 'sv-twin-meet': -0.5, 'sv-twin-shift': 3.5,
+    'sv-twin-void': -0.5, 'sv-wall-fire': -0.5, 'sv-wall-out': 0.5, 'sv-water-hiss': -1.5,
+    'sv-wheel-clang': 3, 'sv-wheel-loop': -10, 'sv-wheel-throw': 1, 'sv-wipe-chord': -1.5,
+    'tg-aoe': 1.5, 'tg-buster': 1, 'tg-charge': 0.5, 'tg-gaze': 0.5,
+    'tg-knockback': 2.5, 'tg-raidwide': -0.5, 'tg-spread': 5.5, 'tg-stack': 1.5,
+    'tide-bell': 1, 'tide-crash': -1.5, 'tide-crest': 4.5, 'tide-gull': 9.5,
+    'tide-pop': 1.5, 'tide-slack': 10.5, 'tide-wave': 2.5, 'title-sting': -3,
+    'ui-bounty': 0.5, 'ui-buy': -6, 'ui-click': 2, 'ui-close': -0.5,
+    'ui-equip': -2.5, 'ui-error': -3, 'ui-feat': -7, 'ui-gold': -4,
+    'ui-hover': 13, 'ui-secret': -6, 'ult-alembist': 0.5, 'ult-bastion': 1.5,
+    'ult-bloodreaver': 1, 'ult-driftblade': 6.5, 'ult-fire': -1.5, 'ult-gloomsworn': -1,
+    'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5, 'ult-kenseier': -1.5,
+    'ult-lanternkeeper': -2, 'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1,
+    'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4,
+    'ult-thermist': -1, 'ult-threadweaver': -1, 'ult-tidecaller': -2, 'wall-break': -1.5,
+    'wall-caelum-break': -1, 'wall-caelum-seal': -1.5, 'wall-caelum-vigil': -19.5, 'wall-corvane-kneel': -1.5,
+    'wall-corvane-rise': -1, 'wall-corvane-take': 1, 'wall-corvane-toll': -18.5, 'wall-hydra-break': -2,
+    'wall-hydra-heart': -11.5, 'wall-hydra-up': -3, 'wall-morrowoak-gulp': -13, 'wall-morrowoak-out': -0.5,
+    'wall-morrowoak-up': -2, 'wall-titan-break': -1, 'wall-titan-up': -3, 'wall-titan-wind': -5.5,
+    'wall-up': -3.5, 'wall-wyrm-close': -1.5, 'wall-wyrm-fall': -1.5, 'wall-wyrm-heart': -12,
+    'wall-wyrm-open': -3.5, 'wall-wyrm-rise': -0.5, 'wall-wyrm-storm': -11, 'waymark': 11.5,
+    'wipe': -2,
   };
   // @@TRIM-END
 
@@ -1645,6 +1647,30 @@
     S.noise({ color: 'brown', lp: 1400, grain: 0.8, dur: 1.4, pts: [[0.05, 1], [1.4, 0]], peak: 0.2 });
     S.pad({ at: 0.2, notes: [mf(45), mf(52), mf(57)], bend: -12, dur: 3, a: 0.1, lpEnv: [1500, 1200, 200, 0.3], peak: 0.18 });
     S.bell({ at: 0.3, f: mf(38), dur: 3.5, peak: 0.2 });
+  });
+  // @@LIFE (the layer between the big moments: your blow landing, the boss's steps and swing, an empty landing, the enrage bell; all kept quiet by their callers)
+  def('hit-confirm', 'ab', S => {
+    S.thud({ f: S.rr(150, 185), f1: 85, dur: 0.1, peak: 0.45, click: 0.3, clickF: 1800 });
+    S.noise({ color: 'pink', bp: 2400, q: 0.8, dur: 0.05, a: 0.001, peak: 0.2 });
+  });
+  def('boss-step', 'imp', S => {
+    S.thud({ f: S.rr(62, 76), f1: 32, dur: 0.32, peak: 0.6, drive: 1.5 });
+    S.noise({ color: 'brown', lp: 500, dur: 0.18, pts: [[0.01, 1], [0.18, 0]], peak: 0.2 });
+    S.rumble({ dur: 0.35, f: 90, peak: 0.1, a: 0.01 });
+  });
+  def('boss-auto', 'imp', S => {
+    S.whoosh({ f: 300, f1: 950, q: 0.8, dur: 0.22, peakAt: 0.7, peak: 0.32 });
+    S.thud({ at: 0.2, f: 95, f1: 40, dur: 0.35, peak: 0.6, drive: 1.5, click: 0.2 });
+    S.noise({ at: 0.2, color: 'pink', lp: 1400, dur: 0.1, a: 0.001, peak: 0.25 });
+  });
+  def('boss-impact-empty', 'imp', S => {
+    S.thud({ f: 80, f1: 38, dur: 0.35, peak: 0.45, drive: 1.2 });
+    S.noise({ color: 'brown', lp: 900, dur: 0.3, grain: 0.6, pts: [[0.02, 1], [0.3, 0]], peak: 0.18 });
+  });
+  def('enrage-bell', 'tg', S => {
+    S.space('hall', 0.4);
+    S.bell({ f: mf(38), dur: 3.2, peak: 0.4 });
+    S.drum({ f: 55, dur: 0.5, peak: 0.25 });
   });
 
   // ============================================================================================== 4. abilities by kind

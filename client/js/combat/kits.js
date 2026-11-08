@@ -382,7 +382,7 @@ const KITS = {
     signature: 'Positionals',
     floor: 'Press Q to build combo points, W to spend them. Stand behind the boss. D when its button glows.',
     ceiling: [
-      'Strike from behind gives 2 combo points instead of 1. Eviscerate from the side hits harder. The boss turns to face the tank, so plan where you\'ll stand through each mechanic.',
+      'Strike from behind gives 2 combo points instead of 1. Eviscerate from the side or behind hits harder. The boss turns to face the tank, so plan where you\'ll stand through each mechanic.',
       'Eviscerate at 5 points gets a big bonus, but a sixth point is wasted. Spend at 4 when you\'re behind (Strike would give 2).',
       'Shadowstep teleports you behind the boss and makes your next hits count as positionals. Use it when a mechanic pushes you to the wrong side.',
       'Refresh Venom Blade in its last 7s: that much carries over, anything more is lost. Shadow Dance speeds up your attacks and makes every positional land; enter it at 5 points and your first Eviscerate in it keeps them.',
@@ -407,13 +407,13 @@ const KITS = {
       },
       {
         id: 'evis', name: 'Eviscerate', type: 'gcd', target: 'enemy', range: MELEE, anim: 'attack',
-        desc: 'Spend all combo points: {d:120} plus {d:115} per point, {d:160} more at 5 points, and {d:80} more from the side.',
+        desc: 'Spend all combo points: {d:120} plus {d:115} per point, {d:160} more at 5 points, and {d:80} more from the side or behind.',
         usable: k => k.g.combo >= 1,
         glow: k => k.g.combo >= 5 || (k.g.combo >= 4 && k.env.positional() === 'rear'),
         effect(k) {
           const cp = k.g.combo; k.g.combo = 0;
           const mult = bladeMult(k) * (k.has('dance') ? 1.25 : 1);
-          const o = bladeOpts(k, this, 'flank', 80, mult), pot = 120 + 115 * cp + (cp >= 5 ? 160 : 0);
+          const o = bladeOpts(k, this, 'flank', 80, mult, 'rear'), pot = 120 + 115 * cp + (cp >= 5 ? 160 : 0);
           const r = k.damage(pot + (o.feint ? 80 : 0), o), hit = o.feint || r.posHit;
           if (cp >= 5 && k.perk('shadowblade_w2')) { k.damage((120 + 115 * cp + 160 + (hit ? 80 : 0)) * 0.3, { ab: this, mult }); k.fx('empower'); }
           bladeFinisher(k, this, cp, (pot + (hit ? 80 : 0)) * mult);
@@ -1376,10 +1376,10 @@ function bladeMult(k) {
   return m;
 }
 // the finisher's damage options: its positional, unless a Feint lands it anyway; Opportunist's crit
-function bladeOpts(k, ab, positional, posBonus, mult) {
+function bladeOpts(k, ab, positional, posBonus, mult, posAlso) {
   const fb = k.talent('shadowblade_feint') && k.has('feint') ? k.buffs.get('feint') : null, pos = !!(fb && fb.data && fb.data.pos);
   if (fb) k.consume('feint');
-  const o = pos ? { ab, mult, feint: true } : { ab, positional, posBonus, mult };
+  const o = pos ? { ab, mult, feint: true } : { ab, positional, posAlso, posBonus, mult };
   if (k.talent('shadowblade_opportunist') && bossCasting(k)) { o.autoCrit = true; o.mult = (o.mult || 1) * bladeOpp(k); }
   if (k.g.shBite) { const sh = bladeSharp(k); o.crit = Math.min(sh.critCap, k.g.shBite * sh.crit); k.g.shBite = 0; }   // (Sharpened Shadows: the sharper the blade, the more often it crits: as much as the edge, up to 25%; a Nightstalker's bites deeper, 9% for each 6%, up to 45%)
   return o;

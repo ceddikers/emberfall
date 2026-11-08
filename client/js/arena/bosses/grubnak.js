@@ -59,7 +59,7 @@ const GRUBNAK = {
     const B = f.boss;
     const mkDmg = H => ({
       grease: H ? 9800 : 9800, buster: H ? 29900 : 29900, mince: H ? 14950 : 14950, ladle: H ? 14950 : 14950, spread: H ? 7900 : 8650, stack: H ? 23500 : 25300,
-      puddle: H ? 2850 : 3000, tower: H ? 5750 : 5750, towerFail: H ? 16100 : 16100, stuffed: H ? 16100 : 16100, simmer: H ? 14950 : 14950, whisk: H ? 14950 : 14950, spice: H ? 14950 : 14950, boil: H ? 50150 : 46000,
+      puddle: H ? 2850 : 3000, tower: H ? 5750 : 5750, towerFail: H ? 16100 : 9000, stuffed: H ? 16100 : 16100, simmer: H ? 14950 : 14950, whisk: H ? 14950 : 14950, spice: H ? 14950 : 14950, boil: H ? 50150 : 46000,
       gorge: H ? 7450 : 7450, heat: H ? 7450 : 7450, orders: H ? 12650 : 12650, meatball: H ? 14950 : 14950, flop: H ? 14950 : 14950, cleaver: H ? 14950 : 14950, flambe: H ? 15250 : 16100,
       skewer: H ? 6100 : 5500, charge: H ? 15250 : 16100, cask: H ? 9800 : 10350, gut: H ? 17450 : 17250, stove: H ? 4900 : 5200, burn: H ? 4350 : 4600, slam: H ? 5450 : 5750, hook: H ? 7650 : 8050,
       // (the Gorged form's moves, Hard only: Spit Up's lump, Sour Burp's cone and its acid, Second Helping's blast at his feet)
@@ -151,7 +151,7 @@ const GRUBNAK = {
     };
     // where a Meat Toss puddle was stays greasy, harmless until fire reaches it and burns it off. The stain does not last
     // for ever: it dulls and shrinks over its last 14 s (fade 1, then 2) and is gone STAIN_LIFE s after the puddle dried.
-    const STAIN_LIFE = H ? 70 : 45;
+    const STAIN_LIFE = H ? 70 : 30;
     const stain = (x, y) => {
       const stains = f.floor.filter(fl => fl.stain);
       if (stains.length >= 8) f.removeFloor(stains[0]);
@@ -179,7 +179,7 @@ const GRUBNAK = {
           onResolve: () => {
             const q = f.alive().find(z => z.id === p.id);
             if (!q) return;
-            const dur = H ? 28 : 24, x = q.x, y = q.y;
+            const dur = H ? 28 : 16, x = q.x, y = q.y;
             f.puddle(x, y, H ? 95 : 80, dur, dmg.puddle, 1, 'grease', { ddown: true });
             f.afterKeep(dur, () => stain(x, y));
           } });
@@ -565,7 +565,7 @@ const GRUBNAK = {
         const n = 6, w = ARENA.hw * 2 / n;
         for (let k = 0; k < n; k++) {
           const i = dir > 0 ? k : n - 1 - k, s = { kind: 'rect', x: -ARENA.hw + w * (i + 0.5), y: -ARENA.hh, angle: Math.PI / 2, len: ARENA.hh * 2, w };
-          f.aoe(s, d + k * 0.85, dmg.flambe, burn(s));
+          f.aoe(s, d + k * 1.05, dmg.flambe, burn(s));
         }
         return;
       }

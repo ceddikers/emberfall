@@ -418,6 +418,7 @@ const BRANNOC = {
       });
     };
     // Undertow Grip: the hand's shadow falls over a hero; then it closes on them. Break the hand before he slams them.
+    const heldAt = new Map();   // (where each held hero stands: the wheel planned meanwhile keeps its lane off them)
     const grip = (n = 1) => {
       const pool = f.shuffle(f.nonTanks().length ? f.nonTanks() : f.alive()).slice(0, n);
       if (!pool.length) return;
@@ -428,15 +429,16 @@ const BRANNOC = {
           onResolve: () => {
             const q = live(tgt.id); if (!q) return;
             const hand = f.spawnAdd({ kind: 'tidehand', x: q.x, y: q.y - 30, hp: dmg.handHp, r: 40, inert: true, prio: 6 });
+            heldAt.set(tgt.id, [q.x, q.y]);
             let held = 0;
             const tick = () => {
               const p = live(tgt.id);
-              if (!f.adds.has(hand.id) || !p || f.state !== 'live') { if (p) f.debuff(p.id, 'rooted', 0); return; }
+              if (!f.adds.has(hand.id) || !p || f.state !== 'live') { heldAt.delete(tgt.id); if (p) f.debuff(p.id, 'rooted', 0); return; }
               f.debuff(p.id, 'rooted', 1.2);
               f.damagePlayer(p, dmg.bleed, { kind: 'brBleed', n: 'Undertow Grip' });
               held++;
               if (held >= 8) {
-                f.killAdd(hand); f.debuff(p.id, 'rooted', 0);
+                heldAt.delete(tgt.id); f.killAdd(hand); f.debuff(p.id, 'rooted', 0);
                 f.damagePlayer(p, dmg.undertow, { kind: 'brUndertow', n: 'Undertow Grip' });
                 f.emit({ t: 'propfx', k: 'brcrush', x: Math.round(p.x), y: Math.round(p.y), pid: p.id });
                 return;
@@ -459,13 +461,15 @@ const BRANNOC = {
       for (let i = 1; i < pts.length; i++) if (!own.includes(i)) m = Math.min(m, segDist(pt[0], pt[1], pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]));
       return m;
     };
-    const unboundPlan = (n, sx, sy) => {
+    // avoid: points (a held hero) the road keeps off by more than half its width, so nobody who cannot move stands in it
+    const unboundPlan = (n, sx, sy, avoid = []) => {
       const obs = stones.map(([x, y]) => [x, y, 118]);
       let best = null;
       for (let k = 0; k < 120; k++) {
         const path = bounce(sx, sy, throwAngle(sx, sy, 120, 360), n, 50, obs);
         if (freeRun(path) < 300) continue;
         const end = rest(path, 0.5), pts = [...path.pts, end], last = pts.length - 1;
+        if (avoid.some(([ax, ay]) => ringRoom([ax, ay], pts, []) < 170)) continue;
         // the first ring sits on the middle of whichever early stretch gives it the most room
         let mid = null, midRoom = -1;
         for (let i = 2; i < last; i++) {
@@ -479,13 +483,18 @@ const BRANNOC = {
         if (!best || score > best.score) best = { path, end, mid, score };
         if (score >= 200) break;
       }
+      for (let k = 0; !best && avoid.length && k < 60; k++) {
+        const path = bounce(sx, sy, throwAngle(sx, sy, 120, 360), n, 50, obs), end = rest(path, 0.5), pts = [...path.pts, end];
+        if (avoid.some(([ax, ay]) => ringRoom([ax, ay], pts, []) < 170)) continue;
+        best = { path, end, mid: [(path.pts[1][0] + path.pts[2][0]) / 2, (path.pts[1][1] + path.pts[2][1]) / 2] };
+      }
       if (!best) { const path = bounce(sx, sy, throwAngle(sx, sy, 120, 360), n, 50, obs), end = rest(path, 0.5); best = { path, end, mid: [(path.pts[1][0] + path.pts[2][0]) / 2, (path.pts[1][1] + path.pts[2][1]) / 2] }; }
       return best;
     };
     const unbound = (n = 4, quiet = false) => {
       const d = f.ct(4.8);
       if (!quiet) f.cast('Sunwheel Unbound', d, 'unbound');
-      const { path, end, mid } = unboundPlan(n, B.x, B.y + 120);
+      const { path, end, mid } = unboundPlan(n, B.x, B.y + 120, [...heldAt.values()]);
       lay([...path.pts, end], { w: 190, speed: 800, delay: d, catches: [mid, end], catchR: 100, dmg: 'wheel', catchDmg: 'catchBig', stones: path.st });
     };
     // Deep Call: the sea heaves and drags everyone in to a ring a step or two from the middle (a hero already inside it stays where he is),
@@ -504,7 +513,7 @@ const BRANNOC = {
     // where it stands when the ring follows), the pull sets the fist down on a party that has just been dragged together, a wave is
     // still running when the next wheel is drawn. A pair is a highlight, about two or three to an act; the rest stand alone.
     const WHEEL_HEEL = 10;   // (the Heel is called once the wheel's road, and on Hard the Riposte after a catch, are done)
-    const ROAR_HEEL = 5.4;   // (the Heel is called as the Roar lands)
+    const ROAR_HEEL = 9;   // (the Heel is called well after the Roar lands: the healer tops up first)
     const LEAP_WHEEL = 8.2;   // (the pose lasts until 8 s after the leap's cast began; the wheel starts as he is up again)
     // I. First Blood. Roar then Heel is a pair (the party takes the raidwide, the tank's stamps follow while the healer is still topping
     // up); the tank has a beat about every half minute.

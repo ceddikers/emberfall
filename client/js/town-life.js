@@ -157,6 +157,81 @@ const TownLife = (() => {
         }
       }
     }
+    chatter(now);
+  }
+
+  // ---------------------------------------------------------------- remarks and idle talk
+  // One bubble at a time, from a queue: what the sergeant says about the pull you just played (and sometimes a neighbour's
+  // word), and now and then an idle line from someone near you. Never during a conversation, an arrival or a feast.
+  const NUMW = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+  const numWord = n => NUMW[n] || 'many';
+  const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  let sayQ = [], saying = null, pullNote = null, nextIdle = 0, lastTick = 0, lastIdle = '';
+  const PULL_POOLS = typeof TOWN_PULL_LINES !== 'undefined' ? TOWN_PULL_LINES : null;
+  // lp: { boss, win, deaths, streak, first } from main.js (leaveRaid); said a moment after the party is back in town
+  function remarkPull(lp) {
+    if (!lp || !PULL_POOLS) return;
+    pullNote = { lp, at: (deps ? deps.now() : 0) + 1.8 };
+  }
+  function sayPull(lp, now) {
+    const kind = lp.win ? (lp.first ? 'first' : lp.deaths >= 3 ? 'rough' : lp.deaths > 0 ? 'some' : 'clean') : lp.streak >= 3 ? 'streak' : 'wipe';
+    const pool = PULL_POOLS[kind], hask = folk.find(f => f.d.id === 'hask');
+    if (!pool || !hask || !present(hask)) return;
+    const fill = t => t.replace('{Out}', cap(numWord(Math.max(0, 4 - lp.deaths)))).replace('{out}', numWord(Math.max(0, 4 - lp.deaths))).replace('{streak}', numWord(lp.streak));
+    sayQ.push({ f: hask, text: fill(pick(pool.hask)), secs: 5, gap: 0 });
+    // sometimes someone close by adds a word
+    const p = deps.player, near = folk.filter(f => f !== hask && present(f) && !f.walk && p && Math.hypot(p.x - f.x, p.y - f.y) < 420);
+    near.sort((a, b) => Math.hypot(p.x - a.x, p.y - a.y) - Math.hypot(p.x - b.x, p.y - b.y));
+    if (near.length && Math.random() < 0.5) sayQ.push({ f: near[0], text: pick(pool.other), secs: 4, gap: 0.6 });
+  }
+  // the lines a townsperson might say to nobody in particular: the opening line of each plain talk entry that fits where the
+  // account is (no hero, role or secret conditions), kept short
+  function idleLines(f) {
+    const out = [];
+    for (const t of f.d.talk || []) {
+      const w = t.when || {};
+      if (w.flags || w.notFlags || w.hero || w.role || w.hardBeaten || !matches(w)) continue;
+      const l = t.lines && t.lines[0];
+      if (l && l.length <= 120 && !/(you|your|you're|yours)|\?/i.test(l)) out.push(l);   // (nothing said to "you": it is talk to nobody)
+    }
+    return out;
+  }
+  function chatter(now) {
+    if (now - lastTick > 2) nextIdle = now + 50 + Math.random() * 50;   // (we were away: a quiet while after coming back)
+    lastTick = now;
+    if (talk || scene || feastSc) {   // (a conversation, an arrival or a meal: whatever was queued is dropped)
+      sayQ = []; pullNote = null;
+      if (saying) { if (saying.f.bubble === saying.text) { saying.f.bubble = null; saying.f.bubbleUntil = 0; } saying = null; }
+      return;
+    }
+    if (saying) {
+      if (now < saying.until && saying.f.bubble === saying.text) return;
+      if (saying.f.bubble === saying.text) { saying.f.bubble = null; saying.f.bubbleUntil = 0; }
+      saying = null;
+    }
+    if (pullNote && now >= pullNote.at) { sayPull(pullNote.lp, now); pullNote = null; }
+    if (sayQ.length) {
+      if (folk.some(f => f.bubble)) return;
+      if (!sayQ[0].start) { sayQ[0].start = now + sayQ[0].gap; }
+      if (now < sayQ[0].start) return;
+      const q = sayQ.shift();
+      q.f.bubble = q.text; q.f.bubbleUntil = now + q.secs; saying = { f: q.f, text: q.text, until: now + q.secs };
+      return;
+    }
+    if (now < nextIdle) return;
+    nextIdle = now + 75 + Math.random() * 75;   // (a word every minute or two, not a running commentary)
+    const p = deps.player;
+    if (!p || folk.some(f => f.bubble)) return;
+    const cands = folk.filter(f => present(f) && !f.walk && !f.pose && Math.hypot(p.x - f.x, p.y - f.y) < 300 && idleLines(f).length);
+    if (!cands.length) return;
+    const a = pick(cands), la = idleLines(a).filter(l => l !== lastIdle);
+    const text = pick(la.length ? la : idleLines(a));
+    lastIdle = text;
+    sayQ.push({ f: a, text, secs: Math.max(3.5, text.length / 16), gap: 0 });
+    // now and then a neighbour answers with one of theirs
+    const nb = folk.filter(f => f !== a && present(f) && !f.walk && !f.pose && Math.hypot(a.x - f.x, a.y - f.y) < 170 && idleLines(f).length);
+    if (nb.length && Math.random() < 0.4) { const b = pick(nb), tb = pick(idleLines(b)); sayQ.push({ f: b, text: tb, secs: Math.max(3.5, tb.length / 16), gap: 0.7 }); }
   }
 
   // ---------------------------------------------------------------- drawing
@@ -1106,7 +1181,7 @@ const TownLife = (() => {
     if (!feastSc || e.repeat || (e.type === 'keydown' && ['Shift', 'Control', 'Alt', 'Meta'].includes(e.key))) return;
     if (deps.now() - feastSc.t0 > 0.25) endFeastScene(true);
   }
-  return { init(d) { deps = d; if (!listening && typeof window !== 'undefined') { listening = true; window.addEventListener('keydown', skipInput, true); window.addEventListener('mousedown', skipInput, true); } }, update, entities, drawGround, drawLabels, interactables, isTalking, endTalk, checkDistance, feast, feastTotals, eat, startArrival, hides, feastScene: () => feastSc,
+  return { init(d) { deps = d; if (!listening && typeof window !== 'undefined') { listening = true; window.addEventListener('keydown', skipInput, true); window.addEventListener('mousedown', skipInput, true); } }, update, entities, drawGround, drawLabels, interactables, isTalking, endTalk, remarkPull, checkDistance, feast, feastTotals, eat, startArrival, hides, feastScene: () => feastSc,
     // a boss's own town moment is playing or still due (the Barrow Gate, barrow-gate.js, waits its turn), and the banner they share
     busy: () => !!scene || !!feastSc || Object.keys(UNLOCKS).some(b => deps && deps.beaten(b) && !state().seen[b]), banner };
 })();

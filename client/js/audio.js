@@ -337,11 +337,28 @@ const Sound = (() => {
   }
   const hasTrack = id => !!id && manifest.has('music/' + id);
   let musicLoop = true;
+  // Stand-ins until the music files exist (the owner is making them from docs/art/music-prompts.md): a boss with no track of its own
+  // plays the set 2 boss in the same slot. This table goes away when the files land; a real file always wins over its stand-in.
+  const MUSIC_STAND_IN = {
+    'mus-corvane': 'mus-wyrm', 'mus-corvane-hard': 'mus-wyrm-hard', 'mus-brannoc': 'mus-titan', 'mus-brannoc-hard': 'mus-titan-hard',
+    'mus-morrowoak': 'mus-archmage', 'mus-morrowoak-hard': 'mus-archmage-hard', 'mus-caelum': 'mus-hydra', 'mus-caelum-hard': 'mus-hydra-hard',
+    'mus-sovereign': 'mus-hydra-hard', 'mus-sovereign-hard': 'mus-hydra-hard',
+  };
+  // The moments with no track of their own (also until the files land): the pull keeps what is playing; a kill or a wipe keeps it too,
+  // with the room muffled for a moment instead of fading to silence.
+  const MUSIC_KEEP = new Set(['mus-pull', 'mus-victory', 'mus-wipe']);
+  const resolveTrack = id => (hasTrack(id) ? id : MUSIC_STAND_IN[id] && hasTrack(MUSIC_STAND_IN[id]) ? MUSIC_STAND_IN[id] : null);
   // an id may be a fallback chain (['mus-ult-1', 'mus-hollowking']): the first track that exists plays, none is silence
-  const pickTrack = id => (Array.isArray(id) ? id.find(hasTrack) || null : id);
+  // (a chain names its own fallbacks, so stand-ins apply to a single id only)
+  const pickTrack = id => (Array.isArray(id) ? id.find(hasTrack) || null : resolveTrack(id));
+  let muffleT = null;
   function applyMusic(id, fade) {
     if (!ctx || !unlocked) return;
-    const pick = pickTrack(id), target = hasTrack(pick) ? pick : null;
+    if (typeof id === 'string' && !resolveTrack(id) && MUSIC_KEEP.has(id)) {
+      if (id !== 'mus-pull' && musicCur) { music.muffle(900, 0.25); clearTimeout(muffleT); muffleT = setTimeout(() => music.muffle(0, 1.5), 3000); }
+      return;
+    }
+    const target = pickTrack(id);
     if (target === musicCur) return;
     if (musicCur) fadeTrack('music/' + musicCur, 0, fade);
     musicCur = target;
@@ -377,13 +394,13 @@ const Sound = (() => {
   // known, else now with a 2 s fade
   let layerTimer = null;
   music.layer = id => safe(() => {
-    const b = hasTrack(id + '-hard') ? id + '-hard' : id + '-b';
-    if (!hasTrack(b) || musicCur === b) return;
+    const b = resolveTrack(id + '-hard') || (hasTrack(id + '-b') ? id + '-b' : null);   // (a stand-in's Hard take counts until the file lands)
+    if (!b || musicCur === b) return;
     musicWant = b;
     if (!ctx || !unlocked) return;
     const cur = musicCur && tracks.get('music/' + musicCur);
     let wait = 0;
-    if (music.bpm > 0 && cur && musicCur === id) { const bar = 240 / music.bpm; wait = bar - (cur.el.currentTime % bar); }
+    if (music.bpm > 0 && cur && musicCur === resolveTrack(id)) { const bar = 240 / music.bpm; wait = bar - (cur.el.currentTime % bar); }
     clearTimeout(layerTimer);
     const go = () => {
       layerTimer = null;
@@ -408,9 +425,12 @@ const Sound = (() => {
     g.setTargetAtTime(1, duckUntil, 0.35);
   });
   // a boss sealed at a wall: the music heard as if from inside him, low-passed to `hz` over `secs` (null or 0: opened again)
+  // (it opens to the resting cutoff, music.rest: a low-health room stays dull after a short dip)
+  let lpRest = 20000;
+  music.rest = hz => safe(() => { lpRest = hz > 0 ? clamp(hz, 120, 20000) : 20000; music.muffle(0, 1.2); });
   music.muffle = (hz, secs = 1) => safe(() => {
     if (!ctx || !musicLP) return;
-    const t = ctx.currentTime, f = musicLP.frequency, to = hz > 0 ? clamp(hz, 120, 20000) : 20000;
+    const t = ctx.currentTime, f = musicLP.frequency, to = hz > 0 ? Math.min(lpRest, clamp(hz, 120, 20000)) : lpRest;
     f.cancelScheduledValues(t); f.setValueAtTime(Math.max(20, f.value), t);
     f.exponentialRampToValueAtTime(to, t + Math.max(0.02, secs));
   });
@@ -423,7 +443,7 @@ const Sound = (() => {
     g.setTargetAtTime(1 + clamp(amount, 0, 0.4), t, 0.05);
     g.setTargetAtTime(1, t + secs * 0.35, secs * 0.25);
   });
-  music.has = id => (Array.isArray(id) ? id.some(hasTrack) : hasTrack(id));   // is this track in the manifest (a boss's '-hard' music is used only if it is)
+  music.has = id => (Array.isArray(id) ? id.some(hasTrack) : !!resolveTrack(id));   // is this track in the manifest, or stood in for (a boss's '-hard' music is used only if it is)
   S.music = music;
 
   // ---------------------------------------------------------------- voice lines
@@ -484,7 +504,7 @@ const Sound = (() => {
         load(id).then(b => { if (!cancelled && b && nowMs() - asked < 900) { const st = start(b); if (st) stop = st; } });
         played = true;
       }
-    } else if (text && cfg.speech && canPlay && HAS_WIN && 'speechSynthesis' in window) {
+    } else if (text && cfg.speech && !o.noSpeech && canPlay && HAS_WIN && 'speechSynthesis' in window) {
       const u = new SpeechSynthesisUtterance(text);
       const h = o.voiceHint || {};
       u.pitch = clamp(Number.isFinite(h.pitch) ? h.pitch : boss ? 0.6 : 0.9, 0, 2);
@@ -501,7 +521,7 @@ const Sound = (() => {
     if (played && o.duck !== false) music.duck(0.35, dur);
     let captioned = false;
     if (text && o.caption !== false && cfg.captions && typeof Captions !== 'undefined' && Captions.show) {
-      safe(() => Captions.show(speaker, text, dur));
+      safe(() => Captions.show(speaker, text, dur, o.color || o.minor ? { color: o.color, minor: !!o.minor } : undefined));   // (a bot's line carries its class colour and is minor: voice-lines.js botSay)
       captioned = true;
       if (!played) speaking.set(speaker, { until: tms + dur * 1000, boss, stop });
     }

@@ -918,6 +918,9 @@ function heroPose(st, emote) {
     P.fwd += 1.3 * wk * Math.min(1.2, rate);
     P.tw += Math.sin(ph) * 0.05 * wk;
   }
+  // a breath when standing: the chest rises and falls a hair, each hero out of step with the next (felt, not seen)
+  if (st._bp == null) st._bp = Math.random() * 6.283;
+  P.sy *= 1 + 0.012 * Math.sin(t * 2 + st._bp) * (1 - Math.min(1, wk));
   if (st.dashT != null) {
     const a = t - st.dashT;
     if (a >= 0 && a < 0.4) {

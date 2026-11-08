@@ -23,6 +23,7 @@
 const Loot = (() => {
   const MAX = 12;        // a chest holds this many at most (the boss's, plus anything put in)
   const ROLL_WINDOW = 8000;   // ms after a piece's first roll in which no one can Take it
+  const LAND_GAP = 150;      // ms between one card landing and the next
   let deps = null;       // from main: { broadcast, send, myId, nameOf, inRaid, addItem(key), addGold(n), itemTip(key, cls), iconURL(key), myItems(), dropItem(uid) }
 
   // ---------------------------------------------------------------- host
@@ -117,6 +118,13 @@ const Loot = (() => {
       else if (!by) g += RARITY[ITEMS[key].rarity].salvage;
     }
     deps.broadcast({ t: 'csalv', id: c.id, g });
+  }
+  // how many pieces would be lost if the host left now: any left in the chest while another human could still choose
+  // (the results card asks before Try again or Back to town: raid-ui.js leaveAsk)
+  function hostPending() {
+    const c = hc, me = deps && deps.myId();
+    if (!c || !c.items.some(x => x[2] !== me)) return 0;
+    return [...c.who.keys()].some(id => id !== me && !c.gone.has(id) && c.acked.has(id)) ? c.items.filter(x => x[2] !== me).length : 0;
   }
 
   // ---------------------------------------------------------------- every player
@@ -219,6 +227,14 @@ const Loot = (() => {
     const boss = (typeof BOSSES !== 'undefined' && BOSSES.find(b => b.id === ch.boss)) || null;
     const clsName = (CLASSES.find(c => c.id === ch.cls) || {}).name || 'hero';
     const me = deps.myId(), now = performance.now();
+    // the cards land one after another (LAND_GAP apart); a late piece lands when it arrives. Legendary and Mythic add a ring and a rising cue.
+    ch.land = ch.land || new Map(); ch.tail = ch.tail || now + 220;
+    for (const [n, key] of ch.items) {
+      if (ch.land.has(n)) continue;
+      const at = Math.max(now, ch.tail), rr = ITEMS[key].rarity;
+      ch.land.set(n, at); ch.tail = at + LAND_GAP;
+      if (rr >= 3 && deps.sound) setTimeout(() => { if (ch && ch.open && ch.land.has(n)) deps.sound(rr >= 4 ? 'ui-secret' : 'ui-feat', { bus: 'ui', vol: 0.7, key: 'loot-rare', minGap: 0.25 }); }, at - now + 140);
+    }
     const cards = ch.items.length ? ch.items.map(([n, key, by]) => {
       const it = ITEMS[key], rar = RARITY[it.rarity], use = canUse(key, ch.cls);
       const rl = ch.rolls.get(n), mine = rl && rl.r.find(x => x[0] === me);
@@ -240,7 +256,8 @@ const Loot = (() => {
         }).join('');
         chart = `<div class="lc-rolls">${rows}${wait > 0 ? `<div class="lr-note">Rolling · ${wait}</div>` : !holder ? '<div class="lr-note">Open to all</div>' : ''}</div>`;
       }
-      return `<div class="loot-card" data-n="${n}" style="--rc:${rar.color}">
+      const lt = ch.land.get(n) - now, landing = lt > -800;
+      return `<div class="loot-card${landing ? ' land' : ''}${it.rarity >= 3 ? ' big' : ''}${it.rarity >= 4 ? ' mythic' : ''}" data-n="${n}" style="--rc:${rar.color}${landing ? `;--ld:${Math.round(lt)}ms` : ''}">
         <div class="lc-item"><img src="${deps.iconURL(key)}" alt=""><div><b>${esc(it.name)}</b><small>${rar.name} · ${SLOT_NAME[it.slot]}${by ? ` · from ${esc(deps.nameOf(by))}` : ''}</small></div></div>
         <div class="lc-acts two">${takeBtn}${second}</div>${chart}</div>`;
     }).join('') : '<p class="loot-empty">Nothing left in the chest.</p>';
@@ -277,5 +294,5 @@ const Loot = (() => {
   // leaving the raid: the panel goes (the host settles the chest)
   function leave() { close(); ch = null; pending.clear(); deps && deps.unescrowAll(); }
 
-  return { init(d) { deps = d; }, hostOpen, hostAck, hostChestFor, hostTake, hostPut, hostRoll, hostPass, hostLeft, hostClose, onChest, onState, onRolled, onGot, onPutOk, onSalvage, open, close, isOpen, reveal, chestAt, leave };
+  return { init(d) { deps = d; }, hostOpen, hostAck, hostChestFor, hostTake, hostPut, hostRoll, hostPass, hostLeft, hostClose, hostPending, has: () => !!ch, onChest, onState, onRolled, onGot, onPutOk, onSalvage, open, close, isOpen, reveal, chestAt, leave };
 })();

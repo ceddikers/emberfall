@@ -413,7 +413,7 @@ const VoiceLines = (() => {
   // ------------------------------------------------------------------ rules per kind
   // chance / cooldown (s) / cooldownKey ('{hero}' and '{boss}' are filled in) / priority / default delivery note
   const HERO_KINDS = {
-    move:    { cooldown: 9,   key: 'hero-{hero}-bark', priority: 1, note: 'brisk acknowledgement' },
+    move:    { chance: 0.6, cooldown: 20, key: 'hero-{hero}-bark', priority: 1, note: 'brisk acknowledgement' },   // (a right-click every few seconds is not a line every few seconds)
     select:  { chance: 0.6, cooldown: 6, key: 'hero-{hero}-select', priority: 1, note: 'attentive, in character' },
     down:    { chance: 1,   cooldown: 2,   key: 'hero-{hero}-down', priority: 1, note: 'pained, fading out' },
     revive:  { chance: 1,   cooldown: 2,   key: 'hero-{hero}-revive', priority: 1, note: 'a breath in, relieved' },
@@ -570,6 +570,53 @@ const VoiceLines = (() => {
     return speak(e, opts);
   }
 
+  // ------------------------------------------------------------------ the fill-in party's barks
+  // The bots that fill the owner's party, and the other players in it, speak now and then: captions only (no recorded file, no device speech), one line at
+  // a time, spaced out, on a chance, and never over a boss line, the pull countdown or the local hero. Fired by main.js
+  // ('bot-bark' { kind, classId, name }). They reuse each class's down / revive / low / ult / victory lines; a healer bot also
+  // has a line for the moment it starts a raise.
+  const BOT_RAISE = {
+    cleric: ["Hold on. I've got you."],
+    grovekeeper: ["Steady now. I'll root you back up."],
+    chronomancer: ["Hold still. This won't have happened."],
+    alembist: ['Sit tight. I have just the dose.'],
+    threadweaver: ["Hold still. I'm stitching you back."],
+    tidecaller: ["The water's coming back for you."],
+    lanternkeeper: ["Stay put. I'm bringing a light."],
+  };
+  // The lines are a murmur, not a commentary: a low chance each, a long gap between any two, a cap per pull, nothing in the first
+  // seconds of a pull and nothing on the heels of a boss line. The raise line (it tells you help is coming) and the victory line
+  // skip the gap and the cap. Captions for these are drawn smaller and dimmer (minor) and never push a boss line out.
+  const BOT_CHANCE = { down: 0.5, revive: 0.35, low: 0.3, ult: 0.25, victory: 0.8, raise: 0.9 };   // the chance each is said
+  const BOT_GAP = 25;    // seconds between two bot lines
+  const BOT_MAX = 6;     // bot lines in one pull, raises and the victory aside
+  const BOT_QUIET = 10;  // no bot line this long after the pull, nor this long after a boss line ends (/4)
+  let botNext = 0, botCount = 0;
+  const botLast = {};
+  function botSay(d, t) {
+    const kind = str(d.kind), c = slug(str(d.classId));
+    if (!Object.prototype.hasOwnProperty.call(BOT_CHANCE, kind) || !HEROES[c]) return null;
+    const row = kind === 'raise' ? null : TABLE[`hero-${c}-${kind}`];
+    const texts = kind === 'raise' ? BOT_RAISE[c] : row && row.texts;
+    if (!texts || !texts.length) return null;
+    const free = kind === 'raise' || kind === 'victory';   // (about you, or after the fight: outside the gap and the cap)
+    if (st.bossUntil + BOT_QUIET / 4 > t || st.countdownUntil > t || st.heroUntil > t) return null;
+    if (!free && (botNext > t || botCount >= BOT_MAX || t - st.pullAt < BOT_QUIET)) return null;
+    if (!(cfg.rng() < BOT_CHANCE[kind])) return null;
+    const key = c + kind;
+    let i = Math.floor(cfg.rng() * texts.length) % texts.length;
+    if (texts.length > 1 && i === botLast[key]) i = (i + 1) % texts.length;
+    botLast[key] = i;
+    const text = texts[i], sp = SPEAKERS[c], name = str(d.name).slice(0, 24) || sp.name, secs = duration(text, sp.hint);
+    let said = false;
+    try {
+      if (typeof Sound !== 'undefined' && Sound && typeof Sound.say === 'function') said = !!Sound.say(`bot-${kind}`, { speaker: name, text, chance: 1, caption: true, duck: false, noSpeech: true, voiceHint: sp.hint, priority: 1, seconds: secs, color: sp.color, minor: true });
+      else if (typeof Captions !== 'undefined' && Captions && Captions.show) { Captions.show(name, text, secs, { color: sp.color, minor: true }); said = true; }
+    } catch (err) { /* a voice line never breaks the game */ }
+    if (said) { botNext = t + BOT_GAP; if (!free) botCount++; }
+    return said ? `bot-${c}-${kind}-${i + 1}` : null;
+  }
+
   // ------------------------------------------------------------------ events
   const str = v => (typeof v === 'string' || typeof v === 'number') ? String(v) : '';
   const bossOf = d => { const b = slug(str(d && (d.bossId || d.boss || d.id)) || st.boss || ''); return BOSSES[b] ? b : (b === 'hollow-king' ? 'hollowking' : null); };
@@ -580,6 +627,7 @@ const VoiceLines = (() => {
     return st.hero && HEROES[st.hero] ? st.hero : null;
   }
   function resetPull(bid) {
+    botCount = 0; botNext = 0;   // (a new pull: the fill-in party's budget starts over)
     st.boss = bid || st.boss; st.phase = 1; st.phaseAt = cfg.now(); st.hpSeen = false; st.taunted = {}; st.tauntPhase = {};
   }
   function hpPct(d) {
@@ -656,10 +704,16 @@ const VoiceLines = (() => {
       // ---- the local hero
       case 'hero-move': { const h = heroOf(d); return h ? trySay(`hero-${h}-move`) : null; }
       case 'hero-select': { const h = heroOf(d); return h ? trySay(`hero-${h}-select`) : null; }
-      case 'hero-down': { const h = heroOf(d); return h ? trySay(`hero-${h}-down`) : null; }
-      case 'hero-revive': { const h = heroOf(d); return h ? trySay(`hero-${h}-revive`) : null; }
+      case 'hero-down': { if (d.bot || d.ally) return botSay(Object.assign({}, d, { kind: 'down' }), t); const h = heroOf(d); return h ? trySay(`hero-${h}-down`) : null; }   // (ally: another player, on the same murmur budget as a bot)
+      case 'hero-revive': { if (d.bot || d.ally) return botSay(Object.assign({}, d, { kind: 'revive' }), t); const h = heroOf(d); return h ? trySay(`hero-${h}-revive`) : null; }
       case 'hero-low': { const h = heroOf(d); return h ? trySay(`hero-${h}-low`) : null; }
       case 'hero-ult': { const h = heroOf(d); return h ? trySay(`hero-${h}-ult`) : null; }
+      // a fill-in bot's or another player's bark (main.js): kind down | revive | low | ult | victory | raise. A delay waits (a victory line: after the boss is done)
+      case 'bot-bark': {
+        const wait = (+d.delay || 0) + (d.kind === 'victory' ? Math.max(0, st.bossUntil - t) : 0);
+        if (wait > 0) { cfg.later(() => botSay(d, cfg.now()), wait); return null; }
+        return botSay(d, t);
+      }
       default: return null;
     }
   }
@@ -676,7 +730,7 @@ const VoiceLines = (() => {
     setLocalHero(c) { const s = slug(str(c)); st.hero = HEROES[s] ? s : null; },
     say: (id, opts) => trySay(id, Object.assign({ force: true }, opts || {})),   // debugging / gallery use
     bossSpeaking: () => st.bossUntil > cfg.now(),
-    reset() { for (const k of Object.keys(st.cd)) delete st.cd[k]; st.bossUntil = st.heroUntil = st.countdownUntil = 0; st.bossPri = 0; resetPull(null); st.pullAt = -1e9; },
+    reset() { botNext = 0; for (const k of Object.keys(st.cd)) delete st.cd[k]; st.bossUntil = st.heroUntil = st.countdownUntil = 0; st.bossPri = 0; resetPull(null); st.pullAt = -1e9; },
     _cfg: cfg, _state: st,
   };
 })();

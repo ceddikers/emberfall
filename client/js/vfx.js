@@ -940,6 +940,56 @@ const VFX = (() => {
       } });
     },
 
+    // (life pass) a move's climax frame in the painted sheets' grammar: one bold silhouette with a dark ink edge, a saturated
+    // body and a hot white core. It pops in over 0.07 s with a little overshoot, HOLDS at full for o.hold s (the beat the eye
+    // needs to read the shape), then dissipates over the rest of o.dur, the ink fading faster than the light so the dark never
+    // outlives it. Then an aftermath: a few smoke puffs and embers, and a low mark on the ground layer (never over 0.3 alpha,
+    // so a telegraph under it still reads). For cooldowns, finishers and Ultimates only: a filler never uses this.
+    //   o.shape: 'burst' (spiky star) | 'disc' | 'ring' | 'crescent' | 'bolt' | 'cone' | 'cross'   o.r: size (90; a hero is ~40)
+    //   o.color / o.core / o.ink   o.angle, o.span (crescent, bolt, cone)   o.hold (0.1)   o.dur (0.55)   o.flat (0.8)   o.z (12)
+    //   o.after: { smoke: 0..1, embers: 0..1, mark: 0..1 } (each 0 by default; o.smokeColor)   o.layer ('air'; 'ground' for a floor shape)
+    climax(x, y, o = {}) {
+      const shape = o.shape || 'burst', r = o.r ?? 90, dur = o.dur ?? 0.55, hold = o.hold ?? 0.1, flat = o.flat ?? 0.8, z = o.layer === 'ground' ? 0 : (o.z ?? 12);
+      const color = o.color || '#ff8a2a', core = o.core || '#fff4c0', ink = o.ink || '#1a1008', ang = o.angle ?? 0, span = o.span ?? 1.6, tilt = o.tilt ?? rand(0, Math.PI);
+      const n = o.n ?? 12, m = Array.from({ length: n * 2 }, (_, i) => (i % 2 ? rand(0.4, 0.55) : rand(0.85, 1.15)));
+      const loz = (c, a, L, W) => { const ca = Math.cos(a), sa = Math.sin(a); c.moveTo(0, 0); c.lineTo(-sa * W + ca * L * 0.3, ca * W + sa * L * 0.3); c.lineTo(ca * L, sa * L); c.lineTo(sa * W + ca * L * 0.3, -ca * W + sa * L * 0.3); c.closePath(); };
+      const path = (c, R) => {
+        c.beginPath();
+        if (shape === 'disc') c.arc(0, 0, R, 0, Math.PI * 2);
+        else if (shape === 'ring') { c.arc(0, 0, R, 0, Math.PI * 2); c.moveTo(R * 0.62, 0); c.arc(0, 0, R * 0.62, 0, Math.PI * 2, true); }
+        else if (shape === 'crescent') {
+          const a0 = ang - span / 2, a1 = ang + span / 2, N = 16;
+          for (let i = 0; i <= N; i++) { const a = a0 + (a1 - a0) * i / N; c.lineTo(Math.cos(a) * R, Math.sin(a) * R); }
+          for (let i = N; i >= 0; i--) { const q = i / N, a = a0 + (a1 - a0) * q, rr = R * (1 - 0.38 * Math.sin(Math.PI * q)); c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+          c.closePath();
+        } else if (shape === 'bolt') loz(c, ang, R * 2, R * 0.22);
+        else if (shape === 'cross') { for (let i = 0; i < 4; i++) loz(c, tilt + i * Math.PI / 2, R, R * 0.2); }
+        else if (shape === 'cone') {
+          const a0 = ang - span / 2, a1 = ang + span / 2, N = 10;
+          c.moveTo(0, 0);
+          for (let i = 0; i <= N; i++) { const a = a0 + (a1 - a0) * i / N, rr = R * (0.9 + 0.1 * Math.cos(i * 2.6 + tilt)); c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+          c.closePath();
+        } else { for (let i = 0; i < n * 2; i++) { const a = tilt + i * Math.PI / n, rr = R * m[i]; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); }
+      };
+      const af = o.after || {};
+      return fx({ dur, layer: o.layer || 'air', draw: (c, p, t, e) => {
+        const tt = p * dur;
+        const pop = tt < 0.07 ? easeOut(tt / 0.07) * 1.12 : tt < 0.16 ? 1.12 - 0.12 * easeOut((tt - 0.07) / 0.09) : 1;
+        const f0 = Math.min(0.95, (0.16 + hold) / dur), q = Math.max(0, (p - f0) / Math.max(0.01, 1 - f0));
+        const k = e.a * (1 - q * q), R = r * pop * (1 - 0.1 * q);
+        if (k <= 0.01) return;
+        c.save(); c.translate(x, y - z); c.scale(1, flat);
+        c.globalAlpha = Math.min(1, k * (1 - q) * (1 - q)); c.fillStyle = ink; path(c, R * 1.08); c.fill();
+        c.globalAlpha = k; c.fillStyle = color; path(c, R); c.fill();
+        c.globalCompositeOperation = 'lighter'; c.globalAlpha = k * 0.9; c.fillStyle = core; path(c, R * (shape === 'ring' || shape === 'crescent' ? 0.92 : 0.55)); c.fill();
+        c.restore();
+        if (shape !== 'ring') glowAt(c, x, y - z, R * 0.7, core, k * 0.45);
+      }, done: () => {
+        if (af.smoke) B.smoke(x, y, { n: Math.round(6 * af.smoke), r: r * 0.35, size: r * 0.4, color: o.smokeColor || '#4a3a38', a: 0.5, life: 1.1, speed: 50 });
+        if (af.embers) for (let i = 0, N = Math.round(10 * af.embers); i < N; i++) { const a = rand(0, Math.PI * 2), d = rand(0, r * 0.7); spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * flat, z: rand(0, 14), vx: rand(-14, 14), vy: rand(-10, 10), vz: rand(30, 90), life: rand(0.6, 1.3), size: rand(4, 8), size1: 0, color: Math.random() < 0.4 ? core : color, kind: Math.random() < 0.3 ? 'star' : 'glow' }); }
+        if (af.mark) B.ink(x, y, { r: r * 0.9, dur: 1.6, a: 0.25 * af.mark, color: ink });
+      } });
+    },
     // rock chunks thrown up by an impact: they arc, bounce once, lie on the floor a moment and fade.
     // o.hot gives them an orange glow while they fly
     debris(x, y, o = {}) {

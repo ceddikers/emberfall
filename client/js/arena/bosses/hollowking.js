@@ -750,7 +750,7 @@ const HOLLOWKING = {
       sets: [
         S([7, courtOfBones, 'Court of Bones']),
         S([5.5, sceptreThrow, 'Sceptre Throw']),
-        S([5.5, H ? sceptreThrow : knell, H ? 'Sceptre Throw' : 'Barrow Knell']),   // (Hard: a Knell before the stack and the Marks was too much for the healer, so a second throw takes its place)
+        S([5.5, sceptreThrow, 'Sceptre Throw']),   // (a Knell before the stack and the Marks was too much for the healer, so a second throw takes its place)
         S([5.5, graveSummons, 'Grave Summons'], [H ? 6 : 3.5, () => marks(), 'Grave Marks']),
         S([6, sceptreThrow, 'Sceptre Throw']),
         H && S([6, knell, 'Barrow Knell']),   // (Hard: the Knell comes last, well after the Marks)
@@ -843,7 +843,7 @@ const HOLLOWKING = {
         S([12, doomPass, 'Royal Doom']),
         S([6, () => swing('stomp', false, false, true), 'Barrow Stomp'], [5, () => swing('sweep'), 'Sceptre Sweep'], [5.5, () => echo(1.5), 'Echo Knights']),
       ],
-      closing: [[6, doomPass, 'Royal Doom'], [6, () => swing('stomp', false, false, true), 'Barrow Stomp'], [6, doomPass, 'Royal Doom'], [6, () => echo(1.5), 'Echo Knights']],
+      closing: [[6, doomPass, 'Royal Doom'], [6, () => swing('stomp', false, false, H), 'Barrow Stomp'], [6, doomPass, 'Royal Doom'], [6, () => echo(1.5), 'Echo Knights']],   // (Normal: the second stomp has no Aftershock)
     }, at);
 
     summons(0);

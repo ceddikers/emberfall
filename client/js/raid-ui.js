@@ -79,7 +79,7 @@ const RaidUI = (() => {
     wm.addEventListener('click', e => { const b = e.target.closest('.wm'); if (!b) return; if (b.dataset.k === '*') handlers.onWaymark({ all: 'clear' }); else if (b.dataset.k === '@') handlers.onCallouts(); else if (b.dataset.k === '#') handlers.onPullIn(); else handlers.onPlaceMark(b.dataset.k); });
     $('rez-ask').addEventListener('click', () => { if (handlers.onRezAsk) handlers.onRezAsk(); });
     wm.addEventListener('contextmenu', e => { const b = e.target.closest('.wm'); if (b && !'*@#'.includes(b.dataset.k)) { e.preventDefault(); handlers.onWaymark({ k: b.dataset.k, clear: true }); } });
-    for (const b of wm.children) b.dataset.tip = b.dataset.k === '*' ? 'Pick up every waymark' : b.dataset.k === '@' ? 'Callouts: the ping wheel (Alt + drag). Middle-click pings.' : b.dataset.k === '#' ? 'Pull in 5: the boss engages when the count runs out' : b.dataset.k === '!' ? 'Ready check: everyone answers, and when all are ready the pull countdown starts' : `Waymark ${b.dataset.k}: click, then click the floor. Right-click to pick it up.`;
+    for (const b of wm.children) b.dataset.tip = b.dataset.k === '*' ? 'Pick up every waymark' : b.dataset.k === '@' ? 'Callouts: the ping wheel (Alt + drag). Middle-click pings.' : b.dataset.k === '#' ? 'Pull in 5: the boss engages when the count runs out. The host can click again, or press Esc, to call it off' : b.dataset.k === '!' ? 'Ready check: everyone answers, and when all are ready the pull countdown starts' : `Waymark ${b.dataset.k}: click, then click the floor. Right-click to pick it up.`;
     castFrameDrag();
     $('party-frames').addEventListener('mousedown', e => {
       const row = e.target.closest('.pf');
@@ -439,13 +439,14 @@ const RaidUI = (() => {
   };
   INTRO_LINES.archmage = 'Seven circles, and a place for each of you in them. Mind where you stand.';
   let introTimer = null;
-  function intro(def, mode, firstMeet) {
+  // short: a retry's name plate only (no line, no punch, gone in a moment)
+  function intro(def, mode, firstMeet, short) {
     const el = $('boss-intro');
     clearTimeout(introTimer);
     el.querySelector('small').textContent = mode === 'hard' ? 'Hard' : '';
     el.querySelector('b').textContent = def.name;
     el.querySelector('i').textContent = def.title || '';
-    const line = firstMeet && INTRO_LINES[def.id];
+    const line = !short && firstMeet && INTRO_LINES[def.id];
     el.querySelector('q').textContent = line || '';
     el.classList.toggle('line', !!line);
     el.classList.remove('hidden', 'out');
@@ -453,13 +454,13 @@ const RaidUI = (() => {
     el.classList.add('in');
     // [boss presentation] the name lands on his entrance's beat (BOSS_VFX.intro: the pot slammed down, her landing, the
     // storm crashing in, his eyes lighting): a hit-stop-like punch, then his title slides in under it. Cosmetic only.
-    const beat = INTRO_BEAT[def.id] ?? 0.4, nameEl = el.querySelector('b'), titleEl = el.querySelector('i');
-    if (nameEl.animate) {
+    const beat = short ? 0 : INTRO_BEAT[def.id] ?? 0.4, nameEl = el.querySelector('b'), titleEl = el.querySelector('i');
+    if (nameEl.animate && !short) {
       nameEl.animate([{ opacity: 0, transform: 'scale(1.35)', letterSpacing: '.3em' }, { opacity: 1, transform: 'scale(0.96)', letterSpacing: '.1em', offset: 0.55 }, { opacity: 1, transform: 'scale(1.02)', offset: 0.62 }, { opacity: 1, transform: 'scale(1)', letterSpacing: '.12em' }],
         { duration: 420, delay: beat * 1000, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
       titleEl.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 380, delay: beat * 1000 + 180, easing: 'ease-out', fill: 'backwards' });
     }
-    introTimer = setTimeout(() => { el.classList.add('out'); introTimer = setTimeout(() => el.classList.add('hidden'), 900); }, (line ? 4200 : 2600) + beat * 1000);
+    introTimer = setTimeout(() => { el.classList.add('out'); introTimer = setTimeout(() => el.classList.add('hidden'), 900); }, short ? 1300 : (line ? 4200 : 2600) + beat * 1000);
   }
   // the kill banner over the arena as he falls: his name, "Defeated", the difficulty and the clear time (a new fastest
   // time shows the one it beat). rec: { prev } or null. Gone before the results card (it hides itself after ~3.6 s)
@@ -966,11 +967,55 @@ const RaidUI = (() => {
   }
 
   // ---------------------------------------------------------------- results
+  // The card can drop to a slim strip (Hide, or Esc) so the room and the chest are in reach; Enter is Try again for the host.
+  // Leaving with pieces still in the chest and another player who may want them asks once first (Loot.hostPending).
+  const resUI = { on: false, slim: false, host: false, actions: null, ask: null };
+  function resSlim(on) {
+    const el = $('results');
+    if (!resUI.on) return;
+    resUI.slim = !!on;
+    el.classList.toggle('slim', resUI.slim);
+    const sp = el.querySelector('.res-strip [data-a="spoils"]');
+    if (sp) sp.hidden = !(typeof Loot !== 'undefined' && Loot.has());
+    Tip.hide();
+  }
+  function resAsk(a) {   // retry / town / leave: arm a plain confirm first when it would give up someone's pieces
+    const el = $('results'), n = resUI.host && a !== 'leave' && typeof Loot !== 'undefined' ? Loot.hostPending() : 0;
+    const go = () => resUI.actions && resUI.actions[a] && resUI.actions[a]();
+    if (!n) return go();
+    const ask = resUI.ask;
+    if (ask && ask.a === a && performance.now() - ask.at < 4000) { resAskOff(); return go(); }
+    resAskOff();
+    resUI.ask = { a, at: performance.now(), t: setTimeout(resAskOff, 4000) };
+    el.querySelectorAll(`button[data-a="${a}"]`).forEach(b => { b.dataset.was = b.textContent; b.textContent = `Leave ${n} ${n === 1 ? 'item' : 'items'}?`; b.classList.add('armed'); });
+  }
+  function resAskOff() {
+    if (!resUI.ask) return;
+    clearTimeout(resUI.ask.t); resUI.ask = null;
+    $('results').querySelectorAll('button[data-was]').forEach(b => { b.textContent = b.dataset.was; delete b.dataset.was; b.classList.remove('armed'); });
+  }
+  function resAct(b) {
+    const a = b.dataset.a;
+    if (a === 'hide') return resSlim(true);
+    if (a === 'expand') return resSlim(false);
+    if (a === 'spoils') { if (typeof Loot !== 'undefined') { if (Loot.isOpen()) Loot.close(); else Loot.open(); } return; }
+    resAsk(a);
+  }
+  // Esc and Enter from the keyboard (main.js); true when the key was used. inField: typing in a box or on a button
+  function resultsKey(key, inField) {
+    if (!resUI.on || inField) return false;
+    if (key === 'Escape') { resSlim(!resUI.slim); return true; }
+    if (key === 'Enter' && resUI.host) { resAsk('retry'); return true; }
+    return false;
+  }
   // msg: the host's 'fight' message. mine: { kit stats, cls, fightTime }. actions: { retry, town } (host only)
   function showResults(msg, raid, myId, mine, isHost, actions) {
     const el = $('results');
     const clear = msg.s === 'clear';
-    if (raid.def.trial) return trialResults(el, raid.def, clear, actions);
+    resAskOff();
+    if (raid.def.trial) { resUI.on = false; return trialResults(el, raid.def, clear, actions); }
+    resUI.on = true; resUI.slim = false; resUI.host = !!isHost; resUI.actions = actions;
+    el.classList.remove('slim');
     const dur = Math.max(1, msg.time || 1);
     const rows = Object.entries(msg.stats).map(([id, s]) => ({ id: Number(id), ...s }))
       .sort((a, b) => (b.damage / dur + b.healing / dur) - (a.damage / dur + a.healing / dur));
@@ -994,6 +1039,7 @@ const RaidUI = (() => {
     const best = !clear && lastPull && lastPull.prev != null && lastPull.pct < lastPull.prev ? `<p class="res-best">New best: ${lastPull.pct.toFixed(1)}%<span>was ${lastPull.prev.toFixed(1)}%</span></p>` : '';
     el.innerHTML = `
       <div class="res-card">
+        <button type="button" class="res-hide" data-a="hide" data-tip="Hide the results to see the room${typeof Loot !== 'undefined' && Loot.has() ? ' and the chest' : ''} (Esc)">Hide</button>
         <h2 class="${clear ? 'win' : 'lose'}">${clear ? 'Cleared' : 'Wiped'}</h2>
         <p class="res-sub">${esc(raid.def.name)} · ${msg.mode === 'hard' ? 'Hard' : 'Normal'} · ${mmss(dur)}${clear ? '' : ` · boss at ${(msg.hp / msg.maxHp * 100).toFixed(1)}%`}${msg.falls != null ? ` · ${msg.falls} ${msg.falls === 1 ? 'fall' : 'falls'}` : ''}</p>
         ${clear && raid.hpRes ? `<p class="res-hp"><b>Hard+</b><span>Heat ${raid.hpRes.heat} cleared</span>${raid.hpRes.up ? '<em class="res-hp-new">New best heat</em>' : `<span>Best heat ${raid.hpRes.best}</span>`}<span class="res-hp-gold">+${raid.hpRes.gold}% gold</span></p>` : ''}
@@ -1009,12 +1055,19 @@ const RaidUI = (() => {
         ${raid.newPages && raid.newPages.length ? `<p class="res-pages">New in your journal: ${raid.newPages.map(n => `<b>${esc(n)}</b>`).join(', ')}<kbd>${typeof Keybinds !== 'undefined' ? Keybinds.label(Keybinds.keyFor('journal')) : 'J'}</kbd></p>` : ''}
         ${report}
         <div class="res-actions">
-          ${isHost ? '<button class="cta" data-a="retry">Try again</button><button class="btn2" data-a="town">Back to town</button>'
+          ${isHost ? '<button class="cta" data-a="retry" data-tip="Start the next pull straight away (Enter)">Try again</button><button class="btn2" data-a="town">Back to town</button>'
                    : '<p class="res-wait">Waiting for the host to choose: try again or head back to town.</p><button class="btn2" data-a="leave">Back to town</button>'}
         </div>
+      </div>
+      <div class="res-strip">
+        <span class="rs-t"><b class="${clear ? 'win' : 'lose'}">${clear ? 'Cleared' : 'Wiped'}</b>${esc(raid.def.name)} · ${mmss(dur)}</span>
+        <button type="button" class="btn2" data-a="expand" data-tip="Show the results (Esc)">Results</button>
+        <button type="button" class="btn2" data-a="spoils" data-tip="Open or close the chest's spoils"${typeof Loot !== 'undefined' && Loot.has() ? '' : ' hidden'}>Spoils</button>
+        ${isHost ? '<button type="button" class="cta" data-a="retry" data-tip="Start the next pull straight away (Enter)">Try again</button><button type="button" class="btn2" data-a="town">Town</button>'
+                 : '<button type="button" class="btn2" data-a="leave">Town</button>'}
       </div>`;
     el.classList.remove('hidden');
-    el.querySelectorAll('button[data-a]').forEach(b => b.addEventListener('click', () => actions[b.dataset.a] && actions[b.dataset.a]()));
+    el.querySelectorAll('button[data-a]').forEach(b => b.addEventListener('click', () => resAct(b)));
     if (mv) moveSetup(el, msg, dur, pick0);
     el.querySelectorAll('.res-tl [data-t], .res-why [data-t]').forEach(m => Tip.set(m, m.dataset.t));
     const whyEl = el.querySelector('.res-why');
@@ -1273,7 +1326,7 @@ const RaidUI = (() => {
     el.classList.remove('hidden');
     el.querySelectorAll('button[data-a]').forEach(b => b.addEventListener('click', () => actions[b.dataset.a] && actions[b.dataset.a]()));
   }
-  function hideResults() { $('results').classList.add('hidden'); }
+  function hideResults() { resAskOff(); resUI.on = false; resUI.slim = false; $('results').classList.remove('slim'); $('results').classList.add('hidden'); }
 
   // What went well and what to work on. Post-fight coaching is fine; mid-fight instructions are not.
   function personalReport(mine, st, dur) {
@@ -1306,5 +1359,5 @@ const RaidUI = (() => {
       `<div class="rr ${cls}"><b>${n}</b><span>${esc(v)}</span><small>${esc(tip)}</small></div>`).join('')}</div>`;
   }
 
-  return { waymarks, readyCheck, prog, intro, victory, toggleMeter, cycleMeter, init, show, setRoster, update, ultFlash, meter, showResults, hideResults, townPosture, dock, resetRoster: () => { rosterKey = ''; } };
+  return { waymarks, readyCheck, prog, intro, victory, toggleMeter, cycleMeter, init, show, setRoster, update, ultFlash, meter, showResults, hideResults, resultsKey, resultsOpen: () => resUI.on, townPosture, dock, resetRoster: () => { rosterKey = ''; } };
 })();

@@ -709,6 +709,24 @@ const FOUNTAIN = {
   ],
 };
 
+// What the portal sergeant says when the party walks back out of a pull (town-life.js remarkPull). Plain, specific, numbers as
+// words. {out}: how many came out standing, {streak}: wipes in a row on that boss. 'other': what someone nearby might add.
+// Never about what a boss's fall brought to town.
+const TOWN_PULL_LINES = {
+  clean: { hask: ["Four out. Good.", "Four went in, four came out. That's the count I like.", "All of you on your own feet. I counted twice anyway.", "Nobody carried. That's a good day at the portal.", "Clean. Go and sit down before you start enjoying it.", "Four. Same as I sent. Keep doing that."],
+    other: ["Well done, the lot of you.", "Good to see you all in one piece."] },
+  some: { hask: ["{Out}. I'll wait.", "{Out} standing. The others can tell me about it.", "I count {out} on their feet. Next time, one more.", "You won, and I'm glad. I'd like the count fuller.", "A win's good. Everyone walking out's better.", "{Out}. The rest of you, go and be useful to someone."],
+    other: ["You made it back. That's what counts.", "Rest a while. The fallen would say the same."] },
+  rough: { hask: ["That was close. I counted twice and lost my place.", "A win's a win. Sit, you look like a dropped sack.", "Barely out, and still the right side of it.", "Take a minute. The portal'll keep.", "Barely's a number too. I'll take it.", "I won't ask how. I'll ask that you eat something."],
+    other: ["Sit down before you fall down.", "That was a close one. We could all tell."] },
+  wipe: { hask: ["Back already. Sit, and try the other side of it.", "Well. You're all walking, so call it a rehearsal.", "That one wins some days. Not today.", "The count's right at least. Everyone's here.", "Drink some water. Then go again, or don't.", "It'll still be there tomorrow. Annoying, but true."],
+    other: ["Next time, then.", "It happens. Everyone gets a turn at it."] },
+  streak: { hask: ["{Streak} in a row now. Change something. Anything.", "I'd say come back tomorrow, but you won't, so go on.", "{Streak} times back through my portal. I'm starting to feel appreciated.", "Same plan is how we got here. Pick a different one.", "That's {streak}. Say the plan out loud, then go again.", "Stubborn lot. I respect it. Mind your feet."],
+    other: ["Maybe a rest first.", "You're not giving up, are you? Good."] },
+  first: { hask: ["First time that one's gone down. I felt it through the stone.", "That's the first. They never forget the first.", "So it can be done. I'll tell the others it was you.", "I'll write this one down. Don't make me regret the ink.", "Down, and for the first time. Take a good look at the sky.", "Four went in. I'll remember who came out."],
+    other: ["First time! I'll tell everyone.", "Well, would you look at that."] },
+};
+
 // The feasts the chef can serve (feast: true above). Small buffs for the party's next hour; small numbers only.
 const FEASTS = [
   { id: 'stew', name: 'Scullery Stew', desc: 'Eleven years of peeling, in a pot of his own. Thick, hot, and hard to knock over.', cost: 30, buff: { stat: 'hp', pct: 3 } },

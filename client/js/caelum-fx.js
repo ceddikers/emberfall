@@ -767,7 +767,7 @@ const CL_FX = (() => {
   TELLS.clWake = { ground(ctx, tg, s, p, k, t, env) {
     const P = pal(), land = tg.start + tg.dur;
     let ahead = 0; if (env && env.tgs) for (const o of env.tgs.values()) if (o !== tg && o.tag === 'clWake' && o.gone == null && o.start + o.dur < land - 0.05) ahead++;
-    const first = ahead === 0, br = first ? 1 : Math.max(0.8, 1 - 0.035 * ahead), near = first ? clamp(1 - (land - t) / 0.9, 0, 1) : 0;
+    const first = ahead === 0, br = first ? 1 : Math.max(0.5, 0.86 - 0.06 * ahead), near = first ? clamp(1 - (land - t) / 0.9, 0, 1) : 0;
     lane(ctx, s, (L, hw) => {
       ctx.lineCap = 'round';
       const g = ctx.createLinearGradient(0, 0, L, 0); g.addColorStop(0, rgba(P.core, (0.04 + 0.08 * br) * k)); g.addColorStop(1, rgba(P.core, (0.06 + 0.1 * br) * k));

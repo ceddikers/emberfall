@@ -8,7 +8,14 @@
 //         px: the Practice Hall's toggles { noEnrage, cantDie, slow, loop } (practice.js; slow and loop are acted on by main.js's host loop) }
 // emit() should broadcast to every player (including the host's own client code).
 
-const BOT_NAMES = ['Brom', 'Ilsa', 'Tamsin', 'Oswin', 'Mira', 'Corvin'];
+const BOT_NAMES = ['Brom', 'Ilsa', 'Tamsin', 'Oswin', 'Mira', 'Corvin'];   // (the slot's name, for a class with none below)
+// each class keeps one name, so the same hero is always the same bot: "Ilsa" is the Cleric
+const BOT_NAME_OF = {
+  bastion: 'Brom', bloodreaver: 'Hagan', runeguard: 'Edda', ranger: 'Tamsin', shadowblade: 'Corvin', pyromancer: 'Oswin',
+  cleric: 'Ilsa', grovekeeper: 'Maren', chronomancer: 'Perrin', thermist: 'Wick', driftblade: 'Rowan', alembist: 'Odile',
+  gorgemaw: 'Dunstan', oathbroker: 'Alaric', ironpalm: 'Joss', threadweaver: 'Mira', marionettist: 'Fenn', gloomsworn: 'Ansel',
+  thresher: 'Rue', tidecaller: 'Neve', lanternkeeper: 'Hester', kenseier: 'Torin', houndmaster: 'Wulf',
+};
 
 // The pull review's record: a compact timeline of one pull, kept on the host and sent with the end-of-pull message so the
 // results card can show it to everyone. It only reads the sim's messages (never touches the fight). Times are tenths of a
@@ -84,7 +91,7 @@ class RaidHost {
     const spec = want ? (want === 'base' ? null : (specs.find(s => s.id === want) || {}).id || null)
       : (specs.length ? [null, ...specs.map(s => s.id)][Math.floor(this.rng() * (specs.length + 1))] : null);
     const spawnA = Math.PI / 2 + (i - 1) * 0.5;
-    const bot = { id: 1000 + i, name: BOT_NAMES[i % BOT_NAMES.length], cls, spec, role: cls.role, bot: true, slot: i,
+    const bot = { id: 1000 + i, name: BOT_NAME_OF[cls.id] || BOT_NAMES[i % BOT_NAMES.length], cls, spec, role: cls.role, bot: true, slot: i, rng: this.rng,
       x: Math.cos(spawnA) * this.spawnR, y: Math.sin(spawnA) * this.spawnR, a: -Math.PI / 2, moving: false, plan: null, nextThink: 0,
       taken: [], healTarget: null, nextAct: 0 };
     bot.actor = new CombatActor(cls, bot, this.botWorld(bot), this.rng);
@@ -101,7 +108,7 @@ class RaidHost {
     const cls = CLASSES.find(c => c.id === h.cls);
     if (!cls || this.bots.some(b => b.id === h.id)) return null;
     this.standSeq = (this.standSeq || 0) + 1;
-    const bot = { id: h.id, name: h.name, cls, spec: h.spec || null, role: h.role || cls.role, bot: true, standIn: true, slot: 40 + this.standSeq,
+    const bot = { id: h.id, name: h.name, cls, spec: h.spec || null, role: h.role || cls.role, bot: true, standIn: true, slot: 40 + this.standSeq, rng: this.rng,
       x: Number.isFinite(h.x) ? h.x : 0, y: Number.isFinite(h.y) ? h.y : this.spawnR, a: Number.isFinite(h.a) ? h.a : -Math.PI / 2, moving: false, plan: null, nextThink: 0,
       taken: [], healTarget: null, nextAct: 0 };
     bot.actor = new CombatActor(cls, bot, this.botWorld(bot), this.rng);
@@ -241,6 +248,13 @@ class RaidHost {
     this.emit({ t: 'pcd', n: secs });
     return true;
   }
+  // the host calls a pull countdown off: back to waiting for the pull
+  pullOut() {
+    if (this.sim.state !== 'prepull' || this.pullAt == null) return false;
+    this.pullAt = null;
+    this.emit({ t: 'pcx' });
+    return true;
+  }
 
   // A ready check before the pull: any human in the raid calls it, every human answers (the bots are always ready, and
   // so is whoever called it). It closes when all are ready (the pull countdown starts), when one says no, or when the time
@@ -307,7 +321,7 @@ class RaidHost {
       const s = sim.ps.get(p.id) || {};
       // a Gloomsworn's Hollow, for the healer bots (BotAI.hollowNeed): the debt, what has been healed back, and the seconds left
       const hl = s.hollow, t = sim.t;
-      return { id: p.id, x: p.x, y: p.y, role: p.role, alive: !!s.alive, hp: s.hp || 0, maxHp: s.maxHp || 1, left: s.left || (sim.mods.nosecondchances && !s.alive),   // (Hard+ No Second Chances: the fallen are gone for good, so bots stop looking to raise them)
+      return { id: p.id, x: p.x, y: p.y, role: p.role, bot: !!p.bot, alive: !!s.alive, hp: s.hp || 0, maxHp: s.maxHp || 1, left: s.left || (sim.mods.nosecondchances && !s.alive),   // (Hard+ No Second Chances: the fallen are gone for good, so bots stop looking to raise them)
         hollow: !!hl, debt: hl ? hl.debt : 0, healed: hl ? hl.heal : 0, hollowLeft: hl ? Math.max(0, hl.until - t) : 0, graceLeft: hl ? Math.max(0, hl.graceUntil - t) : 0 };
     });
     const b = sim.boss, lamps = sim.liveLamps ? sim.liveLamps() : [];
@@ -418,6 +432,9 @@ class RaidHost {
       const s = this.sim.ps.get(bot.id);
       if (!s || !s.alive) { if (!bot.down) { bot.down = true; bot.actor.onDeath(); } bot.moving = false; continue; }   // (a fall keeps half the Ultimate)
       bot.down = false;
+      // under a third of its health: a word, once for each dip (clients show it in the bot's name: main.js 'bark')
+      const hf = s.maxHp > 0 ? s.hp / s.maxHp : 1;
+      if (hf < 0.3 && !bot.lowSaid) { bot.lowSaid = true; if (!bot.standIn) this.emit({ t: 'bark', id: bot.id, k: 'low' }); } else if (hf > 0.55) bot.lowSaid = false;
       // (a pool or a telegraph that has just appeared or landed: look again now, as a player would on seeing it)
       const seen = sim.puddles.length + ':' + sim.mechs.size + ':' + sim.rollers.size;
       if (this.sim.t >= bot.nextThink || (bot.seen !== seen && this.sim.t >= bot.nextThink - 0.15)) {
@@ -473,7 +490,7 @@ class RaidHost {
       bot.actor.update();
       if (bot.actor.taunt) this.botTaunt(bot, view);
       // the Ultimate (T): BotAI.ult says when (the party's burst, a check, a buster, a raidwide)
-      if (bot.actor.kit.ult && !sim.setPieceInvul() && !sim.mods.barehands && BotAI.ult(bot, bot.actor.kit, view, ultCtx)) bot.actor.press(7);
+      if (bot.actor.kit.ult && !sim.setPieceInvul() && !sim.mods.barehands && BotAI.ult(bot, bot.actor.kit, view, ultCtx) && bot.actor.press(7) && !bot.standIn) this.emit({ t: 'bark', id: bot.id, k: 'ult' });
       if (this.sim.t >= bot.nextAct) {
         const i = BotAI.act(bot, bot.actor.kit, view);
         if (i !== null && i !== undefined) {
@@ -481,8 +498,10 @@ class RaidHost {
           if (bot.actor.press(i)) {
             bot.nextAct = this.sim.t + 0.15;
             void ab;
+            if (bot.raiseGo != null && !bot.standIn) this.emit({ t: 'bark', id: bot.id, k: 'raise' });   // (the raise has started: BotAI.act, after its moment to notice)
           }
         }
+        bot.raiseGo = null;
       }
     }
   }

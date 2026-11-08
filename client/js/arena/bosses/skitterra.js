@@ -195,13 +195,13 @@ const SKITTERRA = {
       f.cast('Venom Spit', d, 'spit');
       for (const p of far) {
         const m = f.mech({ type: 'aoe', shape: { kind: 'cone', x: B.x, y: B.y, r: 1300, arc: 0.42, angle: 0 }, delay: d, dmg: dmg.spit,
-          tag: 'venom', ddown: true, aimFromBoss: p.id, lockAt: 1.2,
+          tag: 'venom', ddown: true, aimFromBoss: p.id, lockAt: H ? 1.5 : 1.8,   // (the aim freezes this long before the hit)
           onResolve: () => {
             const q = f.players().find(z => z.id === p.id);
             const dist = q ? Math.hypot(q.x - m.shape.x, q.y - m.shape.y) : 380;
-            const L = Math.max(200, dist);
+            const L = Math.max(200, dist) + 180;   // (the pool lands past the target, so a clean dodge is not standing in it)
             const at = ARENA.clamp({ x: m.shape.x + Math.cos(m.shape.angle) * L, y: m.shape.y + Math.sin(m.shape.angle) * L }, 60);
-            f.puddle(at.x, at.y, H ? 100 : 90, H ? 45 : 45, dmg.pool, 1, 'venom', { slow: true, ddown: true });
+            f.puddle(at.x, at.y, H ? 100 : 90, H ? 45 : 45, H ? dmg.pool : 2200, 1, 'venom', { slow: true, ddown: true });
           } });
       }
     };
@@ -917,10 +917,10 @@ const SKITTERRA = {
       sets: [
         S([2, intoDark, 'Into the Dark']),
         S([3, () => dropFrom(0), 'From the Dark']),
-        S([6, ...(dripFirst ? [() => venomDrip(), 'Venom Drip'] : [cocoonDrop, 'Cocoon Drop'])]),
-        S([3.5, () => dropFrom(1), 'From the Dark']),
+        S([H ? 6 : 4, ...(dripFirst ? [() => venomDrip(), 'Venom Drip'] : [cocoonDrop, 'Cocoon Drop'])]),   // (the stack lands at least 5 s before the next drop)
+        S([dripFirst ? 3.5 : H ? 5 : 5.5, () => dropFrom(1), 'From the Dark']),
         S([H ? 8 : 5.5, ...(dripFirst ? [cocoonDrop, 'Cocoon Drop'] : [() => venomDrip(), 'Venom Drip'])]),
-        S([H ? 5 : 4.5, () => dropFrom(2), 'From the Dark']),
+        S([H ? 5.25 : 4.5, () => dropFrom(2), 'From the Dark']),
         S([H ? 8 : 6, comeBack, 'Tightening Web']),   // (three drops: the dark ran long with four; the cast waits out the last window)
         S([6]),
       ],

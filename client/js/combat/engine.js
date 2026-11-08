@@ -32,7 +32,7 @@
 
 const ENGINE = {
   GCD: 2.5,
-  QUEUE_WINDOW: 0.5,
+  QUEUE_WINDOW: 0.7,   // (a little over the animation lock, so a second key right after an action still queues)
   ANIM_LOCK: 0.6,
   SLIDECAST: 0.5,
   CAST_LOCK_EXTRA: 0.1,
@@ -565,7 +565,9 @@ class Kit {
         this.lockUntil = now + ENGINE.CAST_LOCK_EXTRA;
         this._fromCast = true;   // (a raise from a finished cast is the light raise sickness: raise())
         // a raise lands on the one it was started on while they are still down (a selection moved mid-cast must not turn it into a heal on someone else)
-        const keep = c.ab.allowDead && typeof c.target === 'number' && this.env.isDead && this.env.isDead(c.target);
+        // (any other ally cast keeps the ally it started on while they are still up, so a cursor that wandered during the cast doesn't move the heal)
+        const keep = typeof c.target === 'number' && this.env.isDead && (c.ab.allowDead ? this.env.isDead(c.target)
+          : c.ab.target === 'ally' && !this.env.isDead(c.target) && (!this.env.allyHp || this.env.allyHp(c.target) != null));
         try { this.resolve(c.ab, this.needsTarget(c.ab) ? (keep ? c.target : (this.env.target(c.ab) || c.target)) : null); } finally { this._fromCast = false; }
       }
     }
@@ -622,12 +624,12 @@ class Kit {
   // ---------------------------------------------------------------- effects API used by kits
   rng() { return this.env.rng(); }
 
-  // Potency -> damage on the current enemy. opts: { ab, crit, autoCrit, mult, positional: 'rear'|'flank', posBonus, threat }
+  // Potency -> damage on the current enemy. opts: { ab, crit, autoCrit, mult, positional: 'rear'|'flank', posAlso, posBonus, threat }
   damage(potency, opts = {}) {
     let pot = potency, posHit = null;
     if (opts.positional) {
       const pos = this.env.positional(opts.positional);
-      posHit = this.has('truenorth') || pos === opts.positional || (this.def.positionalAlways && this.def.positionalAlways(this));
+      posHit = this.has('truenorth') || pos === opts.positional || (!!opts.posAlso && pos === opts.posAlso) || (this.def.positionalAlways && this.def.positionalAlways(this));   // (posAlso: a second zone that counts too: Eviscerate, flank or rear)
       if (posHit) { pot += opts.posBonus || 0; this.stats.posHit++; } else this.stats.posMiss++;
     }
     const party = this.env.partyMods ? this.env.partyMods() : {};

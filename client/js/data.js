@@ -35,7 +35,7 @@ const CLASSES = [
   {
     id: 'shadowblade', name: 'Shadowblade', title: 'Assassin', role: 'dps', difficulty: 3, accent: '#7b3fa0',
     tagline: 'The last thing you see is nothing at all.',
-    gameplan: 'Strike from behind for double combo points, Eviscerate from the side for extra damage, and keep your poison up. The highest damage in the game when your positionals land, and the lowest when they don\'t. Shadowstep and Shadow Dance cover you when the boss turns.',
+    gameplan: 'Strike from behind for double combo points, Eviscerate from the side or behind for extra damage, and keep your poison up. The highest damage in the game when your positionals land, and the lowest when they don\'t. Shadowstep and Shadow Dance cover you when the boss turns.',
   },
   {
     id: 'pyromancer', name: 'Pyromancer', title: 'Fire Mage', role: 'dps', difficulty: 2, accent: '#ff7a1a',

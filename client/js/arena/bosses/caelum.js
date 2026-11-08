@@ -151,18 +151,28 @@ const CAELUM = {
       lead += later;
       const a = f.rng() * TAU, at = { x: Math.round(Math.cos(a) * 330), y: Math.round(Math.sin(a) * 330) };
       f.emit({ t: 'roomev', k: 'clchorus:' + (++imgN), who, x: at.x, y: at.y, dur: +(lead + 3).toFixed(2) });
+      // a guest that comes later has its shape drawn about 3.6 s before its own hit, not at the start (the next strike is read, not all of them)
+      const draw = (hit, make) => {
+        const wait = later > 0 ? Math.max(0, hit - 3.6) : 0;
+        if (wait <= 0) return make(hit);
+        f.afterKeep(wait, () => { if (f.state === 'live') make(hit - wait); });
+      };
       if (who === 'corvane') {
         // a Draw Cut from his afterimage through the hero farthest from it
-        let far = null, fd = -1; for (const p of f.alive()) { const d = Math.hypot(p.x - at.x, p.y - at.y); if (d > fd) { fd = d; far = p; } }
-        if (far) { const ang = Math.atan2(far.y - at.y, far.x - at.x); f.aoe({ kind: 'rect', x: at.x, y: at.y, angle: +ang.toFixed(3), len: Math.round(toWall(at.x, at.y, ang)), w: 120 }, lead + 1.2, dmg.chorus, { tag: 'clChorusCut' }); }
+        draw(lead + 1.2, dl => {
+          let far = null, fd = -1; for (const p of f.alive()) { const d = Math.hypot(p.x - at.x, p.y - at.y); if (d > fd) { fd = d; far = p; } }
+          if (far) { const ang = Math.atan2(far.y - at.y, far.x - at.x); f.aoe({ kind: 'rect', x: at.x, y: at.y, angle: +ang.toFixed(3), len: Math.round(toWall(at.x, at.y, ang)), w: 120 }, dl, dmg.chorus, { tag: 'clChorusCut' }); }
+        });
       } else if (who === 'brannoc') {
         // a Victory Leap onto a hero
-        const tgt = nonTank();
-        if (tgt) f.mech({ type: 'aoe', shape: { kind: 'circle', x: tgt.x, y: tgt.y, r: 200 }, delay: lead + 1.8, dmg: dmg.chorus, follow: tgt.id, lockAt: 1.3, tag: 'clChorusLeap' });
+        draw(lead + 1.8, dl => {
+          const tgt = nonTank();
+          if (tgt) f.mech({ type: 'aoe', shape: { kind: 'circle', x: tgt.x, y: tgt.y, r: 200 }, delay: dl, dmg: dmg.chorus, follow: tgt.id, lockAt: 1.3, tag: 'clChorusLeap' });
+        });
       } else {
         // a Fourfold Bloom from where his afterimage stands (narrow petals: one snap)
         const a0 = f.rng() * TAU;
-        for (let i = 0; i < 4; i++) f.aoe({ kind: 'cone', x: at.x, y: at.y, r: 1300, arc: 0.55, angle: +(a0 + i * Math.PI / 2).toFixed(3) }, lead + 2.2, dmg.chorus, { tag: 'clChorusBloom' });
+        draw(lead + 2.2, dl => { for (let i = 0; i < 4; i++) f.aoe({ kind: 'cone', x: at.x, y: at.y, r: 1300, arc: 0.55, angle: +(a0 + i * Math.PI / 2).toFixed(3) }, dl, dmg.chorus, { tag: 'clChorusBloom' }); });
       }
     };
     // Eightfold Wake: eight afterimages round the room, numbered; he cuts from one to the next, each cut a red line drawn ahead, the
@@ -548,7 +558,7 @@ const CAELUM = {
         BL(H ? 12 : 13, MV.glintT(), [7, MV.thrust()]),
         BL(H ? 9 : 10, MV.echo()),
         BL(H ? 8 : 9, MV.starfall(3), [f.ct(5) + 0.1, MV.grace(true)]),   // a second Grace Withdrawn as the Starfall comes down (his cast begins as the towers land)
-        BL(H ? 12 : 14, MV.crown()),
+        BL(H ? 12 : 18, MV.crown()),   // (Normal: the Crown waits a few seconds longer after Nightfall, the healer's catch-up)
         BL(H ? 10 : 12, MV.horizon({ cross: !H }), ...(H ? [[7, MV.coil()]] : [])),   // (Normal: two cuts at once, the bare floor where the gaps meet)
         BL(H ? 11 : 13, MV.wake({ rings: 2, mirror: true, echo: 1 }, H ? 'Mirrored Wake' : 'Eightfold Wake')),
         BL(H ? 19 : 15, MV.crown()),

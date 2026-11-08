@@ -260,7 +260,7 @@ const Hud = {
     el.className = 'hidden';
     el.innerHTML = `
       <div id="buff-row"></div>
-      <div id="cast-bar" class="hidden"><div class="fill"></div><span></span></div>
+      <div id="cast-bar" class="hidden"><div class="fill"></div><i class="notch"></i><span></span></div>
       <div class="hud-main">
         <div class="gauge-wrap"><canvas id="gauge-canvas"></canvas></div>
         <div id="ability-row"></div>
@@ -271,6 +271,7 @@ const Hud = {
     this.castBar = el.querySelector('#cast-bar');
     this.castFill = this.castBar.querySelector('.fill');
     this.castName = this.castBar.querySelector('span');
+    this.castNotch = this.castBar.querySelector('.notch');
     this.buffRow = el.querySelector('#buff-row');
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.gaugeCanvas.width = 130 * dpr; this.gaugeCanvas.height = 116 * dpr;
@@ -362,11 +363,11 @@ const Hud = {
 
   // a slot pressed (key or click, main.js pressSlot): a quick light on it, or a small shake when it's still cooling
   // (Web Animations: nothing to reset, and a held key re-flashes at most every 0.15s)
-  pressed(i) {
+  pressed(i, ok) {   // (ok: what the engine said of the press: false shakes the slot, true lights it, even a queued one; left out, the slot's own state decides)
     const s = this.slots[i], now = performance.now() / 1000;
     if (!s || !s.el.animate || now - s.pressAt < 0.15) return;
     s.pressAt = now;
-    if (s.blocked) {
+    if (ok === false || (ok !== true && s.blocked)) {
       if (HUD_CALM && HUD_CALM.matches) return;   // (reduced motion: no shake)
       s.el.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-3px)' }, { transform: 'translateX(3px)' }, { transform: 'translateX(-2px)' }, { transform: 'translateX(0)' }], { duration: 220, easing: 'ease-out' });
       return;
@@ -442,7 +443,10 @@ const Hud = {
       // the sweep's bright leading edge, only while it turns
       s.sweep.classList.toggle('sw', frac > 0.002);
       s.blocked = onCd || !usable;
-      s.el.classList.toggle('glow', usable && cdLeft <= 0 && k.glows(ab));
+      // the proc glow is full only when the press would fire now (GCD and lock nearly done, a target in reach); otherwise it shows dimmed: next, but wait
+      const lit = usable && cdLeft <= 0 && k.glows(ab), go = lit && k.readyIn(ab) <= 0.35 && (!k.needsTarget(ab) || !!k.env.target(ab));
+      s.el.classList.toggle('glow', go);
+      s.el.classList.toggle('glow-wait', lit && !go);
       s.el.classList.toggle('dim', !usable);
       let queued = !!((k.queued && k.queued.ab === ab) || (k.queuedO && k.queuedO.ab === ab));
       if (!queued) for (let j = 0; j < k.inbuf.length; j++) if (k.inbuf[j].ab === ab) { queued = true; break; }
@@ -492,6 +496,10 @@ const Hud = {
       this._castEnd = k.cast.end;
       if (this._castAb !== k.cast.ab) {
         this._castAb = k.cast.ab;
+        // the hairline where moving stops cancelling the cast (the last SLIDECAST seconds)
+        const dur = k.cast.end - k.cast.start;
+        this.castNotch.style.display = dur > ENGINE.SLIDECAST ? '' : 'none';
+        this.castNotch.style.left = `${((1 - ENGINE.SLIDECAST / Math.max(dur, 0.01)) * 100).toFixed(1)}%`;
         this.castName.innerHTML = `<i class="cb-icon" style="background-image:url(${abilityIcon(a.cls.id, abilityIconId(k.cast.ab))})"></i>${k.cast.ab.name}`;
       }
     } else if (this._castAb) {

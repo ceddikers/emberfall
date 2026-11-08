@@ -67,7 +67,7 @@ const TITAN = {
     B.speed = 112;
     const dmg = {
       howl: H ? 13000 : 13000, fist: H ? 31850 : 28750, slam: H ? 21450 : 20000, sink: H ? 11050 : 10000, fault: H ? 18850 : 18150, icicle: H ? 10650 : 10000,
-      sweep: H ? 16250 : 15000, cold: H ? 34450 : 31250, frozen: H ? 17550 : 15000, water: H ? 3750 : 3650, slide: H ? 25350 : 23150, whiteout: H ? 14950 : 13750,
+      sweep: H ? 16250 : 15000, cold: H ? 34450 : 31250, frozen: H ? 17550 : 15000, water: H ? 3750 : 1800, slide: H ? 25350 : 23150, whiteout: H ? 14950 : 13750,
       arc: H ? 18850 : 17500, stomp: H ? 18850 : 16900, ring: H ? 15600 : 13750, breath: H ? 6250 : 5650, burst: H ? 18200 : 16250,
       gripAim: H ? 6500 : 6250, gripStack: H ? 33800 : 30000, crush: H ? 31200 : 27500, maul: H ? 11200 : 11400,
     };
@@ -566,7 +566,8 @@ const TITAN = {
     // the Long Night opens its act with a raidwide: it waits until the last one is well behind (an act can end, and so begin, a heartbeat after a Howl;
     // two blows that close together killed the healer first)
     const RW_GAP = 15;
-    const nightFrom = from => Math.max(settle(from, 2), rwAt + RW_GAP - c(2.8) - (2 + c(4.8) + 0.6));
+    // (and the Night's Fist must not have to wait for the tank's cooldown: the next set is placed from the Night's start, so a late Night would run into it)
+    const nightFrom = from => Math.max(settle(from, 2), rwAt + RW_GAP - c(2.8) - (2 + c(4.8) + 0.6), fistLand + FIST_GAP - (2 + fo), mauLand + MAUL_NEAR - (2 + fo));
     const fistNight = () => { const w = fistWait(); commit(w + fo + 0.6 + NIGHT_LEN); fist(); f.afterKeep(w + fo + 0.6, longNight); };
     MV.fn = { fn: fistNight, nm: 'Glacial Fist', len: fo + 0.6 + NIGHT_LEN, live: fo + 0.6 + NIGHT_LEN, tk: [fo, fo + 0.6 + NIGHT_FIST], rw: [fo + 0.6 + c(2.8)], mk: [fo + 0.6 + NIGHT_MAUL] };
     MV.lake = { fn: lakeRises, nm: "Winter's Grasp", len: c(3.6) + 0.1 + c(5.2), live: c(3.6) + 0.1 + c(5.2) + 2.7 };
@@ -649,10 +650,10 @@ const TITAN = {
       ] : [
         bt('fist', WIN),
         bt('ga', REST),
+        bt('howl', WIN),   // (early in the act: the Night's Whiteout is the last raidwide before it)
         bt('maul', WIN),
         bt('fsw', WIN),
         bt('fist', WIN),
-        bt('howl', WIN),
         bt('maul', WIN),
       ], [], [1], 24, 15),
       closing: [[12, howl, "Winter's Howl"], [10, fist, 'Glacial Fist'], [10, twinSlam, 'Twin Slam']],

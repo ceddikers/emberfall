@@ -248,7 +248,7 @@ const Keybinds = (() => {
           <section data-page="keys">
             <div class="kb-list"></div>
             <div class="kb-foot"><button type="button" class="btn2 kb-reset">Reset keys</button><span class="kb-note">Click a key, then press the new one. Taking a key swaps it.</span></div>
-            <p class="kb-note kb-fixed">Alt-drag: ping wheel · Middle-click: ping · Shift + skill: on yourself · Shift + next enemy: back</p>
+            <p class="kb-note kb-fixed">Alt-drag: ping wheel · Middle-click: ping · Shift + skill: on yourself · Shift + next enemy: back · Results card: Esc hides it, Enter is Try again (host)</p>
           </section>
           <section data-page="ui">
             <div class="kb-foot kb-scale"><label for="kb-scale">Interface size</label><input id="kb-scale" type="range" min="80" max="140" step="5"><b class="kb-scale-v"></b></div>

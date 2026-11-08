@@ -13,11 +13,14 @@ const RAID_PRESSURE = (typeof process !== 'undefined' && process.env && +process
 const FIGHT = {
   BOSS_R: 70,            // boss hitbox radius (a second form can swell it: def.forms[form].bossR, see setForm; BOSS_R0 is the plain one)
   BOSS_R0: 70,
-  MELEE: 150,            // distance at which the boss autos / walks to the tank
+  BOSS_TURN: 6,          // how fast the boss turns to follow its tank's steps, radians a second (scripts that set facing for a cast are not eased)
+  BOSS_SNAP: 0.9,        // a turn bigger than this (a taunt swap, the pull, after a cast) snaps at once, as it always did
+  MELEE: 150,           // distance at which the boss autos / walks to the tank
   AUTO_EVERY: 2.8,
   DMG_DOWN: 0.10,        // damage dealt penalty, from an avoidable hit of a move that opts in (ddown: true on the mech, puddle, tether, zone...)
   DMG_DOWN_DUR: 10,
   VULN: 0.25,            // damage taken up per stack, from every avoidable hit
+  NORMAL_SLIP_CAP: 0.8,  // Normal: one avoidable hit (not a buster, auto, fail or bill) takes at most this share of the victim's max health before cuts, so a first slip never kills from full
   VULN_DUR: 15,
   // Threat is for adds only: damage × (TANK_THREAT for tanks) × the event's own multiplier (clamped to EV_THREAT_MAX), kept
   // per add and faded (THREAT_FADE of it per second), so what counts is the last ~20 s. The boss has no threat: he stays on
@@ -42,7 +45,7 @@ const FIGHT = {
   // nothing failed adds CLEAN; a damage check met, or a heal check with nobody lost, adds CHECK. Raw damage adds nothing.
   //   TANK: party damage taken down by this much for TANK_DUR s   HEAL: party healed by this share of max health
   //   (three bars, from any role, also raise the fallen at RAISE)   DPS: a blow worth this share of the boss's max health
-  LB: { BAR: 100, CLEAN: 4, CHECK: 70, TANK: [0, 0.2, 0.35, 0.5], TANK_DUR: 8, HEAL: [0, 0.3, 0.6, 1], RAISE: 0.5, DPS: [0, 0.008, 0.018, 0.03] },
+  LB: { BAR: 100, CLEAN: 6, CHECK: 70, TANK: [0, 0.2, 0.35, 0.5], TANK_DUR: 8, HEAL: [0, 0.3, 0.6, 1], RAISE: 0.5, DPS: [0, 0.008, 0.018, 0.03] },
   // Recovering (Hard): after a death the boss's hits land lighter for DUR s (CUT less) so the party can raise, shown on the HUD; it can
   // start again only COOL s after it ends. A raised player is untouchable for REVIVE_SAFE s.
   REC: { DUR: 12, CUT: 0.3, COOL: 12 }, REVIVE_SAFE: 2.5,
@@ -52,6 +55,7 @@ const FIGHT = {
   // danger and share on the floor (safe floor has no colour).
   SLOTS: ['#5fe36a', '#b26cff', '#ff6fd2', '#f2eee4'],
 };
+const NO_SLIP_CAP = { buster: 1, auto: 1, 'tower-fail': 1, 'stack-miss': 1, fall: 1, enrage: 1, doom: 1, self: 1, settle: 1, ledger: 1, pvp: 1 };   // (hits FIGHT.NORMAL_SLIP_CAP leaves alone)
 const playerBaseHp = role => Math.round((role === 'tank' ? FIGHT.TANK_HP : FIGHT.HP) * FIGHT.NUM_SCALE);
 
 // distance from (px, py) to the segment (ax, ay)-(bx, by)
@@ -197,6 +201,8 @@ class FightSim {
       this.layPhase = null;
       return o.next(from);
     }
+    // a pushed act whose first step would fire while a cast bar still runs starts late enough that it doesn't (gate(): no cast cuts another's bar)
+    if (this.castHold) { const g0 = o.sets && o.sets[0] && o.sets[0][0] ? o.sets[0][0][0] : 0; if (from + g0 < this.castHold) from = this.castHold - g0; this.castHold = 0; }
     const cur = { ph, seams: [], o, done: false };
     this.layPhase = ph;
     // a walled act laid out ahead (at the gate before it) holds its floor from now: the moments until it begins can't carry the boss past it
@@ -220,7 +226,7 @@ class FightSim {
         const sh0 = this.pauseShift || 0;
         cur.seams.push(start + closing[0][0]);
         const ramp = this.noEnrage ? 0 : o.ramp ?? 0.1;
-        if (ramp) this.at(start + closing[0][0] - 0.01, () => { this.boss.dmgUp += ramp; this.emit({ t: 'fev', k: 'behind', n: k }); });
+        if (ramp) this.at(start + closing[0][0] - 0.01, () => { this.boss.dmgUp += ramp; this.boss.rampUp = (this.boss.rampUp || 0) + ramp; this.emit({ t: 'fev', k: 'behind', n: k }); });
         const len = this.seq(closing, start) - (start - this.t);
         this.at(Math.max(start, start + len - 20), () => pass(start + len + (this.pauseShift || 0) - sh0, k + 1));
         this.layPhase = null; this.layStep = false;
@@ -284,6 +290,12 @@ class FightSim {
     const at = Math.max(!push && seam != null && seam - this.t <= (cur.o.seam ?? 8) ? seam - 0.02 : this.t, this.boss.pauseUntil || 0);
     // what this course still had after the seam is dropped now, so the feed already shows what comes next
     this.events = this.events.filter(e => e.keep || e.phase !== cur.ph || e.t <= at);
+    // a pushed act waits for a cast bar that is running (no cast cuts another's bar); laid telegraphs resolve as they do
+    const live = this.boss.cast && this.boss.cast.end > this.t ? this.boss.cast.end + 0.5 : 0;
+    // (the extra damage a closing pass piled on, boss.rampUp, is halved when the next act begins; a form's or a failure's own dmgUp stays)
+    const rp = Math.min(this.boss.rampUp || 0, this.boss.dmgUp);
+    if (rp > 0) { const nr = Math.round(rp * 0.5 * 20) / 20; this.boss.dmgUp = Math.max(0, Math.round((this.boss.dmgUp - (rp - nr)) * 100) / 100); this.boss.rampUp = nr; }
+    this.castHold = push && live > at ? live : 0;   // (course(): the next act's first step waits for it; the act itself begins now)
     cur.o.next(at);
   }
   // the next few named steps still to come in this phase (and kept ones, like the enrage), and in courses already
@@ -479,8 +491,10 @@ class FightSim {
       if (d <= step) { b.x = b.moveTo.x; b.y = b.moveTo.y; const done = b.moveTo.done; b.moveTo = null; if (done) done(); }
       else { b.x += dx / d * step; b.y += dy / d * step; }
     } else if (tank && !b.cast && !b.lockFacing && !b.untargetable && !stunned) {
-      b.facing = Math.atan2(tank.y - b.y, tank.x - b.x);
-      if (b.hornTo && b.hornTo.until > this.t) { const hp = this.players().find(q => q.id === b.hornTo.id); if (hp) b.facing = Math.atan2(hp.y - b.y, hp.x - b.x); }   // (Hunting Horn: only its face; its target and its walk stay the tank's)
+      let fa = Math.atan2(tank.y - b.y, tank.x - b.x), horn = false;
+      if (b.hornTo && b.hornTo.until > this.t) { const hp = this.players().find(q => q.id === b.hornTo.id); if (hp) { fa = Math.atan2(hp.y - b.y, hp.x - b.x); horn = true; } }   // (Hunting Horn: only its face, and at once; its target and its walk stay the tank's)
+      const da = Math.atan2(Math.sin(fa - b.facing), Math.cos(fa - b.facing)), mx = FIGHT.BOSS_TURN * dt;   // (it turns, it doesn't snap: shortest way round)
+      b.facing = horn || !Number.isFinite(da) || Math.abs(da) <= mx || Math.abs(da) > FIGHT.BOSS_SNAP ? fa : b.facing + Math.sign(da) * mx;   // (a swing past BOSS_SNAP, a taunt swap or the pull, is an event and snaps; so does a face not yet set)
       const d = Math.hypot(tank.x - b.x, tank.y - b.y);
       if (d > FIGHT.MELEE && !b.anchor && !(b.holdUntil > this.t)) {
         // round any prop in the way rather than pushing into it
@@ -491,6 +505,7 @@ class FightSim {
         PROPS.collide(b, this.props, FIGHT.BOSS_R * 0.7);
       }
     }
+    if (tank && this.t >= b.autoAt) { const hold = this.autoHold(tank.id); if (hold > b.autoAt) b.autoAt = hold; }   // (an ordinary swing never lands on a tankbuster's guard: held back from just before it to just after)
     if (tank && !b.untargetable && !stunned && !(b.noAutoUntil > this.t) && this.t >= b.autoAt) {
       b.autoAt = this.t + (b.duelUntil > this.t ? KENSEI.DUEL_EVERY : FIGHT.AUTO_EVERY);   // (Ember Duel: a steady beat)
       const d = Math.hypot(tank.x - b.x, tank.y - b.y);
@@ -501,6 +516,14 @@ class FightSim {
     }
   }
 
+  // when the boss's auto may next swing at this tank, if a laid tankbuster on them is about to resolve (1 s before) or just did (0.3 s after); 0 if free
+  autoHold(id) {
+    const ba = this.busterAt;
+    if (ba && ba.id === id && this.t < ba.t + 0.3) return ba.t + 0.301;
+    let at = 0;
+    for (const m of this.mechs.values()) if (m.type === 'buster' && (m.target ?? m.follow) === id && this.t >= m.resolveAt - 1 && this.t < m.resolveAt) at = Math.max(at, m.resolveAt + 0.301);
+    return at;
+  }
   // the boss's weakness now: the strongest player's live weaknesses added up (targetDebuff 'vuln')
   liveVuln() {
     const b = this.boss; if (!(b.vulnEnd > this.t)) return 0;
@@ -781,6 +804,7 @@ class FightSim {
     if (this.mods.nosecondchances) return;   // (Hard+ No Second Chances: no raise, no Limit Break raise, nothing brings the fallen back)
     const rs = this.stats[by]; if (rs && by !== tid) rs.raises++;
     ts.alive = true; ts.hollow = null; ts.hp = Math.round(ts.maxHp * Math.max(0.1, Math.min(1, frac)));
+    ts.vuln = 0; ts.vulnEnd = 0; ts.dmgDownEnd = 0; ts.brittle = 0; if (ts.debuffs) { delete ts.debuffs.slowed; delete ts.debuffs.rooted; delete ts.debuffs.brittle; }   // (a raised hero comes back clean of what killed them)
     const sick = kind === 'none' ? null : this.sickness(kind);
     ts.weakEnd = sick ? this.t + sick.dur : 0; ts.weakPct = sick ? sick.pct : 0; ts.hist = []; this.dropThreat(tid);
     ts.mits.push({ pct: 1, start: this.t, end: this.t + FIGHT.REVIVE_SAFE, kind: 'invuln', from: by, rev: 1 });   // a moment to find their feet (rev: not credited as anyone's cut: credit())
@@ -906,7 +930,10 @@ class FightSim {
     let amt = opts.raw || opts.scaled ? raw : raw * this.scale.dmg * (this.hard ? this.def.hardDmg ?? 1.25 : this.def.normalDmg ?? 1) * (1 + this.boss.dmgUp) * (this.mods.heavyhands ? 1 + HARDPLUS.T.HANDS : 1);   // (Hard+ Heavy Hands.) (def.hardDmg / def.normalDmg: a boss's own multiplier on each difficulty)
     if (this.recoverEnd > this.t && !opts.raw) amt *= 1 - FIGHT.REC.CUT;   // recovering after a death (Hard)
     if (!opts.shared) amt = this.threadSplit(p, s, amt, opts);   // threads split the hit evenly along them (classes-c)
-    if (s.vulnEnd > this.t && !opts.raw) amt *= 1 + s.vuln;
+    // Normal: one avoidable slip never kills from full (Vulnerability still lands on top of the capped base, so a second one inside it can)
+    if (!this.hard && !this.pvp && !this.def.trial && this.def.id !== 'sovereign' && opts.avoidable && !opts.raw && !NO_SLIP_CAP[opts.kind]) amt = Math.min(amt, s.maxHp * FIGHT.NORMAL_SLIP_CAP);
+    // Vulnerability: not on an unavoidable raidwide on Normal; on Hard a raidwide feels one stack at most
+    if (s.vulnEnd > this.t && !opts.raw && !(opts.kind === 'raidwide' && !this.hard)) amt *= 1 + (opts.kind === 'raidwide' ? Math.min(s.vuln, FIGHT.VULN) : s.vuln);
     if (s.brittle && s.debuffs.brittle > this.t && !opts.raw) amt *= 1 + s.brittle * HARDPLUS.T.BRITTLE.PER;   // (Hard+ Brittle: a stack per avoidable hit, hardplus.js)
     if (s.def && !opts.raw) amt *= 1 - s.def;
     let mult = 1, perfect = null, reflect = null, invuln = false, read = null, onceHit = null;
@@ -1267,7 +1294,7 @@ class FightSim {
           if (tgt && p.id === tgt.id) continue;
           hit(p, m.dmg * 0.7, 'cleave', true);
         }
-        if (tgt) { hit(tgt, m.dmg, 'buster', false); if (tgt.s.alive) this.stats[tgt.id].busters++; }
+        if (tgt) { this.busterAt = { id: tgt.id, t: this.t }; hit(tgt, m.dmg, 'buster', false); if (tgt.s.alive) this.stats[tgt.id].busters++; }
         break;
       }
       case 'proximity':
@@ -1314,6 +1341,7 @@ class FightSim {
   puddle(x, y, r, dur, dmg, every = 1, tag = 'puddle', extra = {}) {
     const pd = { id: this.nextMechId++, x, y, r, end: this.t + dur, dmg, every, tag, last: {}, slow: !!extra.slow, ddown: !!extra.ddown };
     this.puddles.push(pd);
+    for (const p of this.alive()) if (Math.hypot(p.x - x, p.y - y) <= r + 10) pd.last[p.id] = this.t;   // (whoever stands where it forms gets a full beat to step out)
     this.emit({ t: 'pud', id: pd.id, x, y, r, dur, tag });
     return pd;
   }
@@ -1447,6 +1475,7 @@ class FightSim {
     z.startAt = this.t + (opts.delay || 0);
     z.end = z.startAt + (opts.dur || 9999);
     this.zones.push(z);
+    if (!z.noGrace) for (const p of this.alive()) if (SHAPES.contains(z.shape, p.x, p.y, 8)) z.last[p.id] = z.startAt;   // (whoever stands in it as it forms gets a full beat once it is live)
     this.emit({ t: 'zone', id: z.id, shape: z.shape, dur: opts.dur || 9999, tag: z.tag, delay: opts.delay || 0 });
     return z;
   }
@@ -1456,7 +1485,9 @@ class FightSim {
       if (this.t < z.startAt) continue;
       if (z.effect === 'burn') {
         for (const p of this.alive()) {
-          if (!SHAPES.contains(z.shape, p.x, p.y, 8) || this.t - (z.last[p.id] ?? -9) < 1) continue;
+          if (!SHAPES.contains(z.shape, p.x, p.y, 8)) continue;
+          if (z.last[p.id] == null && !z.noGrace) z.last[p.id] = this.t - 0.5;   // (stepping in: the first tick is half a second away)
+          if (this.t - (z.last[p.id] ?? -9) < 1) continue;
           z.last[p.id] = this.t;
           this.damagePlayer(p, z.dmg || 4000, { kind: z.tag, avoidable: true, noVuln: true, ddown: z.ddown });
         }
@@ -1617,7 +1648,10 @@ class FightSim {
       seen.add(o.id); lit.push(o);
     }
     for (const fl of lit) {
-      if (!(this.fires.get(fl.id) > this.t)) this.emit({ t: 'propfx', k: 'ignite', id: fl.id, x: fl.x, y: fl.y, r: fl.r });
+      if (!(this.fires.get(fl.id) > this.t)) {
+        this.emit({ t: 'propfx', k: 'ignite', id: fl.id, x: fl.x, y: fl.y, r: fl.r });
+        fl.last = fl.last || {}; for (const p of this.alive()) if (Math.hypot(p.x - fl.x, p.y - fl.y) <= fl.r + 10) fl.last[p.id] = this.t;   // (whoever stands in it as it catches gets a full beat to step out)
+      }
       this.fires.set(fl.id, Math.max(this.fires.get(fl.id) || 0, this.t + dur));
     }
     if (lit.length) this.propsDirty = true;
@@ -1631,7 +1665,9 @@ class FightSim {
       if (!fl || until <= this.t) { this.fires.delete(id); this.propsDirty = true; continue; }
       fl.last = fl.last || {};
       for (const p of this.alive()) {
-        if (Math.hypot(p.x - fl.x, p.y - fl.y) > fl.r + 10 || this.t - (fl.last[p.id] || -9) < 1) continue;
+        if (Math.hypot(p.x - fl.x, p.y - fl.y) > fl.r + 10) continue;
+        if (fl.last[p.id] == null) fl.last[p.id] = this.t - 0.5;   // (stepping in: the first tick is half a second away)
+        if (this.t - fl.last[p.id] < 1) continue;
         fl.last[p.id] = this.t;
         this.damagePlayer(p, fl.dmg || 4000, { kind: 'burn', avoidable: true, noVuln: true, ddown: fl.ddown });
       }

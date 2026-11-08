@@ -4,6 +4,7 @@
 //   list, e.g. dps,healer; default none) makes those roles play like a decent human instead of a perfect bot: reaction delay on new
 //   telegraphs, the odd late or short dodge, no slidecasting, a staying put after a dodge, a little late on each GCD, the odd filler press
 //   (bots.js BotHuman and HUMAN_DEFAULTS; HUMANP='{"react":[0.4,0.7]}' overrides single parameters). Also human=dps as an argument.
+//   HUMAN=lively: only the damage bots, with the mild preset the game gives its fill-in bots (bots.js BotHuman.LIVELY).
 //   BREAKDOWN=1 prints, per player and run, where DPS is lost: seconds dead, alive but out of reach, moving, GCD-idle while in reach,
 //   casts cancelled, avoidable hits, dps (a * marks a human-like bot), and at the end the mean over the runs.
 //   node tools/bot-raid.js [normal|hard] [runs] [classes comma-separated] [boss id]
@@ -95,7 +96,7 @@ for (let r = first; r < first + runs; r++) {
     if (msg.t === 'bnext' && process.env.NEXT) console.log(`   ${host.sim.t.toFixed(1)} next: ${msg.l.map(([n, s]) => `${n} ${s}s`).join(', ')}`);
   } });
   if (GEARSET) host.bots.forEach((b, i) => { b.actor.kit.env.gearMods = () => GEARSET.sets[i].mods; });
-  BotHuman.attach(host, humanWho);
+  BotHuman.attach(host, humanWho === 'lively' ? 'dps' : humanWho, humanWho === 'lively' ? BotHuman.LIVELY : undefined);   // (HUMAN=lively: the mild preset the game gives its fill-in damage bots, bots.js BotHuman.LIVELY)
   const bd = BREAKDOWN ? BotBreakdown.make(host) : null;
   let deaths = [];
   const raises = [];
