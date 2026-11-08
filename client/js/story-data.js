@@ -42,6 +42,8 @@ const STORY = {
     morrowoak: 'At the end of the road the land climbs to the rim of the crater, where the oldest tree in the realm still stands in a grove of his own planting. He drank from the star before there were kings, and learned that living is only another kind of hunger. So he fed the Hunger his grove, a tree at a time, to be allowed to go on. A hunger that is fed does not learn to stop. Morrow-Oak is the last thing standing in his own wood, and he has been mending himself out of whatever the dark gave back.',
     caelum: 'At the bottom of the crater lies the star itself, half sunk in the rock where it fell before there were kings, and beside it stands the one it chose. Caelum Vey does not run and does not speak, and he is always already where you were about to be. For an age he has been calling the rest of it down, and the burning stone that has hung over every room of this road is his work. The gate was built so the road would lead away from him. The road, being a road, came here anyway. Whether it ends in fire or in light is the only question it has left.',
     sovereign: 'The fourth portal in the square has never opened. Every road the kings cut through the gate leads away from it, which is the only reason anyone thought to ask what it was for. The stone round its ring is never cold, and the snow does not settle there. The other three portals go out. This one, the old people say, goes down.',
+    hood: '',
+    seraph: '',   // (the room tells it)
   },
 };
 

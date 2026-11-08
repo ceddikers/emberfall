@@ -1087,6 +1087,57 @@ const SvRewards = (() => {
   return { wears, foldOf, wings, glowAlong, WEAPON, TEST };
 })();
 
+// Earned per hero (Save: heroes[classId].unr = 1, set by Save.recordClear on a clear of raid id 'seraph'): a FROST EDGE trailing from the weapon (a thin pale
+// line along the blade and a few motes of frost drifting off behind it) and a faint HALO behind the head (a thin gold ring with a breath of cold light). Both
+// are subtle and small, and drawn the same in town and in a fight. Who wears them is opts.un of drawHero/heroSprite/heroSnapshot, as opts.sv above:
+//    true            this account's own hero (wears them when Save says that hero earned them)
+//    { edge, halo }  an explicit answer for someone else's hero (a remote player: the 'cls' message carries it as `un`)
+//    absent          nobody, except under the test flag
+// TEST FLAG (local dev host only): localStorage 'emberfall.unRewards' = '1' shows both on EVERY hero drawn. Remove it after testing.
+const UnRewards = (() => {
+  const devHost = () => { try { const h = location.hostname; return h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h.endsWith('.localhost'); } catch (e) { return false; } };
+  const TEST = (() => { try { return devHost() && localStorage.getItem('emberfall.unRewards') === '1'; } catch (e) { return false; } })();
+  const earned = id => typeof Save !== 'undefined' && Save.unRewards ? Save.unRewards(id) : false;
+  const K = { frost: '#8fd3ff', pale: '#e6f6ff', gold: '#d8b86a' };
+  function wears(cls, opts) {
+    if (!cls) return null;
+    const un = opts && opts.un;
+    if (un && typeof un === 'object') return un.edge || un.halo ? un : null;
+    if (TEST) return { edge: true, halo: true };
+    return un === true && earned(cls.id) ? { edge: true, halo: true } : null;
+  }
+  // behind the head (drawn before the body): a thin broken gold ring and a faint cold glow inside it
+  function halo(ctx, st) {
+    const t = (st.t || 0) + (st.phase || 0), br = 0.8 + 0.2 * Math.sin(t * 1.3);
+    ctx.save();
+    glow(ctx, -1, 0, 13, K.frost, 0.1 * br);
+    ctx.strokeStyle = rgba(K.gold, 0.5 * br); ctx.lineWidth = 1.1; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(-1, 0, 9.4, 0.5, Math.PI * 2 - 0.5); ctx.stroke();   // (a gap at the front: the ring is not whole)
+    ctx.strokeStyle = rgba(K.pale, 0.16 * br); ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.arc(-1, 0, 7.6, 1.2, Math.PI * 2 - 1.2); ctx.stroke();
+    ctx.restore();
+  }
+  // along the weapon (drawn after the figure): a pale line, a cold bloom, and frost lifting off the end and falling away behind
+  function edge(ctx, cls, st) {
+    const t = (st.t || 0) + (st.phase || 0), k = (1 - 0.5 * pulse(actP(st, 'attack'))) * (0.85 + 0.15 * Math.sin(t * 1.9));
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    (SvRewards.WEAPON[cls.id] || [[7, 12, 0.35, 24]]).forEach((w, n) => {
+      const dx = Math.cos(w[2]), dy = Math.sin(w[2]), L = w[3];
+      if (L <= 8) glow(ctx, w[0] + dx * L * 0.5, w[1] + dy * L * 0.5, 6, K.frost, 0.3 * k, 0.4 * k);
+      else {
+        ctx.strokeStyle = rgba(K.frost, 0.34 * k); ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(w[0], w[1]); ctx.lineTo(w[0] + dx * L, w[1] + dy * L); ctx.stroke();
+        ctx.strokeStyle = rgba(K.pale, 0.42 * k); ctx.lineWidth = 0.8; ctx.stroke();
+      }
+      for (let j = 0; j < 3; j++) {
+        const q = (t * 0.55 + j / 3 + n * 0.37) % 1;   // a mote leaves the tip and drifts back and down
+        circle(ctx, w[0] + dx * L - q * 11 - 1, w[1] + dy * L + (j - 1) * q * 3 + q * 3, 1.1 * (1 - q) + 0.25, rgba(j ? K.frost : K.pale, 0.7 * (1 - q) * k));
+      }
+    });
+    ctx.restore();
+  }
+  return { wears, halo, edge, TEST };
+})();
+
 // the hero itself, in its local space (no shadow, ring or ground marks): what heroSprite takes a picture of
 function heroBody(ctx, cls, angle, st, opts, P) {
   HERO_SPEC = opts.spec || null;
@@ -1099,9 +1150,12 @@ function heroBody(ctx, cls, angle, st, opts, P) {
   ctx.scale(br * P.sx, br * P.sy);
   const sv = SvRewards.wears(cls, opts), svFold = sv ? SvRewards.foldOf(SV_SCALE, opts) : 0;
   if (sv && sv.wings) SvRewards.wings(ctx, st, svFold);   // (behind the body)
+  const un = UnRewards.wears(cls, opts);
+  if (un && un.halo) UnRewards.halo(ctx, st);   // (behind the head)
   (cls ? HERO_ART[cls.id] || HERO_ART.cleric : HERO_ART.wisp)(ctx, st);   // (a class not drawn yet borrows the Cleric's figure)
   if (cls && opts.spec && SPEC_ART[opts.spec]) SPEC_ART[opts.spec](ctx, st);
   if (sv && sv.glow) SvRewards.glowAlong(ctx, cls, st, svFold);
+  if (un && un.edge) UnRewards.edge(ctx, cls, st);
   if (cls) drawChannelFocus(ctx, cls, st, cls ? channelP(st) : -1);
   if (P.wave > 0) waveHand(ctx, st.t, P.wave);
 }

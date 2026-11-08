@@ -343,6 +343,7 @@ const Sound = (() => {
     'mus-corvane': 'mus-wyrm', 'mus-corvane-hard': 'mus-wyrm-hard', 'mus-brannoc': 'mus-titan', 'mus-brannoc-hard': 'mus-titan-hard',
     'mus-morrowoak': 'mus-archmage', 'mus-morrowoak-hard': 'mus-archmage-hard', 'mus-caelum': 'mus-hydra', 'mus-caelum-hard': 'mus-hydra-hard',
     'mus-sovereign': 'mus-hydra-hard', 'mus-sovereign-hard': 'mus-hydra-hard',
+    'mus-hood': 'mus-hollowking', 'mus-seraph': 'mus-hydra-hard',
   };
   // The moments with no track of their own (also until the files land): the pull keeps what is playing; a kill or a wipe keeps it too,
   // with the room muffled for a moment instead of fading to silence.

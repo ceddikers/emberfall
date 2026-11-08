@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hollow Hood art preview</title>
+<style>
+  /* A dev page: the Hood and the Seraph (client/js/hood-art.js), the rooms, the frost shells, the pillar and the telegraph tells (client/js/hood-fx.js) on plain canvases. */
+  :root { color-scheme: dark; --bg: #0a0d14; --card: #121722; --line: #28324a; --ink: #dde7f2; --dim: #8fa0b8; --frost: #8fd3ff; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, "Segoe UI", sans-serif; }
+  header { padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  header span { color: var(--dim); }
+  button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 4px 12px; cursor: pointer; font: inherit; }
+  h2 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--frost); margin: 22px 16px 8px; font-weight: 500; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; padding: 0 16px; }
+  figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  canvas { display: block; width: 100%; aspect-ratio: 1; }
+  figcaption { padding: 6px 10px; display: flex; justify-content: space-between; gap: 8px; color: var(--dim); border-top: 1px solid var(--line); }
+  figcaption b { color: var(--ink); font-weight: 500; }
+  #err { color: #ff7a6a; padding: 8px 16px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1>The Hollow Hood and the Six-Winged Seraph</h1>
+  <span>every cell animates (?cell=N shows one large, &amp;t=seconds starts there, &amp;freeze holds it, &amp;z=2 magnifies)</span>
+  <button id="pause">Pause</button>
+  <label>speed <input id="speed" type="range" min="0.1" max="2" step="0.1" value="1"></label>
+</header>
+<div id="err"></div>
+<h2>The Hood: the hands</h2>
+<div class="grid" id="hands"></div>
+<h2>The Seraph</h2>
+<div class="grid" id="seraph"></div>
+<h2>The pull, the kill, the copies</h2>
+<div class="grid" id="moments"></div>
+<h2>Frost, pillar, coffin</h2>
+<div class="grid" id="props"></div>
+<h2>The rooms</h2>
+<div class="grid" id="rooms"></div>
+<h2>Telegraph tells (a red or blue rim from the shared code, the art inside)</h2>
+<div class="grid" id="tells"></div>
+<script src="../../client/js/draw-util.js"></script>
+<script src="../../client/js/arena/shapes.js"></script>
+<script src="../../client/js/arena/boss-tells.js"></script>
+<script src="../../client/js/arena/arena-view.js"></script>
+<script src="../../client/js/set3-sky.js"></script>
+<script src="../../client/js/bosses.js"></script>
+<script src="../../client/js/hood-art.js"></script>
+<script src="../../client/js/hood-fx.js"></script>
+<script>
+(function () {
+  const cells = [];
+  function cell(host, title, note, fn, size) {
+    const fig = document.createElement('figure'), cv = document.createElement('canvas'), cap = document.createElement('figcaption');
+    cv.width = cv.height = size || 440; cap.innerHTML = '<b>' + title + '</b><span>' + note + '</span>';
+    fig.append(cv, cap); document.getElementById(host).append(fig); cells.push({ cv, fn });
+  }
+  const cyc = (t, n, d) => Math.floor(t / d) % n;
+  const ang = { right: 0, left: Math.PI, down: Math.PI / 2, up: -Math.PI / 2 };
+
+  cell('hands', 'At rest', 'hands low and dark', t => ({ t, props: {} }));
+  cell('hands', 'The blade', 'slides out of the left sleeve, points the way it faces', t => { const u = t % 6; return { t, angle: [0, Math.PI / 2, Math.PI, -Math.PI / 2][cyc(t, 4, 6)], props: { hdBlade: u < 0.4 ? 0 : clamp((u - 0.4) / 0.35, 0, 1) * (u < 4.8 ? 1 : 0) } }; });
+  cell('hands', 'The light', 'the right palm opens on a white-blue disc', t => { const u = t % 6; return { t, props: { hdLight: u < 0.4 ? 0 : clamp((u - 0.4) / 0.35, 0, 1) * (u < 4.8 ? 1 : 0) } }; });
+  cell('hands', 'Both', 'the Waltz finale, Verdict', t => ({ t, props: { hdBlade: 1, hdLight: 1 } }));
+  cell('hands', 'Hollow Step', 'a short swing, hands empty', t => ({ t, action: { t0: Math.floor(t / 3) * 3, dur: 1 }, props: {} }));
+  cell('hands', 'Walking', 'the coat trails behind', t => ({ t, moving: true, angle: 0, props: {} }));
+  cell('hands', 'Eyes shut', 'Dead Calm', t => ({ t, props: { hdBlade: 1, hdShut: 1 } }));
+  cell('hands', 'Facing up and down', 'ring bright at the front', t => ({ t, angle: cyc(t, 2, 3) ? Math.PI / 2 : -Math.PI / 2, props: { hdBlade: 1, hdLight: 1 } }));
+
+  cell('seraph', 'At rest', 'six wings folded: a dark six-pointed shape, a broken halo', t => ({ t, seraph: true, props: {} }));
+  cell('seraph', 'The wings in turn', 'the one about to move lifts, its gold edge brightens', t => ({ t, seraph: true, props: { hdWing: 1 + cyc(t, 6, 1.2), hdBlade: 1 } }));
+  cell('seraph', 'Hover', 'lifted a hand above the floor', t => ({ t, seraph: true, props: { hdHover: 1, hdBlade: 1 } }));
+  cell('seraph', 'The halo filling', 'a shard thrown, a gap burns frost', t => ({ t, seraph: true, props: { hdGaps: cyc(t, 7, 1.5) } }));
+  cell('seraph', 'Both hands', 'Six Wings', t => ({ t, seraph: true, props: { hdBlade: 1, hdLight: 1, hdGaps: 6, hdWing: 6 } }));
+
+  cell('moments', 'Gate 1 opening', 'the hood lowers, nothing under it', t => ({ t, props: { hdOpen: t % 7 < 4.5 ? t % 7 : -1, hdBlade: t % 7 > 3.4 && t % 7 < 6 ? 1 : 0 } }));
+  cell('moments', 'Gate 2 opening', 'the wings unfold', t => ({ t, seraph: true, props: { hdOpen: t % 8 < 5 ? t % 8 : -1 } }));
+  cell('moments', 'Gate 1 kill', 'it kneels, the eyes go out', t => ({ t, props: { hdKneel: clamp((t % 8 - 1) / 2.4, 0, 1) } }));
+  cell('moments', 'Gate 2 kill', 'the wings fold, it lies down', t => ({ t, seraph: true, props: { hdLie: clamp((t % 9 - 1) / 3, 0, 1), hdGaps: 6 } }));
+  cell('moments', 'A copy', 'eyes dark, no blade', t => ({ t, props: { hdEyes: 0 } }));
+  cell('moments', 'The real figure', 'eyes lit, blade out', t => ({ t, props: { hdEyes: 1, hdBlade: 1 } }));
+
+  // frost, pillar, coffin, tells and rooms are added by the second half of this page
+  window.__hdCell = cell; window.__hdCells = cells;
+
+  const qs = new URLSearchParams(location.search), only = qs.get('cell');
+  window.__hdFinish = function () {
+    if (only != null) { cells.forEach((c, i) => { const f = c.cv.parentNode; if (i !== +only) f.style.display = 'none'; else { c.cv.width = c.cv.height = 900; c.cv.style.maxWidth = '900px'; f.style.gridColumn = '1 / -1'; } }); document.querySelectorAll('h2').forEach(h => h.style.display = 'none'); }
+    const Z = +(qs.get('z') || 1);
+    let paused = qs.has('freeze'), speed = 1, clock = +(qs.get('t') || 0), last = null;
+    document.getElementById('pause').onclick = e => { paused = !paused; e.target.textContent = paused ? 'Play' : 'Pause'; };
+    document.getElementById('speed').oninput = e => { speed = +e.target.value; };
+    function render() {
+      for (const c of cells) {
+        if (c.cv.parentNode.style.display === 'none') continue;
+        const o = c.fn(clock);
+        if (o && o.draw) o.draw(c.cv, clock, Z); else if (o) __hdArtPreview(c.cv, Object.assign({ clear: true, t: clock, zoom: c.cv.width / 270 * Z }, o, { t: clock }));
+      }
+    }
+    // __hdAt(seconds[, step]) plays the page from where it is to that time in steps (for a still of a moment), then holds
+    window.__hdAt = (to, step = 0.05) => { paused = true; while (clock < to) { clock = Math.min(to, clock + step); render(); } return clock; };
+    function frame(ms) {
+      if (last != null && !paused) clock += Math.min(0.1, (ms - last) / 1000) * speed;
+      last = ms;
+      try { if (!paused || !window.__hdDrawn) { render(); window.__hdDrawn = true; } } catch (e) { document.getElementById('err').textContent = String(e && e.stack || e); return; }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  };
+})();
+</script>
+<script>
+// ---- the second half: frost, pillar, coffin, the rooms as a played scene, and every telegraph tell
+(function () {
+  const cell = __hdCell;
+  const sm = q => { q = Math.max(0, Math.min(1, q)); return q * q * (3 - 2 * q); };
+  const hero = (ctx, x, y, col) => { ctx.save(); ellipse(ctx, x, y + 4, 14, 6, 0, 'rgba(0,0,0,0.4)'); rrect(ctx, x - 9, y - 50, 18, 46, 6, col, OUT, 2); circle(ctx, x, y - 58, 9, '#e8c9a0', OUT, 2); ctx.restore(); };
+  // a small canvas with its own transform: world units centred, zoom
+  const view = (cv, z, cy = 0.5) => { const c = cv.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#0a0d14'; c.fillRect(0, 0, cv.width, cv.height); c.translate(cv.width / 2, cv.height * cy); c.scale(z, z); return c; };
+  cell('props', 'Frost shell on a hero', 'forms from the floor up; shatters when it lets go', t => ({ draw(cv, clock, Z) {
+    const c = view(cv, cv.width / 200 * Z, 0.7), u = clock % 5; HD_FX.setNow(clock);
+    hero(c, 0, 0, '#5a7fa8');
+    if (u < 3.6) HD_FX.draw.shell(c, 0, 0, sm(u / 0.35), clock, 1.7);
+    if (u > 3.6 && u < 3.65) HD_FX.shatter(0, 0, clock, { n: 22, h: 70, sp: 190, len: 12, r1: 80 });
+    HD_FX.draw.bits(c, clock);
+  } }));
+  cell('props', 'The coffin', 'whole, then cracking as its health goes (1, .55, .1)', t => ({ draw(cv, clock, Z) {
+    const c = view(cv, cv.width / 330 * Z, 0.62); HD_FX.setNow(clock);
+    [[-100, 1], [0, 0.55], [100, 0.1]].forEach(([x, hp], i) => { hero(c, x, 0, '#a8845a'); HD_FX.draw.coffin(c, x, 0, hp, clock, i + 3); });
+  } }));
+  cell('props', 'Pillar: rising, standing, shattering', 'a frost shard with a gold core', t => ({ draw(cv, clock, Z) {
+    const c = view(cv, cv.width / 260 * Z, 0.72), u = clock % 6; HD_FX.setNow(clock);
+    if (u < 4.2) HD_ART.pillar(c, { x: 0, y: 0, r: 34, id: 5 }, clock, u / 0.55);
+    if (u > 4.2 && u < 4.25) HD_FX.shatterPillar(0, 0, clock);
+    HD_FX.draw.bits(c, clock);
+  } }));
+  cell('props', 'A shard in flight', 'torn from the halo, spinning to where it lands', t => ({ draw(cv, clock, Z) {
+    const c = view(cv, cv.width / 520 * Z, 0.55), u = clock % 4, p = u / 2.2; HD_FX.setNow(clock);
+    if (p <= 1) HD_FX.draw.shard(c, { x0: -180, y0: -40, x1: 160, y1: 70 }, p, clock);
+    HD_ART.pillar(c, { x: 160, y: 70, r: 34, id: 9 }, clock, p >= 1 ? (u - 2.2) / 0.55 : 0);
+  } }));
+  cell('props', 'Light column and glow', 'Communion / Benediction; Radiance', t => ({ draw(cv, clock, Z) {
+    const c = view(cv, cv.width / 300 * Z, 0.72), u = (clock % 4) / 4;
+    hero(c, -60, 0, '#7acf8a'); hero(c, 70, 0, '#e8d27a');
+    HD_FX.draw.column(c, -60, 0, u, 1, clock); HD_FX.draw.aura(c, 70, 0, u, 1, clock);
+  } }));
+
+  // ---- the rooms, played: a fake raid (room, props, party, adds) driven by a small script of moments
+  const SCENES = {};
+  function scene(id, P, script, tgs) {
+    return t => ({ draw(cv, clock, Z) {
+      const key = id + P + cv.id; let sc = SCENES[key]; const u = clock % P;
+      if (!cv.id) cv.id = 'c' + Math.random().toString(36).slice(2);
+      if (!sc || u < sc.u - 0.001) {   // the cycle wrapped: a new pull
+        ARENA.use(id); if (!sc) { ArenaView.buildFloor(id, 1); }
+        const room = ArenaView.newRoom(), raid = { room, props: {}, propsUntil: {}, boss: { x: 0, y: 0, hv: 0 }, bossDraw: { x: 0, y: 0, f: Math.PI / 2, st: { t: 0, props: null } }, adds: new Map(), party: new Map(), tgs: new Map() };
+        raid.bossDraw.st.props = raid.props;
+        sc = SCENES[key] = { raid, room, floor: sc ? sc.floor : ArenaView.floor, box: sc ? sc.box : ArenaView.floorBox, amb: sc ? sc.amb : ArenaView.amb, fired: new Set(), ents: new Map(), u: 0 };
+        [['a', -140, 130, '#5a7fa8'], ['b', 150, 110, '#a8845a'], ['h', -50, 210, '#7acf8a'], ['t', 40, 90, '#c85a5a']].forEach(([k, x, y, col]) => { sc.ents.set(k, { x, y, col }); raid.party.set(k, { alive: true, debuffs: [] }); });
+      }
+      sc.u = u; const { raid, room } = sc; ARENA.use(id); ArenaView.floor = sc.floor; ArenaView.floorBox = sc.box; ArenaView.amb = sc.amb; ArenaView.floorFor = id + '@1'; ArenaView.liveRoom = room;
+      const ev = (at, msg) => { const k = at + msg.k + (msg.id || ''); if (u >= at && !sc.fired.has(k)) { sc.fired.add(k); ArenaView.roomEvent(room, msg, clock); } };
+      script({ ev, u, raid, sc, clock });
+      if (tgs) tgs({ raid, u, clock });
+      HD_FX.props(raid, clock); raid.bossDraw.st.t = clock;
+      const ctx = cv.getContext('2d'); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cv.width, cv.height);
+      const z = cv.width / 1200 * Z; ctx.translate(cv.width / 2, cv.height / 2); ctx.scale(z, z);
+      ctx.drawImage(sc.floor, -sc.box.bx, -sc.box.by, sc.box.bx * 2, sc.box.by * 2);
+      ArenaView.drawAmbient(ctx, clock);
+      const env = { bossId: id, boss: raid.bossDraw, entById: k => { const e = sc.ents.get(k); return e && { x: e.x, y: e.y, lift: 0 }; }, party: raid.party, units: [], props: room.props, room, tgs: raid.tgs, hard: false };
+      const drawables = [{ y: raid.bossDraw.y, f: () => { ctx.save(); ctx.scale(1.3, 1.3); ctx.rotate(raid.bossDraw.f); (id === 'seraph' ? HD_ART.seraph : HD_ART.hood)(ctx, raid.bossDraw.st, raid.bossDraw.f); ctx.restore(); } }];
+      for (const pr of room.props) drawables.push({ y: pr.y, f: () => ArenaView.drawProp(ctx, pr, clock, room) });
+      for (const [k, e] of sc.ents) drawables.push({ y: e.y, f: () => hero(ctx, e.x, e.y, e.col) });
+      drawables.sort((a, b) => a.y - b.y).forEach(d => d.f());
+      ArenaView.drawRoomOver(ctx, room, clock, env);
+    } });
+  }
+  const frozen = (raid, ids, on) => ids.forEach(i => { raid.party.get(i).debuffs = on ? [['frozen', 9]] : []; });
+  cell('rooms', 'The frozen court: the pull and the hands', 'frost over dark stone, worn letters, four chains ringing, frozen heroes, a coffin', scene('hood', 16, ({ ev, raid, u }) => {
+    ev(0.1, { k: 'hdopen', gate: 1 }); ev(3.4, { k: 'hdhand', blade: 1, light: 0 }); ev(6, { k: 'hdhand', blade: 0, light: 1 }); ev(7.5, { k: 'hdbell', n: 1 }); ev(9, { k: 'hdbell', n: 2 }); ev(10, { k: 'hdhand', blade: 1, light: 1 });
+    frozen(raid, ['a', 'b'], u > 11 && u < 13.6);
+  }, ({ raid, u }) => { if (u > 12 && u < 14.5 && !raid.adds.size) raid.adds.set(1, { id: 1, kind: 'coffin', x: -50, y: 210, hp: 30, mx: 60 }); if (u > 14.5 || u < 12) raid.adds.clear(); }), 440);
+  cell('rooms', 'The frozen court: the copies', 'three figures, one with lit eyes and the blade out', scene('hood', 12, ({ ev }) => {
+    ev(1, { k: 'hdclones', c: [[-330, -250, 0.9, 0, 0], [330, -250, 2.2, 1, 1], [0, 330, -1.57, 0, 0]], dur: 7 }); ev(8.2, { k: 'hdclones', c: [], dur: 0.1 });
+  }), 440);
+  cell('rooms', 'The roofless court: the pull', 'the roof leaves upward in frost, the wings open, the Seraph hovers', scene('seraph', 14, ({ ev, raid, u }) => {
+    ev(0.1, { k: 'hdopen', gate: 2 }); ev(6, { k: 'hdwing', n: 1, dur: 1.4 }); ev(7.6, { k: 'hdwing', n: 3, dur: 1.4 }); ev(9.2, { k: 'hdwing', n: 6, dur: 1.4 });
+    raid.boss.hv = u > 3 && u < 11 ? 1 : 0;
+  }), 440);
+  cell('rooms', 'The roofless court: shards and pillars', 'a shard thrown at the farthest hero, a pillar stands, one shatters, a column of light', scene('seraph', 14, ({ ev, raid, u, clock }) => {
+    ev(1, { k: 'hdshard', x: 240, y: 130, land: 2 }); ev(1.1, { k: 'hdgaps', n: 1 });
+    if (u > 3 && u < 8.5 && !raid.room.props.some(p => p.id === 7)) raid.room.props.push({ id: 7, kind: 'pillar', shape: 'circle', x: 240, y: 130, r: 34, hp: 1, maxHp: 1, solid: true, cover: true, born: clock });
+    if (u > 5 && !raid.room.props.some(p => p.id === 8)) raid.room.props.push({ id: 8, kind: 'pillar', shape: 'circle', x: -200, y: -120, r: 34, hp: 1, maxHp: 1, solid: true, cover: true, born: clock });
+    if (u >= 8.5 && raid.room.props.some(p => p.id === 7)) { raid.room.props = raid.room.props.filter(p => p.id !== 7); HD_FX.shatterPillar(240, 130, clock); }
+    ev(9.5, { k: 'hdcolumn', id: 'h', dur: 3 }); ev(9.6, { k: 'hdglow', id: 'a', dur: 3 });
+    ev(12.8, { k: 'hdgaps', n: 6 }); ev(11, { k: 'hdhalves', blade: -1, dur: 3 });
+  }), 440);
+
+  // ---- telegraph tells: each its own small room; the rim is the shared code's, the art inside is hood-fx.js
+  const half = x => ({ kind: 'rect', x, y: -520, angle: Math.PI / 2, len: 1040, w: 520 });
+  const G2 = ['hdShard', 'hdReturn', 'hdRay', 'hdAfterglow', 'hdDive', 'hdAsh', 'hdFollow', 'hdFlare', 'hdSermon', 'hdPillarBurst', 'hdBenediction', 'hdAbsolve', 'hdWingbeat'];
+  const circ = r => ({ kind: 'circle', x: 0, y: 0, r });
+  const TELLS = [
+    ['hdCone', 'aoe', { kind: 'cone', x: -150, y: 0, r: 420, angle: 0, arc: 1.0 }, '70%'], ['hdBreath', 'aoe', { kind: 'cone', x: -150, y: 0, r: 300, angle: 0.4, arc: 0.8 }, '30%'], ['hdCircle', 'aoe', circ(60), '70%'],
+    ['hdRing', 'aoe', { kind: 'donut', x: 0, y: 0, r: 260, r2: 92 }, 'fixed'], ['hdLine', 'aoe', { kind: 'rect', x: -480, y: 0, len: 960, w: 96, angle: 0 }, '70%'], ['hdEcho', 'aoe', { kind: 'rect', x: -480, y: 0, len: 600, w: 96, angle: 0 }, 'fixed'],
+    ['hdShatter', 'aoe', circ(100), 'fixed'], ['hdLantern', 'drop', circ(60), 'hits nobody'], ['hdGuard', 'guard', circ(56), 'blue'],
+    ['hdToll', 'aoe', circ(70), 'fixed'], ['hdHunt', 'aoe', circ(120), '70%'], ['hdBeam', 'aoe', { kind: 'rect', x: -480, y: 0, len: 960, w: 70, angle: 0 }, '70%'],
+    ['hdBladeHalf', 'aoe', half(-260), '70%'], ['hdLightHalf', 'aoe', half(260), '70%'], ['hdCalm', 'drop', circ(70), 'hits nobody'],
+    ['hdBurial', 'aoe', circ(70), 'fixed'], ['hdCommune', 'stack', circ(150), 'blue'], ['hdFall', 'aoe', circ(90), 'fixed'],
+    ['hdWaltzEnd', 'raidwide', { kind: 'lit' }, 'fixed'], ['hdHollow', 'raidwide', { kind: 'lit' }, '70%'], ['hdVerdict', 'raidwide', { kind: 'lit' }, 'fixed, heavy'],
+    ['hdShard', 'aoe', circ(70), 'fixed'], ['hdReturn', 'aoe', circ(60), 'fixed'], ['hdRay', 'aoe', { kind: 'rect', x: 0, y: 0, len: 520, w: 60, angle: -0.5 }, '75%'],
+    ['hdAfterglow', 'aoe', circ(80), 'fixed'], ['hdDive', 'aoe', { kind: 'rect', x: -480, y: 0, len: 960, w: 96, angle: 0.3 }, '75%'], ['hdAsh', 'aoe', circ(140), 'fixed'],
+    ['hdFollow', 'aoe', circ(50), 'light'], ['hdFlare', 'aoe', circ(120), '75%'], ['hdSermon', 'aoe', { kind: 'rect', x: 0, y: 0, len: 520, w: 90, angle: 0.6 }, '75%'],
+    ['hdPillarBurst', 'aoe', circ(120), 'fixed'], ['hdBenediction', 'raidwide', { kind: 'lit' }, '75%, cover'], ['hdAbsolve', 'raidwide', { kind: 'lit' }, 'fixed, cover'], ['hdWingbeat', 'raidwide', { kind: 'lit' }, 'knock'],
+  ];
+  TELLS.forEach(([tag, type, shape, note], i) => {
+    const gate = G2.includes(tag) ? 'seraph' : 'hood';
+    cell('tells', tag, note, t => ({ draw(cv, clock, Z) {
+      let e = SCENES['tell' + gate];
+      if (!e) { ARENA.use(gate); ArenaView.buildFloor(gate, 0.5); e = SCENES['tell' + gate] = { floor: ArenaView.floor, box: ArenaView.floorBox, amb: ArenaView.amb, room: ArenaView.newRoom() }; }
+      ARENA.use(gate);
+      const ctx = cv.getContext('2d'); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.translate(cv.width / 2, cv.height / 2); const z = cv.width / 1150 * Z; ctx.scale(z, z);
+      ctx.drawImage(e.floor, -e.box.bx, -e.box.by, e.box.bx * 2, e.box.by * 2);
+      const dur = 3.2, p = (clock % 4) / dur, pc = Math.min(1, p);
+      const pillars = tag === 'hdBenediction' || tag === 'hdAbsolve' ? [{ kind: 'pillar', shape: 'circle', x: 180, y: 0, r: 34, cover: true }, { kind: 'pillar', shape: 'circle', x: -200, y: 160, r: 34, cover: true }] : [];
+      const tg = { id: i + 1, tag, type, start: 0, dur, live: shape, shape, cover: pillars.length ? [-60, -60] : null, gone: null };
+      const env = { bossId: gate, tgs: new Map([[1, tg]]), props: pillars, boss: { x: 0, y: 0 } };
+      ctx.save(); ARENA.trace(ctx, 4); ctx.clip();
+      if (p <= 1.05) BossTells.ground(ctx, tg, shape, pc, 1, clock, env);
+      ctx.restore();
+      ArenaView.amb = e.amb; ArenaView.floorFor = gate + '@0.5';
+      for (const pr of pillars) ArenaView.drawProp(ctx, Object.assign({ id: 1, born: -9 }, pr), clock, e.room);
+    } }), 300);
+  });
+})();
+</script>
+<script>__hdFinish();</script>
+</body>
+</html>

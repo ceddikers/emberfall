@@ -72,7 +72,7 @@ const Net = (() => {
   const dispatch = msg => { const fn = net.handlers[msg.t]; if (fn) try { fn(msg); } catch (e) { console.error(e); } };
   const num = (v, lo, hi, fallback) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fallback);
   const clock = v => (Number.isFinite(v) && v >= 0 ? Math.round(v * 1000) / 1000 : null);   // a sender's game clock, in seconds
-  const pub = p => ({ id: p.id, name: p.name, cls: p.cls, spec: p.spec || null, sv: p.sv || null, x: p.x, y: p.y, a: p.a });
+  const pub = p => ({ id: p.id, name: p.name, cls: p.cls, spec: p.spec || null, sv: p.sv || null, un: p.un || null, x: p.x, y: p.y, a: p.a });
 
   function describe(err) {
     switch (err.type) {
@@ -151,7 +151,8 @@ const Net = (() => {
         if (CLASS_IDS.has(msg.id)) {
           p.cls = msg.id; p.spec = /^[a-z]{1,16}$/.test(msg.spec) ? msg.spec : null;
           p.sv = msg.sv && typeof msg.sv === 'object' && (msg.sv.wings || msg.sv.glow) ? { wings: msg.sv.wings ? 1 : 0, glow: msg.sv.glow ? 1 : 0 } : null;
-          broadcast({ t: 'cls', id: p.id, cls: p.cls, spec: p.spec, sv: p.sv }, p.id);
+          p.un = msg.un && typeof msg.un === 'object' && (msg.un.edge || msg.un.halo) ? { edge: msg.un.edge ? 1 : 0, halo: msg.un.halo ? 1 : 0 } : null;   // (the last road's frost edge and halo, heroes.js UnRewards)
+          broadcast({ t: 'cls', id: p.id, cls: p.cls, spec: p.spec, sv: p.sv, un: p.un }, p.id);
         }
         break;
       case 'cast':

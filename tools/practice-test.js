@@ -143,6 +143,18 @@ function host(px, from = 1, extra = {}) {
   check(P.actWhy({ boss: 'sovereign', from: 3 }, 4) !== '' && P.actWhy({ boss: 'sovereign', from: 2 }, 4) === '' && P.actWhy({ boss: 'sovereign', from: 2 }, 1) !== '' && P.actWhy({ boss: 'grubnak', from: 2 }, 0) === '',
     "actWhy: an Ultimate act needs the host's reach (2 here) and the guest's; other fights are not gated");
   check(P.sane({ boss: 'sovereign', from: 5 }) === null, 'the Ultimate has four acts');
+  // the two fights found in town: twelve and ten windows, one difficulty, offered up to the account's reach (deps.reach), listed only when open
+  {
+    const reach = { hood: 5, seraph: 0 };
+    const c2 = vm.createContext({ localStorage: { getItem: () => null, setItem() {} }, document: {}, Sound: undefined, setInterval, clearInterval, SvPortal: { ACTS: ['A'], reach: () => 0 } });
+    const Q = vm.runInContext(src + '\n;PracticeHall', c2);
+    Q.init({ bossOpen: id => id !== 'seraph', hardOpen: () => true, name: id => id, reach: id => reach[id] || 0 });
+    check(Q.PHASES.hood.length === 13 && Q.PHASES.seraph.length === 10, 'the secret fights have thirteen and ten windows');
+    check(Q.sane({ boss: 'hood', mode: 'hard', from: 12 }, true).mode === 'normal', 'a secret fight has one difficulty');
+    check(Q.sane({ boss: 'hood', from: 14 }) === null && Q.sane({ boss: 'seraph', from: 11 }) === null, 'a secret fight has no window past its last');
+    check(Q.sane({ boss: 'seraph', from: 1 }, true) === null && Q.sane({ boss: 'hood', from: 1 }, true) !== null, 'the host refuses a secret fight that is not open');
+    check(Q.actWhy({ boss: 'hood', from: 6 }, 12) !== '' && Q.actWhy({ boss: 'hood', from: 5 }, 12) === '' && Q.actWhy({ boss: 'hood', from: 5 }, 3) !== '', "actWhy: a secret window needs the host's reach and the guest's");
+  }
   check(P.clean(null).slow === 1 && P.clean({ slow: '0.75', loop: 1 }).slow === 0.75 && P.clean({ loop: 1 }).loop === true, 'a bad or old save is cleaned');
 }
 

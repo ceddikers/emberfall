@@ -66,6 +66,7 @@ const Pastimes = (() => {
     return out;
   }
   const hardRoles = () => new Set([...hardClasses()].map(id => (typeof CLASSES !== 'undefined' && CLASSES.find(c => c.id === id) || {}).role).filter(Boolean));
+  const secretBoss = id => (typeof SECRET_BOSSES !== 'undefined' ? SECRET_BOSSES.find(b => b.id === id) || null : null);   // (data.js: the two fights found in town, not on the Raid Board)
   const BOSS_IDS = set => (typeof BOSSES !== 'undefined' ? BOSSES.filter(b => !set || (b.set || 1) === set).map(b => b.id) : []);   // (set: only that set's bosses; the "all four" feats are set 1)
   function journalPages() {
     let n = 0;
@@ -169,7 +170,7 @@ const Pastimes = (() => {
       if (!d.deaths) { const f = s.flawless[d.boss] = s.flawless[d.boss] || {}; f[d.mode] = 1; }
       if (d.secs > 0 && d.secs < (s.best[d.boss] || Infinity)) s.best[d.boss] = d.secs;
       if (typeof FeatRules !== 'undefined') {
-        const b = typeof BOSSES !== 'undefined' ? BOSSES.find(x => x.id === d.boss) || (typeof ULTIMATE_BOSS !== 'undefined' && d.boss === ULTIMATE_BOSS.id ? ULTIMATE_BOSS : null) : null;   // (the Ultimate is set 4: no set-1 mark may count it)
+        const b = typeof BOSSES !== 'undefined' ? BOSSES.find(x => x.id === d.boss) || (typeof ULTIMATE_BOSS !== 'undefined' && d.boss === ULTIMATE_BOSS.id ? ULTIMATE_BOSS : null) || secretBoss(d.boss) : null;   // (the Ultimate is set 4 and the last road's two fights set 5: no set-1 mark may count them)
         for (const m of FeatRules.clear(d, { set: b ? (b.set || 1) : 0, wipes: s.wipeRun[d.boss] | 0, score: typeof Scoring !== 'undefined' ? Scoring : null })) s.marks[m] = 1;
       }
       delete s.wipeRun[d.boss];
@@ -201,8 +202,11 @@ const Pastimes = (() => {
   function secretsHere() {
     const s = st();
     // a secret with `whole` can be read once more when its `whole.when` holds (the full inscription after the Ultimate)
-    return SECRETS_().filter(x => (!s.secrets[x.id] && deps.matches(x.when || {})) || (s.secrets[x.id] && x.whole && !s.marks['whole:' + x.id] && deps.matches(x.whole.when || {})));
+    // (a secret with `pull` stays readable once found: its card keeps the button that starts the pull)
+    return SECRETS_().filter(x => (!s.secrets[x.id] && deps.matches(x.when || {})) || (s.secrets[x.id] && x.whole && !s.marks['whole:' + x.id] && deps.matches(x.whole.when || {})) || (s.secrets[x.id] && x.pull && deps.matches(x.when || {})));
   }
+  // (the Logbook and the card's count leave out a secret marked `hidden` until it has been found)
+  const shownSecrets = () => SECRETS_().filter(x => !x.hidden || st().secrets[x.id]);
   function drawSecrets(ctx, now) {
     const p = deps.player;
     for (const x of secretsHere()) {
@@ -216,7 +220,7 @@ const Pastimes = (() => {
       else if (look === 'hollow') { ctx.fillStyle = '#1a120c'; ctx.beginPath(); ctx.ellipse(0, 0, 6, 8, 0, 0, Math.PI * 2); ctx.fill(); }
       else if (look === 'coin') { ctx.fillStyle = '#e8c15a'; ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, Math.PI * 2); ctx.fill(); }
       else if (look === 'flowers') { for (let i = 0; i < 5; i++) { ctx.fillStyle = ['#e87aa8', '#f2e6c8', '#b89cff'][i % 3]; ctx.beginPath(); ctx.arc(Math.cos(i * 1.3) * 7, Math.sin(i * 1.3) * 5, 2, 0, Math.PI * 2); ctx.fill(); } }
-      else if (look === 'footprints') { ctx.fillStyle = '#2a1e12'; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(i * 9 - 13, (i % 2) * 6 - 3, 2.5, 4, 0.3, 0, Math.PI * 2); ctx.fill(); } }
+      else if (look === 'footprints') { ctx.fillStyle = x.pull ? '#a9cde0' : '#2a1e12'; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(i * 9 - 13, (i % 2) * 6 - 3, 2.5, 4, 0.3, 0, Math.PI * 2); ctx.fill(); } }
       else if (look === 'note') { ctx.fillStyle = '#efe2c0'; ctx.rotate(0.2); ctx.fillRect(-6, -4, 12, 8); }
       // and always a faint glint, so a sharp eye catches it
       ctx.globalAlpha = a * (0.4 + Math.max(0, Math.sin(now * 2.2 + x.at.y)) * 0.6);
@@ -231,6 +235,7 @@ const Pastimes = (() => {
   function find(x) {
     const s = st();
     const whole = x.whole && deps.matches(x.whole.when || {}) ? x.whole : null;
+    if (x.pull && s.secrets[x.id]) { card(x.name, x.lines || [], '', x.pull); if (typeof Sound !== 'undefined') Sound.play('ui-secret', { bus: 'ui' }); return; }
     if (s.secrets[x.id] && (!whole || s.marks['whole:' + x.id])) return;
     const again = !!s.secrets[x.id];
     if (whole) s.marks['whole:' + x.id] = 1;
@@ -243,20 +248,27 @@ const Pastimes = (() => {
     if (r.gold) { deps.addGold(r.gold); got = `${r.gold} gold`; }
     if (r.gift && deps.giveGift(r.gift)) got = (typeof TOWN_GIFTS !== 'undefined' && TOWN_GIFTS[r.gift] ? TOWN_GIFTS[r.gift].name : 'a gift');
     if (r.title) grantFeat(r.title);
-    card(whole && whole.name || x.name, whole && whole.lines || x.lines || [], got);
+    card(whole && whole.name || x.name, whole && whole.lines || x.lines || [], got, x.pull);
     if (typeof Sound !== 'undefined') Sound.play('ui-secret', { bus: 'ui' });
     event('secret', { id: x.id });
   }
   // the find, told in the same box the townsfolk use
-  function card(name, lines, got) {
+  // (pull: a boss id; the host's card carries a second button that closes it and starts that pull; a guest's card has only Close)
+  function card(name, lines, got, pull) {
     let el = document.getElementById('find-card');
     if (!el) {
       el = document.createElement('div'); el.id = 'find-card'; el.className = 'hidden'; document.body.appendChild(el);
       el.addEventListener('mousedown', e => e.stopPropagation());
-      el.addEventListener('click', e => { if (e.target.closest('button')) el.classList.add('hidden'); });
+      el.addEventListener('click', e => {
+        const b = e.target.closest('button');
+        if (!b) return;
+        el.classList.add('hidden');
+        if (b.dataset.pull && deps && deps.pull) deps.pull(b.dataset.pull);
+      });
     }
-    const n = Object.keys(st().secrets).length, of = SECRETS_().length;
-    el.innerHTML = `<header><small>A secret · ${n} of ${of}</small><b>${esc(name)}</b></header>${lines.map(l => `<p>${esc(l)}</p>`).join('')}${got ? `<p class="fc-got">Found: ${esc(got)}</p>` : ''}<button type="button" class="btn2">Close</button>`;
+    const n = Object.keys(st().secrets).length, of = shownSecrets().length;
+    const go = pull && deps && deps.pull && deps.isHost && deps.isHost();
+    el.innerHTML = `<header><small>A secret · ${n} of ${of}</small><b>${esc(name)}</b></header>${lines.map(l => `<p>${esc(l)}</p>`).join('')}${got ? `<p class="fc-got">Found: ${esc(got)}</p>` : ''}<button type="button" class="btn2">Close</button>${go ? `<button type="button" class="btn2 fc-pull" data-pull="${esc(pull)}">Read the words</button>` : ''}`;
     el.classList.remove('hidden');
   }
 
@@ -496,7 +508,7 @@ const Pastimes = (() => {
     if (bookTab === 'feats') {
       body = featsHtml(s);
     } else if (bookTab === 'secrets') {
-      const all = SECRETS_(), got = all.filter(x => s.secrets[x.id]);
+      const all = shownSecrets(), got = all.filter(x => s.secrets[x.id]);
       body = `<p class="pt-note">${got.length} of ${all.length} found. Some only appear after a boss falls.</p><div class="pt-feats">${all.map(x => s.secrets[x.id] ? `<div class="pt-feat got"><b>${esc(x.name)}</b><span>${esc((x.lines || [])[0] || '')}</span></div>` : `<div class="pt-feat"><b>???</b><span>Not found yet.</span></div>`).join('')}</div>`;
     } else if (bookTab === 'armory') {
       const keys = Object.keys(ITEMS).filter(k => !ITEMS[k].gift && ITEMS[k].tier > 0), seen = new Set([...Object.keys(s.seenItems), ...deps.items().map(i => i.key)]);
@@ -524,7 +536,7 @@ const Pastimes = (() => {
   function bestsHtml() {
     const s = st(), mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`, num = n => Math.round(n).toLocaleString('en-US');
     const day = at => (at ? new Date(at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
-    const all = typeof BOSSES !== 'undefined' ? [...BOSSES, ...(typeof ULTIMATE_BOSS !== 'undefined' ? [ULTIMATE_BOSS] : [])] : [];
+    const all = typeof BOSSES !== 'undefined' ? [...BOSSES, ...(typeof ULTIMATE_BOSS !== 'undefined' ? [ULTIMATE_BOSS] : []), ...(typeof SECRET_BOSSES !== 'undefined' ? SECRET_BOSSES : [])] : [];
     const classes = typeof CLASSES !== 'undefined' ? CLASSES : [];
     const seen = m => all.filter(b => s.bests[b.id + ':' + m] && Object.keys(s.bests[b.id + ':' + m]).length);
     const toggle = `<nav class="pt-tabs pt-modes">${['normal', 'hard'].map(m => `<button type="button" data-bmode="${m}" class="${bestMode === m ? 'on' : ''}">${m === 'hard' ? 'Hard' : 'Normal'}</button>`).join('')}</nav>`;
@@ -547,8 +559,10 @@ const Pastimes = (() => {
   const featGate = f => f.needs || (f.check && f.check.boss) || null;
   // a feat of the Ultimate is not even named, listed or counted until the fourth portal is open (deps.svUnlocked) or it has been earned
   const ultimateHidden = (f, s) => !!f.ultimate && !s.feats[f.id] && !(deps && deps.svUnlocked && deps.svUnlocked());
+  // a `secret` feat is left out the same way until the account's first real pull of the footprints' gate (or it is earned)
+  const secretHidden = (f, s) => !!f.secret && !s.feats[f.id] && !Save.unspokenPulled();
   function featsHtml(s) {
-    const fs = FEATS_().filter(f => !ultimateHidden(f, s)), cats = typeof FEAT_CATS !== 'undefined' ? FEAT_CATS : [['all', 'Feats']];
+    const fs = FEATS_().filter(f => !ultimateHidden(f, s) && !secretHidden(f, s)), cats = typeof FEAT_CATS !== 'undefined' ? FEAT_CATS : [['all', 'Feats']];
     const got = fs.filter(f => s.feats[f.id]).length, titles = fs.filter(f => f.title && s.feats[f.id]);
     const wearing = title();
     const picker = `<div class="pt-title"><label>Title</label><div class="pt-titles"><button type="button" data-title=""${wearing ? '' : ' class="on"'}>None</button>${titles.map(f => `<button type="button" data-title="${f.id}" class="${s.title === f.id && wearing ? 'on' : ''}" data-tip="${esc(f.name)}">${esc(f.title)}</button>`).join('')}</div><small>${got} of ${fs.length} feats</small></div>`;
@@ -584,7 +598,7 @@ const Pastimes = (() => {
   function fightsHtml() {
     const list = Array.isArray(st().fights) ? st().fights : [];
     if (!list.length) return '<p class="pt-note">Your last fights will be written here, with what everyone contributed: points for damage, healing, holding the boss, soaking mechanics, raising the fallen, and more.</p>';
-    const bossName = id => { const b = typeof BOSSES !== 'undefined' ? BOSSES.find(x => x.id === id) || (typeof ULTIMATE_BOSS !== 'undefined' && id === ULTIMATE_BOSS.id ? ULTIMATE_BOSS : null) : null; return b ? b.name : 'A fight'; };
+    const bossName = id => { const b = typeof BOSSES !== 'undefined' ? BOSSES.find(x => x.id === id) || (typeof ULTIMATE_BOSS !== 'undefined' && id === ULTIMATE_BOSS.id ? ULTIMATE_BOSS : null) || secretBoss(id) : null; return b ? b.name : 'A fight'; };
     const crown = '<i class="crown"><svg viewBox="0 0 16 12" aria-hidden="true"><path d="M1.5 10.5 0.8 3.2 4.6 6.4 8 1.5 11.4 6.4 15.2 3.2 14.5 10.5Z" fill="currentColor"/></svg></i>';
     const mmss = t => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
     const label = Scoring.LABEL;

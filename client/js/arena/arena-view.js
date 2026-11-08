@@ -1619,7 +1619,7 @@ const ArenaView = {
         case 'aoe': case 'buster': case 'bait': case 'hook': this.areaWarning(ctx, s, p, fadeIn, tg.type === 'buster' ? BossTells.COL.buster : BossTells.COL.danger, t); break;
         case 'safe': break;   // safe floor is sim data only: nothing is painted to say "stand here"
         case 'own': this.areaWarning(ctx, s, p, fadeIn, tg.color || '#ffffff', t); break;
-        case 'stack': this.stackMarker(ctx, s, p, fadeIn, t); break;
+        case 'stack': case 'guard': this.stackMarker(ctx, s, p, fadeIn, t); break;
         case 'spread': this.spreadMarker(ctx, s, p, fadeIn, t); break;
         case 'tower': this.tower(ctx, s, p, fadeIn, t, tg.need, tg.color); break;
         case 'proximity': this.proximity(ctx, s, p, fadeIn, t); break;

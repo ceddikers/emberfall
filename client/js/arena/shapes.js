@@ -138,6 +138,8 @@ const ARENA_DEFS = {
   'sovereign:square': { kind: 'circle', r: 520 },
   'sovereign:night': { kind: 'circle', r: 520 },
   'caelum:sky': { kind: 'circle', r: 520 },   // ...then a circle of cloud above the falling meteor   // ...then the floating pieces of the grove over the dark, the holes still in them
+  hood: { kind: 'circle', r: 520 },   // a long frozen court (hood.js); the same court with its roof gone is seraph.js's
+  seraph: { kind: 'circle', r: 520 },
 };
 let POLY_NORMALS = null;   // ARENA.sd's cos/sin of a 'poly' room's side normals, for the current side count
 const ARENA = {

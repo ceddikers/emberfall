@@ -29,7 +29,7 @@ const SOVEREIGN = {
   enrage: { normal: 1012, hard: 1012 },   // the cast starts here and lands 8 s later (17:00; the user, 2026-10-29: human parties need the time)
   enrageName: 'Emberfall',
   practiceCut: { 2: 212, 3: 482, 4: 718 },   // (a practice start counts the enrage from its act: the design times its course starts at, so the act has the time it would have left in a full pull; fight.js enrageAt)
-  vuln: 0.5,
+  vuln: 0.5, noSlipCap: true,   // (a single slip can kill from full here, like the Ultimate: damagePlayer skips the Normal slip cap)
   spawn: { x: 0, y: -60 },
   arena: { theme: 'hall' },
   gates: [0.78, { f: 0.5, wall: 1 }, { f: 0.2, push: 1 }],

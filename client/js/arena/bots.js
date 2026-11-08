@@ -39,10 +39,13 @@ const BotAI = {
   // easing off when theirs gets well ahead of its sibling so the pair dies together. null = the boss.
   pickEnemy(bot, view) {
     // things you break (eggs, knots) only count while the room asks for them (prio); a coffin or cocoon always does
+    const held = a => a.kind === 'coffin' && a.held != null;   // (a coffin on a party member; the Hollow King's have no one in them)
     const adds = (view.adds || []).filter(a => !a.inert || a.prio || a.kind === 'cocoon');
+    // a coffin is the tank's first target too (the last one standing, so it does not share the damage dealers' pick)
+    if (bot.role === 'tank') { const cf = adds.filter(held); return cf.length ? cf[cf.length - 1].id : null; }
     if (!adds.length || bot.role !== 'dps') return null;
-    // something holding a party member (Skitterra's cocoon) comes first; then whatever the room asks for (adds.prio)
-    const coc = adds.find(a => a.kind === 'cocoon');
+    // something holding a party member (Skitterra's cocoon, a coffin) comes first; then whatever the room asks for (adds.prio)
+    const coc = adds.find(a => a.kind === 'cocoon' || held(a));
     if (coc) return coc.id;
     const pri = adds.filter(a => a.prio).sort((a, b) => b.prio - a.prio)[0];
     if (pri) return pri.id;
@@ -423,6 +426,10 @@ const BotAI = {
   },
 
   home(bot, view) {
+    const h = this.homeBase(bot, view);
+    return HD_BOSS[view.bossId] ? this.hdHome(bot, view, h) : h;
+  },
+  homeBase(bot, view) {
     const b = view.boss, idx = bot.slot || 0;
     // The Binding (Azerath): the shield leads each elemental into the sigil of its own element, the one due to blow up first
     if (bot.role === 'tank' && view.binding) {
@@ -601,6 +608,7 @@ const BotAI = {
     const me = bot.id;
     const bounded = bs === bs, negs = bot.role !== 'tank' ? (view.pools || []).length : 0;   // (the pool bonuses still to come)
     const alive = this.aliveOf(view);
+    const hd = HD_BOSS[view.bossId], tj = hd && bot.role === 'tank' ? this.hdTankJob(bot, view) : null;   // (the two-gate fight: the line or circle the tank stands in on purpose)
     // The Rune Pair (Azerath): the two bearers stand together or well apart, whichever the coming spell wants (view.runes). When they
     // must meet, the higher id walks to the other, so a bot comes to a human bearer and not the other way round
     const rp = view.runes;
@@ -623,6 +631,14 @@ const BotAI = {
       if (bounded && mi > 0 && this.past(pen, negs, a, b, bs)) return pen;
       const m = soon.ms[mi], dt = soon.dts[mi], urgency = soon.urg[mi];
       const s = m.shape;
+      if (hd) {
+        if (tj && m === tj.m) continue;
+        // The Scales: a damage dealer is hit in the blade half and the healer in the light half; the tank in neither
+        if (m.tag === 'hdBladeHalf' || m.tag === 'hdLightHalf') {
+          if ((bot.role === 'dps' && m.tag === 'hdBladeHalf') || (bot.role === 'healer' && m.tag === 'hdLightHalf')) { if (SHAPES.contains(s, px, py, 22)) pen += 9000 * urgency + (dt < 3 ? 5000 : 0); }
+          continue;
+        }
+      }
       // a blast you hide from behind a prop: be in your own prop's shadow (in someone else's will do, at a pinch)
       // (a line aimed at me follows me until it locks: wherever I go I am in it, so only cover will do)
       if (m.cover && (m.type === 'raidwide' || m.aimFromBoss === me || SHAPES.contains(s, px, py, 22))) {
@@ -721,7 +737,7 @@ const BotAI = {
       switch (m.type) {
         case 'aoe':
           // a cone aimed at me (Venom Spit): bait it out at the edge, then step aside once it locks
-          if (m.aimFromBoss === me && dt > (m.lockAt || 0.6) + 0.15) {
+          if (m.aimFromBoss === me && dt > (m.lockAt || 0.6) + 0.15 && !m.blade) {
             pen += Math.max(0, ARENA.inner - 70 - hypot2(px - view.boss.x, py - view.boss.y)) * 6;
             break;
           }
@@ -961,6 +977,11 @@ const BotAI = {
     try { return this.think(bot, view); } finally { this._mc = prev; }
   },
   think(bot, view) {
+    // Dead Calm cuts whoever moved in the last 0.8 s before it resolves: from 1.25 s before, stand still (unless on a frost patch)
+    if (HD_BOSS[view.bossId] && bot.role === 'dps') {
+      const calm = view.mechs.find(m => m.tag === 'hdCalm' && m.follow === bot.id && m.resolveAt > view.t - 0.1 && m.resolveAt - view.t < 1.25);
+      if (calm && !(view.zones || []).some(z => z.tag === 'hdPatch' && SHAPES.contains(z.shape, bot.x, bot.y, 6))) return { x: bot.x, y: bot.y };
+    }
     // a Gorgemaw heading for a teammate's circle (mawTarget) makes the owner's spot its home until the circle has landed
     const mawT = bot.cls && bot.cls.id === 'gorgemaw' ? this.mawTarget(bot, view) : null, mawO = mawT && view.players.find(p => p.id === mawT.follow);
     const home = mawO ? { x: mawO.x, y: mawO.y } : this.freeOfProps(this.home(bot, view), view);
@@ -1070,7 +1091,8 @@ const BotAI = {
     });
     // floor hits landing in the next few seconds: where along the way we'd be when each lands
     const speed = 230 * (view.debuffs(bot.id).slowed ? FIGHT.SLOWED : 1);
-    const landing = view.mechs.filter(m => m.type === 'aoe' && m.resolveAt - view.t < 2.5 && !(m.follow === bot.id && m.resolveAt - view.t > (m.lockAt || 0)));
+    const hdJob = HD_BOSS[view.bossId] && bot.role === 'tank' ? this.hdTankJob(bot, view) : null;
+    const landing = view.mechs.filter(m => m.type === 'aoe' && m.resolveAt - view.t < 2.5 && !(m.follow === bot.id && m.resolveAt - view.t > (m.lockAt || 0)) && !(hdJob && m === hdJob.m) && m.tag !== 'hdBladeHalf' && m.tag !== 'hdLightHalf');
     const threads = (view.room && view.room.threads || []).filter(th => !th.cut);
     const rolling = (view.rollers || []).length + (view.rollPre || []).length > 0;
     // plates that leave you Stuffed (Order Up! on Hard) coming up soon that aren't ours: don't walk across one as it lands
@@ -1142,7 +1164,7 @@ const BotAI = {
   // stood: fight.js tank()), otherwise an add in reach that's chewing on someone else. Nobody else can pull the boss off
   // a standing tank, so damage dealers' threat never holds the taunt back.
   tauntTarget(bot, view) {
-    if (bot.role !== 'tank' || typeof TAUNT === 'undefined') return null;
+    if (bot.role !== 'tank' || typeof TAUNT === 'undefined' || HD_BOSS[view.bossId]) return null;
     const al = view.players.filter(p => p.alive), byId = id => al.find(p => p.id === id);
     const notTank = id => { const p = byId(id); return !!p && p.role !== 'tank'; };
     const reach = (x, y, r) => hypot2(x - bot.x, y - bot.y) - r <= TAUNT.range;
@@ -1282,8 +1304,17 @@ const BotAI = {
     return low >= 3 || !!(nx && RAID_CASTS.test(nx[0]) && nx[1] < 6) || !!(view.bossCast && RAID_CASTS.test(view.bossCast.name));
   },
 
-  // pick an ability index for this bot (or null)
+  // pick an ability index for this bot (or null). A bar boss's hold (view.barHold, raid-host.js): damage dealers and tanks press nothing that hits the boss; the rest of the choice stands.
   act(bot, k, view) {
+    if (bot.role === 'healer' && HD_BOSS[view.bossId]) { const hi = this.hdHealerAct(bot, k, view); if (hi != null) return hi; }
+    const i = this.actCore(bot, k, view);
+    if (i != null && view.barHold && bot.role !== 'healer') { const a = k.abilities[i]; if (a && a.target === 'enemy') return null; }
+    // a light move that takes a share of everyone's health and is followed 2.0 s after it lands by a fixed blow (hdBenediction): the healer starts no global-cooldown press in the 2.5 s
+    // before it lands, so the heal that follows the hit (hdHealerAct) can start the moment it does
+    if (i != null && bot.role === 'healer' && HD_BOSS[view.bossId]) { const a = k.abilities[i]; if (a && a.type === 'gcd' && view.mechs.some(m => m.tag === 'hdBenediction' && m.resolveAt > view.t - 0.05 && m.resolveAt - view.t < 2.5)) return null; }
+    return i;
+  },
+  actCore(bot, k, view) {
     if (bot.human && !bot.human.inner) return BotHuman.act(bot, k, view);
     BUSTER_SEEN.learn(view);
     const ab = i => k.abilities[i];
@@ -2202,6 +2233,7 @@ BotAI.raiseFirst = function (dead, view) {
 // standing where it is costs the bot little more than walking to its planned spot (the planner's own danger score, which
 // knows every mechanic): safe enough to stand still for a cast
 BotAI.stillOk = function (bot, view) {
+  if (bot.stillForce > view.t) return true;   // (a cast that has to finish: BotAI.hdHealerAct)
   const p = bot.plan;
   return !p || BotAI.danger(bot, bot.x, bot.y, view) <= BotAI.danger(bot, p.x, p.y, view) + 1200;
 };
@@ -2953,6 +2985,158 @@ BOT_CLASS.kenseier = {
     return ok(cut) ? cut : null;
   },
 };
+
+// ------------------------------------------------------------------------------------------------------------------------------
+// The two-gate bar fight (hood, seraph): the reads for blade lines, guard rings, the halves of the floor, shards and moving light. The bots read the
+// telegraphs' tags (hd...) and their host-side fields: m.blade (a blade line: m.blade.to is its target), m.real (1 the line with the blade, 0 a copy),
+// m.n (a hunt's landing, 1..3), m.cover and m.src (light that pillars shadow), view.room.pillarWant and view.barHold (raid-host.js).
+const HD_BOSS = { hood: 1, seraph: 1 };
+Object.assign(BotAI, {
+  // The tank's errand, if it has one: a spot to stand (x, y) and the telegraph it stands in on purpose (m: danger() leaves that one out).
+  // Pursuit's third landing (be inside the circle when it lands: the hunt ends on the tank), or a blade line: stand in it between its source and its target
+  // (the line stops at the first tank in it). A line with m.real === 0 is a copy that freezes nothing; the real one comes first, then the target with less health.
+  hdTankJob(bot, view) {
+    if (bot.role !== 'tank') return null;
+    const mc = this.mcOf(view);
+    if (mc) {
+      if (!mc.hdJob) mc.hdJob = new Map();
+      if (mc.hdJob.has(bot.id)) return mc.hdJob.get(bot.id);
+    }
+    const job = this.hdTankJobOf(bot, view);
+    if (mc) mc.hdJob.set(bot.id, job);
+    return job;
+  },
+  hdTankJobOf(bot, view) {
+    const t = view.t, me = view.players.find(p => p.id === bot.id);
+    if (!me || !me.alive) return null;
+    const hunt = view.mechs.find(m => m.tag === 'hdHunt' && m.n === 3 && m.resolveAt > t - 0.05 && m.resolveAt - t < 3.2);
+    if (hunt) return { kind: 'hunt', m: hunt, x: hunt.shape.x, y: hunt.shape.y };
+    const lines = view.mechs.filter(m => m.blade && m.real !== 0 && m.resolveAt > t - 0.05 && m.resolveAt - t < (m.tag === 'hdBeam' ? 3.4 : 2.4));
+    if (!lines.length) return null;
+    const hpOf = id => { const p = view.players.find(q => q.id === id); return p && p.alive ? p.hp / p.maxHp : 2; };
+    lines.sort((a, z) => ((z.real === 1) - (a.real === 1)) || ((z.id === bot.hdPick) - (a.id === bot.hdPick)) || (hpOf(a.blade.to) - hpOf(z.blade.to)) || (a.resolveAt - z.resolveAt));
+    const m = lines[0], S = m.shape, ux = Math.cos(S.angle), uy = Math.sin(S.angle), b = view.boss;
+    const T = view.players.find(p => p.id === m.blade.to);
+    if (!T) return null;
+    const alT = (T.x - S.x) * ux + (T.y - S.y) * uy, fromBoss = hypot2(S.x - b.x, S.y - b.y) < 40;
+    // (a beam wants the first body, so close to its source; otherwise just in front of the target)
+    let al = m.tag === 'hdBeam' ? Math.min(alT - 60, 120) : alT - 70;
+    if (fromBoss) al = Math.max(al, 100);
+    if (al > alT - 30 || al < 20) return null;   // (the target stands against the source: no room to step in front of it)
+    bot.hdPick = m.id;
+    return { kind: 'line', m, x: S.x + ux * al, y: S.y + uy * al };
+  },
+  // The Scales: the half of the floor this bot may stand in is the one tagged for it (damage dealers in the light half, the healer in the blade half, the tank anywhere).
+  // Where the usual spot is in the wrong half it goes across (mirrored, or the middle of the right half).
+  hdHalfSpot(bot, view, h) {
+    if (bot.role === 'tank') return null;
+    const good = bot.role === 'dps' ? 'hdLightHalf' : 'hdBladeHalf';
+    const m = view.mechs.filter(q => q.tag === good && q.resolveAt > view.t - 0.2).sort((a, z) => a.resolveAt - z.resolveAt)[0];
+    if (!m) return null;
+    const s = m.shape;
+    if (SHAPES.contains(s, h.x, h.y, -40)) return h;
+    const mirror = { x: -h.x, y: h.y };
+    if (SHAPES.contains(s, mirror.x, mirror.y, -40)) return mirror;
+    const c = Math.cos(s.angle), sn = Math.sin(s.angle), b = view.boss;
+    const nearStart = hypot2(s.x - b.x, s.y - b.y) < hypot2(s.x + c * s.len - b.x, s.y + sn * s.len - b.y);   // (the end of the half that meets the other half is the end by the boss)
+    const along = nearStart ? 130 : s.len - 130;
+    return { x: s.x + c * along, y: h.y };
+  },
+  // The Tolling's guard ring beside the healer: with the healer under half health and nobody else in the ring, the damage dealer with the most health stands in it
+  hdGuardJob(bot, view) {
+    if (bot.role !== 'dps') return null;
+    const g = view.mechs.find(m => m.type === 'guard' && m.tag === 'hdGuard' && m.resolveAt - view.t > 0.25);
+    if (!g) return null;
+    const heal = view.players.find(p => p.id === g.target);
+    if (!heal || !heal.alive || heal.hp / heal.maxHp >= 0.5) return null;
+    if (view.players.some(p => p.alive && p.id !== g.target && p.id !== bot.id && SHAPES.contains(g.shape, p.x, p.y, 0))) return null;
+    const dps = view.players.filter(p => p.alive && p.role === 'dps' && !view.debuffs(p.id).rooted)
+      .sort((a, z) => (z.hp / z.maxHp - a.hp / a.maxHp) || (a.id - z.id));
+    if (!dps.length || dps[0].id !== bot.id) return null;
+    return { x: g.shape.x, y: g.shape.y };
+  },
+  // Broken Halo throws its shard at the hero farthest from the boss when the cast starts: the damage dealer with the lower id goes out in the last 6 s before the cast, to the
+  // spot the script asks for (view.room.pillarWant, which is only set for the last 2 s: before that, the side away from the rest of the party), a little farther than anyone else stands
+  hdHaloSpot(bot, view) {
+    if (bot.role !== 'dps' || !(view.next || []).some(n => n[0] === 'Broken Halo' && n[1] < 6)) return null;
+    const dps = view.players.filter(p => p.alive && p.role === 'dps').sort((a, z) => a.id - z.id);
+    if (!dps.length || dps[0].id !== bot.id) return null;
+    const b = view.boss, others = view.players.filter(p => p.alive && p.id !== bot.id);
+    let pw = view.room && view.room.pillarWant, far = 0, cx = 0, cy = 0;
+    for (const p of others) { far = Math.max(far, hypot2(p.x - b.x, p.y - b.y)); cx += p.x; cy += p.y; }
+    if (!pw && others.length) pw = { x: b.x * 2 - cx / others.length, y: b.y * 2 - cy / others.length };
+    if (!pw) return null;
+    const a = Math.atan2(pw.y - b.y, pw.x - b.x), r = Math.min(ARENA.r - 100, Math.max(hypot2(pw.x - b.x, pw.y - b.y), far + 45));
+    return { x: b.x + Math.cos(a) * r, y: b.y + Math.sin(a) * r };
+  },
+  // The healer's own errands: Radiance's six rays leave from where it stands (at fixed angles round the room), so it stands at the wall where the rays through that point
+  // run well clear of the middle; the Following Light chases it, so it leads the light round the edge, away from the party, keeping well ahead of it.
+  hdHealerHome(bot, view, h) {
+    const Re = ARENA.r - 100;
+    const rays = view.mechs.some(m => m.tag === 'hdRay' && m.resolveAt > view.t - 0.1) || (view.bossCast && view.bossCast.name === 'Radiance');
+    if (rays) {
+      let best = null, bd = Infinity;
+      for (let i = 0; i < 6; i++) {
+        const a = i * Math.PI / 3, p = { x: Math.cos(a) * Re, y: Math.sin(a) * Re }, d = hypot2(p.x - bot.x, p.y - bot.y);
+        if (d < bd) { bd = d; best = p; }
+      }
+      return best;
+    }
+    const light = view.mechs.find(m => m.tag === 'hdFollow' && m.resolveAt > view.t - 0.1);
+    if (light) {
+      const L = light.shape, others = this.aliveOf(view).filter(p => p.id !== bot.id);
+      let best = null, bs = -Infinity;
+      for (let i = 0; i < 24; i++) {
+        const a = i * Math.PI / 12, p = { x: Math.cos(a) * Re, y: Math.sin(a) * Re };
+        const dl = hypot2(p.x - L.x, p.y - L.y);
+        if (dl < 260) continue;
+        let s = Math.min(dl, 500) * 0.2 - hypot2(p.x - bot.x, p.y - bot.y) * 0.5;
+        for (const o of others) if (segDist(o.x, o.y, L.x, L.y, p.x, p.y) < 130) s -= 400;   // (the light's way to this spot runs by someone)
+        if (s > bs) { bs = s; best = p; }
+      }
+      if (best) return best;
+    }
+    return null;
+  },
+  // A fixed blow on everyone (a raidwide with a damage number and no share) lands within 3.2 s and somebody is under half health: the biggest heal that finishes before it
+  // goes on the lowest, instead of whatever the usual order would start
+  hdHealerAct(bot, k, view) {
+    const t = view.t;
+    // (a light move with a share on everyone is followed by a fixed blow 2.0 s after it lands, before that blow's own telegraph is laid: remember when)
+    const ben = view.mechs.find(m => m.tag === 'hdBenediction');
+    if (ben) bot.hdAfter = ben.resolveAt + 2.0;
+    let hit = view.mechs.filter(m => m.type === 'raidwide' && m.dmg > 0 && !m.pct && m.resolveAt - t > 0.25 && m.resolveAt - t < 3.2).sort((a, z) => a.resolveAt - z.resolveAt)[0];
+    if (!hit && bot.hdAfter > t + 0.25 && bot.hdAfter < t + 3.2) hit = { resolveAt: bot.hdAfter };
+    if (!hit || k.cast || k.gcdRemaining() > 0) return null;
+    const low = view.players.filter(p => p.alive && !p.left).map(p => ({ p, f: p.hp / p.maxHp })).sort((a, z) => a.f - z.f)[0];
+    if (!low || low.f >= 0.5) return null;
+    const left = hit.resolveAt - t - 0.1;
+    let best = -1, bv = 0;
+    k.abilities.forEach((a, i) => {
+      if (a.type !== 'gcd' || a.target !== 'ally' || a.allowDead || !k.usable(a) || k.readyIn(a) > 0.0001 || !k.available(a)) return;
+      const h = /\{h:(\d+)\}/.exec(a.desc || '');
+      if (!h || (k.castTime(a) || 0) > left || +h[1] <= bv) return;
+      bv = +h[1]; best = i;
+    });
+    if (best < 0) return null;
+    const ct = k.castTime(k.abilities[best]) || 0;
+    if (ct && bot.moving) { bot.stillUntil = bot.stillForce = t + ct + 0.15; }   // (a cast heal on the move: the bot plants and casts it where it stands)
+    bot.healTarget = low.p.id;
+    return best;
+  },
+  // This bot's usual spot, changed by what the fight asks of its role right now
+  hdHome(bot, view, h) {
+    const b = view.boss;
+    if (bot.role === 'tank') {
+      const job = this.hdTankJob(bot, view);
+      if (job) return { x: job.x, y: job.y };
+      return h.x === b.x && h.y === b.y - 125 ? { x: b.x, y: b.y - 105 } : h;   // (the boss's swings go to the closest hero: the tank stands closest)
+    }
+    h = this.hdHalfSpot(bot, view, h) || h;
+    if (bot.role === 'healer') return this.hdHealerHome(bot, view, h) || h;
+    return this.hdGuardJob(bot, view) || this.hdHaloSpot(bot, view) || h;
+  },
+});
 
 // ------------------------------------------------------------------------------------------------------------------------------
 // Human-like play (a measurement tool, off unless a bot carries `bot.human`: tools/bot-raid.js HUMAN=..., tools/comp-sweep.js human=...).

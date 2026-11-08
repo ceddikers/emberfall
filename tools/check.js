@@ -121,6 +121,33 @@ RAIDS.push(
   ['Sovereign, Act III', 'sovereign', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=3', 'until=3'],
   ['Sovereign, Act IV', 'sovereign', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=4', 'runs=8'],
 );
+// The two gates found after the Ultimate (hood.js, seraph.js; one difficulty, played as normal, bots at post5): one window at a time, as the Sovereign's acts
+// (phase=N until=N: the run counts as a clear when the fight passes window N's bar; the last window of each gate plays to the kill).
+RAIDS.push(
+  ['The Hollow Hood, x60', 'hood', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=1', 'until=1'],
+  ['The Hollow Hood, x55', 'hood', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=2', 'until=2'],
+  ['The Hollow Hood, x50', 'hood', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=3', 'until=3'],
+  ['The Hollow Hood, x45', 'hood', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=4', 'until=4'],
+  ['The Hollow Hood, x40', 'hood', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=5', 'until=5'],
+  ['The Hollow Hood, x35', 'hood', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=6', 'until=6'],
+  ['The Hollow Hood, x30', 'hood', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=7', 'until=7'],
+  ['The Hollow Hood, x25', 'hood', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=8', 'until=8'],
+  ['The Hollow Hood, x20', 'hood', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=9', 'until=9'],
+  ['The Hollow Hood, x15', 'hood', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=10', 'until=10'],
+  ['The Hollow Hood, x10', 'hood', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=11', 'until=11'],
+  ['The Hollow Hood, x5', 'hood', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=12', 'until=12'],
+  ['The Hollow Hood, x2', 'hood', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=13', 'runs=8'],
+  ['The Six-Winged Seraph, x40', 'seraph', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=1', 'until=1'],
+  ['The Six-Winged Seraph, x36', 'seraph', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=2', 'until=2'],
+  ['The Six-Winged Seraph, x32', 'seraph', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=3', 'until=3'],
+  ['The Six-Winged Seraph, x28', 'seraph', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=4', 'until=4'],
+  ['The Six-Winged Seraph, x24', 'seraph', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=5', 'until=5'],
+  ['The Six-Winged Seraph, x20', 'seraph', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=6', 'until=6'],
+  ['The Six-Winged Seraph, x16', 'seraph', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=7', 'until=7'],
+  ['The Six-Winged Seraph, x12', 'seraph', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=8', 'until=8'],
+  ['The Six-Winged Seraph, x8', 'seraph', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=9', 'until=9'],
+  ['The Six-Winged Seraph, x3', 'seraph', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=10', 'runs=8'],
+);
 // Hard smoke runs: one per boss, with the plain line-up. Bots aren't expected to clear Hard; the script just has to run
 // clean and the longest of 3 fights has to last a while (HARD_MIN seconds) before they wipe
 const HARD_COMP = 'bastion:base,cleric:base,ranger:base,pyromancer:base';
@@ -138,7 +165,7 @@ let into = results;   // where pass() and fail() write: the stage being read (se
 const pass = (name, detail = '') => into.push({ ok: true, name, detail });
 const fail = (name, detail = '') => into.push({ ok: false, name, detail });
 // each stage's results go in a bucket of their own, and the buckets print in this order (children finish in any order)
-const BUCKETS = ['syntax', 'core', 'hollow', 'kenseier', 'houndmaster', 'rejoin', 'stamps', 'journal', 'reaper', 'feats', 'practice', 'founding', 'pvp', 'heavy'];
+const BUCKETS = ['syntax', 'core', 'hollow', 'unspoken', 'kenseier', 'houndmaster', 'rejoin', 'stamps', 'journal', 'reaper', 'feats', 'practice', 'founding', 'pvp', 'heavy'];
 const buckets = {};
 const stage = (name, fn) => { const prev = into; into = buckets[name] || (buckets[name] = []); try { return fn(); } finally { into = prev; } };
 
@@ -721,6 +748,15 @@ function hollowCheck(r) {
   else fail('Hollow: debt, healing, death, bypasses', out.slice(-900));
 }
 
+// ---------------------------------------------------------------- 3b2. frozen heroes, blade lines, guard rings, coffins, percentage hits (tools/unspoken-test.js)
+// A tank stops a blade line, a frozen tank thaws in half the time, percentage hits skip Vulnerability and the slip cap, a guard ring redirects,
+// a coffin silences heals and breaks, a blade line shatters pillars, and the live telegraph is re-shaped when a tank steps in.
+function unspokenCheck(r) {
+  const out = r.out;
+  if (r.code === 0 && /Unspoken OK/.test(out)) pass('Frozen, blade lines, guard rings, coffins, percentage hits', out.trim().split(/\r?\n/).pop());
+  else fail('Frozen, blade lines, guard rings, coffins, percentage hits', out.slice(-900));
+}
+
 // ---------------------------------------------------------------- 3c. the Reaper's string, marks, Snap and Gate (tools/reaper-test.js)
 function reaperCheck(r) {
   const out = r.out;
@@ -903,6 +939,7 @@ const raidJob = (mode, runs, boss, comp, extra, group, early) => {
 // the test scripts that print a marker line when they are happy: [bucket, script, how the verdict reads it, name if it crashes, weight]
 const TESTS = [
   ['hollow', 'hollow-test.js', hollowCheck, 'Hollow checked', 2],
+  ['unspoken', 'unspoken-test.js', unspokenCheck, 'Unspoken checked', 2],
   ['kenseier', 'kenseier-test.js', kenseierCheck, 'Kenseier checked', 2],
   ['houndmaster', 'houndmaster-test.js', houndmasterCheck, 'Houndmaster checked', 4],
   ['rejoin', 'rejoin-test.js', rejoinCheck, 'Rejoin checked', 14],

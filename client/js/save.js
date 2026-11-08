@@ -215,6 +215,7 @@ const Save = (() => {
       const b = h.clears[bossId] = h.clears[bossId] || { normal: 0, hard: 0 };
       b[mode === 'hard' ? 'hard' : 'normal'] += 1;
       if (bossId === 'sovereign') h.svr = 1;   // the Ultimate's cosmetic rewards (cinder wings, ember glow): earned by the hero who cleared it (heroes.js SvRewards)
+      if (bossId === 'seraph') h.unr = 1;   // the last road's cosmetics (a frost edge, a faint halo): earned by the hero who cleared it (heroes.js UnRewards)
       write();
     },
     // has this hero earned the Cinder Sovereign's rewards? heroes[classId].svr = 1, added without a version bump (optional; missing means no)
@@ -223,6 +224,20 @@ const Save = (() => {
     // (optional; missing means 0). The fourth portal's Reach card (sovereign-portal.js) offers a start at any act up to it. Practice starts never record it.
     svReach: () => Math.max(0, Math.min(4, data.svReach | 0)),
     recordSvReach(act) { act = Number(act); if (!Number.isInteger(act) || act < 1 || act > 4 || act <= (data.svReach | 0)) return false; data.svReach = act; write(); return true; },
+    // has this hero earned the last road's cosmetics? heroes[classId].unr = 1, added without a version bump (optional; missing means no)
+    unRewards: classId => !!((data.heroes[classId] || {}).unr),
+    // set by the first real (non-practice) pull of the footprints' gate: data.unPulled, added without a version bump (optional; missing means 0)
+    unspokenPulled: () => !!data.unPulled,
+    recordUnspokenPull() { if (data.unPulled) return false; data.unPulled = 1; write(); return true; },
+    // the furthest window (1..) a party this account was in has reached in a REAL pull of a bar-count gate: data.reach = { bossId: n }, added without
+    // a version bump (optional; missing means 0). Practice starts never record it. (svReach above stays as it is for the Ultimate.)
+    reach: bossId => { const r = data.reach && typeof data.reach === 'object' ? data.reach[bossId] : 0; return Math.max(0, Math.min(99, Number(r) | 0)); },
+    recordReach(bossId, n) {
+      n = Math.floor(Number(n));
+      if (typeof bossId !== 'string' || !(n >= 1 && n <= 99) || n <= this.reach(bossId)) return false;
+      if (!data.reach || typeof data.reach !== 'object') data.reach = {};
+      data.reach[bossId] = n; write(); return true;
+    },
     // the boss journal (journal.js), per hero: { met: {boss: 1}, won: {boss: 1}, moves: {boss: {cast name: {seen, pass}}} }
     journal(classId) {
       const h = data.heroes[classId];

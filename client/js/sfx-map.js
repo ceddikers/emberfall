@@ -248,6 +248,8 @@
     morrowoak: 'hunger-seed twin-seed inhale fourfold-bloom root-lash hungers-reach sap-tide saplings hungering-dark the-swallowing the-grove-remade deeper-roots cleaver-bough brood-roots storm-knot barrow-lantern wyrm-wing frost-fist archmage-rune hydra-head nothing-left',
     caelum: 'glint eightfold-wake anchored-wake mirrored-wake chorus-of-the-fallen cinder-crown pinning-thrust grace-withdrawn nightfall starfall dark-ember the-starwyrm embers-of-heaven constellation-fall ascendant horizon-cut second-coil the-sky-comes-down trailing-cut',
     sovereign: 'kindling brand brand-sear ashen-sweep cupped-ember scatter halo-turn halo-procession rebirth sovereigns-dance crescent lance pyre emberfall call burning-web flambe-service cloche flambe mince knot fuse shadow ember-and-ash surge hollow-kings-bell royal-doom lantern knights-sweep glass-floor heads-of-flame cinder-dive aftershock twin-brands the-anvil-count the-heart-remembers crossed-blades two-dancers sunwheel-of-embers grace-withdrawn nightfall seeds-of-ash foretold crier',
+    hood: 'hollow-step cold-breath frostfall pale-waltz severance echo hollow-procession shatter the-tolling last-toll pursuit rimelight rimeburst hollowing hollow-echo the-scales weighing dead-calm calm-breaks interment burial two-hands communion verdict verdict-eternal',
+    seraph: 'wingbeat broken-halo returning-edge return radiance afterglow wingfall ash-landing following-light benediction absolution last-rites cold-sermon frost-shadow six-wings the-unsaid',
   };
   const ALIAS = {
     grubnak: { 'butcher-s-charge': 'butchers-charge', 'order-up-plus': 'order-up', 'flame': 'flambe', 'meatballs': 'rolling-meatballs', 'grubnak-gorged': 'gorged' },
@@ -258,11 +260,16 @@
     sovereign: { 'hollow-king': 'call', bell: 'hollow-kings-bell', 'kings-bell': 'hollow-kings-bell', 'the-lantern': 'lantern', doom: 'royal-doom', 'sear': 'brand-sear', 'brands-sear': 'brand-sear', web: 'burning-web', 'knot-breaks': 'knot', 'flambe-line': 'flambe', 'ember-surge': 'surge', 'knight-sweep': 'knights-sweep', 'dance': 'sovereigns-dance', sunwheel: 'sunwheel-of-embers', 'crossed-blade': 'crossed-blades', 'hydra-mother-of-nine-heads': 'call' },
     titan: { howl: 'winters-howl', fist: 'glacial-fist', slam: 'rime-slam', fault: 'fault-line', sweep: 'titans-sweep', grasp: 'winters-grasp', stomp: 'glacial-stomp', breath: 'breath-of-winter', grip: 'titans-grip', 'long-night': 'the-long-night' },
   };
-  const BOSS_ALIAS = { 'hollow-king': 'hollowking', 'the-hollow-king': 'hollowking', 'queen-skitterra': 'skitterra', vhalgrath: 'wyrm', azerath: 'archmage', 'the-sunken-archmage': 'archmage', 'the-ember-wyrm': 'wyrm', hrimgar: 'titan', 'the-frost-titan': 'titan', 'the-unburied-blade': 'corvane', 'brannoc-the-undefeated': 'brannoc', 'the-tidewrought': 'brannoc', tidewrought: 'brannoc', 'morrow-oak': 'morrowoak', 'the-starved-grove': 'morrowoak', 'starved-grove': 'morrowoak', 'caelum-vey': 'caelum', 'the-starborn': 'caelum', starborn: 'caelum', 'cinder-sovereign': 'sovereign', 'the-cinder-sovereign': 'sovereign', 'the-ember': 'sovereign' };
+  const BOSS_ALIAS = { 'hollow-king': 'hollowking', 'the-hollow-king': 'hollowking', 'queen-skitterra': 'skitterra', vhalgrath: 'wyrm', azerath: 'archmage', 'the-sunken-archmage': 'archmage', 'the-ember-wyrm': 'wyrm', hrimgar: 'titan', 'the-frost-titan': 'titan', 'the-unburied-blade': 'corvane', 'brannoc-the-undefeated': 'brannoc', 'the-tidewrought': 'brannoc', tidewrought: 'brannoc', 'morrow-oak': 'morrowoak', 'the-starved-grove': 'morrowoak', 'starved-grove': 'morrowoak', 'caelum-vey': 'caelum', 'the-starborn': 'caelum', starborn: 'caelum', 'cinder-sovereign': 'sovereign', 'the-cinder-sovereign': 'sovereign', 'the-ember': 'sovereign', 'the-hollow-hood': 'hood', 'hollow-hood': 'hood', 'the-six-winged-seraph': 'seraph', 'six-winged-seraph': 'seraph' };
   const TABLE = {};
   for (const b in MOVES) { TABLE[b] = {}; for (const s of MOVES[b].split(' ')) TABLE[b][s] = 'bm-' + b + '-' + s; for (const a in ALIAS[b]) TABLE[b][a] = TABLE[b][ALIAS[b][a]]; }
   // the Ultimate borrows the Hollow King's Tithe and Dirge as they are (the Sovereign's echo of him plays them)
   Object.assign(TABLE.sovereign, { 'royal-tithe': 'bm-hollowking-royal-tithe', tithe: 'bm-hollowking-royal-tithe', dirge: 'bm-hollowking-dirge' });
+  // the second gate's casts it shares with the first sound the same: the walk, the breath, the falling frost, the scales, the coffin, the hollowing and its echo
+  Object.assign(TABLE.seraph, {
+    'hollow-step': 'bm-hood-hollow-step', 'cold-breath': 'bm-hood-cold-breath', frostfall: 'bm-hood-frostfall', 'the-scales': 'bm-hood-the-scales', weighing: 'bm-hood-weighing',
+    burial: 'bm-hood-burial', hollowing: 'bm-hood-hollowing', 'hollow-echo': 'bm-hood-hollow-echo',
+  });
   // (anim: the boss animation the hook may pass along; unused for now, kept for move-less casts later)
   function forBossMove(bossId, moveName, anim) {
     let b = norm(bossId); b = BOSS_ALIAS[b] || b.replace(/-/g, '');

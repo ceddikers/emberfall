@@ -61,7 +61,7 @@ const BotGear = (() => {
   // the gear a fight is tuned for (CLAUDE.md "Tuning gear"): each set's Normal and Hard
   const TUNED = { 1: { normal: 'fresh', hard: 'mid' }, 2: { normal: 'post1', hard: 'post2' }, 3: { normal: 'post3', hard: 'post4' } };
   function levelFor(bossId, mode) {
-    if (bossId === 'sovereign') return 'post5';   // (the Ultimate: a party that cleared everything, set 3's Hard included)
+    if (bossId === 'sovereign' || bossId === 'hood' || bossId === 'seraph') return 'post5';   // (the Ultimate: a party that cleared everything, set 3's Hard included)
     const b =typeof BOSSES !== 'undefined' ? BOSSES.find(x => x.id === bossId) : null;
     const t = b && TUNED[b.set];
     return t ? t[mode === 'hard' ? 'hard' : 'normal'] : null;

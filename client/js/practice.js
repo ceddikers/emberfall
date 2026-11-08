@@ -24,8 +24,11 @@ const PracticeHall = (() => {
     brannoc: ['First Blood', 'Crowd-Pleaser', 'The Tide Rises', 'The Tidewrought', 'Last Round'],
     morrowoak: ['The Grove', 'Hollowing', 'The Grove Remade', 'Last Bloom'],
     caelum: ['Descent', 'Starfall', 'Ascendant', 'The Sky Comes Down'],
+    // the two fights found in town (data.js SECRET_BOSSES): one difficulty like the Ultimate, listed only once found, offered up to the account's reach (deps.reach)
+    hood: ['The Oath', 'Severance', 'The Procession', 'The Tolling', 'The Hunt', 'Rimelight', 'Hollowing', 'The Scales', 'Dead Calm', 'Interment', 'Two Hands', 'Communion', 'Verdict'],
+    seraph: ['Broken Halo', 'Radiance', 'Wingfall', 'Second Shard', 'Benediction', 'Third Shard', 'Last Rites', 'Fourth and Fifth', 'Sixth Shard', 'Six Wings'],
   };
-  const ULT = 'sovereign', NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI'], SLOWS = [1, 0.75, 0.5], KEY = 'emberfall.practice.v1', ASK_SECS = 5;
+  const ULT = 'sovereign', SECRET = ['hood', 'seraph'], NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'], SLOWS = [1, 0.75, 0.5], KEY = 'emberfall.practice.v1', ASK_SECS = 5;
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const OPTS = [
     ['noEnrage', 'Enrage off', 'The boss never enrages. Everything else in the fight stays as it is.'],
@@ -46,8 +49,9 @@ const PracticeHall = (() => {
     return ids;
   };
   const phasesOf = id => (id === ULT ? SvPortal.ACTS : PHASES[id]) || [];
-  const reachOf = id => (id === ULT ? SvPortal.reach() : 99);
-  const label = (boss, mode, from) => `${deps.name(boss)}${boss === ULT ? '' : mode === 'hard' ? ', Hard' : ', Normal'}, from ${phasesOf(boss)[from - 1] || 'the start'}`;
+  const gated = id => id === ULT || SECRET.includes(id);   // (one difficulty, windows offered up to the account's reach)
+  const reachOf = id => (id === ULT ? SvPortal.reach() : SECRET.includes(id) ? (deps.reach ? deps.reach(id) : 0) : 99);
+  const label = (boss, mode, from) => `${deps.name(boss)}${gated(boss) ? '' : mode === 'hard' ? ', Hard' : ', Normal'}, from ${phasesOf(boss)[from - 1] || 'the start'}`;
 
   // a request, checked: the host starts only what it could have started itself
   function sane(m, hostSide) {
@@ -55,16 +59,17 @@ const PracticeHall = (() => {
     if (!(boss in PHASES) && boss !== ULT) return null;
     if (!(from >= 1 && from <= phasesOf(boss).length)) return null;
     if (hostSide && boss !== ULT && !deps.bossOpen(boss)) return null;
-    return { boss, mode: boss === ULT ? 'normal' : mode, from, px: clean(m && m.px) };
+    return { boss, mode: gated(boss) ? 'normal' : mode, from, px: clean(m && m.px) };
   }
 
   // the Ultimate's acts: a request may ask only for an act the host has reached itself (the panel offers it nothing further) and the guest says it
   // has reached too ('reach' in the request: their SvPortal.reach(); it is their word, but it keeps an honest client from the later acts). '' when fine
   function actWhy(o, guestReach) {
-    if (o.boss !== ULT) return '';
-    if (o.from > Math.max(0, reachOf(ULT))) return 'The host has not reached that act yet.';
-    const g = Math.min(phasesOf(ULT).length, Math.floor(Number(guestReach)));
-    if (!(g >= o.from)) return g >= 1 ? `You have only reached act ${NUMERALS[g - 1]} of that fight.` : 'You have not reached any act of that fight yet.';
+    if (!gated(o.boss)) return '';
+    const noun = o.boss === ULT ? 'act' : 'window';
+    if (o.from > Math.max(0, reachOf(o.boss))) return `The host has not reached that ${noun} yet.`;
+    const g = Math.min(phasesOf(o.boss).length, Math.floor(Number(guestReach)));
+    if (!(g >= o.from)) return g >= 1 ? `You have only reached ${noun} ${NUMERALS[g - 1]} of that fight.` : `You have not reached any ${noun} of that fight yet.`;
     return '';
   }
 
@@ -90,7 +95,7 @@ const PracticeHall = (() => {
           const o = { boss: pick.boss, mode: pick.mode, from: Number(t.dataset.ph), px: clean(px) };
           close();
           if (deps.isHost()) deps.start(o);
-          else { deps.request(o.boss === ULT ? Object.assign({ reach: reachOf(ULT) }, o) : o); deps.toast('Asked the host to start it.'); }
+          else { deps.request(gated(o.boss) ? Object.assign({ reach: reachOf(o.boss) }, o) : o); deps.toast('Asked the host to start it.'); }
           return;
         }
         render();
@@ -102,7 +107,7 @@ const PracticeHall = (() => {
   function render() {
     const ids = bossIds();
     if (!ids.includes(pick.boss)) pick.boss = ids[0];
-    const ult = pick.boss === ULT, hard = !ult && deps.hardOpen(pick.boss);
+    const ult = gated(pick.boss), hard = !ult && deps.hardOpen(pick.boss);   // (ult: a fight with one difficulty)
     if (!hard) pick.mode = 'normal';
     const reach = reachOf(pick.boss);
     const phases = phasesOf(pick.boss).map((n, i) => i + 1 <= reach

@@ -46,6 +46,10 @@ const { CAELUM } = load('arena/bosses/caelum.js');
 DEFS.caelum = CAELUM;   // (set 3, Boss XII, the finale)
 const { SOVEREIGN } = load('arena/bosses/sovereign.js');
 DEFS.sovereign = SOVEREIGN;   // (the Ultimate: not on the Raid Board; one difficulty, play it as normal)
+const { HOOD } = load('arena/bosses/hood.js');
+DEFS.hood = HOOD;   // (gate 1 of the found fight; one difficulty, play it as normal)
+const { SERAPH } = load('arena/bosses/seraph.js');
+DEFS.seraph = SERAPH;   // (gate 2)
 const { TRIALS, trialDef } = load('arena/trials.js');
 
 let gearLevel = process.env.GEAR || '', modsArg = process.env.MODS || '';
