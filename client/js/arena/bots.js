@@ -1318,14 +1318,14 @@ const BotAI = {
         bot.healTarget = first.id;   // (aimed first: whether the raise is ready can depend on who it lands on, kits.js Intervention's lockout)
         if (r >= 0 && readyIdx(r) && !(hurt[0] && hurt[0].f < (asked ? 0.25 : 0.35))) {
           const ct = k.castTime(ab(r)) || 0;
-          if (BotAI.noticed(bot, first.id, view.t) && (!ct || BotAI.stillOk(bot, view))) { if (ct) bot.stillUntil = view.t + ct + 0.15; bot.raiseFor = { id: first.id, until: view.t + ct + 0.5 }; bot.raiseGo = first.id; return r; }
+          if (BotAI.noticed(bot, first.id, view.t, view) && (!ct || BotAI.stillOk(bot, view))) { if (ct) bot.stillUntil = view.t + ct + 0.15; bot.raiseFor = { id: first.id, until: view.t + ct + 0.5 }; bot.raiseGo = first.id; return r; }
         }
         bot.healTarget = was;
         const rw = idx('rewind');
         // (Rewind only brings back someone who fell in the last few seconds, and not the one a Recall is already on)
         const dsn = bot.deadSince || (bot.deadSince = {}); for (const d of dead) { const e = dsn[d.id]; if (!e || view.t - e.last > 1) dsn[d.id] = { first: view.t, last: view.t }; else e.last = view.t; }
         const rwD = dead.filter(d => view.t - dsn[d.id].first < 3.4 && !(bot.raiseFor && bot.raiseFor.until > view.t && bot.raiseFor.id === d.id));
-        if (rw >= 0 && readyIdx(rw) && rwD.length) { const rt = rwD.find(d => d.id === first.id) || rwD[0]; if (BotAI.noticed(bot, rt.id, view.t)) { bot.healTarget = rt.id; bot.raiseGo = rt.id; return rw; } }
+        if (rw >= 0 && readyIdx(rw) && rwD.length) { const rt = rwD.find(d => d.id === first.id) || rwD[0]; if (BotAI.noticed(bot, rt.id, view.t, view)) { bot.healTarget = rt.id; bot.raiseGo = rt.id; return rw; } }
       }
       let low = hurt[0];
       // a Gloomsworn gone Hollow (held at 1 HP, its damage written down as a debt): heal it until the debt is covered
@@ -1916,7 +1916,7 @@ BotAI.alembist = function (bot, k, view) {
   if (dead.length && k.now >= k.g.raiseAt) {
     const ri = vials.findIndex(v => ['DD', 'DQ', 'DDD'].includes(v.r));
     const rf = ri >= 0 ? (BotAI.raiseFirst(dead, view) || dead[0]) : null;
-    if (rf && BotAI.noticed(bot, rf.id, view.t)) { bot.raiseGo = rf.id; return throwAt(ri, rf.id); }
+    if (rf && BotAI.noticed(bot, rf.id, view.t, view)) { bot.raiseGo = rf.id; return throwAt(ri, rf.id); }
   }
   // pick the vial to throw now, if any: the bot's own choice (players mark theirs by hand; Throw alone takes the oldest)
   const cands = vials.map((v, i) => i);
@@ -2185,12 +2185,14 @@ BotAI.partnersOf = function (view, id) {
   return out;
 };
 // the fallen player a healer bot raises first: the earliest who asked for it from the Down screen (raid-host rezAsk), or null
-// A healer sees a fall a moment after it happens (1.2 to 2 s, from its own rng), then goes for the raise; false until then. The timer is
-// kept for as long as the raise keeps being asked about, and starts over for a body that has been left alone for a while.
-BotAI.noticed = function (bot, id, t) {
-  const m = bot.rezSeen || (bot.rezSeen = {}), e = m[id];
-  if (!e || t - e.last > 1.5) { m[id] = { at: t + 1.2 + (bot.rng ? bot.rng() : 0.5) * 0.8, last: t }; return false; }
-  e.last = t;
+// A healer sees a fall a moment after it happens (1.2 to 2 s, from its own rng), then goes for the raise; false until then. The timer runs
+// from the first time the raise is asked about and holds while the body stays down, however busy the healer is in between (a timer that
+// restarted on every gap kept a healer in a heavy act from ever raising); it is forgotten once the hero is seen alive again.
+BotAI.noticed = function (bot, id, t, view) {
+  const m = bot.rezSeen || (bot.rezSeen = {});
+  if (view) for (const p of view.players) if (p.alive && m[p.id]) delete m[p.id];
+  const e = m[id];
+  if (!e) { m[id] = { at: t + 1.2 + (bot.rng ? bot.rng() : 0.5) * 0.8 }; return false; }
   return t >= e.at;
 };
 BotAI.raiseFirst = function (dead, view) {
@@ -2267,7 +2269,7 @@ BotAI.threadweaver = function (bot, k, view) {
     bot.healTarget = first.id;
     if (ready(mend)) {
       const ct = k.castTime(k.abilities[mend]) || 0;
-      if (BotAI.noticed(bot, first.id, view.t) && (!ct || BotAI.stillOk(bot, view))) { if (ct) bot.stillUntil = view.t + ct + 0.15; bot.raiseFor = { id: first.id, until: view.t + ct + 0.5 }; bot.raiseGo = first.id; return mend; }
+      if (BotAI.noticed(bot, first.id, view.t, view) && (!ct || BotAI.stillOk(bot, view))) { if (ct) bot.stillUntil = view.t + ct + 0.15; bot.raiseFor = { id: first.id, until: view.t + ct + 0.5 }; bot.raiseGo = first.id; return mend; }
     }
     bot.healTarget = was;
   }
@@ -2387,7 +2389,7 @@ BotAI.tidecaller = function (bot, k, view) {
       bot.healTarget = first.id;
       if (ready(sip)) {
         const rct = k.castTime(k.abilities[sip]) || 0;
-        if (BotAI.noticed(bot, first.id, view.t) && (!rct || BotAI.stillOk(bot, view))) { if (rct) bot.stillUntil = view.t + rct + 0.15; bot.raiseFor = { id: first.id, until: view.t + rct + 0.5 }; bot.raiseGo = first.id; return sip; }
+        if (BotAI.noticed(bot, first.id, view.t, view) && (!rct || BotAI.stillOk(bot, view))) { if (rct) bot.stillUntil = view.t + rct + 0.15; bot.raiseFor = { id: first.id, until: view.t + rct + 0.5 }; bot.raiseGo = first.id; return sip; }
       }
       bot.healTarget = was;
     }
@@ -2482,7 +2484,7 @@ BotAI.lanternkeeper = function (bot, k, view) {
       bot.healTarget = first.id;
       if (ready(hand)) {
         const rct = k.castTime(k.abilities[hand]) || 0;
-        if (BotAI.noticed(bot, first.id, view.t) && (!rct || BotAI.stillOk(bot, view))) { if (rct) bot.stillUntil = view.t + rct + 0.15; bot.raiseFor = { id: first.id, until: view.t + rct + 0.5 }; bot.raiseGo = first.id; return hand; }
+        if (BotAI.noticed(bot, first.id, view.t, view) && (!rct || BotAI.stillOk(bot, view))) { if (rct) bot.stillUntil = view.t + rct + 0.15; bot.raiseFor = { id: first.id, until: view.t + rct + 0.5 }; bot.raiseGo = first.id; return hand; }
       }
       bot.healTarget = was;
     }
