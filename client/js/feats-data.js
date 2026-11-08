@@ -6,7 +6,8 @@
 // Check types the engine supports (pastimes.js met): clear, clearAll, clearNoDeaths, clearUnder, pulls, practice, secrets,
 // gifts, feasts, fish, journal, bounties, heroes, emotes, items, trial, mark (a mark from feat-rules.js), count (a counter),
 // hardRole, hardRoles, hardClasses. A check may carry `set` (1 or 2) to mean "any boss of that set". `ultimate: true` marks a feat of the Ultimate: it is left out of
-// the Logbook entirely (list and every count) until the fourth portal is open, unless it is already earned (pastimes.js featsHtml).
+// the Logbook entirely (list and every count) until the fourth portal is open, unless it is already earned (pastimes.js featsHtml). `secret: true` does the same
+// until the account's first real pull of the footprints' gate (Save.unspokenPulled).
 // No feat's text describes a mechanic: the wording stays on who was in the party and what the result looked like.
 // Overview: docs/plans/story.md.
 
@@ -40,6 +41,11 @@ const FEATS = [
 
   { id: 'who-walked-home', cat: 'road', name: 'The Last Door', desc: 'Defeat the Cinder Sovereign.', title: 'Who Walked Home', hidden: true, hint: 'Something in town is still sealed.', needs: 'sovereign', ultimate: true,
     check: { type: 'clear', boss: 'sovereign' } },
+
+  { id: 'witness', cat: 'road', name: 'The Witness', desc: 'Defeat the Hollow Hood.', title: 'Witness', hidden: true, hint: 'Something was read that was not meant to be.', needs: 'hood', secret: true,
+    check: { type: 'clear', boss: 'hood' } },
+  { id: 'unspoken', cat: 'road', name: 'The Unspoken', desc: 'Defeat the Six-Winged Seraph.', title: 'Unspoken', hidden: true, hint: 'Someone was waiting at the bottom of the road.', needs: 'seraph', secret: true,
+    check: { type: 'clear', boss: 'seraph' } },
 
   // ---------------------------------------------------------------- hard
   { id: 'sent-it-back', cat: 'hard', name: 'Sent It Back', desc: 'Defeat Grubnak on Hard.', title: 'Sent It Back', hidden: false,

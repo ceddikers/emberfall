@@ -291,7 +291,7 @@ const RaidUI = (() => {
     if (fm) q('#boss-bar').dataset.form = raid.form; else delete q('#boss-bar').dataset.form;
     const mode = q('.bb-mode');
     const hpHeat = raid.mode === 'hard' ? HARDPLUS.heat(raid.mods) : 0;
-    setText(mode, raid.mode === 'hard' ? (hpHeat ? 'Hard+ ' + hpHeat : 'Hard') : 'Normal');
+    setText(mode, raid.def && raid.def.bars ? '' : raid.mode === 'hard' ? (hpHeat ? 'Hard+ ' + hpHeat : 'Hard') : 'Normal');   // (a fight shown in bars has one difficulty: no badge)
     HARDPLUS.hud(q('.bb-mods'), hpHeat ? raid.mods : null);   // (Hard+: the modifiers as small icons with tips)
     mode.classList.toggle('hard', raid.mode === 'hard');
     // who the boss is on, right in its bar (so targeting the boss needs no second frame)
@@ -299,7 +299,8 @@ const RaidUI = (() => {
     setText(tot, totR ? `→ ${totR.id === myId ? 'You' : totR.name}` : '');
     if (totR) tot.style.setProperty('--rc', ROLES[totR.role].color);
     setText(q('.bb-time'), raid.state === 'live' || raid.state === 'clear' || raid.state === 'wipe' ? mmss(raid.fightTime || 0) : raid.state === 'prepull' ? 'Waiting for the pull' : '');
-    layeredHp(raid, now, dt, fm);
+    q('#boss-bar').classList.toggle('counted', !!raid.def.bars);
+    if (raid.def.bars) countedHp(raid, now, dt); else layeredHp(raid, now, dt, fm);
     q('#boss-bar').classList.toggle('untargetable', !!b.u);
     q('#boss-bar').classList.toggle('walled', !!raid.wallLabel);   // sealed at a gate (fight.js raiseWall)
     posture(raid, now, dt);
@@ -909,6 +910,29 @@ const RaidUI = (() => {
     setText(q('.bb-x'), mx ? `×${cur}${goal != null && goalCur < cur ? ` → ×${goalCur}` : ''}` : '');
   }
 
+  // A boss with def.bars (a number) shows its health as a count: one fill, a thin tick for every bar, a bolder tick at each gate, the running count x N large
+  // on the right (N = bars still standing, the one being worked on included) and the next gate's count small beside it. No health figures, nothing named.
+  function countedHp(raid, now, dt) {
+    const b = raid.boss, mx = b.mx || 0, bars = raid.def.bars, real = Math.max(0, Math.min(mx, b.hp || 0)), frac = mx ? real / mx : 0;
+    const cur = real > 0 ? Math.ceil(frac * bars - 1e-6) : 0;
+    let nxt = 0;   // (the highest gate still below the health: the count the next pattern fires at)
+    for (const [f] of Array.isArray(raid.gates) ? raid.gates : []) if (f < frac - 1e-4 && f > nxt) nxt = f;
+    if (lastHp - real > mx * 0.004) ghostHold = now + 0.35;
+    lastHp = real;
+    if (real > ghostHp || !mx || ghostHp - real > mx * 0.1) ghostHp = real;
+    else if (now >= ghostHold) ghostHp = Math.max(real, ghostHp - dt * (mx * 0.02 + (ghostHp - real) * 3));
+    const fill = q('.bb-hp .fill'), hp = q('.bb-hp');
+    if (fill._c !== 'n') { fill._c = 'n'; fill.style.setProperty('--lc', raid.def.barColor || '#c2412c'); }
+    if (hp._b !== bars) { hp._b = bars; hp.style.setProperty('--bars', String(bars)); }
+    setX(fill, frac);
+    setX(q('.bb-hp .trail'), mx ? ghostHp / mx : 0);
+    q('.bb-hp .vuln').classList.toggle('on', !!b.v);
+    q('.bb-hp .goal').classList.add('hidden');
+    setText(q('.bb-hp span'), '');
+    const x = q('.bb-x'), key = cur + '|' + Math.round(nxt * bars);
+    if (x._k !== key) { x._k = key; x.innerHTML = mx ? `×${cur}${nxt > 0 ? `<small>×${Math.round(nxt * bars)}</small>` : ''}` : ''; }
+  }
+
   // the HP gates (where the acts change) as ticks on the boss's health; a gate with a wall on it is marked, and lit while it holds
   // (hidden while the health is shown in stacked bars: players learn where the acts turn)
   let gateKey = '';
@@ -1041,7 +1065,7 @@ const RaidUI = (() => {
       <div class="res-card">
         <button type="button" class="res-hide" data-a="hide" data-tip="Hide the results to see the room${typeof Loot !== 'undefined' && Loot.has() ? ' and the chest' : ''} (Esc)">Hide</button>
         <h2 class="${clear ? 'win' : 'lose'}">${clear ? 'Cleared' : 'Wiped'}</h2>
-        <p class="res-sub">${esc(raid.def.name)} · ${msg.mode === 'hard' ? 'Hard' : 'Normal'} · ${mmss(dur)}${clear ? '' : ` · boss at ${(msg.hp / msg.maxHp * 100).toFixed(1)}%`}${msg.falls != null ? ` · ${msg.falls} ${msg.falls === 1 ? 'fall' : 'falls'}` : ''}</p>
+        <p class="res-sub">${esc(raid.def.name)} · ${raid.def.bars ? '' : (msg.mode === 'hard' ? 'Hard' : 'Normal') + ' · '}${mmss(dur)}${clear ? '' : ` · boss at ${(msg.hp / msg.maxHp * 100).toFixed(1)}%`}${msg.falls != null ? ` · ${msg.falls} ${msg.falls === 1 ? 'fall' : 'falls'}` : ''}</p>
         ${clear && raid.hpRes ? `<p class="res-hp"><b>Hard+</b><span>Heat ${raid.hpRes.heat} cleared</span>${raid.hpRes.up ? '<em class="res-hp-new">New best heat</em>' : `<span>Best heat ${raid.hpRes.best}</span>`}<span class="res-hp-gold">+${raid.hpRes.gold}% gold</span></p>` : ''}
         ${clear ? '' : wipeSummary(msg, raid, deaths, deathName, dur)}
         ${clear && lastPull && lastPull.rec && lastPull.prevFast > 0 ? `<p class="res-best rec">New record: ${mmss(lastPull.time)}<span>was ${mmss(lastPull.prevFast)}</span></p>` : ''}

@@ -87,7 +87,7 @@
     hard: id => (hostRoad ? !!hostRoad[id] && hostRoad[id][1] > 0 : Save.hardBeaten(id)),
   };
   const townBeaten = id => unlockAll || (Save.bossBeaten(id) && road.beaten(id));
-  const ROAD_BOSSES = [...BOSSES, ULTIMATE_BOSS];   // (the road carries the Ultimate too: its town lines, the epilogue, the Trophy Hall plinth and the whole-inscription secret read townBeaten)
+  const ROAD_BOSSES = [...BOSSES, ULTIMATE_BOSS, ...SECRET_BOSSES];   // (the road carries the Ultimate too: its town lines, the epilogue, the Trophy Hall plinth and the whole-inscription secret read townBeaten)
   const myRoad = () => { const o = {}; for (const b of ROAD_BOSSES) { const n = Save.normalBeaten(b.id), h = Save.hardBeaten(b.id); if (n || h) o[b.id] = [n ? 1 : 0, h ? 1 : 0]; } return o; };
   function bossOpen(boss, beaten = road.beaten) { const i = BOSSES.indexOf(boss); return unlockAll || i <= 0 || beaten(BOSSES[i - 1].id); }
   // Hard, set by set (data.js BOSSES[].set): locked until every playable boss of the set has fallen on Normal, then it opens a boss at a
@@ -1140,6 +1140,7 @@
   RAID_DEFS.morrowoak = MORROWOAK;   // (set 3, Boss XI: morrowoak.js)
   RAID_DEFS.caelum = CAELUM;   // (set 3, Boss XII: caelum.js)
   RAID_DEFS.sovereign = SOVEREIGN;   // (the Ultimate: sovereign.js. Not on the Raid Board yet; window.__game.startRaid('normal', true, 'sovereign') starts it for testing)
+  RAID_DEFS.hood = HOOD; RAID_DEFS.seraph = SERAPH;   // (the two gates of the fight found in town: hood.js, seraph.js)
   // an echo's flame leaves from the halo's real sigil (sovereign-art.js sigilPos, read off the boss as it is drawn)
   if (typeof ULT_ECHO !== 'undefined' && typeof SV_ART !== 'undefined') {
     const dflt = ULT_ECHO.hooks.halo;
@@ -1209,9 +1210,15 @@
     return [me, ...others].filter(h => h.cls).slice(0, 4);
   }
 
+  // the footprints' gate (town-secrets.js unspoken-prints): the host may start gate 1 once the prints are found (or pulled before), gate 2 once gate 1 has fallen; a local dev host may start either
+  const unspokenMayStart = id => {
+    try { const h = location.hostname; if (h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h.endsWith('.localhost')) return true; } catch (e) { /* no location */ }
+    return unlockAll || (id === 'hood' ? Save.unspokenPulled() || !!((Save.get('town') || {}).flags || {})['found-unspoken-prints'] : Save.bossBeaten('hood'));
+  };
   // (px: the Practice Hall's aids, practice.js: { noEnrage, cantDie, slow, loop }; only a practice run takes them)
   function startRaid(mode, fill, bossId = lastRaidOpts.boss, practiceFrom = 0, px = null) {
     if (bossId === 'sovereign' && !SvPortal.mayStart()) return;   // (the Ultimate starts only once it is unlocked, or on a local dev host for testing: pulls of it grant rewards)
+    if ((bossId === 'hood' || bossId === 'seraph') && !unspokenMayStart(bossId)) return;   // (the footprints' gate starts from the card in town, its second gate once the first has fallen, or on a local dev host)
     Loot.hostClose();   // a chest from the last pull is settled first
     if (!Net.isHost || !player.cls) return;
     if (mode === 'hard' && !hardOpen(BOSSES.find(b => b.id === bossId) || BOSSES[0])) mode = 'normal';   // (Hard stays locked)
@@ -1222,6 +1229,7 @@
     // Hard+ (hardplus.js): the host's armed pick, only on Hard, on a boss already beaten on Hard, and never in a practice run
     const hpMods = mode === 'hard' && !practiceFrom && HARDPLUS.eligible(def.id) && (unlockAll || road.hard(def.id)) ? HARDPLUS.armedFor(def.id) : null;
     lastRaidOpts = { mode, fill, boss: def.id, practice: practiceFrom || 0, mods: hpMods, px };
+    if (def.id === 'hood' && !practiceFrom) Save.recordUnspokenPull();   // (the first real pull gives the Raid Board its frost entry and the Practice Hall its listing)
     const humans = raidHumans();
     const spawns = {};
     ARENA.use(def.id);
@@ -1309,6 +1317,7 @@
   // to trade) until the raid ends (loot.js). The host pays everyone the clear's gold with it. Wipes and trials drop nothing.
   function hostRollLoot() {
     if (hostTrial) return;   // a trial is a memory: nothing drops
+    if (lastRaidOpts.boss === 'hood' || lastRaidOpts.boss === 'seraph') return;   // (the last road gives no chest, ever)
     const humans = hostRoster.filter(h => !h.left && h.cls).map(h => [h.id, h.cls]);
     const b = raidHost && raidHost.sim.boss;
     if (humans.length) Loot.hostOpen(lastRaidOpts.boss, lastRaidOpts.mode, humans, b ? { x: b.x, y: b.y } : null, raidRid, HARDPLUS.heat(lastRaidOpts.mods));
@@ -1384,7 +1393,8 @@
   // A guest's click is a request to the host (see Net.onHost 'prreq' below).
   PracticeHall.init({
     isHost: () => Net.isHost, hasHero: () => !!player.cls, toast: msg => toast(msg),
-    bossOpen: id => bossOpen(BOSSES.find(b => b.id === id) || BOSSES[0]), hardOpen: id => hardOpen(BOSSES.find(b => b.id === id) || BOSSES[0]),
+    bossOpen: id => (id === 'hood' ? Save.unspokenPulled() : id === 'seraph' ? townBeaten('hood') : bossOpen(BOSSES.find(b => b.id === id) || BOSSES[0])), hardOpen: id => hardOpen(BOSSES.find(b => b.id === id) || BOSSES[0]),
+    reach: id => Math.max(Save.reach(id), id === 'hood' ? (Save.unspokenPulled() ? 1 : 0) : id === 'seraph' ? (townBeaten('hood') ? 1 : 0) : 0),   // (the windows a real pull has reached; a listed fight always offers its first)
     name: id => (RAID_DEFS[id] ? RAID_DEFS[id].name : id),
     start: o => startRaid(o.mode, true, o.boss, o.from, o.px), request: o => Net.send(Object.assign({ t: 'prreq' }, o)),
     busy: () => scene !== 'town' || !!raidHost || !!hostTrial, reply: (pid, m) => Net.sendTo(pid, m), nameOf: pid => (remotes.get(pid) || {}).name || 'A party member',
@@ -1919,7 +1929,7 @@
     const fromSet = (() => { const b = raid && raid.def && BOSSES.find(x => x.id === raid.def.id); return b ? bossSet(b) : raid && raid.def && raid.def.id === 'sovereign' ? 4 : 1; })();
     if (trialPrevSpec !== undefined) {
       player.spec = trialPrevSpec; trialPrevSpec = undefined;
-      if (player.cls) Net.send({ t: 'cls', id: player.cls.id, spec: player.spec, sv: svOf(player.cls.id) });
+      if (player.cls) Net.send({ t: 'cls', id: player.cls.id, spec: player.spec, sv: svOf(player.cls.id), un: unOf(player.cls.id) });
     }
     // (a real pull that ended: town remarks on it when the party is back)
     lastPull = raid && raid.result && !raid.def.trial && !raid.practice && !raid.pvp && (raid.result.s === 'clear' || raid.result.s === 'wipe')
@@ -2318,7 +2328,7 @@
     } else if (msg.s === 'clear' && player.cls && !raid.practice) {
       const first = !Save.bossBeaten(raid.def.id);
       Save.recordClear(player.cls.id, raid.def.id, raid.mode);
-      if (raid.def.id === 'sovereign') Net.send({ t: 'cls', id: player.cls.id, spec: player.spec, sv: svOf(player.cls.id) });   // (the wings and the glow are earned: everyone sees them from now on)
+      if (raid.def.id === 'sovereign' || raid.def.id === 'seraph') Net.send({ t: 'cls', id: player.cls.id, spec: player.spec, sv: svOf(player.cls.id), un: unOf(player.cls.id) });   // (the wings and the glow are earned: everyone sees them from now on)
       sendRoad();   // (the host's road just grew: everyone in its game walks it)
       if (first) {
         const i = BOSSES.findIndex(b => b.id === raid.def.id), next = i >= 0 ? BOSSES[i + 1] : null;
@@ -2334,7 +2344,7 @@
   });
   Net.on('fb', msg => {
     if (!raid) return;
-    Object.assign(raid.boss, { x: msg.x, y: msg.y, f: msg.f, hp: msg.hp, mx: msg.mx, u: msg.u, v: msg.v, tg: msg.tg });
+    Object.assign(raid.boss, { x: msg.x, y: msg.y, f: msg.f, hp: msg.hp, mx: msg.mx, u: msg.u, v: msg.v, tg: msg.tg, hv: msg.hv ? 1 : 0 });   // (hv: hovering, fight.js boss.hover)
     BOSS_VFX.bossHp(raid.bossDraw, msg.hp, msg.mx);   // [boss presentation] a flinch for everyone's bigger blows
     raid.bossTrack.push(raid.fightClock.map(msg.c, rnow), msg.x, msg.y, msg.f);
     raid.lastFb = performance.now();   // for the debug overlay
@@ -2348,6 +2358,7 @@
     // a Kenseier in the party: the boss's Posture bar and Break (fight.js kenPack), for the HUD and the kit (world.boss)
     raid.posture = Array.isArray(msg.po) ? { p: msg.po[0], max: msg.po[1], broken: msg.po[2], hold: !!msg.po[3], rec: !!msg.po[4], by: msg.po[5], at: now } : null;
     if (SH && raid.state === 'live' && msg.mx > 0 && Math.floor(msg.hp / msg.mx * 20) !== raid.hpBucket) { raid.hpBucket = Math.floor(msg.hp / msg.mx * 20); SH.vo('boss-hp', { bossId: raid.def.id, hp: msg.hp, maxHp: msg.mx }); }   // (every 5%)
+    if (msg.ph != null && msg.ph !== raid.ph && (raid.def.id === 'hood' || raid.def.id === 'seraph') && !raid.practice && raid.state === 'live') Save.recordReach(raid.def.id, Number(msg.ph));   // (the Practice Hall offers a window once a real pull has reached it)
     if (msg.ph != null && msg.ph !== raid.ph) { const first = raid.ph == null; raid.ph = msg.ph; if (SH && raid.state === 'live') { SH.phase(raid.def.id, msg.ph); if (!first) SH.vo('boss-phase', { bossId: raid.def.id, n: msg.ph }); } }
   });
   // A wall (fight.js raiseWall) goes up when the host's wall label appears and breaks when it clears while the fight is live (fb 'wl'; a wipe or a
@@ -2402,6 +2413,12 @@
     if (!raid) return;
     raid.tgs.set(msg.id, Object.assign({}, msg, { start: now, live: Object.assign({}, msg.shape) }));
     if (SH) SH.telegraph(msg.type);
+  });
+  // a live telegraph takes a new shape (fight.js bladeLine: the line is cut short at the body that stops it, and grows back when they step out)
+  Net.on('tgmod', msg => {
+    const tg = raid && raid.tgs.get(msg.id);
+    if (!tg || tg.gone != null || !msg.shape) return;
+    tg.shape = Object.assign({}, msg.shape); Object.assign(tg.live, msg.shape);
   });
   Net.on('tgx', msg => {
     if (!raid) return;
@@ -2530,12 +2547,12 @@
   Net.on('adds', msg => {
     if (!raid) return;
     const seen = new Set(), at = raid.fightClock.map(msg.c, rnow);
-    for (const [id, kind, x, y, hp, mx, enr, link, f] of msg.l) {
+    for (const [id, kind, x, y, hp, mx, enr, link, f, held] of msg.l) {
       seen.add(id);
       let a = raid.adds.get(id);
       if (!a) { a = { id, kind, x, y, f, born: now, track: new Track(x, y, f), st: newSt(Math.random() * 3) }; raid.adds.set(id, a); }
       else a.track.push(at, x, y, f);
-      Object.assign(a, { tx: x, ty: y, hp, mx, enr: !!enr, link, tf: f });
+      Object.assign(a, { tx: x, ty: y, hp, mx, enr: !!enr, link, tf: f, held: held ?? null });
     }
     for (const id of [...raid.adds.keys()]) if (!seen.has(id)) removeAdd(id, 0.45);
   });
@@ -2685,7 +2702,7 @@
   });
   // the room: props and floor state (the whole list), a prop chipped / broken / slammed into, and room moments
   Net.on('props', msg => { if (raid) ArenaView.roomProps(raid.room, msg, now); });
-  Net.on('propfx', msg => { if (raid) BOSS_VFX.propFx(msg, raid.room, entById, raid.def.id); });
+  Net.on('propfx', msg => { if (raid) { BOSS_VFX.propFx(msg, raid.room, entById, raid.def.id); if (SH && SH.hoodProp && (raid.def.id === 'hood' || raid.def.id === 'seraph')) SH.hoodProp(msg); } });
   const SV_CUT = /^sv(proc|flambe|web|fuse|shadow|glass|dive|twin|anvil|anvilt|pillar|bite|head|crescent|lance|pyre|dance|wheel|wallout|turn|fore|seed|recall|signal|echoact|grace|cut):/;
   Net.on('roomev', msg => {
     if (!raid) return;
@@ -2693,6 +2710,7 @@
     if (raid.def.id === 'sovereign' && msg.k === 'svactcut') { for (const k in raid.room.ev) if (SV_CUT.test(k)) delete raid.room.ev[k]; return; }
     if (raid.def.id === 'sovereign' && msg.k === 'svact') raid.svActNow = msg.act;   // (the act in play, kept even while a snapshot is replayed silently: a rejoiner's music starts from it)
     if (raid.def.id === 'sovereign' && SH && SH.sovereignRoom) SH.sovereignRoom(msg);   // the Ultimate's echoes and moves (sound-hooks.js)
+    if ((raid.def.id === 'hood' || raid.def.id === 'seraph') && SH && SH.hoodRoom) SH.hoodRoom(msg);   // the cold court's hands, frost, tolls, shards, wings and its opening and ending (sound-hooks.js)
     if (raid.def.id === 'sovereign' && raid.state === 'live' && player.cls && !raid.practice && typeof msg.k === 'string' && msg.k.startsWith('svsignal:')) Journal.castStart(player.cls.id, 'sovereign', String(msg.name), 3, now);   // (the First Signal: not a cast, so its journal page is told by this roomev)
     if (raid.def.id === 'sovereign' && msg.k === 'svact' && !raid.practice) SvPortal.reached(msg.act);   // (the furthest act of a real pull: the fourth portal's Reach card)
     if (raid.def.id === 'sovereign' && (msg.k === 'svline' || msg.k === 'svhalo')) {   // the Sovereign's two lines, a quiet line of boss speech: the town's name as the twelfth flame lights (the script sends none), then the first hero who fell (nothing if nobody did)
@@ -2789,6 +2807,7 @@
     const ps = raid.party.get(msg.id);
     if (ps && msg.hp != null) { ps.hp = msg.hp; if (msg.a > 0) ps.hitAt = now; }
     heroFlinch(msg, ps);
+    if (msg.pc && typeof HD_FX !== 'undefined' && (raid.def.id === 'hood' || raid.def.id === 'seraph')) { const fe = entById(msg.id); if (fe) HD_FX.frostHit(fe.x, fe.y - (fe.lift || 0) - 40); }   // (a hit that took a share: a burst of frost on the hero, hood-fx.js)
     // a blow that left them at 0: the death log on the results screen
     if (msg.k === 'enrage') BOSS_VFX.enrageLand(raid.def.id, raid.bossDraw);   // [boss presentation] the enrage lands (once)
     if (msg.hp === 0 && msg.a > 0 && raid.state === 'live' && raid.deaths.length < 60) {
@@ -2797,21 +2816,22 @@
     }
     if (msg.id !== Net.id) return;
     if (msg.k === 'svBurn' && SH && SH.sovereignBurn) SH.sovereignBurn();   // the Brand's burn on you
+    if (msg.pc && SH && SH.hoodFrostHit && (raid.def.id === 'hood' || raid.def.id === 'seraph')) SH.hoodFrostHit();   // a percentage hit on you
     raid.taken.push({ t: now, a: msg.a });
     if (actor && msg.a > 0) actor.notify('taken', msg);   // (a Gloomsworn's vessel fills for every hit it takes)
     // the death recap: your last few hits, named by the move they came from (or what kind of hit it was)
     if (msg.a > 0) {
       const c = raid.cast && now <= raid.cast.start + raid.cast.dur + 0.3 ? raid.cast.name : null;
-      (raid.hits || (raid.hits = [])).push({ t: now, a: msg.a, n: typeof msg.n === 'string' ? msg.n.slice(0, 40) : null, k: String(msg.k || ''), cast: c, hp: msg.hp, dd: !!msg.dd });
+      (raid.hits || (raid.hits = [])).push({ t: now, a: msg.a, n: typeof msg.n === 'string' ? msg.n.slice(0, 40) : null, k: String(msg.k || ''), cast: c, hp: msg.hp, dd: !!msg.dd, pc: msg.pc ? 1 : 0 });
       if (raid.hits.length > 12) raid.hits.shift();
     }
     // (left of the body, clear of the name tag; what your shield ate beside it in muted blue: msg.sh, fight.js)
     const hy = player.y - (player.lift || 0) - 18;
     // (the bite as a share of your health: a number's size, the sound's weight and the flush follow it; a tick or a chip is a number and a quiet sound, no red)
-    const mx = ps && ps.maxHp > 1 ? ps.maxHp : 0, share = mx ? msg.a / mx : 0, chip = chipHit(msg, ps);
-    if (msg.a > 0) FX.text(player.x, hy, '-' + rnd(msg.a), msg.dd ? '#ff4a3a' : '#ff8a7a', (mx ? share > 0.25 : msg.a > 400) ? 18 : 14, 1, { kind: 'taken' });
+    const mx = ps && ps.maxHp > 1 ? ps.maxHp : 0, share = mx ? msg.a / mx : 0, chip = !msg.pc && chipHit(msg, ps);   // (msg.pc: a share of your current health, drawn in frost at the big size)
+    if (msg.a > 0) FX.text(player.x, hy, '-' + rnd(msg.a), msg.pc ? '#8fd3ff' : msg.dd ? '#ff4a3a' : '#ff8a7a', msg.pc || (mx ? share > 0.25 : msg.a > 400) ? 18 : 14, 1, { kind: 'taken' });
     if (msg.sh >= 1) FX.text(player.x, hy, rnd(msg.sh) + ' absorbed', '#9cc4ec', 12, 1, { kind: 'absorb' });
-    if (SH && msg.a > 0) SH.play(chip ? 'hit-light' : share > 1 / 3 ? 'hit-heavy' : 'hit-light', { vol: chip ? 0.3 : 0.85, key: 'hit', minGap: 0.08 });
+    if (SH && msg.a > 0) SH.play(chip ? 'hit-light' : msg.pc || share > 1 / 3 ? 'hit-heavy' : 'hit-light', { vol: chip ? 0.3 : 0.85, key: 'hit', minGap: 0.08 });
     if (SH && msg.sh >= 1 && msg.a > 0) SH.play('shield-break', { vol: 0.7, key: 'shield-break', minGap: 0.4 });   // (it ate what it could and broke)
     if (msg.dd) FX.shake = Math.max(FX.shake, 4);
     // a blow of more than 60% of your health: the music dips for a beat, a stop and a heavier shake, yours alone
@@ -3095,6 +3115,7 @@
   Pastimes.init({
     player, toast: m => toast(m), addGold: n => Inventory.addGold(n), giveGift, matches: whenOk,
     bossOpen: id => bossOpen(BOSSES.find(b => b.id === id) || BOSSES[0], townBeaten), beaten: townBeaten, svUnlocked: () => SvPortal.unlocked(),
+    isHost: () => Net.isHost, pull: id => { if (!player.cls) { toast('Pick a hero first.'); return; } if (scene === 'town' && !raidHost && !hostTrial) startRaid('normal', raidFill, id); },   // (a secret's card button, town-secrets.js `pull`: the host's ready check and bot fill are startRaid's)
     items: () => Inventory.items(), iconURL: key => Inventory.iconURL({ key }),
     onTitle: t => sendTitle(t), later: (s2, fn) => later(s2, fn),
   });
@@ -3112,8 +3133,8 @@
   player.title = Pastimes.title();
   // the journal shows the heroes you've played (the current one first)
   Journal.setOpener(() => ({
-    bosses: [...BOSSES, ULTIMATE_BOSS], open: (b, hero) => (b.id === ULTIMATE_BOSS.id ? !!(hero && Save.journal(hero).met[b.id]) : bossOpen(b)),   // (the Ultimate is not in BOSSES: its page shows once this hero has met it)
-    lore: id => (id === ULTIMATE_BOSS.id && typeof STORY !== 'undefined' && STORY.bossLore ? STORY.bossLore[id] || '' : ''),
+    bosses: [...BOSSES, ULTIMATE_BOSS, ...SECRET_BOSSES], open: (b, hero) => (b.id === ULTIMATE_BOSS.id || b.secret ? !!(hero && Save.journal(hero).met[b.id]) : bossOpen(b)),   // (the Ultimate and the two fights found in town are not in BOSSES: a page shows once this hero has met it)
+    lore: id => ((id === ULTIMATE_BOSS.id || SECRET_BOSSES.some(b => b.id === id)) && typeof STORY !== 'undefined' && STORY.bossLore ? STORY.bossLore[id] || '' : ''),
     hero: player.cls ? player.cls.id : null, boss: raid && !raid.def.trial ? raid.def.id : null,
     heroes: () => CLASSES.filter(c => (player.cls && c.id === player.cls.id) || Object.keys(Save.journal(c.id).met).length).sort((a, b) => (player.cls && b.id === player.cls.id) - (player.cls && a.id === player.cls.id)),
   }));
@@ -3539,6 +3560,7 @@
       raid.props.svForm = ({ forge: 'forge', crater: 'crater', square: 'square', night: 'square' })[raid.form] || 'hall';
       { const gu = ev.svgutter; raid.props.svGutter = gu ? Math.min(1, Math.max(0, (now - gu.start) / (gu.dur || 1))) : 0; }   // (the kill: roomev svgutter { dur } drains the fire 0..1, sovereign.js)
     }
+    if ((raid.def.id === 'hood' || raid.def.id === 'seraph') && typeof HD_FX !== 'undefined') HD_FX.props(raid, now);   // (the hands, the wings, the halo, the hover and the openings: hood-art.js reads them off raid.props)
     if (raid.def.id === 'grubnak') { raid.props.gorged =raid.form === 'gorged'; raid.props.gAge = raid.props.gorged ? now - (raid.formAt ?? now - 9) : 0; }   // (Hard: the swollen second form after Clean Plate; bosses.js draws it, gAge is the seconds since the swell)
     if (raid.def.id === 'volkar') {   // (Hard's second form, volkar-storm.js: the body cracking, then the Storm Heart under a face in the clouds)
       if (typeof VK_STORM !== 'undefined') Object.assign(raid.props, VK_STORM.props(raid.room, raid.form, now));   // (storm, stormBreak, stormHush, stormBeat, stormAge, stormHits, stormHitAge)
@@ -3812,7 +3834,7 @@
           if (dead) { ctx.save(); ctx.globalAlpha = 0.4; drawHero(ctx, e.cls, e.x, e.y, e.angle, { t: 0, moving: false, action: null }, hs, { lift: e.lift, spec: e.spec, ringColor }); ctx.restore(); break; }
         }
         const em = Pastimes.emoteLook(e, now);
-        drawHero(ctx, e.cls, e.x, e.y, e.angle, e.st, heroScale(), { lift: e.lift, spec: e.spec, emote: em || null, ringColor, sv: !e.id ? true : e.sv });
+        drawHero(ctx, e.cls, e.x, e.y, e.angle, e.st, heroScale(), { lift: e.lift, spec: e.spec, emote: em || null, ringColor, sv: !e.id ? true : e.sv, un: !e.id ? true : e.un });
         drawKenRing(e);
         // what's on them, on the body (heroes.js drawHeroStatus): shields and defensives, chosen-ally buffs, Slowed,
         // Damage Down, Vulnerability, a bleed or venom
@@ -4160,7 +4182,7 @@
     const lants = raid.lanterns.filter(l => l.carrier == null).map(l => ({ kind: 'lantern', y: l.y, l }));
     const roomProps = raid.room.props.map(pr => ({ kind: 'prop', y: pr.y + (pr.shape === 'rect' ? 0 : pr.r * 0.4), pr }));
     const all = [...ents, ...(raid.pvp ? [] : [bossEnt]), ...adds, ...husks, ...posts, ...knights, ...lants, ...roomProps, ...Stagecraft.entities(now, scEnv), ...Kennel.entities(now, scEnv)].sort((a, b) => a.y - b.y);
-    const bossDef = BOSSES.find(x => x.id === raid.def.id) || (raid.def.id === ULTIMATE_BOSS.id ? ULTIMATE_BOSS : undefined);   // (the Ultimate is not in BOSSES: data.js)
+    const bossDef = BOSSES.find(x => x.id === raid.def.id) || (raid.def.id === ULTIMATE_BOSS.id ? ULTIMATE_BOSS : undefined) || SECRET_BOSSES.find(x => x.id === raid.def.id);   // (the Ultimate and the two fights found in town are not in BOSSES: data.js)
     for (const e of all) {
       if (e === bossEnt) {
         // [boss presentation] BOSS_VFX.drawBody: in the Long Night he's a shape in the dark; in a trial only a memory (pale,
@@ -4670,7 +4692,7 @@
     heroPickFx(player, spec ? { accent: spec.accent } : player.cls);
     makeActor();
     toast(spec ? `You are now the ${spec.name}, ${spec.title}.` : `You are the ${player.cls.name} again.`);
-    Net.send({ t: 'cls', id: player.cls.id, spec: player.spec, sv: svOf(player.cls.id) });
+    Net.send({ t: 'cls', id: player.cls.id, spec: player.spec, sv: svOf(player.cls.id), un: unOf(player.cls.id) });
   }
   const slotIndex = k => (k === 'space' ? 6 : SLOT_OF[k]);
   function keyChip(cls, k) {
@@ -4806,7 +4828,7 @@
     VFX.neonRing(c, 130, 200, 84, cls.accent, 1.2, 0.5, 0.42);
     VFX.glowAt(c, 130, 150, 120, cls.accent, 0.28 + Math.sin(now * 2) * 0.06);
     for (let i = 0; i < 6; i++) { const q = (now * 0.35 + i / 6) % 1, a = i * 2.1; VFX.glowAt(c, 130 + Math.cos(a) * 70, 200 - q * 170, 6, cls.accent, 0.8 * Math.sin(q * Math.PI)); }
-    drawHero(c, cls, 130, 160, 0.45 + Math.sin(now * 0.6) * 0.35, st, 3.1, { ring: false, spec: selSpec, sv: true });
+    drawHero(c, cls, 130, 160, 0.45 + Math.sin(now * 0.6) * 0.35, st, 3.1, { ring: false, spec: selSpec, sv: true, un: true });
     c.restore();
   }
 
@@ -4856,11 +4878,11 @@
     updateHeroName(); updatePartyList();
     toast(`You are now the ${cls.name}, ${cls.title}.`);
     townObjective();
-    Net.send({ t: 'cls', id: cls.id, spec: player.spec, sv: svOf(cls.id) });
+    Net.send({ t: 'cls', id: cls.id, spec: player.spec, sv: svOf(cls.id), un: unOf(cls.id) });
     sendGear();
   }
 
-  const bossThumbs = [];
+  const bossThumbs = [], secretThumbs = [];
   (function buildBossList() {
     const list = $('boss-list');
     BOSSES.forEach((boss, i) => {
@@ -4873,8 +4895,33 @@
       list.appendChild(b);
       bossThumbs.push({ cv, boss, b });
     });
+    // the two frost-rimmed entries at the foot of the list (data.js SECRET_BOSSES): hidden until the first pull, then a blank card, then a name once the gate has fallen
+    SECRET_BOSSES.forEach(def => {
+      const b = document.createElement('button');
+      b.className = 'item frost hidden'; b.dataset.id = def.id;
+      const cv = document.createElement('canvas'); setupCanvas(cv, 56, 56);
+      b.appendChild(cv);
+      b.insertAdjacentHTML('beforeend', `<span><b></b><small></small></span>`);
+      b.addEventListener('click', () => { if (secretState(def).clickable) showSecret(def); });
+      list.appendChild(b);
+      secretThumbs.push({ cv, def, b });
+    });
     refreshBossList();
   })();
+  // what the Raid Board shows of a secret fight: shown (the first pull has been made, or the first gate has fallen for the second), named (it has fallen), clickable
+  function secretState(def) {
+    const first = def.id === 'hood', named = townBeaten(def.id), shown = first ? Save.unspokenPulled() || townBeaten('hood') : townBeaten('hood');
+    return { shown, named, clickable: first ? named : shown };
+  }
+  // a pale flake on a frost ring: the mark of a card with no name
+  function frostMark(c, x, y, s) {
+    c.save(); c.translate(x, y); c.scale(s, s);
+    c.strokeStyle = 'rgba(143,211,255,0.55)'; c.lineWidth = 1.6; c.beginPath(); c.arc(0, 0, 22, 0, Math.PI * 2); c.stroke();
+    c.strokeStyle = 'rgba(214,240,255,0.5)'; c.lineWidth = 1.2; c.beginPath();
+    for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3 + 0.2; c.moveTo(Math.cos(a) * 6, Math.sin(a) * 6); c.lineTo(Math.cos(a) * 17, Math.sin(a) * 17); }
+    c.stroke();
+    c.restore();
+  }
   // names and thumbnails for the bosses that are open; the rest read as sealed. Given a set, only that set's bosses are listed
   // (a portal or a statue shows the raids of its own set)
   function refreshBossList(set = null) {
@@ -4885,6 +4932,14 @@
       t.b.querySelector('b').textContent = open ? boss.name : 'Sealed';
       t.b.querySelector('small').textContent = open ? `Boss ${ROMAN[i]} · ${boss.title}` : `Boss ${ROMAN[i]} · after ${bossOpen(BOSSES[i - 1]) ? BOSSES[i - 1].name : `Boss ${ROMAN[i - 1]}`}`;
     });
+    for (const t of secretThumbs) {
+      const st = secretState(t.def);
+      t.b.classList.toggle('hidden', !st.shown);
+      t.b.classList.toggle('blank', !st.named);
+      t.b.disabled = !st.clickable;
+      t.b.querySelector('b').textContent = st.named ? t.def.name : '';
+      t.b.querySelector('small').textContent = st.named ? t.def.title : '';
+    }
   }
   let raidMode = 'normal', raidFill = true;
   function showBoss(boss) {
@@ -4914,6 +4969,34 @@
     preview = { kind: 'boss', boss, cv, st: newSt(), nextDemo: now + 0.8 };
     if (boss.playable) { const el = det.querySelector('.raid-setup'); el.dataset.boss = boss.id; renderRaidSetup(el); }
     if (boss.playable) setupLootTab(det, boss);
+  }
+  // a secret fight's page: its name once it has fallen (else only the frost mark), the party and the start button. One difficulty, no loot tab.
+  function showSecret(def) {
+    document.querySelectorAll('#boss-list .item').forEach(b => b.classList.toggle('active', b.dataset.id === def.id));
+    const named = townBeaten(def.id), det = $('boss-detail');
+    det.innerHTML = `
+      <div class="detail-top">
+        <canvas></canvas>
+        <div class="detail-info">${named ? `<h3>${escapeHtml(def.name)}</h3><div class="sub">${escapeHtml(def.title)}</div>` : ''}</div>
+      </div>
+      <div class="board-pane"><div class="raid-setup"></div></div>`;
+    const cv = det.querySelector('canvas');
+    setupCanvas(cv, 260, 260);
+    if (named && typeof BOSS_ART !== 'undefined' && BOSS_ART[def.id]) preview = { kind: 'boss', boss: def, cv, st: newSt(), nextDemo: now + 0.8 };
+    else { preview = null; frostMark(prep(cv), 130, 130, 2.4); }
+    renderSecretSetup(det.querySelector('.raid-setup'), def);
+  }
+  function renderSecretSetup(el, def) {
+    const humans = raidHumans(), bots = raidFill ? pickBots(humans) : [];
+    const canStart = Net.isHost && !!player.cls;
+    const why = !Net.isHost ? 'Only the host can start the raid.' : !player.cls ? 'Pick a hero first.' : '';
+    el.innerHTML = `
+      <label class="fill"><input type="checkbox" ${raidFill ? 'checked' : ''} ${Net.isHost ? '' : 'disabled'}> Fill empty slots with bots</label>
+      <div class="raid-roster">${humans.map(h => `<span style="--c:${ROLES[h.role].color}">${escapeHtml(h.name)}<small>${CLASSES.find(c => c.id === h.cls).name}</small></span>`).join('')}${
+        bots.map(id => { const c = CLASSES.find(x => x.id === id); return `<span class="bot" style="--c:${ROLES[c.role].color}">Bot<small>${c.name}</small></span>`; }).join('')}</div>
+      <button class="cta" ${canStart ? '' : 'disabled'}>${canStart ? 'Start raid' : why}</button>`;
+    el.querySelector('.fill input').addEventListener('change', e => { raidFill = e.target.checked; renderSecretSetup(el, def); });
+    el.querySelector('.cta').addEventListener('click', () => startRaid('normal', raidFill, def.id));
   }
   // ---------------------------------------------------------------- the Loot tab: a beaten boss's chest and the odds
   // Normal's odds once the boss has fallen, Hard's once it has fallen on Hard. The odds come from the real roll
@@ -5041,6 +5124,7 @@
     if (overlay.classList.contains('hidden')) return;
     const idle = { t: now, moving: false, action: null };
     for (const { cv, boss } of bossThumbs) { const c = prep(cv); if (bossOpen(boss)) drawBoss(c, boss, 28, 28, Math.PI / 2, idle, 0.34); else { c.save(); c.translate(28, 40); c.scale(0.42, 0.42); drawShroud(c, 0, 0); c.restore(); } }
+    for (const { cv, def, b } of secretThumbs) { if (b.classList.contains('hidden')) continue; const c = prep(cv); if (!b.classList.contains('blank') && typeof BOSS_ART !== 'undefined' && BOSS_ART[def.id]) drawBoss(c, def, 28, 28, Math.PI / 2, idle, 0.34); else frostMark(c, 28, 28, 0.8); }   // (the frost-rimmed entries: a flake until the gate has fallen)
     if (!preview || preview.kind !== 'boss') return;
     const st = preview.st;
     st.t = now;
@@ -5064,10 +5148,13 @@
   // them, else none; svRead is the receiving side's copy (drawHero's opts.sv for a remote hero)
   const svOf = classId => (classId && Save.svRewards(classId) ? { wings: 1, glow: 1 } : null);
   const svRead = v => (v && typeof v === 'object' && (v.wings || v.glow) ? { wings: !!v.wings, glow: !!v.glow } : null);
+  // the last road's cosmetics (heroes.js UnRewards: a frost edge and a halo), carried the same way as `un`
+  const unOf = classId => (classId && Save.unRewards(classId) ? { edge: 1, halo: 1 } : null);
+  const unRead = v => (v && typeof v === 'object' && (v.edge || v.halo) ? { edge: !!v.edge, halo: !!v.halo } : null);
   function makeRemote(p) {
     return {
       kind: 'remote', remote: true, id: p.id, name: p.name, cls: CLASSES.find(c => c.id === p.cls) || null,
-      spec: p.cls && specOf(p.cls, p.spec) ? p.spec : null, sv: svRead(p.sv),
+      spec: p.cls && specOf(p.cls, p.spec) ? p.spec : null, sv: svRead(p.sv), un: unRead(p.un),
       x: p.x, y: p.y, tx: p.x, ty: p.y, angle: p.a || 0, ta: p.a || 0, m: 0, lift: 0, tl: 0, faceLock: 0, scene: p.s || 0,
       st: newSt(Math.random() * 3),
     };
@@ -5123,7 +5210,7 @@
     const was = r.cls;
     r.cls = CLASSES.find(c => c.id === msg.cls) || null;
     r.spec = r.cls && specOf(r.cls.id, msg.spec) ? msg.spec : null;
-    r.sv = svRead(msg.sv);
+    r.sv = svRead(msg.sv); r.un = unRead(msg.un);
     if (r.cls && r.cls !== was) {   // a spec change alone (or a reconnect resend) isn't a new pick
       if (r.scene === (scene === 'arena' ? 1 : 0)) heroPickFx(r, r.cls);
       toast(`${r.name} picked ${r.cls.name}.`);
@@ -5293,7 +5380,7 @@
     started = true;
     Inventory.showGoldHud(scene !== 'arena');
     if (!player.cls) { const lh = rememberedHero(); if (lh) chooseHero(lh.cls, lh.spec); else openSelect(null); }   // (no remembered hero: the first time, hero select as ever)
-    else { Net.send({ t: 'cls', id: player.cls.id, spec: player.spec, sv: svOf(player.cls.id) }); sendGear(); }   // back after a lost connection: tell the new room who we are
+    else { Net.send({ t: 'cls', id: player.cls.id, spec: player.spec, sv: svOf(player.cls.id), un: unOf(player.cls.id) }); sendGear(); }   // back after a lost connection: tell the new room who we are
     updatePartyList();
     toast(Net.solo ? `Welcome to Emberfall, ${player.name}. Bots fill the empty slots.` : Net.isHost ? `Hosting. Room code ${Net.room}.` : `Welcome to Emberfall, ${player.name}.`);
   }
@@ -5350,7 +5437,7 @@
       c.restore();
       VFX.neonRing(c, w / 2, h - 34, 86, cls.accent, 2, 0.7, 0.4);
       VFX.glowAt(c, w / 2, h * 0.55, 110, cls.accent, 0.22);
-      drawHero(c, cls, w / 2, h * 0.52, Math.PI / 2 + Math.sin(now * 0.6) * 0.5, invSt, 2.9, { ring: false, sv: true });
+      drawHero(c, cls, w / 2, h * 0.52, Math.PI / 2 + Math.sin(now * 0.6) * 0.5, invSt, 2.9, { ring: false, sv: true, un: true });
     },
   });
   const bagBtn = document.createElement('button');

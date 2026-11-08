@@ -315,6 +315,38 @@ class RaidHost {
     }
   }
 
+  // A bar boss (def.bars) is crossed gate by gate and every gate starts the next pattern, so the damage dealers and the tank stop attacking the boss while it stands
+  // within 1.5% of its health above the next gate, as long as the healer's longest-cooldown healing ability has more than 4 s to come, anyone alive is under 60% health, or
+  // anyone is down. One answer for every bot per tick (they let go together), and never more than 12 s of holding at one gate.
+  barHoldNow() {
+    const sim = this.sim, b = sim.boss;
+    if (!sim.def.bars || !b.maxHp || sim.state !== 'live') return false;
+    const h = this.hold || (this.hold = { gate: -1, used: 0, last: sim.t, t: -1, on: false });
+    if (h.t === sim.t) return h.on;   // (once a tick, however many views are built)
+    const dt = Math.max(0, Math.min(1, sim.t - h.last));
+    h.last = sim.t; h.t = sim.t;
+    const frac = b.hp / b.maxHp;
+    const next = sim.gates.find(g => g.f < frac - 1e-9);
+    if (!next || frac - next.f > 0.015) { h.on = false; h.gate = next ? next.f : -1; if (!next || frac - next.f > 0.03) h.used = 0; return false; }
+    if (h.gate !== next.f) { h.gate = next.f; h.used = 0; }
+    let bad = false;
+    for (const p of this.allPlayers()) {
+      const s = sim.ps.get(p.id);
+      if (!s || s.left) continue;
+      if (!s.alive || s.hp / (s.maxHp || 1) < 0.6) { bad = true; break; }
+    }
+    if (!bad) for (const bot of this.bots) {
+      if (bot.role !== 'healer' || !sim.ps.get(bot.id) || !sim.ps.get(bot.id).alive) continue;
+      const k = bot.actor.kit;
+      let big = null;
+      for (const a of k.abilities) if (a.target !== 'enemy' && !a.allowDead && a.cd > 0 && /heal|less damage|shield|HP back|stored|mend/i.test(a.desc || '') && (!big || a.cd > big.cd)) big = a;
+      if (big && k.readyIn(big) > 4) { bad = true; break; }
+    }
+    h.on = bad && h.used < 12;
+    if (h.on) h.used += dt;
+    return h.on;
+  }
+
   view() {
     const sim = this.sim;
     const players = this.allPlayers().map(p => {
@@ -337,6 +369,7 @@ class RaidHost {
       // Volkar: everyone's charge, the rods' posts, and where the closing wall is about to jump
       polarity: sim.polarity || null, posts: (sim.posts || []).filter(c => c.end > sim.t), edgeNext: sim.edgeNext || null,
       pendingCut: sim.pendingCut || null,   // (Hard) the wedge of the summit about to break away
+      barHold: this.barHoldNow(),   // a bar boss (def.bars): the party holds its damage just above the next gate (below)
       // the Hollow King: lanterns, who is doomed (and when it kills), and the knights' replays still to come
       lanterns: sim.lanterns || [], doomed: sim.doomed || null, echoPlan: sim.echoPlan || [], night: !!sim.night,
       // healing on the floor worth standing in: pools (Moonwell, vials) and every Lanternkeeper's glows; lamps: [[owner, lantern, { x, y }]] (fight.js LANTERNS)
@@ -490,7 +523,7 @@ class RaidHost {
       bot.actor.update();
       if (bot.actor.taunt) this.botTaunt(bot, view);
       // the Ultimate (T): BotAI.ult says when (the party's burst, a check, a buster, a raidwide)
-      if (bot.actor.kit.ult && !sim.setPieceInvul() && !sim.mods.barehands && BotAI.ult(bot, bot.actor.kit, view, ultCtx) && bot.actor.press(7) && !bot.standIn) this.emit({ t: 'bark', id: bot.id, k: 'ult' });
+      if (bot.actor.kit.ult && !sim.setPieceInvul() && !sim.mods.barehands && !(view.barHold && bot.role === 'dps') && BotAI.ult(bot, bot.actor.kit, view, ultCtx) && bot.actor.press(7) && !bot.standIn) this.emit({ t: 'bark', id: bot.id, k: 'ult' });
       if (this.sim.t >= bot.nextAct) {
         const i = BotAI.act(bot, bot.actor.kit, view);
         if (i !== null && i !== undefined) {
@@ -629,13 +662,13 @@ class RaidHost {
   botWorld(bot) {
     const host = this;
     // the talents a bot holds: the strongest build for as many rows as a party has by this boss's set (combat/bot-builds.js; none without it)
-    const set = host.def && (host.def.set || (typeof BOSSES !== 'undefined' && (BOSSES.find(b => b.id === host.def.id) || {}).set) || (typeof ULTIMATE_BOSS !== 'undefined' && ULTIMATE_BOSS.id === host.def.id && ULTIMATE_BOSS.set));   // (the fight's def has no set; data.js BOSSES and ULTIMATE_BOSS do)
+    const set = host.def && (host.def.set || (typeof BOSSES !== 'undefined' && (BOSSES.find(b => b.id === host.def.id) || {}).set) || (typeof ULTIMATE_BOSS !== 'undefined' && ULTIMATE_BOSS.id === host.def.id && ULTIMATE_BOSS.set) || (typeof SECRET_BOSSES !== 'undefined' && (SECRET_BOSSES.find(b => b.id === host.def.id) || {}).set));   // (the fight's def has no set; data.js BOSSES, ULTIMATE_BOSS and SECRET_BOSSES do)
     const tal = typeof botTalentSet === 'function' && set ? botTalentSet(bot.cls.id, bot.spec, set, host.mode) : null;
     return {
       talents: () => tal,
       now: () => host.sim.t,
       moving: () => bot.moving,
-      canAuto: () => { const s = host.sim.ps.get(bot.id); return !!s && s.alive && host.sim.state === 'live'; },
+      canAuto: () => { const s = host.sim.ps.get(bot.id); return !!s && s.alive && host.sim.state === 'live' && !(bot.role !== 'healer' && host.barHoldNow()); },   // (a bar boss's hold: bots.js BotAI.act)
       // the add this bot wants if it's in range, else the boss, else any add in range
       findEnemy: (actor, ab) => {
         const b = host.sim.boss;

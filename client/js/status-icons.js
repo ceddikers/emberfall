@@ -12,6 +12,7 @@ const STATUS_GLYPH = {
   stuffed: stSvg('<ellipse cx="6" cy="7.5" rx="4.6" ry="2.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M3.5 6.6a2.5 2.5 0 0 1 5 0" fill="none" stroke="currentColor" stroke-width="1.3"/>'),
   slowed: stSvg('<path d="M6 1v10M1 6h10M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width=".9"/><circle cx="6" cy="6" r="2.4" fill="none" stroke="currentColor" stroke-width=".9"/><circle cx="6" cy="6" r="4.3" fill="none" stroke="currentColor" stroke-width=".9"/>'),
   rooted: stSvg('<path d="M2 3c2.5 1.2 5.5-1.2 8 0M2 6c2.5 1.2 5.5-1.2 8 0M2 9c2.5 1.2 5.5-1.2 8 0" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>'),
+  frozen: stSvg('<path d="M6 1v10M1.7 3.5l8.6 5M10.3 3.5l-8.6 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M4.8 1.9 6 3l1.2-1.1M4.8 10.1 6 9l1.2 1.1" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>'),   // (a six-point frost star)
   conductive: stSvg('<path d="M7 1 3 6.5h3L5 11l4-5.5H6Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>'),
   doom: stSvg('<path d="M6 1.5c-2.3 0-4 1.6-4 3.8 0 1.3.6 2.2 1.5 2.8V10h5V8.1c.9-.6 1.5-1.5 1.5-2.8 0-2.2-1.7-3.8-4-3.8Z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="4.4" cy="5.5" r="1" fill="currentColor"/><circle cx="7.6" cy="5.5" r="1" fill="currentColor"/>'),
   dread: stSvg('<path d="M1 6c1.6-2.6 3.2-3.6 5-3.6S9.4 3.4 11 6c-1.6 2.6-3.2 3.6-5 3.6S2.6 8.6 1 6Z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M3 9 9 3" stroke="currentColor" stroke-width="1.2"/>'),
@@ -49,6 +50,7 @@ const STATUS_INFO = {
   stuffed: ['Stuffed', 'You can\'t eat another plate.'],
   slowed: ['Slowed', 'Stuck in silk or venom.'],
   rooted: ['Rooted', 'You can\'t move.'],
+  frozen: ['Frozen', 'Held where you stand until the blow lands. You can still act.'],
   conductive: ['Conductive', 'The next strike you catch hurts far more.'],
   doom: ['Royal Doom', 'When this runs out, so do you.'],
   dread: ['Dread', 'You met his eyes. Meeting them again hurts far more.'],

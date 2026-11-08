@@ -732,7 +732,7 @@ class FightSim {
       if (ev.amount) this.applyHeal(pid, p.id, num(ev.amount) * (ev.up ? 2 - s.hp / s.maxHp : 1) * (alone ? Math.max(1, Math.min(1.5, Number(ev.solo) || 1)) : 1));
       if (ev.sh || (ev.sht && p === at)) { const sa = p === at && ev.sht ? Math.max(num(ev.sh), num(ev.sht)) : num(ev.sh); this.giveShield(pid, p.id, s, sa, ev.dur || 10, 'splash'); }   // (ev.tg: never over the caster's own tagged shield, a Petal shield or Barrier: Purify)   // (a ward from a splash never replaces a live shield that is as strong, the caster's own Barrier or Petal shield included)
       if (ev.cl & 1) { s.vuln = 0; s.vulnEnd = 0; s.dmgDownEnd = 0; }
-      if (ev.cl & 2) { delete s.debuffs.slowed; delete s.debuffs.rooted; }
+      if (ev.cl & 2) { delete s.debuffs.slowed; if (!(s.debuffs.frozen > this.t)) delete s.debuffs.rooted; }   // (a freeze is only ended by its blow or its time)
     }
     if (at && ev.ticks) {
       const mine = this.healPools.filter(pl => pl.from === pid && pl.vial);
@@ -748,6 +748,8 @@ class FightSim {
   // All of them together never hold more than the player's health. s.shield/shieldMax/shieldEnd/shieldFrom/shieldTag are the
   // totals and the first in line, kept for every older reader (shieldSync).
   giveShield(from, tid, ts, amount, dur, key, tag) {
+    const src = this.ps.get(from);
+    if (src && src.debuffs.coffin > this.t) return;   // (silenced by a coffin)
     if (ts.hollow) { this.hollowShield(from, ts, amount); return; }
     if (!ts.shields) ts.shields = [];
     const k = key || 'shield', old = ts.shields.find(e => e.from === from && e.key === k);
@@ -804,7 +806,7 @@ class FightSim {
     if (this.mods.nosecondchances) return;   // (Hard+ No Second Chances: no raise, no Limit Break raise, nothing brings the fallen back)
     const rs = this.stats[by]; if (rs && by !== tid) rs.raises++;
     ts.alive = true; ts.hollow = null; ts.hp = Math.round(ts.maxHp * Math.max(0.1, Math.min(1, frac)));
-    ts.vuln = 0; ts.vulnEnd = 0; ts.dmgDownEnd = 0; ts.brittle = 0; if (ts.debuffs) { delete ts.debuffs.slowed; delete ts.debuffs.rooted; delete ts.debuffs.brittle; }   // (a raised hero comes back clean of what killed them)
+    ts.vuln = 0; ts.vulnEnd = 0; ts.dmgDownEnd = 0; ts.brittle = 0; if (ts.debuffs) { delete ts.debuffs.slowed; delete ts.debuffs.rooted; delete ts.debuffs.brittle; delete ts.debuffs.frozen; delete ts.debuffs.coffin; }   // (a raised hero comes back clean of what killed them)
     const sick = kind === 'none' ? null : this.sickness(kind);
     ts.weakEnd = sick ? this.t + sick.dur : 0; ts.weakPct = sick ? sick.pct : 0; ts.hist = []; this.dropThreat(tid);
     ts.mits.push({ pct: 1, start: this.t, end: this.t + FIGHT.REVIVE_SAFE, kind: 'invuln', from: by, rev: 1 });   // a moment to find their feet (rev: not credited as anyone's cut: credit())
@@ -871,6 +873,8 @@ class FightSim {
     if (best != null) this.credit(best, best === p.id ? 'savedSelf' : 'saved', 1);
   }
   applyHeal(fromId, tid, amount, partyWide, mkey) {
+    const src = this.ps.get(fromId);
+    if (src && src.debuffs.coffin > this.t) return;   // (a hero in a coffin heals no one, themselves included: coffin)
     const targets = partyWide ? this.alive() : this.alive().filter(p => p.id === tid);
     for (const p of targets) {
       const s = p.s;
@@ -897,7 +901,7 @@ class FightSim {
 
   endShield(tid, s) { for (const e of (s.shields || []).slice()) this.endShieldEntry(tid, s, e); }   // (every shield on them ends)
 
-  debuff(pid, name, dur) { const s = this.ps.get(pid); if (s) { s.debuffs[name] = this.t + dur; } }
+  debuff(pid, name, dur) { const s = this.ps.get(pid); if (s) { s.debuffs[name] = name === 'rooted' && s.debuffs.frozen > this.t ? Math.max(s.debuffs.rooted || 0, this.t + dur) : this.t + dur; } }   // (a daze never shortens a freeze's hold)
   hasDebuff(pid, name) { const s = this.ps.get(pid); return !!(s && s.debuffs[name] > this.t); }
 
   // ---------------------------------------------------------------- damage to players
@@ -927,15 +931,17 @@ class FightSim {
       return amt;
     }
     // (opts.scaled: already in small numbers, e.g. a share passed along a thread, but still mitigated as usual)
-    let amt = opts.raw || opts.scaled ? raw : raw * this.scale.dmg * (this.hard ? this.def.hardDmg ?? 1.25 : this.def.normalDmg ?? 1) * (1 + this.boss.dmgUp) * (this.mods.heavyhands ? 1 + HARDPLUS.T.HANDS : 1);   // (Hard+ Heavy Hands.) (def.hardDmg / def.normalDmg: a boss's own multiplier on each difficulty)
-    if (this.recoverEnd > this.t && !opts.raw) amt *= 1 - FIGHT.REC.CUT;   // recovering after a death (Hard)
+    // (opts.pct, 0..1: a share of the victim's current health, taken before mitigation. It skips the act scale, difficulty and ramp multipliers, Heavy Hands, Recovering, Vulnerability, Brittle, defence and the slip cap, and never gives Vulnerability or Damage Down; cooldowns, shields, threads and class hooks still act on it.)
+    const pcHit = opts.pct > 0;
+    let amt = pcHit ? s.hp * Math.min(1, opts.pct) : opts.raw || opts.scaled ? raw : raw * this.scale.dmg * (this.hard ? this.def.hardDmg ?? 1.25 : this.def.normalDmg ?? 1) * (1 + this.boss.dmgUp) * (this.mods.heavyhands ? 1 + HARDPLUS.T.HANDS : 1);   // (Hard+ Heavy Hands.) (def.hardDmg / def.normalDmg: a boss's own multiplier on each difficulty)
+    if (this.recoverEnd > this.t && !opts.raw && !pcHit) amt *= 1 - FIGHT.REC.CUT;   // recovering after a death (Hard)
     if (!opts.shared) amt = this.threadSplit(p, s, amt, opts);   // threads split the hit evenly along them (classes-c)
     // Normal: one avoidable slip never kills from full (Vulnerability still lands on top of the capped base, so a second one inside it can)
-    if (!this.hard && !this.pvp && !this.def.trial && this.def.id !== 'sovereign' && opts.avoidable && !opts.raw && !NO_SLIP_CAP[opts.kind]) amt = Math.min(amt, s.maxHp * FIGHT.NORMAL_SLIP_CAP);
+    if (!this.hard && !this.pvp && !this.def.trial && !this.def.noSlipCap && opts.avoidable && !opts.raw && !pcHit && !NO_SLIP_CAP[opts.kind]) amt = Math.min(amt, s.maxHp * FIGHT.NORMAL_SLIP_CAP);
     // Vulnerability: not on an unavoidable raidwide on Normal; on Hard a raidwide feels one stack at most
-    if (s.vulnEnd > this.t && !opts.raw && !(opts.kind === 'raidwide' && !this.hard)) amt *= 1 + (opts.kind === 'raidwide' ? Math.min(s.vuln, FIGHT.VULN) : s.vuln);
-    if (s.brittle && s.debuffs.brittle > this.t && !opts.raw) amt *= 1 + s.brittle * HARDPLUS.T.BRITTLE.PER;   // (Hard+ Brittle: a stack per avoidable hit, hardplus.js)
-    if (s.def && !opts.raw) amt *= 1 - s.def;
+    if (s.vulnEnd > this.t && !opts.raw && !pcHit && !(opts.kind === 'raidwide' && !this.hard)) amt *= 1 + (opts.kind === 'raidwide' ? Math.min(s.vuln, FIGHT.VULN) : s.vuln);
+    if (s.brittle && s.debuffs.brittle > this.t && !opts.raw && !pcHit) amt *= 1 + s.brittle * HARDPLUS.T.BRITTLE.PER;   // (Hard+ Brittle: a stack per avoidable hit, hardplus.js)
+    if (s.def && !opts.raw && !pcHit) amt *= 1 - s.def;
     let mult = 1, perfect = null, reflect = null, invuln = false, read = null, onceHit = null;
     const ap = []; let pm = null, pv = 1;   // (value counters: [mit, damage it took off], in the order they were applied)
     for (const m of (opts.nomit ? [] : s.mits)) {
@@ -1001,15 +1007,16 @@ class FightSim {
     if (opts.avoidable) {
       st.avoidable++; this.avoidCount++;
       if (this.onAvoidable) this.onAvoidable(p, opts);   // a boss that keeps count of its own (Corvane's Whetstone)
-      if (opts.ddown) s.dmgDownEnd = this.t + FIGHT.DMG_DOWN_DUR;   // (Damage Down only where the move opts in: ddown)
+      if (opts.ddown && !pcHit) s.dmgDownEnd = this.t + FIGHT.DMG_DOWN_DUR;   // (Damage Down only where the move opts in: ddown)
       // lingering ground ticks don't stack Vulnerability (it would snowball per tick)
-      if (!opts.noVuln) { s.vuln = Math.min(1, (s.vulnEnd > this.t ? s.vuln : 0) + this.vulnStep); s.vulnEnd = this.t + FIGHT.VULN_DUR; }
-      if (this.mods.brittle && !opts.noVuln && amt > 0) { const B = HARDPLUS.T.BRITTLE; s.brittle = Math.min(B.MAX, (s.debuffs.brittle > this.t ? s.brittle || 0 : 0) + 1); s.debuffs.brittle = this.t + B.DUR; }   // (Hard+ Brittle)
+      if (!opts.noVuln && !pcHit) { s.vuln = Math.min(1, (s.vulnEnd > this.t ? s.vuln : 0) + this.vulnStep); s.vulnEnd = this.t + FIGHT.VULN_DUR; }
+      if (this.mods.brittle && !opts.noVuln && !pcHit && amt > 0) { const B = HARDPLUS.T.BRITTLE; s.brittle = Math.min(B.MAX, (s.debuffs.brittle > this.t ? s.brittle || 0 : 0) + 1); s.debuffs.brittle = this.t + B.DUR; }   // (Hard+ Brittle)
     }
     if (s.hp <= 0 && s.mits.some(m => m.kind === 'living') && opts.kind !== 'enrage' && opts.kind !== 'fall') s.hp = 1;
     this.saveCredit(p, s, ap, before, hp0, shFrom0, absorbed, dead0);
     const pd = { t: 'pdmg', id: p.id, a: amt, k: opts.kind || 'hit', hp: Math.max(0, s.hp), dd: opts.avoidable ? 1 : 0 };
     if (opts.n) pd.n = opts.n;   // the move it came from (the death recap)
+    if (pcHit) pd.pc = 1;   // (a share of their health: the client draws it in frost)
     if (absorbed > 0) pd.sh = absorbed;
     if (s.hollow && amt > 0) pd.hl = 1;
     if (kd) pd.df = kd.q;   // (a deflect caught it: 2 Perfect, 1 Good, 3 Mikiri Step)
@@ -1218,6 +1225,7 @@ class FightSim {
         }
       }
       if (m.aimFromBoss) { const tp = this.players().find(q => q.id === m.aimFromBoss); if (tp && this.t < m.resolveAt - (m.lockAt || 0.6)) { m.shape.x = this.boss.x; m.shape.y = this.boss.y; m.shape.angle = Math.atan2(tp.y - this.boss.y, tp.x - this.boss.x); } }
+      if (m.tick) m.tick(m);   // (a blade line fits its length to whoever stands in it, bladeLine)
       if (this.t < m.resolveAt) continue;
       this.mechs.delete(id);
       this.resolveMech(m);
@@ -1234,7 +1242,7 @@ class FightSim {
     const eat = this.eatInfo ? this.eatInfo(m, inside) : null;
     const hit = (p, dmg, kind, avoidable) => {
       const ea = eat && eat.on && eat.on.some(q => q.id === p.id) ? eat.type : null;
-      this.damagePlayer(p, dmg, { kind, avoidable: avoidable && !ea, ddown: m.ddown, eat: ea, mid: m.id, n: m.from }); hits.push(p.id);
+      this.damagePlayer(p, dmg, { kind, avoidable: avoidable && !ea, ddown: m.ddown, eat: ea, mid: m.id, n: m.from, pct: m.pct }); hits.push(p.id);   // (m.pct: a share of their current health instead of m.dmg, damagePlayer)
     };
     if (eat && eat.whole) {
       this.damagePlayer(eat.whole, m.dmg, { kind: m.tag || m.type, eat: eat.type, mid: m.id, whole: 1, owner: eat.owner, n: m.from });
@@ -1245,6 +1253,7 @@ class FightSim {
     }
     switch (m.type) {
       case 'aoe':
+        if (m.blade) { this.resolveBlade(m, hit); break; }   // (a blade line: the first body that stops it, bladeLine)
         // m.group (a Set shared by many overlapping circles that land together, Snare Weave): one hit each at most
         for (const p of inside) { if (m.group) { if (m.group.has(p.id)) continue; m.group.add(p.id); } hit(p, m.dmg, m.tag || 'aoe', m.avoidable); }
         break;
@@ -1307,6 +1316,15 @@ class FightSim {
       case 'knockback':
         for (const p of this.alive()) this.emit({ t: 'kb', id: p.id, x: m.shape.x, y: m.shape.y, d: m.dist || 260 });
         break;
+      // a ring beside the hero in m.target: whoever else stands in it (the one nearest its centre) takes the hit instead; with nobody else in it the target takes it where they stand
+      case 'guard': {
+        const tgt = this.alive().find(p => p.id === m.target);
+        const cover = inside.filter(p => !tgt || p.id !== tgt.id).sort((a, z) => Math.hypot(a.x - m.shape.x, a.y - m.shape.y) - Math.hypot(z.x - m.shape.x, z.y - m.shape.y))[0];
+        const victim = cover || tgt;
+        if (cover) this.stats[cover.id].soaked++;
+        if (victim) hit(victim, m.dmg, m.tag || 'guard', false);
+        break;
+      }
     }
     this.emit(fail ? { t: 'tgx', id: m.id, hits, fail } : { t: 'tgx', id: m.id, hits });
     // answered cleanly (nobody caught by something they could avoid, nothing failed): the gauge fills a little
@@ -1703,7 +1721,7 @@ class FightSim {
   broadcastBoss() {
     const b = this.boss;
     this.emit({ t: 'fb', hp: b.hp, mx: b.maxHp, x: Math.round(b.x), y: Math.round(b.y), f: +b.facing.toFixed(2), tg: b.target,
-      u: b.untargetable ? 1 : 0, v: this.liveVuln(), ft: Math.round(this.t * 10) / 10, ph: this.phase,
+      u: b.untargetable ? 1 : 0, hv: b.hover ? 1 : 0, v: this.liveVuln(), ft: Math.round(this.t * 10) / 10, ph: this.phase,
       pz: this.spShift ? Math.round(this.spShift * 10) / 10 : undefined,   // the seconds the enrage clock has stood still in set pieces (main.js, raid-ui.js)
       na: +(b.autoAt - this.t).toFixed(2),  // time to the next auto-attack, so clients can show the wind-up
       c: +this.t.toFixed(3),                // the fight clock, so clients can space the boss's moves evenly (interp.js)
@@ -1728,7 +1746,7 @@ class FightSim {
   broadcastAdds() {
     this.addsDirty = false;
     this.emit({ t: 'adds', l: [...this.adds.values()].map(a => [a.id, a.kind, Math.round(a.x), Math.round(a.y), Math.round(a.hp), a.maxHp,
-      a.enraged ? 1 : 0, a.link && this.adds.has(a.link) ? a.link : null, +a.facing.toFixed(2)]), c: +this.t.toFixed(3) });
+      a.enraged ? 1 : 0, a.link && this.adds.has(a.link) ? a.link : null, +a.facing.toFixed(2), a.held ?? null]), c: +this.t.toFixed(3) });
   }
   broadcastParty() {
     const list = [];
@@ -2654,6 +2672,145 @@ Object.assign(FightSim.prototype, {
     (this.kenHits || (this.kenHits = [])).push({ t: this.t, id: p.id, pre, amt, buster: opts.kind === 'buster', done: false });
     if (this.kenHits.length > 12) this.kenHits.shift();
   },
+});
+
+// ===================================================================================================================
+// FROZEN, BLADE LINES AND COFFINS (boss-agnostic: a boss script lays them, nothing here reads def.id)
+//   freeze / thaw        a hero held where they stand until a follow-up lands ('frozen' + 'rooted'; a tank thaws in half the time)
+//   bladeLine            a line from a source through a hero to the wall that the first tank (or hero) in it stops
+//   coffin               a breakable block on one hero: held in place and unable to heal or shield while it stands
+// Messages: roomev hdfreeze { id, dur } / hdthaw { id }, tgmod { id, shape } (the live telegraph takes this shape), adds element 9 = held hero.
+// ===================================================================================================================
+Object.assign(FightSim.prototype, {
+  // distance from (x, y) going out along angle a to the room's wall
+  wallDist(x, y, a) {
+    const c = Math.cos(a), s = Math.sin(a);
+    let lo = 0, hi = ARENA.R + Math.hypot(x, y) + 2;
+    for (let i = 0; i < 22; i++) { const m = (lo + hi) / 2; if (ARENA.sd(x + c * m, y + s * m) > 0) hi = m; else lo = m; }
+    return lo;
+  },
+  // held where they stand for dur seconds (a tank: half), the follow-up's thaw ends it early. Actions still work: the rooted debuff only stops movement and dashes.
+  freeze(pid, dur) {
+    const s = this.ps.get(pid);
+    if (!s || !s.alive || !(dur > 0)) return 0;
+    const d = s.role === 'tank' ? dur / 2 : dur, end = Math.max(this.t + d, s.debuffs.frozen > this.t ? s.debuffs.frozen : 0);
+    s.debuffs.frozen = end; s.debuffs.rooted = Math.max(s.debuffs.rooted > this.t ? s.debuffs.rooted : 0, end);
+    this.emit({ t: 'roomev', k: 'hdfreeze', id: pid, dur: +(end - this.t).toFixed(2) });
+    return end - this.t;
+  },
+  // ends a freeze (and the root it laid). A hero in a standing coffin stays held until it breaks.
+  thaw(pid) {
+    const s = this.ps.get(pid);
+    if (!s || !(s.debuffs.frozen > this.t) || s.debuffs.coffin > this.t) return false;
+    delete s.debuffs.frozen; delete s.debuffs.rooted;
+    this.emit({ t: 'roomev', k: 'hdthaw', id: pid });
+    return true;
+  },
+
+  // A blade line. o: { src: {x, y} (default: the boss, following it until the lock), to: hero id (or hero), w: 96, delay, lock: 0.6 (the line follows
+  // the hero until this long before it resolves), tag, pct | dmg, freeze: 2 (seconds, 0 for none; a tank half), stop: 'tank' (default) | 'first' | 'none',
+  // shatter: true (pillar props the line crosses before its stop point break, in order from src), avoidable: true, onResolve(hit, stopAt) }.
+  // stop 'tank': the first tank standing in the line stops it; everyone in the line from src up to and including that tank is hit. 'first': the first hero
+  // of any role. 'none': nothing stops it. With nobody stopping it, everyone in the line is hit. Returns the mech (script fields such as m.real go on it).
+  bladeLine(o) {
+    const B = this.boss, tid = o.to && typeof o.to === 'object' ? o.to.id : o.to, tp = this.alive().find(p => p.id === tid);
+    const fromBoss = !o.src, src = fromBoss ? { x: B.x, y: B.y } : { x: o.src.x, y: o.src.y };
+    const shape = { kind: 'rect', x: src.x, y: src.y, angle: tp ? Math.atan2(tp.y - src.y, tp.x - src.x) : (B.facing || 0), len: 0, w: o.w || 96 };
+    const blade = { to: tid, w: shape.w, lock: o.lock ?? 0.6, stop: o.stop || 'tank', freeze: o.freeze ?? 2, shatter: !!o.shatter, onResolve: o.onResolve || null, last: null };
+    this.bladeClip(shape, blade.stop);
+    const m = this.mech(Object.assign({ type: 'aoe', shape, delay: o.delay, dmg: o.dmg || 0, pct: o.pct, tag: o.tag || 'blade', avoidable: o.avoidable ?? true, lockAt: blade.lock, blade },
+      fromBoss && tid != null ? { aimFromBoss: tid } : null));
+    blade.last = { x: shape.x, y: shape.y, angle: shape.angle, len: shape.len, t: this.t };
+    m.tick = mm => this.bladeTick(mm);
+    return m;
+  },
+  // the first body in the line (S is the shape: it starts at its x, y): { p, al } or null. mode 'tank' only counts tanks.
+  bladeFirst(S, mode) {
+    const c = Math.cos(S.angle), sn = Math.sin(S.angle), hw = S.w / 2 + 14;
+    let best = null;
+    for (const p of this.alive()) {
+      if (mode === 'tank' && p.s.role !== 'tank') continue;
+      const dx = p.x - S.x, dy = p.y - S.y, al = dx * c + dy * sn, ac = -dx * sn + dy * c;
+      if (al >= -14 && Math.abs(ac) <= hw && (!best || al < best.al)) best = { p, al };
+    }
+    return best;
+  },
+  // the drawn length: to the wall, or to the body that stops it
+  bladeClip(S, mode) {
+    const full = this.wallDist(S.x, S.y, S.angle);
+    const b = mode === 'none' ? null : this.bladeFirst(S, mode);
+    S.len = b ? Math.min(full, Math.max(10, b.al + 10)) : full;
+    return b;
+  },
+  bladeTick(m) {
+    const b = m.blade, S = m.shape;
+    if (m.aimFromBoss == null && this.t < m.resolveAt - b.lock) {   // (a line from the boss is steered by updateMechs and the clients)
+      const tp = this.alive().find(p => p.id === b.to);
+      if (tp) S.angle = Math.atan2(tp.y - S.y, tp.x - S.x);
+    }
+    this.bladeClip(S, b.stop);
+    const L = b.last, dl = Math.abs(S.len - L.len);
+    const moved = dl > 3 || (m.aimFromBoss == null && (Math.abs(S.angle - L.angle) > 0.015 || Math.abs(S.x - L.x) > 3 || Math.abs(S.y - L.y) > 3));
+    if (moved && (this.t - L.t >= 0.1 || dl > 20)) {
+      b.last = { x: S.x, y: S.y, angle: S.angle, len: S.len, t: this.t };
+      this.emit({ t: 'tgmod', id: m.id, shape: { kind: 'rect', x: Math.round(S.x), y: Math.round(S.y), angle: +S.angle.toFixed(3), len: Math.round(S.len), w: S.w } });
+    }
+  },
+  resolveBlade(m, hit) {
+    const b = m.blade, S = m.shape, c = Math.cos(S.angle), sn = Math.sin(S.angle), hw = b.w / 2 + 14, full = this.wallDist(S.x, S.y, S.angle);
+    const line = [];
+    for (const p of this.alive()) {
+      const dx = p.x - S.x, dy = p.y - S.y, al = dx * c + dy * sn, ac = -dx * sn + dy * c;
+      if (al >= -14 && Math.abs(ac) <= hw) line.push({ p, al });
+    }
+    line.sort((a, z) => a.al - z.al);
+    let cut = line.length, stopAl = full, stopAt = { x: S.x + c * full, y: S.y + sn * full };
+    if (b.stop !== 'none') {
+      const i = line.findIndex(e => b.stop === 'first' || e.p.s.role === 'tank');
+      if (i >= 0) { cut = i + 1; stopAl = line[i].al; stopAt = { x: line[i].p.x, y: line[i].p.y }; }
+    }
+    const hits = line.slice(0, cut).map(e => e.p);
+    for (const p of hits) {
+      hit(p, m.dmg, m.tag || 'blade', m.avoidable);
+      if (b.freeze > 0 && p.s.alive) this.freeze(p.id, b.freeze);
+    }
+    if (b.shatter) {
+      const pil = this.props.filter(pr => pr.kind === 'pillar').map(pr => { const dx = pr.x - S.x, dy = pr.y - S.y; return { pr, al: dx * c + dy * sn, ac: Math.abs(-dx * sn + dy * c) }; })
+        .filter(e => e.al >= 0 && e.al <= stopAl && e.ac <= b.w / 2 + e.pr.r).sort((a, z) => a.al - z.al);
+      for (const e of pil) this.breakProp(e.pr, 'blade');
+    }
+    if (b.onResolve) b.onResolve(hits, stopAt);
+  },
+
+  // A coffin on a hero: an inert add (kind 'coffin', held: pid) at their feet. While it stands they are frozen for up to dur and silenced (their heals and
+  // shields give nothing). It breaks when its hp is gone, at dur, or on breakCoffin; then the silence and the freeze end. o: { hp: 60000 (raw), dur: 8, name }.
+  // The add breaks on the first tick at or after its end, so a cast resolving at the same instant may find it gone: check coffinOf a little early.
+  coffin(pid, o = {}) {
+    const p = this.alive().find(q => q.id === pid);
+    if (!p) return null;
+    const had = this.coffinOf(pid);
+    if (had) return had;
+    const dur = o.dur || 8;
+    const a = this.spawnAdd({ kind: 'coffin', x: p.x, y: p.y, hp: o.hp || 60000, r: 30, inert: true, prio: 9, held: pid, name: o.name || null,
+      onTick: ad => this.coffinTick(ad), onDeath: ad => this.coffinFree(ad) });
+    a.until = this.t + dur;
+    p.s.debuffs.coffin = a.until;
+    this.freeze(pid, dur);
+    return a;
+  },
+  coffinTick(ad) {
+    const s = this.ps.get(ad.held), p = this.getPlayers().find(q => q.id === ad.held);
+    if (!s || !s.alive || s.left || !p || this.t >= ad.until) { this.killAdd(ad); return; }
+    if (Math.abs(p.x - ad.x) > 1 || Math.abs(p.y - ad.y) > 1) { ad.x = p.x; ad.y = p.y; this.addsDirty = true; }
+  },
+  coffinFree(ad) {
+    const s = this.ps.get(ad.held);
+    if (!s) return;
+    delete s.debuffs.coffin;
+    this.thaw(ad.held);
+  },
+  breakCoffin(pid) { const a = this.coffinOf(pid); if (!a) return false; this.killAdd(a); return true; },
+  coffinOf(pid) { for (const a of this.adds.values()) if (a.kind === 'coffin' && a.held === pid) return a; return null; },
 });
 
 // The training yard's stand-in for a raid host, for a Kenseier on the sparring dummy (main.js townKen): a bare FightSim with the one

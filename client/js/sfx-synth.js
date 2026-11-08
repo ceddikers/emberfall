@@ -693,7 +693,13 @@
     'bm-hollowking-intro': 1.5, 'bm-hollowking-judgement': 0.5, 'bm-hollowking-lantern': 8.5, 'bm-hollowking-lights-out': 2,
     'bm-hollowking-royal-audience': -1.5, 'bm-hollowking-royal-decree': -1, 'bm-hollowking-royal-doom': 1, 'bm-hollowking-royal-gaze': -1.5,
     'bm-hollowking-sceptre-rebuke': 1.5, 'bm-hollowking-sceptre-sweep': 3.5, 'bm-hollowking-sceptre-throw': 2, 'bm-hollowking-the-charge-sheet': 1.5,
-    'bm-hollowking-the-king-rises': -1, 'bm-hollowking-the-long-night': 1.5, 'bm-hollowking-writ-of-execution': 1.5, 'bm-hydra-acid-spray': 3,
+    'bm-hollowking-the-king-rises': -1, 'bm-hollowking-the-long-night': 1.5, 'bm-hollowking-writ-of-execution': 1.5, 'bm-hood-burial': -0.5,
+    'bm-hood-calm-breaks': 0.5, 'bm-hood-cold-breath': 3, 'bm-hood-communion': -1, 'bm-hood-dead-calm': -1,
+    'bm-hood-echo': -2, 'bm-hood-frostfall': -3, 'bm-hood-hollow-echo': -2, 'bm-hood-hollow-step': 1,
+    'bm-hood-hollowing': -1, 'bm-hood-interment': -0.5, 'bm-hood-intro': -1.5, 'bm-hood-last-toll': -2,
+    'bm-hood-pale-waltz': 1, 'bm-hood-pursuit': 0.5, 'bm-hood-rimeburst': -1.5, 'bm-hood-rimelight': -2.5,
+    'bm-hood-severance': 1, 'bm-hood-the-scales': 1, 'bm-hood-the-tolling': 2, 'bm-hood-two-hands': 1,
+    'bm-hood-verdict': -0.5, 'bm-hood-verdict-eternal': -1, 'bm-hood-weighing': -0.5, 'bm-hydra-acid-spray': 3,
     'bm-hydra-flame-gout': 3, 'bm-hydra-intro': -3, 'bm-hydra-mire-spit': 2, 'bm-hydra-mothers-cry': -1.5,
     'bm-hydra-mothers-heart': 0.5, 'bm-hydra-regrowth': 0.5, 'bm-hydra-rending-maul': 1.5, 'bm-hydra-rime-crown': 1,
     'bm-hydra-searing': 2.5, 'bm-hydra-stonegaze': 0.5, 'bm-hydra-stormcall': 3, 'bm-hydra-stump-echo': -0.5,
@@ -703,141 +709,148 @@
     'bm-morrowoak-hungering-dark': -1, 'bm-morrowoak-hungers-reach': 2, 'bm-morrowoak-hydra-head': 1.5, 'bm-morrowoak-inhale': -1.5,
     'bm-morrowoak-intro': -1, 'bm-morrowoak-nothing-left': -3, 'bm-morrowoak-root-lash': -0.5, 'bm-morrowoak-sap-tide': -0.5,
     'bm-morrowoak-saplings': 3, 'bm-morrowoak-storm-knot': 0.5, 'bm-morrowoak-the-grove-remade': -1, 'bm-morrowoak-the-swallowing': -3,
-    'bm-morrowoak-twin-seed': -0.5, 'bm-morrowoak-wyrm-wing': -1, 'bm-skitterra-acid-deluge': 0.5, 'bm-skitterra-brood': 4.5,
-    'bm-skitterra-ceiling-ambush': 1, 'bm-skitterra-chrysalis': 4, 'bm-skitterra-cocoon-drop': 1.5, 'bm-skitterra-cocoon-split': 0.5,
-    'bm-skitterra-eclosion': -0.5, 'bm-skitterra-egg-sacs': 1.5, 'bm-skitterra-eightfold-lunge': 6.5, 'bm-skitterra-fang-rush': 2,
-    'bm-skitterra-fang-strike': 1, 'bm-skitterra-flutter': 3.5, 'bm-skitterra-from-the-dark': 2, 'bm-skitterra-heartbeat': 2.5,
-    'bm-skitterra-into-the-dark': 2, 'bm-skitterra-intro': -1, 'bm-skitterra-molt': 8, 'bm-skitterra-moonlight': -0.5,
-    'bm-skitterra-moth-queen': 1.5, 'bm-skitterra-moth-shriek': -4, 'bm-skitterra-rebirth': 1, 'bm-skitterra-scale-wave': 0.5,
-    'bm-skitterra-silk-lines': 3.5, 'bm-skitterra-silk-reel': 3.5, 'bm-skitterra-silk-wrap': 2.5, 'bm-skitterra-snare-weave': 2,
-    'bm-skitterra-spiderlings': 11, 'bm-skitterra-spin': 8, 'bm-skitterra-spinneret-volley': 16, 'bm-skitterra-strand-reel': 5.5,
-    'bm-skitterra-the-swarm': 11.5, 'bm-skitterra-the-web-gives-way': 0.5, 'bm-skitterra-tightening-web': 2, 'bm-skitterra-venom-drip': 4,
-    'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4, 'bm-sovereign-aftershock': -1.5, 'bm-sovereign-ashen-sweep': -1,
-    'bm-sovereign-brand': -1.5, 'bm-sovereign-brand-sear': 1.5, 'bm-sovereign-burning-web': 4, 'bm-sovereign-call': 1,
-    'bm-sovereign-cinder-dive': -2, 'bm-sovereign-cloche': 3.5, 'bm-sovereign-crescent': 2, 'bm-sovereign-crier': 1,
-    'bm-sovereign-crossed-blades': 2, 'bm-sovereign-cupped-ember': -0.5, 'bm-sovereign-ember-and-ash': 1, 'bm-sovereign-emberfall': -1,
-    'bm-sovereign-flambe': 0.5, 'bm-sovereign-flambe-service': 0.5, 'bm-sovereign-foretold': 1, 'bm-sovereign-fuse': 7.5,
-    'bm-sovereign-glass-floor': -1.5, 'bm-sovereign-grace-withdrawn': -2.5, 'bm-sovereign-halo-procession': -0.5, 'bm-sovereign-halo-turn': -1.5,
-    'bm-sovereign-heads-of-flame': -2, 'bm-sovereign-hollow-kings-bell': 1.5, 'bm-sovereign-intro': -0.5, 'bm-sovereign-kindling': -2,
-    'bm-sovereign-knights-sweep': -0.5, 'bm-sovereign-knot': 4, 'bm-sovereign-lance': -3, 'bm-sovereign-lantern': 4,
-    'bm-sovereign-mince': 0.5, 'bm-sovereign-nightfall': -1, 'bm-sovereign-pyre': 2.5, 'bm-sovereign-royal-doom': 1,
-    'bm-sovereign-scatter': 0.5, 'bm-sovereign-seeds-of-ash': 1, 'bm-sovereign-shadow': -0.5, 'bm-sovereign-sovereigns-dance': -0.5,
-    'bm-sovereign-sunwheel-of-embers': 0.5, 'bm-sovereign-surge': -1.5, 'bm-sovereign-the-anvil-count': 2, 'bm-sovereign-twin-brands': 2,
-    'bm-sovereign-two-dancers': 2, 'bm-titan-avalanche': 0.5, 'bm-titan-breath-of-winter': 1.5, 'bm-titan-endless-winter': -1.5,
-    'bm-titan-frostbite': 2.5, 'bm-titan-glacial-stomp': -0.5, 'bm-titan-icebreaker': 2, 'bm-titan-icefall': 2.5,
-    'bm-titan-intro': -3, 'bm-titan-rime-slam': 0.5, 'bm-titan-titans-grip': 2.5, 'bm-titan-titans-sweep': 2,
-    'bm-titan-twin-slam': 2, 'bm-titan-whiteout': 1.5, 'bm-titan-winters-grasp': 2.5, 'bm-titan-winters-howl': -1,
-    'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3, 'bm-volkar-crossing-arms': 2.5,
-    'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4, 'bm-volkar-gathering-storm': 0.5,
-    'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5, 'bm-volkar-lightning-rods': 9,
-    'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5, 'bm-volkar-pulse': 4.5,
-    'bm-volkar-reaching-arms': 0.5, 'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5, 'bm-volkar-squall-line': 3,
-    'bm-volkar-static-field': 5, 'bm-volkar-static-lash': 4.5, 'bm-volkar-still-air': 3, 'bm-volkar-storm-burst': -1.5,
-    'bm-volkar-storm-groan': 1, 'bm-volkar-storm-heart': 1, 'bm-volkar-storm-hush': 1.5, 'bm-volkar-storm-roar': -1,
-    'bm-volkar-storm-roll': 2.5, 'bm-volkar-storm-unbound': -1, 'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2,
-    'bm-volkar-thunder-crash': 1, 'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5, 'bm-volkar-titan-fist': -1.5,
-    'bm-volkar-twin-fall': -1.5, 'bm-wyrm-cinder-rain': 7.5, 'bm-wyrm-ember-breath': 3.5, 'bm-wyrm-intro': -4,
-    'bm-wyrm-pounce': 0.5, 'bm-wyrm-take-flight': 3.5, 'bm-wyrm-twin-breath': 3.5, 'boss-auto': 2.5,
-    'boss-death': -2.5, 'boss-enrage': -2.5, 'boss-impact-empty': 7, 'boss-impact-heavy': 0.5,
-    'boss-impact-light': 7, 'boss-intro': -1.5, 'boss-step': 6, 'buff-on': -0.5,
-    'chest-drop': 3.5, 'chest-open': -5, 'cleanse': -5, 'clear': -4.5,
-    'crit': 4, 'dash': 6.5, 'debuff-on': -1, 'dummy-hit': 3,
-    'emote-cheer': -6.5, 'emote-laugh': -2, 'emote-wave': 2, 'enrage-bell': 3,
-    'fd-alert': -6, 'fd-arrow': 7, 'fd-auto-cast': 7, 'fd-auto-ember': 12.5,
-    'fd-auto-hit-arrow': 8.5, 'fd-auto-hit-ember': 16, 'fd-auto-hit-holy': 11, 'fd-auto-hit-melee': 7.5,
-    'fd-auto-holy': 9, 'fd-auto-melee': -1, 'fd-auto-shot': 8.5, 'fd-ballista': 1,
-    'fd-banner': -0.5, 'fd-bash': 4, 'fd-boon': -3, 'fd-boss-arrive': -3,
-    'fd-boss-down': -2, 'fd-brace': 1, 'fd-brand': 9.5, 'fd-brute-slam': 3,
-    'fd-buy': -3, 'fd-camp-hit': 5.5, 'fd-carve': 5.5, 'fd-chain-ash-breath': 1,
-    'fd-chain-bell': 0.5, 'fd-chain-bubble': 3.5, 'fd-chain-down': -3, 'fd-chain-far': -3,
-    'fd-chain-oak-cut': 4.5, 'fd-chain-pike-lunge': 3.5, 'fd-chain-pike-slap': 5, 'fd-chain-ram-charge': 0.5,
-    'fd-chain-ram-stamp': 2.5, 'fd-chain-root-snare': 1, 'fd-chain-soak-ok': -1, 'fd-chain-stump-throw': 3,
-    'fd-chain-sweep': 2, 'fd-chain-whelp-call': 1.5, 'fd-count': 6, 'fd-cover': -1,
-    'fd-dawn': -0.5, 'fd-dawn-breaks': -1, 'fd-defeat': -1.5, 'fd-deliver': 1.5,
-    'fd-elite-die': -3, 'fd-enemy-die': 5, 'fd-enemy-hit': 5.5, 'fd-erupt': -0.5,
-    'fd-fireball-cast': 7.5, 'fd-fireball-hit': 3.5, 'fd-firestep': 3, 'fd-flamecircle': 1,
-    'fd-flood-rise': 2, 'fd-gate-break': 0.5, 'fd-gate-hit': 3, 'fd-gate-shut': -2.5,
-    'fd-gnaw-breath': -3, 'fd-gnaw-lunge': -2.5, 'fd-gnaw-sniff': 0.5, 'fd-gnaw-stamp': 1,
-    'fd-hero-down': -1, 'fd-hyperforge': -3, 'fd-levelup': -0.5, 'fd-log-break': 2.5,
-    'fd-loot-land': 1, 'fd-march': -6, 'fd-mark': 3.5, 'fd-mend': -2.5,
-    'fd-meteor-fall': 1.5, 'fd-meteor-hit': -2, 'fd-mire-charge': 2.5, 'fd-mire-drown': -1.5,
-    'fd-mire-stamp': -1, 'fd-night': -1, 'fd-page': 1.5, 'fd-perfect': 2,
-    'fd-pickup': 4, 'fd-pierce': 7, 'fd-ping': 8.5, 'fd-post-out': 5.5,
-    'fd-post-plant': 0.5, 'fd-quake': 0.5, 'fd-quest-done': -1.5, 'fd-quest-missed': -2,
-    'fd-quest-offer': -5.5, 'fd-rankup': 2.5, 'fd-recall': -3, 'fd-recall-done': -2.5,
-    'fd-relight': 0.5, 'fd-sanctum': -2.5, 'fd-sell': -2, 'fd-setdown': 2.5,
-    'fd-smite': 0.5, 'fd-soldier-heal': 9.5, 'fd-soldier-shot': 12, 'fd-soldier-swing': 4,
-    'fd-spire-bolt': 5.5, 'fd-spire-hit': 4.5, 'fd-spit': 6, 'fd-stalker': 1.5,
-    'fd-starfall': 2, 'fd-step': 1.5, 'fd-strike-claw': 7.5, 'fd-strike-dart': 7.5,
-    'fd-strike-shade': 7, 'fd-strike-slag': 4, 'fd-strike-torch': 7, 'fd-tail-sweep': 1,
-    'fd-tower-fall': -2.5, 'fd-trap-arm': 3, 'fd-trap-burst': 3.5, 'fd-tunnel-burrow': -0.5,
-    'fd-tunnel-surface': -1.5, 'fd-victory': -4.5, 'fd-wall': -1, 'fd-wave': -7,
-    'fd-waystone-wake': -4, 'fd-whelps': 15, 'fd-wick-breath': 0.5, 'fd-wick-eat': 5.5,
-    'fd-wick-glow': 2.5, 'fd-wick-lunge': 2, 'fd-wild-boar': -4.5, 'fd-wild-howl': -6.5,
-    'fd-wild-return': -3.5, 'fd-wild-snap': 2, 'fd-wild-stone': 2.5, 'fd-wild-wake': -3.5,
-    'fd-wild-wolf': -5, 'feast-chew': 6.5, 'feast-clink': -5.5, 'feast-serve': -3.5,
-    'feast-sting': -2.5, 'fish-bite': 3, 'fish-cast': 1.5, 'fish-catch': -3,
-    'fish-lost': -0.5, 'fish-reel': -0.5, 'gloom-hollow-off': -2, 'gloom-hollow-on': 2,
-    'heal-land': -2.5, 'hit-confirm': 5.5, 'hit-heavy': 5, 'hit-light': 9,
-    'hm-bark-ash': -0.5, 'hm-bark-ghost': 3.5, 'hm-bark-greyfang': 0.5, 'hm-bark-rust': 0.5,
-    'hm-bite': 8, 'hm-bite-big': 2.5, 'hm-bringdown': -3, 'hm-calloff': 1.5,
-    'hm-down': 3, 'hm-hamstring': 1, 'hm-horn': -6, 'hm-howl': -3.5,
-    'hm-longchase': 1.5, 'hm-mount': -1, 'hm-quarry': 6.5, 'hm-relay': 4,
-    'hm-rend': 0.5, 'hm-ridedown': 2.5, 'hm-snap': 7, 'hm-up': 2.5,
-    'hm-whistle-hold': -7.5, 'hm-whistle-pounce': -7, 'ken-blaze': 0.5, 'ken-break': -0.5,
-    'ken-deathblow': -2, 'ken-good': 8, 'ken-iai': 2.5, 'ken-miss': 7.5,
-    'ken-off': 4.5, 'ken-pass': 6.5, 'ken-perfect': 2, 'ken-pommel': 6.5,
-    'ken-redirect': 1, 'lamp-drop': 11, 'lamp-ember': 14.5, 'lamp-end': 6.5,
-    'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5, 'lamp-pillar': 3, 'lamp-snuff': 5.5,
-    'lamp-sparks': 5, 'lb-fire': -1.5, 'lb-ready': -5, 'loot-take': -2,
-    'low-hp': -4.5, 'npc-talk': -6, 'ping': 2.5, 'pip-up': 12,
-    'portal-enter': -3, 'portal-hum': -22.5, 'pull-count': 0.5, 'pull-count-last': -3.5,
-    'pull-go': -2, 'reaper-blink': 5.5, 'reaper-danse': 5, 'reaper-finish1': 4.5,
-    'reaper-finish2': -0.5, 'reaper-finish3': 1, 'reaper-finish4': -2, 'reaper-frenzy': -2.5,
-    'reaper-gate-bloom': -2.5, 'reaper-gate-close': -1, 'reaper-gate-open': 3.5, 'reaper-gate-tone': 8,
-    'reaper-gatebreaker': 1.5, 'reaper-harvest': -1, 'reaper-moon': 1.5, 'reaper-pop-bind': 4.5,
-    'reaper-pop-death': 3, 'reaper-pop-drain': 4, 'reaper-pop-thread': 9, 'reaper-rune': 12.5,
-    'reaper-rune-emp': 6, 'reaper-slack': 14.5, 'reaper-slash': 2.5, 'reaper-star-collapse': -2,
-    'reaper-star-open': 0.5, 'reaper-swing': 12, 'reaper-veil': -0.5, 'revive': -2,
-    'shield-break': 5, 'shield-up': -4, 'stack-1': 8, 'stack-2': -2.5,
-    'step-grass': 8, 'step-stone': 8.5, 'step-wood': 1.5, 'story-page': 3.5,
-    'sv-anvil-rise': 3.5, 'sv-anvil-strike': -1.5, 'sv-bite': 1, 'sv-boil': 3.5,
-    'sv-burnback': 0.5, 'sv-call-archmage': 0.5, 'sv-call-brannoc': 2.5, 'sv-call-corvane': -1,
-    'sv-call-grubnak': 0.5, 'sv-call-hollowking': 1.5, 'sv-call-hydra': -3, 'sv-call-morrowoak': 0.5,
-    'sv-call-skitterra': 3, 'sv-call-titan': 1, 'sv-call-volkar': 1, 'sv-call-wyrm': -3,
-    'sv-crescent-fan': -0.5, 'sv-crumble': -3.5, 'sv-cut': -2, 'sv-dance-cut': 0.5,
-    'sv-dance-cut2': 1, 'sv-dance-image': -1, 'sv-descent': -1.5, 'sv-dive-fall': -2,
-    'sv-dive-line': 1, 'sv-drift-loop': -11, 'sv-emberfall-below': -1, 'sv-everyname': -0.5,
-    'sv-fore-ghost': 0.5, 'sv-gutter': 1, 'sv-head-rise': -2, 'sv-heart-breath': 6,
-    'sv-heart-loop': -14, 'sv-hole-fall': -4.5, 'sv-hole-town': 0.5, 'sv-lance-dash': -1,
-    'sv-lantern-down': 0.5, 'sv-lantern-fly': 7, 'sv-lie-bell': -2.5, 'sv-pillar': -2,
-    'sv-proc-burst': -1, 'sv-pyre-cut': 1.5, 'sv-rebirth-blast': -1, 'sv-rebirth-choir': -1.5,
-    'sv-rebirth-draw': -1.5, 'sv-rebirth-halo': -1, 'sv-rebirth-sky': -2, 'sv-relight': -0.5,
-    'sv-sapling-arrive': -3, 'sv-sapling-creak': 2.5, 'sv-sapling-die': -4, 'sv-seal-shatter': -1.5,
-    'sv-seed-burst': -1.5, 'sv-seed-pulse': 2, 'sv-signal': -3, 'sv-stance-comet': -1,
-    'sv-stance-crane': 0.5, 'sv-stance-parting': 4, 'sv-steam-burst': -1, 'sv-twin-bloom': -2,
-    'sv-twin-bolt': 3.5, 'sv-twin-fire': -0.5, 'sv-twin-meet': -0.5, 'sv-twin-shift': 3.5,
-    'sv-twin-void': -0.5, 'sv-wall-fire': -0.5, 'sv-wall-out': 0.5, 'sv-water-hiss': -1.5,
-    'sv-wheel-clang': 3, 'sv-wheel-loop': -10, 'sv-wheel-throw': 1, 'sv-wipe-chord': -1.5,
-    'tg-aoe': 1.5, 'tg-buster': 1, 'tg-charge': 0.5, 'tg-gaze': 0.5,
-    'tg-knockback': 2.5, 'tg-raidwide': -0.5, 'tg-spread': 5.5, 'tg-stack': 1.5,
-    'tide-bell': 1, 'tide-crash': -1.5, 'tide-crest': 4.5, 'tide-gull': 9.5,
-    'tide-pop': 1.5, 'tide-slack': 10.5, 'tide-wave': 2.5, 'title-sting': -3,
-    'ui-bounty': 0.5, 'ui-buy': -6, 'ui-click': 2, 'ui-close': -0.5,
-    'ui-equip': -2.5, 'ui-error': -3, 'ui-feat': -7, 'ui-gold': -4,
-    'ui-hover': 13, 'ui-secret': -6, 'ult-alembist': 0.5, 'ult-bastion': 1.5,
-    'ult-bloodreaver': 1, 'ult-driftblade': 6.5, 'ult-fire': -1.5, 'ult-gloomsworn': -1,
-    'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5, 'ult-kenseier': -1.5,
-    'ult-lanternkeeper': -2, 'ult-marionettist': 0.5, 'ult-oathbroker': -1, 'ult-pyromancer': -1,
-    'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1, 'ult-shadowblade': 4,
-    'ult-thermist': -1, 'ult-threadweaver': -1, 'ult-tidecaller': -2, 'wall-break': -1.5,
-    'wall-caelum-break': -1, 'wall-caelum-seal': -1.5, 'wall-caelum-vigil': -19.5, 'wall-corvane-kneel': -1.5,
-    'wall-corvane-rise': -1, 'wall-corvane-take': 1, 'wall-corvane-toll': -18.5, 'wall-hydra-break': -2,
-    'wall-hydra-heart': -11.5, 'wall-hydra-up': -3, 'wall-morrowoak-gulp': -13, 'wall-morrowoak-out': -0.5,
-    'wall-morrowoak-up': -2, 'wall-titan-break': -1, 'wall-titan-up': -3, 'wall-titan-wind': -5.5,
-    'wall-up': -3.5, 'wall-wyrm-close': -1.5, 'wall-wyrm-fall': -1.5, 'wall-wyrm-heart': -12,
-    'wall-wyrm-open': -3.5, 'wall-wyrm-rise': -0.5, 'wall-wyrm-storm': -11, 'waymark': 11.5,
-    'wipe': -2,
+    'bm-morrowoak-twin-seed': -0.5, 'bm-morrowoak-wyrm-wing': -1, 'bm-seraph-absolution': -1, 'bm-seraph-afterglow': -1.5,
+    'bm-seraph-ash-landing': -1.5, 'bm-seraph-benediction': -0.5, 'bm-seraph-broken-halo': -1, 'bm-seraph-cold-sermon': -0.5,
+    'bm-seraph-following-light': 0.5, 'bm-seraph-frost-shadow': -0.5, 'bm-seraph-intro': -2.5, 'bm-seraph-last-rites': 0.5,
+    'bm-seraph-radiance': -3, 'bm-seraph-return': -1, 'bm-seraph-returning-edge': -0.5, 'bm-seraph-six-wings': 5,
+    'bm-seraph-the-unsaid': -1.5, 'bm-seraph-wingbeat': -1, 'bm-seraph-wingfall': 0.5, 'bm-skitterra-acid-deluge': 0.5,
+    'bm-skitterra-brood': 4.5, 'bm-skitterra-ceiling-ambush': 1, 'bm-skitterra-chrysalis': 4, 'bm-skitterra-cocoon-drop': 1.5,
+    'bm-skitterra-cocoon-split': 0.5, 'bm-skitterra-eclosion': -0.5, 'bm-skitterra-egg-sacs': 1.5, 'bm-skitterra-eightfold-lunge': 6.5,
+    'bm-skitterra-fang-rush': 2, 'bm-skitterra-fang-strike': 1, 'bm-skitterra-flutter': 3.5, 'bm-skitterra-from-the-dark': 2,
+    'bm-skitterra-heartbeat': 2.5, 'bm-skitterra-into-the-dark': 2, 'bm-skitterra-intro': -1, 'bm-skitterra-molt': 8,
+    'bm-skitterra-moonlight': -0.5, 'bm-skitterra-moth-queen': 1.5, 'bm-skitterra-moth-shriek': -4, 'bm-skitterra-rebirth': 1,
+    'bm-skitterra-scale-wave': 0.5, 'bm-skitterra-silk-lines': 3.5, 'bm-skitterra-silk-reel': 3.5, 'bm-skitterra-silk-wrap': 2.5,
+    'bm-skitterra-snare-weave': 2, 'bm-skitterra-spiderlings': 11, 'bm-skitterra-spin': 8, 'bm-skitterra-spinneret-volley': 16,
+    'bm-skitterra-strand-reel': 5.5, 'bm-skitterra-the-swarm': 11.5, 'bm-skitterra-the-web-gives-way': 0.5, 'bm-skitterra-tightening-web': 2,
+    'bm-skitterra-venom-drip': 4, 'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4, 'bm-sovereign-aftershock': -1.5,
+    'bm-sovereign-ashen-sweep': -1, 'bm-sovereign-brand': -1.5, 'bm-sovereign-brand-sear': 1.5, 'bm-sovereign-burning-web': 4,
+    'bm-sovereign-call': 1, 'bm-sovereign-cinder-dive': -2, 'bm-sovereign-cloche': 3.5, 'bm-sovereign-crescent': 2,
+    'bm-sovereign-crier': 1, 'bm-sovereign-crossed-blades': 2, 'bm-sovereign-cupped-ember': -0.5, 'bm-sovereign-ember-and-ash': 1,
+    'bm-sovereign-emberfall': -1, 'bm-sovereign-flambe': 0.5, 'bm-sovereign-flambe-service': 0.5, 'bm-sovereign-foretold': 1,
+    'bm-sovereign-fuse': 7.5, 'bm-sovereign-glass-floor': -1.5, 'bm-sovereign-grace-withdrawn': -2.5, 'bm-sovereign-halo-procession': -0.5,
+    'bm-sovereign-halo-turn': -1.5, 'bm-sovereign-heads-of-flame': -2, 'bm-sovereign-hollow-kings-bell': 1.5, 'bm-sovereign-intro': -0.5,
+    'bm-sovereign-kindling': -2, 'bm-sovereign-knights-sweep': -0.5, 'bm-sovereign-knot': 4, 'bm-sovereign-lance': -3,
+    'bm-sovereign-lantern': 4, 'bm-sovereign-mince': 0.5, 'bm-sovereign-nightfall': -1, 'bm-sovereign-pyre': 2.5,
+    'bm-sovereign-royal-doom': 1, 'bm-sovereign-scatter': 0.5, 'bm-sovereign-seeds-of-ash': 1, 'bm-sovereign-shadow': -0.5,
+    'bm-sovereign-sovereigns-dance': -0.5, 'bm-sovereign-sunwheel-of-embers': 0.5, 'bm-sovereign-surge': -1.5, 'bm-sovereign-the-anvil-count': 2,
+    'bm-sovereign-twin-brands': 2, 'bm-sovereign-two-dancers': 2, 'bm-titan-avalanche': 0.5, 'bm-titan-breath-of-winter': 1.5,
+    'bm-titan-endless-winter': -1.5, 'bm-titan-frostbite': 2.5, 'bm-titan-glacial-stomp': -0.5, 'bm-titan-icebreaker': 2,
+    'bm-titan-icefall': 2.5, 'bm-titan-intro': -3, 'bm-titan-rime-slam': 0.5, 'bm-titan-titans-grip': 2.5,
+    'bm-titan-titans-sweep': 2, 'bm-titan-twin-slam': 2, 'bm-titan-whiteout': 1.5, 'bm-titan-winters-grasp': 2.5,
+    'bm-titan-winters-howl': -1, 'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3,
+    'bm-volkar-crossing-arms': 2.5, 'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4,
+    'bm-volkar-gathering-storm': 0.5, 'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5,
+    'bm-volkar-lightning-rods': 9, 'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5,
+    'bm-volkar-pulse': 4.5, 'bm-volkar-reaching-arms': 0.5, 'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5,
+    'bm-volkar-squall-line': 3, 'bm-volkar-static-field': 5, 'bm-volkar-static-lash': 4.5, 'bm-volkar-still-air': 3,
+    'bm-volkar-storm-burst': -1.5, 'bm-volkar-storm-groan': 1, 'bm-volkar-storm-heart': 1, 'bm-volkar-storm-hush': 1.5,
+    'bm-volkar-storm-roar': -1, 'bm-volkar-storm-roll': 2.5, 'bm-volkar-storm-unbound': -1, 'bm-volkar-storm-walls': 2,
+    'bm-volkar-supercell': 2, 'bm-volkar-thunder-crash': 1, 'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5,
+    'bm-volkar-titan-fist': -1.5, 'bm-volkar-twin-fall': -1.5, 'bm-wyrm-cinder-rain': 7.5, 'bm-wyrm-ember-breath': 3.5,
+    'bm-wyrm-intro': -4, 'bm-wyrm-pounce': 0.5, 'bm-wyrm-take-flight': 3.5, 'bm-wyrm-twin-breath': 3.5,
+    'boss-auto': 2.5, 'boss-death': -2.5, 'boss-enrage': -2.5, 'boss-impact-empty': 7,
+    'boss-impact-heavy': 0.5, 'boss-impact-light': 7, 'boss-intro': -1.5, 'boss-step': 6,
+    'buff-on': -0.5, 'chest-drop': 3.5, 'chest-open': -5, 'cleanse': -5,
+    'clear': -4.5, 'crit': 4, 'dash': 6.5, 'debuff-on': -1,
+    'dummy-hit': 3, 'emote-cheer': -6.5, 'emote-laugh': -2, 'emote-wave': 2,
+    'enrage-bell': 3, 'fd-alert': -6, 'fd-arrow': 7, 'fd-auto-cast': 7,
+    'fd-auto-ember': 12.5, 'fd-auto-hit-arrow': 8.5, 'fd-auto-hit-ember': 16, 'fd-auto-hit-holy': 11,
+    'fd-auto-hit-melee': 7.5, 'fd-auto-holy': 9, 'fd-auto-melee': -1, 'fd-auto-shot': 8.5,
+    'fd-ballista': 1, 'fd-banner': -0.5, 'fd-bash': 4, 'fd-boon': -3,
+    'fd-boss-arrive': -3, 'fd-boss-down': -2, 'fd-brace': 1, 'fd-brand': 9.5,
+    'fd-brute-slam': 3, 'fd-buy': -3, 'fd-camp-hit': 5.5, 'fd-carve': 5.5,
+    'fd-chain-ash-breath': 1, 'fd-chain-bell': 0.5, 'fd-chain-bubble': 3.5, 'fd-chain-down': -3,
+    'fd-chain-far': -3, 'fd-chain-oak-cut': 4.5, 'fd-chain-pike-lunge': 3.5, 'fd-chain-pike-slap': 5,
+    'fd-chain-ram-charge': 0.5, 'fd-chain-ram-stamp': 2.5, 'fd-chain-root-snare': 1, 'fd-chain-soak-ok': -1,
+    'fd-chain-stump-throw': 3, 'fd-chain-sweep': 2, 'fd-chain-whelp-call': 1.5, 'fd-count': 6,
+    'fd-cover': -1, 'fd-dawn': -0.5, 'fd-dawn-breaks': -1, 'fd-defeat': -1.5,
+    'fd-deliver': 1.5, 'fd-elite-die': -3, 'fd-enemy-die': 5, 'fd-enemy-hit': 5.5,
+    'fd-erupt': -0.5, 'fd-fireball-cast': 7.5, 'fd-fireball-hit': 3.5, 'fd-firestep': 3,
+    'fd-flamecircle': 1, 'fd-flood-rise': 2, 'fd-gate-break': 0.5, 'fd-gate-hit': 3,
+    'fd-gate-shut': -2.5, 'fd-gnaw-breath': -3, 'fd-gnaw-lunge': -2.5, 'fd-gnaw-sniff': 0.5,
+    'fd-gnaw-stamp': 1, 'fd-hero-down': -1, 'fd-hyperforge': -3, 'fd-levelup': -0.5,
+    'fd-log-break': 2.5, 'fd-loot-land': 1, 'fd-march': -6, 'fd-mark': 3.5,
+    'fd-mend': -2.5, 'fd-meteor-fall': 1.5, 'fd-meteor-hit': -2, 'fd-mire-charge': 2.5,
+    'fd-mire-drown': -1.5, 'fd-mire-stamp': -1, 'fd-night': -1, 'fd-page': 1.5,
+    'fd-perfect': 2, 'fd-pickup': 4, 'fd-pierce': 7, 'fd-ping': 8.5,
+    'fd-post-out': 5.5, 'fd-post-plant': 0.5, 'fd-quake': 0.5, 'fd-quest-done': -1.5,
+    'fd-quest-missed': -2, 'fd-quest-offer': -5.5, 'fd-rankup': 2.5, 'fd-recall': -3,
+    'fd-recall-done': -2.5, 'fd-relight': 0.5, 'fd-sanctum': -2.5, 'fd-sell': -2,
+    'fd-setdown': 2.5, 'fd-smite': 0.5, 'fd-soldier-heal': 9.5, 'fd-soldier-shot': 12,
+    'fd-soldier-swing': 4, 'fd-spire-bolt': 5.5, 'fd-spire-hit': 4.5, 'fd-spit': 6,
+    'fd-stalker': 1.5, 'fd-starfall': 2, 'fd-step': 1.5, 'fd-strike-claw': 7.5,
+    'fd-strike-dart': 7.5, 'fd-strike-shade': 7, 'fd-strike-slag': 4, 'fd-strike-torch': 7,
+    'fd-tail-sweep': 1, 'fd-tower-fall': -2.5, 'fd-trap-arm': 3, 'fd-trap-burst': 3.5,
+    'fd-tunnel-burrow': -0.5, 'fd-tunnel-surface': -1.5, 'fd-victory': -4.5, 'fd-wall': -1,
+    'fd-wave': -7, 'fd-waystone-wake': -4, 'fd-whelps': 15, 'fd-wick-breath': 0.5,
+    'fd-wick-eat': 5.5, 'fd-wick-glow': 2.5, 'fd-wick-lunge': 2, 'fd-wild-boar': -4.5,
+    'fd-wild-howl': -6.5, 'fd-wild-return': -3.5, 'fd-wild-snap': 2, 'fd-wild-stone': 2.5,
+    'fd-wild-wake': -3.5, 'fd-wild-wolf': -5, 'feast-chew': 6.5, 'feast-clink': -5.5,
+    'feast-serve': -3.5, 'feast-sting': -2.5, 'fish-bite': 3, 'fish-cast': 1.5,
+    'fish-catch': -3, 'fish-lost': -0.5, 'fish-reel': -0.5, 'gloom-hollow-off': -2,
+    'gloom-hollow-on': 2, 'hd-bell': 0.5, 'hd-blade-out': -2.5, 'hd-freeze': -2,
+    'hd-frost-hit': 2, 'hd-kneel': -1.5, 'hd-lie': -1, 'hd-open-2': -2,
+    'hd-palm-open': -4, 'hd-pillar': -0.5, 'hd-shard': -1, 'hd-thaw': 3,
+    'hd-wing': 5.5, 'heal-land': -2.5, 'hit-confirm': 5.5, 'hit-heavy': 5,
+    'hit-light': 9, 'hm-bark-ash': -0.5, 'hm-bark-ghost': 3.5, 'hm-bark-greyfang': 0.5,
+    'hm-bark-rust': 0.5, 'hm-bite': 8, 'hm-bite-big': 2.5, 'hm-bringdown': -3,
+    'hm-calloff': 1.5, 'hm-down': 3, 'hm-hamstring': 1, 'hm-horn': -6,
+    'hm-howl': -3.5, 'hm-longchase': 1.5, 'hm-mount': -1, 'hm-quarry': 6.5,
+    'hm-relay': 4, 'hm-rend': 0.5, 'hm-ridedown': 2.5, 'hm-snap': 7,
+    'hm-up': 2.5, 'hm-whistle-hold': -7.5, 'hm-whistle-pounce': -7, 'ken-blaze': 0.5,
+    'ken-break': -0.5, 'ken-deathblow': -2, 'ken-good': 8, 'ken-iai': 2.5,
+    'ken-miss': 7.5, 'ken-off': 4.5, 'ken-pass': 6.5, 'ken-perfect': 2,
+    'ken-pommel': 6.5, 'ken-redirect': 1, 'lamp-drop': 11, 'lamp-ember': 14.5,
+    'lamp-end': 6.5, 'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5, 'lamp-pillar': 3,
+    'lamp-snuff': 5.5, 'lamp-sparks': 5, 'lb-fire': -1.5, 'lb-ready': -5,
+    'loot-take': -2, 'low-hp': -4.5, 'npc-talk': -6, 'ping': 2.5,
+    'pip-up': 12, 'portal-enter': -3, 'portal-hum': -22.5, 'pull-count': 0.5,
+    'pull-count-last': -3.5, 'pull-go': -2, 'reaper-blink': 5.5, 'reaper-danse': 5,
+    'reaper-finish1': 4.5, 'reaper-finish2': -0.5, 'reaper-finish3': 1, 'reaper-finish4': -2,
+    'reaper-frenzy': -2.5, 'reaper-gate-bloom': -2.5, 'reaper-gate-close': -1, 'reaper-gate-open': 3.5,
+    'reaper-gate-tone': 8, 'reaper-gatebreaker': 1.5, 'reaper-harvest': -1, 'reaper-moon': 1.5,
+    'reaper-pop-bind': 4.5, 'reaper-pop-death': 3, 'reaper-pop-drain': 4, 'reaper-pop-thread': 9,
+    'reaper-rune': 12.5, 'reaper-rune-emp': 6, 'reaper-slack': 14.5, 'reaper-slash': 2.5,
+    'reaper-star-collapse': -2, 'reaper-star-open': 0.5, 'reaper-swing': 12, 'reaper-veil': -0.5,
+    'revive': -2, 'shield-break': 5, 'shield-up': -4, 'stack-1': 8,
+    'stack-2': -2.5, 'step-grass': 8, 'step-stone': 8.5, 'step-wood': 1.5,
+    'story-page': 3.5, 'sv-anvil-rise': 3.5, 'sv-anvil-strike': -1.5, 'sv-bite': 1,
+    'sv-boil': 3.5, 'sv-burnback': 0.5, 'sv-call-archmage': 0.5, 'sv-call-brannoc': 2.5,
+    'sv-call-corvane': -1, 'sv-call-grubnak': 0.5, 'sv-call-hollowking': 1.5, 'sv-call-hydra': -3,
+    'sv-call-morrowoak': 0.5, 'sv-call-skitterra': 3, 'sv-call-titan': 1, 'sv-call-volkar': 1,
+    'sv-call-wyrm': -3, 'sv-crescent-fan': -0.5, 'sv-crumble': -3.5, 'sv-cut': -2,
+    'sv-dance-cut': 0.5, 'sv-dance-cut2': 1, 'sv-dance-image': -1, 'sv-descent': -1.5,
+    'sv-dive-fall': -2, 'sv-dive-line': 1, 'sv-drift-loop': -11, 'sv-emberfall-below': -1,
+    'sv-everyname': -0.5, 'sv-fore-ghost': 0.5, 'sv-gutter': 1, 'sv-head-rise': -2,
+    'sv-heart-breath': 6, 'sv-heart-loop': -14, 'sv-hole-fall': -4.5, 'sv-hole-town': 0.5,
+    'sv-lance-dash': -1, 'sv-lantern-down': 0.5, 'sv-lantern-fly': 7, 'sv-lie-bell': -2.5,
+    'sv-pillar': -2, 'sv-proc-burst': -1, 'sv-pyre-cut': 1.5, 'sv-rebirth-blast': -1,
+    'sv-rebirth-choir': -1.5, 'sv-rebirth-draw': -1.5, 'sv-rebirth-halo': -1, 'sv-rebirth-sky': -2,
+    'sv-relight': -0.5, 'sv-sapling-arrive': -3, 'sv-sapling-creak': 2.5, 'sv-sapling-die': -4,
+    'sv-seal-shatter': -1.5, 'sv-seed-burst': -1.5, 'sv-seed-pulse': 2, 'sv-signal': -3,
+    'sv-stance-comet': -1, 'sv-stance-crane': 0.5, 'sv-stance-parting': 4, 'sv-steam-burst': -1,
+    'sv-twin-bloom': -2, 'sv-twin-bolt': 3.5, 'sv-twin-fire': -0.5, 'sv-twin-meet': -0.5,
+    'sv-twin-shift': 3.5, 'sv-twin-void': -0.5, 'sv-wall-fire': -0.5, 'sv-wall-out': 0.5,
+    'sv-water-hiss': -1.5, 'sv-wheel-clang': 3, 'sv-wheel-loop': -10, 'sv-wheel-throw': 1,
+    'sv-wipe-chord': -1.5, 'tg-aoe': 1.5, 'tg-buster': 1, 'tg-charge': 0.5,
+    'tg-gaze': 0.5, 'tg-knockback': 2.5, 'tg-raidwide': -0.5, 'tg-spread': 5.5,
+    'tg-stack': 1.5, 'tide-bell': 1, 'tide-crash': -1.5, 'tide-crest': 4.5,
+    'tide-gull': 9.5, 'tide-pop': 1.5, 'tide-slack': 10.5, 'tide-wave': 2.5,
+    'title-sting': -3, 'ui-bounty': 0.5, 'ui-buy': -6, 'ui-click': 2,
+    'ui-close': -0.5, 'ui-equip': -2.5, 'ui-error': -3, 'ui-feat': -7,
+    'ui-gold': -4, 'ui-hover': 13, 'ui-secret': -6, 'ult-alembist': 0.5,
+    'ult-bastion': 1.5, 'ult-bloodreaver': 1, 'ult-driftblade': 6.5, 'ult-fire': -1.5,
+    'ult-gloomsworn': -1, 'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5,
+    'ult-kenseier': -1.5, 'ult-lanternkeeper': -2, 'ult-marionettist': 0.5, 'ult-oathbroker': -1,
+    'ult-pyromancer': -1, 'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1,
+    'ult-shadowblade': 4, 'ult-thermist': -1, 'ult-threadweaver': -1, 'ult-tidecaller': -2,
+    'wall-break': -1.5, 'wall-caelum-break': -1, 'wall-caelum-seal': -1.5, 'wall-caelum-vigil': -19.5,
+    'wall-corvane-kneel': -1.5, 'wall-corvane-rise': -1, 'wall-corvane-take': 1, 'wall-corvane-toll': -18.5,
+    'wall-hydra-break': -2, 'wall-hydra-heart': -11.5, 'wall-hydra-up': -3, 'wall-morrowoak-gulp': -13,
+    'wall-morrowoak-out': -0.5, 'wall-morrowoak-up': -2, 'wall-titan-break': -1, 'wall-titan-up': -3,
+    'wall-titan-wind': -5.5, 'wall-up': -3.5, 'wall-wyrm-close': -1.5, 'wall-wyrm-fall': -1.5,
+    'wall-wyrm-heart': -12, 'wall-wyrm-open': -3.5, 'wall-wyrm-rise': -0.5, 'wall-wyrm-storm': -11,
+    'waymark': 11.5, 'wipe': -2,
   };
   // @@TRIM-END
 
@@ -7680,6 +7693,584 @@
     svRing(S, 0.5, 880, 0.14, 1.8);
     svBody(S, 0.5, 1.8, 0.2, 2.4);
     S.whoosh({ at: 0.35, color: 'brown', f: 300, f1: 2600, dur: 0.3, peakAt: 0.95, peak: 0.3 });
+  });
+
+  // ---------------------------------------------------------------------------------------------- cold steel and bells (boss ids hood and seraph)
+  // thin steel, breath, glass tones, a deep bell with chain shimmer for the tolls, a hard frost crack for the fixed blows and a hollow soft weight (no crack) for the
+  // percentage hits, with a drawn-in hush before it. The second gate's wing beats are low and feathered. No voices but one cold sermon.
+  const hdBreath = (S, at, d, pk, f0, f1, pan) => S.noise({ at, color: 'pink', bp: f0 || 2000, bp1: f1 || 5600, q: 1.8, dur: d, a: d * 0.75, pts: [[d * 0.85, 1], [d, 0]], peak: pk, pan });   // cold air drawn in
+  const hdSigh = (S, at, d, pk, f0, f1, pan) => S.noise({ at, color: 'pink', bp: f0 || 4200, bp1: f1 || 1400, q: 1.2, dur: d, a: 0.04, pts: [[0.06, 1], [d, 0]], peak: pk, pan });          // ...and let out
+  const hdSteel = (S, at, d, pk, pan) => {              // a blade sliding from a sleeve: a whisper of steel on cloth, then a thin ring
+    S.noise({ at, bp: 3400, bp1: 7600, q: 7, dur: d, a: d * 0.25, pts: [[d * 0.4, 1], [d, 0]], peak: pk, pan });
+    S.scrape({ at, f: 5200, q: 3, dur: d, rate: 70, pts: [[d * 0.3, 1], [d, 0]], peak: pk * 0.3, pan });
+    S.metal({ at: at + d * 0.85, set: 'bar', f: 2600, dur: 1.2, peak: pk * 0.35, strike: 0.2, click: 0.2, pan });
+  };
+  const hdRing = (S, at, f, pk, dur, pan) => {          // a struck thin blade: bar, a thread of glass over it
+    S.metal({ at, set: 'bar', f, dur: dur || 1.6, peak: pk, strike: 0.3, pan });
+    S.glass({ at: at + 0.01, f: f * 1.5, dur: (dur || 1.6) * 0.5, peak: pk * 0.15, pan });
+  };
+  const hdCut = (S, at, f, pk, pan) => { S.whoosh({ at, f: f * 0.5, f1: f * 2.6, dur: 0.2, peakAt: 0.8, peak: pk, q: 2.2, pan }); hdRing(S, at + 0.17, f, pk * 0.5, 0.9, pan); };   // a swing and its ring
+  const hdGlass = (S, at, f, pk, dur, pan, am) => {     // a glass tone with its fifth over it
+    S.glass({ at, f, dur: dur || 1.2, peak: pk, pan, am });
+    S.glass({ at: at + 0.03, f: f * 1.5, dur: (dur || 1.2) * 0.8, peak: pk * 0.4, pan });
+  };
+  const hdChains = (S, at, d, pk, pan) => {             // chains stirring: small bright clinks, thinning out
+    const n = Math.max(3, Math.round(d * 18));
+    for (let i = 0; i < n; i++) S.noise({ at: at + Math.pow(i / n, 1.3) * d, bp: S.rr(2200, 5200), q: 9, dur: S.rr(0.04, 0.09), a: 0.0006, peak: pk * (1 - (i / n) * 0.6) * S.rr(0.5, 1), pan });
+  };
+  const hdFrost = (S, at, pk, pan) => {                 // the hard crack of frost: a spike, a low thud under it, shards of glass and a sparkle
+    S.crack({ at, f: 2600, peak: pk * 0.9, dur: 0.22, pan });
+    S.thud({ at, f: 90, f1: 40, dur: 0.6, drive: 2.2, peak: pk * 0.45, pan });
+    [0, 4, 7, 11].forEach((n, i) => S.glass({ at: at + 0.01 + i * 0.025, f: mf(93 + n), dur: 0.5, peak: pk * 0.11, pan }));
+    S.sizzle({ at, hp: 5000, dur: 0.55, pts: [[0.02, 1], [0.55, 0]], peak: pk * 0.2, pan });
+  };
+  const hdWhump = (S, at, pk, pan) => {                 // the percentage landing: no crack, a hollow weight and the warmth going out of the air
+    S.thud({ at, f: 56, f1: 28, dur: 1.0, drive: 1.4, peak: pk * 0.7, click: 0.1, pan });
+    S.tone({ at, f: mf(62), f1: mf(50), dur: 1.0, pts: [[0.02, 1], [1.0, 0]], peak: pk * 0.18, lp: 900, pan });
+    hdSigh(S, at, 0.9, pk * 0.12, 2400, 600, pan);
+  };
+  const hdToll = (S, at, f, pk, dur, shim) => {         // a deep bell, the chains shivering over it
+    S.bell({ at, f, dur: dur || 3.2, peak: pk, lp: 2200 });
+    hdChains(S, at + 0.02, shim == null ? 0.8 : shim, pk * 0.35);
+    S.thud({ at, f: 58, f1: 34, dur: 0.6, drive: 1.6, peak: pk * 0.3, click: 0 });
+  };
+  const hdFeather = (S, at, pk, pan, f) => {            // a low feathered wing beat: a soft pressure swell, a rustle of vanes, a dull settle
+    S.whoosh({ at, color: 'brown', f: (f || 150), f1: (f || 150) * 2.8, dur: 0.55, peakAt: 0.45, peak: pk, q: 0.7, pan });
+    S.noise({ at, color: 'pink', hp: 2500, lp: 7000, grain: 0.7, dur: 0.5, a: 0.1, pts: [[0.2, 1], [0.5, 0]], peak: pk * 0.22, pan });
+    S.thud({ at: at + 0.3, f: 58, f1: 32, dur: 0.5, drive: 1.2, peak: pk * 0.55, click: 0, pan });
+  };
+  const hdDrone = (S, at, d, pk, f, f2) => {            // a held cold pair of tones a fifth apart, slowly beating
+    S.tone({ at, f, f1: f2 || f, dur: d, pts: [[d * 0.55, 1], [d, 0]], peak: pk, lp: 1400, am: [0.8, 0.3] });
+    S.tone({ at, f: f * 1.5, f1: (f2 || f) * 1.5 * 1.004, dur: d, pts: [[d * 0.6, 1], [d, 0]], peak: pk * 0.5, lp: 1800 });
+  };
+  const hdStep = (S, at, pk, pan) => { S.noise({ at, color: 'pink', lp: 1300, dur: 0.1, a: 0.004, pts: [[0.01, 1], [0.1, 0]], peak: pk, pan }); S.thud({ at, f: 90, f1: 50, dur: 0.14, peak: pk * 1.2, click: 0, pan }); };   // a footfall in snow
+
+  // gate 1 -------------------------------------------------------------------------------------------------
+  def('bm-hood-intro', 'sting', S => {
+    S.space('hall', 0.7);
+    // a long drawn breath, one deep bell far off with the chains stirring under it, a thin steel ring at the end
+    hdBreath(S, 0, 1.4, 0.14, 900, 3200);
+    hdToll(S, 0.5, mf(38), 0.2, 3.6, 0.9);
+    hdDrone(S, 0.2, 2.6, 0.08, mf(50));
+    hdRing(S, 1.7, 1760, 0.1, 2.2);
+  });
+  def('bm-hood-hollow-step', 'bm', S => {
+    S.space('hall', 0.35);
+    // a short cast: a breath in, two soft steps in the snow, the blade whispering free, then two quick cuts
+    hdBreath(S, 0, 0.6, 0.1, 1400, 4200);
+    hdStep(S, 0.2, 0.2); hdStep(S, 0.45, 0.24);
+    hdSteel(S, 0.3, 0.45, 0.16);
+    hdCut(S, 0.85, 2000, 0.32); hdCut(S, 1.2, 2400, 0.36, 0.2);
+  });
+  def('bm-hood-cold-breath', 'bm', S => {
+    S.space('hall', 0.4);
+    // a cone of cold: a long breath drawn in and rising, a stop, then a wide breath out with frost grains flying and glass dust
+    hdBreath(S, 0, 1.2, 0.2, 1200, 6200);
+    hdSigh(S, 1.35, 0.9, 0.3, 5200, 1600);
+    S.sizzle({ at: 1.35, hp: 6000, dur: 0.9, pts: [[0.05, 1], [0.9, 0]], peak: 0.14 });
+    S.whoosh({ at: 1.35, f: 600, f1: 2400, dur: 0.5, peakAt: 0.25, peak: 0.2, q: 0.8 });
+    [0, 5, 9, 12].forEach((n, i) => S.glass({ at: 1.42 + i * 0.07, f: mf(95 + n), dur: 0.6, peak: 0.04, pan: i % 2 ? 0.4 : -0.4 }));
+  });
+  def('bm-hood-frostfall', 'bm', S => {
+    S.space('hall', 0.45);
+    // three crystals whistle down out of the dark, one after another, and land together close: a thin falling tone each, then three frost cracks across the room
+    [[-0.6, 3400, 0.0], [0.6, 2900, 0.12], [0, 2500, 0.24]].forEach(([pan, f, d], i) => {
+      S.tone({ at: d, f, f1: f * 0.4, dur: 1.5, pts: [[0.4, 1], [1.5, 0]], peak: 0.07, lp: 6000, pan, glide: 1.5 });
+      hdFrost(S, 1.6 + i * 0.1, 0.26, pan);
+    });
+    hdBreath(S, 0, 1.5, 0.06, 3000, 7000);
+  });
+  def('bm-hood-pale-waltz', 'bm', S => {
+    S.space('hall', 0.55);
+    // three steps in a slow count: a low footfall, two light ones, a pair of glass notes rising a third, a breath held, and a steel ring on the last count
+    hdStep(S, 0.0, 0.3); hdStep(S, 0.5, 0.15, -0.3); hdStep(S, 1.0, 0.15, 0.3);
+    hdGlass(S, 0.5, mf(86), 0.07, 1.0, -0.3); hdGlass(S, 1.0, mf(89), 0.07, 1.0, 0.3);
+    hdBreath(S, 1.0, 0.5, 0.08, 1800, 4400);
+    hdDrone(S, 0, 1.8, 0.06, mf(50));
+    hdRing(S, 1.55, 1560, 0.16, 1.4);
+  });
+  def('bm-hood-severance', 'bm', S => {
+    S.space('hall', 0.5);
+    // two blades slid out and set on their marks: a long slow draw of steel, a glass ping as each line locks, a rising whine, then two dashes and a cold hit each
+    hdSteel(S, 0, 1.6, 0.16, -0.5); hdSteel(S, 0.5, 1.6, 0.16, 0.5);
+    hdGlass(S, 1.5, mf(93), 0.07, 0.9, -0.6); hdGlass(S, 2.0, mf(96), 0.07, 0.9, 0.6);
+    S.tone({ f: 1100, f1: 3600, dur: 3.5, a: 3.0, pts: [[3.2, 1], [3.5, 0]], peak: 0.05, lp: 5000, am: [7, 0.4] });
+    hdBreath(S, 2.6, 0.9, 0.09, 1600, 5000);
+    [3.6, 4.2].forEach((at, i) => { S.whoosh({ at: at - 0.2, f: 1800, f1: 7000, dur: 0.2, peakAt: 0.9, peak: 0.32, q: 2.4, pan: i ? 0.5 : -0.5 }); hdRing(S, at, 2100 + i * 220, 0.24, 1.4, i ? 0.5 : -0.5); hdWhump(S, at, 0.3, i ? 0.4 : -0.4); });
+  });
+  def('bm-hood-echo', 'bm', S => {
+    S.space('hall', 0.55);
+    // the two cuts again where they stopped: the same ring sounding late and doubled, smeared by a long echo, and a frost crack through the middle
+    S.echo({ time: 0.27, fb: 0.5, lp: 3000, kill: 3.2 });
+    hdRing(S, 0.3, 2100, 0.2, 1.8, -0.4); hdRing(S, 0.55, 2320, 0.2, 1.8, 0.4);
+    S.metal({ at: 0.3, set: 'bar', f: 2100, dur: 1.2, peak: 0.12, ech: 0.8, pan: -0.4 }); S.metal({ at: 0.55, set: 'bar', f: 2320, dur: 1.2, peak: 0.12, ech: 0.8, pan: 0.4 });
+    hdBreath(S, 0, 0.5, 0.07, 2400, 6000);
+    hdFrost(S, 1.55, 0.5);
+    hdSigh(S, 1.6, 1.2, 0.1, 3000, 900);
+  });
+  def('bm-hood-hollow-procession', 'bm', S => {
+    S.space('hall', 0.5);
+    // three figures at the edge draw steel one after another, left, right and middle (the middle one a note brighter), a low wind under them, then three dashes
+    hdSteel(S, 0, 1.0, 0.13, -0.8); hdSteel(S, 0.5, 1.0, 0.13, 0.8); hdSteel(S, 1.0, 1.0, 0.18, 0);
+    S.metal({ at: 2.0, set: 'bar', f: 3300, dur: 1.6, peak: 0.08 });
+    hdDrone(S, 0.5, 4.2, 0.05, mf(57), mf(59));
+    S.noise({ color: 'pink', bp: 2400, bp1: 3600, q: 3, dur: 4.4, a: 2.0, pts: [[3.8, 1], [4.4, 0]], peak: 0.08, am: [0.9, 0.5] });
+    [[4.55, -0.8, 0.14], [4.7, 0.8, 0.14], [4.85, 0, 0.3]].forEach(([at, pan, pk]) => { S.whoosh({ at: at - 0.18, f: 1600, f1: 6400, dur: 0.18, peakAt: 0.9, peak: pk, q: 2.4, pan }); hdRing(S, at, 2000 + (pan === 0 ? 500 : 0), pk * 0.7, 1.2, pan); });
+    hdWhump(S, 4.85, 0.3);
+  });
+  def('bm-hood-shatter', 'bm', S => {
+    S.space('hall', 0.5);
+    // whoever is frozen shatters: a sheet of ice goes with a long falling run of glass and then a heavy frost crack and a low blow
+    S.tone({ f: 5200, f1: 1800, dur: 1.2, pts: [[0.1, 1], [1.2, 0]], peak: 0.05, lp: 7000 });
+    for (let i = 0; i < 8; i++) S.glass({ at: 0.9 + i * 0.045, f: mf(105 - i * 2), dur: 0.7, peak: 0.07, pan: (i % 3 - 1) * 0.4 });
+    S.crackle({ at: 0.9, dens: 2.6, f: 4800, dur: 0.9, pts: [[0.05, 1], [0.9, 0]], peak: 0.22 });
+    hdFrost(S, 1.0, 0.8);
+    S.thud({ at: 1.0, f: 60, f1: 30, dur: 1.0, drive: 3, peak: 0.4 });
+  });
+  def('bm-hood-the-tolling', 'bm', S => {
+    S.space('hall', 0.6);
+    // a lantern lit over one hero: a bright glass chime climbing three notes, a low bell humming up under it, the chains stirring, and one soft beat of a tolling to come
+    [0, 5, 9].forEach((n, i) => hdGlass(S, i * 0.4, mf(88 + n), 0.07, 1.4, 0.3 - i * 0.3));
+    S.bell({ at: 0.6, f: mf(50), dur: 3.2, peak: 0.1, lp: 2400, swell: true, a: 0.6 });
+    hdChains(S, 0.4, 1.2, 0.08);
+    hdDrone(S, 0.2, 3.0, 0.06, mf(50));
+  });
+  def('bm-hood-last-toll', 'bm', S => {
+    S.space('hall', 0.65);
+    // the last of the tolling: a huge low bell struck hard with every chain ringing, a frost crack riding the strike and a long hall ring
+    hdBreath(S, 0, 1.0, 0.1, 800, 2600);
+    hdToll(S, 1.1, mf(34), 0.5, 5.0, 1.6);
+    S.bell({ at: 1.12, f: mf(46), dur: 4.0, peak: 0.28, lp: 2600 });
+    S.crack({ at: 1.1, f: 2200, peak: 0.45, dur: 0.25 });
+    S.thud({ at: 1.1, f: 62, f1: 26, dur: 1.4, drive: 3, peak: 0.55 });
+    hdRing(S, 1.15, 880, 0.12, 3.0);
+  });
+  def('bm-hood-pursuit', 'bm', S => {
+    S.space('hall', 0.4);
+    // a hunt in the snow: quick footfalls running, a thin tone leaning up with each turn, and three heavy pounces, each a little higher
+    for (let k = 0; k < 3; k++) {
+      const t0 = k * 2.2, f = 880 * Math.pow(1.122, k);
+      for (let i = 0; i < 5; i++) hdStep(S, t0 + 0.3 + i * 0.22, 0.1 + i * 0.03, (k - 1) * 0.3);
+      S.tone({ at: t0, f: f, f1: f * 1.5, dur: 1.4, a: 1.0, pts: [[1.2, 1], [1.4, 0]], peak: 0.05, lp: 4000 });
+      S.whoosh({ at: t0 + 1.0, f: 300, f1: 2400, dur: 0.4, peakAt: 0.95, peak: 0.2, q: 1.2 });
+      S.thud({ at: t0 + 1.4, f: 76 - k * 6, f1: 34, dur: 0.6, drive: 2.2, peak: 0.55 }); S.crack({ at: t0 + 1.4, f: 2000, peak: 0.16, dur: 0.15 });
+    }
+  });
+  def('bm-hood-rimelight', 'bm', S => {
+    S.space('hall', 0.55);
+    // a beam of cold light: two glass tones a hair apart swelling and beating, a narrow bright sweep of air through them, sparks of frost, and a pulse
+    S.tone({ f: mf(89), f1: mf(89) * 1.002, dur: 3.2, a: 2.6, pts: [[2.8, 1], [3.2, 0]], peak: 0.07, lp: 6000 });
+    S.tone({ f: mf(89) * 1.012, dur: 3.2, a: 2.6, pts: [[2.8, 1], [3.2, 0]], peak: 0.07, lp: 6000 });
+    S.noise({ bp: 1400, bp1: 6400, q: 8, dur: 3.2, a: 2.6, pts: [[2.9, 1], [3.2, 0]], peak: 0.14 });
+    for (let i = 0; i < 6; i++) S.glass({ at: 1.2 + i * 0.28, f: mf(100 + (i * 5) % 9), dur: 0.5, peak: 0.035, pan: Math.sin(i * 2.1) * 0.7 });
+    S.thud({ at: 3.0, f: 70, f1: 34, dur: 0.7, drive: 1.6, peak: 0.4, click: 0.1 });
+  });
+  def('bm-hood-rimeburst', 'bm', S => {
+    S.space('hall', 0.6);
+    // the beam goes off over the whole room: a flash of high glass cascading down, a broad crack, a deep blow, frost dust falling after
+    for (let i = 0; i < 9; i++) S.glass({ at: 0.05 + i * 0.05, f: mf(108 - i * 3), dur: 0.9, peak: 0.07, pan: (i % 2 ? 1 : -1) * 0.4 });
+    S.noise({ hp: 3000, dur: 0.5, a: 0.002, pts: [[0.02, 1], [0.5, 0]], peak: 0.3, drive: 1.5 });
+    hdFrost(S, 0.05, 0.9);
+    S.thud({ at: 0.05, f: 52, f1: 26, dur: 1.2, drive: 3.2, peak: 0.55 });
+    S.sizzle({ at: 0.2, hp: 4500, dur: 1.8, pts: [[0.1, 1], [1.8, 0]], peak: 0.1 });
+    hdRing(S, 0.08, 1320, 0.14, 2.4);
+  });
+  def('bm-hood-hollowing', 'bm', S => {
+    S.space('hall', 0.5);
+    // the hush: the room's sound is drawn in and thinned out of it, a falling pitch and a breath held to the end, then the hollow weight on everyone
+    hdBreath(S, 0, 2.6, 0.2, 700, 4800);
+    S.tone({ f: mf(74), f1: mf(50), dur: 2.7, pts: [[2.4, 1], [2.7, 0]], peak: 0.07, lp: 2400 });
+    S.noise({ color: 'brown', lp: 500, lp1: 90, dur: 2.7, a: 2.0, pts: [[2.4, 1], [2.7, 0]], peak: 0.2 });
+    hdWhump(S, 2.95, 0.8);
+  });
+  def('bm-hood-hollow-echo', 'bm', S => {
+    S.space('cave', 0.6);
+    // the hollowing again, hard: a deep boom with a hollow stone resonance ringing in it, an echo of the boom, the frost crack
+    S.echo({ time: 0.34, fb: 0.45, lp: 1400, kill: 3.2 });
+    S.thud({ at: 0.8, f: 50, f1: 22, dur: 1.8, drive: 3.4, peak: 0.9, ech: 0.6 });
+    S.partials({ at: 0.8, set: 'stone', f: 96, dur: 2.4, peak: 0.2, ech: 0.5 });
+    hdBreath(S, 0, 0.8, 0.1, 600, 2000);
+    hdFrost(S, 0.8, 0.6);
+    hdSigh(S, 0.9, 1.6, 0.08, 1800, 400);
+  });
+  def('bm-hood-the-scales', 'bm', S => {
+    S.space('hall', 0.55);
+    // a pair of scales hung in the dark: chains creaking to a rest, a glass tone on the left and a lower steel one on the right, passing between the ears as the beam tilts, a clack when they settle
+    hdChains(S, 0, 1.6, 0.14, -0.4);
+    S.tone({ f: mf(81), dur: 3.8, a: 0.4, pts: [[0.4, 1], [3.4, 0.6], [3.8, 0]], peak: 0.07, lp: 4000, am: [1.4, 0.8] , pan: -0.6 });
+    S.tone({ f: mf(77), dur: 3.8, a: 0.4, pts: [[0.4, 1], [3.4, 0.6], [3.8, 0]], peak: 0.07, lp: 4000, am: [1.4, 0.8], pan: 0.6 });
+    S.noise({ bp: 1300, bp1: 2600, q: 5, dur: 3.5, a: 0.4, pts: [[0.6, 1], [3.5, 0]], peak: 0.07, am: [1.4, 0.7], grain: 0.5 });
+    hdRing(S, 1.6, 1480, 0.18, 1.6, -0.5); hdRing(S, 2.0, 1240, 0.18, 1.6, 0.5);
+    S.thud({ at: 3.55, f: 80, f1: 44, dur: 0.4, peak: 0.3, click: 0.3 });
+  });
+  def('bm-hood-weighing', 'bm', S => {
+    S.space('hall', 0.6);
+    // the scales drop their weight on everyone: a chain running out, a heavy iron bell struck and its clatter, the frost crack
+    hdChains(S, 0, 1.0, 0.2);
+    S.noise({ bp: 900, bp1: 200, q: 3, dur: 1.0, a: 0.8, pts: [[0.9, 1], [1.0, 0.4]], peak: 0.2 });
+    S.metal({ at: 1.1, set: 'plate', f: 520, dur: 2.4, peak: 0.4, strike: 0.7 });
+    S.bell({ at: 1.1, f: mf(48), dur: 3.0, peak: 0.2, lp: 2400 });
+    hdChains(S, 1.12, 0.9, 0.25);
+    hdFrost(S, 1.1, 0.7);
+  });
+  def('bm-hood-dead-calm', 'bm', S => {
+    S.space('hall', 0.5);
+    // everything goes still: a single held glass tone thinning away while the room's low air drops out from under it, a faint pulse of a pulse, a tiny snap of ice for whoever moved
+    S.glass({ f: mf(91), dur: 4.4, peak: 0.12, am: [5, 0.25] });
+    S.tone({ f: mf(91), f1: mf(91) * 0.995, dur: 4.4, a: 0.2, pts: [[0.3, 1], [2.6, 0.4], [4.4, 0]], peak: 0.06, lp: 3000, vib: [0.8, 0.003] });
+    S.noise({ color: 'brown', lp: 300, lp1: 70, dur: 3.2, a: 0.1, pts: [[0.1, 1], [3.2, 0]], peak: 0.2 });
+    for (let i = 0; i < 4; i++) S.thud({ at: 0.5 + i * 0.95, f: 50, f1: 36, dur: 0.3, peak: 0.12 * (1 - i * 0.22), click: 0 });
+    S.glass({ at: 4.45, f: mf(100), dur: 0.5, peak: 0.07 }); S.crack({ at: 4.5, f: 4200, peak: 0.1, dur: 0.1 });
+  });
+  def('bm-hood-calm-breaks', 'bm', S => {
+    S.space('hall', 0.55);
+    // the stillness gives way under one hero: a long crack runs across ice, a second and a third branching off it, then the fixed blow
+    for (let i = 0; i < 4; i++) { S.crack({ at: i * 0.17, f: 3000 + i * 500, peak: 0.12 + i * 0.07, dur: 0.1 }); S.glass({ at: i * 0.17, f: mf(100 + i * 2), dur: 0.5, peak: 0.04, pan: (i % 2 ? 0.3 : -0.3) }); }
+    S.tone({ f: 2400, f1: 600, dur: 0.8, pts: [[0.05, 1], [0.8, 0]], peak: 0.06, lp: 4000 });
+    hdFrost(S, 0.85, 0.85);
+    S.thud({ at: 0.85, f: 58, f1: 30, dur: 1.0, drive: 3, peak: 0.4 });
+  });
+  def('bm-hood-interment', 'bm', S => {
+    S.space('hall', 0.5);
+    // ice grows round a hero: a crystalline sizzle rising, creaks, the lid thudding home on its seam, a chain pulled tight, and a hollow weight
+    S.sizzle({ hp: 4000, dur: 2.2, a: 1.6, pts: [[1.8, 1], [2.2, 0]], peak: 0.14 });
+    S.creak({ at: 0.2, f: 24, f1: 50, res: [500, 1100, 2200], q: 12, dur: 1.8, peak: 0.14 });
+    for (let i = 0; i < 6; i++) S.glass({ at: 0.3 + i * 0.28, f: mf(98 + (i * 3) % 8), dur: 0.5, peak: 0.04, pan: Math.sin(i * 1.7) * 0.5 });
+    S.thud({ at: 2.2, f: 64, f1: 32, dur: 0.8, drive: 2.8, peak: 0.5 });
+    S.metal({ at: 2.2, set: 'plate', f: 300, dur: 1.2, peak: 0.25, strike: 0.8 });
+    hdChains(S, 2.25, 0.5, 0.2);
+    hdWhump(S, 2.4, 0.4);
+  });
+  def('bm-hood-burial', 'bm', S => {
+    S.space('cave', 0.5);
+    // a long cast to break the ice before it settles: slow grinding under a rising low drone, a crack ticking louder every second, and the heavy settle if it holds
+    S.noise({ color: 'brown', lp: 140, lp1: 360, dur: 8.0, a: 6, pts: [[7.6, 1], [8.0, 0.6]], peak: 0.2, am: [0.6, 0.4] });
+    S.creak({ at: 0.4, f: 20, f1: 36, res: [350, 800, 1700], q: 10, dur: 7.4, pts: [[5, 0.5], [7.4, 1]], peak: 0.1 });
+    S.tone({ f: mf(38), f1: mf(40), dur: 8.0, a: 6, pts: [[7.6, 1], [8.0, 0.5]], peak: 0.13, lp: 600, am: [3, 0.3] });
+    for (let i = 0; i < 7; i++) { S.crack({ at: 1.0 + i * 1.0, f: 2600, peak: 0.04 + i * 0.015, dur: 0.1 }); S.glass({ at: 1.0 + i * 1.0, f: mf(96), dur: 0.5, peak: 0.02 + i * 0.01 }); }
+    S.thud({ at: 8.0, f: 46, f1: 22, dur: 1.5, drive: 3, peak: 0.8 });
+    hdFrost(S, 8.0, 0.45);
+  });
+  def('bm-hood-two-hands', 'bm', S => {
+    S.space('hall', 0.5);
+    // both hands raised at once: steel drawn on the left, a soft glass tone opening on the right, the two joined in one chord and a held breath
+    hdSteel(S, 0.1, 0.8, 0.2, -0.7);
+    hdGlass(S, 0.3, mf(86), 0.1, 2.0, 0.7);
+    S.glass({ at: 0.9, f: mf(93), dur: 1.8, peak: 0.07, pan: 0 });
+    S.choir({ at: 0.4, notes: [mf(50), mf(57), mf(65)], vowel: 'u', vowel1: 'o', dur: 1.8, a: 1.0, lp: 1400, peak: 0.07 });
+    hdBreath(S, 0, 0.9, 0.08, 1200, 4000);
+    hdRing(S, 0.95, 1860, 0.16, 1.6, -0.5);
+  });
+  def('bm-hood-communion', 'bm', S => {
+    S.space('hall', 0.65);
+    // a cold ring of light closing round the healer: a soft choir of cold vowels swelling, glass tones stepping up, a bell and a gathering of the chains, then one deep soft strike to stand in
+    S.choir({ notes: [mf(50), mf(57), mf(62), mf(65)], vowel: 'o', vowel1: 'a', dur: 5.4, a: 3.4, lp: 1800, pts: [[4.8, 1], [5.4, 0]], peak: 0.1 });
+    [0, 3, 7, 10].forEach((n, i) => hdGlass(S, 0.8 + i * 1.0, mf(81 + n), 0.05, 1.8, Math.sin(i * 1.3) * 0.5));
+    hdChains(S, 3.5, 1.6, 0.1);
+    S.bell({ at: 5.35, f: mf(45), dur: 3.0, peak: 0.28, lp: 2000 });
+    S.thud({ at: 5.35, f: 56, f1: 26, dur: 1.2, drive: 2.4, peak: 0.7 });
+    hdWhump(S, 5.5, 0.3);
+  });
+  def('bm-hood-verdict', 'bm', S => {
+    S.space('hall', 0.7);
+    // a heavy raidwide: both hands, a choir cluster rising to a held breath, the bell struck under a hard frost crack, a long cold ring
+    hdSteel(S, 0, 1.0, 0.14, -0.5); hdGlass(S, 0.2, mf(86), 0.08, 2.0, 0.5);
+    S.choir({ notes: [mf(38), mf(45), mf(50), mf(53), mf(57)], vowel: 'a', vowel1: 'o', dur: 2.6, a: 1.8, lp: 2200, pts: [[2.3, 1], [2.6, 0]], peak: 0.12 });
+    hdBreath(S, 1.0, 1.6, 0.12, 900, 4400);
+    hdToll(S, 2.7, mf(36), 0.5, 4.6, 1.4);
+    hdFrost(S, 2.7, 0.8);
+    hdRing(S, 2.75, 1100, 0.16, 3.0);
+  });
+  def('bm-hood-verdict-eternal', 'bm', S => {
+    S.space('cave', 0.8);
+    // the enrage: a slow bell tolled three times each lower and harder, a choir cluster held unresolved over a drone, breath, and a last crack that does not ring
+    [[0.0, 45, 0.3], [1.9, 41, 0.38], [3.8, 36, 0.52]].forEach(([at, n, pk], i) => { hdToll(S, at, mf(n), pk, 4.2, 1.0 + i * 0.3); S.crack({ at, f: 2200, peak: 0.1 + i * 0.14, dur: 0.18 }); });
+    S.choir({ at: 0.5, notes: [mf(38), mf(39), mf(45), mf(50), mf(56)], vowel: 'a', vowel1: 'u', dur: 6.0, a: 3.0, lp: 1800, pts: [[4.6, 1], [6.0, 0]], peak: 0.1 });
+    hdDrone(S, 0, 6.0, 0.1, mf(26), mf(25));
+    hdBreath(S, 2.6, 1.1, 0.12, 700, 3600);
+    S.thud({ at: 3.8, f: 40, f1: 18, dur: 2.2, drive: 3.4, peak: 0.95 });
+  });
+
+  // gate 2 -------------------------------------------------------------------------------------------------
+  def('bm-seraph-intro', 'sting', S => {
+    S.space('hall', 0.75);
+    // frost splitting upward and falling away: a long rising crack and shard-fall, a wide low unfolding of feathered beats, one high bright note cracking in two
+    S.creak({ f: 20, f1: 60, res: [600, 1500, 3200], q: 12, dur: 1.4, peak: 0.1 });
+    for (let i = 0; i < 6; i++) S.glass({ at: 0.3 + i * 0.12, f: mf(104 - i * 2), dur: 0.8, peak: 0.04, pan: Math.sin(i * 1.9) * 0.6 });
+    hdFeather(S, 1.0, 0.3, -0.4, 120); hdFeather(S, 1.55, 0.35, 0.4, 110);
+    hdGlass(S, 1.9, mf(93), 0.14, 2.8); S.glass({ at: 1.95, f: mf(93) * 1.03, dur: 2.4, peak: 0.08 });
+    hdToll(S, 1.0, mf(38), 0.14, 3.4, 0.7);
+  });
+  def('bm-seraph-wingbeat', 'bm', S => {
+    S.space('hall', 0.4);
+    // a cast to hold your ground: two slow feathered beats gathering air, then one huge down-stroke that pushes the whole room out, the dull settle of the throw's end
+    hdFeather(S, 0.0, 0.3, -0.5, 120); hdFeather(S, 0.55, 0.4, 0.5, 110);
+    S.noise({ color: 'pink', bp: 200, bp1: 1400, q: 0.6, dur: 0.9, a: 0.8, pts: [[0.8, 1], [0.9, 0.6]], peak: 0.3 });
+    hdFeather(S, 1.35, 0.7, 0, 90);
+    S.thud({ at: 1.6, f: 52, f1: 24, dur: 1.2, drive: 2.6, peak: 0.7 });
+    S.noise({ at: 1.6, color: 'brown', lp: 800, lp1: 120, dur: 1.2, a: 0.02, pts: [[0.05, 1], [1.2, 0]], peak: 0.3 });
+    hdSigh(S, 1.7, 0.9, 0.08, 3000, 700);
+  });
+  def('bm-seraph-broken-halo', 'bm', S => {
+    S.space('hall', 0.6);
+    // a ring of high glass struck and cracking, a long rising ring-tone going out of tune, a shard torn off with a tearing hiss and flung, landing as a low frost thud
+    hdGlass(S, 0, mf(96), 0.14, 2.0); S.glass({ at: 0.02, f: mf(96) * 1.014, dur: 1.8, peak: 0.1 });
+    S.tone({ f: mf(96), f1: mf(96) * 1.12, dur: 1.2, a: 0.2, pts: [[0.3, 1], [1.2, 0]], peak: 0.04, lp: 7000 });
+    S.crack({ at: 1.0, f: 4200, peak: 0.28, dur: 0.15 });
+    S.noise({ at: 1.0, hp: 4000, dur: 0.4, a: 0.02, pts: [[0.05, 1], [0.4, 0]], peak: 0.18 });
+    S.whoosh({ at: 1.2, f: 5200, f1: 1200, dur: 0.7, peakAt: 0.2, peak: 0.22, q: 2.4 });
+    [0, 4, 7].forEach((n, i) => S.glass({ at: 1.1 + i * 0.05, f: mf(100 + n), dur: 0.6, peak: 0.05 }));
+  });
+  def('bm-seraph-returning-edge', 'bm', S => {
+    S.space('hall', 0.45);
+    // a blade thrown at a hero: a draw of steel, a spinning whine climbing (fast tremble), a hard thunk as it buries in the wall and a hum of the buried steel
+    hdSteel(S, 0, 0.7, 0.16);
+    S.tone({ f: 900, f1: 3200, dur: 1.3, a: 0.2, pts: [[1.2, 1], [1.3, 0.4]], peak: 0.08, lp: 5000, am: [28, 0.8] });
+    S.whoosh({ at: 0.6, f: 800, f1: 5200, dur: 0.7, peakAt: 0.9, peak: 0.26, q: 2.2, pan: 0 });
+    S.thud({ at: 1.4, f: 110, f1: 48, dur: 0.25, peak: 0.7, click: 0.9, clickF: 3000 });
+    S.metal({ at: 1.4, set: 'bar', f: 740, dur: 1.8, peak: 0.2, strike: 0.5, click: 0 });
+    S.tone({ at: 1.4, f: 740, dur: 1.6, a: 0.01, pts: [[0.02, 1], [1.6, 0]], peak: 0.05, am: [14, 0.7], lp: 2000 });
+  });
+  def('bm-seraph-return', 'bm', S => {
+    S.space('hall', 0.55);
+    // the blade comes back along a long curve: a whistle sweeping across the room from one ear to the other and falling in pitch as it passes, a chain of stamped hits along its path, a hard crack at the end
+    S.tone({ f: 4200, f1: 900, dur: 1.5, a: 0.1, pts: [[0.2, 1], [1.4, 0.7], [1.5, 0]], peak: 0.07, lp: 6000, am: [26, 0.7], pan: -0.8 });
+    S.whoosh({ f: 3200, f1: 500, dur: 1.5, peakAt: 0.1, peak: 0.3, q: 2, pan: -0.7 });
+    for (let i = 0; i < 6; i++) { hdStep(S, 0.2 + i * 0.2, 0.18 + i * 0.03, -0.8 + i * 0.3); S.glass({ at: 0.2 + i * 0.2, f: mf(90 + i), dur: 0.4, peak: 0.04, pan: -0.8 + i * 0.3 }); }
+    hdFrost(S, 1.6, 0.8, 0.3);
+    hdRing(S, 1.62, 1580, 0.2, 2.0);
+  });
+  def('bm-seraph-radiance', 'bm', S => {
+    S.space('hall', 0.65);
+    // a bright light gathering over a hero, gold and cold: a swell of glass tones with a slow beat, a high choir of vowels rising, and six rays opening one after another round the room
+    S.tone({ f: mf(93), dur: 3.2, a: 2.6, pts: [[2.8, 1], [3.2, 0]], peak: 0.07, lp: 6000 });
+    S.tone({ f: mf(93) * 1.01, dur: 3.2, a: 2.6, pts: [[2.8, 1], [3.2, 0]], peak: 0.07, lp: 6000 });
+    S.choir({ notes: [mf(69), mf(76), mf(81)], vowel: 'a', vowel1: 'i', dur: 3.2, a: 2.4, lp: 3200, pts: [[2.8, 1], [3.2, 0]], peak: 0.07 });
+    for (let i = 0; i < 6; i++) S.glass({ at: 1.5 + i * 0.28, f: mf(86 + [0, 2, 4, 7, 9, 12][i]), dur: 1.0, peak: 0.07, pan: -0.8 + i * 0.32 });
+    S.whoosh({ at: 2.7, f: 1000, f1: 6400, dur: 0.5, peakAt: 0.9, peak: 0.22, q: 1.6 });
+  });
+  def('bm-seraph-afterglow', 'bm', S => {
+    S.space('hall', 0.6);
+    // the light collapses on its target: a long falling run of glass into a sharp bright crack, a deep thud and a thin ring-down
+    for (let i = 0; i < 7; i++) S.glass({ at: i * 0.1, f: mf(108 - i * 3), dur: 0.7, peak: 0.07 - i * 0.004, pan: Math.sin(i * 2.2) * 0.4 });
+    S.tone({ f: 6000, f1: 1500, dur: 0.8, pts: [[0.05, 1], [0.8, 0]], peak: 0.07, lp: 8000 });
+    hdFrost(S, 0.8, 0.8);
+    S.thud({ at: 0.8, f: 58, f1: 26, dur: 1.4, drive: 3, peak: 0.65 });
+    hdRing(S, 0.82, 1760, 0.12, 2.0);
+  });
+  def('bm-seraph-wingfall', 'bm', S => {
+    S.space('hall', 0.5);
+    // a hovering descent: feathered beats rising off the floor and holding, then three dives from the edge, each a falling whistle and a hollow blow, spaced as the dives are
+    hdFeather(S, 0, 0.3, -0.4, 120); hdFeather(S, 0.5, 0.34, 0.4, 130); hdFeather(S, 1.0, 0.36, -0.3, 140);
+    hdDrone(S, 0.3, 5.4, 0.05, mf(45), mf(43));
+    [[1.8, -0.6], [3.8, 0.6], [5.8, 0]].forEach(([at, pan], i) => {
+      S.tone({ at: at - 0.5, f: 3600, f1: 700, dur: 0.6, a: 0.05, pts: [[0.1, 1], [0.6, 0]], peak: 0.06, lp: 5000, pan });
+      S.whoosh({ at: at - 0.5, f: 4200, f1: 600, dur: 0.55, peakAt: 0.1, peak: 0.28, q: 1.8, pan });
+      hdWhump(S, at, 0.38 + i * 0.05, pan); hdRing(S, at, 1500 + i * 120, 0.12, 1.2, pan);
+    });
+  });
+  def('bm-seraph-ash-landing', 'bm', S => {
+    S.space('cave', 0.55);
+    // the last dive lands: a vast low thud, a puff of ash (dark soft noise rushing outward), a rattle of falling feathers, the frost crack and a ring of cold glass round the place
+    S.thud({ at: 0.0, f: 46, f1: 20, dur: 2.0, drive: 3.4, peak: 0.95 });
+    S.noise({ color: 'brown', lp: 900, lp1: 140, dur: 1.8, a: 0.03, pts: [[0.08, 1], [1.8, 0]], peak: 0.4 });
+    S.noise({ at: 0.05, color: 'pink', hp: 2400, lp: 7000, grain: 0.8, dur: 1.6, a: 0.1, pts: [[0.3, 1], [1.6, 0]], peak: 0.15 });
+    hdFrost(S, 0.0, 0.7);
+    [0, 3, 7, 10, 12].forEach((n, i) => S.glass({ at: 0.15 + i * 0.1, f: mf(88 + n), dur: 1.2, peak: 0.05, pan: Math.sin(i * 2.4) * 0.8 }));
+    hdFeather(S, 0.7, 0.18, 0, 160);
+  });
+  def('bm-seraph-following-light', 'bm', S => {
+    S.space('hall', 0.6);
+    // a slow cold light that follows one hero for a long while: a soft hum leaning toward them, a drop of glass left behind every beat where frost is laid, and a swell and flare at the end
+    S.tone({ f: mf(74), f1: mf(79), dur: 8.4, a: 1.0, pts: [[1.2, 0.6], [7.4, 0.8], [8.4, 0]], peak: 0.09, lp: 2400, am: [1.6, 0.5], pan: -0.3 });
+    S.tone({ f: mf(81), f1: mf(86), dur: 8.4, a: 1.0, pts: [[1.2, 0.4], [7.4, 0.6], [8.4, 0]], peak: 0.05, lp: 3200, pan: 0.3 });
+    for (let i = 0; i < 13; i++) { const at = 0.6 + i * 0.6; S.glass({ at, f: mf(96 - (i % 4) * 2), dur: 0.7, peak: 0.04, pan: Math.sin(i * 1.7) * 0.6 }); S.noise({ at, hp: 5000, dur: 0.25, a: 0.002, pts: [[0.01, 1], [0.25, 0]], peak: 0.04, grain: 0.8 }); }
+    hdBreath(S, 7.2, 1.1, 0.1, 1500, 5000);
+    hdWhump(S, 8.4, 0.5);
+  });
+  def('bm-seraph-benediction', 'bm', S => {
+    S.space('hall', 0.7);
+    // a column of light over the healer and a long cold blessing: choir vowels opening upward over a gently rising glass fifth, then a drawn breath that stops short and the hollow weight on all in sight
+    S.choir({ notes: [mf(50), mf(57), mf(62), mf(69)], vowel: 'o', vowel1: 'a', dur: 3.8, a: 2.4, lp: 2400, pts: [[3.4, 1], [3.8, 0]], peak: 0.1 });
+    [0, 7, 12].forEach((n, i) => hdGlass(S, 0.6 + i * 0.9, mf(81 + n), 0.06, 1.6, (i - 1) * 0.4));
+    S.bell({ at: 0.3, f: mf(62), dur: 3.2, peak: 0.06, lp: 2200 });
+    hdBreath(S, 2.4, 1.5, 0.13, 800, 4200);
+    hdWhump(S, 4.05, 0.7);
+  });
+  def('bm-seraph-absolution', 'bm', S => {
+    S.space('hall', 0.65);
+    // a bright raidwide: the choir cut short on a downward slip, a bright bell struck by a hard frost crack, a glass cascade and a boom under all of it
+    S.choir({ notes: [mf(50), mf(57), mf(62)], vowel: 'a', vowel1: 'u', dur: 1.0, a: 0.4, lp: 2200, bend: -3, pts: [[0.8, 1], [1.0, 0]], peak: 0.09 });
+    hdToll(S, 1.1, mf(50), 0.4, 3.4, 1.0);
+    hdFrost(S, 1.1, 0.85);
+    for (let i = 0; i < 6; i++) S.glass({ at: 1.15 + i * 0.05, f: mf(102 - i * 3), dur: 0.8, peak: 0.05, pan: Math.sin(i * 2.3) * 0.5 });
+    S.thud({ at: 1.1, f: 50, f1: 22, dur: 1.6, drive: 3.2, peak: 0.85 });
+  });
+  def('bm-seraph-last-rites', 'bm', S => {
+    S.space('hall', 0.6);
+    // two heroes sealed in ice at once and one blade for the third: two slow bell strokes a fifth apart as the lids close left and right, ice sizzle on each, then steel slipped out, set and sent
+    hdToll(S, 0.2, mf(43), 0.22, 3.4, 0.6); S.thud({ at: 0.2, f: 60, f1: 28, dur: 0.9, drive: 2.6, peak: 0.6, pan: -0.5 });
+    hdToll(S, 1.0, mf(50), 0.22, 3.4, 0.6); S.thud({ at: 1.0, f: 64, f1: 30, dur: 0.9, drive: 2.6, peak: 0.6, pan: 0.5 });
+    S.sizzle({ at: 0.2, hp: 4200, dur: 1.2, pts: [[0.05, 1], [1.2, 0]], peak: 0.1, pan: -0.5 }); S.sizzle({ at: 1.0, hp: 4200, dur: 1.2, pts: [[0.05, 1], [1.2, 0]], peak: 0.1, pan: 0.5 });
+    hdSteel(S, 1.9, 0.9, 0.15, 0.2);
+    S.tone({ at: 2.0, f: 1200, f1: 3000, dur: 3.0, a: 2.6, pts: [[2.8, 1], [3.0, 0]], peak: 0.04, lp: 5000, am: [8, 0.4] });
+    hdCut(S, 4.85, 2200, 0.3, 0.2); hdWhump(S, 5.0, 0.3);
+  });
+  def('bm-seraph-cold-sermon', 'bm', S => {
+    S.space('cave', 0.7);
+    // a cold low voice speaking without words down the length of the room, glass tones answering from pillars one by one, a drawn breath, then frost laid in rows with a soft weight
+    S.voice({ at: 0.2, f: 92, f1: 78, dur: 2.0, vowel: 'o', vowel1: 'u', breath: 4, lp: 1400, peak: 0.16, a: 0.5 });
+    S.voice({ at: 1.2, f: 84, f1: 70, dur: 1.8, vowel: 'u', vowel1: 'o', breath: 4, lp: 1200, peak: 0.12, a: 0.4 });
+    for (let i = 0; i < 5; i++) hdGlass(S, 0.5 + i * 0.4, mf(86 + [0, 3, 5, 7, 10][i]), 0.05, 1.2, -0.8 + i * 0.4);
+    hdBreath(S, 2.2, 0.9, 0.1, 900, 3800);
+    hdWhump(S, 3.1, 0.6);
+    S.sizzle({ at: 3.1, hp: 5000, dur: 0.7, pts: [[0.05, 1], [0.7, 0]], peak: 0.1 });
+  });
+  def('bm-seraph-frost-shadow', 'bm', S => {
+    S.space('hall', 0.55);
+    // the sermon's shadows run down the rows again: a dark falling sweep of air, a low drone leaning down, then a line of hard frost cracks running outward and a deep blow
+    S.noise({ color: 'brown', bp: 1200, bp1: 160, q: 1.2, dur: 1.4, a: 1.0, pts: [[1.2, 1], [1.4, 0.3]], peak: 0.3 });
+    S.tone({ f: mf(62), f1: mf(45), dur: 1.5, pts: [[1.2, 1], [1.5, 0]], peak: 0.06, lp: 1600 });
+    for (let i = 0; i < 5; i++) S.crack({ at: 1.4 + i * 0.06, f: 2400 + i * 400, peak: 0.28 - i * 0.03, dur: 0.14, pan: -0.8 + i * 0.4 });
+    hdFrost(S, 1.4, 0.7);
+    S.thud({ at: 1.4, f: 46, f1: 20, dur: 1.6, drive: 3.2, peak: 0.85 });
+  });
+  def('bm-seraph-six-wings', 'bm', S => {
+    S.space('hall', 0.5);
+    // one beat of six: a quick breath, a low feathered beat opening to the side, and a single glass note, a different one each time
+    const n = S.vi(6);
+    hdBreath(S, 0, 0.3, 0.08, 1500, 4800);
+    hdFeather(S, 0.2, 0.34, (n % 2 ? 0.45 : -0.45), 110 + n * 8);
+    hdGlass(S, 0.9, mf(81 + [0, 2, 3, 7, 9, 12][n]), 0.09, 1.0, (n % 2 ? 0.3 : -0.3));
+    hdRing(S, 1.3, 1500 + n * 90, 0.1, 0.9);
+  });
+  def('bm-seraph-the-unsaid', 'bm', S => {
+    S.space('cave', 0.85);
+    // the last stroke: every wing beating at once under a cluster of choir, a bell toll that does not stop, glass bursting upward, a crack that opens the hall and a boom that holds
+    for (let i = 0; i < 4; i++) hdFeather(S, i * 0.45, 0.3 + i * 0.08, (i % 2 ? 0.5 : -0.5), 120 - i * 10);
+    S.choir({ notes: [mf(38), mf(45), mf(50), mf(57), mf(62), mf(69)], vowel: 'a', vowel1: 'o', dur: 4.2, a: 2.4, lp: 2600, pts: [[3.6, 1], [4.2, 0]], peak: 0.12 });
+    hdBreath(S, 1.2, 1.5, 0.12, 800, 5200);
+    hdToll(S, 2.0, mf(33), 0.55, 6.0, 1.8);
+    S.bell({ at: 2.02, f: mf(45), dur: 5.0, peak: 0.28, lp: 2600 });
+    for (let i = 0; i < 10; i++) S.glass({ at: 2.05 + i * 0.05, f: mf(92 + i * 2), dur: 1.2, peak: 0.05, pan: Math.sin(i * 2) * 0.6 });
+    hdFrost(S, 2.0, 0.95);
+    S.thud({ at: 2.0, f: 40, f1: 18, dur: 2.6, drive: 3.6, peak: 1.0 });
+  });
+
+  // events -----------------------------------------------------------------------------------------------------
+  def('hd-blade-out', 'hud', S => {
+    // the blade hand coming up: steel whispering free, a thread of ring
+    hdSteel(S, 0, 0.45, 0.25);
+    S.metal({ at: 0.35, set: 'bar', f: 3100, dur: 0.9, peak: 0.07, strike: 0.2, click: 0 });
+  });
+  def('hd-palm-open', 'hud', S => {
+    S.space('hall', 0.4);
+    // the light hand opening: a soft breath out and a warm-cold glass tone blooming in a fifth
+    hdSigh(S, 0, 0.5, 0.08, 2600, 1200);
+    S.glass({ at: 0.08, f: mf(86), dur: 1.4, peak: 0.16 }); S.glass({ at: 0.2, f: mf(93), dur: 1.2, peak: 0.08 });
+    S.tone({ at: 0.08, f: mf(74), dur: 1.0, a: 0.4, pts: [[0.4, 1], [1.0, 0]], peak: 0.04, lp: 2400 });
+  });
+  def('hd-freeze', 'hud', S => {
+    // a shell of frost closing round a hero: a quick crystalline sizzle and a falling thin tone, a small crack at the seal
+    S.sizzle({ hp: 5000, dur: 0.5, a: 0.04, pts: [[0.1, 1], [0.5, 0]], peak: 0.14 });
+    S.tone({ f: 4200, f1: 1600, dur: 0.4, pts: [[0.04, 1], [0.4, 0]], peak: 0.05, lp: 6000 });
+    S.crack({ at: 0.32, f: 3500, peak: 0.2, dur: 0.1 });
+    S.glass({ at: 0.33, f: mf(98), dur: 0.5, peak: 0.07 });
+    S.thud({ at: 0.32, f: 96, f1: 54, dur: 0.18, peak: 0.25, click: 0 });
+  });
+  def('hd-thaw', 'hud', S => {
+    // the shell going: a soft cracking and slipping, a few drops of glass, and a breath out
+    for (let i = 0; i < 4; i++) S.crack({ at: i * 0.07, f: 2400, peak: 0.07, dur: 0.07, pan: (i % 2 ? 0.2 : -0.2) });
+    for (let i = 0; i < 4; i++) S.glass({ at: 0.1 + i * 0.09, f: mf(92 - i * 3), dur: 0.5, peak: 0.05 });
+    hdSigh(S, 0.15, 0.5, 0.05, 2600, 900);
+  });
+  def('hd-bell', 'bm', S => {
+    S.space('hall', 0.55);
+    // one toll: a deep bell with four chains shivering over it
+    hdToll(S, 0, mf(45), 0.5, 3.6, 1.4);
+    hdChains(S, 0.06, 1.3, 0.18, 0.2);
+    S.noise({ bp: 3000, bp1: 1800, q: 4, dur: 1.4, a: 0.01, pts: [[0.02, 1], [1.4, 0]], peak: 0.08, grain: 0.7 });
+    S.bell({ at: 0.01, f: mf(50), dur: 2.4, peak: 0.1, lp: 2400 });
+  });
+  def('hd-shard', 'bm', S => {
+    S.space('hall', 0.5);
+    // a shard torn from the ring and thrown: a hiss, a bright tearing crack, a whistle that falls away across the room
+    S.crack({ f: 4400, peak: 0.3, dur: 0.14 });
+    S.noise({ hp: 4500, dur: 0.3, a: 0.01, pts: [[0.03, 1], [0.3, 0]], peak: 0.15 });
+    S.tone({ at: 0.05, f: 5000, f1: 1200, dur: 0.8, pts: [[0.1, 1], [0.8, 0]], peak: 0.06, lp: 6000 });
+    S.whoosh({ at: 0.05, f: 4200, f1: 800, dur: 0.7, peakAt: 0.15, peak: 0.22, q: 2.2 });
+    S.glass({ at: 0.03, f: mf(100), dur: 0.7, peak: 0.07 });
+  });
+  def('hd-pillar', 'bm', S => {
+    S.space('hall', 0.5);
+    // the shard standing up out of the floor: a heavy thud, ice growing with a creak and a rising sizzle, a bright top note and a settling ring
+    S.thud({ f: 62, f1: 28, dur: 0.9, drive: 2.6, peak: 0.8 });
+    S.crack({ f: 2200, peak: 0.3, dur: 0.2 });
+    S.creak({ at: 0.02, f: 20, f1: 46, res: [500, 1200, 2600], q: 12, dur: 0.7, peak: 0.12 });
+    S.sizzle({ at: 0.05, hp: 4500, dur: 0.8, pts: [[0.3, 1], [0.8, 0]], peak: 0.1 });
+    S.glass({ at: 0.45, f: mf(93), dur: 1.4, peak: 0.1 });
+    S.metal({ at: 0.02, set: 'stone', f: 150, dur: 1.0, peak: 0.2, strike: 0.5 });
+  });
+  def('hd-wing', 'bm', S => {
+    S.space('hall', 0.35);
+    // a wing opening before a beat (the pitch climbs with the count): a soft rustle of vanes and a low feathered push
+    hdFeather(S, 0, 0.26, 0, 130);
+    S.glass({ at: 0.2, f: mf(88), dur: 0.5, peak: 0.04 });
+  });
+  def('hd-shatter', 'bm', S => {
+    S.space('hall', 0.5);
+    // a pillar breaking: a deep crack, a burst of glass falling in a rush, a spray of frost and chips on the floor
+    S.crack({ f: 1800, peak: 0.45, dur: 0.3 });
+    S.thud({ f: 70, f1: 30, dur: 0.8, drive: 2.4, peak: 0.55 });
+    for (let i = 0; i < 9; i++) S.glass({ at: 0.02 + i * 0.04, f: mf(104 - i * 2 + (i % 3)), dur: 0.7, peak: 0.07, pan: Math.sin(i * 1.9) * 0.6 });
+    S.crackle({ at: 0.05, dens: 2.4, f: 4200, dur: 0.8, pts: [[0.05, 1], [0.8, 0]], peak: 0.18 });
+    S.sizzle({ at: 0.1, hp: 5500, dur: 0.8, pts: [[0.05, 1], [0.8, 0]], peak: 0.1 });
+  });
+  def('hd-frost-hit', 'imp', S => {
+    // a percentage hit on you: the hollow weight and the cold going through, a thin falling tone, no crack
+    S.thud({ f: 56, f1: 24, dur: 0.8, drive: 1.6, peak: 0.7, click: 0.15 });
+    S.tone({ f: mf(86), f1: mf(62), dur: 0.7, pts: [[0.02, 1], [0.7, 0]], peak: 0.07, lp: 3000 });
+    hdSigh(S, 0, 0.5, 0.1, 3600, 900);
+    S.glass({ at: 0.02, f: mf(98), dur: 0.5, peak: 0.05 });
+  });
+  def('hd-open-1', 'sting', S => {
+    S.space('hall', 0.7);
+    // a long cold draught and cloth sliding, chains settling and a hand rising: a soft glass tone climbing a fifth, a held breath
+    hdSigh(S, 0, 1.6, 0.12, 1800, 500);
+    S.noise({ bp: 600, bp1: 1800, q: 1.4, dur: 1.4, a: 0.5, pts: [[0.9, 1], [1.4, 0]], peak: 0.1, grain: 0.5 });
+    hdChains(S, 0.2, 1.2, 0.1);
+    S.tone({ at: 1.0, f: mf(74), f1: mf(81), dur: 2.0, a: 0.8, pts: [[1.2, 1], [2.0, 0]], peak: 0.06, lp: 2400 });
+    hdGlass(S, 1.6, mf(86), 0.1, 2.2);
+    S.thud({ at: 0, f: 48, f1: 30, dur: 1.2, drive: 1.4, peak: 0.3, click: 0 });
+  });
+  def('hd-open-2', 'sting', S => {
+    S.space('hall', 0.8);
+    // the roof going up and away in frost: a long rising crack and falling shards, wide wind opening, three slow feathered beats unfolding, a bright cracked note
+    S.creak({ f: 18, f1: 70, res: [500, 1300, 3000], q: 12, dur: 1.8, peak: 0.12 });
+    S.noise({ bp: 300, bp1: 3200, q: 0.8, dur: 2.2, a: 1.4, pts: [[1.9, 1], [2.2, 0]], peak: 0.2 });
+    for (let i = 0; i < 8; i++) S.glass({ at: 0.5 + i * 0.16, f: mf(106 - i * 2), dur: 0.9, peak: 0.045, pan: Math.sin(i * 2.1) * 0.7 });
+    [[1.8, -0.5], [2.35, 0.5], [2.95, 0]].forEach(([at, pan], i) => hdFeather(S, at, 0.35 + i * 0.1, pan, 120 - i * 12));
+    S.thud({ at: 1.8, f: 44, f1: 22, dur: 1.6, drive: 2.6, peak: 0.6 });
+    hdGlass(S, 3.0, mf(93), 0.12, 2.8); S.glass({ at: 3.05, f: mf(93) * 1.03, dur: 2.2, peak: 0.07 });
+  });
+  def('hd-kneel', 'sting', S => {
+    S.space('hall', 0.7);
+    // the weight lowering: cloth and a long breath out, a single knee on the stone, one soft bell fading with its chains, the cold tone letting go
+    hdSigh(S, 0, 2.0, 0.12, 2200, 400);
+    S.noise({ bp: 500, bp1: 200, q: 1, dur: 1.2, a: 0.3, pts: [[0.5, 1], [1.2, 0]], peak: 0.12, grain: 0.4 });
+    S.thud({ at: 1.2, f: 70, f1: 34, dur: 0.7, drive: 1.6, peak: 0.45 });
+    hdToll(S, 1.5, mf(48), 0.2, 5.0, 0.9);
+    hdDrone(S, 1.0, 4.0, 0.06, mf(50), mf(48));
+  });
+  def('hd-lie', 'sting', S => {
+    S.space('hall', 0.75);
+    // the wings folding and laying down: a run of feather rustles closing one by one, a soft body in snow, a long breath, and the high note of the ring dying away alone
+    for (let i = 0; i < 6; i++) S.noise({ at: i * 0.35, color: 'pink', hp: 2200, lp: 6500, grain: 0.7, dur: 0.4, a: 0.08, pts: [[0.15, 1], [0.4, 0]], peak: 0.12 * (1 - i * 0.1), pan: Math.sin(i * 1.7) * 0.6 });
+    hdFeather(S, 0, 0.18, -0.4, 100); hdFeather(S, 0.5, 0.2, 0.4, 90);
+    S.thud({ at: 2.2, f: 60, f1: 30, dur: 1.2, drive: 1.4, peak: 0.45, click: 0 });
+    S.noise({ at: 2.2, color: 'pink', lp: 1200, dur: 0.6, a: 0.02, pts: [[0.05, 1], [0.6, 0]], peak: 0.1 });
+    hdSigh(S, 2.4, 2.4, 0.1, 2400, 400);
+    hdGlass(S, 3.0, mf(93), 0.1, 4.0);
   });
 
   // ---------------------------------------------------------------------------------------------- install

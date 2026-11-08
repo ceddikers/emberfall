@@ -100,6 +100,14 @@ const TOWN_SECRETS = [
     lines: ['Pale footprints in the frost behind the gate, many kinds of boot, none of them warm. They come out of the portal in pairs.',
       'They walk a little way toward town, and stop exactly where you are standing.'],
     reward: { gold: 40 } },
+
+  // ---------------------------------------------------------------- after the Ultimate
+  // `pull` makes the card carry a second button (pastimes.js card): on the host it starts that boss's pull. A secret with `pull` stays readable after it is found.
+  { id: 'unspoken-prints', name: 'Footprints behind the gate', at: { x: 850, y: 574 }, r: 24,
+    when: { beaten: ['sovereign'] }, look: 'footprints', pull: 'hood', hidden: true,
+    lines: ['A second set of prints in the frost, narrower than the pale ones, and bare. They leave the road and go round behind the ring.',
+      'They stop at the foot of the carved stone, where the chipped letters lie whole in the frost, every one of them, and nothing is left to read.'],
+    reward: {}, set: 'found-unspoken-prints' },
 ];
 
 if (typeof module !== 'undefined') module.exports = { TOWN_SECRETS };

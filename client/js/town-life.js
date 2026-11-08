@@ -335,6 +335,66 @@ const TownLife = (() => {
     }
     ctx.restore();
   }
+  // The Unspoken's piece in the Trophy Hall (for the account, once the last gate has fallen): a plinth in the middle of the second row, and on it a frost shard
+  // with a broken gold ring turning very slowly round it, and a plate. Test flag: localStorage 'emberfall.unRewards' = '1' (local dev host; remove after testing).
+  function drawUnspokenPlinth(ctx, now) {
+    const H = TOWN.hall, x = H.x + H.w / 2, y = H.rows[1] - 4, sc = PED_S;
+    ctx.save(); ctx.translate(x, y);
+    circle(ctx, 4, 5, 33 * sc, 'rgba(0,0,0,0.32)');
+    circle(ctx, 0, 0, 31 * sc, '#464c56', '#262a32', 3); circle(ctx, 0, 0, 24 * sc, '#343a44'); circle(ctx, 0, 0, 28 * sc, null, 'rgba(143,211,255,0.4)', 1.2);
+    const br = 0.5 + 0.5 * Math.sin(now * 0.7);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(ctx, 0, -6, 24, '#8fd3ff', 0.12 + 0.08 * br, 0.3 + 0.2 * br); ctx.restore();
+    // the shard: a tall pale crystal with a lit facet and a gold core
+    poly(ctx, [0, -34, 8, -12, 5, 8, -5, 8, -9, -14], '#bfe0f2', '#2e4a5e', 1.6);
+    poly(ctx, [0, -34, 8, -12, 3, 2, 0, -8], 'rgba(240,250,255,0.7)');
+    line(ctx, 0, -24, 0, 2, 'rgba(216,184,106,0.8)', 1.4);
+    // the broken ring: six arcs of gold with gaps, one of them frosted over, turning slowly
+    const R = 40 * sc, spin = now * 0.04;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 6; i++) {
+      const a0 = spin + i * Math.PI / 3 + 0.09, a1 = a0 + Math.PI / 3 - 0.3;
+      ctx.strokeStyle = i === 2 ? 'rgba(143,211,255,0.8)' : 'rgba(216,184,106,0.85)'; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.ellipse(0, -2, R, R * 0.92, 0, a0, a1); ctx.stroke();
+    }
+    // the plate
+    ctx.font = '700 11px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const tw = ctx.measureText('The Unspoken').width + 22;
+    ctx.fillStyle = '#2e2a26'; ctx.strokeStyle = '#c9a65a'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.roundRect(-tw / 2, 40 * sc, tw, 19, 4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f0d48a'; ctx.fillText('The Unspoken', 0, 40 * sc + 10);
+    ctx.restore();
+  }
+  // The quiet change in town once the last gate has fallen (never told): a rim of frost on the stones round the first portal's ring that never melts, and by
+  // night (the player's own clock, 21:00 to 06:00) a thin drift of snow over the terrace that falls upward.
+  const hash = n => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  function drawFrostRim(ctx, now) {
+    const P = TOWN.portals[0];
+    ctx.save(); ctx.translate(P.x, P.y);
+    for (let i = 0; i < 46; i++) {
+      const a = i / 46 * Math.PI * 2 + hash(i) * 0.12, d = P.r + 10 + hash(i + 50) * 22, w = 4 + hash(i + 100) * 9;
+      const px = Math.cos(a) * d, py = Math.sin(a) * d * 0.96;
+      ctx.save(); ctx.translate(px, py); ctx.rotate(a);
+      ctx.fillStyle = 'rgba(190,225,245,' + (0.26 + hash(i + 150) * 0.2).toFixed(2) + ')';
+      ctx.beginPath(); ctx.ellipse(0, 0, w, 1.8 + hash(i + 200) * 2.4, 0, 0, Math.PI * 2); ctx.fill();
+      if (i % 3 === 0) { const tw = 0.5 + 0.5 * Math.sin(now * 1.4 + i); ctx.fillStyle = 'rgba(240,250,255,' + (0.25 + 0.4 * tw).toFixed(2) + ')'; ctx.fillRect(-w * 0.3, -0.6, 2.4, 1.2); }
+      ctx.restore();
+    }
+    ctx.strokeStyle = 'rgba(160,210,240,0.2)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, P.r + 8, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  const nightNow = () => { const h = new Date().getHours(); return h >= 21 || h < 6; };
+  function drawUpSnow(ctx, now) {
+    const T = TOWN.terrace, N = 42;
+    ctx.save();
+    for (let i = 0; i < N; i++) {
+      const sp = 0.035 + hash(i + 3) * 0.03, q = (now * sp + hash(i + 7)) % 1;   // 0 at the stones, 1 high above them
+      const x = T.x + hash(i) * T.w + Math.sin(now * 0.5 + i) * 10, y = T.y + T.h - q * (T.h + 80);
+      const a = Math.sin(q * Math.PI) * 0.5;
+      ctx.fillStyle = 'rgba(236,246,255,' + a.toFixed(2) + ')';
+      ctx.beginPath(); ctx.arc(x, y, 0.9 + hash(i + 11) * 1.1, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
   function drawDecor(ctx, kind, now) {
     if (kind === 'cookfire') {
       drawKitchen(ctx, now);
@@ -601,6 +661,8 @@ const TownLife = (() => {
       if (u.trophy && pedestals[i] && deps.heat && typeof HARDPLUS !== 'undefined') HARDPLUS.flame(ctx, pedestals[i].x + 52 * PED_S, pedestals[i].y + 8 * PED_S, deps.heat(b), now, PED_S);   // (Hard+: a flame over the trophy, bigger with the best heat cleared)
     }
     if (deps.beaten('sovereign') || (typeof SvRewards !== 'undefined' && SvRewards.TEST)) drawSovereignPlinth(ctx, now);
+    if (deps.beaten('seraph') || (typeof UnRewards !== 'undefined' && UnRewards.TEST)) drawUnspokenPlinth(ctx, now);
+    if (deps.beaten('seraph') || (typeof UnRewards !== 'undefined' && UnRewards.TEST)) { drawFrostRim(ctx, now); if (nightNow() || (typeof UnRewards !== 'undefined' && UnRewards.TEST)) drawUpSnow(ctx, now); }
     groundMeal(ctx, now);
   }
   function entities(scale) {

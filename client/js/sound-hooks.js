@@ -651,6 +651,49 @@ const SoundHooks = (() => {
   // the Brand's burn ticking on you (pdmg kind svBurn): a short sear, very quiet
   function sovereignBurn() { play('bm-sovereign-brand-sear', { vol: 0.6, key: 'svsear', minGap: 1 }); }
 
+  // ---------------------------------------------------------------- the cold court (boss ids hood and seraph; roomev keys hd*)
+  // The casts sound from bossCast (SfxMap: bm-hood-*, bm-seraph-*). What a cast cannot say is read off the room's events: main.js hands each 'roomev' to hoodRoom(msg), a broken
+  // prop (the 'propfx' message) to hoodProp(msg) and the percentage hit on you to hoodFrostHit().
+  //   hdhand { blade, light }  a hand coming up: hd-blade-out (steel whispering free) / hd-palm-open (a glass tone blooming); a 0 is silence
+  //   hdfreeze { id } / hdthaw { id }   the shell of frost closing on a hero and going (yours full, another's quiet)
+  //   hdbell { n }   a toll: hd-bell, a little lower for each of the three
+  //   hdshard { x, y, land }   hd-shard at the throw, hd-pillar when it stands (land seconds on, placed where it stands)
+  //   hdwing { n }   hd-wing, climbing a little for each of the six beats
+  //   hdopen { gate }   the pull: hd-open-1 (the first court) or hd-open-2 (the second, the roof going)      hdkneel / hdlie   the kill: hd-kneel / hd-lie
+  const hdSpot = e => (e && e.x != null ? { x: e.x, y: e.y } : null);
+  function hoodRoom(msg) {
+    if (!has() || !msg || typeof msg.k !== 'string') return;
+    safe(() => {
+      switch (msg.k) {
+        case 'hdhand':
+          if (msg.blade === 1) play('hd-blade-out', { vol: 0.8, key: 'hdblade', minGap: 0.15 });
+          if (msg.light === 1) play('hd-palm-open', { vol: 0.8, key: 'hdpalm', minGap: 0.15 });
+          break;
+        case 'hdfreeze': play('hd-freeze', typeof Net !== 'undefined' && msg.id === Net.id ? { vol: 0.9, key: 'hdfreeze:' + msg.id, minGap: 0.1 } : { vol: 0.5, key: 'hdfreeze:' + msg.id, minGap: 0.1 }); break;
+        case 'hdthaw': play('hd-thaw', typeof Net !== 'undefined' && msg.id === Net.id ? { vol: 0.9, key: 'hdthaw:' + msg.id, minGap: 0.1 } : { vol: 0.5, key: 'hdthaw:' + msg.id, minGap: 0.1 }); break;
+        case 'hdbell': play('hd-bell', { vol: 0.9, rate: Math.max(0.8, 1 - 0.05 * ((+msg.n || 1) - 1)), key: 'hdbell', minGap: 0.5 }); break;
+        case 'hdshard': {
+          const at = hdSpot(msg), land = +msg.land > 0 ? +msg.land : 2;
+          play('hd-shard', { vol: 0.85, key: 'hdshard', minGap: 0.4 });
+          setTimeout(() => safe(() => play('hd-pillar', { vol: 0.9, at, key: 'hdpillar', minGap: 0.4 })), land * 1000);
+          break;
+        }
+        case 'hdwing': play('hd-wing', { vol: 0.8, rate: 1 + 0.07 * (Math.max(1, Math.min(6, +msg.n || 1)) - 1), key: 'hdwing', minGap: 0.3 }); break;
+        case 'hdopen': play(+msg.gate === 2 ? 'hd-open-2' : 'hd-open-1', { vol: 0.9, key: 'hdopen', minGap: 1 }); break;
+        case 'hdkneel': play('hd-kneel', { vol: 0.9, key: 'hdkneel', minGap: 1 }); Sound.music.duck(0.5, 5); break;
+        case 'hdlie': play('hd-lie', { vol: 0.9, key: 'hdlie', minGap: 1 }); Sound.music.duck(0.5, 6); break;
+        default: break;
+      }
+    });
+  }
+  // a prop broken in the room (propfx k break): a standing shard of frost goes with a shatter
+  function hoodProp(msg) {
+    if (!has() || !msg || msg.k !== 'break' || msg.kind !== 'pillar') return;
+    safe(() => play('hd-shatter', { vol: 0.9, at: hdSpot(msg), key: 'hdshatter:' + (msg.id == null ? '' : msg.id), minGap: 0.1 }));
+  }
+  // a percentage hit on you (pdmg with pc): the hollow weight, no crack
+  function hoodFrostHit() { play('hd-frost-hit', { vol: 0.8, key: 'hdfrost', minGap: 0.25 }); }
+
   // ---------------------------------------------------------------- music
   const music = (id, o) => { if (has()) safe(() => Sound.music.set(id, o)); };
   // The Founding's music (founding/client.js picks the slot from what the run shows; the prompts are in docs/art/music-prompts.md). A slot is the track mus-fd-<slot>. Until that
@@ -676,6 +719,8 @@ const SoundHooks = (() => {
   // act: for the Ultimate, the act in play (a practice start, a rejoin; absent or 0 is the first); other bosses ignore it
   function bossTrack(bossId, mode, act) {
     if (bossId === 'sovereign') { svClear(svMusT); svClear(svFxT); svMusOn = true; svAct = act >= 1 && act <= 4 ? Math.floor(act) : 1; svSlot = svAct; return (SV_MUS[svAct] || SV_MUS[1]).ids; }   // (the act the room is in: Act I on a normal pull; the chain, see SV_MUS)
+    if (bossId === 'hood') return ['mus-hood', 'mus-hollowking'];      // (the first court's own tune, else the Hollow King's)
+    if (bossId === 'seraph') return ['mus-seraph', 'mus-hydra-hard'];  // (the second court's, else the Mother's harder tune)
     const hard = 'mus-' + bossId + '-hard';
     return mode === 'hard' && !TURN.has(bossId) && has() && Sound.music.has && Sound.music.has(hard) ? hard : 'mus-' + bossId;
   }
@@ -794,7 +839,7 @@ const SoundHooks = (() => {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUI); else wireUI();
   }
 
-  return { step, bossStep, sovereignRoom, sovereignSetPiece, sovereignBurn, play, vo, ability, auto, hollow, thresher, tidecaller, lanternkeeper, kenseier, houndmaster, castStart, castEnd, stacks, telegraph, bossCast, impact, music, foundingMusic, phase, bossTrack, tick, stopBeds, ground, TG };
+  return { step, bossStep, sovereignRoom, sovereignSetPiece, sovereignBurn, hoodRoom, hoodProp, hoodFrostHit, play, vo, ability, auto, hollow, thresher, tidecaller, lanternkeeper, kenseier, houndmaster, castStart, castEnd, stacks, telegraph, bossCast, impact, music, foundingMusic, phase, bossTrack, tick, stopBeds, ground, TG };
 })();
 
 if (typeof module !== 'undefined') module.exports = { SoundHooks };

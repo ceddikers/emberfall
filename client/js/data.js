@@ -330,5 +330,12 @@ const ULTIMATE_BOSS = {
   mechanics: [],
 };
 
+// Two more fights outside BOSSES (set 5, found in town rather than unlocked; boss ids hood and seraph, arena/bosses/hood.js and seraph.js). As ULTIMATE_BOSS,
+// they are looked up by id where a name or colour is needed and are never on the per-boss lists that read BOSSES.
+const SECRET_BOSSES = [
+  { id: 'hood', name: 'The Hollow Hood', title: 'the Unspoken', color: '#8fd3ff', playable: false, set: 5, secret: true, blurb: '', mechanics: [] },
+  { id: 'seraph', name: 'The Six-Winged Seraph', title: 'the Unspoken', color: '#d8b86a', playable: false, set: 5, secret: true, blurb: '', mechanics: [] },
+];
+
 // Lets Node tools reuse this file.
-if (typeof module !== 'undefined') module.exports = { ROLES, KEYS, CLASSES, BOSSES, ULTIMATE_BOSS };
+if (typeof module !== 'undefined') module.exports = { ROLES, KEYS, CLASSES, BOSSES, ULTIMATE_BOSS, SECRET_BOSSES };
