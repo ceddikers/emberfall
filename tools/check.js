@@ -160,6 +160,8 @@ HARD_BOSSES.push(['Corvane', 'corvane', 'gear=post3']);
 HARD_BOSSES.push(['Brannoc', 'brannoc', 'gear=post3']);
 HARD_BOSSES.push(['Morrow-Oak', 'morrowoak', 'gear=post3']);
 HARD_BOSSES.push(['Caelum Vey', 'caelum', 'gear=post3']);
+// Extreme (docs/plans/2026-11-boss-revamp.md): Hard plus three mechanics of its own on every set boss, smoke-run at its tuning gear (bot-gear.js TUNED)
+const EXTREME_BOSSES = HARD_BOSSES.map(([name, id], i) => [name, id, 'gear=' + (i < 4 ? 'full' : ['wyrm', 'titan', 'hydra', 'archmage'].includes(id) ? 'post3' : 'post5')]);
 const results = [];
 let into = results;   // where pass() and fail() write: the stage being read (see stage)
 const pass = (name, detail = '') => into.push({ ok: true, name, detail });
@@ -399,7 +401,7 @@ function items() {
   for (const it of Object.values(ITEMS)) if (it.tier > 0 && !Object.values(LOOT_TABLES).some(t => (t[it.rarity] || []).includes(it.key))) probs.push(`${it.key} never drops`);
   // chests: the right size, real items, class items only for the classes in the run, rarities about as advertised
   let seed = 11; const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  for (const boss of Object.keys(LOOT_TABLES)) for (const mode of ['normal', 'hard']) {
+  for (const boss of Object.keys(LOOT_TABLES)) for (const mode of ['normal', 'hard', 'extreme']) {
     const counts = [0, 0, 0, 0, 0]; let n = 0;
     for (let i = 0; i < 1500; i++) {
       const classes = i % 3 ? ['bastion'] : ['cleric', 'ranger', 'pyromancer'];
@@ -417,8 +419,8 @@ function items() {
   const needs = [['bastion_w1', 'bastion', true], ['bastion_w1', 'cleric', false], ['g_cleaver', 'ranger', true], ['g_cleaver', 'cleric', false],
     ['g_apron', 'cleric', true], ['m_crown', 'bastion', true], ['cleric_a2', 'grovekeeper', false]];
   for (const [k, c, want] of needs) if (canUse(k, c) !== want) probs.push(`canUse(${k}, ${c}) should be ${want}`);
-  // gold: per boss, doubled on Hard; selling follows rarity
-  if (clearGold('grubnak', 'normal') !== 40 || clearGold('hollowking', 'hard') !== 120 || clearGold('nobody', 'normal') !== 0) probs.push('clear gold is off');
+  // gold: per boss, doubled on Hard, tripled on Extreme; selling follows rarity
+  if (clearGold('grubnak', 'normal') !== 40 || clearGold('hollowking', 'hard') !== 120 || clearGold('hollowking', 'extreme') !== 180 || clearGold('grubnak', 'extreme') !== 120 || clearGold('nobody', 'normal') !== 0) probs.push('clear gold is off');
   if (RARITY.map(r => r.sell).join() !== '2,8,15,30,60') probs.push('sell prices are off');
 
   // the engine runs effects: a Mythic's shorter oGCD cooldowns, its buff on an oGCD, and a crit's strike
@@ -681,13 +683,32 @@ const TL = { WARN_MIN: 1.2, GAP_MAX: 16, RAID_MAX: 150, BUSTER_MAX: 180, LEN_MIN
 function timelines() {
   const load = p => require(path.join(ROOT, 'client/js', p));
   Object.assign(global, load('combat/actor.js'), load('arena/fight.js'));
+  // Extreme is Hard plus a boss's own extra moves: the Hard flags, no Hard+ mods, and Hard's health, enrage and damage wherever the boss has no Extreme entry of its own
+  {
+    const probs = [], savedHp = global.HARDPLUS;
+    global.HARDPLUS = load('hardplus.js').HARDPLUS;
+    try {
+      const def = load('arena/bosses/grubnak.js').GRUBNAK, mods = { shortfuse: true, heavyhands: true };
+      const players = [['tank', 0, 120], ['healer', -200, 200], ['dps', 200, 200], ['dps', 0, 260]].map(([role, x, y], i) => ({ id: i + 1, name: role + i, role, cls: 'x', x, y, a: 0 }));
+      const mk = mode => new FightSim(def, mode, () => players, () => {}, 4242, { mods });
+      const hs = mk('hard'), xs = mk('extreme'), ns = mk('normal');
+      if (xs.hard !== true || xs.extreme !== true) probs.push('an Extreme sim should have hard and extreme both true');
+      if (hs.extreme || ns.extreme || ns.hard) probs.push('only an Extreme sim has extreme set, and Normal is not hard');
+      if (Object.keys(hs.mods).length !== 2) probs.push('Hard should take the Hard+ mods it is given');
+      if (Object.keys(xs.mods).length || Object.keys(ns.mods).length) probs.push('Extreme and Normal take no Hard+ mods');
+      if (!def.hp.extreme && xs.boss.maxHp !== hs.boss.maxHp) probs.push('an Extreme boss with no hp of its own should have the Hard health');
+      if (!def.enrage.extreme && xs.enrageAt() !== def.enrage.hard) probs.push('an Extreme boss with no enrage of its own should have the Hard enrage');
+      if (!def.extremeDmg && xs.dmgMult() !== hs.dmgMult()) probs.push('an Extreme boss with no extremeDmg should hit as hard as on Hard');
+    } finally { if (savedHp === undefined) delete global.HARDPLUS; else global.HARDPLUS = savedHp; }
+    if (probs.length) fail('Extreme falls back to Hard', probs.join('\n')); else pass('Extreme falls back to Hard', 'hard and extreme flags, no Hard+ mods, Hard health, enrage and damage');
+  }
   for (const [boss, id, sym] of CHOREO) {
     const file = path.join(ROOT, 'client/js/arena/bosses', id + '.js'), src = fs.readFileSync(file, 'utf8'), probs = [], notes = [];
     const code = src.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
     if (/f\.loop\(/.test(code)) probs.push('still uses f.loop');
     for (const l of code.split('\n')) if (/hidden:/.test(l) && !/raidwide/.test(l)) probs.push(`hidden telegraph: ${l.trim().slice(0, 90)}`);
     const def = load(`arena/bosses/${id}.js`)[sym];
-    for (const mode of ['normal', 'hard']) {
+    for (const mode of ['normal', 'hard', 'extreme']) {
       const players = [['tank', 0, 120], ['healer', -200, 200], ['dps', 200, 200], ['dps', 0, 260]].map(([role, x, y], i) => ({ id: i + 1, name: role + i, role, cls: 'x', x, y, a: 0 }));
       const sim = new FightSim(def, mode, () => players, () => {}, 4242);
       for (const s of sim.ps.values()) { s.hp = s.maxHp = 1e12; }
@@ -975,6 +996,7 @@ async function heavy() {
     ...trialIds.map(id => raidJob('normal', 2, 'trial:' + id, '', [], 'spec trials')),
     ...HARD_BOSSES.map(([, boss, gear]) => raidJob('hard', 3, boss, HARD_COMP, gear ? [gear] : [], 'hard smoke')),
     raidJob('hard', 1, 'grubnak', HARD_COMP, ['mods=all'], 'hard smoke'),   // (Hard+: every modifier on, one run; client/js/hardplus.js)
+    ...EXTREME_BOSSES.map(([, boss, gear]) => raidJob('extreme', 3, boss, HARD_COMP, [gear], 'extreme smoke')),
   ]);
   const hards = raids.splice(RAIDS.length + trialIds.length);
   const trials = raids.splice(RAIDS.length);
@@ -1055,6 +1077,14 @@ function verdicts(sim, tal, raids, trials, hards, trialIds, specOf) {
     if (r.code === 0 && m && /Hard\+ heat 15/.test(r.out)) pass(name, `${m[1]} at ${m[2]}s`);
     else fail(name, r.out.slice(-800));
   }
+
+  // Extreme smoke: each boss's Extreme script runs without errors and the bots last at least HARD_MIN seconds (as the Hard smoke does)
+  EXTREME_BOSSES.forEach(([boss, , gear], i) => {
+    const r = hards[HARD_BOSSES.length + 1 + i], name = `${boss} Extreme runs clean (${gear})`;
+    const m = [...r.out.matchAll(/^run \d+: (\w+) at (\d+)s/gm)].sort((a, b) => b[2] - a[2])[0];
+    if (r.code === 0 && m && +m[2] >= HARD_MIN) pass(name, `${m[1]} at ${m[2]}s`);
+    else fail(name, m ? `${m[1]} at ${m[2]}s (want ${HARD_MIN}s or more)` : r.out.slice(-800));
+  });
 
   // spec trials: a bot playing the spec can pass each one (a bot isn't a careful player, so one clear of two is enough)
   const stuck = trialIds.filter((id, i) => { const m = trials[i].out.match(/cleared (\d+) of/); return trials[i].code !== 0 || !m || +m[1] < 1; });

@@ -34,9 +34,13 @@
 //   Gravebind: a grave-chain binds two players (never the tank); they must stay close until it breaks.
 //   Burial Rites and the Writ of Execution: a grave each, and the Writ's burning lines (see burialRites, writ), then in close
 //     for a Crown of Graves and out to your grave.
-// Hard draws its dances fresh each pull (f.rng): the Charge Sheet's order, the Funeral March's open lane, who is Pardoned,
-// who is bound in Gravebind, and which grave is whose. The Echo replays and the Judgement's swings always land on the beat
-// (the order may be new; the timing never is).
+// Hard draws one of three fixed dances each pull (2026-11-10, f.danceRng): the order of the sets of the Summons, Testimony and Judgement acts, and which
+// coffin of each side wakes when. Fresh each pull, as reads: the Charge Sheet's order, the Funeral March's open lane, who is Pardoned, who is bound in
+// Gravebind, which grave is whose, and which knight answers. The Echo replays and the Judgement's swings always land on the beat (the order may be new;
+// the timing never is).
+// Extreme (the same fight, one fixed order, three more judgements; f.extreme): Contempt of Court (a knight that kneels as it takes a swing in answers with
+// the swing turned inside out), The Sentence (two Shackled, two Exiled, judged as the knights answer) and Roll Call (the party numbered, the numbers
+// called in turn: face him when called, back to him otherwise).
 // Work for the tank and the healer, and room to damage (2026-10-26): every act is laid out in units (see `lay` in the hearing). A unit is a call
 // and what rides with it; most are a single move with room after it, and two are stacked only at the fight's signature moments (a swing and the
 // Echo that answers it, the Lids and the Decree, the Tithe and the Dirge, the Rites and the Writ, the Charge Sheet and Judgement). Tank jobs
@@ -57,10 +61,11 @@
 const HOLLOWKING = {
   id: 'hollowking', name: 'The Hollow King', title: 'Lord of the Barrow',
   normalDmg: 1.36,   // (Normal's damage multiplier, fight.js default 1; 2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven))
-  hp: { normal: 4400000, hard: 4990000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 3700000 / 4345000)
-  hardDmg: 1.23,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.03; Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
-  autoDmg: { normal: 1650, hard: 1800 },
-  enrage: { normal: 622, hard: 632 },   // the cast starts here and lands 8 s later (10:30 / 10:40)
+  hp: { normal: 4400000, hard: 4990000, extreme: 7460000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 3700000 / 4345000; Extreme: Hard's and 6%, a first guess)
+  hardDmg: 1.38,   // (2026-11-11: Hard brought into line with its set, the user's call; was 1.23)   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.03; Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
+  extremeDmg: 1.45,   // (Extreme: Hard's, a first guess)
+  autoDmg: { normal: 1650, hard: 1800, extreme: 1800 },
+  enrage: { normal: 622, hard: 632, extreme: 632 },   // the cast starts here and lands 8 s later (10:30 / 10:40)
   enrageName: 'Moonset',
   vuln: 0.5,
   spawn: { x: 0, y: -80 },
@@ -80,11 +85,35 @@ const HOLLOWKING = {
       dirge: H ? 6250 : 3000,
       marks: H ? 12800 : 9000, bell: H ? 5650 : 4500, bellFail: H ? 2500 : 2000, march: H ? 17500 : 14000, bind: H ? 20000 : 16000,
       throw: H ? 17500 : 14000, summons: H ? 21250 : 11000, lid: H ? 15000 : 12000, decree: H ? 21250 : 15000, masonry: H ? 15000 : 12000, writ: H ? 11250 : 9000, scorch: H ? 5000 : 4000, unburied: H ? 18750 : 15000, grave: H ? 12500 : 10000, restless: H ? 3150 : 2500, coffinHp: 7000, skelHp: 9000, skelBite: H ? 1650 : 1300, wardenHp: H ? 58000 : 48000, wardenBite: H ? 5200 : 3800, rebuke: H ? 14000 : 12000, rebukeEcho: H ? 12500 : 10500,
+      shackle: 14000, exile: 14000,   // (Extreme's Sentence: a broken shackle on each of the pair, an exile's ring with someone in it; only ever used on Extreme)
     };
     const HARD_HIT = 1.34;   // (Hard's every blow, one factor: the bots dodge well since the prop-steering fix, so Hard is retuned here, not by changing a dance)
     if (H) for (const k in dmg) if (!/Hp$/.test(k)) dmg[k] = Math.round(dmg[k] * HARD_HIT);
     const S = (...steps) => steps.filter(Boolean);
-    const GAZE_ARC = 1.2;     // you're looking at him if he's within this angle of where you face (~70° either side)
+    const X = f.extreme;   // (Extreme: Hard, and the court's three more judgements: Contempt of Court, The Sentence, Roll Call)
+    // --- the dances (docs/plans/2026-11-boss-revamp.md): Hard draws one of three fixed orders per pull (f.dance 0 to 2), Extreme and Normal always the first.
+    // An act's order is drawn from f.danceRng(salt), so a dance is the same on every pull that draws it. The three dances of an act are chosen to
+    // differ, all three at once, in the first set that is not common to all of them (danceAttempt tries salts, reading the other two dances'
+    // generators with f.danceRng(salt, dance)), so that set tells the party which dance it is in.
+    const shuf = (arr, rnd) => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    const danceAttempt = (tag, make) => {
+      if (f.dance === 0) return 0;
+      const sig = u => (Array.isArray(u) ? u.map(st => st[2] || '-').join('+') : u);   // (a set by what the party sees: two Rebuke sets are the same set)
+      const draw = (d, a) => make(f.danceRng(tag + ':' + a, d)).map(sig);
+      const s0 = draw(0, 0);
+      for (let a1 = 0; a1 < 40; a1++) {
+        const s1 = draw(1, a1);
+        if (!s1.some((u, i) => u !== s0[i])) continue;
+        for (let a2 = 0; a2 < 120; a2++) {
+          const s2 = draw(2, a2);
+          const j = s0.findIndex((u, i) => u !== s1[i] || u !== s2[i]);
+          if (j >= 0 && s0[j] !== s1[j] && s0[j] !== s2[j] && s1[j] !== s2[j]) return f.dance === 1 ? a1 : a2;
+        }
+      }
+      return f.dance;   // (no such trio found: the dance's own number still draws three different timelines)
+    };
+    const danceDraw = (tag, make) => make(f.danceRng(tag + ':' + danceAttempt(tag, make)));
+    const GAZE_ARC = 1.2;    // you're looking at him if he's within this angle of where you face (~70° either side)
     const LANT_PICK = 40;     // walk this close to a lantern on the floor to pick it up
     const LANT_CURE = 85;     // a lantern's light cures Doom this far out
     const ECHO_WARN = H ? 2.0 : 2.6;
@@ -101,6 +130,12 @@ const HOLLOWKING = {
     f.noPause = () => f.night || f.doomed.size > 0 || !!(f.doomNext && f.doomNext.length) || !!(B.cast && B.cast.name === 'Royal Doom' && f.t < B.cast.end);
     const memory = [null, null];   // the swing each knight remembers
     let memNext = 0;
+    // Contempt of Court (Extreme): a knight that kneels as it stores a swing answers with the swing turned inside out (the same shape, everywhere but
+    // where it would have been). The kneel is the tell, shown from the moment the swing is stored until it is answered (roomev 'kneel').
+    const kneel = [false, false], bowed = [false, false];   // (kneel: what the answer will be, cleared as the replays are laid; bowed: the pose, until that knight's own replay begins)
+    let stored = 0;
+    const sendKneel = () => f.emit({ t: 'roomev', k: 'kneel', dur: 90, l: f.knights.map((k, i) => (bowed[i] ? [k.x, k.y, +k.f.toFixed(2)] : null)).filter(Boolean) });
+    const INV_TAG = { sweep: 'sweep', stomp: 'ring', ring: 'stomp' };   // (what the turned-out swing looks like, for its tag: a stomp's inside out is a ring)
 
     const sendLanterns = () => f.emit({ t: 'lant', l: f.lanterns.map(l => [l.id, Math.round(l.x), Math.round(l.y), l.carrier ?? null, l.last ? 1 : 0]) });
     const sendKnights = () => f.emit({ t: 'knights', k: f.knights.map(k => [k.id, k.x, k.y, +k.f.toFixed(2)]) });
@@ -260,17 +295,24 @@ const HOLLOWKING = {
             const k = f.knights[i];
             memory[i] = kind;
             f.emit({ t: 'kmem', id: k.id, kind });
+            if (X) { stored++; kneel[i] = bowed[i] = stored % 2 === 0; sendKneel(); }   // (Extreme: every second swing taken in is taken in on a knee)
             memNext++;
           }
         } });
       return kind;
     };
     // a knight replays what it remembers, from where it stands, aimed at the middle of the hall
-    const knightSwing = (k, kind) => {
-      const shape = swingShape(kind, k.x, k.y, k.f, true);
-      f.echoPlan = f.echoPlan.filter(e => e.knight !== k.id || e.kind !== kind);
-      f.emit({ t: 'kswing', id: k.id, kind, dur: ECHO_WARN });
-      f.mech({ type: 'aoe', shape, delay: ECHO_WARN, dmg: dmg.echo, tag: 'e' + kind });
+    // (inv: the knight knelt as it took the swing in: the same shape turned inside out: a circle's rest of the hall, a ring's circle, a cone's everything but the cone)
+    const turnedOut = (kind, k) => (
+      kind === 'sweep' ? { kind: 'cone', x: k.x, y: k.y, r: 1100, arc: TAU - 1.25, angle: k.f + Math.PI }
+        : kind === 'stomp' ? { kind: 'donut', x: k.x, y: k.y, r: 1100, r2: 290 }
+          : { kind: 'circle', x: k.x, y: k.y, r: 250 });
+    const knightSwing = (k, kind, inv) => {
+      const shape = inv ? turnedOut(kind, k) : swingShape(kind, k.x, k.y, k.f, true), shown = inv ? INV_TAG[kind] : kind;
+      if (X) { const ki = f.knights.indexOf(k); if (ki >= 0 && bowed[ki]) { bowed[ki] = false; sendKneel(); } }   // (it rises as it answers)
+      f.echoPlan = f.echoPlan.filter(e => e.knight !== k.id || e.kind !== shown);
+      f.emit({ t: 'kswing', id: k.id, kind: shown, dur: ECHO_WARN });
+      f.mech({ type: 'aoe', shape, delay: ECHO_WARN, dmg: dmg.echo, tag: 'e' + shown });
     };
     // replay what the knights remember: each in turn (or only the last one). Returns when the first replay lands, so a
     // Gaze can land with it.
@@ -280,18 +322,67 @@ const HOLLOWKING = {
       if (H && !onlyLast) order = f.shuffle(order);
       let t = lead, first = null;
       for (const i of order) {
-        const k = f.knights[i], kind = memory[i];
+        const k = f.knights[i], kind = memory[i], inv = !!kneel[i];
         if (!k || !kind) continue;
-        // the bots "remember" too: where each replay will land, before it shows
-        f.echoPlan.push({ knight: k.id, kind, at: f.t + t + ECHO_WARN, shape: swingShape(kind, k.x, k.y, k.f, true) });
-        f.afterKeep(t, () => { if (f.knights.includes(k)) knightSwing(k, kind); });
+        // the bots "remember" too: where each replay will land, before it shows (a knight that knelt answers with the swing turned out)
+        f.echoPlan.push({ knight: k.id, kind: inv ? INV_TAG[kind] : kind, at: f.t + t + ECHO_WARN, shape: inv ? turnedOut(kind, k) : swingShape(kind, k.x, k.y, k.f, true) });
+        f.afterKeep(t, () => { if (f.knights.includes(k)) knightSwing(k, kind, inv); });
         if (first == null) first = t + ECHO_WARN;
         t += 3.4;
       }
-      for (const i of order) memory[i] = null;
+      for (const i of order) { memory[i] = null; kneel[i] = false; }
+      if (X && first != null && sentenceDue) judgeSentence(first);
       return first;
     };
     const echoGaze = (lead = 1.5, onlyLast) => { const first = echo(lead, onlyLast); gaze(first ?? f.ct(4)); };
+
+    // --- Extreme: The Sentence and Roll Call -----------------------------------------------------------------
+    // The Sentence: before a call, the court marks the party: two are Shackled to each other (a chain over their heads) and two are Exiled (a
+    // sign of parting). The marks are judged at the moment the knights answer, never on a clock of their own: when the first replay of the
+    // next Echo is laid, the Shackled pair's chain is drawn between them and each exile's ring is drawn on the floor round them, both landing
+    // with the replay (3 to 4 s of floor). Shackled: stay within reach of your partner when it lands. Exiled: nobody in your ring when it lands.
+    const SHACKLE_LEN = 150, EXILE_R = 240;
+    let sentenceDue = null;
+    const sentence = () => {
+      const al = f.alive();
+      if (al.length < 2) return;
+      f.cast('The Sentence', f.ct(3), 'judgement');
+      const ids = f.shuffle(al.map(p => p.id)), bound = ids.slice(0, 2), exiled = ids.slice(2, 4);
+      for (const id of bound) f.mark(id, { sym: 'chain', col: '#d8c070', key: 'sentence' });
+      for (const id of exiled) f.mark(id, { sym: 'apart', col: '#8fc4ff', key: 'sentence' });
+      const due = sentenceDue = { bound, exiled };
+      f.afterKeep(45, () => { if (sentenceDue === due) { sentenceDue = null; f.clearMarks('sentence'); } });   // (never judged: no replay came)
+    };
+    const judgeSentence = d => {
+      const due = sentenceDue; sentenceDue = null;
+      const [a, b] = due.bound;
+      if (a != null && b != null && alive(a) && alive(b)) f.tether(a, b, d, { kind: 'short', len: SHACKLE_LEN, dmg: dmg.shackle, tag: 'bind', ddown: true });
+      for (const id of due.exiled) {
+        const p = alive(id);
+        if (p) f.mech({ type: 'aoe', shape: { kind: 'circle', x: p.x, y: p.y, r: EXILE_R }, delay: d, dmg: dmg.exile, follow: id, lockAt: 0.7, group: new Set([id]), tag: 'exile', ddown: true });
+      }
+      f.afterKeep(d + 0.4, () => f.clearMarks('sentence'));
+    };
+    // Roll Call: the party is numbered over their heads and the King calls the numbers in order. On each call the hero called is shown the eye
+    // (it burns down over their head) and must be facing him when it lands; everyone else must have their back to him. One call after another,
+    // 2.1 s apart, the first landing with the first replay of the Echo it rides with. (The bots, which cannot turn one at a time, are judged
+    // as having done as asked: see the report.)
+    const rollCall = d0 => {
+      const al = f.alive();
+      if (al.length < 2) { gaze(d0); return; }
+      const G = 2.1, order = f.shuffle(al.map(p => p.id));
+      f.cast('Roll Call', d0, 'gaze');
+      order.forEach((id, i) => f.mark(id, { sym: 'num', n: i + 1, col: '#e8d8a0', key: 'roll', dur: d0 + (order.length - 1) * G + 0.6 }));
+      order.forEach((id, i) => {
+        f.afterKeep(d0 + i * G - 1.8, () => {
+          if (alive(id)) f.mark(id, { sym: 'eye', col: '#ffffff', key: 'call', dur: 1.8 });
+          f.mech({ type: 'audience', shape: { kind: 'circle', x: B.x, y: B.y, r: 0 }, delay: 1.8, dmg: 0, tag: 'rollcall', who: id, avoidable: false,
+            onResolve: () => { for (const p of f.alive()) if (facing(p) !== (p.id === id)) caught(p, p.id === id ? 'audience' : 'gaze'); } });
+        });
+      });
+    };
+    const echoRoll = (lead = 1.5, onlyLast) => { const first = echo(lead, onlyLast); rollCall(first ?? f.ct(4)); };
+    const echoCall = X ? echoRoll : echoGaze;   // (Extreme: the Gaze that rides with an Echo is the Roll Call)
     // Sceptre Rebuke (the tank's own call, once the knights have risen): he rebukes his tank with the sceptre, a lance through the tank
     // (the tank takes it, anyone in the line behind takes most of it, so the tank chooses where it points). A knight takes it in, and a
     // beat after the blow answers it: the same lance from the knight's wall, aimed at the place the tank stood when it landed (drawn on
@@ -327,8 +418,10 @@ const HOLLOWKING = {
     const placeKnights = layout => {
       f.knights = KNIGHTS[layout].map(([x, y]) => ({ id: f.nextMechId++, x, y, f: Math.atan2(-y, -x) }));
       memory[0] = memory[1] = null; memNext = 0;
+      kneel[0] = kneel[1] = bowed[0] = bowed[1] = false;
       f.echoPlan = [];
       sendKnights();
+      if (X) sendKneel();
     };
     const knightsRise = () => { f.cast('Echo Knights', 3, 'rise'); f.afterKeep(2, () => placeKnights(0)); };
 
@@ -544,10 +637,12 @@ const HOLLOWKING = {
     // He goes back to his throne, out of reach, and wakes the coffins down the walls in a set order, 3 s apart. Each
     // glows as it nears opening; break it first and it sends nothing, or a skeleton climbs out.
     // (Hard: the sides still take turns, but which coffin of each side wakes when is drawn each pull)
-    const LEFT = H ? f.shuffle([0, 2, 3]) : [0, 2, 3], RIGHT = H ? f.shuffle([3, 1, 0]) : [3, 1, 0];
-    const COURT = [[-1, LEFT[0]], [1, RIGHT[0]], [-1, LEFT[1]], [1, RIGHT[1]], [-1, LEFT[2]], [1, RIGHT[2]]];
+    // (Hard's three dances: a coffin of each side's three, keyed side then bay, so the first coffin that wakes differently tells the dances apart)
+    const WAKE = H ? danceDraw('court', rnd => { const l = shuf([0, 2, 3], rnd), r = shuf([3, 1, 0], rnd); return [l[0], 10 + r[0], l[1], 10 + r[1], l[2], 10 + r[2]]; }) : [0, 13, 2, 11, 3, 10];
+    const COURT = WAKE.map(k => (k >= 10 ? [1, k - 10] : [-1, k]));
     const courtOfBones = () => {
       f.cast('Court of Bones', 4, 'rise');
+      if (X) { sentenceDue = null; f.clearMarks('sentence'); f.clearMarks('roll'); f.clearMarks('call'); }   // (an act cut short: no mark outlives the call it was for)
       crumbleLids('court');
       f.echoPlan = [];
       B.untargetable = true; B.lockFacing = true;
@@ -676,15 +771,18 @@ const HOLLOWKING = {
     const fl = (k, u) => { u.fl = k; return u; };
     // (seconds of units in a row with no job for the tank / no beat for the healer; a unit's length is its steps' leads)
     const gap = (seq, k) => { let run = 0, worst = 0; for (const u of seq) { if (u.fl && u.fl.includes(k)) run = 0; else { run += u.reduce((x, st) => x + st[0], 0); worst = Math.max(worst, run); } } return worst; };
-    const lay = (head, T, O, tail) => {
+    // (Hard: the act's order is one of three fixed dances, drawn from the dance's own generator; `tag` names the act for the draw)
+    const lay = (tag, head, T, O, tail) => {
       const Tl = T.filter(Boolean), Ol = O.filter(Boolean);
       if (!H) return [...head, ...weave(Tl, Ol), ...tail];
-      let best = null, bw = 1e9;
-      for (let i = 0; i < 300 && bw > 24; i++) {
-        const seq = [...head, ...weave(f.shuffle(Tl), f.shuffle(Ol)), ...tail], w = Math.max(gap(seq, 't'), gap(seq, 'h'));
-        if (w < bw) { bw = w; best = seq; }
-      }
-      return best;
+      return danceDraw(tag, rnd => {
+        let best = null, bw = 1e9;
+        for (let i = 0; i < 300 && bw > 24; i++) {
+          const seq = [...head, ...weave(shuf(Tl, rnd), shuf(Ol, rnd)), ...tail], w = Math.max(gap(seq, 't'), gap(seq, 'h'));
+          if (w < bw) { bw = w; best = seq; }
+        }
+        return best;
+      });
     };
     // De-cook pass (2026-10-26): a move stands on its own with room after it; two moves are stacked only at the fight's signature moments
     // (a call and the answer it gets, the Lids and the Decree, the Rites and the Writ, the Tithe and the Dirge, the Charge Sheet and
@@ -694,7 +792,7 @@ const HOLLOWKING = {
     const rebukeUnit = lead => fl('th', S([lead, rebuke, 'Sceptre Rebuke']));
     const lidsUnit = (lead, a, b) => fl('h', S([lead, () => coffinLids(a, b), 'Coffin Lids'], [H ? 7 : 7.5, decree, 'Royal Decree']));
     const sweepUnit = (lead, combo) => fl('t', S([lead, () => swing('sweep', false, false, combo), 'Sceptre Sweep']));
-    const sweepEcho = (lead, withKnell) => fl(withKnell ? 'th' : 't', S([lead, () => swing('sweep'), 'Sceptre Sweep'], [5, () => echo(1.5), 'Echo Knights'], ...(withKnell ? [[3.5, knell, 'Barrow Knell']] : []), [2]));
+    const sweepEcho = (lead, withKnell, sent) => fl(withKnell ? 'th' : 't', S(X && sent && [3, sentence, 'The Sentence'], [X && sent ? lead - 3 : lead, () => swing('sweep'), 'Sceptre Sweep'], [5, () => echo(1.5), 'Echo Knights'], ...(withKnell ? [[3.5, knell, 'Barrow Knell']] : []), [2]));
     const cleaveUnit = lead => fl('th', S([lead, graveCleave, 'Grave Cleave']));
     const knellUnit = lead => fl('h', S([lead, knell, 'Barrow Knell']));
     const L = n => (H ? n - 1 : n);   // (Hard's calms between the units are a second shorter)
@@ -703,7 +801,7 @@ const HOLLOWKING = {
     // I. The Summons: his calls, one at a time, each with room after it (a Sweep or a Cleave for the tank every other call, a Knell for the healer at each end)
     const summons = at => f.course({
       until: 0.8,
-      sets: lay(
+      sets: lay('summons',
         [fl('h', S([5, knell, 'Barrow Knell']))],
         [
           sweepUnit(L(10), true),
@@ -725,16 +823,18 @@ const HOLLOWKING = {
     }, at);
 
     // II. Testimony: the knights rise and answer every call; the charges are read out
+    // (Extreme: the Roll Call's Echo and the Sentence's Echo are the act's first calls after the Charge Sheet, not left to the draw, so a quick party meets both)
+    const stompCall = () => S([H ? 9 : 11, () => swing('stomp'), 'Barrow Stomp'], [5.5, () => echoCall(1.5), X ? 'Roll Call' : 'Royal Gaze'], [2]);
     const testimony = at => f.course({
       until: 0.62,
-      sets: lay(
-        [S([7, knightsRise, 'Echo Knights']), fl('th', S([6, chargeSheet, 'The Charge Sheet'], [H ? 10 : 11, graveCleave, 'Grave Cleave']))],
+      sets: lay('testimony',
+        [S([7, knightsRise, 'Echo Knights']), fl('th', S([6, chargeSheet, 'The Charge Sheet'], [H ? 10 : 11, graveCleave, 'Grave Cleave'])), ...(X ? [stompCall(), sweepEcho(7, true, true)] : [])],
         [
-          ...(H ? [sweepEcho(7, true), rebukeUnit(9), rebukeUnit(9)]
+          ...(H ? [...(X ? [] : [sweepEcho(7, true, true)]), rebukeUnit(9), rebukeUnit(9)]
             : [rebukeUnit(10), sweepEcho(9, true)]),
         ],
         [
-          S([H ? 9 : 11, () => swing('stomp'), 'Barrow Stomp'], [5.5, () => echoGaze(1.5), 'Royal Gaze'], [2]),
+          ...(X ? [] : [stompCall()]),
           lidsUnit(H ? 9 : 11, 1, 2),
           H ? lightsUnit(9) : S([10, () => bells(0.6), 'Barrow Bells']),
         ],
@@ -796,11 +896,12 @@ const HOLLOWKING = {
     const verdict = at => f.course({
       until: 0.46,
       sets: [
-        S([4, () => swing('sweep'), 'Sceptre Sweep'], [H ? 3 : 0, () => swing('stomp', true), 'Barrow Stomp'], [H ? 6.5 : 5.5, () => echo(1.5), 'Echo Knights']),
+        S(X && [1, sentence, 'The Sentence'], [X ? 3 : 4, () => swing('sweep'), 'Sceptre Sweep'], [H ? 3 : 0, () => swing('stomp', true), 'Barrow Stomp'], [H ? 6.5 : 5.5, () => echo(1.5), 'Echo Knights']),
         ...(H
           // (Hard) the graves open, the Writ is read with them, then in close for a Crown of Graves and out to your grave
           ? [S([9, cleaveBind, 'Grave Cleave']), S([10, burialRites, 'Burial Rites'], [3.5, writ, 'Writ of Execution'], [8.5, () => swing('ring', false, true), 'Crown of Graves']),
-            S([12, () => royalDoom(2), 'Royal Doom']), rebukeUnit(9), lidsDecree(), rebukeUnit(8)]
+            // (Extreme: the Roll Call is called while the two dooms are walking to their lights; the Rebuke that follows is that much sooner, so the set is no longer)
+            S([12, () => royalDoom(2), 'Royal Doom'], X && [3.5, () => rollCall(f.ct(4)), 'Roll Call']), rebukeUnit(X ? 5.5 : 9), lidsDecree(), rebukeUnit(8)]
           : [lidsDecree(), rebukeUnit(10), S([10, () => royalDoom(1), 'Royal Doom']), S([10, cleaveBind, 'Grave Cleave'])]),
         S([H ? 9 : 12, tithe, 'Royal Tithe'], [f.ct(5) + 3, dirge, 'Dirge']),
         S([8, () => swing('sweep'), 'Sceptre Sweep'], [5.5, () => echo(1.5), 'Echo Knights']),
@@ -810,19 +911,21 @@ const HOLLOWKING = {
       closing: [[10, graveCleave, 'Grave Cleave'], [10, () => swing('sweep'), 'Sceptre Sweep'], [5.5, () => echo(1.5), 'Echo Knights'], [8, knell, 'Barrow Knell']],
       next: judged,
     }, at);
+    const ringCall = () => S([L(11), () => swing('ring'), 'Crown of Graves'], [5.5, () => echoCall(1.5), X ? 'Roll Call' : 'Royal Gaze'], [2]);
     const judged = at => f.course({
       until: 0.25,
-      sets: lay(
-        [S([H ? 10 : 11, judgement, 'Judgement']), fl('h', S([H ? 10 : 13, knellRocks, 'Barrow Knell'])), ...(H ? [fl('th', S([10, cleaveBind, 'Grave Cleave']))] : [])],   // (Hard: the Cleave comes first, so it is never a long way from the one in the Verdict)
+      sets: lay('judged',
+        [S([H ? 10 : 11, judgement, 'Judgement']), fl('h', S([H ? 10 : 13, knellRocks, 'Barrow Knell'])), ...(H ? [fl('th', S([10, cleaveBind, 'Grave Cleave']))] : []),   // (Hard: the Cleave comes first, so it is never a long way from the one in the Verdict)
+          ...(X ? [ringCall(), sweepEcho(8, false, true)] : [])],   // (Extreme: the Roll Call's Echo and the Sentence's Echo come first here too)
         [
-          ...(H ? [sweepEcho(8), rebukeUnit(9), rebukeUnit(9), knellUnit(9)]
+          ...(H ? [...(X ? [] : [sweepEcho(8, false, true)]), rebukeUnit(9), rebukeUnit(9), knellUnit(9)]
             : [rebukeUnit(10), sweepEcho(10, true), cleaveUnit(10)]),
         ],
         [
           ...(H ? [S([L(10), () => swing('stomp', false, false, true), 'Barrow Stomp'], [5, () => echo(1.5), 'Echo Knights'], [2]),
-            S([L(11), () => swing('ring'), 'Crown of Graves'], [5.5, () => echoGaze(1.5), 'Royal Gaze'], [2]),
+            ...(X ? [] : [ringCall()]),
             S([L(10), () => bells(2.2), 'Barrow Bells']), fl('h', S([10, gatherThenScatter, 'Grave Summons']))]
-            : [fl('h', S([10, graveSummons, 'Grave Summons'])), lightsUnit(11), S([11, () => swing('ring'), 'Crown of Graves'], [5.5, () => echoGaze(1.5), 'Royal Gaze'], [2])]),
+            : [fl('h', S([10, graveSummons, 'Grave Summons'])), lightsUnit(11), S([11, () => swing('ring'), 'Crown of Graves'], [5.5, () => echoCall(1.5), X ? 'Roll Call' : 'Royal Gaze'], [2])]),
         ],
         [fl('h', S([H ? 9 : 10, knell, 'Barrow Knell']))]),
       closing: [[10, graveCleave, 'Grave Cleave'], [10, () => swing('sweep'), 'Sceptre Sweep'], [5.5, () => echo(1.5), 'Echo Knights'], [8, knell, 'Barrow Knell']],
@@ -849,7 +952,7 @@ const HOLLOWKING = {
     summons(0);
 
     f.moves = { knell, gaze, audience, graveCleave, royalDoom, marks, swing, echo, bells, march, gravebind, lightsOut, coffinLids, decree, masonry,
-      rebuke, courtOfBones, kingRises, placeKnights, burialRites, writ, chargeSheet, judgement, longNight, doomPass };
+      rebuke, courtOfBones, kingRises, placeKnights, burialRites, writ, chargeSheet, judgement, longNight, doomPass, sentence, rollCall };
   },
 };
 

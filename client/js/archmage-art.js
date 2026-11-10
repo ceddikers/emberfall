@@ -156,8 +156,10 @@ const AZ_ART = (() => {
     const base = parse(tg.tag)[0], conv = s.kind === 'circle' && s.r === 225;
     if (base === 'azFire') return conv ? 'convFire' : (s.kind === 'donut' || (Math.abs(s.x) < 2 && Math.abs(s.y) < 2 && s.r >= 170)) ? 'pyre' : 'cinder';
     if (base === 'azFrost') return conv ? 'convFrost' : s.kind === 'rect' ? 'lances' : 'rime';
-    if (base === 'azBolt') return conv ? 'convBolt' : 'leap';
+    if (base === 'azBolt') return conv ? 'convBolt' : tg.type === 'spread' ? 'static' : 'leap';   // (a spread ring on a hero is the lightning rider of a Burst or a Lance: no hop to draw)
     if (base === 'azVoid') return conv ? 'convVoid' : s.kind === 'donut' ? 'rift' : 'rifts';
+    // the last blow of the Cascading Convergence: the middle and the four diagonals, the only tag of his that is a circle of these sizes
+    if (base === 'azReact' && s.kind === 'circle' && String(tg.tag) === 'azReact:fire:void' && (s.r === 95 || s.r === 140)) return 'settle';
     return base;
   }
 
@@ -357,6 +359,39 @@ const AZ_ART = (() => {
     for (let i = 0; i < 12; i++) { const u = (t * 0.5 + hash(i, tg.id + 8)) % 1, a = hash(i, tg.id + 9) * TAU, d = s.r * (0.9 - 0.7 * u); circle(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 2 + 3 * (1 - u), rgba('#10041e', 0.6 * k), rgba('#b078ff', (0.3 + 0.4 * p) * k), 1.2); }
     ctx.restore();
   }
+  // Static charge (the lightning rider of an Arcane Burst or Lance, a ring on the hero): the bolt's disc with the rim crackling, a thread
+  // of light running round it. No hop: it is a ring on a hero, not a bolt in flight
+  function staticTell(ctx, tg, s, p, k, t) {
+    disc(ctx, 'bolt', s, p, k, t, tg.id, { glyphMax: 22 });
+    const step = Math.floor(t * 14), n = 22, r = s.r - 6;
+    ctx.save(); SHAPES.trace(ctx, s); ctx.clip(); ctx.globalCompositeOperation = 'lighter'; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    const rim = (lw, al, col) => {
+      ctx.beginPath();
+      for (let i = 0; i <= n; i++) { const a = i * TAU / n + t * 0.9, rr = r - 4 + (hash(i, step + tg.id) - 0.5) * 12; i ? ctx.lineTo(s.x + Math.cos(a) * rr, s.y + Math.sin(a) * rr) : ctx.moveTo(s.x + Math.cos(a) * rr, s.y + Math.sin(a) * rr); }
+      ctx.strokeStyle = rgba(col, al * k); ctx.lineWidth = lw; ctx.stroke();
+    };
+    rim(6, 0.12 + 0.18 * p, '#ffe45a'); rim(1.6, 0.5 + 0.4 * p, '#fff6b0');
+    ctx.restore();
+  }
+  // the Cascading Convergence's last blow: the middle and the four diagonals, the four elements turning together in each (the ground the
+  // sigils left); the red outline is the exact area, what is painted inside is the clue
+  function settleTell(ctx, tg, s, p, k, t) {
+    const id = tg.id;
+    ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+    glow(ctx, s.x, s.y, s.r * 1.05, WATER, (0.12 + 0.24 * p) * k);
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 4; i++) {
+      const a = t * 1.1 + i * Math.PI / 2, col = COL[ELS[i]];
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 0.62, a, a + 1.25); ctx.strokeStyle = rgba(col, (0.35 + 0.45 * p) * k); ctx.lineWidth = 3.4; ctx.stroke();
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 0.36, -a * 1.3, -a * 1.3 + 0.9); ctx.strokeStyle = rgba(col, (0.25 + 0.4 * p) * k); ctx.lineWidth = 2; ctx.stroke();
+      for (let j = 0; j < 3; j++) { const u = (t * 0.6 + hash(i * 3 + j, id)) % 1, aa = hash(i * 3 + j, id + 1) * TAU, d = hash(i * 3 + j, id + 2) * s.r * 0.8; glow(ctx, s.x + Math.cos(aa) * d, s.y + Math.sin(aa) * d - u * 26, 8 + 6 * p, col, (0.25 + 0.4 * p) * k * (1 - u)); }
+    }
+    ctx.restore();
+    brassRing(ctx, s.x, s.y, s.r - 3, 'water', (0.6 + 0.3 * p) * k, t, { seed: id });
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    hexStar(ctx, s.x, s.y, s.r * 0.3 * (0.8 + 0.3 * p), rgba('#ffffff', (0.3 + 0.5 * p) * k), 1.6, -t * 0.5);
+    ctx.restore();
+  }
   // the four discs of the Convergence: each the same disc as its own move, larger, brass-ringed
   const convTell = el => (ctx, tg, s, p, k, t) => disc(ctx, el, s, p, k, t, tg.id, { glyphMax: 40 });
   // Arcane Mark (Hard): the hero's own element rising where they stood
@@ -430,7 +465,7 @@ const AZ_ART = (() => {
   const GROUND = {
     pyre: pyreTell, cinder: cinderTell, convFire: convTell('fire'),
     lances: lancesTell, rime: rimeTell, convFrost: convTell('frost'),
-    leap: leapTell, convBolt: convTell('bolt'),
+    leap: leapTell, convBolt: convTell('bolt'), static: staticTell, settle: settleTell,
     rifts: riftsTell, rift: riftTell, convVoid: convTell('void'),
     azBeam: beamTell, azMark: markTell, azReact: reactTell, azPulse: pulseTell,
   };
@@ -462,12 +497,18 @@ const AZ_ART = (() => {
     try { if (typeof FX !== 'undefined' && FX.cam) { if (stop) FX.cam.stop(stop); FX.cam.punch(punch, dur); if (flashCol) FX.cam.flash(flashCol, flashA || 0.18, 0.32); } } catch (e) { /* cosmetic */ }
   }
   const onceAt = key => { if (AS.once.has(key)) return false; if (AS.once.size > 200) AS.once.clear(); AS.once.add(key); return true; };
-  const ELM = { pyre: 'fire', cinder: 'fire', convFire: 'fire', lances: 'frost', rime: 'frost', convFrost: 'frost', leap: 'bolt', convBolt: 'bolt', azBeam: 'bolt', rifts: 'void', rift: 'void', convVoid: 'void' };
+  // the room's clock as the tower floor last saw it (towerLife runs every frame): what the room's events (start, end) are timed in, for the
+  // pieces drawn elsewhere (his body's hovering glyphs, the impacts). A stale one (the floor is not being drawn) reads as no event.
+  AS.clock = 0; AS.clockAt = -99;
+  const roomEv = k => { const room = typeof ArenaView !== 'undefined' ? ArenaView.liveRoom : null, e = room && room.ev && room.ev[k]; return e && nowS() - AS.clockAt < 0.5 && AS.clock < e.end ? e : null; };
+  const cascadeOn = () => !!roomEv('archmage-cascade');
+  const ELM = { pyre: 'fire', cinder: 'fire', convFire: 'fire', lances: 'frost', rime: 'frost', convFrost: 'frost', leap: 'bolt', static: 'bolt', convBolt: 'bolt', azBeam: 'bolt', rifts: 'void', rift: 'void', convVoid: 'void' };
   const ECHO_COL = '#c8a0ff';
   // the colour a shape's landing is in (the element of the move; a lens is the mix of its two; an echo is pale violet)
   function colOf(tg, s) {
     if (tg.color === 'echo') return ECHO_COL;
     const [base, e1, e2] = parse(tg.tag);
+    if (moveOf(tg, s) === 'settle') return '#bff8f0';
     if (base === 'azReact') return mix2(COL[e1] || '#ffffff', COL[e2] || '#ffffff', 0.5);
     if (base === 'azMark') return (P[e1] || P.fire).col;
     if (base === 'azPulse') return WATER;
@@ -645,6 +686,24 @@ const AZ_ART = (() => {
       stamp(s.x, s.y, s.r * 1.05, 'frost', { dur: 0.85 });
       feel(0.06, 0.03, 0.45, 2.2, '#d8f6ff', 0.14);
       H.shake(7);
+    } else if (mv === 'static') {
+      // the charge goes off on the hero: a short crack of light out of them, a ring, sparks; no chain from the last one
+      H.shapeFlash(s, COL.bolt, { a: 0.26, dur: 0.4 });
+      burstAt('bolt', s.x, s.y, s.r * 0.8, { n: 10, dur: 0.4 });
+      ringShock(H, s.x, s.y, s.r * 1.2, '#fff6b0', 5);
+      for (let i = 0; i < 4; i++) { const a = i * TAU / 4 + Math.random() * 0.8; VFX.fx({ dur: 0.3, layer: 'air', draw: (c, p, t, e) => { const fl = Math.floor(t * 30); zig(c, s.x, s.y - 8, s.x + Math.cos(a) * s.r * 0.85, s.y + Math.sin(a) * s.r * 0.85 - 8, fl + i, e.a * (1 - p) * (hash(fl, i + 4) > 0.25 ? 1 : 0.4), { jag: 10, seg: 20, w: 2 }); } }); }
+      VFX.sparks(s.x, s.y, { color: '#fff6b0', n: 6, speed: 260 });
+      stamp(s.x, s.y, s.r * 1.05, 'bolt', { dur: 0.55 });
+    } else if (mv === 'settle') {
+      // the ground the sigils left lets go: each diagonal in the element of its own quarter, the middle the plain arcane, all in a white-teal ring
+      H.shapeFlash(s, '#e8fffb', { a: 0.34, dur: 0.7 });
+      const mid = Math.abs(s.x) < 2 && Math.abs(s.y) < 2, el = mid ? 'arc' : ELS[(s.x > 0 ? 1 : 0) + (s.y > 0 ? 2 : 0)];
+      burstAt(el, s.x, s.y, s.r * 0.85, { n: 14, dur: 0.5 });
+      erupt(mid ? 'frost' : el, s.x, s.y, s.r * 0.7, mid ? 8 : 10, { h: mid ? 80 : 90, w: 10, dur: 1.0 });
+      ringShock(H, s.x, s.y, s.r * 1.25, '#e8fffb', 7);
+      stamp(s.x, s.y, s.r * 1.05, null, { col: '#bff8f0', hot: '#ffffff', dur: 0.95 });
+      VFX.swirl(s.x, s.y, { r: s.r * 0.8, color: '#bff8f0', dur: 0.6, arms: 4, inward: 1 });
+      if (mid) { VFX.fx({ dur: 0.8, layer: 'air', draw: (c, p, t, e) => { c.save(); c.globalCompositeOperation = 'lighter'; hexStar(c, 0, -10, 30 + 240 * easeOut(p), rgba('#ffffff', 0.7 * e.a * (1 - p)), 3, t * 2); c.restore(); } }); feel(0.09, 0.045, 0.55, 3, '#bff8f0', 0.14); H.shake(10); }
     } else if (mv === 'leap') {
       H.shapeFlash(s, COL.bolt, { a: 0.3, dur: 0.45 });
       erupt('bolt', s.x, s.y, s.r * 0.5, 3, { h: 90, w: 9, dur: 0.6 });
@@ -679,7 +738,10 @@ const AZ_ART = (() => {
       ringShock(H, s.x, s.y, s.r * 1.2, P[el].hot, 8);
       stamp(s.x, s.y, s.r * 1.1, el, { dur: 1.0 });
       beamFx(s.x, s.y, 0, 0, COL[el], 8, 0.6);   // (the sigils answer one another through the middle of the floor)
-      if (onceAt('conv' + Math.round(tg.start * 4))) { H.roomTint('#ffffff', 0.12, 0.6); VFX.fx({ dur: 0.8, layer: 'air', draw: (c, p, t, e) => { c.save(); c.globalCompositeOperation = 'lighter'; hexStar(c, 0, -10, 40 + 260 * easeOut(p), rgba('#ffffff', 0.8 * e.a * (1 - p)), 3, t * 2.4); c.restore(); glow(c, 0, -10, 120 * (1 - p * 0.5), '#ffffff', 0.5 * e.a * (1 - p)); } }); }
+      if (cascadeOn()) {
+        // Cascading Convergence: four blasts two seconds apart, so none of them whites out the room; each answers on the middle star in its own colour
+        if (onceAt('conv' + Math.round(tg.start * 4))) VFX.fx({ dur: 0.7, layer: 'air', draw: (c, p, t, e) => { c.save(); c.globalCompositeOperation = 'lighter'; hexStar(c, 0, -10, 30 + 150 * easeOut(p), rgba(P[el].mid, 0.75 * e.a * (1 - p)), 3, t * 2.4); c.restore(); } });
+      } else if (onceAt('conv' + Math.round(tg.start * 4))) { H.roomTint('#ffffff', 0.12, 0.6); VFX.fx({ dur: 0.8, layer: 'air', draw: (c, p, t, e) => { c.save(); c.globalCompositeOperation = 'lighter'; hexStar(c, 0, -10, 40 + 260 * easeOut(p), rgba('#ffffff', 0.8 * e.a * (1 - p)), 3, t * 2.4); c.restore(); glow(c, 0, -10, 120 * (1 - p * 0.5), '#ffffff', 0.5 * e.a * (1 - p)); } }); }
       feel(0.09, 0.045, 0.55, 3, COL[el], 0.15);
       H.shake(10);
     } else if (base === 'azBeam') {
@@ -788,7 +850,7 @@ const AZ_ART = (() => {
         for (let i = 0; i < 7; i++) { const a = hash(i, seed + 5) * TAU, d = hash(i, seed + 6) * q.r * 0.8; glow(ctx, q.x + Math.cos(a) * d, q.y + Math.sin(a) * d, 5, '#ffffff', 0.7 * k * (0.5 + 0.5 * Math.sin(age * 4 + i))); }
         ctx.restore();
       }, tg.id);
-    } else if (mv === 'leap') {
+    } else if (mv === 'leap' || mv === 'static') {
       mark(T.brief, s, (ctx, q, k, age, seed) => {
         circle(ctx, q.x, q.y, q.r * 0.7, rgba('#1a1204', 0.22 * k), rgba('#33260a', 0.4 * k), 1.6);
         for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + hash(i, seed) * 0.5; crackLine(ctx, q.x + Math.cos(a) * 10, q.y + Math.sin(a) * 10, q.x + Math.cos(a) * q.r * (0.75 + 0.3 * hash(i, seed + 1)), q.y + Math.sin(a) * q.r * (0.75 + 0.3 * hash(i, seed + 1)), seed + i, k, { w: 1.8, jag: 7, ink: '#33260a', col: '#ffe45a', a: 0.7 + 0.3 * Math.sin(age * 14 + i) }); }
@@ -819,6 +881,14 @@ const AZ_ART = (() => {
         circle(ctx, q.x, q.y, q.r - 4, null, rgba(Q.col, 0.6 * k), 2); circle(ctx, q.x, q.y, q.r * 0.55, null, rgba(BRASS, 0.4 * k), 1.4);
         glyph(ctx, el, q.x, q.y, 28, rgba(Q.mid, 0.55 * k), 2.4);
         runes(ctx, q.x, q.y, q.r * 0.8, 20, 5, Q.mid, 0.45 * k, age * 0.15, seed);
+      }, tg.id);
+    } else if (mv === 'settle') {
+      // the last of the Convergence: a pale ring of the tower's own water, the four colours faintly in it, cooling
+      mark(T.short, s, (ctx, q, k, age, seed) => {
+        glow(ctx, q.x, q.y, q.r * 1.05, WATER, 0.18 * k);
+        for (let i = 0; i < 4; i++) { const a = age * 0.5 + i * Math.PI / 2; ctx.beginPath(); ctx.arc(q.x, q.y, q.r * 0.62, a, a + 1.1); ctx.strokeStyle = rgba(COL[ELS[i]], 0.45 * k); ctx.lineWidth = 3; ctx.stroke(); }
+        circle(ctx, q.x, q.y, q.r - 4, null, rgba('#bff8f0', 0.5 * k), 2);
+        runes(ctx, q.x, q.y, q.r * 0.8, Math.max(8, Math.round(q.r / 9)), 5, '#bff8f0', 0.4 * k, age * 0.15, seed);
       }, tg.id);
     } else if (base === 'azReact') {
       if (s.kind === 'rect') return;
@@ -916,9 +986,91 @@ const AZ_ART = (() => {
     c.beginPath(); c.arc(0, 0, R, 0, TAU); c.strokeStyle = 'rgba(0,0,0,0.7)'; c.lineWidth = 3; c.stroke();
     ArenaView.amb = { kind: 'tower', bubbles: Array.from({ length: 22 }, () => ({ a: r() * TAU, d: Math.sqrt(r()) * R, sp: 0.04 + r() * 0.08, ph: r() * 9, s: 1 + r() * 2.2 })), caus: Array.from({ length: 12 }, () => ({ a: r() * TAU, d: Math.sqrt(r()) * R, sp: 0.02 + r() * 0.04, s: 60 + r() * 90, ph: r() * 9 })) };
   }
+  // An act's opening cast (roomev archmage-circle, { el: 'fire' | 'frost' | 'bolt' | 'void' | 'all', dur }): the floor turns to the act's
+  // element. The tower draws its circle in light, the way an inlay is traced: the outer ring first, then the inner one, then the middle
+  // one, the element's creatures of light standing along the outer ring as it closes. For the finale ('all') all seven are drawn, the four
+  // sigils each in its own colour. Under the units, never louder than the telegraphs: thin lines, small tongues, nothing screen-wide.
+  const CIRC = [[350, 0.0, 0.5], [170, 0.28, 0.72], [84, 0.5, 0.88]];   // [radius, starts, done] as a share of the cast
+  function circleAct(ctx, ev, t) {
+    const dur = Math.max(1, ev.end - ev.start), u = clamp((t - ev.start) / dur, 0, 1), fade = clamp((1 - u) / 0.22, 0, 1), a = Math.min(1, u / 0.08) * fade;
+    if (a <= 0.01) return;
+    const all = ev.el === 'all', el = all ? null : ev.el, Q = el ? P[el] : P.water, col = Q.col;
+    ctx.save(); ctx.lineCap = 'round';
+    CIRC.forEach(([rad, s0, s1], i) => {
+      const pr = easeOut(clamp((u - s0) / (s1 - s0), 0, 1)); if (pr <= 0) return;
+      const a0 = -Math.PI / 2 + i * 0.9, a1 = a0 + TAU * pr, hx = Math.cos(a1) * rad, hy = Math.sin(a1) * rad;
+      ctx.globalCompositeOperation = 'lighter';
+      for (const [w, al, c] of [[10, 0.1, col], [3, 0.55, col], [1.2, 0.7, '#ffffff']]) { ctx.beginPath(); ctx.arc(0, 0, rad, a0, a1); ctx.strokeStyle = rgba(c, al * a); ctx.lineWidth = w; ctx.stroke(); }
+      if (pr < 1) glow(ctx, hx, hy, 26, col, 0.7 * a);
+      ctx.globalCompositeOperation = 'source-over';
+      if (pr > 0.5) runes(ctx, 0, 0, rad - 13, Math.round(rad / 9), 4.5, Q.mid, 0.5 * a * (pr - 0.5) * 2, t * 0.2 * (i % 2 ? -1 : 1), i + 3);
+    });
+    // the element standing along the outer ring as the pen passes: small, ink-edged, low
+    if (el) {
+      const pr = easeOut(clamp(u / 0.5, 0, 1)), n = 14;
+      for (let i = 0; i < n; i++) {
+        const ang = -Math.PI / 2 + i * TAU / n, frac = (ang + Math.PI / 2) / TAU; if (frac > pr) continue;
+        const x = Math.cos(ang) * 350, y = Math.sin(ang) * 350, k2 = a * (0.6 + 0.3 * hash(i, 8));
+        if (el === 'fire') flame(ctx, x, y + 4, 12 + 8 * hash(i, 1), 4.5, t, k2, i);
+        else if (el === 'frost') crystal(ctx, x, y + 3, 10 + 10 * hash(i, 1), 3.5, (hash(i, 2) - 0.5) * 0.5, k2);
+        else if (el === 'void') voidSpike(ctx, x, y + 3, 10 + 12 * hash(i, 1), 3.4, (hash(i, 2) - 0.5) * 0.6, k2);
+        else if (hash(i, Math.floor(t * 9)) > 0.3) { const x2 = Math.cos(ang + 0.2) * 316, y2 = Math.sin(ang + 0.2) * 316; zig(ctx, x, y, x2, y2, Math.floor(t * 12) + i, k2 * 0.8, { jag: 7, seg: 14, w: 1.6 }); }
+      }
+      // the sigil of the element answers: a ring going out from it
+      const [sx, sy] = SIG[el], q = clamp((u - 0.15) / 0.5, 0, 1);
+      if (q > 0 && q < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; circle(ctx, sx, sy, 108 + q * 90, null, rgba(col, 0.55 * (1 - q) * a), 3); ctx.restore(); }
+    } else {
+      // the seven: the four sigils flare one after another in their own colours, then the middle seal
+      for (let i = 0; i < 4; i++) {
+        const [sx, sy] = SIG[ELS[i]], q = clamp((u - 0.12 - i * 0.12) / 0.3, 0, 1); if (q <= 0 || q >= 1) continue;
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; circle(ctx, sx, sy, 108 + q * 80, null, rgba(COL[ELS[i]], 0.6 * (1 - q) * a), 3.5); glow(ctx, sx, sy, 130, COL[ELS[i]], 0.3 * Math.sin(q * Math.PI) * a); ctx.restore();
+      }
+    }
+    // the middle seal closes the cast: its sign in the centre, a ring running out and gone (the floor's own seven-pointed star, lit)
+    const sq = clamp((u - 0.72) / 0.28, 0, 1);
+    if (sq > 0) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      circle(ctx, 0, 0, 84 + sq * 120, null, rgba(col, 0.5 * (1 - sq) * fade), 3);
+      ctx.beginPath(); for (let i = 0; i <= 7; i++) { const an = -Math.PI / 2 + i * 3 * TAU / 7; i ? ctx.lineTo(Math.cos(an) * 70, Math.sin(an) * 70) : ctx.moveTo(Math.cos(an) * 70, Math.sin(an) * 70); }
+      ctx.strokeStyle = rgba('#ffffff', 0.5 * Math.sin(sq * Math.PI) * fade); ctx.lineWidth = 2; ctx.stroke();
+      ctx.restore();
+      if (el) glyph(ctx, el, 0, 0, 24, rgba(Q.hot, 0.55 * Math.sin(sq * Math.PI) * fade), 3);
+    }
+    ctx.restore();
+  }
+  // Cascading Convergence (roomev archmage-cascade, { order, gap, dur }): the sigils go in `order`. Each wears its place in it as brass pips
+  // under its sign (the one going next burns white), and a thread of light runs from the sigil that has gone to the one that goes next,
+  // drawn only inside the two circles (both red). A sigil that has gone is let go dark, never painted as safe.
+  function cascadeFloor(ctx, ev, t) {
+    const gap = +ev.gap || 2, d = ev.dur - 3 * gap - 2, ord = ev.order || [0, 1, 2, 3], u = t - ev.start;
+    ctx.save();
+    for (let j = 0; j < 4; j++) {
+      const el = ELS[ord[j]], [x, y] = SIG[el], tj = d + j * gap, nextUp = u < tj && (j === 0 || u >= d + (j - 1) * gap), col = COL[el];
+      if (u < tj) {
+        // the pips: one for the first to go, four for the last
+        for (let q = 0; q <= j; q++) {
+          const px = x + (q - j / 2) * 13, py = y + 66, pu = nextUp ? 0.5 + 0.5 * Math.sin(t * 7) : 0.45;
+          circle(ctx, px, py, 4.4, 'rgba(6,22,28,0.8)', rgba(BRASS, 0.9 * (nextUp ? 1 : 0.65)), 1.5);
+          circle(ctx, px, py, 2.4, rgba(nextUp ? '#ffffff' : col, pu + 0.3));
+        }
+        if (nextUp) { ctx.globalCompositeOperation = 'lighter'; const q = ((t * 0.9) % 1); circle(ctx, x, y, 112 + q * 40, null, rgba(col, 0.4 * (1 - q)), 2.5); ctx.globalCompositeOperation = 'source-over'; }
+      }
+      if (j > 0 && u >= tj - gap && u < tj) {
+        const [px, py] = SIG[ELS[ord[j - 1]]], q = easeOut((u - (tj - gap)) / gap);
+        ctx.save(); ctx.beginPath(); ctx.arc(x, y, 225, 0, TAU); ctx.moveTo(px + 225, py); ctx.arc(px, py, 225, 0, TAU); ctx.clip();
+        ctx.globalCompositeOperation = 'lighter';
+        const hx = px + (x - px) * q, hy = py + (y - py) * q;
+        zig(ctx, px, py, hx, hy, Math.floor(t * 12), 0.75, { jag: 8, seg: 26, w: 2, col: COL[ELS[ord[j - 1]]] });
+        glow(ctx, hx, hy, 30, '#ffffff', 0.45);
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
   // the room's life: light moving on the water, bubbles, and the sigils glowing with what the fight asks of them
   function towerLife(ctx, a, t) {
     const room = ArenaView.liveRoom, ev = (room && room.ev) || {};
+    AS.clock = t; AS.clockAt = nowS();
     ctx.save(); ARENA.trace(ctx, 0); ctx.clip();
     for (const cs of a.caus) { const an = cs.a + t * cs.sp; glow(ctx, Math.cos(an) * cs.d, Math.sin(an) * cs.d * 0.95, cs.s, '#5ad0c8', 0.045 + 0.03 * Math.sin(t * 0.6 + cs.ph)); }
     for (const b of a.bubbles) { const u = (t * b.sp + b.ph) % 1, x = Math.cos(b.a) * b.d + Math.sin(t + b.ph) * 6, y = Math.sin(b.a) * b.d * 0.95 - u * 26; circle(ctx, x, y, b.s, null, rgba('#c8fff6', 0.32 * Math.sin(u * Math.PI)), 1); }
@@ -954,6 +1106,9 @@ const AZ_ART = (() => {
         circle(ctx, x, y, 60 + q * 520, null, rgba(col, 0.7 * (1 - q)), 5 * (1 - q) + 1);   // (an unbound one tears loose: a ring through the room)
       }
     }
+    const cir = ev['archmage-circle'], cas = ev['archmage-cascade'];
+    if (cir && t < cir.end + 0.1) circleAct(ctx, cir, t);
+    if (cas && t < cas.end) cascadeFloor(ctx, cas, t);
     ctx.restore();
   }
 
@@ -1058,7 +1213,85 @@ const AZ_ART = (() => {
     }
     if (el !== 'void' && el !== 'frost') { circle(ctx, 9, bob - 4, 2, '#ffffff'); circle(ctx, 9, bob + 4, 2, '#ffffff'); }
   };
-  function archmage(ctx, st) {
+  // a brass medallion over him holding an element's sign (the same piece as over a rune bearer's head). `k` 0..1 is how lit it is.
+  function medal(ctx, x, y, el, r, k, t) {
+    const col = COL[el];
+    glow(ctx, x, y, r * 2.3, col, 0.45 * k);
+    circle(ctx, x, y, r, 'rgba(6,20,26,0.88)', null);
+    circle(ctx, x, y, r, null, rgba(BRASS, 0.95 * (0.4 + 0.6 * k)), 2.2);
+    circle(ctx, x, y, r * 0.78, null, rgba(col, 0.8 * k), 1.3);
+    glyph(ctx, el, x, y, r * 0.52, rgba(col, 0.55 + 0.45 * k), 2);
+  }
+  // the sign of the reversal: a ring of two arrows chasing each other the wrong way round
+  function flipSign(ctx, x, y, r, k, t) {
+    const col = '#e8e0c8';
+    glow(ctx, x, y, r * 2.2, col, 0.3 * k);
+    circle(ctx, x, y, r, 'rgba(6,20,26,0.88)', null);
+    circle(ctx, x, y, r, null, rgba(BRASS, 0.95 * (0.4 + 0.6 * k)), 2.2);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-t * 0.8); ctx.strokeStyle = rgba(col, 0.95 * k); ctx.fillStyle = rgba(col, 0.95 * k); ctx.lineWidth = 2; ctx.lineCap = 'round';
+    for (const o of [0, Math.PI]) {
+      // an arc running clockwise whose head is at its start: the arrow points the other way round
+      const a0 = o + 0.4, a1 = o + 2.6, rr = r * 0.55;
+      ctx.beginPath(); ctx.arc(0, 0, rr, a0, a1); ctx.stroke();
+      const px = Math.cos(a0) * rr, py = Math.sin(a0) * rr, tx = Math.sin(a0), ty = -Math.cos(a0), rx = Math.cos(a0), ry = Math.sin(a0);
+      poly(ctx, [px + tx * 5, py + ty * 5, px - tx * 1 + rx * 3.6, py - ty * 1 + ry * 3.6, px - tx * 1 - rx * 3.6, py - ty * 1 - ry * 3.6], rgba(col, 0.95 * k), null);
+    }
+    ctx.restore();
+  }
+  // Spellweave (roomev archmage-weave, { els, rev, dur }): three medallions float over his staff, one for each spell in the order the
+  // numbers give them (a pip each: one, two, three), the reversal sign beside them when the order is turned. The next to fall burns bright
+  // and its ring closes on it; one that has fallen flares and goes out. Drawn upright (screen-aligned) at his side of the room.
+  function weaveGlyphs(ctx, ev, now) {
+    const els = ev.els || [], nn = els.length; if (!nn) return;
+    const total = Math.max(1, ev.end - ev.start - 0.6), sc = total / (4.4 + 2.4 * (nn - 1)), d = 4.4 * sc, gap = 2.4 * sc, u = now - ev.start;
+    const order = [...Array(nn).keys()]; if (ev.rev) order.reverse();
+    const cnt = nn + (ev.rev ? 1 : 0), sp = 32, y0 = -82 + Math.sin(now * 1.6) * 2;
+    let next = order.findIndex((k, j) => u < d + j * gap);
+    for (let i = 0; i < cnt; i++) {
+      const x = (i - (cnt - 1) / 2) * sp, born = clamp((u - 0.15 * i) / 0.45, 0, 1), rise = easeOut(born);
+      if (i === nn) { flipSign(ctx, x, y0 + 12 * (1 - rise), 12, rise, now); continue; }
+      const j = order.indexOf(i), tj = d + j * gap, el = els[i], gone = u - tj;
+      if (gone > 0.6) continue;
+      const lit = j === next ? 1 : 0.55, y = y0 + 12 * (1 - rise);
+      if (gone > 0) { const q = gone / 0.6; ctx.save(); ctx.globalAlpha = 1 - q; medal(ctx, x, y - 8 * q, el, 13 * (1 + 0.5 * q), 1, now); ctx.restore(); circle(ctx, x, y, 13 + 30 * q, null, rgba(COL[el], 0.6 * (1 - q)), 2.5); continue; }
+      ctx.save(); ctx.globalAlpha = rise;
+      medal(ctx, x, y, el, 13 * (j === next ? 1.15 + 0.05 * Math.sin(now * 6) : 1), lit, now);
+      if (j === next && tj - u < 1.4 && tj - u > 0) { const q = 1 - (tj - u) / 1.4; ctx.globalCompositeOperation = 'lighter'; circle(ctx, x, y, 13 + (1 - q) * 26, null, rgba(COL[el], 0.3 + 0.6 * q), 2 + 2 * q); }
+      ctx.restore();
+      for (let q = 0; q <= i; q++) circle(ctx, x + (q - i / 2) * 7, y + 22, 2.1, rgba('#efe6cc', 0.85 * rise * lit));   // (its number, as on the hero)
+    }
+  }
+  // Runic Clock (roomev archmage-clock, { els, d1, d2, dur }): two dials over him, one for each pair, in the colour of the pair's rune. A
+  // ring burns down on each to the moment that pair's spell lands (the hero marks burn down the same way); the shorter one is the first
+  // (one pip) and the other the second (two). A dial that has run out flares and goes out; the other keeps going.
+  function clockDials(ctx, ev, now) {
+    const els = ev.els || [], ds = [ev.d1, ev.d2], u = now - ev.start, y0 = -80 + Math.sin(now * 1.6) * 2;
+    for (let i = 0; i < 2; i++) {
+      const el = els[i], D = ds[i]; if (!el || !(D > 0)) continue;
+      const x = (i ? 1 : -1) * 30, col = COL[el], left = clamp(1 - u / D, 0, 1), born = easeOut(clamp(u / 0.5, 0, 1)), gone = u - D;
+      if (gone > 0.6) continue;
+      if (gone > 0) { const q = gone / 0.6; circle(ctx, x, y0, 15 + 32 * q, null, rgba(col, 0.7 * (1 - q)), 3); glow(ctx, x, y0, 40, col, 0.4 * (1 - q)); continue; }
+      ctx.save(); ctx.globalAlpha = born;
+      glow(ctx, x, y0, 34, col, 0.35 + 0.2 * (1 - left));
+      circle(ctx, x, y0, 15, 'rgba(6,20,26,0.88)', rgba(BRASS, 0.95), 2.2);
+      for (let q = 0; q < 12; q++) { const a = q * TAU / 12 - Math.PI / 2; line(ctx, x + Math.cos(a) * 12, y0 + Math.sin(a) * 12, x + Math.cos(a) * 14, y0 + Math.sin(a) * 14, rgba(BRASS, 0.7), 1); }
+      // the ring that burns down: what is left of it runs from the top clockwise
+      const a0 = -Math.PI / 2, a1 = a0 + TAU * left;
+      if (left > 0.01) { ctx.save(); ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(x, y0, 10, a0, a1); ctx.strokeStyle = rgba(col, 0.9); ctx.lineWidth = 3; ctx.stroke(); ctx.strokeStyle = rgba('#ffffff', 0.7); ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); }
+      glyph(ctx, el, x, y0, 4.6, rgba(col, 0.95), 1.6);
+      line(ctx, x, y0, x + Math.cos(a1) * 12, y0 + Math.sin(a1) * 12, rgba('#ffffff', 0.8), 1.2);   // (the hand, at the end of what is left)
+      if (D - u < 1.2 && D - u > 0) { const q = 1 - (D - u) / 1.2; ctx.globalCompositeOperation = 'lighter'; circle(ctx, x, y0, 15 + (1 - q) * 20, null, rgba(col, 0.3 + 0.6 * q), 2 + 2 * q); }
+      for (let q = 0; q <= i; q++) circle(ctx, x + (q - i / 2) * 7, y0 + 24, 2.1, rgba('#efe6cc', 0.85));
+      ctx.restore();
+    }
+  }
+  // his hovering pieces, drawn upright whatever way he faces
+  function hover(ctx, angle) {
+    const w = roomEv('archmage-weave'), c = roomEv('archmage-clock'); if (!w && !c) return;
+    ctx.save();
+    try { ctx.rotate(-(angle || 0)); if (w) weaveGlyphs(ctx, w, AS.clock); if (c) clockDials(ctx, c, AS.clock); } finally { ctx.restore(); }
+  }
+  function archmage(ctx, st, angle) {
     const props = st.props || {}, t = st.t || 0;
     const el = ELS.find(e => props[e]) || null, hot = el ? COL[el] : '#7fe8e0';
     const cast = props.arc || el || props.rune || props.bind || props.conv || props.counter || props.swap || props.mark || props.burst || props.lance;
@@ -1097,6 +1330,7 @@ const AZ_ART = (() => {
     circle(ctx, 12, bob - 3.2, 1.9, hot); circle(ctx, 12, bob + 3.2, 1.9, hot); glow(ctx, 12, bob, 10, hot, 0.55);
     // a crown of broken coral
     for (let k = 0; k < 5; k++) { const a = -1.2 + k * 0.6; poly(ctx, [4 + Math.cos(a - 0.12) * 12, bob + Math.sin(a - 0.12) * 12, 4 + Math.cos(a) * 19, bob + Math.sin(a) * 19, 4 + Math.cos(a + 0.12) * 12, bob + Math.sin(a + 0.12) * 12], '#e8a890', OUT, 1.2); }
+    try { hover(ctx, angle); } catch (e) { /* the hovering signs are never worth a broken body */ }
   }
   return { tell, lance, impact, aftermath, tide, glyph, buildTower, towerLife, runeLink, elementalArt, archmage };
 })();

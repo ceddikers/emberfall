@@ -9,13 +9,13 @@
 // Levels (line-up slots 0-3 are tank, healer, dps, dps; every item is in a real loot table, nothing exceeds a cap):
 //   fresh: Uncommon weapon + armour and one Rare ring, one boss's gear per player, a different boss each: no bonus. SET 1 NORMAL
 //   mid:   four pieces each (Uncommon weapon and armour, two Rare/Legendary accessories); slots 0 and 1 wear Grubnak gear. SET 1 HARD
-//   full:  best set-1 Hard drops: Legendary class weapon, Mythic armour and accessories, 4-piece bonuses for every tier, a feast
+//   full:  best set-1 Hard drops: Legendary class weapon, Mythic armour and accessories, 4-piece bonuses for every tier, a feast. SET 1 EXTREME
 //   post1: the party that has cleared all four set-1 bosses on Normal AND Hard, the median loot worn: every player has one piece
 //          from each set-1 boss (4-piece bonus for every tier), 2 Mythic, 6 Legendary, 6 Rare, 2 Uncommon, plus a feast. SET 2 NORMAL
 //   post2: post1 + a set-2 Normal clear: eight pieces swapped for set-2 pieces of the same rarity (items.js SET2_STEP). SET 2 HARD
-//   post3: post2 + a set-2 Hard clear: two set-2 Mythics and more Legendaries. SET 3 NORMAL
+//   post3: post2 + a set-2 Hard clear: two set-2 Mythics and more Legendaries. SET 3 NORMAL, SET 2 EXTREME
 //   post4: post3 + a set-3 Normal clear: one set-3 Rare and two set-3 Legendaries swapped in (items.js SET3_STEP). SET 3 HARD
-//   post5: post4 + a set-3 Hard clear: two set-3 Mythics (Crown of Dead Leaves, The Sunwheel) and two more set-3 Legendaries (Halo Shard Pendant, Last Watch Medal) swapped in. THE ULTIMATE
+//   post5: post4 + a set-3 Hard clear: two set-3 Mythics (Crown of Dead Leaves, The Sunwheel) and two more set-3 Legendaries (Halo Shard Pendant, Last Watch Medal) swapped in. THE ULTIMATE, SET 3 EXTREME
 const BotGear = (() => {
   const I = typeof module !== 'undefined' ? require('./items.js') : null;   // (Node: the tools; the browser has items.js's globals)
   const items = () => (I ? I : { ITEMS, CLASS_MAIN, gearTotals, gearMods, sanitizeGear, gearSources, partyBonus });
@@ -58,13 +58,13 @@ const BotGear = (() => {
     { m_broodeye: 'm_sunwheel' },                                    // M2 to M10
   ];
   const LEVELS = ['fresh', 'mid', 'full', 'post1', 'post2', 'post3', 'post4', 'post5'];
-  // the gear a fight is tuned for (CLAUDE.md "Tuning gear"): each set's Normal and Hard
-  const TUNED = { 1: { normal: 'fresh', hard: 'mid' }, 2: { normal: 'post1', hard: 'post2' }, 3: { normal: 'post3', hard: 'post4' } };
+  // the gear a fight is tuned for (CLAUDE.md "Tuning gear"): each set's Normal and Hard, and Extreme (the party that has cleared that set's Hard)
+  const TUNED = { 1: { normal: 'fresh', hard: 'mid', extreme: 'full' }, 2: { normal: 'post1', hard: 'post2', extreme: 'post3' }, 3: { normal: 'post3', hard: 'post4', extreme: 'post5' } };
   function levelFor(bossId, mode) {
     if (bossId === 'sovereign' || bossId === 'hood' || bossId === 'seraph') return 'post5';   // (the Ultimate: a party that cleared everything, set 3's Hard included)
     const b =typeof BOSSES !== 'undefined' ? BOSSES.find(x => x.id === bossId) : null;
     const t = b && TUNED[b.set];
-    return t ? t[mode === 'hard' ? 'hard' : 'normal'] : null;
+    return t ? t[mode === 'extreme' ? 'extreme' : mode === 'hard' ? 'hard' : 'normal'] : null;
   }
   // one hero's pieces at a level; slot: 0 tank, 1 healer, 2 and 3 dps (the rows differ so a party has every tier)
   function keysFor(level, cls, slot) {

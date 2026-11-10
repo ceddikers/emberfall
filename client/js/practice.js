@@ -51,11 +51,12 @@ const PracticeHall = (() => {
   const phasesOf = id => (id === ULT ? SvPortal.ACTS : PHASES[id]) || [];
   const gated = id => id === ULT || SECRET.includes(id);   // (one difficulty, windows offered up to the account's reach)
   const reachOf = id => (id === ULT ? SvPortal.reach() : SECRET.includes(id) ? (deps.reach ? deps.reach(id) : 0) : 99);
-  const label = (boss, mode, from) => `${deps.name(boss)}${gated(boss) ? '' : mode === 'hard' ? ', Hard' : ', Normal'}, from ${phasesOf(boss)[from - 1] || 'the start'}`;
+  const MODES = ['normal', 'hard', 'extreme'], MODE_NAME = { normal: 'Normal', hard: 'Hard', extreme: 'Extreme' };
+  const label = (boss, mode, from) => `${deps.name(boss)}${gated(boss) ? '' : ', ' + (MODE_NAME[mode] || 'Normal')}, from ${phasesOf(boss)[from - 1] || 'the start'}`;
 
   // a request, checked: the host starts only what it could have started itself
   function sane(m, hostSide) {
-    const boss = String(m && m.boss), mode = m && m.mode === 'hard' ? 'hard' : 'normal', from = Math.floor(Number(m && m.from));
+    const boss = String(m && m.boss), mode = m && MODES.includes(m.mode) ? m.mode : 'normal', from = Math.floor(Number(m && m.from));
     if (!(boss in PHASES) && boss !== ULT) return null;
     if (!(from >= 1 && from <= phasesOf(boss).length)) return null;
     if (hostSide && boss !== ULT && !deps.bossOpen(boss)) return null;
@@ -107,8 +108,9 @@ const PracticeHall = (() => {
   function render() {
     const ids = bossIds();
     if (!ids.includes(pick.boss)) pick.boss = ids[0];
-    const ult = gated(pick.boss), hard = !ult && deps.hardOpen(pick.boss);   // (ult: a fight with one difficulty)
-    if (!hard) pick.mode = 'normal';
+    const ult = gated(pick.boss), hard = !ult && deps.hardOpen(pick.boss), extreme = !ult && !!deps.extremeOpen && deps.extremeOpen(pick.boss);   // (ult: a fight with one difficulty)
+    if (!extreme && pick.mode === 'extreme') pick.mode = hard ? 'hard' : 'normal';
+    if (!hard && !extreme) pick.mode = 'normal';
     const reach = reachOf(pick.boss);
     const phases = phasesOf(pick.boss).map((n, i) => i + 1 <= reach
       ? `<button type="button" class="px-ph" data-ph="${i + 1}"><i>${NUMERALS[i]}</i><b>${esc(n)}</b></button>`
@@ -116,7 +118,7 @@ const PracticeHall = (() => {
     panel.innerHTML = `<header><h3>Practice Hall</h3><button type="button" class="close" aria-label="Close" data-tip="Close (Esc)">×</button></header>
       <p class="px-note">Any fight, from any phase. No loot, no clears; the progression record and your bests don't see it.${deps.isHost() ? '' : ' Anyone can ask; the host starts it.'}</p>
       <h4>Fight</h4><div class="px-row">${ids.map(id => `<button type="button" class="btn2${pick.boss === id ? ' on' : ''}" data-boss="${id}">${esc(deps.name(id))}</button>`).join('')}</div>
-      ${ult ? '' : `<h4>Difficulty</h4><div class="px-row">${['normal', 'hard'].map(m => `<button type="button" class="btn2${pick.mode === m ? ' on' : ''}"${m === 'hard' && !hard ? ' disabled data-tip="Hard is still locked"' : ''} data-mode="${m}">${m === 'hard' ? 'Hard' : 'Normal'}</button>`).join('')}</div>`}
+      ${ult ? '' : `<h4>Difficulty</h4><div class="px-row">${MODES.map(m => `<button type="button" class="btn2${pick.mode === m ? ' on' : ''}"${(m === 'hard' && !hard) || (m === 'extreme' && !extreme) ? ` disabled data-tip="${MODE_NAME[m]} is still locked"` : ''} data-mode="${m}">${MODE_NAME[m]}</button>`).join('')}</div>`}
       <h4>Aids</h4><div class="px-row px-opts">${OPTS.map(([k, n, tip]) => `<button type="button" class="btn2${px[k] ? ' on' : ''}" data-opt="${k}" aria-pressed="${px[k]}" data-tip="${esc(tip)}">${n}</button>`).join('')}
         <span class="px-speed" data-tip="Slows the whole fight, for everyone: the boss, the telegraphs, and your own hands.">Speed${SLOWS.map(v => `<button type="button" class="btn2${px.slow === v ? ' on' : ''}" data-slow="${v}" aria-pressed="${px.slow === v}">${Math.round(v * 100)}%</button>`).join('')}</span></div>
       <h4>Start from</h4><div class="px-phases">${phases}</div>`;

@@ -33,6 +33,17 @@ const check = (ok, what) => { if (!ok) probs.push(what); };
     if (f.check.type === 'mark') check(f.check.k, `${f.id}: a mark check needs k`);
   }
   check(FEATS.length >= 60, `expected at least 60 feats, have ${FEATS.length}`);
+  // Extreme: one feat per set boss, one per set for clearing every boss of it, each set-wide one with a title and (after set 1) a gate
+  const xf = FEATS.filter(f => f.cat === 'extreme');
+  check(FEAT_CATS.map(c => c[0]).indexOf('extreme') === FEAT_CATS.map(c => c[0]).indexOf('hard') + 1, 'the Extreme section follows Hard');
+  check(xf.every(f => f.check.mode === 'extreme'), 'every Extreme feat checks Extreme');
+  for (const b of BOSSES.filter(b => b.playable)) check(xf.some(f => f.check.type === 'clear' && f.check.boss === b.id), `${b.id}: no Extreme clear feat`);
+  for (const set of [1, 2, 3]) {
+    const f = xf.find(x => x.check.type === 'clearAll' && (x.check.set || 1) === set);
+    check(f && f.title, `set ${set}: no Extreme set feat with a title`);
+    if (set > 1 && f) check(f.needs, `set ${set}: its Extreme set feat needs a gate`);
+  }
+  check(xf.length === 15, `expected 15 Extreme feats, have ${xf.length}`);
 }
 
 // ---------------------------------------------------------------- 2. the rules
@@ -63,6 +74,12 @@ const has = (marks, k) => marks.includes(k);
   const solo = FeatRules.clear(Object.assign({ stats: stats(P(1, 'tank')), alive: [1] }, base), { set: 1 });
   check(has(solo, 'comp:solo') && !has(solo, 'comp:soloHard') && !has(solo, 'me:lastEmber'), 'solo');
   check(has(FeatRules.clear(Object.assign({ stats: stats(P(1, 'tank')), alive: [1] }, base, { mode: 'hard' }), { set: 1 }), 'comp:soloHard'), 'solo on Hard');
+  // Extreme: its own clear mark (never the Hard one), and every Hard mark that is about doing it well
+  m = FeatRules.clear(Object.assign({ stats: std }, base, { mode: 'extreme' }), { set: 1 });
+  check(has(m, 'clear:grubnak:extreme') && !has(m, 'clear:grubnak:hard') && !has(m, 'clear:grubnak:normal'), 'an Extreme clear marks Extreme only');
+  check(has(m, 'party:spotlessHard') && has(m, 'hardrole:tank') && has(m, 'hardcls:bastion'), 'a spotless Extreme clear also marks the party, role and hero');
+  check(has(FeatRules.clear(Object.assign({ stats: stats(P(1, 'tank')), alive: [1] }, base, { mode: 'extreme' }), { set: 1 }), 'comp:soloHard'), 'solo on Extreme');
+  check(!has(FeatRules.clear(Object.assign({ stats: noHeal }, base, { mode: 'extreme' }), { set: 1 }), 'comp:noHealer'), 'no healer on Extreme is not the Normal feat');
   // personal record
   m = FeatRules.clear(Object.assign({ stats: stats(P(1, 'tank', { avoidable: 2 }), P(2, 'healer'), P(3, 'dps'), P(4, 'dps')) }, base), { set: 1 });
   check(!has(m, 'me:spotless'), 'an avoidable hit breaks spotless');
@@ -147,9 +164,18 @@ const has = (marks, k) => marks.includes(k);
   Pt.event('clear', { boss: 'grubnak', mode: 'hard', secs: 400, practice: false, deaths: 0, avoidable: 0, stats: stats(P(1, 'tank', { cls: 'bastion' })), myId: 1, alive: [1] });
   e = earned();
   check(e.includes('three-hats') && e.includes('role-tank') && e.includes('role-dps'), 'tank, healer and damage on Hard make three hats');
-  // old saves: hard clears the save already holds count for mastery
-  store.heroes = { bloodreaver: { clears: { grubnak: { normal: 1, hard: 2 } } }, runeguard: { clears: { volkar: { normal: 0, hard: 1 } } } };
+  // Extreme: its own feats, not Hard's; a flawless one also counts for the Hard clean feat; four of a set make the set feat
+  Pt.event('clear', { boss: 'skitterra', mode: 'extreme', secs: 500, practice: false, deaths: 0, avoidable: 0, stats: std, myId: 1, alive: [1, 2, 3, 4] });
+  e = earned();
+  check(e.includes('last-thread') && e.includes('unwebbed') && !e.includes('eight-eyes'), `Extreme Skitterra earns its own feat and the flawless Hard one, not the Hard clear feat (have: ${e.join(', ')})`);
+  for (const b of ['corvane', 'brannoc', 'morrowoak']) Pt.event('clear', { boss: b, mode: 'extreme', secs: 500, practice: false, deaths: 1, avoidable: 1, stats: std, myId: 1, alive: [1, 2, 3, 4] });
+  check(!earned().includes('extreme-star') && earned().includes('timber'), 'three of the third set on Extreme is not the set feat');
+  Pt.event('clear', { boss: 'caelum', mode: 'extreme', secs: 500, practice: false, deaths: 1, avoidable: 1, stats: std, myId: 1, alive: [1, 2, 3, 4] });
+  check(earned().includes('extreme-star') && !earned().includes('extreme-hask'), 'the third set on Extreme, and not the first');
+  // old saves: hard clears the save already holds count for mastery (a record with no extreme count reads 0; one with it earns the Extreme feat)
+  store.heroes = { bloodreaver: { clears: { grubnak: { normal: 1, hard: 2 } } }, runeguard: { clears: { volkar: { normal: 0, hard: 1, extreme: 1 } } } };
   Pt.event('item', { key: 'x' });
+  check(earned().includes('fair-weather') && !earned().includes('no-tip'), 'a save with an Extreme count earns the Extreme feat; an old record with none does not');
   // raises, hollow, flags, bouts
   Pt.event('raise', {});
   Pt.event('hollow', { ok: 0 });

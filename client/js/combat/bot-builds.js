@@ -2,7 +2,7 @@
 // (user, 2026-10-31): Normal for the rows a party has by that set, Hard one row more, and each pick the strongest of its row.
 //   BOT_BUILDS['class' or 'class:spec']   the strongest pick of rows I..VII, in row order (a base hero has five rows)
 //   BOT_TALENT_ROWS[set]                  [rows on Normal, rows on Hard]; set 4 is the Ultimate
-//   botTalentSet(cls, spec, set, mode)    the Set of talent ids a bot holds for that boss (Hard+ plays as Hard)
+//   botTalentSet(cls, spec, set, mode)    the Set of talent ids a bot holds for that boss (Hard+ and Extreme play as Hard)
 const BOT_BUILDS = {
   'alembist': ['alembist_ricochet', 'alembist_spill', 'alembist_blend', 'alembist_flash', 'alembist_chain'],
   'alembist:apothecary': ['alembist_ricochet', 'alembist_spill', 'alembist_blend', 'alembist_reserve', 'alembist_residue', 'alembist_label', 'alembist_cold'],

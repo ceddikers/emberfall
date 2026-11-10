@@ -163,7 +163,7 @@ ul.abilities em.meta { display: block; font-style: normal; font-size: 11px; colo
 
 /* Raid setup on the raid board */
 .raid-setup { margin-top: 10px; display: grid; gap: 10px; }
-.mode-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mode-pick { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
 .mode-pick button { text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid #5a4a6a; background: #0d0b1280; color: var(--ink); cursor: pointer; font: inherit; }
 .mode-pick button b { display: block; font-family: var(--fantasy); font-size: 15px; }
 .mode-pick button small { color: var(--muted); font-size: 12px; }
@@ -175,7 +175,7 @@ ul.abilities em.meta { display: block; font-style: normal; font-size: 11px; colo
 .raid-roster small { margin-left: 6px; color: var(--muted); }
 .raid-note { margin: 0; font-size: 12px; color: var(--muted); }
 .raid-rec { display: grid; gap: 2px; padding: 5px 10px; border: 1px solid var(--line-soft); border-radius: 3px; background: #0f0d0b80; }
-.raid-rec p { display: grid; grid-template-columns: 56px 1fr auto; align-items: baseline; margin: 0; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.raid-rec p { display: grid; grid-template-columns: 66px 1fr auto; align-items: baseline; margin: 0; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .raid-rec b { font-family: var(--fantasy); font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
 .raid-rec span { color: #e6dcc8; }
 .raid-rec em { font-style: normal; font-size: 11px; }
@@ -612,6 +612,7 @@ kbd { border-radius: 3px; background: #1d1813; border-color: #4a3d2c; color: var
 #boss-bar.form .bb-hp .trail { background: #bfe8e0; }
 .bb-mode { font-size: 9.5px; letter-spacing: .18em; color: var(--muted); border: 1px solid var(--line); padding: 1px 6px 0; border-radius: 2px; }
 .bb-mode.hard { color: #e8907e; border-color: #5a2620; }
+.bb-mode.extreme { color: #b9d6ee; border-color: #2f4558; }   /* Extreme: a cool pale tone beside Hard's warm one */
 .bb-time { font-size: 12px; color: #cfc5b2; letter-spacing: .04em; }
 .bb-hp { height: 14px; margin-top: 6px; background: #0a0807; border: 1px solid #000; border-radius: 2px; box-shadow: 0 0 0 1px var(--line); }
 .bb-hp .fill { background: linear-gradient(#cf5a40, #8f2c1d 55%, #6c1f14); box-shadow: inset 0 1px 0 #ffffff2e; transition: width .12s; }
@@ -1295,6 +1296,7 @@ body.link-lost #combat-hud { opacity: .55; }
 #kill-banner.in { animation: kill-in 1s cubic-bezier(.2,.8,.2,1) .55s forwards; }
 #kill-banner.out { animation: intro-out .9s ease-in forwards; }
 #kill-banner small { font-size: 10.5px; letter-spacing: .3em; text-transform: uppercase; color: #ff9a7a; min-height: 12px; }
+#boss-intro small.extreme, #kill-banner small.extreme { color: #b9d6ee; }
 #kill-banner b { white-space: nowrap; font-family: var(--fantasy); font-size: clamp(26px, 3.8vw, 42px); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #f6ecd8; text-shadow: 0 3px 0 #000, 0 8px 28px #000c; }
 #kill-banner i { font-style: normal; font-family: var(--fantasy); font-size: 13px; letter-spacing: .38em; text-transform: uppercase; color: var(--gold); text-shadow: 0 2px 8px #000; }
 #kill-banner i::before, #kill-banner i::after { content: ''; display: inline-block; width: 46px; height: 1px; margin: 0 14px; vertical-align: middle; background: linear-gradient(90deg, transparent, #c89a5a); }
@@ -1549,6 +1551,7 @@ body.in-raid #meter-btn { display: inline-grid; }
 #journal .jr-ic { width: 38px; height: 38px; background: center / cover no-repeat; border-radius: 2px; box-shadow: 0 0 0 1px #2a1e1288; }
 #journal .jr-entry h5 { margin: 0 0 2px; font-family: var(--fantasy); font-size: 12px; letter-spacing: .06em; color: #4a2a14; }
 #journal .jr-entry h5 em { margin-left: 8px; font-style: normal; font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: #9a2a1a; }
+#journal .jr-entry h5 em.ex { color: #3d5f7c; }
 #journal .jr-entry p { margin: 0; font-family: Georgia, serif; font-style: italic; font-size: 13.5px; line-height: 1.5; }
 #journal .jr-entry.blank { opacity: .55; }
 #journal .jr-entry.blank .jr-ic { filter: grayscale(1); }

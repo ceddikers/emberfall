@@ -7,12 +7,12 @@
 //   HUMAN=lively: only the damage bots, with the mild preset the game gives its fill-in bots (bots.js BotHuman.LIVELY).
 //   BREAKDOWN=1 prints, per player and run, where DPS is lost: seconds dead, alive but out of reach, moving, GCD-idle while in reach,
 //   casts cancelled, avoidable hits, dps (a * marks a human-like bot), and at the end the mean over the runs.
-//   node tools/bot-raid.js [normal|hard] [runs] [classes comma-separated] [boss id]
+//   node tools/bot-raid.js [normal|hard|extreme] [runs] [classes comma-separated] [boss id]
 //   e.g. node tools/bot-raid.js normal 5 skitterra   (arguments can come in any order; the boss defaults to grubnak)
 //   seed=N uses another set of seeds; first=K starts at run K (0-based) of the set, so first=5 with 5 runs plays what runs 6-10 of a
 //   10-run job play (tools/check.js cuts long jobs into pieces that way); WHY=1 prints the last hits before each death, NEXT=1 the upcoming-moves feed,
 //   TRACE=1 the boss's casts, walls, adds and props as they happen
-//   gear=fresh|mid|full|post1|post2|post3|post4 (or GEAR=...) gives every bot representative player gear (see buildGear below); FEAST=pie|stew|broth|tarts
+//   gear=fresh|mid|full|post1|post2|post3|post4|post5 (or GEAR=...) gives every bot representative player gear (see buildGear below); FEAST=pie|stew|broth|tarts
 //   picks the meal for 'full', 'post1' and 'post2' (default pie, none at the other levels). SUMMARY=1 prints one machine-readable line only.
 //   until=N (with phase=N) ends the run as a clear once the fight passes act N's gate, so check.js can play one act of the Sovereign.
 //   phase=N starts at course (phase) N like a Practice Hall run (the boss starts at that act's health); the Sovereign has one per act.
@@ -55,17 +55,21 @@ const { TRIALS, trialDef } = load('arena/trials.js');
 let gearLevel = process.env.GEAR || '', modsArg = process.env.MODS || '';
 let humanWho = process.env.HUMAN || 'none';
 const BREAKDOWN = !!process.env.BREAKDOWN;
-let untilAct = 0, mode = 'normal', runs = 3, comp = 'bastion,cleric,ranger,pyromancer'.split(','), def = GRUBNAK, seed0 = 1000, first = 0, stopOnClear = false, practiceFrom = 0;
+let untilAct = 0, mode = 'normal', runs = 3, comp = 'bastion,cleric,ranger,pyromancer'.split(','), def = GRUBNAK, seed0 = 1000, first = 0, stopOnClear = false, practiceFrom = 0, danceArg = null, xhp = 1, xdmg = 1, hdmg = 1;
 for (const a of process.argv.slice(2)) {
-  if (a === 'normal' || a === 'hard') mode = a;
+  if (a === 'normal' || a === 'hard' || a === 'extreme') mode = a;
   else if (/^seed=\d+$/.test(a)) seed0 = Number(a.slice(5));   // a different set of seeds (default 1000)
   else if (/^first=\d+$/.test(a)) first = Number(a.slice(6));
   else if (a === 'stop=clear') stopOnClear = true;
+  else if (/^dance=[0-2]$/.test(a)) danceArg = Number(a.slice(6));   // (Hard only: play this one of the three dances on every run; without it each run's seed draws one)
+  else if (/^xhp=[\d.]+$/.test(a)) xhp = Number(a.slice(4));     // (tuning aid: scale this boss's Extreme health for this process; nothing is written)
+  else if (/^hdmg=[\d.]+$/.test(a)) hdmg = Number(a.slice(5));   // (tuning aid: scale this boss's Hard damage multiplier for this process; Extreme keeps its own)
+  else if (/^xdmg=[\d.]+$/.test(a)) xdmg = Number(a.slice(5));   // (tuning aid: scale this boss's Extreme damage multiplier for this process)
   else if (/^phase=\d+$/.test(a)) practiceFrom = Number(a.slice(6));   // start at this course (act) number, as a practice run does (FightSim practiceFrom; the Sovereign's acts)
   else if (/^until=\d+$/.test(a)) untilAct = Number(a.slice(6));   // an act-by-act run (the Sovereign, with phase=N): the run ends, counted as a clear, when the fight passes act N's gate
   else if (/^gear=\w+$/.test(a)) gearLevel = a.slice(5);
   else if (/^human=[\w,]+$/.test(a)) humanWho = a.slice(6);
-  else if (/^mods=[\w,]+$/.test(a)) modsArg = a.slice(5);   // Hard+ modifiers (hardplus.js ids or aliases, or 'all'); only a Hard run takes them
+  else if (/^mods=[\w,]+$/.test(a)) modsArg = a.slice(5);   // Hard+ modifiers (hardplus.js ids or aliases, or 'all'); only a Hard run takes them (not Extreme)
   else if (/^\d+$/.test(a)) runs = Number(a);
   else if (DEFS[a]) def = DEFS[a];
   // trial:<spec> runs that spec's trial, with a bot taking it (or 'trial:<spec>:base' to try it with the base kit)
@@ -83,6 +87,8 @@ if (GEARSET) {
   RaidHost.prototype.allPlayers = function () { return orig.call(this).map(p => (p.bot ? Object.assign(p, { gear: GEARSET.sets[p.id - 1000].host }) : p)); };
   log(`gear ${gearLevel}: bond ${JSON.stringify(GEARSET.bond.active.map(a => a.name + ' x' + a.n))}; ` + GEARSET.sets.map(g => `${g.cls} hp${g.host.hp} def${g.host.def} main+${(g.mods.power * 1000).toFixed(0)} crit${g.mods.crit} haste${g.mods.haste}`).join(' | '));
 }
+if (xhp !== 1 || xdmg !== 1) { def = Object.assign({}, def, { hp: Object.assign({}, def.hp, { extreme: Math.round((def.hp.extreme ?? def.hp.hard) * xhp) }), extremeDmg: (def.extremeDmg ?? def.hardDmg ?? 1.25) * xdmg }); }
+if (hdmg !== 1) def = Object.assign({}, def, { hardDmg: (def.hardDmg ?? 1.25) * hdmg, extremeDmg: def.extremeDmg ?? def.hardDmg ?? 1.25 });
 const MODSET = mode === 'hard' ? HARDPLUS.clean(modsArg) : {};
 log(`${def.name}, ${mode}, ${comp.join('/')}`);
 if (HARDPLUS.heat(MODSET)) log(`Hard+ heat ${HARDPLUS.heat(MODSET)}: ${HARDPLUS.ids(MODSET).join(', ')}`);
@@ -92,7 +98,7 @@ const bdTot = {};   // BREAKDOWN=1: the sums over the runs, per player
 const hollowTot = { started: 0, saved: 0, failed: 0 };   // a Gloomsworn's Hollow (fight.js HOLLOW_HOST), over every run
 for (let r = first; r < first + runs; r++) {
   const casts = [];
-  const host = new RaidHost({ def, mode, humans: () => [], bots: comp, mods: MODSET, seed: seed0 + r * 77, bond: GEARSET ? GEARSET.bond : undefined, practiceFrom, emit: msg => {
+  const host = new RaidHost({ def, mode, humans: () => [], bots: comp, mods: MODSET, seed: seed0 + r * 77, bond: GEARSET ? GEARSET.bond : undefined, practiceFrom, dance: danceArg, emit: msg => {
     if (msg.t === 'bcast') casts.push(msg.name);
     // TRACE=1: print the boss's casts, the walls, adds and props as they happen
     if (process.env.TRACE && (msg.t === 'bcast' || (msg.t === 'fev' && msg.k === 'wall') || (msg.t === 'addev' && msg.k !== 'bite') || msg.t === 'propfx')) console.log(`   ${host.sim.t.toFixed(1)} ${msg.t} ${msg.name || msg.k || ''} ${msg.label || msg.kind || ''}`);

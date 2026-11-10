@@ -117,7 +117,7 @@ const BR_FX = (() => {
     for (const k in e) if (k.startsWith('brpath:')) { const v = e[k]; if (t < v.end + 1 && Math.abs((v.w || 0) - w) < 3 && !!v.wave === !!wave) return v.sp || 900; }
     return wave ? 650 : 950;
   }
-  const fadeOf = (ev, t) => clamp((t - ev.start) / 0.35, 0, 1) * clamp((ev.end - t) / 0.4, 0, 1);
+  const fadeOf = (ev, t) => (ev.re ? 1 : clamp((t - ev.start) / 0.35, 0, 1)) * clamp((ev.end - t) / 0.4, 0, 1);   // (ev.re: a road sent again as it changes, Stand Your Ground's: no fade-in each time)
 
   // ---------------------------------------------------------------- the Sunwheel
   // a bronze disc with a blazing gold rim, flung low over the sand; spin turns the sun-rays on its face
@@ -219,6 +219,8 @@ const BR_FX = (() => {
         // a stone turned it: a cool white-blue star with a ring round it
         star4(c, x, y, r * 1.1, t * 0.8 + i, '#9fd0ff', '#ffffff', k * (d > P.cum[i] ? Math.max(0.35, after) : 1));
         ellipse(c, x, y, 24 + 8 * after, 15 + 5 * after, 0, null, rgba('#e8f4ff', 0.6 * k), 2);
+        // Stand Your Ground's road, redrawn as the post moves: the post's own reach, a dashed gold ring the wheel will turn on
+        if (ev.re) { c.save(); c.setLineDash([7, 7]); c.lineDashOffset = -t * 24; circle(c, x, y, 88, null, rgba(C.gold, 0.55 * k), 2); c.setLineDash([]); c.restore(); }
       } else star4(c, x, y, r, t * 0.8 + i, C.gold, C.goldHi, k * (d > P.cum[i] ? Math.max(0.35, after) : 1));
     }
     // Twin Wheels: a badge of one or two pips at the foot of each road says which leaves first
@@ -309,6 +311,7 @@ const BR_FX = (() => {
   function floor(ctx, room, t) {
     const ev = room && room.ev; if (!ev) return;
     for (const key in ev) if (key.startsWith('brpath:') && t < ev[key].end) pathFloor(ctx, key, ev[key], t);
+    if (ev[CP] && t < ev[CP].end) cpFloor(ctx, ev[CP], t);
   }
 
   // ---------------------------------------------------------------- the warnings (boss-tells.js get() reads TELLS[tag])
@@ -369,12 +372,52 @@ const BR_FX = (() => {
       ctx.save(); ctx.translate(s.x + Math.cos(a) * d, s.y + Math.sin(a) * d); ctx.rotate(a + Math.PI);
       ctx.beginPath(); ctx.moveTo(-9, -8); ctx.lineTo(3, 0); ctx.lineTo(-9, 8); ctx.strokeStyle = rgba('#ffffff', al); ctx.lineWidth = 2.6; ctx.stroke(); ctx.restore();
     }
-    // the outline of the wheel, waiting to be caught: its rim and rays, spinning slowly, filling as it nears
-    const dr = r * 0.34, sp = t * 1.2;
+    // the outline of the wheel, waiting to be caught: its rim and rays, spinning slowly, filling as it nears (on a role ring it stands wider, round the sigil)
+    const dr = r * (tg.slot ? 0.5 : 0.34), sp = t * 1.2, ri = tg.slot ? 0.66 : 0.45;
     ctx.beginPath(); ctx.arc(s.x, s.y, dr, 0, TAU); ctx.fillStyle = rgba(C.catchHi, (0.04 + 0.2 * p * p) * k); ctx.fill();
     ctx.setLineDash([6, 6]); ctx.lineDashOffset = -t * 20; ctx.strokeStyle = rgba('#ffffff', (0.55 + 0.35 * p) * k); ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
-    for (let i = 0; i < 12; i++) { const a = i * TAU / 12 + sp; ctx.beginPath(); ctx.moveTo(s.x + Math.cos(a) * dr * 0.45, s.y + Math.sin(a) * dr * 0.45); ctx.lineTo(s.x + Math.cos(a) * dr * (i % 2 ? 0.75 : 0.92), s.y + Math.sin(a) * dr * (i % 2 ? 0.75 : 0.92)); ctx.strokeStyle = rgba(C.catchHi, (0.4 + 0.4 * p) * k); ctx.lineWidth = 1.6; ctx.stroke(); }
+    for (let i = 0; i < 12; i++) { const a = i * TAU / 12 + sp; ctx.beginPath(); ctx.moveTo(s.x + Math.cos(a) * dr * ri, s.y + Math.sin(a) * dr * ri); ctx.lineTo(s.x + Math.cos(a) * dr * (i % 2 ? 0.75 : 0.92), s.y + Math.sin(a) * dr * (i % 2 ? 0.75 : 0.92)); ctx.strokeStyle = rgba(C.catchHi, (0.4 + 0.4 * p) * k); ctx.lineWidth = 1.6; ctx.stroke(); }
     glow(ctx, s.x, s.y, r * 0.5, C.catchHi, (0.15 + 0.4 * p * p) * k);
+    // Crowd's Choice (Extreme): the ring carries a role's sign, the very signs of the head marks (arena-view.js headMark: tank a shield, healer a cross,
+    // damage a blade, in the same dark badge and pale gold), the badge's rim burning round as the wheel nears. Only a hero of that role may catch it.
+    if (tg.slot) {
+      const sg = tg.slot, sc = clamp(r * 0.27, 20, 30) / 14, col = '#ffe9a8', bob = Math.sin(t * 3 + tg.id) * 1.5;
+      const seg = (x1, y1, x2, y2, w = 2.4) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineWidth = w; ctx.stroke(); };
+      ctx.save(); ctx.translate(s.x, s.y + bob); ctx.scale(sc, sc);
+      glow(ctx, 0, 0, 26, col, (0.22 + 0.2 * p) * k);
+      ctx.beginPath(); ctx.arc(0, 0, 14, 0, TAU); ctx.fillStyle = rgba('#120e1a', 0.86 * k); ctx.fill(); ctx.strokeStyle = rgba(col, 0.55 * k); ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, 14, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(p, 0, 1)); ctx.strokeStyle = rgba('#ffffff', 0.9 * k); ctx.lineWidth = 3; ctx.stroke();
+      ctx.strokeStyle = rgba(col, k); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      if (sg === 1) { ctx.beginPath(); ctx.moveTo(-7, -7); ctx.lineTo(7, -7); ctx.lineTo(7, 1); ctx.lineTo(0, 8); ctx.lineTo(-7, 1); ctx.closePath(); ctx.lineWidth = 2.2; ctx.stroke(); }
+      else if (sg === 2) { seg(0, -7, 0, 7, 3.4); seg(-7, 0, 7, 0, 3.4); }
+      else { seg(-6, 7, 6, -7, 2.6); seg(-7, 2, -2, 7, 2.2); }
+      ctx.restore();
+    }
+    ctx.restore();
+  } };
+
+  // Stand Your Ground's post (Extreme): where the wheel will strike the marked hero. Red is the hit, so the circle stays the shared red; inside it
+  // the post's own gold (the colour of its head mark): the stone footing the wheel turns on, gold chevrons drawing in on it, its star waking as it nears
+  TELLS.brPost = { ground(ctx, tg, s, p, k, t) {
+    const r = s.r;
+    ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+    const g = ctx.createRadialGradient(s.x, s.y, 6, s.x, s.y, r);
+    g.addColorStop(0, rgba(C.wetDk, (0.3 + 0.3 * p) * k)); g.addColorStop(0.7, rgba(C.wetDk, (0.16 + 0.2 * p) * k)); g.addColorStop(1, rgba(C.wetDk, 0.05 * k));
+    ctx.fillStyle = g; ctx.fillRect(s.x - r, s.y - r, r * 2, r * 2);
+    // sand pressed in rings round the footing
+    ctx.lineCap = 'round';
+    for (const q of [0.78, 0.5]) { ctx.beginPath(); ctx.arc(s.x, s.y, r * q, 0, TAU); ctx.strokeStyle = rgba('#ffe7a8', (0.1 + 0.14 * p) * k); ctx.lineWidth = 1.4; ctx.stroke(); }
+    ctx.setLineDash([8, 7]); ctx.lineDashOffset = -t * 22; ctx.beginPath(); ctx.arc(s.x, s.y, r * 0.64, 0, TAU); ctx.strokeStyle = rgba(C.gold, (0.4 + 0.4 * p) * k); ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
+    // gold chevrons drawing in on the post
+    for (let i = 0; i < 6; i++) {
+      const a = i * TAU / 6 + 0.3, q = (t * 0.8 + i / 6) % 1, d = r * (0.95 - 0.55 * q), al = Math.sin(q * Math.PI) * (0.4 + 0.5 * p) * k;
+      ctx.save(); ctx.translate(s.x + Math.cos(a) * d, s.y + Math.sin(a) * d); ctx.rotate(a + Math.PI);
+      ctx.beginPath(); ctx.moveTo(-8, -7); ctx.lineTo(3, 0); ctx.lineTo(-8, 7); ctx.strokeStyle = rgba(C.goldHi, al); ctx.lineWidth = 2.4; ctx.stroke(); ctx.restore();
+    }
+    // the footing itself, a stone drum seen from above, and the star the wheel will turn in
+    circle(ctx, s.x, s.y, r * 0.2, rgba(C.bronzeDk, 0.85 * k), rgba(C.gold, (0.6 + 0.3 * p) * k), 2.4);
+    circle(ctx, s.x, s.y, r * 0.11, null, rgba(C.bronze, 0.8 * k), 1.6);
+    star4(ctx, s.x, s.y, r * 0.2 * (0.6 + 0.5 * p), t * 0.8, '#9fd0ff', '#ffffff', k * (0.35 + 0.55 * p));
     ctx.restore();
   } };
 
@@ -745,8 +788,18 @@ const BR_FX = (() => {
           ctx.strokeStyle = rgba(C.foam, 0.3 * k); ctx.lineWidth = 18; ctx.stroke(); ctx.strokeStyle = rgba('#ffffff', 0.4 * k); ctx.lineWidth = 3; ctx.stroke();
         }, id);
         break;
+      case 'brPost': {
+        const cx = s.x, cy = s.y, R = s.r;
+        mark(T.short, { x: cx, y: cy, r: R }, (ctx, q, k, age, seed) => {
+          // the print of the wheel's blow on the footing: scuffed sand in a ring, a few cracks, flecks of gold
+          ellipse(ctx, cx, cy + 3, R * 0.7, R * 0.56, 0, rgba(C.wetDk, 0.45 * k), rgba('#e0cd9a', 0.4 * k), 2);
+          crackStar(ctx, cx, cy + 3, R * 0.85, 8, seed, k * 0.9, { w: 1.6, flat: 0.78, col: '#f0e0b8' });
+          for (let i = 0; i < 8; i++) { const a = hash(i, seed) * TAU, r = R * (0.3 + 0.55 * hash(i, seed + 1)); glow(ctx, cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.8, 5, C.gold, 0.5 * k); }
+        }, id);
+        break;
+      }
       case 'brGrip':
-        mark(T.brief, { x: s.x, y: s.y }, (ctx, q, k, age, seed) => { for (let i = 0; i < 3; i++) ellipse(ctx, s.x, s.y + 6, 30 + i * 28, 14 + i * 12, 0, null, rgba(C.foam, (0.4 - i * 0.1) * k), 2); }, id);
+        mark(T.brief,{ x: s.x, y: s.y }, (ctx, q, k, age, seed) => { for (let i = 0; i < 3; i++) ellipse(ctx, s.x, s.y + 6, 30 + i * 28, 14 + i * 12, 0, null, rgba(C.foam, (0.4 - i * 0.1) * k), 2); }, id);
         break;
     }
   }
@@ -818,6 +871,18 @@ const BR_FX = (() => {
     for (const u of inside(ctx, s, 6)) VFX.hit(u.x, u.y, '#ff8a6a', 1.8);
     H.shockAt(cx, cy, { r: 150, color: '#ff8a6a', w: 6, dur: 0.45, flat: 0.8 });
     H.shake(7);
+  };
+
+  // Stand Your Ground: the wheel strikes the post: it turns on the stone with a cool white star, sparks and chips, and the hero held there takes the blow
+  IMP.brPost = (tg, msg, ctx, H) => {
+    const s = tg.live, x = s.x, y = s.y;
+    H.shapeFlash(s, '#ffd890', { a: 0.26, dur: 0.45 });
+    VFX.sparks(x, y, { color: '#ffffff', n: 16, speed: 420 }); VFX.sparks(x, y, { color: C.gold, n: 12, speed: 340 });
+    VFX.debris(x, y, { color: '#6a6a60', n: 8, speed: 1.4, size: 1.2 }); sandUp(x, y, 5, { size: 0.9 });
+    VFX.shock(x, y, { r: s.r * 1.5, color: '#e8f4ff', w: 6, dur: 0.5, flat: 0.75 }); VFX.shock(x, y, { r: s.r, color: C.gold, w: 5, dur: 0.45, flat: 0.75 });
+    VFX.hit(x, y, '#ffffff', 1.6);
+    for (const u of inside(ctx, s, 4)) { VFX.hit(u.x, u.y, C.goldHi, 1.8); if (isMe(u)) flinch(C.gold, 0.08, 0.2, 0.016); }
+    H.shake(6);
   };
 
   // Victory Leap: the damage's flash and rings; the landing itself (sand and spray) is propfx brland
@@ -1109,12 +1174,70 @@ const BR_FX = (() => {
     shakeNow(8); cam(0.08, 0.04, 0.6, 0);
   }
 
+  // ---------------------------------------------------------------- Crowd-Pleaser (roomev 'brannoc-crowdpleaser': Act II's opener; dur is the cast plus a second and a half)
+  // He lifts the Sunwheel to the stands: the banners on the wall unfurl up the tiers behind them, shafts of gold light lie across the sand from each,
+  // the ghost crowd rises; when the cast ends (the light raidwide, brRoar) the sun on every banner flashes and the light swells, then it all lets go.
+  // Under the units and the warnings (floor), except the lifted wheel over his head; nothing here covers the floor beyond a faint light.
+  const CP = 'brannoc-crowdpleaser';
+  const cpTime = (ev, t) => { const u = t - ev.start, d = Math.max(1, ev.end - ev.start - 1.5); return { u, d, un: easeOut(clamp(u / (d * 0.85), 0, 1)), beat: u >= d ? clamp(1 - (u - d) / 0.7, 0, 1) : 0, k: clamp(u / 0.4, 0, 1) * clamp((ev.end - t) / 1.0, 0, 1) }; };
+  function cpFloor(c, ev, t) {
+    const { u, d, un, beat, k } = cpTime(ev, t); if (u < 0 || k <= 0.01) return;
+    const R = ARENA.r || 560, NB = 8;
+    // the crowd gets to its feet: pale lights rising off the stands while the banners come down
+    if (u < d && t - (S.cpMote || 0) > 0.12) { S.cpMote = t; const a = rand(0, TAU); VFX.motes(Math.cos(a) * (R + 40), Math.sin(a) * (R + 40), { n: 1, color: C.ghostHi, r: 14, rise: 1.4 }); }
+    if (u >= d && !S.fired.has(CP + ev.start)) {
+      S.fired.add(CP + ev.start);
+      if (u - d < 0.5) for (let i = 0; i < NB; i++) { const a = (i + 0.5) * TAU / NB + 0.06; VFX.motes(Math.cos(a) * (R + 30), Math.sin(a) * (R + 30), { n: 3, color: C.goldHi, r: 22, rise: 1.6 }); }
+    }
+    c.save();
+    // the gold light: a soft band along the wall, and a shaft down from each banner across the sand
+    c.globalCompositeOperation = 'lighter'; c.lineJoin = 'round';
+    ARENA.trace(c, -6);
+    for (const [w, a] of [[46, 0.04], [18, 0.07], [5, 0.16]]) { c.strokeStyle = rgba(C.gold, a * k * (0.35 + 0.65 * un + 0.5 * beat)); c.lineWidth = w; c.stroke(); }
+    const L = 260 + 140 * un + 60 * beat;
+    for (let i = 0; i < NB; i++) {
+      const a = (i + 0.5) * TAU / NB + 0.06;
+      c.save(); c.translate(Math.cos(a) * (R - 8), Math.sin(a) * (R - 8)); c.rotate(a + Math.PI);
+      const g = c.createLinearGradient(0, 0, L, 0); g.addColorStop(0, rgba(C.goldHi, 0.2 * k * (0.3 + 0.7 * un + 0.6 * beat))); g.addColorStop(1, rgba(C.gold, 0));
+      c.beginPath(); c.moveTo(0, -18); c.lineTo(L, -58); c.lineTo(L, 58); c.lineTo(0, 18); c.closePath(); c.fillStyle = g; c.fill();
+      c.restore();
+    }
+    c.restore();
+    // the banners: from the top of the stands down to the wall, the long cloth paying out; the sun on each flashes at the beat
+    for (let i = 0; i < NB; i++) {
+      const a = (i + 0.5) * TAU / NB + 0.06, top = R + 236, len = 206 * un; if (len < 10) continue;
+      const rc = top - len / 2, sway = Math.sin(t * 3.2 + i * 1.3) * 0.05 * (1 - un * 0.7);
+      c.save(); c.translate(Math.cos(a) * rc, Math.sin(a) * rc); c.rotate(a + Math.PI);
+      c.fillStyle = rgba('#000000', 0.2 * k); c.fillRect(-len / 2 + 4, -20, len, 46);
+      bannerCloth(c, len, 44, 0.92 * k, sway);
+      c.strokeStyle = rgba(C.gold, 0.9 * k); c.lineWidth = 3; c.beginPath(); c.moveTo(-len / 2, -29); c.lineTo(-len / 2, 29); c.stroke();   // the rod it hangs from
+      c.restore();
+      if (beat > 0) glow(c, Math.cos(a) * (R + 30), Math.sin(a) * (R + 30), 70, C.goldHi, 0.5 * beat * k);
+    }
+  }
+  // over the units: the Sunwheel held up over his head, light drawn up into it, a gold flare at the beat
+  function cpOver(c, ev, t, env) {
+    const { u, un, beat, k } = cpTime(ev, t), b = env && env.boss; if (u < 0 || k <= 0.01 || !b) return;
+    const x = b.x, y = b.y - 104, q = easeOut(clamp(u / 0.8, 0, 1)), r = 32 * (0.7 + 0.3 * q) * (1 + 0.18 * beat);
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    glow(c, x, y, r * 3.2, C.gold, (0.16 + 0.2 * un + 0.3 * beat) * k);
+    for (let i = 0; i < 12; i++) {
+      const a = t * 0.5 + i * TAU / 12, R0 = r * 1.15, R1 = r * (1.9 + 0.5 * Math.sin(t * 4 + i * 2) + 0.8 * beat);
+      c.beginPath(); c.moveTo(x + Math.cos(a - 0.07) * R0, y + Math.sin(a - 0.07) * R0); c.lineTo(x + Math.cos(a) * R1, y + Math.sin(a) * R1); c.lineTo(x + Math.cos(a + 0.07) * R0, y + Math.sin(a + 0.07) * R0); c.closePath();
+      c.fillStyle = rgba(C.goldHi, 0.2 * q * k); c.fill();
+    }
+    c.restore();
+    wheelDisc(c, x, y, r, t * (2 + 5 * un), k * 0.9, { lift: 0 });
+  }
+
   // ---------------------------------------------------------------- the room over the units (ArenaView.drawRoomOver hands it over)
   function roomOver(ctx, room, t, env) {
     const ev = room && room.ev; if (!ev) return;
     for (const key in ev) if (key.startsWith('brpath:') && t < ev[key].end) pathOver(ctx, key, ev[key], t);
     if (ev.tide && t < ev.tide.end) tideOver(ctx, ev.tide, t, env); else if (S.tide) S.tide = null;
     if (ev.lastround && t < ev.lastround.end) lastRoundOver(ev.lastround, t);
+    if (ev[CP] && t < ev[CP].end) cpOver(ctx, ev[CP], t, env);
   }
 
   // ---------------------------------------------------------------- the enrage, the entrance, the fall

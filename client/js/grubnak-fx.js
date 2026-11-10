@@ -16,7 +16,7 @@ const GR_FX = (() => {
   const nowS = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
   const S = { camAt: -99 };
   // [hit-stop, camera push] of the blows that earn a held breath
-  const CAMP = { mince: [0.05, 0.028], ladle: [0.05, 0.026], lid: [0.06, 0.03], flop: [0.07, 0.034], charge: [0.04, 0.02], buster: [0.05, 0.024], burp: [0.05, 0.026], spit: [0.04, 0.02], helping: [0.07, 0.034] };
+  const CAMP = { mince: [0.05, 0.028], ladle: [0.05, 0.026], lid: [0.06, 0.03], flop: [0.07, 0.034], charge: [0.04, 0.02], buster: [0.05, 0.024], burp: [0.05, 0.026], spit: [0.04, 0.02], helping: [0.07, 0.034], longskewer: [0.05, 0.026], flashover: [0.06, 0.03] };
 
   // the camera holds for a beat when something big lands (main.js FX.cam); never more than once in a few seconds
   function cam(stop = 0.06, punch = 0.03, dur = 0.45, gap = 2.5) {
@@ -310,10 +310,57 @@ const GR_FX = (() => {
     H.after(0.1, () => H.shake(9));
   }
 
+  // ---------------------------------------------------------------- the revamp: Long Skewer, the grease flaring, Flashover (landings that draw whole)
+  // Long Skewer: the iron runs the line in a blue-white band, bites into the far wall, and what was spitted on it is flung along the way
+  function skewerAfter(tg, H) {
+    const s = tg.live, ca = Math.cos(s.angle), sa = Math.sin(s.angle);
+    let L = 0; while (L < s.len && ARENA.sd(s.x + ca * L, s.y + sa * L) < -24) L += 16;
+    const ex = s.x + ca * L, ey = s.y + sa * L, bits = ['#e8d8b8', '#c8382a', '#9a3a2a', '#8ab04a'];
+    H.shapeFlash(s, '#3d8bff', { a: 0.34 });
+    H.sweep(s, '#b4d4ff', 0.36);
+    H.streak(s.x, s.y, s.angle, '#eef4ff', { len: L, w: 8, dur: 0.28 });
+    H.after(L / 3800 + 0.05, () => {
+      VFX.sparks(ex, ey, { color: '#dfe9ff', n: 10, speed: 420 });
+      H.shockAt(ex, ey, { r: 90, color: '#cfe0ff', w: 4, dur: 0.4, flat: 1 });
+      VFX.debris(ex, ey, { color: '#e8d8b8', n: 6, speed: 1.2, up: 1.4, size: 1.1 });
+      H.shake(3);
+    });
+    for (let i = 0; i < 8; i++) {
+      const d = rand(80, Math.max(100, L - 60)), off = rand(-s.w * 0.35, s.w * 0.35), x = s.x + ca * d - sa * off, y = s.y + sa * d + ca * off;
+      H.after(d / 3000, () => VFX.debris(x, y, { color: bits[i % 4], n: 3, speed: 1, up: 1.2, size: 1 }));
+    }
+  }
+  // Grease Fire's rings: the grease round each stain catches, a gout of flame standing up out of it
+  function flareAfter(tg, H) {
+    const s = tg.live;
+    H.shapeFlash(s, '#ff7a1a', { a: 0.3 });
+    H.shockAt(s.x, s.y, { r: s.r * 1.15, color: '#ffd890', w: 4, dur: 0.45, flat: 1 });
+    VFX.sparks(s.x, s.y, { color: '#ffb050', n: 6, speed: 260 });
+    VFX.smoke(s.x, s.y, { color: '#3a2a1a', n: 2, size: 26, a: 0.4, speed: 40 });
+    const ph = rand(0, 9);
+    VFX.fx({ dur: 0.55, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - p * p), h = 62 * easeOut(Math.min(1, p / 0.35)) * (1 - p * 0.5);
+      c.save(); c.globalAlpha = k;
+      for (let i = 0; i < 5; i++) { const a = i * 2.4 + ph, d = s.r * 0.5 * (i ? 1 : 0); ArenaView.fireTongue(c, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d * 0.8, h * (0.7 + 0.3 * Math.sin(i * 3 + ph)), 11, t * 1.3 + i); }
+      c.restore();
+    } });
+  }
+  // Flashover: the blast goes off over its marked hero, a white-gold ring running out to its edge (the flash across it is room(): roomev 'grubnak-flashover')
+  function flashoverAfter(tg, H) {
+    const s = tg.live;
+    H.shapeFlash(s, '#ff8a2a', { a: 0.38 });
+    for (let i = 0; i < 2; i++) H.shockAt(s.x, s.y, { r: s.r * (1.02 + i * 0.12), color: i ? '#ffffff' : '#ffd9a0', w: 9 - i * 4, dur: 0.6, flat: 1, delay: i * 0.08 });
+    VFX.debris(s.x, s.y, { color: '#ffb050', n: 10, speed: 2, up: 1.8, size: 1.1 });
+    H.after(0.08, () => H.shake(7));
+  }
+
   function impact(tg, msg, ctx, H) {
     const tag = tg.tag;
     try {
       const c = CAMP[tag]; if (c) cam(c[0], c[1]);
+      if (tag === 'longskewer') { skewerAfter(tg, H); return true; }
+      if (tag === 'greaseflare') { flareAfter(tg, H); return true; }
+      if (tag === 'flashover') { flashoverAfter(tg, H); return true; }
       if (tag === 'burp') burpAfter(tg, H);
       else if (tag === 'spit') spitAfter(tg, H);
       else if (tag === 'helping') helpingAfter(tg, H);
@@ -414,5 +461,205 @@ const GR_FX = (() => {
   // roomev from the host (main.js): the Gorged form's inhale and swell; h is boss-vfx.js's onBody, shockAt, shake and flash
   function room(msg, bd, h) { try { if (msg.k === 'inhale') inhale(msg, bd, h); else if (msg.k === 'form' && msg.form === 'gorged') swell(bd, h); else if (msg.k === 'mend') mend(msg, bd, h); } catch (e) { /* cosmetic */ } }
 
-  return { impact, prop, cast, room, lean, puddle };
+  // ---------------------------------------------------------------- the revamp: act openers, Kitchen Staff, Flashover (roomev 'grubnak-*')
+  // These ride ArenaView's own room.ev store (every roomev is kept there with its start and end), so they are drawn from the two room hooks below,
+  // under the units (drawRoomUnder: nothing here ever covers a hero, a telegraph or him, the telegraphs are drawn over it) and as one-shot effects from
+  // roomEvent. The stove line, the ovens and the larder doors sit where arena-view.js buildKitchen puts them.
+  const hs = (i, n = 0) => { const x = Math.sin(i * 127.1 + n * 311.7) * 43758.5453; return x - Math.floor(x); };
+  const flashK = () => (typeof FX !== 'undefined' && FX.washK ? FX.washK('#fff2d8', 'lighter') : 1);   // (Options: reduce flashes)
+  const shk = n => { try { if (typeof vfxShake === 'function') vfxShake(n, 'boss'); else if (typeof FX !== 'undefined') FX.shake = Math.max(FX.shake || 0, n); } catch (e) { /* cosmetic */ } };
+  function kitchen() {
+    const hw = ARENA.hw, hh = ARENA.hh, out = 34, burners = [];
+    for (let i = 0; i < 6; i++) burners.push({ x: -hw + 150 + i * (hw * 2 - 300) / 5, y: -hh - out - 30 });
+    return { hw, hh, burners, ovens: [-1, 1].map(sx => ({ x: sx * (hw - 10) - (sx > 0 ? 60 : 0) + 30, y: -hh - out - 40 })) };
+  }
+  // Dinner Bell: the pass bell rings three times, and each ring runs along the stove line as a flare from burner to burner, tongues standing up
+  // out of them, a warm sheet of light laid down the top of the floor; it settles back as the light raidwide lands
+  const CHIMES = [0.3, 1.2, 2.1];
+  function bellUnder(ctx, ev, t) {
+    const age = t - ev.start, life = Math.max(0.5, ev.end - ev.start) + 0.9;
+    if (age < 0 || age > life) return;
+    const fade = Math.min(1, age / 0.2) * clamp((life - age) / 0.9, 0, 1), g = kitchen();
+    let peak = 0;
+    const pl = [];
+    g.burners.forEach((b, i) => { let v = 0; for (const c of CHIMES) { const q = age - c - i * 0.05; if (q > 0) v = Math.max(v, Math.exp(-q * 3.2)); } pl.push(v); peak = Math.max(peak, v); });
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    g.burners.forEach((b, i) => {
+      glow(ctx, b.x, b.y, 40 + 46 * pl[i], '#ffb04a', (0.2 + 0.55 * pl[i]) * fade);
+      glow(ctx, b.x, b.y + 36, 90 + 70 * pl[i], '#ff7a1a', 0.14 * pl[i] * fade);
+    });
+    for (const o of g.ovens) glow(ctx, o.x, o.y, 40 + 20 * peak, '#ff6a1a', (0.2 + 0.3 * peak) * fade);
+    const gr = ctx.createLinearGradient(0, -g.hh, 0, -g.hh + 190);
+    gr.addColorStop(0, rgba('#ff9a3a', 0.2 * peak * fade)); gr.addColorStop(1, rgba('#ff9a3a', 0));
+    ctx.fillStyle = gr; ctx.fillRect(-g.hw, -g.hh, g.hw * 2, 190);
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha = fade;
+    g.burners.forEach((b, i) => ArenaView.fireTongue(ctx, b.x, b.y + 12, 8 + 34 * pl[i], 7 + 3 * pl[i], t + i * 0.7));
+    ctx.restore();
+  }
+  // Dessert Is Served: the lights go down over the kitchen, only what burns stays lit: the stove line, the ovens, any grease still alight
+  function dessertUnder(ctx, room, ev, t) {
+    const age = t - ev.start, dur = ev.end - ev.start;
+    if (age < 0 || age > dur) return;
+    const lvl = clamp(age / 1.1, 0, 1) * clamp((dur - age) / 1.3, 0, 1);
+    if (lvl <= 0.01) return;
+    const g = kitchen(), R = ARENA.R + 260;
+    ctx.save();
+    ctx.fillStyle = rgba('#080410', 0.44 * lvl); ctx.fillRect(-R, -R, R * 2, R * 2);
+    ctx.globalCompositeOperation = 'lighter';
+    g.burners.forEach((b, i) => { const f = 0.8 + 0.2 * Math.sin(t * 7 + i * 2); glow(ctx, b.x, b.y, 52, '#ffa040', 0.5 * lvl * f); glow(ctx, b.x, b.y + 44, 120, '#ff7a1a', 0.2 * lvl * f); });
+    for (const o of g.ovens) glow(ctx, o.x, o.y, 50, '#ff6a1a', 0.42 * lvl);
+    for (const fl of room.floor) { const until = room.lit && room.lit.get(fl.id); if (fl.kind === 'grease' && until > t) glow(ctx, fl.x, fl.y, fl.r * 1.6, '#ff7a1a', 0.3 * lvl); }
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha = lvl;
+    g.burners.forEach((b, i) => ArenaView.fireTongue(ctx, b.x, b.y + 12, 14 + 6 * Math.sin(t * 6 + i), 7, t + i * 0.7));
+    ctx.restore();
+  }
+  // Kitchen Staff: a door in each side wall, over where the sous-chefs come in (x = +-(hw - 80), y = 10): the leaves swing in and warm light spills onto the floor
+  function staffUnder(ctx, ev, t) {
+    const age = t - ev.start, life = Math.max(0.5, ev.end - ev.start) + 2.8;
+    if (age < 0 || age > life) return;
+    const open = easeOut(clamp((age - 0.3) / 1.6, 0, 1)), fade = Math.min(1, age / 0.25) * clamp((life - age) / 0.8, 0, 1), hw = ARENA.hw, y0 = 10, th = open * 1.45;
+    ctx.save(); ctx.globalAlpha = fade; ctx.lineCap = 'round';
+    for (const sx of [-1, 1]) {
+      const gx = sx * (hw + 13);
+      rrect(ctx, gx - 14, y0 - 58, 28, 116, 3, '#1a0e08', OUT, 2.5);
+      glow(ctx, gx, y0, 70, '#ffc878', 0.26 * open);
+      // the light falling across the floor, widening as it comes
+      ctx.save(); ARENA.trace(ctx, 2); ctx.clip(); ctx.globalCompositeOperation = 'lighter';
+      const x1 = gx - sx * 200 * open, gr = ctx.createLinearGradient(gx - sx * 14, 0, x1, 0);
+      gr.addColorStop(0, rgba('#ffc878', 0.3 * open)); gr.addColorStop(1, rgba('#ffc878', 0));
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(gx - sx * 14, y0 - 54); ctx.lineTo(x1, y0 - 54 - 60 * open); ctx.lineTo(x1, y0 + 54 + 60 * open); ctx.lineTo(gx - sx * 14, y0 + 54); ctx.closePath(); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      for (let i = 0; i < 6; i++) { const q = (t * 0.25 + hs(i, sx)) % 1; circle(ctx, gx - sx * (20 + q * 170 * open), y0 + (hs(i + 4, sx) - 0.5) * 100 + Math.sin(t * 2 + i) * 6, 1.4, rgba('#fff4d8', 0.5 * (1 - q) * open)); }
+      ctx.restore();
+      // the two leaves, hinged at the top and bottom of the gap, swinging in
+      for (const sy of [-1, 1]) {
+        const hx = gx, hy = y0 + sy * 56, ex = hx - sx * Math.sin(th) * 56, ey = hy - sy * Math.cos(th) * 56;
+        line(ctx, hx, hy, ex, ey, OUT, 13); line(ctx, hx, hy, ex, ey, '#7a4e2a', 9); line(ctx, hx, hy, ex, ey, 'rgba(255,224,170,0.35)', 2);
+        circle(ctx, ex, ey, 3.5, '#d8b45a', OUT, 1.5);
+      }
+    }
+    ctx.restore();
+  }
+  // a sous-chef a hero is holding (stood by: it follows them): a gold ring under it and a dashed lead to its holder. Gold, never red or blue
+  function heldUnder(ctx, v, t) {
+    const gm = typeof window !== 'undefined' && window.__game, r = gm && gm.raid;
+    if (!r || !r.adds) return;
+    for (const a of r.adds.values()) {
+      if (a.kind !== 'sous' || a.held == null) continue;
+      const e = v && v.entById ? v.entById(a.held) : null;
+      ctx.save();
+      ctx.setLineDash([8, 7]); ctx.lineDashOffset = -t * 26;
+      ellipse(ctx, a.x, a.y + 6, 34, 26, 0, null, rgba('#f0c060', 0.7), 2.5);
+      if (e && Math.hypot(e.x - a.x, e.y - a.y) > 50) { ctx.beginPath(); ctx.moveTo(e.x, e.y + 4); ctx.lineTo(a.x, a.y + 4); ctx.strokeStyle = rgba('#f0c060', 0.5); ctx.lineWidth = 2.5; ctx.stroke(); }
+      ctx.restore();
+    }
+  }
+  // an order going over the counter: the plate under its cloche lifts and the bell is struck
+  function servedFx(msg) {
+    const x = msg.x, y = msg.y;
+    S.served = { x, y, at: nowS() };
+    VFX.shock(x, y, { r: 70, color: '#ffe08a', w: 3, dur: 0.45, flat: 0.7 });
+    VFX.glint(x, y - 10, { z: 58, size: 28, color: '#fff2c0' });
+    VFX.fx({ dur: 1.1, layer: 'air', draw: (c, p, t, e) => {
+      const q = easeOut(Math.min(1, p / 0.7)), k = e.a * (1 - Math.max(0, p - 0.6) / 0.4), px = x, py = y - 20 - 46 * q;
+      c.save(); c.globalAlpha = k;
+      ellipse(c, px, py + 6, 22, 7, 0, '#f6f3ea', OUT, 2);
+      c.beginPath(); c.ellipse(px, py + 4, 15, 12, 0, Math.PI, TAU); c.closePath();
+      const g = c.createLinearGradient(px - 15, py - 8, px + 15, py + 4); g.addColorStop(0, '#f4f7fa'); g.addColorStop(1, '#8a96a2');
+      c.fillStyle = g; c.fill(); c.strokeStyle = OUT; c.lineWidth = 2; c.stroke();
+      circle(c, px, py - 10, 3.5, '#d8dee4', OUT, 1.5);
+      ellipse(c, px - 5, py - 4, 3, 5, -0.5, 'rgba(255,255,255,0.6)');
+      c.restore();
+    } });
+  }
+  // Flashover going off: a white-gold flash across the blast, embers thrown up, scorch smoke
+  function flashFx(msg) {
+    const x = msg.x, y = msg.y, r = msg.r || 240, fk = flashK();
+    VFX.fx({ dur: 0.75, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - p) * (1 - p) * fk, q = easeOut(Math.min(1, p / 0.5)), R = r * (0.35 + 0.65 * q);
+      c.save(); ARENA.trace(c, 4); c.clip(); c.globalCompositeOperation = 'lighter';
+      const g = c.createRadialGradient(x, y, 0, x, y, R);
+      g.addColorStop(0, rgba('#ffffff', 0.85 * k)); g.addColorStop(0.35, rgba('#ffd890', 0.55 * k)); g.addColorStop(0.8, rgba('#ff7a1a', 0.22 * k)); g.addColorStop(1, rgba('#ff4a1a', 0));
+      c.fillStyle = g; c.beginPath(); c.arc(x, y, R, 0, TAU); c.fill();
+      c.restore();
+    } });
+    for (let i = 0; i < 16; i++) {
+      const a = rand(0, TAU), d = rand(0, r * 0.85), sx = x + Math.cos(a) * d, sy = y + Math.sin(a) * d * 0.8;
+      if (ARENA.sd(sx, sy) > -10) continue;
+      VFX.spawn({ x: sx, y: sy, z: 8, vx: rand(-30, 30), vy: rand(-20, 20), vz: rand(70, 170), g: 180, life: rand(0.6, 1.1), size: rand(3, 6), size1: 1, color: i % 3 ? '#ffb050' : '#fff0c0', drag: 0.02 });
+    }
+    VFX.smoke(x, y, { color: '#4a3a2a', n: 5, size: 40, a: 0.45, speed: 70 });
+    shk(5);
+  }
+  function onEvent(msg) {
+    if (msg.k === 'grubnak-served') servedFx(msg);
+    else if (msg.k === 'grubnak-flashover') flashFx(msg);
+    else if (msg.k === 'grubnak-staff') {
+      const hw = ARENA.hw;
+      for (const sx of [-1, 1]) VFX.fx({ dur: 0.7, delay: 0.5, layer: 'ground', draw() {}, done: () => { VFX.smoke(sx * (hw - 20), 10, { color: '#d8c4a4', n: 4, size: 28, a: 0.5, speed: 50 }); shk(2); } });
+    }
+  }
+  // the sous-chefs' arrival and their end: boss-vfx.js addSpawn / addDeath hand over here (a sous-chef is one of his own kitchen, not a green swirl)
+  function sousSpawn(x, y, H) {
+    VFX.smoke(x, y, { color: '#d8c4a4', n: 4, size: 26, a: 0.5, speed: 50 });
+    H.shockAt(x, y, { r: 60, color: '#ffe0a0', w: 3, dur: 0.35, flat: 0.7 });
+    VFX.glint(x, y - 10, { z: 30, size: 20, color: '#fff2c0' });
+  }
+  function sousDeath(x, y, H) {
+    const sv = S.served;
+    if (sv && nowS() - sv.at < 0.6 && Math.hypot(sv.x - x, sv.y - y) < 90) { S.served = null; VFX.smoke(x, y, { color: '#f1ede2', n: 3, size: 22, a: 0.45, speed: 40 }); return; }   // (handed over at the counter: it is gone in a puff)
+    VFX.debris(x, y, { color: '#b8844a', n: 10, speed: 1.5, up: 1.6, size: 1.2 });
+    VFX.smoke(x, y, { color: '#f4f0e4', n: 6, size: 32, a: 0.6, speed: 80 });
+    H.shockAt(x, y, { r: 80, color: '#f0e0c0', w: 4, dur: 0.4, flat: 1 });
+    VFX.spawn({ x, y, z: 30, vx: rand(-60, 60), vy: rand(-40, 40), vz: rand(160, 240), g: 560, life: 0.9, size: 12, color: '#f6f3ea', kind: 'shard', add: false, vr: rand(-12, 12), rot: rand(0, TAU) });   // (the toque flies)
+    H.shake(3);
+  }
+
+  // a sous-chef (Kitchen Staff, Extreme): a small green cook in a tall white toque and a stained apron, a crate of orders held out in front of him
+  // with the slip sticking out, his feet going all the time. Facing +x, about 45 px across at scale 1 like the others.
+  if (typeof ADD_ART !== 'undefined') ADD_ART.sous = (ctx, st) => {
+    const t = st.t || 0, mv = !!st.moving, w = mv ? Math.sin(t * 11) : Math.sin(t * 2) * 0.15, skin = '#8fb55a', apron = '#f1ede2';
+    ctx.translate(0, mv ? -Math.abs(Math.sin(t * 11)) * 1.4 : 0);
+    for (const sy of [-1, 1]) ellipse(ctx, -7 + w * 4 * sy, 7 * sy, 5, 3.4, 0, '#4a3524', OUT, 1.8);   // feet
+    ellipse(ctx, -4, 0, 10.5, 13, 0, skin, OUT, 2.2);   // shoulders
+    ellipse(ctx, -2, 0, 7.5, 10, 0, apron, OUT, 1.4);   // apron
+    line(ctx, -11, -3, -11, 3, apron, 2);
+    ellipse(ctx, 0, 3, 2.6, 1.6, 0.4, 'rgba(160,60,30,0.55)');   // a stain
+    // the crate, held in both arms out in front
+    for (const sy of [-1, 1]) limb(ctx, [-1, 7 * sy, 7, 8.5 * sy, 12, 6.5 * sy], skin, 2.8);
+    rrect(ctx, 9, -9.5, 18, 19, 2.5, '#b8844a', OUT, 2);
+    line(ctx, 15, -9, 15, 9, 'rgba(60,36,16,0.6)', 1.2); line(ctx, 21, -9, 21, 9, 'rgba(60,36,16,0.6)', 1.2);
+    rrect(ctx, 22, -4.5, 7, 9, 1, '#f6f0dc', OUT, 1.2); line(ctx, 23.5, -2, 27.5, -2, '#c8382a', 1); line(ctx, 23.5, 1, 27, 1, '#8a7a6a', 1);   // the order slip
+    for (const sy of [-1, 1]) circle(ctx, 12, 6.5 * sy, 2.4, skin, OUT, 1.3);   // hands
+    // head with its ears out, the toque over the back of it
+    for (const sy of [-1, 1]) poly(ctx, [1, 5.5 * sy, 0, 12 * sy, 4, 7 * sy], skin, OUT, 1.4);
+    circle(ctx, 3, 0, 7, skin, OUT, 2);
+    for (const [px, py, pr] of [[-3, -3.2, 4.4], [-3, 3.2, 4.4], [-5.5, 0, 4.4], [-1, 0, 5.4]]) circle(ctx, px, py, pr, '#ffffff', OUT, 1.6);
+    line(ctx, -5, -4, -1, -1, 'rgba(180,176,164,0.7)', 1); line(ctx, -5, 4, -1, 1, 'rgba(180,176,164,0.7)', 1);
+    circle(ctx, 8, -2.6, 1.3, '#1a1a1a'); circle(ctx, 8, 2.6, 1.3, '#1a1a1a'); circle(ctx, 9.6, 0, 1, '#6a8a3a');
+  };
+
+  // the room hooks: ArenaView's own drawRoomUnder (the room moments and the held sous-chefs) and roomEvent (the one-shot effects), wrapped from here
+  if (typeof ArenaView !== 'undefined') {
+    const baseUnder = ArenaView.drawRoomUnder, baseEvent = ArenaView.roomEvent;
+    ArenaView.drawRoomUnder = function (ctx, room, t, v) {
+      baseUnder.call(this, ctx, room, t, v);
+      const ev = room && room.ev;
+      if (!ev) return;
+      try {
+        if (ev['grubnak-dinnerbell']) bellUnder(ctx, ev['grubnak-dinnerbell'], t);
+        if (ev['grubnak-dessert']) dessertUnder(ctx, room, ev['grubnak-dessert'], t);
+        if (ev['grubnak-staff']) { staffUnder(ctx, ev['grubnak-staff'], t); heldUnder(ctx, v, t); }
+      } catch (e) { /* a broken effect never stops the fight drawing */ }
+    };
+    ArenaView.roomEvent = function (room, msg, now, ...rest) {
+      const r = baseEvent.call(this, room, msg, now, ...rest);
+      if (msg && typeof msg.k === 'string' && msg.k.indexOf('grubnak-') === 0) { try { onEvent(msg); } catch (e) { /* cosmetic */ } }
+      return r;
+    };
+  }
+
+  return { impact, prop, cast, room, lean, puddle, sousSpawn, sousDeath };
 })();

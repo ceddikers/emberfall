@@ -57,7 +57,7 @@
     const h = Save.get('heroes') && Save.get('heroes')[id];
     if (!h) return false;
     const c = h.clears || {};
-    return Object.values(c).some(b => b && (b.normal || b.hard)) || (h.talents && ((h.talents.rows | 0) > 1 || (h.talents.picks || []).some(x => x != null))) || (h.journal && Object.keys(h.journal.met || {}).length > 0) || !!h.spec;
+    return Object.values(c).some(b => b && (b.normal || b.hard || b.extreme)) || (h.talents && ((h.talents.rows | 0) > 1 || (h.talents.picks || []).some(x => x != null))) || (h.journal && Object.keys(h.journal.met || {}).length > 0) || !!h.spec;
   }
   function refreshLineup() {
     // (not the hero you're playing: you're already the one walking round town)
@@ -80,15 +80,16 @@
   // In a friend's game the road is theirs: what's open at the statues and the portal follows the host's clears while you're
   // there. Your save never sees it (your hero, gear, specs and every clear you make there stay yours), and town's own moments
   // (townsfolk, secrets, bounties) only follow what both of you have reached, so none of yours is spent early.
-  let hostRoad = null;   // { bossId: [normal, hard] } from the host, while you're in someone else's game
+  let hostRoad = null;   // { bossId: [normal, hard, extreme] } from the host, while you're in someone else's game
   const road = {
-    beaten: id => (hostRoad ? !!hostRoad[id] && hostRoad[id][0] + hostRoad[id][1] > 0 : Save.bossBeaten(id)),
+    beaten: id => (hostRoad ? !!hostRoad[id] && hostRoad[id][0] + hostRoad[id][1] + hostRoad[id][2] > 0 : Save.bossBeaten(id)),
     normal: id => (hostRoad ? !!hostRoad[id] && hostRoad[id][0] > 0 : Save.normalBeaten(id)),
     hard: id => (hostRoad ? !!hostRoad[id] && hostRoad[id][1] > 0 : Save.hardBeaten(id)),
+    extreme: id => (hostRoad ? !!hostRoad[id] && hostRoad[id][2] > 0 : Save.extremeBeaten(id)),
   };
   const townBeaten = id => unlockAll || (Save.bossBeaten(id) && road.beaten(id));
   const ROAD_BOSSES = [...BOSSES, ULTIMATE_BOSS, ...SECRET_BOSSES];   // (the road carries the Ultimate too: its town lines, the epilogue, the Trophy Hall plinth and the whole-inscription secret read townBeaten)
-  const myRoad = () => { const o = {}; for (const b of ROAD_BOSSES) { const n = Save.normalBeaten(b.id), h = Save.hardBeaten(b.id); if (n || h) o[b.id] = [n ? 1 : 0, h ? 1 : 0]; } return o; };
+  const myRoad = () => { const o = {}; for (const b of ROAD_BOSSES) { const n = Save.normalBeaten(b.id), h = Save.hardBeaten(b.id), x = Save.extremeBeaten(b.id); if (n || h || x) o[b.id] = [n ? 1 : 0, h ? 1 : 0, x ? 1 : 0]; } return o; };
   function bossOpen(boss, beaten = road.beaten) { const i = BOSSES.indexOf(boss); return unlockAll || i <= 0 || beaten(BOSSES[i - 1].id); }
   // Hard, set by set (data.js BOSSES[].set): locked until every playable boss of the set has fallen on Normal, then it opens a boss at a
   // time, starting with the set's first (Grubnak; Vhalgrath for set 2)
@@ -97,6 +98,11 @@
   const firstOfSet = boss => { const i = BOSSES.indexOf(boss); return i <= 0 || bossSet(BOSSES[i - 1]) !== bossSet(boss); };
   function hardOpen(boss) { const i = BOSSES.indexOf(boss); return unlockAll || (hardUnlocked(bossSet(boss)) && (firstOfSet(boss) || road.hard(BOSSES[i - 1].id))); }
   const hardWhy = boss => { const i = BOSSES.indexOf(boss); return !hardUnlocked(bossSet(boss)) ? (bossSet(boss) === 1 ? 'Clear all four bosses on Normal first.' : bossSet(boss) === 2 ? 'Clear every boss of the wild realm on Normal first.' : 'Clear every boss of the Fallen Star on Normal first.') : `Beat ${BOSSES[i - 1].name} on Hard first.`; };
+  // Extreme: open for a boss once it has fallen on Hard (the road, so in a friend's game the host's), and while it is shut a pull starts on Hard
+  const extremeOpen = boss => unlockAll || road.hard(boss.id);
+  const extremeWhy = () => 'Defeat this boss on Hard to open it.';
+  const modeLabel = m => (m === 'extreme' ? 'Extreme' : m === 'hard' ? 'Hard' : 'Normal');
+  const hardish = m => m === 'hard' || m === 'extreme';   // (Extreme plays every Hard move, cast speed and rule: what Hard looks and sounds like, it does too)
   const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
   // a portal opens the raid board at the latest open boss of its own set (null while none of the set's bosses is open yet)
   const setOpenBoss = set => [...BOSSES].reverse().find(b => b.playable && bossSet(b) === set && bossOpen(b)) || null;
@@ -1221,6 +1227,7 @@
     if ((bossId === 'hood' || bossId === 'seraph') && !unspokenMayStart(bossId)) return;   // (the footprints' gate starts from the card in town, its second gate once the first has fallen, or on a local dev host)
     Loot.hostClose();   // a chest from the last pull is settled first
     if (!Net.isHost || !player.cls) return;
+    if (mode === 'extreme') { const xb = BOSSES.find(b => b.id === bossId); if (!xb || !extremeOpen(xb)) mode = 'hard'; }   // (Extreme stays locked: a pull falls back to Hard, and Hard's own lock check follows)
     if (mode === 'hard' && !hardOpen(BOSSES.find(b => b.id === bossId) || BOSSES[0])) mode = 'normal';   // (Hard stays locked)
     stopRaidHost();
     hostTrial = null;
@@ -1393,7 +1400,7 @@
   // A guest's click is a request to the host (see Net.onHost 'prreq' below).
   PracticeHall.init({
     isHost: () => Net.isHost, hasHero: () => !!player.cls, toast: msg => toast(msg),
-    bossOpen: id => (id === 'hood' ? Save.unspokenPulled() : id === 'seraph' ? townBeaten('hood') : bossOpen(BOSSES.find(b => b.id === id) || BOSSES[0])), hardOpen: id => hardOpen(BOSSES.find(b => b.id === id) || BOSSES[0]),
+    bossOpen: id => (id === 'hood' ? Save.unspokenPulled() : id === 'seraph' ? townBeaten('hood') : bossOpen(BOSSES.find(b => b.id === id) || BOSSES[0])), hardOpen: id => hardOpen(BOSSES.find(b => b.id === id) || BOSSES[0]), extremeOpen: id => { const b = BOSSES.find(x => x.id === id); return !!b && extremeOpen(b); },
     reach: id => Math.max(Save.reach(id), id === 'hood' ? (Save.unspokenPulled() ? 1 : 0) : id === 'seraph' ? (townBeaten('hood') ? 1 : 0) : 0),   // (the windows a real pull has reached; a listed fight always offers its first)
     name: id => (RAID_DEFS[id] ? RAID_DEFS[id].name : id),
     start: o => startRaid(o.mode, true, o.boss, o.from, o.px), request: o => Net.send(Object.assign({ t: 'prreq' }, o)),
@@ -1863,7 +1870,7 @@
       nextAutoAt: 0, cast: null, props: {}, propsUntil: {},
       hits: [],
       tgs: new Map(), puddles: new Map(), party: new Map(), bots: new Map(), pbuffs: [], abuffs: [], taken: [], result: null, resultAt: 0,
-      adds: new Map(), tethers: new Map(), zones: new Map(), lunges: [], husks: [], eggs: null,
+      adds: new Map(), tethers: new Map(), hmarks: new Map(), zones: new Map(), lunges: [], husks: [], eggs: null,
       rollers: new Map(), reels: new Map(),
       mods: msg.mode === 'hard' ? HARDPLUS.clean(msg.mods) : {},   // Hard+ (hardplus.js): the modifiers the host set for this pull, on every client
       bond: partyBonus(msg.bond),   // the gear party bonus the host counted for this fight
@@ -2293,7 +2300,7 @@
       pullStreak[sk] = msg.s === 'wipe' ? (pullStreak[sk] || 0) + 1 : 0; raid.streak = pullStreak[sk];
       raid.prog = progRecord(raid.def.id, raid.mode, { pct, ph: Number(msg.ph) || 1, time: Math.floor(msg.time || 0), clear: msg.s === 'clear' ? 1 : 0, at: Date.now() });
     }
-    fadeTelegraphs(); raid.tethers.clear(); Stagecraft.endFight(); Lamps.reset(); Kennel.endFight(); raid.lunges = []; raid.eggs = null; raid.rollers.clear(); raid.reels.clear(); player.reel = null;
+    fadeTelegraphs(); raid.tethers.clear(); raid.hmarks.clear(); Stagecraft.endFight(); Lamps.reset(); Kennel.endFight(); raid.lunges = []; raid.eggs = null; raid.rollers.clear(); raid.reels.clear(); player.reel = null;
     raid.sweeps.clear(); raid.edgeWarn = null; for (const p of raid.posts.values()) p.end = Math.min(p.end, now + 1);
     raid.doom.clear(); raid.lanterns = raid.lanterns.filter(l => l.last); for (const k of raid.knights.values()) k.gone = k.gone || now;
     if (msg.s === 'clear') raid.night = false;   // the Long Night lifts when he falls
@@ -2368,7 +2375,7 @@
   function wallEdge(label, was) {
     if (!raid) return;
     const quiet = raid.state !== 'live' || FX.muted;
-    const env = { bossId: raid.def.id, hard: raid.mode === 'hard', sound: !!SH };
+    const env = { bossId: raid.def.id, hard: hardish(raid.mode), sound: !!SH };
     if (was) {
       if (!quiet) WallFx.broke(raid.bossDraw, was, RAID_BOSS_SCALE, env); else WallFx.reset();
       raid.wallAt = null;
@@ -2585,6 +2592,13 @@
       }
     }
   });
+  // head marks (fight.js mark()): a sign over a hero's head, kept per hero and key until it ends or is taken away (raid.hmarks; raid.marks is the party's waymarks)
+  Net.on('hmark', msg => { if (raid) raid.hmarks.set(msg.pid + ':' + msg.key, { pid: msg.pid, key: msg.key, sym: msg.sym, n: msg.n, col: msg.col, start: now, end: msg.dur ? now + msg.dur : Infinity }); });
+  Net.on('hmarkx', msg => {
+    if (!raid) return;
+    if (msg.clear) { for (const [k, m] of [...raid.hmarks]) if (!msg.key || m.key === msg.key) raid.hmarks.delete(k); return; }
+    raid.hmarks.delete(msg.pid + ':' + msg.key);
+  });
   Net.on('teth', msg => {
     if (!raid) return;
     raid.tethers.set(msg.id, { a: msg.a, b: msg.b, kind: msg.kind, len: msg.len, tag: msg.tag, start: now, end: now + msg.dur });
@@ -2698,7 +2712,7 @@
   Net.on('bcastend', msg => {
     if (!raid) return;
     if (raid.cast && raid.cast.name === msg.name && now < raid.cast.start + raid.cast.dur) { raid.cast.dur = Math.max(0.01, now - raid.cast.start); raid.cast.goal = null; }
-    if (!(raid.def.id === 'skitterra' && raid.mode === 'hard')) BOSS_VFX.cocoonEnd(raid.bossDraw, !!msg.ok);   // (Hard's Metamorphosis bursts the cocoon on its own beat: roomev 'metamorph' below)
+    if (!(raid.def.id === 'skitterra' && hardish(raid.mode))) BOSS_VFX.cocoonEnd(raid.bossDraw, !!msg.ok);   // (Hard's Metamorphosis bursts the cocoon on its own beat: roomev 'metamorph' below)
   });
   // the room: props and floor state (the whole list), a prop chipped / broken / slammed into, and room moments
   Net.on('props', msg => { if (raid) ArenaView.roomProps(raid.room, msg, now); });
@@ -3026,7 +3040,7 @@
   }
   // ---- town life: the townsfolk, unlock moments and feasts (town-life.js)
   TownLife.init({
-    beaten: townBeaten, heat: id => HARDPLUS.heatOf(id),   // (heat: the best Hard+ heat on a boss, for the flame on its trophy)
+    beaten: townBeaten, heat: id => HARDPLUS.heatOf(id), extreme: id => Save.extremeBeaten(id),   // (heat: the best Hard+ heat on a boss, for the flame on its trophy)
     hero: () => (player.cls ? player.cls.id : null),
     role: () => (player.cls ? player.cls.role : null),
     player,
@@ -4140,7 +4154,7 @@
     // things that shelter from Gale Slam: posts, and rods waiting for their bolt
     const covers = [...raid.posts.values()].filter(p => now < p.end).map(p => ({ x: p.x, y: p.y }));
     for (const tg of raid.tgs.values()) if (tg.tag === 'rod' && tg.gone == null) covers.push({ x: tg.live.x, y: tg.live.y });
-    const tellEnv = { tgs: raid.tgs, boss: bd, bossId: raid.def.id, entById, hard: raid.mode === 'hard', pol: raid.pol, units, covers, props: raid.room.props, room: raid.room, doom: raid.doom, lanterns: raid.lanterns, knights: raid.knights, party: raid.party };
+    const tellEnv = { tgs: raid.tgs, boss: bd, bossId: raid.def.id, entById, hard: hardish(raid.mode), pol: raid.pol, units, covers, props: raid.room.props, room: raid.room, doom: raid.doom, lanterns: raid.lanterns, knights: raid.knights, party: raid.party };
     // the floor effects (scorch, frost, lingering pools, dash afterimages) go under the telegraphs' fills, so a lingering
     // effect never sits over a mechanic; the telegraph rims are drawn over both again below (BossTells.rims)
     FX.draw(ctx, true);
@@ -4160,7 +4174,7 @@
     const tAdd = !lt && lastEnemy && raid.adds.get(lastEnemy.id);
     if (lt) drawReticle(lt);
     else if (tAdd) ellipse(ctx, tAdd.x, tAdd.y + 4, 34, 26, 0, null, rgba('#ff6a5a', 0.5 + Math.sin(now * 6) * 0.2), 2);
-    for (const a of raid.adds.values()) { const o = a.link && raid.adds.get(a.link); if (o && a.id < o.id && raid.mode === 'hard') ArenaView.addBeam(ctx, a, o, now); }
+    for (const a of raid.adds.values()) { const o = a.link && raid.adds.get(a.link); if (o && a.id < o.id && hardish(raid.mode)) ArenaView.addBeam(ctx, a, o, now); }
     drawFocusMark();
     drawChest();
     BossTells.rims(ctx, raid.tgs, now, tellEnv);   // telegraph rims stay readable over the floor effects
@@ -4228,6 +4242,15 @@
       if (!on && st.wrapAt) { st.wrapAt = 0; if (e && st.alive) BOSS_VFX.silkFree(e); }
       if (on && e) ArenaView.cocoon(ctx, e.x, e.y - (e.lift || 0), now - st.wrapAt, now);
     }
+    if (raid.hmarks.size) {
+      const seen = new Map();   // (two marks on one hero sit side by side)
+      for (const [k, m] of raid.hmarks) {
+        if (now >= m.end) { raid.hmarks.delete(k); continue; }
+        const e = entById(m.pid), st = raid.party.get(m.pid); if (!e || (st && !st.alive)) continue;
+        const i = seen.get(m.pid) || 0; seen.set(m.pid, i + 1);
+        ArenaView.headMark(ctx, e.x + i * 34, e.y - (e.lift || 0) - 96 * heroScale() / HERO_SCALE, m, m.end === Infinity ? 1 : (m.end - now) / Math.max(0.1, m.end - m.start), now);
+      }
+    }
     for (const [id, d] of raid.doom) {
       const e = entById(id); if (!e) continue;
       ArenaView.doomMark(ctx, e.x, e.y - (e.lift || 0) - 92 * heroScale() / HERO_SCALE, (d.end - now) / Math.max(0.1, d.end - d.start), now);
@@ -4237,7 +4260,7 @@
     BossTells.drawReels(ctx, raid.reels, now, tellEnv);
     for (const th of raid.tethers.values()) {
       const a = entById(th.a), b = entById(th.b);
-      if (a && b && now <= th.end) ArenaView.tether(ctx, a, b, th, now, raid.mode === 'hard');
+      if (a && b && now <= th.end) ArenaView.tether(ctx, a, b, th, now, hardish(raid.mode));
     }
     Stagecraft.drawOver(ctx, now, scEnv);
     Lamps.drawOver(ctx, now, { entById, me: Net.id, party: units });
@@ -5066,18 +5089,21 @@
     const bots = raidFill ? pickBots(humans) : [];
     const canStart = Net.isHost && !!player.cls;
     const bossDef = BOSSES.find(b => b.id === el.dataset.boss) || BOSSES[0], hardOk = hardOpen(bossDef);
+    const extremeOk = extremeOpen(bossDef);
+    if (!extremeOk && raidMode === 'extreme') raidMode = hardOk ? 'hard' : 'normal';
     if (!hardOk && raidMode === 'hard') raidMode = 'normal';
     const hpOpen = HARDPLUS.eligible(bossDef.id) && (unlockAll || road.hard(bossDef.id)), hpSel = hpOpen ? HARDPLUS.pickOf(bossDef.id) : {}, hpHeat = raidMode === 'hard' ? HARDPLUS.heat(hpSel) : 0;   // (Hard+: hardplus.js)
     const why = !Net.isHost ? 'Only the host can start the raid.' : !player.cls ? 'Pick a hero first.' : '';
     const extra = [...remotes.values()].filter(r => r.cls).length + (player.cls ? 1 : 0) > 4 ? '<p class="raid-note">Only the first four heroes go in.</p>' : '';
-    const recs = ['normal', 'hard'].map(m => {
+    const recs = ['normal', 'hard', 'extreme'].map(m => {
       const r = progOf(bossDef.id, m);
-      return r.n ? `<p><b>${m === 'hard' ? 'Hard' : 'Normal'}</b><span>${r.fast ? `Best clear ${clock(r.fast.time)}` : r.best ? `Best ${r.best.pct.toFixed(1)}%` : ''}</span><em>${r.n} ${r.n === 1 ? 'pull' : 'pulls'}</em></p>` : '';
+      return r.n ? `<p><b>${modeLabel(m)}</b><span>${r.fast ? `Best clear ${clock(r.fast.time)}` : r.best ? `Best ${r.best.pct.toFixed(1)}%` : ''}</span><em>${r.n} ${r.n === 1 ? 'pull' : 'pulls'}</em></p>` : '';
     }).join('');
     el.innerHTML = `
       <div class="mode-pick">
         <button data-mode="normal" class="${raidMode === 'normal' ? 'on' : ''}"><b>Normal</b><small>Every attack is telegraphed on the floor.</small></button>
         <button data-mode="hard" class="${raidMode === 'hard' ? 'on' : ''}"${hardOk ? '' : ' disabled'}><b>Hard</b><small>${hardOk ? 'Faster and deadlier, with attacks Normal never uses.' : hardWhy(bossDef)}</small></button>
+        <button data-mode="extreme" class="${raidMode === 'extreme' ? 'on' : ''}"${extremeOk ? '' : ' disabled'}><b>Extreme</b><small>${extremeOk ? 'Hard, with attacks Hard never uses.' : extremeWhy(bossDef)}</small></button>
       </div>
       ${HARDPLUS.panelHtml(bossDef, hpSel, hpOpen, raidMode === 'hard')}
       ${recs ? `<div class="raid-rec">${recs}</div>` : ''}
@@ -5085,7 +5111,7 @@
       <div class="raid-roster">${humans.map(h => `<span style="--c:${ROLES[h.role].color}">${escapeHtml(h.name)}<small>${CLASSES.find(c => c.id === h.cls).name}</small></span>`).join('')}${
         bots.map(id => { const c = CLASSES.find(x => x.id === id); return `<span class="bot" style="--c:${ROLES[c.role].color}">Bot<small>${c.name}</small></span>`; }).join('')}</div>
       ${extra}
-      <button class="cta" ${canStart ? '' : 'disabled'}>${canStart ? `Start raid · ${raidMode === 'hard' ? (hpHeat ? 'Hard+ ' + hpHeat : 'Hard') : 'Normal'}` : why}</button>`;
+      <button class="cta" ${canStart ? '' : 'disabled'}>${canStart ? `Start raid · ${raidMode === 'extreme' ? 'Extreme' : raidMode === 'hard' ? (hpHeat ? 'Hard+ ' + hpHeat : 'Hard') : 'Normal'}` : why}</button>`;
     el.querySelectorAll('.mode-pick button:not([disabled])').forEach(b => b.addEventListener('click', () => { raidMode = b.dataset.mode; renderRaidSetup(el); }));
     el.querySelector('.fill input').addEventListener('change', e => { raidFill = e.target.checked; renderRaidSetup(el); });
     HARDPLUS.wirePanel(el, bossDef, hpSel, () => renderRaidSetup(el), () => { if (hardOk) { raidMode = 'hard'; renderRaidSetup(el); } });
@@ -5178,7 +5204,7 @@
   Net.on('road', m => {
     if (Net.isHost || !m || !m.b || typeof m.b !== 'object') return;
     const o = {};
-    for (const b of ROAD_BOSSES) { const v = m.b[b.id]; if (Array.isArray(v)) o[b.id] = [v[0] ? 1 : 0, v[1] ? 1 : 0]; }
+    for (const b of ROAD_BOSSES) { const v = m.b[b.id]; if (Array.isArray(v)) o[b.id] = [v[0] ? 1 : 0, v[1] ? 1 : 0, v[2] ? 1 : 0]; }
     hostRoad = o;
     SvPortal.sync();   // (the fourth portal follows the host's road)
     if (scene !== 'arena') townObjective();

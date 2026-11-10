@@ -137,6 +137,8 @@ function host(px, from = 1, extra = {}) {
   check(P.sane({ boss: 'grubnak', mode: 'hard', from: 2, px: { slow: 0.5, cantDie: 1 } }).px.slow === 0.5, 'a request keeps a valid slow');
   check(P.sane({ boss: 'grubnak', mode: 'hard', from: 2, px: { slow: 0.1 } }).px.slow === 1, 'a made-up slow becomes full speed');
   check(P.sane({ boss: 'grubnak', mode: 'x', from: 2 }).mode === 'normal', 'a made-up mode becomes Normal');
+  check(P.sane({ boss: 'grubnak', mode: 'extreme', from: 2 }).mode === 'extreme', 'a request may ask for Extreme');
+  check(P.sane({ boss: 'sovereign', mode: 'extreme', from: 2 }, true).mode === 'normal' && P.sane({ boss: 'grubnak', mode: 'Extreme', from: 2 }).mode === 'normal', 'the Ultimate stays on one difficulty and the mode name is exact');
   check(P.sane({ boss: 'grubnak', from: 9 }) === null && P.sane({ boss: 'grubnak', from: 0 }) === null && P.sane({ boss: 'nope', from: 1 }) === null, 'a bad phase or boss is refused');
   check(P.sane({ boss: 'titan', from: 1 }, true) === null && P.sane({ boss: 'titan', from: 1 }, false) !== null, "the host refuses a fight that is not open on its road");
   check(P.sane({ boss: 'sovereign', mode: 'hard', from: 2 }, true).mode === 'normal', 'the Ultimate has one difficulty');

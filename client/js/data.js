@@ -189,6 +189,7 @@ const BOSSES = [
       { name: 'Order Up!', desc: 'Plates on the counter. Every order must be collected: an empty plate is {b:16100/15250} to everyone.' },
       { name: 'Simmer', desc: 'Halfway through, the whole kitchen comes to a boil, {b:14950/14150} a ring.' },
       { name: 'Hard: Belly Flop, Cleaver Toss, Flambé', desc: 'He stops holding back. He throws his weight around, throws his cleavers, and sets the brandy alight.' },
+      { name: 'Extreme: Table Numbers, Kitchen Staff, Flashover', desc: 'Every plate has a name on it, the kitchen sends help, and one of you carries the fire.' },
     ],
   },
   {
@@ -202,6 +203,7 @@ const BOSSES = [
       { name: 'Silk Wrap', desc: 'A {b:33800/28100} blow. Her favourite holds very still afterwards.' },
       { name: 'Tightening Web', desc: 'Halfway through, the edges of her web grow sticky.' },
       { name: 'Hard: Egg Sacs, Fang Rush, Spinneret Volley', desc: 'Her clutch is laid in the open, she runs her prey down herself, and silk falls like rain.' },
+      { name: 'Extreme: Cat\'s Cradle, Lure, Imprint', desc: 'She ties you to each other, hunts where you lead her, and her young choose whom to follow.' },
     ],
   },
   {
@@ -215,6 +217,7 @@ const BOSSES = [
       { name: 'The Storm', desc: '{b:300/360} to everyone every 4 s. It never stops, and it only grows.' },
       { name: 'Eye of the Storm', desc: 'In the second half, the sky closes in.' },
       { name: 'Hard: Chain Lightning, Ball Lightning, Skyfall', desc: 'The storm leaps from hero to hero, wanders the summit on its own, and at last the sky itself comes down.' },
+      { name: 'Extreme: Polarity Shift, Conduction, Split Current', desc: 'Charges turn over, the bolt picks its own road through you, and one strike falls two ways.' },
     ],
   },
   {
@@ -228,6 +231,7 @@ const BOSSES = [
       { name: 'Barrow Bells', desc: 'Every bell must be rung. Unrung bells toll for everyone.' },
       { name: 'The Long Night', desc: 'At the end, the lanterns go out, and the moon is setting.' },
       { name: 'Hard: Royal Audience, Funeral March, Gravebind', desc: 'The king will be faced, his dead march from wall to wall, and the grave takes the living two at a time.' },
+      { name: 'Extreme: Contempt of Court, The Sentence, Roll Call', desc: 'A kneeling knight answers backwards, the court passes sentence, and the king calls you by number.' },
     ],
   },
   // ---- set 2: the wild realm beyond the road (docs/plans/2026-10-set-2-bosses.md). `set` groups the bosses whose Hard opens together (main.js hardUnlocked).
@@ -240,6 +244,7 @@ const BOSSES = [
       { name: 'The Roost', desc: 'It perches high above the crater and shakes its burning scales loose.' },
       { name: 'The Ember Heart', desc: 'At the end, the crater floor burns and shrinks.' },
       { name: 'Hard: Wingbeat, Cinder Rain, Heart Flare', desc: 'Its wings push the air along its flight, embers fall like rain, and the heart flares at the weakest.' },
+      { name: 'Extreme: Marked Prey, Ember Devils, Molten Trail', desc: 'It lands on whom it chooses, fire stands up where you stood, and one of you is hunted along the rim.' },
     ],
   },
   {
@@ -251,6 +256,7 @@ const BOSSES = [
       { name: 'The Long Night', desc: 'The aurora dims, and the giant swings in great slow arcs.' },
       { name: 'The Avalanche', desc: 'At the end, the plateau tips and the snow runs down in lanes.' },
       { name: "Hard: Glacial Stomp, Breath of Winter, Titan's Grip", desc: 'The ground rings with shards, his breath freezes the floor before it shatters, and his fist closes on a hero.' },
+      { name: 'Extreme: Two Winters, Ice Tomb, Sunk Towers', desc: 'Two colds at once, heroes sealed in ice that only he can break, and work to do on the drowned sheets.' },
     ],
   },
   {
@@ -262,6 +268,7 @@ const BOSSES = [
       { name: 'The Binding', desc: 'He calls up elementals and the circles wake. Each belongs in the circle of its own element.' },
       { name: 'Convergence', desc: 'At the end, every circle is lit at once, and where two meet, they react.' },
       { name: 'Hard: Counterspell, Rune Swap, Arcane Mark', desc: 'His last spell comes again from the far side of the room, the runes change hands, and a hero\'s own elemental rises where they stood.' },
+      { name: 'Extreme: Spellweave, Runic Clock, Cascading Convergence', desc: 'He holds three spells before he casts one, the runes keep different hours, and the circles fall in turn.' },
     ],
   },
   {
@@ -273,6 +280,7 @@ const BOSSES = [
       { name: 'The Submerge', desc: 'She dives and the temple floods. Heads rise at the columns, one by one.' },
       { name: "The Mother's Heart", desc: 'At the end, every head she has had strikes again, in the order you cut them.' },
       { name: "Hard: Regrowth, Tidal Dance, Hydra's Gaze", desc: 'A missed stump grows an extra head, two heads send their tides across each other, and the whole temple is watched.' },
+      { name: 'Extreme: Scalding, Entwined Necks, Breach', desc: 'A stump wants searing twice, two heads trade their breath, and she comes up out of the pool.' },
     ],
   },
   // ---- set 3: the Fallen Star (docs/plans/2026-10-set-3-pitches.md)
@@ -285,6 +293,7 @@ const BOSSES = [
       { name: 'The Lanterns', desc: 'The old stone lanterns of the pass give shelter, once each.' },
       { name: 'The Vigil', desc: 'He kneels in the snow, and the cold of the pass comes to him.' },
       { name: 'Hard: Overwhet, False Stance, Returning Parting, Comet Volley', desc: 'His edge holds more than it should, his stance can lie, his dance comes back, and his dash comes three times.' },
+      { name: 'Extreme: The Circle, Gale Through the Pass, Three Lessons', desc: 'He names one of you for a duel, the wind takes the pass end to end, and each of you is given a lesson.' },
     ],
   },
   {
@@ -296,6 +305,7 @@ const BOSSES = [
       { name: 'The Tide Rises', desc: 'Halfway through the bout, the sea comes for the arena.' },
       { name: 'The Tidewrought', desc: 'What rises from the water has his reach and his fists, grown huge.' },
       { name: 'Hard: Twin Wheels, Double Grip, Riposte, Riptide', desc: 'Two wheels cross, both hands close, a caught wheel is kicked back, and the waves come back twice.' },
+      { name: 'Extreme: Stand Your Ground, Crowd\'s Choice, Carry-through', desc: 'One of you turns the wheel, the crowd picks who may catch it, and a caught wheel does not stop.' },
     ],
   },
   {
@@ -307,6 +317,7 @@ const BOSSES = [
       { name: 'Fourfold Bloom', desc: 'Four petals open around him, and they do not stay still.' },
       { name: 'The Swallowing', desc: 'Halfway through, the Hunger takes the whole grove.' },
       { name: 'Hard: Twin Seed, Hungering Dark, Deeper Roots, Last Gasp', desc: 'Seeds come in pairs, the holes pull, he grows older limbs, and a broken one strikes once more.' },
+      { name: 'Extreme: Greenseed, Take Root, Grafting', desc: 'One seed mends what another eats, the pull spares only the rooted, and a broken limb passes on what it knew.' },
     ],
   },
   {
@@ -318,6 +329,7 @@ const BOSSES = [
       { name: 'Grace Withdrawn', desc: 'For a moment, nobody has anything left.' },
       { name: 'The Starwyrm', desc: 'The constellations come loose.' },
       { name: 'Hard: Mirrored Wake, Second Coil, Chorus of the Fallen, Dark Ember', desc: 'Every dance twice, the serpent returns, old foes dance with him, and the dark can be pushed back.' },
+      { name: 'Extreme: Carried Shadow, Fallen Stars, The Star\'s Pull', desc: 'One of you carries a shadow, stars fall where you stand, and the meteor draws everything toward it.' },
     ],
   },
 ];

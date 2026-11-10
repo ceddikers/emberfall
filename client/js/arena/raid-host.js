@@ -75,7 +75,7 @@ class RaidHost {
     this.pull = new PullLog();   // (the pull review: PullLog above)
     this.seen = new Map();       // what the sim has told the clients that still stands (note() below), for a rejoining or resyncing player's snapshot
     this.px = opts.practiceFrom && opts.px ? opts.px : null; this.practiceFrom = opts.practiceFrom || 0;
-    this.sim = new FightSim(this.def, this.mode, () => this.allPlayers(), msg => this.onSimMsg(msg), rngSeed, { hpPct: this.bond.hp, waitPull: !!opts.waitPull, practiceFrom: opts.practiceFrom || 0, noEnrage: !!(this.px && this.px.noEnrage), cantDie: !!(this.px && this.px.cantDie), mods: opts.mods });   // (mods: Hard+, hardplus.js)
+    this.sim = new FightSim(this.def, this.mode, () => this.allPlayers(), msg => this.onSimMsg(msg), rngSeed, { hpPct: this.bond.hp, waitPull: !!opts.waitPull, practiceFrom: opts.practiceFrom || 0, noEnrage: !!(this.px && this.px.noEnrage), cantDie: !!(this.px && this.px.cantDie), mods: opts.mods, dance: opts.dance });   // (mods: Hard+, hardplus.js)
     this.lastBotBroadcast = -1;
   }
 
@@ -363,8 +363,8 @@ class RaidHost {
       posture: sim.postureOn ? sim.kenPack() : null,   // (a Kenseier in the party: [p, max, break seconds left, held full, recovering, builder], for the bots: fight.js KENSEI_HOST)
       bossCast: b.cast ? { name: b.cast.name, left: b.cast.end - sim.t } : null,
       mechs: [...sim.mechs.values()], puddles: sim.puddles, players,
-      bossId: sim.def.id, dmgScale: sim.scale.dmg * (sim.hard ? sim.def.hardDmg ?? 1.25 : sim.def.normalDmg ?? 1), mitLog: this.mitLog,   // (what a telegraph's raw dmg comes to on a player, before mitigation)
-      adds: [...sim.adds.values()], tethers: [...sim.tethers.values()], zones: sim.zones,
+      bossId: sim.def.id, dmgScale: sim.scale.dmg * sim.dmgMult(), hard: sim.hard, extreme: sim.extreme, mitLog: this.mitLog,   // (what a telegraph's raw dmg comes to on a player, before mitigation)
+      adds: [...sim.adds.values()], tethers: [...sim.tethers.values()], marks: [...sim.marks.values()], zones: sim.zones,
       rollers: [...sim.rollers.values()], rollPre: (this.rollPre || []).filter(r => r.end > sim.t), lungePlan: (this.lungePlan || []).filter(e => e.at > sim.t - 0.2), tauntAt: id => (this.tauntAt || {})[id] ?? -99, reels: [...sim.reels.values()], sweeps: [...sim.sweeps.values()],
       // Volkar: everyone's charge, the rods' posts, and where the closing wall is about to jump
       polarity: sim.polarity || null, posts: (sim.posts || []).filter(c => c.end > sim.t), edgeNext: sim.edgeNext || null,
@@ -520,6 +520,9 @@ class RaidHost {
       bot.a = Math.atan2(b.y - bot.y, b.x - bot.x);
       // Royal Gaze: turn your back on him just before it lands (Royal Audience wants the opposite: keep facing him)
       if (view.mechs.some(m => m.type === 'gaze' && m.resolveAt - this.sim.t < 1.1) && !view.mechs.some(m => m.type === 'audience' && m.resolveAt - this.sim.t < 1.1)) bot.a += Math.PI;
+      // Roll Call (the Hollow King on Extreme, tag 'rollcall', who = the hero called): only the hero called faces him, everyone else turns away
+      const rc = view.mechs.find(m => m.tag === 'rollcall' && m.resolveAt - this.sim.t < 1.1);
+      if (rc) bot.a = Math.atan2(b.y - bot.y, b.x - bot.x) + (rc.who === bot.id ? 0 : Math.PI);
       bot.actor.update();
       if (bot.actor.taunt) this.botTaunt(bot, view);
       // the Ultimate (T): BotAI.ult says when (the party's burst, a check, a buster, a raidwide)

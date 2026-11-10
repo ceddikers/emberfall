@@ -54,14 +54,15 @@ const Pastimes = (() => {
 
   // ---------------------------------------------------------------- feats and titles
   // (a clear counts from the fight's own mark too: the event comes before main.js writes the hero's record)
-  const anyClear = (boss, mode) => (mode ? !!st().marks[`clear:${boss}:${mode}`] : !!(st().marks[`clear:${boss}:normal`] || st().marks[`clear:${boss}:hard`])) || Object.values(Save.get('heroes') || {}).some(h => {
+  const MODE_NAME = { normal: 'Normal', hard: 'Hard', extreme: 'Extreme' };
+  const anyClear = (boss, mode) => (mode ? !!st().marks[`clear:${boss}:${mode}`] : !!(st().marks[`clear:${boss}:normal`] || st().marks[`clear:${boss}:hard`] || st().marks[`clear:${boss}:extreme`])) || Object.values(Save.get('heroes') || {}).some(h => {
     const c = h && h.clears && h.clears[boss];
-    return c && (mode ? (c[mode] | 0) > 0 : (c.normal | 0) + (c.hard | 0) > 0);
+    return c && (mode ? (c[mode] | 0) > 0 : (c.normal | 0) + (c.hard | 0) + (c.extreme | 0) > 0);
   });
-  // the heroes (class ids) that have beaten a boss on Hard: from the save's records, and from this tab's own marks
+  // the heroes (class ids) that have beaten a boss on Hard (or Extreme, which is Hard and more): from the save's records, and from this tab's own marks
   function hardClasses() {
     const out = new Set();
-    for (const [id, h] of Object.entries(Save.get('heroes') || {})) if (h && h.clears && Object.values(h.clears).some(c => c && (c.hard | 0) > 0)) out.add(id);
+    for (const [id, h] of Object.entries(Save.get('heroes') || {})) if (h && h.clears && Object.values(h.clears).some(c => c && ((c.hard | 0) > 0 || (c.extreme | 0) > 0))) out.add(id);
     for (const k of Object.keys(st().marks)) if (k.startsWith('hardcls:')) out.add(k.slice(8));
     return out;
   }
@@ -77,14 +78,14 @@ const Pastimes = (() => {
   function trialCount() { let n = 0; for (const h of Object.values(Save.get('heroes') || {})) n += Object.keys((h && h.trials) || {}).length; return n; }
   // a count of heroes: n, or 'all' for every hero in the roster (it grows as classes are added)
   const need = n => (n === 'all' ? (typeof CLASSES !== 'undefined' ? CLASSES.length : 19) : n);
-  function heroesCleared() { return Object.values(Save.get('heroes') || {}).filter(h => h && h.clears && Object.values(h.clears).some(c => c && (c.normal || c.hard))).length; }
+  function heroesCleared() { return Object.values(Save.get('heroes') || {}).filter(h => h && h.clears && Object.values(h.clears).some(c => c && (c.normal || c.hard || c.extreme))).length; }
   function maxRarity() { let r = -1; for (const i of deps.items()) { const it = ITEMS[i.key]; if (it && it.rarity > r) r = it.rarity; } for (const k of Object.keys(st().seenItems)) { const it = ITEMS[k]; if (it && it.rarity > r) r = it.rarity; } return r; }
   function met(c) {
     const s = st();
     switch (c && c.type) {
       case 'clear': return c.boss ? anyClear(c.boss, c.mode) : BOSS_IDS(c.set).some(b => anyClear(b, c.mode));
       case 'clearAll': return BOSS_IDS(c.set || 1).every(b => anyClear(b, c.mode));
-      case 'clearNoDeaths': return (c.boss ? [c.boss] : BOSS_IDS(c.set)).some(b => { const f = s.flawless[b]; return !!f && !!(c.mode ? f[c.mode] : Object.values(f).some(Boolean)); });
+      case 'clearNoDeaths': return (c.boss ? [c.boss] : BOSS_IDS(c.set)).some(b => { const f = s.flawless[b]; return !!f && !!(c.mode ? f[c.mode] || (c.mode === 'hard' && f.extreme) : Object.values(f).some(Boolean)); });
       case 'mark': return !!s.marks[c.k];
       case 'count': return stat(c.k) >= c.n;
       case 'hardRole': return hardRoles().has(c.role);
@@ -151,7 +152,7 @@ const Pastimes = (() => {
   function recordBest(d) {
     const secs = Number(d.secs);
     if (!d.boss || !d.cls || !(secs > 0)) return;
-    const s = st(), key = d.boss + ':' + (d.mode === 'hard' ? 'hard' : 'normal'), at = Date.now();
+    const s = st(), key = d.boss + ':' + (d.mode === 'extreme' ? 'extreme' : d.mode === 'hard' ? 'hard' : 'normal'), at = Date.now();
     const grp = s.bests[key] = s.bests[key] || {}, b = grp[d.cls] = grp[d.cls] || {};
     if (d.clear && (!b.t || secs < b.t)) { b.t = Math.round(secs * 10) / 10; b.ta = at; }
     if (secs >= BEST_MIN_SECS) {
@@ -296,7 +297,7 @@ const Pastimes = (() => {
       if (s.bounty.done[b.id] || (s.bounty.prog[b.id] || 0) >= (g.n || 1)) continue;
       let hit = false;
       if (kind === 'clear') {
-        const bossOk = !g.boss || g.boss === d.boss, modeOk = !g.mode || g.mode === d.mode;
+        const bossOk = !g.boss || g.boss === d.boss, modeOk = !g.mode || g.mode === d.mode || (g.mode === 'hard' && d.mode === 'extreme');   // (an Extreme clear is a Hard clear and more)
         if (g.type === 'clear') hit = bossOk && modeOk;
         if (g.type === 'clearNoDeaths') hit = bossOk && !d.deaths;
         if (g.type === 'clearUnder') hit = bossOk && d.secs <= g.secs;
@@ -539,10 +540,10 @@ const Pastimes = (() => {
     const all = typeof BOSSES !== 'undefined' ? [...BOSSES, ...(typeof ULTIMATE_BOSS !== 'undefined' ? [ULTIMATE_BOSS] : []), ...(typeof SECRET_BOSSES !== 'undefined' ? SECRET_BOSSES : [])] : [];
     const classes = typeof CLASSES !== 'undefined' ? CLASSES : [];
     const seen = m => all.filter(b => s.bests[b.id + ':' + m] && Object.keys(s.bests[b.id + ':' + m]).length);
-    const toggle = `<nav class="pt-tabs pt-modes">${['normal', 'hard'].map(m => `<button type="button" data-bmode="${m}" class="${bestMode === m ? 'on' : ''}">${m === 'hard' ? 'Hard' : 'Normal'}</button>`).join('')}</nav>`;
-    if (!seen('normal').length && !seen('hard').length) return '<p class="pt-note">Your fastest clears and your best damage and healing per second will be kept here, per boss and per hero. Only real pulls count: practice runs, trials and bouts are not written down.</p>';
+    const toggle = `<nav class="pt-tabs pt-modes">${['normal', 'hard', 'extreme'].map(m => `<button type="button" data-bmode="${m}" class="${bestMode === m ? 'on' : ''}">${MODE_NAME[m]}</button>`).join('')}</nav>`;
+    if (!seen('normal').length && !seen('hard').length && !seen('extreme').length) return '<p class="pt-note">Your fastest clears and your best damage and healing per second will be kept here, per boss and per hero. Only real pulls count: practice runs, trials and bouts are not written down.</p>';
     const bosses = seen(bestMode);
-    if (!bosses.length) return toggle + `<p class="pt-note">Nothing on ${bestMode === 'hard' ? 'Hard' : 'Normal'} yet.</p>`;
+    if (!bosses.length) return toggle + `<p class="pt-note">Nothing on ${MODE_NAME[bestMode] || 'Normal'} yet.</p>`;
     const cell = (v, at, what, fmt, top) => (v ? `<td class="${top ? 'top' : ''}" data-tip="${esc(what)}: ${esc(fmt(v))}${at ? ' · ' + esc(day(at)) : ''}">${fmt(v)}</td>` : '<td class="none">-</td>');
     return toggle + `<p class="pt-note">Real pulls only. A hero's damage and healing per second count from a pull of a minute or more.</p>` + bosses.map(b => {
       const grp = s.bests[b.id + ':' + bestMode], ids = classes.filter(c => grp[c.id]);
@@ -604,7 +605,7 @@ const Pastimes = (() => {
     const label = Scoring.LABEL;
     return `<p class="pt-note">Contribution points by role, out of 100. Your last ${FIGHTS_KEPT} fights.</p><div class="pt-fights">${list.map(f => {
       const when = new Date(f.at || 0), mv = f.mvp >= 0 && f.p[f.mvp] ? f.p[f.mvp][0] : '';
-      return `<details class="pt-fight" data-at="${f.at}"${openFight === String(f.at) ? ' open' : ''}><summary><b>${esc(bossName(f.b))}</b><span>${f.m === 'hard' ? 'Hard' : 'Normal'} · ${f.c ? 'Cleared' : 'Wiped'} · ${mmss(f.t)}</span><em>${f.at ? when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}</em></summary><div class="pf-body">${f.p.map(([name, cls, role, total, pts, av, de], i) => `
+      return `<details class="pt-fight" data-at="${f.at}"${openFight === String(f.at) ? ' open' : ''}><summary><b>${esc(bossName(f.b))}</b><span>${MODE_NAME[f.m] || 'Normal'} · ${f.c ? 'Cleared' : 'Wiped'} · ${mmss(f.t)}</span><em>${f.at ? when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}</em></summary><div class="pf-body">${f.p.map(([name, cls, role, total, pts, av, de], i) => `
         <div class="pf-p"><i style="background:${(typeof ROLES !== 'undefined' && ROLES[role] ? ROLES[role].color : '#999')}"></i><b>${esc(name)}${i === f.mvp ? crown : ''}<em>${esc((typeof CLASSES !== 'undefined' && CLASSES.find(c => c.id === cls) || {}).name || '')}</em></b><strong>${total}</strong>
           <p>${Object.entries(pts).map(([k, v]) => `<u>${label[k] || k}<b>${v}</b></u>`).join('')}${av ? `<u class="neg">Avoidable hits<b>-${Math.min(18, av * Scoring.PENALTY.avoid.each)}</b></u>` : ''}${de ? `<u class="neg">Deaths<b>-${Math.min(21, de * Scoring.PENALTY.deaths.each)}</b></u>` : ''}</p></div>`).join('')}
         ${f.aw && f.aw.length ? `<p class="pf-aw">${f.aw.map(([k, i]) => `<span>${esc(AWARD_NAMES[k] || k)}<b>${esc(f.p[i] ? f.p[i][0] : '')}</b></span>`).join('')}</p>` : ''}</div></details>`;

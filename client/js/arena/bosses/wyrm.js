@@ -30,8 +30,13 @@
 //   Cinder Rain: embers fall across the crater; each leaves a small molten pool.
 //   Heart Flare: a stack on a random hero, then a spread right after it.
 //   Aftershock rings twice (the second ring closes in on his feet) and Cinder Run adds a fourth landing.
-// Hard also shuffles the order of its middle sets in every act each pull (mix() keeps the tank and healer beats even), draws whether
-// the Flare falls after the first or the second burn, adds a third Heart Burn, and the outer ring boils further in.
+// Hard draws one of three fixed dances per pull (f.dance): dance 0 is the written order, dances 1 and 2 open each act's middle sets on a different set
+// (mix() keeps the tank and healer beats even), and the dance sets whether the Flare falls after the first or the second burn and the Cinder Run's order of
+// landings; Hard also adds a third Heart Burn, and the outer ring boils further in.
+// The revamp (2026-11-10): Cinder Feast is a party tankbuster (a ring on the tank, three bites, four on Hard), Twin Breath marks the two it aims at, Act II
+// opens on Skyward and Act IV on The Tyrant Wakes. Extreme (f.extreme) adds Marked Prey (landings fall on marked heroes: Searing Descent and the Cinder Run),
+// Ember Devils (a whirl under each hero that a touch sets off: with the first Dragonfall and alone in Act III) and Molten Trail (one hero hunted by five
+// pools while the rest do the Feast), and runs the written order.
 
 // Hard's damage multiplier (fight.js default 1.25). Hard's table is a notch below Normal's on the moves both have, so with 1.7 each
 // of those hits lands about 1.1x Normal's. The floor fire, the whelps, the autos and Hard's own moves are scaled back by 1.25 / HD
@@ -39,11 +44,12 @@
 const HD = 1.7;
 const WYRM = {
   id: 'wyrm', name: 'Vhalgrath', title: 'Tyrant of the Cinder Peaks',
-  hp: { normal: 6120000, hard: 6650000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 5200000 / 5430000)
+  hp: { normal: 6120000, hard: 6650000, extreme: 7545000 },   // (Extreme: Hard's plus about 6%, to be tuned)   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 5200000 / 5430000)
   normalDmg: 0.92,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 0.84; Normal's damage multiplier, fight.js default 1: 2026-10-27, tuned for a human party rather than perfect bots, CLAUDE.md)
-  hardDmg: HD * 1.038,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was HD * 0.88; 2026-10-27: every Hard hit 12% lighter, tuned for a human party rather than perfect bots, CLAUDE.md)
-  autoDmg: { normal: 2300, hard: Math.round(2100 * 1.25 / HD) },
-  enrage: { normal: 582, hard: 622 },   // the cast starts here and lands 8 s later (9:50 / 10:30)
+  hardDmg: HD * 1.038 * 1.1,   // (2026-11-11: Hard brought into line with its set, the user's call; was HD * 1.038)   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was HD * 0.88; 2026-10-27: every Hard hit 12% lighter, tuned for a human party rather than perfect bots, CLAUDE.md)
+  extremeDmg: HD * 1.038 * 1.18,   // (Extreme: Hard's, to be tuned)
+  autoDmg: { normal: 2300, hard: Math.round(2100 * 1.25 / HD), extreme: Math.round(2100 * 1.25 / HD) },
+  enrage: { normal: 582, hard: 622, extreme: 622 },   // the cast starts here and lands 8 s later (9:50 / 10:30)
   enrageName: 'Ashfall',
   vuln: 0.5,
   spawn: { x: 0, y: -60 },
@@ -60,16 +66,18 @@ const WYRM = {
       magma: H ? 11400 : 14700, feast: H ? 32100 : 42000, gust: H ? 3600 : 3500, pass: H ? 14500 : 19200, land: H ? 20600 : 25800, wing: H ? 4600 : 5400, slam: H ? 6600 : 7500,
       pounce: H ? 7600 : 10000, pounce2: H ? 5400 : 0, scale: H ? 12700 : 16500, boom: H ? 15100 : 18000, boil: H ? 10900 : 14300, scorch: H ? 15700 : 20300, burn: H ? 24800 : 27800, heart: H ? 9100 : 10500,
       rain: H ? 9100 : 10500, quake: H ? 11800 : 14000, flareStack: H ? 31000 : 30000, flareSpread: H ? 12500 : 13200, whelpHp: 30000, whelpBite: H ? 2300 : 2300, last: H ? 13400 : 14300,
+      devil: 5200, trail: 9600,   // (Extreme's Ember Devils burst and Molten Trail pools)
     };
     const K = H ? 1.06 : 1.15;          // tuning: every hit but the floor fire and the whelps, together
     const RAID_UP = 1.08;
     const EASE = { burn: 0.85, quake: 0.9, last: 0.85, boom: 0.9, flareStack: 0.85, flareSpread: 0.85, rain: 0.85, molten: 0.85, puddle: 0.85 };
-    const KEEP = ['molten', 'puddle', 'whelpBite', 'gust', 'wing', 'slam', 'rain', 'flareStack', 'flareSpread'];   // (floor fire, whelps and Hard's own moves keep what they hit before hardDmg went up)
+    const KEEP = ['molten', 'puddle', 'whelpBite', 'gust', 'wing', 'slam', 'rain', 'flareStack', 'flareSpread', 'devil', 'trail'];   // (floor fire, whelps and Hard's own moves keep what they hit before hardDmg went up)
     for (const k in dmg) if (k !== 'molten' && k !== 'puddle' && k !== 'whelpHp' && k !== 'whelpBite') dmg[k] = Math.round(dmg[k] * K);
     // Hard's party-wide hits (the Roar, the Crater Boils, the Heart's pulse) hit a notch harder and the single-target and floor hits a notch lighter: raid
     // hits are the ones a thin-skinned party cannot shrug off, so Hard tells a set-1 party from one with set 2 gear (every shared move stays 1.1x Normal's or more).
     if (H) { for (const k of ['roar', 'boil', 'heart']) dmg[k] = Math.round(dmg[k] * RAID_UP); for (const k in EASE) dmg[k] = Math.round(dmg[k] * EASE[k]); }
     if (H) for (const k of KEEP) dmg[k] = Math.round(dmg[k] * 1.25 / HD);
+    dmg.skyward = Math.round(dmg.roar * 0.4); dmg.wake = Math.round(dmg.roar * 0.75);   // (the two act openers: a light gust as he climbs, a roar that is not the full Roar)
     const S = (...steps) => steps.filter(Boolean);
     const R = 560;                       // the crater floor's radius (shapes.js)
     const SPOT_R = 260;                  // the three crater spots sit this far from the middle: south, north-west, north-east
@@ -79,26 +87,31 @@ const WYRM = {
     // Hard draws the order of an act's middle sets fresh each pull (the opening and the last sets stay put). A draw is only taken
     // if it keeps the rhythm: the tank is never more than 28 s from a beat (Rending Claws, Talon Dive, Tail Lash, Pounce), two Rending
     // Claws are never closer than 12 s, the healer is never more than 36 s from work (a buster, a breath or a real hit on the whole party)
-    // and never more than 75 s from a hit on the whole party (Twin Breath and the Aftershock are avoidable, so they do not count).
+    // and never more than 85 s from a hit on the whole party (Skyward and The Tyrant Wakes count; Twin Breath and the Aftershock are avoidable, so they do not count).
     // The act's start counts as a beat of every kind. Normal plays the written order, which is written to pass the same check
     // (f.moves.orderOk, run by the scratch tools; an act with a wall after it also ends within endMax of a tank beat); if no draw passes, Hard falls back to the written order too.
     const TANK_B = new Set(['Rending Claws', 'Talon Dive', 'Tail Lash', 'Pounce']);
-    const RAID_B = new Set(["Tyrant's Roar", 'Cinder Feast', 'Magma Burst', 'Heart Flare', 'Cinder Rain', 'Crater Boils', 'The Roost']);
+    const RAID_B = new Set(["Tyrant's Roar", 'Cinder Feast', 'Magma Burst', 'Heart Flare', 'Cinder Rain', 'Crater Boils', 'The Roost', 'Skyward', 'The Tyrant Wakes']);
     const orderOk = (sets, endMax = 26) => {
       let t = 0, lastT = 0, lastH = 0, lastR = 0, lastC = -99;
       for (const set of sets) for (const [dt, , name, tailAt] of set) {   // (a step's fourth value: a Tail Lash that far behind it, another beat for the tank)
         t += dt;
         if (name === 'Rending Claws') { if (t - lastC < 12) return false; lastC = t; }
-        if (TANK_B.has(name)) { if (t - lastT > 28) return false; lastT = t; }
+        if (TANK_B.has(name)) { if (t - lastT > 28.05) return false; lastT = t; }
         if (tailAt) lastT = t + tailAt;
         if (name === 'Rending Claws' || name === 'Ember Breath' || name === 'Twin Breath' || RAID_B.has(name)) { if (t - lastH > 36) return false; lastH = t; }
-        if (RAID_B.has(name)) { if (t - lastR > 75) return false; lastR = t; }
+        if (RAID_B.has(name)) { if (t - lastR > 85) return false; lastR = t; }
       }
       return t - lastT <= endMax && t - lastH <= 38;   // (and the act does not end on a long wait)
     };
-    const mix = (head, mid, tail, endMax) => {
-      if (!H) return [...head, ...mid, ...tail];
-      for (let i = 0; i < 80; i++) { const c = [...head, ...f.shuffle(mid), ...tail]; if (orderOk(c, endMax)) return c; }
+    // Hard's dance (docs/plans/2026-11-boss-revamp.md): dance 0 plays the written order, dances 1 and 2 each open their middle sets on a different set of the
+    // act (so that set tells the party which dance this pull is) and draw the rest from the dance's own generator, under the same rhythm check.
+    // Normal and Extreme are always dance 0, the written order.
+    const shufR = (a, r) => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+    const mix = (head, mid, tail, endMax, salt = 'act') => {
+      if (!H || !f.dance || mid.length < 2) return [...head, ...mid, ...tail];
+      const first = mid[f.dance % mid.length], rest = mid.filter(x => x !== first);
+      for (let i = 0; i < 80; i++) { const c = [...head, first, ...shufR(rest, f.danceRng(salt + i)), ...tail]; if (orderOk(c, endMax)) return c; }
       return [...head, ...mid, ...tail];
     };
 
@@ -182,6 +195,8 @@ const WYRM = {
       const pool = f.nonTanks().length > 1 ? f.shuffle(f.nonTanks()) : f.shuffle(f.alive());
       const d = f.ct(4.4);
       f.cast('Twin Breath', d, 'breath');
+      // the two it will aim at carry a number over their heads from the cast, one for each cone in the order they come, so the party points them on purpose
+      pool.slice(0, 2).forEach((p, i) => f.mark(p.id, { sym: 'num', n: i + 1, col: '#ff8a3c', dur: d + i * 1.6, key: 'twinbreath' }));
       breath(pool[0], d, false);
       if (pool[1]) f.afterKeep(0.02, () => breath(pool[1], d + 1.6, false));
     };
@@ -195,13 +210,20 @@ const WYRM = {
           onResolve: () => { const q = f.alive().find(z => z.id === p.id); if (q) { const pd = f.puddle(q.x, q.y, 80, H ? 11 : 9, dmg.puddle, 1, 'ember', { ddown: true }); for (const o of f.alive()) pd.last[o.id] = f.t; } } });   // (a second to step out of it before it first burns)
       }
     };
-    // Cinder Feast: a stack on a random hero (the tank, standing on him, is forgiven on Normal)
+    // Cinder Feast: a party tankbuster. A blue ring on the tank, everyone stands in it, and it bites three times (four on Hard) a beat apart; the
+    // healer heals between bites. The damage is the old stack's, split over the bites. (Normal forgives one missing from the ring, as it always did;
+    // Extreme sends one hero off on the Molten Trail, who is excused.)
     const feast = () => {
-      const pool = f.alive().length > 1 ? f.nonTanks() : f.alive();
-      const t = pool.length ? f.pick(pool) : null; if (!t) return;
-      const d = f.ct(5.2), n = f.alive().length;
+      const al = f.alive(), tank = f.tank() || (al.length ? f.pick(al) : null); if (!tank) return;
+      const d = f.ct(5.2), n = al.length, hits = H ? 4 : 3, beat = Math.max(1.25, f.ct(1.5));
+      const hunted = f.extreme && n > 1 ? nonTank() : null, share = hunted ? n - 1 : n;
+      const each = dmg.feast * Math.min(share, 4) / 4 / hits;
       f.cast('Cinder Feast', d, 'feast');
-      f.mech({ type: 'stack', shape: { kind: 'circle', x: t.x, y: t.y, r: 120 }, delay: d, dmg: dmg.feast * Math.min(n, 4) / 4, follow: t.id, need: H ? n : Math.max(1, n - 1), tag: 'stack' });
+      f.afterKeep(d, () => f.emit({ t: 'bcast', name: 'Cinder Feast', dur: (hits - 1) * beat, anim: 'feast' }));   // (the bar runs on through the last bite)
+      const bite = (k, delay) => f.mech({ type: 'stack', shape: { kind: 'circle', x: tank.x, y: tank.y, r: 120 }, delay, dmg: each, follow: tank.id, need: H ? share : Math.max(1, share - 1), tag: 'stack',
+        onResolve: () => { if (k + 1 < hits) bite(k + 1, beat); } });
+      bite(0, d);
+      if (hunted) moltenTrail(hunted);
     };
 
     // --- flight ---------------------------------------------------------------------------------
@@ -211,6 +233,27 @@ const WYRM = {
       f.cast('Take Flight', d, 'fly');
       f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.gust, hidden: true, tag: 'gust' });
       f.afterKeep(d, () => { B.untargetable = true; B.lockFacing = true; B.moveTo = { x: 0, y: -30, speed: 460 }; });
+    };
+    // Skyward (Act II's opening): he climbs out of the crater in one wide circle round the rim, a light gust following him up. Out of reach from a second
+    // into the cast (the same untargetable time as Take Flight, which it stands in for); the last leg brings him back over the middle.
+    const skyward = () => {
+      const d = f.ct(3.2), a0 = Math.atan2(B.y, B.x), legs = 4, leg = d / (legs + 0.5);
+      f.cast('Skyward', d, 'fly');
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.skyward, hidden: true, tag: 'gust' });
+      f.emit({ t: 'roomev', k: 'wyrm-skyward', dur: d + 0.6 });
+      f.afterKeep(1.0, () => { B.untargetable = true; B.lockFacing = true; });
+      for (let k = 0; k < legs; k++) f.afterKeep(k * leg, () => {
+        const a = a0 + (k + 1) * TAU / legs, x = Math.cos(a) * 330, y = Math.sin(a) * 330, dx = x - B.x, dy = y - B.y;
+        B.facing = Math.atan2(dy, dx); B.moveTo = { x, y, speed: Math.max(300, Math.hypot(dx, dy) / leg) };
+      });
+      f.afterKeep(legs * leg, () => { B.moveTo = { x: 0, y: -30, speed: 460 }; });
+    };
+    // The Tyrant Wakes (Act IV's opening): he rears on the ground and roars, and the rim of the crater begins to glow for the rest of the fight
+    const tyrantWakes = () => {
+      const d = f.ct(3.4);
+      f.cast('The Tyrant Wakes', d, 'roar');
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.wake, hidden: true, tag: 'roar' });
+      f.afterKeep(d, () => f.emit({ t: 'roomev', k: 'wyrm-wakes', dur: 9999 }));
     };
     // where a dive comes from: the edge of the crater past one of the other two spots
     const edgeOf = P => { const a = Math.atan2(P[1], P[0]); return { x: Math.cos(a) * (R + 190), y: Math.sin(a) * (R + 190) }; };
@@ -277,16 +320,19 @@ const WYRM = {
     // one cone after another (all on the floor from a couple of seconds before the landing, the first one aimed where a random
     // hero stands then). A cone that has gone off is safe: leave the ring, then move with the sweep.
     let sweepDir = f.rng() < 0.5 ? 1 : -1;   // the sweep turns the other way each time (the first is random)
+    // the fan of cones from where he came down: laid `lead` s before the landing, the first aimed where a random hero stands then
+    const fan = (L, sign, lead) => {
+      const tg = nonTank(); if (!tg) return;
+      const arc = 0.8, base = Math.atan2(tg.y - L[1], tg.x - L[0]), first = lead + f.ct(1.3), step = f.ct(1.15);
+      for (let i = 0; i < 3; i++) {
+        const angle = base + sign * (i - 1) * arc;
+        f.aoe({ kind: 'cone', x: Math.round(L[0]), y: Math.round(L[1]), r: 760, arc, angle }, first + i * step, Math.round(dmg.breath * 0.5), { tag: 'breath' });
+      }
+    };
     const searingDescent = () => {
-      const r = dive({ name: 'Searing Descent' }), arc = 0.8, sign = (sweepDir = -sweepDir), lead = 1.5;   // (laid after Hard's Wingbeat has pushed)
-      f.afterKeep(Math.max(0.1, r.d - lead), () => {
-        const tg = nonTank(); if (!tg) return;
-        const base = Math.atan2(tg.y - r.L[1], tg.x - r.L[0]), first = lead + f.ct(1.3), step = f.ct(1.15);
-        for (let i = 0; i < 3; i++) {
-          const angle = base + sign * (i - 1) * arc;
-          f.aoe({ kind: 'cone', x: Math.round(r.L[0]), y: Math.round(r.L[1]), r: 760, arc, angle }, first + i * step, Math.round(dmg.breath * 0.5), { tag: 'breath' });
-        }
-      });
+      if (f.extreme) return searingPrey();
+      const r = dive({ name: 'Searing Descent' }), sign = (sweepDir = -sweepDir), lead = 1.5;   // (laid after Hard's Wingbeat has pushed)
+      f.afterKeep(Math.max(0.1, r.d - lead), () => fan(r.L, sign, lead));
     };
     // two lane segments (a to b, c to d) that cross: the point, or null
     const crossAt = (a, b, c, d) => {
@@ -325,10 +371,13 @@ const WYRM = {
     };
     // Cinder Run (the finale's own): he skims the crater and comes down on each of the three spots in turn (Hard: a fourth), every
     // line and ring drawn from the start. The middle of the crater is on none of them.
+    // Hard draws the run's order from its dance (the three spots in turn, a fourth after them, and the edge he comes in from); Normal draws it fresh.
+    const RUN_ORDERS = [[0, 1, 2, 0], [1, 2, 0, 2], [2, 0, 1, 0]];
     const cinderRun = () => {
-      const order = f.shuffle(SPOTS);
-      if (H) order.push(f.pick(SPOTS.filter(s => s !== order[2])));
-      const d1 = f.ct(4.4), gap = f.ct(2.6), P = f.pick(SPOTS.filter(s => s !== order[0])), E = edgeOf(P);
+      if (f.extreme) return preyRun();
+      const order = H ? RUN_ORDERS[f.dance].map(i => SPOTS[i]) : f.shuffle(SPOTS);
+      const rr = H ? f.danceRng('cinderrun') : () => f.rng(), edges = SPOTS.filter(s => s !== order[0]);
+      const d1 = f.ct(4.4), gap = f.ct(2.6), P = edges[Math.floor(rr() * edges.length)], E = edgeOf(P);
       f.cast('Cinder Run', d1, 'dive');
       B.untargetable = true; B.lockFacing = true; B.moveTo = { x: E.x, y: E.y, speed: 1500 };
       let from = E;
@@ -407,6 +456,95 @@ const WYRM = {
         } });
     };
 
+    // --- Extreme only -----------------------------------------------------------------------------
+    // Marked Prey: a landing no longer takes one of the three crater spots; it falls on a hero. A mark over their head from the cast and a ring on the
+    // floor that follows them, until it locks a moment before he comes down: they carry it where they want it and run out of it, and where it came down the
+    // floor is molten, so the party chooses where its pools go. (In Searing Descent, and four of them in the Cinder Run.)
+    const PREY_R = 190, PREY_LOCK = 1.5;
+    const preyPool = (x, y) => { const pd = f.puddle(Math.round(x), Math.round(y), 140, 14, dmg.puddle, 1, 'ember', { ddown: true }); for (const o of f.alive()) pd.last[o.id] = f.t; };
+    // one marked landing: the ring on `hero` for `lead` s, the boss off to it as it locks, down in it as it lands (hop: he is off again, the Cinder Run)
+    const preyLanding = (hero, lead, hop, lock = PREY_LOCK) => {
+      const p = f.alive().find(q => q.id === hero.id) || hero;
+      const m = f.mech({ type: 'aoe', shape: { kind: 'circle', x: p.x, y: p.y, r: PREY_R }, delay: lead, dmg: dmg.land, follow: hero.id, lockAt: lock, tag: 'dragonfall', ddown: true, from: 'Marked Prey',
+        onResolve: () => { f.unmark(hero.id, 'prey'); preyPool(m.shape.x, m.shape.y); } });
+      f.afterKeep(Math.max(0, lead - lock), () => {
+        const dx = m.shape.x - B.x, dy = m.shape.y - B.y, dist = Math.hypot(dx, dy), fl = Math.max(0.3, lock - 0.1);
+        B.untargetable = true; B.lockFacing = true; B.facing = Math.atan2(dy, dx); B.moveTo = { x: m.shape.x, y: m.shape.y, speed: Math.max(300, dist / fl) };
+      });
+      f.afterKeep(lead + 0.03, () => land([m.shape.x, m.shape.y], B.facing, hop));
+      return m;
+    };
+    // Searing Descent with its landing on a marked hero: the fan of cones comes after, from wherever he came down
+    const searingPrey = () => {
+      const tg = nonTank() || f.alive()[0]; if (!tg) return;
+      const d = f.ct(4.6), sign = (sweepDir = -sweepDir), lead = 1.4;
+      f.cast('Searing Descent', d, 'dive');
+      f.emit({ t: 'bcast', name: 'Marked Prey', dur: d, anim: 'dive' });
+      f.mark(tg.id, { sym: 'prey', col: '#ff5a2a', dur: d, key: 'prey' });
+      const m = preyLanding(tg, d, false);
+      f.afterKeep(d - lead, () => fan([m.shape.x, m.shape.y], sign, lead));
+    };
+    // the Cinder Run on Extreme: a landing on each hero in turn (one to four, by who is standing), the number over their heads the order
+    const preyRun = () => {
+      const heroes = f.shuffle(f.alive()).slice(0, 4), n = heroes.length;
+      const d1 = f.ct(4.4), gap = f.ct(2.6);
+      f.cast('Marked Prey', d1, 'dive');
+      B.untargetable = true; B.lockFacing = true;
+      heroes.forEach((h, i) => {
+        const at = d1 + i * gap, lead = Math.min(at, 3.2);
+        f.mark(h.id, { sym: 'num', n: i + 1, col: '#ff7a2a', dur: at, key: 'prey' });
+        if (at - lead < 0.05) preyLanding(h, lead, i < n - 1);   // (the first ring is there from the cast)
+        else f.afterKeep(at - lead, () => preyLanding(h, lead, i < n - 1));
+      });
+      return d1 + (n - 1) * gap + 0.8;
+    };
+
+    // Ember Devils: when its cast ends a small whirl of fire is left under every hero. A hero who touches a whirl sets it off (their own once it has had
+    // a second to be walked out of, or anyone else's at once): it bursts over everyone near it. Keep apart as it sets, then walk out clean.
+    // The rings on the floor from `lead` s before are the heroes' whirls forming; paired with a Dragonfall it comes in on the landing (bar over the dive's).
+    const DEVIL_R = 70, DEVIL_BLAST = 170, DEVIL_LIFE = 9, devils = [];
+    if (f.extreme) f.ticker(() => {
+      for (let i = devils.length - 1; i >= 0; i--) {
+        const w = devils[i];
+        if (w.done || f.t >= w.end) { devils.splice(i, 1); continue; }
+        for (const p of f.alive()) {
+          if (Math.hypot(p.x - w.x, p.y - w.y) > DEVIL_R + 10 || (p.id === w.owner && f.t < w.safeUntil)) continue;
+          w.done = true;
+          for (const o of f.alive()) if (Math.hypot(o.x - w.x, o.y - w.y) <= DEVIL_BLAST) f.damagePlayer(o, dmg.devil, { kind: 'devil', avoidable: true, ddown: true, n: 'Ember Devils' });
+          f.emit({ t: 'roomev', k: 'wyrm-devil', x: Math.round(w.x), y: Math.round(w.y), r: DEVIL_BLAST, dur: 0.8 });
+          break;
+        }
+      }
+    });
+    const emberDevils = (set, solo) => {
+      const lead = Math.min(set, 2.6);
+      if (solo) f.cast('Ember Devils', set, 'burst'); else f.emit({ t: 'bcast', name: 'Ember Devils', dur: set, anim: 'burst' });
+      for (const h of f.alive()) f.afterKeep(set - lead, () => {
+        const p = f.alive().find(q => q.id === h.id); if (!p) return;
+        const m = f.mech({ type: 'drop', shape: { kind: 'circle', x: p.x, y: p.y, r: DEVIL_R }, delay: lead, dmg: 0, follow: h.id, tag: 'wyDevil', avoidable: false, color: '#ff7a2a', from: 'Ember Devils',
+          onResolve: () => {
+            const x = Math.round(m.shape.x), y = Math.round(m.shape.y), pd = f.puddle(x, y, DEVIL_R, DEVIL_LIFE, dmg.puddle, 1, 'ember', { ddown: true });
+            for (const o of f.alive()) pd.last[o.id] = f.t;
+            devils.push({ x, y, owner: h.id, safeUntil: f.t + 1.0, end: f.t + DEVIL_LIFE, done: false });
+          } });
+      });
+    };
+
+    // Molten Trail: one hero (the Feast's own, who is not at it) is hunted by five falling pools in a row, each coming down where they stand; they lay the
+    // trail along the rim while the rest of the party does the Feast
+    const moltenTrail = hero => {
+      const D = 2.0, LOCK = 0.6, GAP = 1.0, N = 5, R_T = 90;
+      f.emit({ t: 'bcast', name: 'Molten Trail', dur: D + (N - 1) * GAP, anim: 'rain' });
+      f.mark(hero.id, { sym: 'move', col: '#ff7a2a', dur: D + (N - 1) * GAP, key: 'trail' });
+      const drop = () => {
+        const p = f.alive().find(q => q.id === hero.id); if (!p) return;
+        const m = f.mech({ type: 'aoe', shape: { kind: 'circle', x: p.x, y: p.y, r: R_T }, delay: D, dmg: dmg.trail, follow: hero.id, lockAt: LOCK, tag: 'wyTrail', ddown: true, from: 'Molten Trail',
+          onResolve: () => { const pd = f.puddle(Math.round(m.shape.x), Math.round(m.shape.y), R_T - 10, 12, dmg.puddle, 1, 'ember', { ddown: true }); for (const o of f.alive()) pd.last[o.id] = f.t; } });
+      };
+      drop();
+      for (let i = 1; i < N; i++) f.afterKeep(i * GAP, drop);
+    };
+
     // --- the Ember Heart (the wall) ------------------------------------------------------------------
     // The Heart opens in his chest and he is sealed (fight.js raiseWall). Scorch marks bloom at the three crater spots one by one;
     // the last one marks the island the floor-wide fire leaves standing. Two waves (Hard: three), each smaller.
@@ -431,7 +569,7 @@ const WYRM = {
       // (drawn each pull) with a buster after its spread, and the burn after it only starts more than five seconds after the
       // spread has gone off.
       const waves = H ? 3 : 2, cl = f.ct(4.4), burn = f.ct(9), fl = f.ct(4.6);
-      const flareSlot = H ? (f.rng() < 0.5 ? 0 : 1) : -1;
+      const flareSlot = H ? [0, 1, 1][f.dance] : -1;   // (the dance's own: after the first burn, or the second)
       const starts = [3], clawsAt = [];
       let flareAt = 0, pounceAt = 0;
       for (let k = 0; k < waves - 1; k++) {
@@ -454,6 +592,8 @@ const WYRM = {
     // Every act opens on a beat for the tank and holds one about every 25 s; each flight rides on a beat (claws, tail or Talon Dive)
     // so a Hard shuffle of the middle sets cannot open a long gap (mix() checks each draw).
     const groundStart = () => { grounded(); };
+    // Extreme runs one fixed order: the written one with its Feast sets brought forward, so a quick party sees the Molten Trail before it cuts the act
+    const ext = (on, order, sets) => (on ? order.map(i => sets[i]) : sets);
     const PD = 6.5;                      // a Pounce comes this long after the claws that open its set (the claws' bar has ended; the next step still has its 12 s)
     const clawsTail = () => { claws(); f.afterKeep(f.ct(4.4) + 0.6, () => tailLash()); };
     const doubleBreath = () => { breath(); f.afterKeep(f.ct(4.2) + 0.4, () => breath()); };
@@ -465,9 +605,9 @@ const WYRM = {
       until: 0.75, push: true, onStart: groundStart,
       sets: mix([S([4, roar, "Tyrant's Roar"]), S([14, claws, 'Rending Claws'], [G, () => breath(), 'Ember Breath'])], [
         S([G, clawsTail, 'Rending Claws', 5], [G, magma, 'Magma Burst']),
-        S([G, claws, 'Rending Claws'], [9, takeFlight, 'Take Flight'], [3, () => dive(), 'Dragonfall']),
+        S([G, claws, 'Rending Claws'], [9, takeFlight, 'Take Flight'], [3, () => { dive(); if (f.extreme) { const d = f.ct(4.6); f.afterKeep(0.4, () => emberDevils(d + 0.8 - 0.4, false)); } }, 'Dragonfall']),
         S([G, claws, 'Rending Claws'], H ? [G, cinderRain, 'Cinder Rain'] : [G, feast, 'Cinder Feast']),
-      ], [S([G, pounce, 'Pounce'])]),
+      ], [S([G, pounce, 'Pounce'])], undefined, 'ground'),
       closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, () => breath(), 'Ember Breath'], [10, () => tailLash(), 'Tail Lash']],
       next: flight1,
     }, from);
@@ -475,13 +615,13 @@ const WYRM = {
     // II. First Flight: opens on a Talon Dive (the tank's own dive) and a Roar
     const flight1 = from => f.course({
       until: 0.5, push: true, onStart: groundStart,
-      sets: mix([S([4, takeFlight, 'Take Flight'], [3, () => talonDive(), 'Talon Dive']), S([G, roar, "Tyrant's Roar"])], [
+      sets: mix([S([4, skyward, 'Skyward'], [f.ct(3.2) + 0.8, () => talonDive(), 'Talon Dive']), S([G, roar, "Tyrant's Roar"])], ext(f.extreme, [2, 0, 1], [
         S([G, claws, 'Rending Claws'], [9, takeFlight, 'Take Flight'], [3, () => searingDescent(), 'Searing Descent']),
         S([G, claws, 'Rending Claws'], H ? [G, cinderRain, 'Cinder Rain'] : [G, magma, 'Magma Burst']),
         S([G, pounce, 'Pounce'], [G, feast, 'Cinder Feast']),
-      ], [
+      ]), [
         S([G, () => tailLash(), 'Tail Lash']),   // (the tank's beat before the Roost, where the gap would otherwise run long)
-      ]),
+      ], undefined, 'flight1'),
       closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, takeFlight, 'Take Flight'], [3, () => dive(), 'Dragonfall']],
       next: roosted,
     }, from);
@@ -489,13 +629,13 @@ const WYRM = {
     // The Roost, then III. Ground, Scorched. The buster comes right as he lands, then the Crater Boils.
     const roosted = from => f.course({
       until: 0.24, push: true, onStart: groundStart,
-      sets: mix([S([2, roost, 'The Roost']), S([15.5, claws, 'Rending Claws']), S([8, boils, 'Crater Boils'])], [
+      sets: mix([S([2, roost, 'The Roost']), S([15.5, claws, 'Rending Claws']), S([8, boils, 'Crater Boils'])], ext(f.extreme, [2, 1, 0], [
         S([G, clawsTail, 'Rending Claws', 5], [15.5, twinBreath, 'Twin Breath']),
-        S([G, claws, 'Rending Claws'], H ? [G, cinderRain, 'Cinder Rain'] : [G, magma, 'Magma Burst']),
+        S([G, claws, 'Rending Claws'], f.extreme ? [G, () => emberDevils(f.ct(3.2), true), 'Ember Devils'] : H ? [G, cinderRain, 'Cinder Rain'] : [G, magma, 'Magma Burst']),
         S([G, pounce, 'Pounce'], [G, feast, 'Cinder Feast']),
-      ], [
+      ]), [
         S([G, claws, 'Rending Claws'], [G, roar, "Tyrant's Roar"]),
-      ]),
+      ], undefined, 'roosted'),
       closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, twinBreath, 'Twin Breath'], [10, () => tailLash(), 'Tail Lash']],
       next: flight2,
     }, from);
@@ -504,11 +644,11 @@ const WYRM = {
     const flight2 = from => f.course({
       until: 0.1, push: true, onStart: groundStart,
       wall: { label: 'Ember Heart', run: heartRun, until: 'resolved', timeout: 70 },
-      sets: mix([S([4, takeFlight, 'Take Flight'], [3, () => talonDive(), 'Talon Dive'])], [
+      sets: mix([S([4, tyrantWakes, 'The Tyrant Wakes'], [f.ct(3.4) + 0.6, takeFlight, 'Take Flight'], [3, () => talonDive(), 'Talon Dive'])], [
         S([G, claws, 'Rending Claws'], H ? [G, heartFlare, 'Heart Flare'] : [G, magma, 'Magma Burst']),
         S([G, pounce, 'Pounce'], [G, roar, "Tyrant's Roar"]),
         S([G, claws, 'Rending Claws'], [9, takeFlight, 'Take Flight'], [3, () => twinPass(), 'Twin Pass']),   // (last in the written order: a quick party reaches the wall before the crossing lines)
-      ], []),
+      ], [], undefined, 'flight2'),
       closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, twinBreath, 'Twin Breath'], [10, () => tailLash(), 'Tail Lash']],
       next: lastEmber,
     }, from);
@@ -523,7 +663,7 @@ const WYRM = {
       sets: mix([S([0.01, null, 'Rending Claws'])], [
         S([G - 3.5, twinBreath, 'Twin Breath']),   // (the Heart closes once its Roar has been cast, so the first beat here comes a little sooner)
         S([G - 3.5, clawsTail, 'Rending Claws', 5]),
-      ], [], 14),
+      ], [], 14, 'lastember'),
       closing: [[10, roar, "Tyrant's Roar"], [10, claws, 'Rending Claws'], [10, twinBreath, 'Twin Breath']],
       ramp: 0.08,
       next: lastStand,
@@ -548,7 +688,7 @@ const WYRM = {
     ground(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.dive())
-    f.moves = { roar, claws, pounce, tailLash, breath, twinBreath, magma, feast, takeFlight, dive, talonDive, aftershock, cinderRun, twinPass, searingDescent, roost, boils, cinderRain, heartFlare, heartWave, heartRun, orderOk };
+    f.moves = { skyward, tyrantWakes, emberDevils, moltenTrail, preyRun, searingPrey, roar, claws, pounce, tailLash, breath, twinBreath, magma, feast, takeFlight, dive, talonDive, aftershock, cinderRun, twinPass, searingDescent, roost, boils, cinderRain, heartFlare, heartWave, heartRun, orderOk };
   },
 };
 

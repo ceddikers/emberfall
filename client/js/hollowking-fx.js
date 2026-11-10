@@ -4,7 +4,8 @@
 // `typeof HK_FX !== 'undefined'`, and it returns false for anything it only adds to, so the older landing still plays):
 //   - a hit-stop and a push of the camera when one of his big swings lands (never more than once in a few seconds);
 //   - the Sceptre Throw: the sceptre itself flies down the line, spinning, and bites into the far wall;
-//   - the Barrow Stomp's second ring and the Sceptre Sweep's lingering crescent.
+//   - the Barrow Stomp's second ring and the Sceptre Sweep's lingering crescent;
+//   - Extreme: the Exile's ring (the Sentence), a Roll Call landing and the gold on a knight's answer turned inside out (Contempt of Court).
 
 const HK_FX = (() => {
   const rand = (a, b) => a + Math.random() * (b - a);
@@ -63,9 +64,39 @@ const HK_FX = (() => {
     for (const q of H.scatter({ kind: 'circle', x: s.x, y: s.y, r: s.r }, 8)) H.after(rand(0, 0.25), () => VFX.pillar(q.x, q.y, { r: 12, h: 70 + rand(0, 40), color: '#4fe0d0', dur: 0.4 }));
   }
 
+  // Extreme. The Exile's ring lands (the Sentence): the red ring flashes, pale shock rings run out and in, and the ring's rim throws up grave-light where its stakes were
+  function exileFx(tg, H) {
+    const s = tg.live;
+    H.shapeFlash(s, '#ff6a5a', { a: 0.34, dur: 0.45 });
+    H.shockAt(s.x, s.y, { r: s.r * 1.25, color: '#e8f0ff', w: 7, dur: 0.6, flat: 1 });
+    H.shockAt(s.x, s.y, { r: s.r * 0.7, color: '#ff8a7a', w: 5, dur: 0.45, flat: 1, delay: 0.08 });
+    for (let i = 0; i < 8; i++) {
+      const a = i * TAU / 8 + 0.2, x = s.x + Math.cos(a) * (s.r - 12), y = s.y + Math.sin(a) * (s.r - 12);
+      if (ARENA.sd(x, y) < -10) H.after(rand(0, 0.2), () => VFX.pillar(x, y, { r: 9, h: 50 + rand(0, 30), color: '#c8d8ff', dur: 0.35 }));
+    }
+    try { H.AFT.decal(s.x, s.y, { style: 'crack', r: s.r * 0.5, dur: 3, a: 0.5, seed: s.x * 0.01 + s.y * 0.013 }); } catch (e) { /* cosmetic */ }
+    H.shake(6);
+  }
+  // Extreme. A Roll Call lands: the eye flares and the hall takes the pale gold of the court for a breath (whoever was caught has the stone creeping on them already: boss-vfx.js gazed)
+  function rollFx(tg, ctx, H) {
+    const b = (ctx && ctx.bossDraw) || { x: 0, y: 0 };
+    H.roomTint('#ffe9a8', 0.14, 0.4);
+    VFX.flash(b.x, b.y - 175, 90, '#fff4c8', 0.3);
+    H.shockAt(b.x, b.y - 4, { r: H.AR * 0.9, color: '#ffe9a8', w: 4, dur: 0.7, flat: 1 });
+  }
+
   function impact(tg, msg, ctx, H) {
     const tag = base(tg.tag), echo = tg.tag !== tag;
     if (tag === 'throw') { throwFx(tg, H); return true; }
+    if (tag === 'exile') { exileFx(tg, H); return true; }
+    if (tag === 'rollcall') { rollFx(tg, ctx, H); return true; }
+    // Contempt of Court: a knight's answer turned inside out (told by its size, as boss-tells.js does) gets the court's gold along the edge it turned, on top of the usual landing
+    if (echo) {
+      const s = tg.live;
+      if (tag === 'ring' && s.r2 === 290) H.shockAt(s.x, s.y, { r: 290, color: '#ffe19a', w: 4, dur: 0.7, flat: 1, delay: 0.1 });
+      else if (tag === 'stomp' && s.r === 250) H.shockAt(s.x, s.y, { r: 250, color: '#ffe19a', w: 4, dur: 0.7, flat: 1, delay: 0.1 });
+      else if (tag === 'sweep' && s.arc > 3) H.roomTint('#ffe19a', 0.1, 0.35);
+    }
     if (!echo) {
       if (tag === 'sweep') { sweepAfter(tg, H); cam(0.05, 0.026); }
       else if (tag === 'stomp') { stompAfter(tg, H); cam(0.07, 0.034); }

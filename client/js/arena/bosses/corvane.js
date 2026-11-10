@@ -45,24 +45,33 @@
 //                      followed by a Draw Cut at anyone, not only the tank.
 // Hard also draws which six of eight lanterns stand, the order of Act III's unleashings, the order of the closing three edges and when
 // Hollow Breath comes, fresh each pull.
+// THE REVAMP (2026-11-10, docs/plans/2026-11-boss-revamp.md):
+//   Still Water is a counter stance: while the glass stands (and his blade is sheathed) any hero who strikes him is cut at once. Two cold wisps
+//     stand behind him for the party to strike instead (bots.js pickEnemy: stance wisps). Act II opens with "The Shrine" (a named walk to the shrine).
+//   Dances: Hard draws one of three FIXED timelines per pull (f.dance, f.danceRng): the lantern set, the three acts' mid-set orders, the order of Act III's
+//     unleashings, the order of the closing three edges and Hollow Breath's timing are all fixed by the dance now. Normal and Extreme run dance 0.
+//   Extreme (f.extreme): The Circle (a duel ring), Gale Through the Pass (a thrown wind; lit lanterns shelter) and Three Lessons (a stance over every head, judged
+//     when an unleashing lands).
 
 const CORVANE = {
   id: 'corvane', name: 'Corvane', title: 'the Unburied Blade',
   normalDmg: 1.1,   // (Normal's damage multiplier, fight.js default 1; 2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven))
-  hp: { normal: 7440000, hard: 7155000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 5450000 / 5125000; Normal 5.9M before 2026-10-27)
+  hp: { normal: 7440000, hard: 7155000, extreme: 8495000 },   // (Extreme: Hard's plus about 6%, to be tuned. 2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 5450000 / 5125000; Normal 5.9M before 2026-10-27)
   hardDmg: 1.66,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.3; Hard's damage multiplier; fight.js default 1.25: 1.17 from 2026-10-27's retune for a human party; 1.33 before that, and before the 2026-10-26 fun pass, 1.42 before that: a numbers bump, part of that difficulty lives in the Hard-only skill moves below)
+  extremeDmg: 1.71,   // (Extreme: Hard's for now, to be tuned)
   autoDmg: { normal: 2300, hard: 2050 },
-  enrage: { normal: 590, hard: 585 },   // the cast starts here and lands 8 s later (9:58 / 9:48: a minute after the script's end, 45 s on Hard)
+  enrage: { normal: 590, hard: 585, extreme: 585 },   // the cast starts here and lands 8 s later (9:58 / 9:48: a minute after the script's end, 45 s on Hard)
   enrageName: 'Last Light of the Pass',
   vuln: 0.5,
   spawn: { x: 0, y: -80 },
   arena: { theme: 'pass' },
   gates: [0.72, { f: 0.42, wall: 1 }, 0.16],   // where the acts change (ticks on the boss bar; fight.js course): the Last Vigil is health-gated, so every party meets it
 
-  // the stone lanterns (Hard draws six of the eight spots each pull; Normal stands the same six)
+  // the stone lanterns (Hard stands six of the eight spots, one fixed set for each of its three dances; Normal and Extreme stand dance 0's, the first six)
   room(f) {
     const SPOTS = [[-420, -235], [420, -235], [-420, 235], [420, 235], [0, -300], [0, 300], [-170, -275], [170, 275]];
-    const pick = f.hard ? f.shuffle(SPOTS).slice(0, 6) : SPOTS.slice(0, 6);
+    const OUT = [[6, 7], [2, 4], [1, 5]][f.dance | 0] || [6, 7];   // (the two spots left empty, by dance)
+    const pick = f.hard ? SPOTS.filter((_, i) => !OUT.includes(i)) : SPOTS.slice(0, 6);
     f.lanternSpots = pick;   // (where they stood: the Vigil's wisps come from the broken ones, and a wisp struck down relights its lantern)
     for (const [x, y] of pick) f.addProp({ kind: 'stonelantern', x, y, r: 30, hp: 1, solid: true, cover: true, state: 0 });
   },
@@ -75,10 +84,17 @@ const CORVANE = {
       gale: H ? 12250 : 14800, cut: H ? 18300 : 22000, guard: H ? 17000 : 20500, draw: H ? 19700 : 23800, sweep: H ? 20350 : 24600,
       still: H ? 5200 : 3500, breath: H ? 2900 : 3000, crane: H ? 23700 : 28600, comet: H ? 21550 : 26000, part: H ? 21900 : 26400,
       sheathe: H ? 13900 : 16800, wispHp: 34000, last: H ? 14800 : 17800, answer: H ? 5500 : 6600,
+      counter: H ? 6000 : 7200,   // (Still Water's cut on a hero who strikes him)
+      shrine: H ? 6900 : 8400,    // (The Shrine's light raidwide: about half a Cold Sheathe)
+      galeHit: 9800, galeSlam: 6000, lesson: 6000,   // (Extreme only: Gale Through the Pass, the wall it throws you at, a lesson failed)
     };
     const S = (...steps) => steps.filter(Boolean);
+    const K = (key, set) => { set.key = key; return set; };   // (a set's name, for the dance draw: the three dances differ in the first set that is not common to all)
     const live = id => f.alive().find(p => p.id === id);
-    const nonTank = () => { const pool = f.nonTanks().length ? f.nonTanks() : f.alive(); return pool.length ? f.pick(pool) : null; };
+    // The Circle (Extreme): while it stands, every move of his that picks a hero picks its duelist
+    let duel = null;   // { id, x, y, r, from, until }
+    const duelist = () => (duel && f.t < duel.until ? live(duel.id) || null : null);
+    const nonTank = () => { const dd = duelist(); if (dd) return dd; const pool = f.nonTanks().length ? f.nonTanks() : f.alive(); return pool.length ? f.pick(pool) : null; };
     const healer = () => f.alive().find(p => p.role === 'healer') || nonTank();
     const hold = d => { B.holdUntil = Math.max(B.holdUntil || 0, f.t + d); };
     // an earned unleashing waits out a move still on the floor and a follow-up still to come (it never starts on top of one)
@@ -86,6 +102,38 @@ const CORVANE = {
     const busyFor = d => { quietAt = Math.max(quietAt, f.t + d); };
     // how far a line from (x, y) along a runs before it meets the wall
     const toWall = (x, y, a) => { const c = Math.cos(a), s = Math.sin(a); let d = 0; while (d < 2400 && ARENA.sd(x + c * d, y + s * d) < -12) d += 12; return Math.max(60, d); };
+
+    // --- who strikes him: Still Water's counter, and the sheathed lesson ---------------------------------------------------------
+    // Every blow a hero lands on him (not on an add) comes through the sim's onEvent; it is watched here, for humans and bots alike.
+    const struck = {};                  // when each hero last hurt him
+    const glass = { from: 0, to: 0 };   // Still Water's stance: from the moment the glass is laid to the moment it lets go
+    const counterAt = {};
+    const counter = pid => {
+      if (f.t - (counterAt[pid] ?? -9) < 1.2) return;   // (a cut for a blow, not for every tick of a rotation)
+      const p = live(pid); if (!p) return;
+      counterAt[pid] = f.t;
+      f.emit({ t: 'propfx', k: 'cvcounter', x: Math.round(B.x), y: Math.round(B.y), x2: Math.round(p.x), y2: Math.round(p.y), pid });
+      f.damagePlayer(p, dmg.counter, { kind: 'cvCounter', avoidable: true, noVuln: true, n: 'Still Water' });
+    };
+    const onEventIn = f.onEvent.bind(f);
+    f.onEvent = (pid, ev) => {
+      const hp0 = B.hp;
+      onEventIn(pid, ev);
+      if (f.state !== 'live' || !ev || ev.type !== 'damage' || ev.dot || (ev.tgt != null && ev.tgt !== 'boss') || !(B.hp < hp0)) return;   // (a blow, not a damage-over-time tick laid before the stance)
+      struck[pid] = f.t;
+      if (f.t >= glass.from && f.t < glass.to) counter(pid);
+    };
+    // two cold wisps stand behind him for as long as a stance asks the party not to strike him: something to strike instead (bots.js pickEnemy reads a.stance)
+    let stanceWisps = [];
+    const dropWisps = () => { for (const w of stanceWisps) if (f.adds.has(w.id)) f.killAdd(w); stanceWisps = []; };
+    const raiseWisps = (kind, dur) => {
+      dropWisps();
+      for (const s of [-1, 1]) {
+        const a = B.facing + Math.PI + s * 0.95, at = ARENA.clamp({ x: B.x + Math.cos(a) * 230, y: B.y + Math.sin(a) * 230 }, 60);
+        stanceWisps.push(f.spawnAdd({ kind: 'wisp', x: Math.round(at.x), y: Math.round(at.y), hp: 300000, r: 22, inert: true, stance: kind }));
+      }
+      f.afterKeep(dur, () => { if (stanceWisps.length && stanceWisps[0].stance === kind) dropWisps(); });
+    };
 
     // --- the Whetstone ---------------------------------------------------------------------------------------------------
     // shared with the bots and the host's view (raid-host.js): { n, max, over, st (the stance on show), busy }
@@ -180,7 +228,7 @@ const CORVANE = {
     };
     // Draw Cut: a long line through a hero, drawn a moment before the blade is
     const drawCut = (target) => {
-      target = target || nonTank(); if (!target) return;
+      target = duelist() || target || nonTank(); if (!target) return;
       const d = f.ct(3.0);
       f.cast('Draw Cut', d, 'draw');
       f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: Math.atan2(target.y - B.y, target.x - B.x), len: 1300, w: 110 }, delay: d, dmg: dmg.draw,
@@ -190,7 +238,8 @@ const CORVANE = {
     // two at two different heroes (Act III), both lines painted at once, the second landing a beat after the first: the line you stepped
     // out of puts you somewhere, and the second line is still following its own hero while the first lands
     const twinDraw = () => {
-      const pool = f.shuffle(f.nonTanks().length > 1 ? f.nonTanks() : f.alive());
+      const dd = duelist();
+      const pool = dd ? [dd, dd] : f.shuffle(f.nonTanks().length > 1 ? f.nonTanks() : f.alive());
       const d = f.ct(3.4), gap = f.ct(0.9);
       f.cast('Draw Cut', d + gap, 'draw');
       pool.slice(0, 2).forEach((p, i) => f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: Math.atan2(p.y - B.y, p.x - B.x), len: 1300, w: 110 }, delay: d + i * gap, dmg: dmg.draw, aimFromBoss: p.id, lockAt: 0.5, tag: 'cvDraw' }));
@@ -207,12 +256,15 @@ const CORVANE = {
       hold(d);
       f.afterKeep(d + 0.1, () => { if (f.t >= glassEnd) B.lockFacing = false; });   // (a Sweep laid on the glass leaves him turned until the glass lets go)
     };
-    // Still Water: he plants in a parry stance; the floor in front of him is glassy, and anyone standing on it is countered
+    // Still Water: he plants in a counter stance, blade sheathed; the floor in front of him is glassy and burns whoever stands on it, and for as long as the
+    // glass stands anyone who strikes him is answered at once with a cut (glass.from..to; onEvent above). Strike a wisp instead.
     const stillWater = () => {
       const d = f.ct(2.4), dur = 7;
       glassEnd = f.t + d + dur;
+      glass.from = f.t + d; glass.to = f.t + d + dur;
       B.lockFacing = true;
       f.cast('Still Water', d, 'still');
+      raiseWisps('glass', d + dur);
       const ang = B.facing;
       f.zone({ shape: { kind: 'cone', x: Math.round(B.x), y: Math.round(B.y), r: 760, arc: 2.2, angle: +ang.toFixed(3) }, dur, delay: d, effect: 'burn', dmg: dmg.still, tag: 'cvStill' });
       B.noAutoUntil = f.t + d + dur;
@@ -237,6 +289,95 @@ const CORVANE = {
         f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.sheathe, hidden: true, tag: 'cvSheathe' });
       }, named ? 'Cold Sheathe' : undefined);
       return delay + f.ct(3.4) + 0.3;
+    };
+    // The Shrine (Act II opens with it): he walks to the shrine on the north wall, bows, the lanterns flare, and a light cold goes through the party.
+    // It sits in the calm before the act's first move, so it adds no time.
+    // (An act that began while the last act's unleashing was still on the floor waits for it, and slides the rest of the act by what that cost beyond the calm.)
+    const shrineOpen = () => {
+      const firstAt = f.t + 12.2, d = f.ct(3.4);
+      let waited = 0;
+      const go = () => {
+        if (f.state !== 'live') return;
+        if ((whet.busy || (B.cast && f.t < B.cast.end) || f.t < pairEnd) && waited < 14) { waited += 0.3; return f.afterKeep(0.3, go); }
+        const over = f.t + d + 0.3 - firstAt; if (over > 0.1) slide(over);
+        const home = { x: Math.round(B.x), y: Math.round(B.y) };
+        B.lockFacing = true; B.moveTo = { x: 0, y: -250, speed: 400 };
+        f.afterKeep(0.4, () => { B.facing = -Math.PI / 2; });
+        f.cast('The Shrine', d, 'kneel'); hold(d + 0.2); busyFor(d + 0.5);
+        f.emit({ t: 'roomev', k: 'corvane-shrine', dur: d });
+        f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.shrine, hidden: true, tag: 'cvShrine' });
+        f.afterKeep(d + 0.05, () => { B.moveTo = { x: home.x, y: home.y, speed: 400 }; B.lockFacing = false; });
+      };
+      go();
+    };
+
+    // --- Extreme: The Circle, Gale Through the Pass, Three Lessons --------------------------------------------------------------
+    // THE CIRCLE. He names one hero for a duel (a duel mark over their head) and a ring is drawn round the two of them: the duelist cannot leave it, nobody
+    // else can enter it (a hero on the wrong side when it closes is thrown to the right one), and every move of his that picks a hero picks the duelist
+    // until it ends (nonTank, drawCut, twinDraw, cometOne). His busters stay on the tank: it is never laid across one. len: how long it stands after its cast.
+    const circle = len => () => {
+      if (f.state !== 'live') return;
+      const pool = f.alive(); if (!pool.length) return;
+      const who = f.pick(pool), d = f.ct(2.4);
+      const cx = Math.round((who.x + B.x) / 2), cy = Math.round((who.y + B.y) / 2), R = Math.round(Math.max(250, Math.hypot(who.x - B.x, who.y - B.y) / 2 + 150));
+      f.cast('The Circle', d, 'draw'); hold(d + len); busyFor(d + len);
+      f.zone({ shape: { kind: 'donut', x: cx, y: cy, r: R + 24, r2: R - 24 }, dur: len, delay: d, effect: 'slow', tag: 'cvCircle', noGrace: true });
+      duel = { id: who.id, x: cx, y: cy, r: R, from: f.t + d, until: f.t + d + len };
+      f.mark(who.id, { sym: 'duel', key: 'cvDuel', col: '#f0d890', dur: d + len });
+      f.emit({ t: 'roomev', k: 'cvcircle', x: cx, y: cy, r: R, dur: d + len });
+      f.afterKeep(d + len, () => { f.unmark(who.id, 'cvDuel'); if (duel && duel.id === who.id) duel = null; });
+    };
+    const ringHeld = {};
+    f.ticker(() => {
+      if (!duel || f.state !== 'live' || f.t < duel.from || f.t >= duel.until) return;
+      for (const p of f.alive()) {
+        if (f.t - (ringHeld[p.id] ?? -9) < 0.45) continue;
+        const dx = p.x - duel.x, dy = p.y - duel.y, d = Math.hypot(dx, dy) || 1;
+        if (p.id === duel.id) { if (d > duel.r) { ringHeld[p.id] = f.t; f.knock(p, p.x + dx / d * 20, p.y + dy / d * 20, d - (duel.r - 60)); } }   // (the duelist is thrown back in)
+        else if (d < duel.r) { ringHeld[p.id] = f.t; f.knock(p, duel.x, duel.y, duel.r + 60 - d); }   // (anyone else is thrown out)
+      }
+    });
+    // GALE THROUGH THE PASS. In Extreme some White Gales are this: the wind blows from the west end of the pass and throws everyone down it to the east wall.
+    // A lit stone lantern shelters whoever stands in its lee (cover from a source far to the west); a broken one does not. The ones thrown into the east wall
+    // are hurt by it. Floor tell: the whole pass in red from the cast to the blow, the lee of every standing lantern drawn clear.
+    const galeLine = () => {
+      const d = f.ct(4.4);
+      f.cast('Gale Through the Pass', d, 'gale');
+      f.emit({ t: 'roomev', k: 'cvgalepass', dur: d });
+      // (the gale is the party-wide beat the healer reads where a White Gale stood: a hidden raidwide that does nothing itself rides under it, so the timeline sees the raidwide it is; the real hit is the area below)
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: 0, hidden: true, tag: 'cvGaleBeat' });
+      f.mech({ type: 'aoe', shape: { kind: 'rect', x: -760, y: 0, angle: 0, len: 1700, w: 1200 }, delay: d, dmg: dmg.galeHit, tag: 'cvGaleLine', cover: true, src: { x: -4000, y: 0 },
+        onResolve: inside => { for (const p of inside) f.knock(p, p.x - 20, p.y, 480, { slam: dmg.galeSlam, slamAt: 40 }); } });
+    };
+    const galeX = () => (f.extreme ? galeLine : gale)();
+    const GALE = f.extreme ? 'Gale Through the Pass' : 'White Gale';   // (its name in the feed)
+    // THREE LESSONS. As an unleashing begins he points at each hero in turn (a head mark, one a beat after another): blade LOW (be behind him), blade HIGH (be far
+    // from him), SHEATHED (do not strike him). Everyone is judged when the unleashing lands, by where they stand when its floor is painted: his place and his
+    // facing then. A lesson failed is a cut and a notch on the whetstone. Sheathed heroes have the stance wisps to strike instead (bots.js).
+    const FAR = 400, LESSON = { low: '#8fc7ff', high: '#ffd890', sheath: '#e6e6f0' };
+    let lesson = null;   // { syms: { id: sym }, since: { id: t }, ref }
+    const lessonStart = (landIn) => {
+      const al = f.shuffle(f.alive()); if (!al.length) return;
+      const bag = f.shuffle(['low', 'high', 'sheath']);
+      lesson = { syms: {}, since: {}, ref: null };
+      const mine = lesson;
+      al.forEach((p, i) => {
+        const sym = i < 3 ? bag[i] : f.pick(['low', 'high', 'sheath']), at = 0.2 + i * 0.5;
+        mine.syms[p.id] = sym; mine.since[p.id] = f.t + at;
+        f.afterKeep(at, () => { if (live(p.id)) f.mark(p.id, { sym, key: 'cvLesson', col: LESSON[sym], dur: Math.max(0.5, landIn - at) }); });
+      });
+      if (al.length && Object.values(mine.syms).includes('sheath')) raiseWisps('lesson', landIn + 0.3);
+      f.afterKeep(landIn + 0.1, () => {
+        const ref = mine.ref || { x: B.x, y: B.y, f: B.facing };
+        for (const p of f.alive()) {
+          const sym = mine.syms[p.id]; if (!sym) continue;
+          const dx = p.x - ref.x, dy = p.y - ref.y, dd = Math.hypot(dx, dy);
+          const ok = sym === 'low' ? Math.cos(Math.atan2(dy, dx) - ref.f) < -0.35 : sym === 'high' ? dd >= FAR : !(struck[p.id] >= mine.since[p.id]);
+          if (!ok) f.damagePlayer(p, dmg.lesson, { kind: 'cvLesson', avoidable: true, noVuln: true, n: 'Three Lessons' });
+        }
+        f.clearMarks('cvLesson');
+        if (lesson === mine) lesson = null;
+      });
     };
 
     // --- the unleashings ---------------------------------------------------------------------------------------------------
@@ -267,9 +408,9 @@ const CORVANE = {
     });
     // one dash through the hero farthest from where he stands, to the wall; a stone lantern in the way shelters, once
     const cometOne = (d, exclude) => {
-      const pool = f.alive().filter(p => !exclude.has(p.id));
-      if (!pool.length) return null;
-      const tgt = pool.reduce((m, p) => (Math.hypot(p.x - B.x, p.y - B.y) > Math.hypot(m.x - B.x, m.y - B.y) ? p : m));
+      const dd = duelist(), pool = f.alive().filter(p => !exclude.has(p.id));
+      if (!pool.length && !dd) return null;
+      const tgt = dd || pool.reduce((m, p) => (Math.hypot(p.x - B.x, p.y - B.y) > Math.hypot(m.x - B.x, m.y - B.y) ? p : m));   // (the farthest hero: or, in the Circle, its duelist, every dash)
       exclude.add(tgt.id);
       const sx = B.x, sy = B.y;
       const m = f.mech({ type: 'aoe', shape: { kind: 'rect', x: sx, y: sy, angle: Math.atan2(tgt.y - sy, tgt.x - sx), len: 1300, w: 150 }, delay: d, dmg: dmg.comet,
@@ -344,20 +485,26 @@ const CORVANE = {
     // A re-read is only asked for once at a time: no False Stance on the second unleashing of a pair, and none two unleashings running.
     const FLIP_T = STANCE_T * 0.85;   // (the stance he ends on, alone, before its floor is painted)
     let lastFlip = false;
-    const unleash = (st, over) => {
+    // when the first blow of an unleashing lands, from the moment its floor is painted
+    const landOf = st => (st === 'crane' ? f.ct(3.4) : st === 'comet' ? f.ct(3.6) : f.ct(1.6) + f.alive().length * f.ct(0.85) + f.ct(1.5));
+    const unleash = (st, over, lessons) => {
       whet.busy = true;
       let shift = null;
       if (H && act >= 2 && !over && !lastFlip && f.rng() < 0.5) { const other = (act === 2 ? ['crane', 'comet'] : ['crane', 'comet', 'parting']).filter(s => s !== st); shift = st; st = f.pick(other); }
       lastFlip = !!shift;
+      if (lessons && f.extreme) lessonStart(STANCE_T + (shift ? FLIP_T : 0) + landOf(st));   // (Three Lessons: his stance points at every hero; judged when the unleashing lands)
       whet.st = shift || st; sendWhet();
       // (the cast bar says only that the edge is coming: which unleashing it is, his stance tells, then the floor and its own cast)
       f.cast(over ? 'Overwhet' : 'Whetted Edge', STANCE_T + (shift ? FLIP_T : 0), 'stance', { st: shift || st });
+      // (Three Lessons has no cast of its own: a bcast puts its name over the stance bar, same pose and length, so the journal can open its page. The stance cast above is untouched.)
+      if (lessons && f.extreme) f.emit({ t: 'bcast', name: 'Three Lessons', dur: STANCE_T + (shift ? FLIP_T : 0), anim: 'stance', st: shift || st });
       if (shift) f.afterKeep(STANCE_T, () => { whet.st = st; sendWhet(); f.cast('False Stance', FLIP_T, 'stance', { st }); });
       const lead = STANCE_T + (shift ? FLIP_T : 0);
       let len = lead;
       f.afterKeep(lead, () => {
         if (f.state !== 'live') return;
         const run = st === 'crane' ? crane() : st === 'comet' ? comet(H && act === 3) : parting();
+        if (lesson && !lesson.ref) lesson.ref = { x: B.x, y: B.y, f: B.facing };   // (his place and his facing as the floor is painted: what the lessons are judged against)
         let tail = run;
         if (st === 'parting' && H) {
           // Returning Parting: back the other way, through wherever everyone has gone
@@ -389,10 +536,10 @@ const CORVANE = {
       slide(len + 1);
     });
     // an act's own unleashing: the gauge fills itself, then he unleashes (on the script: nothing slides)
-    const scripted = st => () => {
+    const scripted = (st, lessons) => () => {
       if (whet.busy) return;
       whet.n = MAX; sendWhet();
-      const len = unleash(st || choose());
+      const len = unleash(st || choose(), false, lessons);
       // (Hard's Returning Parting, or a Volley, can run past the next step: the rest of the script waits for it)
       const next = f.events.reduce((m, e) => (e.step && e.t > f.t ? Math.min(m, e.t) : m), Infinity);
       if (next < Infinity && f.t + len + 1 > next) slide(f.t + len + 1 - next);
@@ -405,6 +552,9 @@ const CORVANE = {
     const vigil = () => {
       B.lockFacing = true; B.moveTo = { x: 0, y: -80, speed: 420 };
       f.clearZones();   // (a Still Water caught by the gate lets go: the glass was laid for another place in the room)
+      glass.to = 0; dropWisps();   // (and so does its counter, and the Circle's ring)
+      if (duel) { f.unmark(duel.id, 'cvDuel'); duel = null; }
+      f.clearMarks('cvLesson'); lesson = null;
       // (the kneel waits for what he was doing when the gate was reached: a cast, a Sundering pair or an unleashing on its way; nothing of his is cut short)
       let kneelEnd = Infinity;
       const kneel = (waited = 0) => {
@@ -438,7 +588,7 @@ const CORVANE = {
         for (let i = 0; i < n; i++) { const home = broken.shift(); spawnWisp(home || snow.shift() || [0, 360], home || null); }
       }));
       // the healer still has work and the tank takes the pair as he rises (2026-10-26 de-cook: no Draw Cut inside the breath: the wisps are the wall's job)
-      f.afterKeep(6, later(gale), 'White Gale');
+      f.afterKeep(6, later(galeX), GALE);
       f.afterKeep(H ? 10 : 12, later(hollowBreath), 'Hollow Breath');
       f.afterKeep(H ? 13.3 : 14.4, later(answer), 'Answering Cut');   // (the tank has nothing else in the wall until the pair as he rises; clear of the gale's raidwide)
       // (and what he does as he rises is laid now, so the feed reads across the wall into Act III)
@@ -542,8 +692,8 @@ const CORVANE = {
     const healerDraw = () => drawCut(healer());    // a line through the healer, inside Hollow Breath's circle
     // how long an unleashing runs from its first step (U: Rising Crane or Comet Draw, V: Hundredfold Parting, with its return on Hard, Q: Hard's Comet Volley)
     const ULEN = H ? { U: 11.4, V: 20, Q: 15.5 } : { U: 11.1, V: 13.1, Q: 11.1 };
-    const EVT = { P: [[4.2, 3], [8.5, 3]], D: [[3, 3]], L: [[3, 2]], H: [[4.4, 2]], G: [[2.4, 1]], B: [[2, 2], [6.6, 2]], U: [[ULEN.U - 0.5, 2]], V: [[ULEN.V - 0.5, 2]], Q: [[ULEN.Q - 0.5, 2]], C: [[7, 1]], R: [[1.9, 3]] };   // [seconds in, 1 tank | 2 healer | 3 both]
-    const CAST = { R: 3.3, P: 8.5, D: 3, X: 3, L: 3, H: 4.4, G: 2.4, B: 2, C: 7.2, k: 7.2, c: 3.6, W: 3.8 };   // (how long its casts keep the bar busy; an unleashing the script waits for)
+    const EVT = { P: [[4.2, 3], [8.5, 3]], D: [[3, 3]], L: [[3, 2]], H: [[4.4, 2]], G: [[2.4, 1]], B: [[2, 2], [6.6, 2]], U: [[ULEN.U - 0.5, 2]], V: [[ULEN.V - 0.5, 2]], Q: [[ULEN.Q - 0.5, 2]], C: [[7, 1]], R: [[1.9, 3]], T: [[3.4, 2]] };   // [seconds in, 1 tank | 2 healer | 3 both]  (T: The Shrine's raidwide)
+    const CAST = { R: 3.3, P: 8.5, D: 3, X: 3, L: 3, H: 4.4, G: 2.4, B: 2, C: 7.2, k: 7.2, c: 3.6, W: 3.8, T: 3.5, O: 2.6 };   // (O: The Circle's own cast, Extreme)   // (how long its casts keep the bar busy; an unleashing the script waits for)
     // the steps of a run of sets with the time each one begins (an unleashing pushes what follows it later, as scripted() does)
     const walk = (sets, fn) => {
       let t = 0, wait = 0;
@@ -577,109 +727,145 @@ const CORVANE = {
     // glasses, two Breaths...) side by side, no cast bar cut, and neither the tank nor the healer waits more than limit s (31; Act III, where a Hundredfold Parting
     // with its return runs 20 s, 33: below that some orders of its three edges have no arrangement at all). (Every act has several; the
     // written order is only the fallback if a draw of thousands finds none, and f.mixInfo says how many it took.)
-    const mix = (plan, pre, limit = 31, tlimit = limit) => {
-      const flat = pick => plan.flatMap(x => (Array.isArray(x) ? x : pick(x.mix)));
-      if (!f.hard) return flat(m => m);
-      const keep = plan.flatMap(x => x.keep || []);
-      for (let k = 1; k <= 4000; k++) {
-        const seq = flat(m => f.shuffle(m));
-        const at = keep.map(x => seq.indexOf(x));
-        if (at.some((v, i) => i && v < at[i - 1])) continue;
-        let ok = true;
-        for (let i = 1; i < seq.length && ok; i++) { const h = heavy(seq[i - 1]); for (const c of heavy(seq[i])) if (h.has(c)) ok = false; }
-        if (!ok || crowded(seq) || lookClash(seq)) continue;
-        const [tg, hg] = feel(seq, pre);
-        if (tg > tlimit || hg > limit) continue;
-        f.mixInfo = (f.mixInfo || []).concat([k]);
-        return seq;
+    // THE DANCES (docs/plans/2026-11-boss-revamp.md): Hard has three fixed timelines, one per f.dance (drawn once at the pull), and Extreme and Normal run dance 0. The
+    // order of an act's mid sets is drawn from the dance's own generator, under the rules above; and the three dances must differ in the first set that is not common
+    // to all three (re-drawn, a stream of allowed orders for each dance, until they do), so that set tells the party which dance this pull is. planOf(d) lays out
+    // the act as dance d would have it (sets are named with K; a set without a name is the same fixed set in every dance).
+    const danceGen = (d, salt) => f.danceRng(salt, d);   // (another dance's generator: the engine's own, so the three orders are really the ones each dance draws)
+    const shuf = (arr, rnd) => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    const keyAll = (pre, sets) => { sets.forEach((s, i) => { if (!s.key) s.key = pre + i; }); return sets; };
+    const mix = (planOf, pre, limit = 31, tlimit = limit, salt = 'act') => {
+      const flatOf = (plan, pick) => plan.flatMap(x => (Array.isArray(x) ? x : pick(x.mix)));
+      if (!f.hard) return flatOf(planOf(0), m => m);
+      let fell = false;
+      const stream = d => {
+        const plan = planOf(d), rnd = danceGen(d, salt), keep = plan.flatMap(x => x.keep || []);
+        return () => {
+          for (let k = 1; k <= 4000; k++) {
+            const seq = flatOf(plan, m => shuf(m, rnd));
+            const at = keep.map(x => seq.indexOf(x));
+            if (at.some((v, i) => i && v < at[i - 1])) continue;
+            let ok = true;
+            for (let i = 1; i < seq.length && ok; i++) { const h = heavy(seq[i - 1]); for (const c of heavy(seq[i])) if (h.has(c)) ok = false; }
+            if (!ok || crowded(seq) || lookClash(seq)) continue;
+            const [tg, hg] = feel(seq, pre);
+            if (tg > tlimit || hg > limit) continue;
+            return seq;
+          }
+          fell = true;
+          return flatOf(plan, m => m);   // (the written order is only the fallback if a draw of thousands finds none)
+        };
+      };
+      // (two sets are the same set to the party if they are the same moves: a Sundering Cut set is a Sundering Cut set; the three edges' sets are named by their unleashing)
+      const next = [0, 1, 2].map(stream), seqs = [[], [], []], key = s => (/^s\d:/.test(s.key || '') ? s.key : s.map(st => st[3] || st[2] || '').join('+'));
+      for (let k = 0; k < 60; k++) {
+        for (let d = 0; d < 3; d++) seqs[d].push(next[d]());
+        const ks = seqs.map(q => q[k].map(key));
+        const i0 = ks[0].findIndex((v, i) => v !== ks[1][i] || v !== ks[2][i]);
+        if (i0 >= 0 && new Set([ks[0][i0], ks[1][i0], ks[2][i0]]).size === 3) { f.mixInfo = (f.mixInfo || []).concat([fell ? -1 : k]); return seqs[f.dance][k]; }
       }
-      f.mixInfo = (f.mixInfo || []).concat([-1]);
-      return flat(m => m);
+      f.mixInfo = (f.mixInfo || []).concat([-2]);   // (no triple found: this dance's first draw)
+      return seqs[f.dance][0];
     };
-    // I. The Pass (Hard draws the order of the middle sets)
+    // how long a ring must stand to cover what it governs (Extreme): a Draw Cut, or a Comet Draw with the Draw Cut behind it
+    const drawSpan = 0.6 + f.ct(3.0) + 0.6;
+    const cometSpan = 0.6 + f.ct(3.6) + 0.55 + f.ct(3.0) + 0.6;
+    // the three unleashings' orders: Hard's dance d takes them turned d places round (Act III), and the closing sentence turned the other way (Act IV)
+    const ROT3 = ['crane', 'comet', 'parting'];
+    const rot = n => ROT3.slice(n).concat(ROT3.slice(0, n));
+    const edgeOrder = d => (H ? rot(d) : ROT3);
+    const finOrder = d => (H ? [rot(0), rot(2), rot(1)][d] : ROT3);
+
+    // I. The Pass (Hard draws, per dance, the order of the middle sets)
     const pass = from => {
       const head = [S([4, gale, 'White Gale', 'H'])];
       const tail = [S([9.5, scripted('crane'), 'Whetted Edge', 'U'])];
       // (2026-10-26 de-cook: a move stands on its own with a breath after it; the Sundering pair and one Draw Cut with a Sweep laid behind it are the act's pairs)
-      const mid = [
+      const mid = keyAll('p', [
         S([8, ...tankPair]),
-        S([15, tankDraw, 'Draw Cut', 'D']),
+        // (Extreme: this Draw Cut is fought inside The Circle, whose step is taken out of the gap before it)
+        f.extreme ? S([12.4, circle(drawSpan), 'The Circle', 'O'], [2.6, tankDraw, 'Draw Cut', 'D']) : S([15, tankDraw, 'Draw Cut', 'D']),
         S([11, () => sweep(), 'Scabbard Sweep', 'W']),
         S([10, ...rip]),
         S([9, tankDraw, 'Draw Cut', 'D']),
         S([13, ...tankPair]),
         S([15, () => drawCut(), 'Draw Cut', 'X'], [3.1, () => sweep(), 'Scabbard Sweep', 'W']),
         S([9, ...rip]),
-        S([11, gale, 'White Gale', 'H']),
+        S([11, galeX, GALE, 'H']),   // (Extreme: Gale Through the Pass)
         S([12, ...tankPair]),
-      ];
+      ]);
       return f.course({
         until: 0.72, onStart: () => { act = 1; },
-        sets: mix([head, { mix: mid }, tail], {}, 31, 28),
+        sets: mix(() => [head, { mix: mid }, tail], {}, 31, 28, 'pass'),
         closing: [[10, gale, 'White Gale'], [10, cut, 'Sundering Cut'], [12, () => drawCut(), 'Draw Cut']],
         next: shrine,
       }, from);
     };
 
-    // II. The Shrine (its gate is the Vigil's wall)
+    // II. The Shrine (its gate is the Vigil's wall). It opens with The Shrine, in the calm before its first move.
     const shrine = from => {
       // (2026-10-26 de-cook: the act's pairs are the Comet Draw's line from the far wall and the Draw Cut inside Hollow Breath; the rest stand alone)
-      const head = [S([12.5, ...rip], [9, stillWater, 'Still Water', 'G'])];
-      const mid = [
+      const head = [S([0.3, shrineOpen, 'The Shrine', 'T'], [12.2, ...rip], [9, stillWater, 'Still Water', 'G'])];
+      const midOf = d => keyAll('s', [
         S([15, ...tankPair]),
-        S([14, () => cometDraw('tank'), 'Comet Draw', 'C']),
-        S([14, hollowBreath, 'Hollow Breath', 'B'], [H ? 4 + Math.round(f.rng() * 4) : 6, healerDraw, 'Draw Cut', 'L']),
+        // (Extreme: the Comet Draw is fought inside The Circle: its duelist takes the dash and the line behind it. The Circle's step is taken out of the gap before it)
+        f.extreme ? S([11.4, circle(cometSpan), 'The Circle', 'O'], [2.6, () => cometDraw('tank'), 'Comet Draw', 'C']) : S([14, () => cometDraw('tank'), 'Comet Draw', 'C']),
+        S([14, hollowBreath, 'Hollow Breath', 'B'], [H ? [6, 4, 8][d] : 6, healerDraw, 'Draw Cut', 'L']),   // (the Draw Cut's place in the breath: the dance's)
         S([11, ...rip]),
         S([9, ...tankPair]),
-        S([14, gale, 'White Gale', 'H']),
+        S([14, galeX, GALE, 'H']),   // (Extreme: Gale Through the Pass)
         S([10, tankDraw, 'Draw Cut', 'D'], [9, () => sweep(), 'Scabbard Sweep', 'W']),
         S([12, H ? () => cometDraw('any') : () => comet(false), 'Comet Draw', H ? 'k' : 'c']),
         S([11, ...rip]),
-      ];
-      const anchor = [S([9, scripted('comet'), 'Whetted Edge', 'U'])];
-      const late = [
+      ]);
+      const anchor = [S([9, scripted('comet', f.extreme), 'Whetted Edge', 'U'])];   // (Extreme: Three Lessons)
+      const late = keyAll('l', [
         S([13, ...tankPair]),
         S([14, stillWater, 'Still Water', 'G']),
-      ];
+      ]);
       return f.course({
         until: 0.42, onStart: () => { act = 2; },
         wall: { label: 'The Vigil', run: vigil, until: 'resolved', timeout: VIGIL + 8 },
-        sets: mix([head, { mix: mid }, anchor, { mix: late }], { hl: [10.5] }, 31, 30),
+        sets: mix(d => [head, { mix: midOf(d) }, anchor, { mix: late }], { hl: [10.5] }, 31, 30, 'shrine'),
         closing: [[10, gale, 'White Gale'], [10, cut, 'Sundering Cut'], [12, stillWater, 'Still Water']],
         next: edge,
       }, from);
     };
 
-    // III. The Whetted Edge: the three unleashings on the script (Hard draws their order, and the order of the sets between them)
+    // III. The Whetted Edge: the three unleashings on the script (Hard's dance fixes their order, and the order of the sets between them)
     const edge = from => {
-      const order = H ? f.shuffle(['crane', 'comet', 'parting']) : ['crane', 'comet', 'parting'];
-      const uv = i => (order[i] === 'parting' ? 'V' : H && order[i] === 'comet' ? 'Q' : 'U');   // (which kind of unleashing the script lays third, for the Hard draw)
-      // (2026-10-26 de-cook: the act's pairs are the twin Draw, the glass with a line at the tank on it, and the Draw Cut at the healer inside Hollow Breath; the three edges are its peaks)
-      const s1 = [S([19, twinDraw, 'Draw Cut', 'X'], [9, ...rip], [H ? 9 : 9, scripted(order[0]), 'Whetted Edge', uv(0)])];
-      const a = [
-        S([14, stillWater, 'Still Water', 'G'], [3.4, tankDraw, 'Draw Cut', 'D']),   // the glass, and a line at the tank on it
-        S([13, ...tankPair]),
-      ];
-      const s5 = [S([13, scripted(order[1]), 'Whetted Edge', uv(1)])];
-      const b = [
-        S([13, tankDraw, 'Draw Cut', 'D']),
-        S([10, hollowBreath, 'Hollow Breath', 'B'], [5, healerDraw, 'Draw Cut', 'L']),   // (a line at the healer, inside the breath)
-        S([10, ...rip]),
-      ];
-      const s8 = [S([6, scripted(order[2]), 'Whetted Edge', uv(2)])];
-      const s9 = [S([12, ...tankPair])];
+      const planOf = d => {
+        const order = edgeOrder(d);
+        const uv = i => (order[i] === 'parting' ? 'V' : H && order[i] === 'comet' ? 'Q' : 'U');   // (which kind of unleashing the script lays third, for the Hard draw)
+        // (2026-10-26 de-cook: the act's pairs are the twin Draw, the glass with a line at the tank on it, and the Draw Cut at the healer inside Hollow Breath; the three edges are its peaks)
+        // (Extreme: all three edges carry Three Lessons, and the Draw Cut at the tank is fought inside The Circle)
+        const s1 = [K('s1:' + order[0], S([19, twinDraw, 'Draw Cut', 'X'], [9, ...rip], [9, scripted(order[0], f.extreme), 'Whetted Edge', uv(0)]))];
+        const a = keyAll('a', [
+          S([14, stillWater, 'Still Water', 'G'], [3.4, tankDraw, 'Draw Cut', 'D']),   // the glass, and a line at the tank on it
+          S([13, ...tankPair]),
+        ]);
+        const s5 = [K('s5:' + order[1], S([13, scripted(order[1], f.extreme), 'Whetted Edge', uv(1)]))];
+        const b = keyAll('b', [
+          f.extreme ? S([10.4, circle(drawSpan), 'The Circle', 'O'], [2.6, tankDraw, 'Draw Cut', 'D']) : S([13, tankDraw, 'Draw Cut', 'D']),
+          S([10, hollowBreath, 'Hollow Breath', 'B'], [5, healerDraw, 'Draw Cut', 'L']),   // (a line at the healer, inside the breath)
+          S([10, ...rip]),
+        ]);
+        const s8 = [K('s8:' + order[2], S([6, scripted(order[2], f.extreme), 'Whetted Edge', uv(2)]))];
+        const s9 = [S([12, ...tankPair])];
+        return [s1, { mix: [...a, ...s5, ...b, ...s8], keep: [s5[0], s8[0]] }, s9];
+      };
       return f.course({
         until: 0.16, onStart: () => { act = 3; B.lockFacing = false; },
-        sets: mix([s1, { mix: [...a, ...s5, ...b, ...s8], keep: [s5[0], s8[0]] }, s9], { tk: [7.2, 11.5], hl: [7.2, 11.5, 18.4] }, 33, 30),   // (the Vigil's own Sundering pair and gale are just ahead)
+        sets: mix(planOf, { tk: [7.2, 11.5], hl: [7.2, 11.5, 18.4] }, 33, 30, 'edge'),   // (the Vigil's own Sundering pair and gale are just ahead)
         closing: [[12, gale, 'White Gale'], [10, cut, 'Sundering Cut'], [12, twinDraw, 'Draw Cut']],
         ramp: 0.08,
         next: finale,
       }, from);
     };
 
-    // IV. The Last Vigil: all three edges, then a Parting from each hero in turn
+    // IV. The Last Vigil: all three edges (Hard's dance fixes their order), then a Parting from each hero in turn
     const finale = from => {
-      const order = H ? f.shuffle(['crane', 'comet', 'parting']) : ['crane', 'comet', 'parting'];   // (drawn here so the pair that follows the three edges can be laid right behind them)
+      const order = finOrder(f.dance);   // (fixed here so the pair that follows the three edges can be laid right behind them)
       const afterEdges = 2.7 + (H ? f.ct(1.9) + f.ct(1.4) : f.ct(1.9)) + 0.3 + sentenceLen(order, 4) + 0.3;   // (from the Last Vigil's step: the kneel, the Answering Cut as he rises, then the edges and the Cold Sheathe)
       return f.course({
         onStart: () => { act = 3; B.lockFacing = false; },
@@ -696,7 +882,7 @@ const CORVANE = {
     pass(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.parting())
-    f.moves = { gale, cut, answer, drawCut, tankDraw, healerDraw, twinDraw, sweep, stillWater, hollowBreath, sheathe, crane, comet, cometDraw, parting, unleash, scripted, vigil, lastVigil, threefold, finalDance, notch };
+    f.moves = { gale, cut, answer, drawCut, tankDraw, healerDraw, twinDraw, sweep, stillWater, hollowBreath, sheathe, crane, comet, cometDraw, parting, unleash, scripted, vigil, lastVigil, threefold, finalDance, notch, shrineOpen, circle, galeLine, lessonStart };
   },
 };
 

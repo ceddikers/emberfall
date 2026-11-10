@@ -28,15 +28,20 @@
 //   Dark Ember:           a hero carries a black ember as a Starfall comes down (Acts II and III); set down at the shadow's edge, it pushes the shadow back.
 //   and a second Grace Withdrawn during a dance.
 // Hard also draws the afterimage orders, the Starfall spots and the Starwyrm's side each pull, and the order of each act's middle (see the acts below).
+// The revamp (2026-11-10): Act II opens with "The Shadow Lengthens" and Act IV with "Sunless" (a named cast, the shadow changing, a light raidwide). Hard's act
+// orders are drawn from f.danceRng (three fixed dances; Extreme runs the first). Extreme (f.extreme) adds three mechanics: Carried Shadow (a hero carries a
+// second shadow, and a Starfall tower falls inside it), Fallen Stars (marked heroes drop stars in the sky, the only cover from a Constellation Fall) and
+// The Star's Pull (one whole dance is drawn toward the middle of the shadow).
 // Crossed Horizon Cut (same name): two cuts at once at different angles; the only bare floor is where the two gaps meet (Normal once in Act III, Hard once in Act IV).
 
 const CAELUM = {
   id: 'caelum', name: 'Caelum Vey', title: 'the Starborn',
-  hp: { normal: 7045000, hard: 7580000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 5400000 / 5400000; Hard was 5.6M: the slowest clears used to land on the enrage cast; now 20 s or more clear)
+  hp: { normal: 7045000, hard: 7580000, extreme: 8280000 },   // (extreme: Hard's plus about 6%, a first number, tuning comes later) (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 5400000 / 5400000; Hard was 5.6M: the slowest clears used to land on the enrage cast; now 20 s or more clear)
   normalDmg: 0.86,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 0.78; Normal's damage multiplier, fight.js default 1: 2026-10-27, tuned for a human party rather than perfect bots, CLAUDE.md)
-  hardDmg: 1.46,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.19; Hard's damage multiplier; fight.js default 1.25; 1.435 before 2026-10-27's retune for a human party)
-  autoDmg: { normal: 2600, hard: 2600 },
-  enrage: { normal: 605, hard: 625 },   // the cast starts here and lands 8 s later (10:13 / 10:33)
+  hardDmg: 1.75,   // (2026-11-11: Hard brought into line with its set, the user's call; was 1.46)   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.19; Hard's damage multiplier; fight.js default 1.25; 1.435 before 2026-10-27's retune for a human party)
+  extremeDmg: 1.75,   // (Extreme never hits softer than Hard: Hard's multiplier, with its own health and mechanics)
+  autoDmg: { normal: 2600, hard: 2600, extreme: 2600 },
+  enrage: { normal: 605, hard: 625, extreme: 625 },   // the cast starts here and lands 8 s later (10:13 / 10:33)
   enrageName: 'The Sky Comes Down',
   vuln: 0.5,
   spawn: { x: 0, y: -300 },
@@ -190,7 +195,13 @@ const CAELUM = {
       const name = o.name || (o.mirror && H ? 'Mirrored Wake' : o.anchored ? 'Anchored Wake' : 'Eightfold Wake');
       // o.echo (1 or 2: in the first or the second pass of a mirrored dance): the tank's Trailing Cut is cast just after the lead
       const ep = o.echo ? ((o.mirror && H) ? o.echo : 1) : 0;
-      if (!o.quiet) f.cast(name, (o.bar || ep === 1) ? lead + (o.echoAt ? o.echoAt - 0.05 : 0) : total, 'wake');   // (o.bar: the bar shows only the lead; the cuts run on, so a cast that begins during them does not cut it)
+      const barLen = (o.bar || ep === 1) ? lead + (o.echoAt ? o.echoAt - 0.05 : 0) : total;
+      if (!o.quiet) {
+        // (o.bar: the bar shows only the lead; the cuts run on, so a cast that begins during them does not cut it)
+        // (Extreme, The Star's Pull: the lead's bar carries that name, and the dance's own bar follows it)
+        if (o.pull && f.extreme) { f.cast("The Star's Pull", lead, 'wake'); f.afterKeep(lead, () => { if (f.state === 'live') f.cast(name, Math.max(0.2, barLen - lead), 'wake'); }); }
+        else f.cast(name, barLen, 'wake');
+      }
       if (ep === 1) f.afterKeep(lead + (o.echoAt || 0.25), () => { if (f.state === 'live') echo({ hosted: true }); }, 'Trailing Cut');
       B.lockFacing = true; hold(total + 0.8);
       const from = { x: Math.round(B.x), y: Math.round(B.y) };
@@ -216,8 +227,11 @@ const CAELUM = {
         const m = f.rng() * Math.PI, c = Math.cos(2 * m), s = Math.sin(2 * m);
         const mp = pts.map(q => ({ x: Math.round(q.x * c + q.y * s), y: Math.round(q.x * s - q.y * c) }));
         f.afterKeep(total + 0.3, () => { if (f.state === 'live') dance(mp, { quiet: true, lead: 2.6, echo: ep === 2 ? 1 : 0 }); }, 'Mirrored Wake');
-        return total + 0.3 + f.ct(2.6) + mp.length * step;
+        const whole = total + 0.3 + f.ct(2.6) + mp.length * step;
+        if (o.pull && f.extreme) pullFor(whole + 0.3);
+        return whole;
       }
+      if (o.pull && f.extreme) pullFor(total + 0.3);
       return total;
     };
 
@@ -279,8 +293,19 @@ const CAELUM = {
     // Starfall: shards break off the meteor and fall as blue soaks inside its shadow (one hero each)
     const starfall = (n = 2) => {
       const d = f.ct(5), taken = [], minR = f.form ? 40 : 175;
-      f.cast('Starfall', d, 'starfall');
+      // Extreme, Carried Shadow: one hero carries a small second shadow, and one of the towers falls inside it, wherever they have taken it
+      // (a ring on the carrier, a mark over their head, the tower on the same hero until it locks 1.6 s before the fall; it takes the place of one of the shadow's towers)
+      const carrier = f.extreme ? nonTank() : null;
+      f.cast(carrier ? 'Carried Shadow' : 'Starfall', d, 'starfall');
       f.afterKeep(d - 0.4, () => { if (f.state === 'live' && f.t + 0.4 >= graceUntil) f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: 0.4, dmg: dmg.starRain, hidden: true, tag: 'clStarRain' }); });
+      if (carrier) {
+        f.mark(carrier.id, { sym: 'dot', col: '#9d8cff', dur: d, key: 'clCarry' });
+        f.emit({ t: 'roomev', k: 'caelum-carried', pid: carrier.id, dur: +(d + 0.5).toFixed(2) });
+        // (the tower is laid first, so a bot's plan gives it to whoever stands in it: the carrier)
+        f.mech({ type: 'tower', shape: { kind: 'circle', x: Math.round(carrier.x), y: Math.round(carrier.y), r: 85 }, delay: d, dmg: dmg.star, need: 1, failDmg: dmg.starFail, follow: carrier.id, lockAt: 1.6, tag: 'clStar' });
+        f.mech({ type: 'drop', shape: { kind: 'circle', x: Math.round(carrier.x), y: Math.round(carrier.y), r: 150 }, delay: d, dmg: 0, follow: carrier.id, lockAt: 1.6, tag: 'clShadowCarry', avoidable: false });
+        n = Math.max(0, n - 1);
+      }
       for (let i = 0; i < n; i++) {
         const at = inShadow(taken, minR, i < 2 ? B : null); if (!at) break;
         taken.push(at);
@@ -301,6 +326,77 @@ const CAELUM = {
           if (edge < 80) { held += 20; setShadow(Math.max(140, shadow.r - 55)); f.emit({ t: 'propfx', k: 'clember', x: Math.round(x), y: Math.round(y), ok: 1 }); }
           else { held = Math.max(-20, held - 20); f.puddle(x, y, 100, 10, dmg.darkEmber, 1, 'clEmberBurn'); f.emit({ t: 'propfx', k: 'clember', x: Math.round(x), y: Math.round(y), ok: 0 }); }
         } });
+    };
+
+    // --- the acts open with a named cast (the shadow lengthens; the sun goes out) -------------------------------------------------
+    // Act II: "The Shadow Lengthens": he lifts the blade, the shadow grows to the second form's size, a little light comes down on everyone.
+    // Act IV: "Sunless": the shadow goes dark and burns, and grows again 36 s on. Each is the first step of its act, with the first block's lead cut to match.
+    const lengthen = () => {
+      f.cast('The Shadow Lengthens', 3.2, 'summon');
+      f.emit({ t: 'roomev', k: 'caelum-lengthens', r: 270, dur: 3.2 });
+      f.afterKeep(2.2, () => { if (f.state === 'live') setShadow(270); });
+      f.afterKeep(3.2, () => { if (f.state === 'live' && f.t + 0.4 >= graceUntil) f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: 0.4, dmg: dmg.glow, hidden: true, tag: 'clGlow', from: 'The Shadow Lengthens' }); });
+    };
+    const sunless = () => {
+      f.cast('Sunless', 3.4, 'night');
+      f.emit({ t: 'roomev', k: 'caelum-sunless', dur: 3.4 });
+      f.afterKeep(3.4, () => {
+        if (f.state !== 'live') return;
+        setShadow(340 - held, true);
+        f.afterKeep(36, () => { if (f.state === 'live') setShadow(390 - held, true); });
+        if (f.t >= graceUntil) f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: 0.4, dmg: dmg.glow, hidden: true, tag: 'clGlow', from: 'Sunless' });
+      });
+    };
+
+    // --- Extreme: The Star's Pull ---------------------------------------------------------------------------------------------------
+    // For one whole dance the meteor draws every hero steadily toward the middle of its shadow: svdrift, the gentle pull the clients and the host
+    // already carry (a hero's own walking beats it). The dance is the same; the floor under it is not still. Laid by a dance's o.pull (dance()).
+    const PULL = { v: 36, every: 0.2 };
+    let pullUntil = 0, pullAt = 0;
+    const pullFor = len => {
+      pullUntil = f.t + len;
+      f.emit({ t: 'roomev', k: 'caelum-pull', x: shadow.x, y: shadow.y, dur: +len.toFixed(2) });
+    };
+    if (f.extreme) f.ticker(() => {
+      if (f.state !== 'live' || f.t >= pullUntil || f.t < pullAt) return;
+      pullAt = f.t + PULL.every;
+      const v = f.alive().map(p => { const dx = shadow.x - p.x, dy = shadow.y - p.y, d = Math.hypot(dx, dy); return d < 70 ? [p.id, 0, 0] : [p.id, Math.round(dx / d * PULL.v), Math.round(dy / d * PULL.v)]; });
+      f.emit({ t: 'svdrift', v, dt: PULL.every, dur: 0.35 });
+    });
+
+    // --- Extreme: Fallen Stars -------------------------------------------------------------------------------------------------------
+    // Two or three heroes are marked; when a mark runs out a star stands where that hero did (cover, solid). Constellation Fall, laid by fall(), hits
+    // the whole floor from the rim but for the shadow of a star, so the stars are the only cover. Two stars dropped closer than FALLEN.gap burst.
+    const FALLEN = { markDur: 6, gap: 220, burst: 170, burstIn: 1.6 };
+    let starsOut = [];
+    const stars = () => {
+      const pool = f.nonTanks().length ? f.nonTanks() : f.alive();
+      const marked = f.shuffle(pool).slice(0, Math.min(pool.length, f.rng() < 0.5 ? 2 : 3));
+      f.cast('Fallen Stars', f.ct(3), 'summon');
+      f.emit({ t: 'roomev', k: 'caelum-fallen', dur: FALLEN.markDur + 1 });
+      for (const p of marked) f.mark(p.id, { sym: 'star', col: '#cfe0ff', dur: FALLEN.markDur, key: 'clStar' });
+      f.afterKeep(FALLEN.markDur, () => {
+        if (f.state !== 'live') return;
+        const made = [];
+        for (const p of marked) {
+          const q = live(p.id); if (!q) continue;
+          made.push(f.addProp({ kind: 'starshard', x: Math.round(q.x), y: Math.round(q.y), r: 34, hp: 0, solid: true, cover: true, rubble: false }));
+        }
+        starsOut = starsOut.filter(pr => f.props.includes(pr)).concat(made);
+        // (two dropped too close together burst, both: a red ring on each from the moment they fall, so the pair can part)
+        const bad = new Set();
+        for (let i = 0; i < made.length; i++) for (let j = i + 1; j < made.length; j++) if (Math.hypot(made[i].x - made[j].x, made[i].y - made[j].y) < FALLEN.gap) { bad.add(made[i]); bad.add(made[j]); }
+        for (const pr of bad) f.aoe({ kind: 'circle', x: pr.x, y: pr.y, r: FALLEN.burst }, FALLEN.burstIn, dmg.glint, { tag: 'clStarBurst', onResolve: () => { if (f.props.includes(pr)) f.breakProp(pr, 'burst'); } });
+      });
+    };
+    // the breath itself: from a point on the rim, over the whole floor; a star's shadow is the only safe ground
+    const fall = () => {
+      const d = f.ct(4.8), ra = f.rng() * TAU, rx = Math.round(Math.cos(ra) * (ARENA.r - 20)), ry = Math.round(Math.sin(ra) * (ARENA.r - 20));
+      f.cast('Constellation Fall', d, 'constellation');
+      f.emit({ t: 'roomev', k: 'clrear', x: rx, y: ry, dur: +(d + 2).toFixed(2) });
+      f.mech({ type: 'aoe', shape: { kind: 'circle', x: rx, y: ry, r: 1400 }, delay: d, dmg: dmg.constellation, cover: true, src: { x: rx, y: ry }, tag: 'clConstellation' });
+      // (the stars that stood in the way are spent)
+      f.afterKeep(d + 0.3, () => { for (const pr of starsOut) if (f.props.includes(pr)) f.breakProp(pr, 'fall'); starsOut = []; });
     };
 
     // --- the Starwyrm (the wall) ------------------------------------------------------------------------------------------------
@@ -431,7 +527,9 @@ const CAELUM = {
       glintT: () => ({ fn: () => glint({ tank: true }), name: 'Glint', tail: f.ct(2.6) + 0.4, tank: [f.ct(2.6)] }),
       crown: () => ({ fn: crown, name: 'Cinder Crown', tail: f.ct(4.2) + 0.6, tank: [f.ct(4.2)], bust: [f.ct(4.2)], heal: [f.ct(4.2) + 1] }),
       thrust: () => ({ fn: thrust, name: 'Pinning Thrust', tail: f.ct(3.8) + 0.6, tank: [f.ct(3.8)], bust: [f.ct(3.8)] }),
-      starfall: (n = 2) => ({ fn: () => starfall(n), name: 'Starfall', tail: f.ct(5) }),
+      starfall: (n = 2) => ({ fn: () => starfall(n), name: f.extreme ? 'Carried Shadow' : 'Starfall', tail: f.ct(5) }),
+      stars: () => ({ fn: stars, name: 'Fallen Stars', tail: f.ct(3) + 0.4 }),   // (Extreme: the stars drop FALLEN.markDur s after the cast begins; fall() lays the breath)
+      fall: () => ({ fn: fall, name: 'Constellation Fall', tail: f.ct(4.8) + 0.5, heal: [f.ct(4.8)] }),
       ember: () => ({ fn: darkEmber, name: 'Dark Ember', tail: 7 }),   // (carried for ct(9); the next block begins just after it is set down)
       horizon: o => ({ fn: () => horizon(o), name: 'Horizon Cut', tail: f.ct(5) + 0.4 }),
       coil: () => ({ fn: secondCoil, name: 'Second Coil', tail: f.ct(4.6) }),
@@ -481,19 +579,26 @@ const CAELUM = {
     // Normal plays the blocks as written; Hard draws the middle (head and tail stay) until an order passes
     // (groups of block positions, drawn among themselves: the same load arrives at about the same time, so a party behind or ahead meets
     // the same fight. Threes by default over the middle of the act.)
-    const threes = (from, to) => {   // (the windows start one or two blocks in on some pulls, so the same blocks do not always share a window)
-      const g = [], o = Math.floor(f.rng() * 3); let i = from;
+    const threes = (from, to, rnd, o = Math.floor(rnd() * 3)) => {   // (the windows start one or two blocks in on some pulls, so the same blocks do not always share a window; rnd: the dance's generator; o: the offset, fixed by an act that pins its first block)
+      const g = []; let i = from;
       for (const n of [o ? 3 - o : 3, ...Array(8).fill(3)]) { if (i >= to) break; g.push(Array.from({ length: Math.min(n, to - i) }, (_, k) => i + k)); i += n; }
       return g;
     };
-    const sets = (blocks, groups, rules, tankMax, next, entry) => {
+    // (Hard draws each act's order from the dance's own generator, f.danceRng(salt): one of three fixed dances a pull, Extreme the first; the salt of each
+    // act was picked so the three dances part ways in the first block they do not share: the party can tell which dance this pull is)
+    // (pin: { g: the window, b: one block index a dance } puts that block first in the window: where the draw alone leaves two dances opening the same way)
+    const sets = (blocks, groups, rules, tankMax, next, entry, salt, pin) => {
       plan(blocks);
       if (!H) return lay(blocks);
-      let gs = typeof groups === 'function' ? groups() : groups;
+      const R = f.danceRng(salt), shuf = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+      let gs = typeof groups === 'function' ? groups(R) : groups;
       for (let k = 0; k < 12000; k++) {
-        if (k && k % 1000 === 0 && typeof groups === 'function') gs = groups();   // (a window layout that cannot be made to fit is drawn again)
+        if (k && k % 1000 === 0 && typeof groups === 'function') gs = groups(R);   // (a window layout that cannot be made to fit is drawn again)
         const order = blocks.slice();
-        for (const g of gs) { const d = f.shuffle(g.map(i => blocks[i])); g.forEach((pos, j) => { order[pos] = d[j]; }); }
+        for (const g of gs) {
+          const pb = pin && g === gs[pin.g] ? blocks[pin.b[f.dance]] : null, d = pb ? [pb, ...shuf(g.map(i => blocks[i]).filter(b => b !== pb))] : shuf(g.map(i => blocks[i]));
+          g.forEach((pos, j) => { order[pos] = d[j]; });
+        }
         if (orderOk(order, rules, tankMax, next, entry)) return lay(order);
       }
       return lay(blocks);
@@ -501,6 +606,8 @@ const CAELUM = {
     const has = (b, n) => b.names.includes(n);
     const isFloor = b => b.names.every(n => /Wake|Chorus of the Fallen|Horizon Cut|Second Coil/.test(n));
     const isDance = b => !!b && b.names.some(n => /Wake|Chorus of the Fallen/.test(n));
+
+    const SALT = { descent: 'descent-42', starfall: 'starfall-4', ascendant: 'ascendant-2', sky: 'sky-1' };   // (one generator per act)
 
     // I. Descent
     const descent = from => {
@@ -523,7 +630,7 @@ const CAELUM = {
       };
       return f.course({
         until: 0.76, onStart: () => setShadow(150),
-        sets: sets(blocks, () => threes(1, blocks.length - 1), rules, 28),
+        sets: sets(blocks, R => threes(1, blocks.length - 1, R), rules, 28, 0, undefined, SALT.descent),
         closing: [[10, glint, 'Glint'], [10, crown, 'Cinder Crown'], [12, () => wake(), 'Eightfold Wake']],
         next: starfallAct,
       }, from);
@@ -532,8 +639,8 @@ const CAELUM = {
     // II. Starfall (its gate is the Starwyrm's wall)
     const starfallAct = from => {
       const blocks = [
-        BL(5, MV.starfall()),
-        BL(H ? 10 : 12, MV.wake({ anchored: 2, echo: 1 }, 'Anchored Wake')),
+        BL(3.3, MV.starfall()),   // (the lead is 5 s less the transition's cast: the Starfall comes when it always did)
+        BL(H ? 10 : 12, MV.wake({ anchored: 2, echo: 1, pull: true }, 'Anchored Wake')),   // (Extreme: The Star's Pull holds this dance)
         BL(H ? 12 : 14, MV.crown()),
         BL(H ? 11 : 12, MV.starfall(), ...(H ? [[4.6, MV.ember()], [4.4, MV.echoOne()]] : [])),
         BL(H ? 9 : 11, MV.glintT(), [7, MV.thrust()]),
@@ -542,9 +649,9 @@ const CAELUM = {
         BL(H ? 11 : 13, MV.crown()),
       ];
       return f.course({
-        until: 0.52, onStart: () => setShadow(270),
+        until: 0.52,
         wall: { label: 'The Starwyrm', run: starwyrm, until: 'resolved', timeout: STARWYRM + 8 },
-        sets: sets(blocks, () => threes(1, 7), null, 31),
+        sets: [[[1.8, lengthen, 'The Shadow Lengthens']], ...sets(blocks, R => threes(1, 7, R), null, 31, 0, undefined, SALT.starfall)],
         closing: [[10, () => starfall(2), 'Starfall'], [10, crown, 'Cinder Crown'], [12, () => wake({ anchored: 2 }), 'Anchored Wake']],
         next: ascendant,
       }, from);
@@ -554,13 +661,13 @@ const CAELUM = {
     const ascendant = from => {
       const blocks = [
         BL(22, MV.crown()),
-        BL(H ? 11 : 12, MV.horizon({ star: true })),
+        f.extreme ? BL(11, MV.stars(), [FALLEN.markDur + 1, MV.fall()]) : BL(H ? 11 : 12, MV.horizon({ star: true })),   // (Extreme: Fallen Stars take the place of this Horizon Cut, the act's first block)
         BL(H ? 12 : 13, MV.glintT(), [7, MV.thrust()]),
         BL(H ? 9 : 10, MV.echo()),
         BL(H ? 8 : 9, MV.starfall(3), [f.ct(5) + 0.1, MV.grace(true)]),   // a second Grace Withdrawn as the Starfall comes down (his cast begins as the towers land)
         BL(H ? 12 : 18, MV.crown()),   // (Normal: the Crown waits a few seconds longer after Nightfall, the healer's catch-up)
         BL(H ? 10 : 12, MV.horizon({ cross: !H }), ...(H ? [[7, MV.coil()]] : [])),   // (Normal: two cuts at once, the bare floor where the gaps meet)
-        BL(H ? 11 : 13, MV.wake({ rings: 2, mirror: true, echo: 1 }, H ? 'Mirrored Wake' : 'Eightfold Wake')),
+        BL(H ? 11 : 13, MV.wake({ rings: 2, mirror: true, echo: 1, pull: true }, H ? 'Mirrored Wake' : 'Eightfold Wake')),   // (Extreme: The Star's Pull holds this dance)
         BL(H ? 19 : 15, MV.crown()),
         BL(H ? 10 : 12, MV.starfall(3), ...(H ? [[5, MV.ember()], [4.4, MV.echoOne()]] : [])),
         BL(H ? 11 : 12, MV.thrust()),
@@ -578,7 +685,7 @@ const CAELUM = {
       return f.course({
         until: 0.18, push: true,
         onStart: () => { if (!ascended) ascend(); },   // (practice from here: the wall that lays it was passed over)
-        sets: sets(blocks, () => threes(1, blocks.length - 1), rules, 30, 9, [19]),   // (19: the flare that closes the dance laid at the wall)
+        sets: sets(blocks, R => threes(1, blocks.length - 1, R, 2), rules, 30, 9, [19], SALT.ascendant, { g: 1, b: [2, 3, 3] }),   // (the only layout of windows that fits: the Horizon Cut first, then threes; the first three open with the Glint (dance 0) or the Trailing Cut (1 and 2, which part at the next set))   // (19: the flare that closes the dance laid at the wall)
         closing: [[10, crown, 'Cinder Crown'], [10, horizon, 'Horizon Cut'], [12, () => wake({ rings: 2 }), 'Eightfold Wake']],
         next: skyComes,
       }, from);
@@ -586,9 +693,11 @@ const CAELUM = {
 
     // IV. The Sky Comes Down: the shadow burns, and grows; the last dance runs round the clear ground left at the rim
     const skyComes = from => {
+      const pw = MV.wake({ ringR: 455, echo: 1 }, 'Eightfold Wake');
       const blocks = [
-        BL(5, MV.crown()),
-        BL(H ? 8 : 12, MV.horizon()),
+        BL(4.6, MV.crown()),   // (the lead is 5 s less a little of the transition's cast)
+        // (Extreme: Fallen Stars, the dance they hide from, and the breath, in place of this Horizon Cut)
+        f.extreme ? BL(8, MV.stars(), [FALLEN.markDur + 0.4, pw], [pw.tail + 0.4, MV.fall()]) : BL(H ? 8 : 12, MV.horizon()),
         BL(H ? 10 : 14, MV.thrust()),
         BL(11, MV.wake({ ringR: 455, fallen: true, echo: 1, echoAt: 4.4 }, 'Chorus of the Fallen')),
         BL(H ? 14 : 16, MV.crown()),   // (the climax: the fallen's dance, a last Cinder Crown, then the party is taken to nothing and the sky comes down at once)
@@ -596,8 +705,7 @@ const CAELUM = {
         BL(H ? 14 : 17, MV.horizon({ cross: H })),
       ];
       return f.course({
-        onStart: () => { setShadow(340 - held, true); f.afterKeep(36, () => { if (f.state === 'live') setShadow(390 - held, true); }); },
-        sets: sets(blocks, [[0, 1, 2], [4, 5, 6]], (order) => !has(order[6], 'Grace Withdrawn'), 31, 12),   // (the dance, then the last three in some order, but Grace never last: the closing passes would meet a party held at nothing)
+        sets: [[[0.5, sunless, 'Sunless']], ...sets(blocks, [[0, 1, 2], [4, 5, 6]], (order) => !has(order[6], 'Grace Withdrawn'), 31, 12, undefined, SALT.sky)],   // (the dance, then the last three in some order, but Grace never last: the closing passes would meet a party held at nothing)
         closing: [[10, crown, 'Cinder Crown'], [10, horizon, 'Horizon Cut'], [12, () => wake({ ringR: 455 }), 'Eightfold Wake']],
         ramp: 0.08,
       }, from);

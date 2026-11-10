@@ -61,7 +61,7 @@ const Journal = (() => {
       const icon = n => (typeof BossIcons !== 'undefined' ? `<i class="jr-ic" style="background-image:${BossIcons.css(bossId, n)}"></i>` : '');
       const lore = opts.lore && opts.lore(bossId);   // (a fight's own lore line, for one that has no Raid Board page)
       pages = (lore ? `<p class="jr-meet">${esc(lore)}</p>` : '') + `<p class="jr-meet">${esc((d.meet || {})[cls] || '')}</p>` +
-        learned.map(n => `<div class="jr-entry${moves[n].pass >= MASTER ? ' seal' : ''}">${icon(n)}<div><h5>${esc(n)}${d.moves[n].hard ? '<em>Hard</em>' : ''}</h5><p>${esc((d.moves[n].learned || {})[cls] || '')}</p></div></div>`).join('') +
+        learned.map(n => `<div class="jr-entry${moves[n].pass >= MASTER ? ' seal' : ''}">${icon(n)}<div><h5>${esc(n)}${d.moves[n].hard ? '<em>Hard</em>' : ''}${d.moves[n].extreme ? '<em class="ex">Extreme</em>' : ''}</h5><p>${esc((d.moves[n].learned || {})[cls] || '')}</p></div></div>`).join('') +
         seen.map(n => `<div class="jr-entry blank">${icon(n)}<div><h5>${esc(n)}</h5><p>Not figured out yet.</p></div></div>`).join('') +
         (names.length > learned.length + seen.length ? `<p class="jr-more">${names.length - learned.length - seen.length} more ${names.length - learned.length - seen.length === 1 ? 'page' : 'pages'} still blank.</p>` : '') +
         (won ? `<p class="jr-win">${esc((d.win || {})[cls] || '')}</p>` : '');

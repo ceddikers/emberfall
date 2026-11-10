@@ -155,6 +155,60 @@ const WYRM_ART = (() => {
     ctx.restore();
   }
 
+  // Extreme's Ember Devils: where each hero's whirl formed (so the puddle that appears there can be drawn as a whirl until it is set off, and the
+  // burst can find it). The puddle itself is an ordinary ember pool to the host; the tell and the puddle are matched here by place and by time.
+  const DEVILS = [], PUD_DEVIL = new WeakMap();
+  function devilSeen(tg, s) {
+    let e = null;
+    for (const d of DEVILS) if (d.id === tg.id) { e = d; break; }
+    if (!e) { if (DEVILS.length > 24) DEVILS.splice(0, 8); e = { id: tg.id, x: 0, y: 0, end: tg.start + tg.dur, claimed: null, burst: 0 }; DEVILS.push(e); }
+    e.x = s.x; e.y = s.y;
+  }
+  function devilOf(p) {
+    if (!DEVILS.length || p.r !== 70) return null;
+    const known = PUD_DEVIL.get(p); if (known) return known;
+    let best = null, bd = 60;
+    for (const d of DEVILS) {
+      if (d.claimed && d.claimed !== p) continue;
+      const dd = Math.hypot(d.x - p.x, d.y - p.y);
+      if (dd < bd && Math.abs(p.start - d.end) < 1.5) { best = d; bd = dd; }
+    }
+    if (best) { best.claimed = p; PUD_DEVIL.set(p, best); }
+    return best;
+  }
+  // Marked Prey's landing ring (a Dragonfall circle that follows a hero): four talons close in on the hero as it runs down, and hold when it locks
+  function hunted(ctx, tg, s, p, k, t) {
+    const left = (1 - p) * tg.dur, lock = tg.lockAt || 0, locked = lock > 0 && left < lock;
+    const prog = lock > 0 ? clamp(1 - (left - lock) / Math.max(0.5, tg.dur - lock), 0, 1) : p, rr = s.r * (locked ? 0.6 : 0.94 - 0.34 * easeOut(prog));
+    const spin = locked ? 0.4 : 0.4 + (1 - prog) * 0.9 + t * 0.35 * (1 - prog);
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.setLineDash([9, 9]); ctx.lineDashOffset = -t * 18; ctx.beginPath(); ctx.arc(s.x, s.y, rr, 0, TAU);
+    ctx.strokeStyle = rgba(locked ? C.white : C.amber, (locked ? 0.55 : 0.3 + 0.2 * prog) * k); ctx.lineWidth = 1.8; ctx.stroke(); ctx.setLineDash([]);
+    for (let i = 0; i < 4; i++) {
+      const a = spin + i * TAU / 4, x = s.x + Math.cos(a) * rr, y = s.y + Math.sin(a) * rr, ia = a + Math.PI;
+      ctx.beginPath(); ctx.moveTo(x + Math.cos(ia - 0.55) * 26, y + Math.sin(ia - 0.55) * 26); ctx.lineTo(x, y); ctx.lineTo(x + Math.cos(ia + 0.55) * 26, y + Math.sin(ia + 0.55) * 26);
+      ctx.strokeStyle = rgba(C.ink, 0.6 * k); ctx.lineWidth = 8; ctx.stroke();
+      ctx.strokeStyle = rgba(locked ? C.white : '#ff8a2a', (0.6 + 0.35 * prog) * k); ctx.lineWidth = 4; ctx.stroke();
+    }
+    ctx.restore();
+    if (locked) glow(ctx, s.x, s.y, s.r * 0.5, C.hot, 0.18 * k * (0.8 + 0.2 * Math.sin(t * 12)));
+  }
+  // a whirl of fire standing on (x, y): tilted rings of ember turning, a flame heart, motes lifting (Ember Devils)
+  function whirlBody(ctx, x, y, r, a, t, id, grow) {
+    ctx.save(); ctx.lineCap = 'round';
+    for (let j = 0; j < 5; j++) {
+      const rx = r * (0.95 - 0.13 * j) * (0.6 + 0.4 * grow), cy = y - 4 - j * 11 * grow, sx = Math.sin(t * 2.6 + j * 1.3 + id) * 3;
+      ctx.setLineDash([16, 13]); ctx.lineDashOffset = -t * (70 + j * 14) * (j % 2 ? -1 : 1);
+      ctx.beginPath(); ctx.ellipse(x + sx, cy, rx, rx * 0.38, 0, 0, TAU);
+      ctx.strokeStyle = rgba(C.ink, a * 0.5); ctx.lineWidth = 7; ctx.stroke();
+      ctx.strokeStyle = rgba(j % 2 ? C.hot : C.amber, a * (0.85 - j * 0.1)); ctx.lineWidth = 3.2 - j * 0.3; ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.restore();
+    flame(ctx, x, y + 2, (24 + 30 * grow) * (0.9 + 0.1 * Math.sin(t * 9 + id)), 9 + 3 * grow, Math.sin(t * 7 + id) * 4, a);
+    for (let i = 0; i < 6; i++) { const q = (t * 0.8 + i / 6 + id * 0.17) % 1, ang = t * 3.2 + i * TAU / 6, d = r * (0.8 - 0.5 * q); circle(ctx, x + Math.cos(ang) * d, y - q * 48 * grow, 1.6 + 1.6 * (1 - q), rgba(i % 2 ? C.hot : C.fire, 0.8 * (1 - q) * a)); }
+  }
+
   const TELLS = {
     // Tyrant's Roar: the floor round him darkens and four red rings come up round him, one after another
     roar: {
@@ -286,6 +340,7 @@ const WYRM_ART = (() => {
           ctx.strokeStyle = rgba(C.ash, (0.12 + 0.25 * p) * k); ctx.lineWidth = 3; ctx.stroke();
         }
         ctx.restore();
+        if (tg.follow != null) hunted(ctx, tg, s, p, k, t);   // (Marked Prey: the landing rides a hero, talons closing in on them)
         // the last second: a ring of heat closing in on the edge of the circle (it arrives exactly as he does), the edge going white-hot
         const cl = clamp((p - 0.62) / 0.38, 0, 1);
         if (cl > 0) {
@@ -385,6 +440,31 @@ const WYRM_ART = (() => {
         }
         ctx.restore();
       },
+    },
+    // Ember Devils (Extreme): the heat gathering under every hero into a whirl of fire, spiralling in and standing up as the cast runs out. It is not a hit itself
+    // (the ring is orange, not red); what it leaves is the whirl a touch will set off
+    wyDevil: {
+      color: '#ff7a2a',
+      ground(ctx, tg, s, p, k, t) {
+        devilSeen(tg, s);
+        const r = s.r;
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        circle(ctx, s.x, s.y, r * (0.35 + 0.55 * p), rgba(C.ink, (0.2 + 0.35 * p) * k));
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          for (let j = 0; j <= 14; j++) { const u = j / 14, a = i * TAU / 3 + u * 2.4 + t * (2.4 + 4 * p), d = r * (1.0 - u * 0.8); j ? ctx.lineTo(s.x + Math.cos(a) * d, s.y + Math.sin(a) * d) : ctx.moveTo(s.x + Math.cos(a) * d, s.y + Math.sin(a) * d); }
+          ctx.strokeStyle = rgba(C.fire, (0.2 + 0.3 * p) * k); ctx.lineWidth = 5; ctx.stroke();
+          ctx.strokeStyle = rgba(C.hot, (0.25 + 0.4 * p) * k); ctx.lineWidth = 1.6; ctx.stroke();
+        }
+        ctx.restore();
+        whirlBody(ctx, s.x, s.y, r * 0.8, (0.25 + 0.6 * p) * k, t, tg.id, easeOut(p));
+      },
+    },
+    // Molten Trail (Extreme): one burning rock falling on the hunted hero, again and again along the rim; the ring locks a beat before it lands
+    wyTrail: {
+      ground(ctx, tg, s, p, k, t) { fireDisc(ctx, s, p, k, t, tg.id, { n: 7, core: C.white, mid: C.amber, edge: C.deep, pulse: 12, dark: true }); },
+      air(ctx, tg, s, p, k) { comet(ctx, s.x, s.y, (1 - easeIn(p)) * 380, 1.15, k); },
     },
   };
   const tell = (tag, type) => (type === 'buster' ? TELLS.buster : TELLS[tag]) || null;
@@ -693,6 +773,23 @@ const WYRM_ART = (() => {
         H.shake(4);
         return true;
       }
+      case 'wyTrail': {
+        // the molten rock lands where the hero was: a white-hot splash, drops thrown out of it, a ring of heat
+        cluster(s.x, s.y, s.r * 0.5, 5, { h: 160, w: 15, life: 0.8 });
+        VFX.flash(s.x, s.y - 14, s.r * 1.3, C.white, 0.24);
+        H.shockAt(s.x, s.y, { r: s.r * 1.35, color: C.amber, w: 6, dur: 0.45, flat: 1 });
+        fountain(s.x, s.y, s.r * 0.4, 8, { out: 120, vz0: 200, vz1: 400 });
+        VFX.debris(s.x, s.y, { color: '#1c1210', n: 6, speed: 1.2, hot: true });
+        H.shake(4);
+        return true;
+      }
+      case 'wyDevil': {
+        // the whirl catches: a ring of heat, a gout of flame, sparks lifting
+        cluster(s.x, s.y, s.r * 0.4, 4, { h: 110, w: 12, life: 0.7 });
+        H.shockAt(s.x, s.y, { r: s.r * 1.5, color: C.amber, w: 5, dur: 0.4, flat: 1 });
+        VFX.sparks(s.x, s.y - 6, { color: C.hot, n: 8, speed: 220 });
+        return true;
+      }
       case 'whelpboom': {
         H.shapeFlash(s, '#ff7a22', { a: 0.36, dur: 0.5 });
         cluster(s.x, s.y, s.r * 0.6, 8, { h: 190, w: 20, life: 0.9 });
@@ -819,6 +916,8 @@ const WYRM_ART = (() => {
       scorch: charred(T.short, 0, 12, 4),
       whelpboom: charred(T.short, 0, 10),
       cinder: charred(T.brief, 0, 7, 2),
+      wyTrail: charred(T.brief, 0, 7, 2.5),   // (Molten Trail's rock: scorched where it fell; the pool is the puddle drawn over it)
+      wyDevil: charred(T.brief, 0, 6, 2),
       // the dive's line: scorched along it, a few seams still glowing
       divepath: tg => mark(T.short, tg.live, (ctx, s, k, age, seed) => scorchLine(ctx, s, k, age, seed), tg.id),
       divepath2: tg => mark(T.short, tg.live, (ctx, s, k, age, seed) => scorchLine(ctx, s, k, age, seed), tg.id),
@@ -941,6 +1040,18 @@ const WYRM_ART = (() => {
   // a pool of lava left where a Magma Burst or a Cinder Rain ember fell: ragged black rim, bright body, a white-hot middle, bubbles breaking
   function emberPool(ctx, p, r, k, t) {
     const id = p.id || 0;
+    const dv = devilOf(p);
+    if (dv && !dv.burst) {
+      // an Ember Devils whirl, not yet set off: a scorched ring with a fire whirl standing in it, and (faint, red) how far its burst reaches
+      ctx.save(); ctx.globalAlpha = k;
+      glow(ctx, p.x, p.y, r * 1.5, '#ff6a1a', 0.3);
+      circle(ctx, p.x, p.y, r * 1.05, rgba(C.ink, 0.7));
+      glowRing(ctx, p.x, p.y, r * 0.95, C.fire, 0.8, 3, 0.9);
+      ctx.setLineDash([16, 14]); ctx.lineDashOffset = -t * 20; circle(ctx, p.x, p.y, 170, null, rgba(BossTells.COL.danger, 0.22), 2); ctx.setLineDash([]);
+      whirlBody(ctx, p.x, p.y, r * 0.9, 1, t, id, 1);
+      ctx.restore();
+      return;
+    }
     ctx.save(); ctx.globalAlpha = k;
     glow(ctx, p.x, p.y, r * 1.5, '#ff6a1a', 0.34);
     const blob = (rr, pad) => {
@@ -959,6 +1070,109 @@ const WYRM_ART = (() => {
     for (let i = 0; i < 5; i++) { const a = i * 1.3 + id * 2, d = r * (1.08 + 0.16 * hash(i, id)); rock(ctx, p.x + Math.cos(a) * d, p.y + Math.sin(a) * d * 0.92, 5 + 3 * hash(i, id + 1), i, 0.95); }
     for (let i = 0; i < 3; i++) { const q = (t * 0.7 + i / 3 + id * 0.13) % 1, a = i * 2.1 + id; circle(ctx, p.x + Math.cos(a) * r * 0.45, p.y + Math.sin(a) * r * 0.45, 2 + q * 6, null, rgba(C.white, 0.7 * (1 - q)), 1.5); }
     flame(ctx, p.x + r * 0.15, p.y - r * 0.1, 14 + 6 * Math.sin(t * 8 + id), 5, Math.sin(t * 6 + id) * 3, 0.7);
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------- room moments (arena-view.js roomEvent() and drawRoomUnder() ask; all under the units and under the telegraphs)
+  const later = (sec, fn) => VFX.fx({ dur: sec, layer: 'ground', draw() {}, done: fn });
+  const wrapPi = a => ((a + Math.PI) % TAU + TAU) % TAU - Math.PI;
+  // how far round the rim (0 at the north, 1 at the south) an angle is: the rim ignites from the north both ways round
+  const fromNorth = a => Math.abs(wrapPi(a + Math.PI / 2)) / Math.PI;
+  function roomEvent(room, msg, now) {
+    if (msg.k === 'wyrm-wakes') {
+      // the rim catches: embers thrown up along it, the north first, the south last (the glow itself is drawn by rimLit)
+      const R = AR();
+      for (let i = 0; i < 16; i++) { const a = i * TAU / 16 + rnd(-0.08, 0.08); later(fromNorth(a) * 1.4 + rnd(0, 0.1), () => fountain(Math.cos(a) * (R + 6), Math.sin(a) * (R + 6), 22, 4, { out: 50, vz0: 200, vz1: 420 })); }
+    } else if (msg.k === 'wyrm-devil') {
+      const x = msg.x || 0, y = msg.y || 0, r = msg.r || 170;
+      let best = null, bd = 60;
+      for (const d of DEVILS) { if (!d.claimed || d.burst) continue; const dd = Math.hypot(d.x - x, d.y - y); if (dd < bd) { best = d; bd = dd; } }
+      if (best) best.burst = now;
+      const near = ARENA.sd(x, y) + r > -4;
+      const ring = (rr, o) => VFX.shock(x, y, near ? Object.assign({ clip: 1 }, o, { r: rr }) : Object.assign({}, o, { r: rr }));
+      // the burst's own reach, lit for a moment (exactly the circle that hurt), then the ring running out of the whirl
+      VFX.fx({ dur: 0.5, layer: 'ground', draw: (c, p, t, e) => {
+        const k = (1 - p) * (1 - p) * e.a;
+        c.save(); ARENA.trace(c, 4); c.clip(); c.beginPath(); c.arc(x, y, r, 0, TAU);
+        c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.22 * k; c.fillStyle = '#ff7a22'; c.fill();
+        c.globalCompositeOperation = 'lighter'; c.globalAlpha = Math.min(1, 0.7 * k); c.strokeStyle = '#ff8a2a'; c.lineWidth = 8 * (1 - p) + 2; c.stroke();
+        c.restore();
+      } });
+      ring(r * 1.05, { color: C.fire, w: 9, dur: 0.5, flat: 1 });
+      ring(r * 0.6, { color: C.hot, w: 4, dur: 0.4, flat: 1, delay: 0.05 });
+      cluster(x, y, r * 0.55, 9, { h: 170, w: 19, life: 0.8, spread: 0.12 });
+      VFX.spikeburst(x, y, { r: r * 0.6, n: 14, color: '#ff8a2a', core: '#fff4d8', ink: '#3a1408', dur: 0.45 });
+      VFX.pillar(x, y, { r: 26, h: 300, color: '#ffd890', dur: 0.6 });
+      VFX.debris(x, y, { color: '#1c1210', n: 8, speed: 1.3, hot: true, up: 1.2 });
+      fountain(x, y, r * 0.3, 10, { out: 150 });
+      try { if (typeof vfxShake === 'function') vfxShake(6, 'boss'); } catch (e) { /* cosmetic */ }
+    }
+  }
+  function roomUnder(ctx, room, t, v) {
+    const ev = room && room.ev; if (!ev) return;
+    const sk = ev['wyrm-skyward'], wk = ev['wyrm-wakes'];
+    if (sk && t < sk.end + 0.1) skyClimb(ctx, sk, t, v);
+    if (wk && t >= wk.start) rimLit(ctx, wk, t);
+  }
+  // Skyward: he climbs out of the crater in one wide circle round the rim. His shadow slides over the floor, the air he drives round with him streaks the floor behind
+  // him in ash-grey arcs, grit blown along them. (Light and low: it is under every hero and every telegraph.)
+  function skyClimb(ctx, ev, t, v) {
+    const el = t - ev.start, env = Math.min(1, el / 0.5) * Math.min(1, (ev.end - t) / 0.8);
+    const b = v && v.boss; if (env <= 0 || !b) return;
+    const air = clamp((el - 0.5) / 0.7, 0, 1) * env, ab = Math.atan2(b.y, b.x), R = AR();
+    if (air <= 0) return;
+    ctx.save(); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.clip();
+    for (let i = 0; i < 3; i++) {
+      const r0 = 250 + i * 70 + 10 * Math.sin(t * 2 + i), len = 1.5 + 0.25 * i, N = 8;
+      for (let j = 0; j < N; j++) {
+        const a0 = ab - len * j / N, a1 = ab - len * (j + 1) / N - 0.02, al = air * (1 - j / N) * 0.9;
+        ctx.beginPath(); ctx.arc(0, 0, r0 + j * 3, a1, a0);
+        ctx.strokeStyle = rgba(C.ashD, 0.2 * al); ctx.lineWidth = 12; ctx.stroke();
+        ctx.strokeStyle = rgba(C.ash, 0.32 * al); ctx.lineWidth = 2.2; ctx.stroke();
+      }
+    }
+    for (let i = 0; i < 16; i++) {
+      const u = (t * 0.7 + hash(i, 3)) % 1, a = ab - 0.15 - u * 1.6, r = 200 + hash(i, 4) * 280, x = Math.cos(a) * r, y = Math.sin(a) * r, ta = a + 0.12;
+      line(ctx, x, y, Math.cos(ta) * (r + 4), Math.sin(ta) * (r + 4), rgba(i % 5 ? C.ash : C.fire, 0.5 * air * Math.sin(u * Math.PI)), 2);
+    }
+    ctx.restore();
+    // his shadow: the body and the span of the wings across the floor under him
+    ctx.save(); ctx.translate(b.x, b.y + 6); ctx.rotate(b.f || 0);
+    ctx.fillStyle = rgba('#000000', 0.3 * air);
+    ctx.beginPath(); ctx.ellipse(0, 0, 150, 38, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(24, 0); ctx.lineTo(-30, -150); ctx.lineTo(-90, -118); ctx.lineTo(-56, 0); ctx.lineTo(-90, 118); ctx.lineTo(-30, 150); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  // The Tyrant Wakes: the rim of the crater lit for the rest of the fight: a band of heat on the wall, flames standing along it, embers lifting. It ignites from the north
+  // both ways round, then breathes slowly (nothing flashes).
+  function rimLit(ctx, ev, t) {
+    const R = AR(), el = t - ev.start, sweep = el / 1.4 * 1.1, full = sweep > 1.4, br = 0.88 + 0.12 * Math.sin(t * 1.3), N = 40;
+    ctx.save(); ctx.lineCap = 'butt';
+    const band = (rr, a, w, col, a0 = 0, a1 = TAU) => { ctx.beginPath(); ctx.arc(0, 0, rr, a0, a1); ctx.strokeStyle = rgba(col, a); ctx.lineWidth = w; ctx.stroke(); };
+    if (full) {
+      band(R + 6, 0.1 * br, 70, C.deep); band(R - 8, 0.07 * br, 40, C.fire);
+      band(R + 4, 0.34 * br, 16, C.fire); band(R + 3, 0.6 * br, 4, C.amber); band(R + 3, 0.5 * br, 1.4, C.white);
+    } else {
+      for (let i = 0; i < N; i++) {
+        const a0 = i * TAU / N, on = clamp((sweep - fromNorth(a0 + TAU / N / 2)) * 5, 0, 1); if (on <= 0) continue;
+        const a1 = a0 + TAU / N + 0.012;
+        band(R + 6, 0.1 * on, 70, C.deep, a0, a1); band(R - 8, 0.07 * on, 40, C.fire, a0, a1);
+        band(R + 4, 0.34 * on, 16, C.fire, a0, a1); band(R + 3, 0.6 * on, 4, C.amber, a0, a1); band(R + 3, 0.5 * on, 1.4, C.white, a0, a1);
+      }
+    }
+    // flames standing up out of the rim, and embers lifting off it
+    for (let i = 0; i < 26; i++) {
+      const a = i * TAU / 26 + (hash(i, 61) - 0.5) * 0.12, on = full ? 1 : clamp((sweep - fromNorth(a)) * 5, 0, 1); if (on <= 0) continue;
+      const x = Math.cos(a) * (R + 8), y = Math.sin(a) * (R + 8), h = (20 + 22 * hash(i, 62)) * on * (0.8 + 0.2 * Math.sin(t * 5 + i * 1.7)), w = 6 + 3 * hash(i, 63), sw = Math.sin(t * 4.2 + i) * 4;
+      ctx.globalAlpha = 0.55 * on; tongue(ctx, x, y + 2, h * 1.1, w * 1.3, sw, FIRE[0]); ctx.globalAlpha = 0.7 * on; tongue(ctx, x, y + 1, h, w, sw, FIRE[1]); tongue(ctx, x, y, h * 0.55, w * 0.55, sw * 0.7, FIRE[2]);
+    }
+    ctx.globalAlpha = 1;
+    for (let i = 0; i < 22; i++) {
+      const a = hash(i, 71) * TAU, on = full ? 1 : clamp((sweep - fromNorth(a)) * 5, 0, 1); if (on <= 0) continue;
+      const q = (t * 0.45 + hash(i, 72)) % 1;
+      circle(ctx, Math.cos(a) * (R + 4 + hash(i, 73) * 30), Math.sin(a) * (R + 4 + hash(i, 73) * 30) - q * 60, 1.6 + 1.8 * (1 - q), rgba(i % 2 ? C.hot : C.fire, 0.75 * (1 - q) * on));
+    }
     ctx.restore();
   }
 
@@ -1036,5 +1250,5 @@ const WYRM_ART = (() => {
     H.shockAt(x, y, { r: 70, color: C.hot, w: 4, dur: 0.35, flat: 1 });
   }
 
-  return { tell, impact, aftermath, moltenFloor, emberPool, lavaBody, cast, whelpSpawn, whelpDeath };
+  return { tell, impact, aftermath, moltenFloor, emberPool, lavaBody, cast, whelpSpawn, whelpDeath, roomEvent, roomUnder };
 })();

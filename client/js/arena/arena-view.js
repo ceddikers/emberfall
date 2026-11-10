@@ -417,6 +417,7 @@ const ArenaView = {
         ctx.restore();
       }
     }
+    if (typeof TI_ART !== 'undefined') TI_ART.room(ctx, room, t);   // (The Ice Groans, Deep Winter: titan-art.js)
     // snow
     for (const f of a.flakes) {
       const x = ((f.x + t * f.sp * 0.6 + Math.sin(t * 0.7 + f.ph) * f.dr + hw + 80) % (hw * 2 + 160) + (hw * 2 + 160)) % (hw * 2 + 160) - hw - 80;
@@ -1330,7 +1331,7 @@ const ArenaView = {
       if (z.tag === 'acid') { if (this.floorFor && this.floorFor.startsWith('hydra@')) this.hydraAcid(ctx, z, k, t); else this.acidFloor(ctx, z, k, t); continue; }
       if (z.tag === 'writburn') { this.writBurn(ctx, z, t); continue; }
       if (z.tag === 'lava') { this.moltenFloor(ctx, z, k, t); continue; }
-      if (z.tag === 'cvStill') { if (typeof CV_FX !== 'undefined') CV_FX.zone(ctx, z, k, t); continue; }   // (Corvane's Still Water: corvane-fx.js)
+      if (z.tag === 'cvStill' || z.tag === 'cvCircle') { if (typeof CV_FX !== 'undefined') CV_FX.zone(ctx, z, k, t); continue; }   // (Corvane's Still Water and The Circle: corvane-fx.js)
       if (z.tag === 'brFurrow') { if (typeof BR_FX !== 'undefined') BR_FX.zone(ctx, z, k, t); continue; }   // (Brannoc's Sand Furrow: brannoc-fx.js)
       if (z.tag === 'clShadowBurn' || z.tag === 'clCrownRing') { if (typeof CL_FX !== 'undefined') CL_FX.zone(ctx, z, k, t); continue; }   // (Caelum's burning shadow and Cinder Crown's ring of fire: caelum-fx.js)
       ctx.save();
@@ -1456,9 +1457,10 @@ const ArenaView = {
     const d = Math.hypot(b.x - a.x, b.y - a.y);
     const ok = th.kind === 'long' ? d >= th.len : d <= th.len;
     this.tetherSeen(th, a, b, t, ok);
-    if (th.tag === 'bind') return this.graveChain(ctx, a, b, th, t, d, ok);
+    if (th.tag === 'bind') return th.len === 150 ? this.shackleChain(ctx, a, b, th, t, d, ok) : this.graveChain(ctx, a, b, th, t, d, ok);   // (reach 150: the Sentence's Shackle, Extreme)
     if (String(th.tag).startsWith('rune:')) return this.runeLink(ctx, a, b, th, t);   // Azerath's Rune Pair (archmage-art.js)
     if (th.tag === 'mgTwin' && typeof MG_FX !== 'undefined') return MG_FX.twin(ctx, a, b, th, t, d, ok);   // Morrow-Oak's Twin Seed (morrowoak-fx.js)
+    if ((th.tag === 'magnet' || th.tag === 'conduct') && typeof VK_STORM !== 'undefined') return VK_STORM.thread(ctx, a, b, th, t);   // (Volkar's Magnetize links and Conduction's leaps: volkar-storm.js)
     const color = !hard ? '#f0eaff' : th.kind === 'long' ? '#6dff7a' : '#ffe6a8';
     const w = th.kind === 'short' ? 6 : 3;
     const left = Math.max(0, th.end - t), p = 1 - left / Math.max(0.1, th.end - th.start);
@@ -1484,7 +1486,7 @@ const ArenaView = {
   // spark where it broke. (A tether cleared early, on a wipe, just goes.)
   tetherSeen(th, a, b, t, ok) {
     const m = this._teth || (this._teth = new Map());
-    m.set(th, { ax: a.x, ay: a.y - 20, bx: b.x, by: b.y - 20, end: th.end, last: t, frame: this._tframe || 0, ok, kind: th.kind, tag: th.tag });
+    m.set(th, { ax: a.x, ay: a.y - 20, bx: b.x, by: b.y - 20, end: th.end, last: t, frame: this._tframe || 0, ok, kind: th.kind, tag: th.tag, len: th.len });
   },
   tetherWatch(t, hard) {
     const m = this._teth;
@@ -1494,7 +1496,7 @@ const ArenaView = {
       if (e.frame >= this._tframe - 1) continue;   // still being drawn
       m.delete(th);
       if (Math.abs(e.last - e.end) > 0.6 || typeof VFX === 'undefined' || !VFX.fx) continue;
-      const col = e.tag === 'bind' ? '#9affc0' : e.tag === 'mgTwin' ? '#c8a8ff' : !hard ? '#f0eaff' : e.kind === 'long' ? '#6dff7a' : '#ffe6a8';
+      const col = e.tag === 'bind' ? (e.len === 150 ? '#ffe19a' : '#9affc0') : e.tag === 'mgTwin' ? '#c8a8ff' : !hard ? '#f0eaff' : e.kind === 'long' ? '#6dff7a' : '#ffe6a8';
       const mx = (e.ax + e.bx) / 2, my = (e.ay + e.by) / 2;
       VFX.fx({ dur: 0.45, layer: 'air', draw: (c, p) => {
         const q = easeOut(p), k = 1 - p;
@@ -1529,6 +1531,31 @@ const ArenaView = {
     const q = (t * (0.6 + p * 2.5)) % 1, [gx, gy] = at(q);
     glow(ctx, gx, gy, 14, '#6dff9a', 0.7);
     for (const e of [a, b]) { circle(ctx, e.x, e.y - 20, 7, null, '#6a747c', 3); glow(ctx, e.x, e.y - 20, 12, '#6dff9a', 0.5); }
+  },
+
+  // The Sentence's Shackle (the Hollow King, Extreme; a short tether of reach 150): the same iron chain as Gravebind's, with the court's gold on every link's rim, a cuff at
+  // each hero and the court's seal (the two rings of the Shackled mark) at its middle. Hanging slack while they are within reach; taut and burning gold while they are not.
+  shackleChain(ctx, a, b, th, t, d, ok) {
+    const left = Math.max(0, th.end - t), p = 1 - left / Math.max(0.1, th.end - th.start);
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2 - 20, nx = -(b.y - a.y) / (d || 1), ny = (b.x - a.x) / (d || 1);
+    const sag = ok ? 18 : 0, n = Math.max(4, Math.floor(d / 16));
+    const at = q => { const s = 1 - q, cx = mx + nx * sag, cy = my + ny * sag + sag; return [s * s * a.x + 2 * s * q * cx + q * q * b.x, s * s * (a.y - 20) + 2 * s * q * cy + q * q * (b.y - 20)]; };
+    if (!ok) { ctx.save(); ctx.lineCap = 'round'; line(ctx, a.x, a.y - 20, b.x, b.y - 20, rgba('#ffcf6a', 0.25 + 0.15 * Math.sin(t * 10)), 12); ctx.restore(); }
+    for (let i = 0; i < n; i++) {
+      const [x, y] = at((i + 0.5) / n), [x2, y2] = at((i + 1) / n), ang = Math.atan2(y2 - y, x2 - x);
+      ellipse(ctx, x, y, 9, i % 2 ? 2.5 : 5, ang, null, i % 2 ? '#4a5258' : '#6a747c', 2.5);
+      ellipse(ctx, x, y, 9, i % 2 ? 2.5 : 5, ang, null, rgba('#ffe19a', ok ? 0.5 : 0.85), 1);
+    }
+    const q = (t * (0.6 + p * 2.5)) % 1, [gx, gy] = at(q);
+    glow(ctx, gx, gy, 14, '#ffd98a', 0.7);
+    for (const e of [a, b]) {
+      ellipse(ctx, e.x, e.y - 20, 9, 7, 0, null, '#6a747c', 3.2);
+      ellipse(ctx, e.x, e.y - 20, 9, 7, 0, null, rgba('#ffe19a', 0.9), 1.2);
+      glow(ctx, e.x, e.y - 20, 13, '#ffcf6a', ok ? 0.35 : 0.6);
+    }
+    const [sx, sy] = at(0.5);
+    circle(ctx, sx, sy, 9, 'rgba(18,14,26,0.88)', rgba('#ffe19a', 0.9), 1.6);
+    circle(ctx, sx - 3, sy, 3, null, '#ffe19a', 1.6); circle(ctx, sx + 3, sy, 3, null, '#ffe19a', 1.6);
   },
 
   // the burning beam between a linked pair of adds (Hard brood)
@@ -1782,6 +1809,7 @@ const ArenaView = {
     room.ev[msg.k] = Object.assign({}, msg, { start: now, end: now + (msg.dur || 0) });
     if (msg.k === 'stove' && typeof BOSS_VFX !== 'undefined') BOSS_VFX.stoveBurst(msg.x || 0);
     if (msg.k === 'lightsout' && typeof BOSS_VFX !== 'undefined') BOSS_VFX.snuff(room);
+    if (typeof msg.k === 'string' && msg.k.startsWith('wyrm-') && typeof WYRM_ART !== 'undefined') WYRM_ART.roomEvent(room, msg, now);   // (Vhalgrath's Skyward, The Tyrant Wakes and a whirl bursting: wyrm-art.js)
   },
 
   // the floor layer: rubble, grease, broken ground. Same size and scale as the floor, rebuilt only when it changes
@@ -1969,6 +1997,7 @@ const ArenaView = {
     this.drawRoomFloor(ctx, room);
     if (typeof VK_STORM !== 'undefined') VK_STORM.under(ctx, room, t);   // Volkar's storm form: the canopy, the face, the cracks lit from below (volkar-storm.js)
     if (typeof MG_ART !== 'undefined') MG_ART.holes(ctx, room, t);   // Morrow-Oak's holes: always drawn, at their current size (morrowoak-art.js)
+    if (typeof WYRM_ART !== 'undefined') WYRM_ART.roomUnder(ctx, room, t, v);   // Vhalgrath's Skyward (his shadow and the gust he drives) and the rim lit by The Tyrant Wakes (wyrm-art.js)
     if (this.amb && this.amb.kind === 'barrow') this.chargeBanners(ctx, room, t);
     for (const fl of room.floor) {
       const until = room.lit.get(fl.id);
@@ -2150,6 +2179,17 @@ const ArenaView = {
         }
       }
     }
+    // Contempt of Court (the Hollow King, Extreme): a knight that has taken a swing in kneeling answers with it turned inside out. The kneel is the
+    // tell (kneelMark: a ring on the floor whose two halves swap places, the blade planted before it, the crown hung upside down over its helm; roomev kneel, l: [[x, y, facing]])
+    const kn = room.ev.kneel;
+    if (kn && t < kn.end) {
+      const seen = this._kneelAt || (this._kneelAt = new Map());   // (when each kneeling knight was first seen: the mark eases in)
+      for (const [x, y, fa] of kn.l || []) {
+        const key = (x | 0) + ':' + (y | 0), was = seen.get(key);
+        if (!was || t - was.last > 0.5) seen.set(key, { at: t, last: t }); else was.last = t;
+        this.kneelMark(ctx, x, y, fa || 0, t, clamp((t - seen.get(key).at) / 0.5, 0, 1));
+      }
+    }
     const rs = room.ev.rodmark;
     if (rs && t < rs.end) for (const id of rs.ids || []) {
       const e = env.entById(id); if (!e) continue;
@@ -2161,6 +2201,43 @@ const ArenaView = {
       jagged(ctx, -5, -11, 4, 11, Math.floor(t * 10), '#bff6ff', 2.2);
       ctx.restore();
     }
+  },
+
+  // Contempt of Court: the kneeling knight (the Hollow King, Extreme). Gold is the court's own voice (his crown, the audience) and the knights are pale blue, so this is
+  // the court's mark laid on a knight: two rings on the floor turning against each other, the outer one's chevrons pointing in and the inner one's pointing out (inside out),
+  // its blade planted point-down before it, and the king's crown hung upside down over its helm, sinking a little with each breath. k eases it in.
+  kneelMark(ctx, x, y, fa, t, k) {
+    const pul = 0.8 + 0.2 * Math.sin(t * 3), sink = (0.5 + 0.5 * Math.sin(t * 1.6)) * 5;
+    ctx.save(); ctx.globalAlpha = k; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.translate(x, y); ctx.scale(1.25, 1.25); ctx.translate(-x, -y);   // (the knights are drawn at 1.6 times: the mark stands out beside them)
+    glow(ctx, x, y, 78, '#ffcf6a', 0.2 * pul);
+    const ring = (rx, ry, n, dir, spin) => {
+      ellipse(ctx, x, y + 8, rx, ry, 0, null, rgba('#ffe19a', 0.75 * pul), 2.2);
+      const sq = ry / rx;
+      for (let i = 0; i < n; i++) {
+        const a = i * TAU / n + spin, c = Math.cos(a), s = Math.sin(a), px = x + c * rx, py = y + 8 + s * ry, ox = c * dir, oy = s * sq * dir, tx = -s * 6, ty = c * sq * 6;
+        ctx.beginPath(); ctx.moveTo(px - ox * 4 + tx, py - oy * 4 + ty); ctx.lineTo(px + ox * 7, py + oy * 7); ctx.lineTo(px - ox * 4 - tx, py - oy * 4 - ty);
+        ctx.strokeStyle = rgba('#ffe19a', 0.95 * pul); ctx.lineWidth = 2.4; ctx.stroke();
+      }
+    };
+    ring(64, 28, 8, -1, t * 0.35);   // (the outer ring: its chevrons point in)
+    ring(42, 18, 6, 1, -t * 0.45);   // (the inner ring: its chevrons point out)
+    // the blade planted point-down before it, a hair of gold running up it
+    const bx = x + Math.cos(fa) * 42, by = y + 12 + Math.sin(fa) * 42 * 0.45;
+    ellipse(ctx, bx + 3, by + 1, 11, 4, 0, 'rgba(0,0,0,0.35)');
+    poly(ctx, [bx, by, bx - 4, by - 12, bx - 4, by - 48, bx + 4, by - 48, bx + 4, by - 12], '#cfd8dc', OUT, 1.8);
+    line(ctx, bx, by - 8, bx, by - 46, rgba('#ffe19a', 0.9 * pul), 1.4);
+    rrect(ctx, bx - 12, by - 53, 24, 6, 2, '#b89a4a', OUT, 1.8);
+    line(ctx, bx, by - 53, bx, by - 64, '#5a4a2a', 4);
+    circle(ctx, bx, by - 66, 4, '#e8c15a', OUT, 1.5);
+    glow(ctx, bx, by - 30, 24, '#ffcf6a', 0.22 * pul);
+    // the crown, upside down: the band on top, its points hanging toward the knight's helm
+    const cx = x, cy = y - 88 + sink;
+    glow(ctx, cx, cy + 4, 34, '#ffcf6a', 0.3 * pul);
+    for (let i = -2; i <= 2; i++) { const sx = cx + i * 7.5, len = i === 0 ? 17 : Math.abs(i) === 1 ? 13 : 9; poly(ctx, [sx - 4, cy, sx + 4, cy, sx, cy + len], '#e8c15a', OUT, 1.5); }
+    rrect(ctx, cx - 19, cy - 9, 38, 9, 2, '#c9a24a', OUT, 2);
+    circle(ctx, cx, cy - 4.5, 2.4, '#6dff9a', OUT, 1);
+    ctx.restore();
   },
 
   // one prop, in the room's style. Every prop: a contact shadow and a clean outline. On its last hit it shows cracks.
@@ -2181,6 +2258,7 @@ const ArenaView = {
       case 'boulder': this.boulder(ctx, pr, t); break;
       case 'pot': this.stockpot(ctx, pr, t); break;
       case 'stonelantern': this.stoneLantern(ctx, pr, t); break;   // (corvane-art.js)
+      case 'icetomb': if (typeof TI_ART !== 'undefined') TI_ART.tomb(ctx, pr, t); break;   // (Hrimgar's Ice Tomb: titan-art.js)
       case 'debris': this.debrisProp(ctx, pr, t); break;   // (brannoc-art.js)
       case 'starcore': this.starCore(ctx, pr, t); break;   // (caelum-art.js)
       case 'starshard': this.starShard(ctx, pr, t); break;   // (caelum-art.js)
@@ -2581,6 +2659,40 @@ const ArenaView = {
       const a = k * TAU / 8 + Math.sin(t * 9 + k) * 0.08, l = r * 0.95;
       ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + Math.cos(a) * l * 0.6, y + Math.sin(a) * l * 0.5 - 10, x + Math.cos(a) * l, y + Math.sin(a) * l * 0.8);
       ctx.strokeStyle = `rgba(4,2,8,${0.4 + 0.3 * p})`; ctx.lineWidth = 7; ctx.stroke();
+    }
+    ctx.restore();
+  },
+
+  // A head mark (fight.js mark()): a dark disc over a hero's head with a sign in it and a ring that burns down with its time. The signs are plain
+  // shapes, one family for every boss; colour is the move's own (m.col) or pale gold.
+  headMark(ctx, x, y, m, frac, t) {
+    if (m.sym === 'eye' && m.key === 'call') this._called = { id: m.pid, t };   // (Roll Call: who the King is looking at; boss-tells.js rollcall reads it)
+    const col = m.col || '#ffe9a8', hot = frac < 0.25, k = hot ? 0.75 + Math.sin(t * 14) * 0.25 : 1, bob = Math.sin(t * 3 + x * 0.01) * 1.5;
+    ctx.save(); ctx.translate(x, y + bob);
+    glow(ctx, 0, 0, 26, col, 0.28 * k);
+    circle(ctx, 0, 0, 14, 'rgba(18,14,26,0.82)', rgba(col, 0.55), 1.5);
+    if (frac < 1) { ctx.beginPath(); ctx.arc(0, 0, 14, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(frac, 0, 1)); ctx.strokeStyle = rgba(hot ? '#ffffff' : col, k); ctx.lineWidth = 3; ctx.stroke(); }
+    const L = (x1, y1, x2, y2, w = 2.4) => line(ctx, x1, y1, x2, y2, col, w);
+    switch (m.sym) {
+      case 'num': ctx.fillStyle = col; ctx.font = '700 17px Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(m.n || 1), 0, 1); break;
+      case 'tank': poly(ctx, [[-7, -7], [7, -7], [7, 1], [0, 8], [-7, 1]], null, col, 2.2); break;   // a shield
+      case 'healer': L(0, -7, 0, 7, 3.4); L(-7, 0, 7, 0, 3.4); break;                              // a cross
+      case 'dps': L(-6, 7, 6, -7, 2.6); L(-7, 2, -2, 7, 2.2); break;                                // a blade
+      case 'move': L(-7, -4, 0, 3); L(0, 3, 7, -4); L(-7, 2, 0, 9); L(0, 9, 7, 2); break;            // two chevrons: keep moving
+      case 'still': rrect(ctx, -6, -6, 12, 12, 2, col); break;                                      // a block: stand still
+      case 'chain': circle(ctx, -4, 0, 4.5, null, col, 2.2); circle(ctx, 4, 0, 4.5, null, col, 2.2); break;
+      case 'apart': L(-2, 0, -8, 0); L(-8, 0, -5, -3); L(-8, 0, -5, 3); L(2, 0, 8, 0); L(8, 0, 5, -3); L(8, 0, 5, 3); break;
+      case 'eye': ctx.beginPath(); ctx.ellipse(0, 0, 8, 4.5, 0, 0, TAU); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke(); circle(ctx, 0, 0, 2.4, col); break;
+      case 'post': rrect(ctx, -3, -8, 6, 16, 1, col); L(-6, 8, 6, 8); break;
+      case 'low': L(-8, 5, 8, 1, 2.6); L(-8, 5, -5, 1, 2); break;                                   // blade low
+      case 'high': L(-5, 8, 5, -8, 2.6); L(-7, 4, -2, 7, 2); break;                                 // blade high
+      case 'sheath': rrect(ctx, -2.5, -8, 5, 13, 2, null, col, 2); L(-5, 6, 5, 6); break;            // blade sheathed
+      case 'flip': ctx.beginPath(); ctx.arc(0, 0, 6.5, -2.6, 0.4); ctx.strokeStyle = col; ctx.lineWidth = 2.2; ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, 6.5, 0.55, 3.5); ctx.stroke(); L(6, 2.5, 8.5, -1.5, 2); L(-6, -2.5, -8.5, 1.5, 2); break;
+      case 'seed': ctx.beginPath(); ctx.ellipse(0, 0, 4.5, 7.5, 0.5, 0, TAU); ctx.fillStyle = col; ctx.fill(); break;
+      case 'star': poly(ctx, [[0, -8], [2.2, -2.2], [8, -2.2], [3.4, 1.6], [5, 7.5], [0, 4], [-5, 7.5], [-3.4, 1.6], [-8, -2.2], [-2.2, -2.2]], col); break;
+      case 'prey': poly(ctx, [[-7, -6], [7, -6], [0, 8]], null, col, 2.4); break;                   // a talon pointing down
+      case 'duel': L(-7, -7, 7, 7, 2.4); L(7, -7, -7, 7, 2.4); break;                               // crossed blades
+      default: circle(ctx, 0, 0, 4, col);
     }
     ctx.restore();
   },

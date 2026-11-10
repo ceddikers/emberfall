@@ -24,6 +24,7 @@ const MG_FX = (() => {
     thorn: '#7ed23a', thornDk: '#1f4a10', thornTip: '#f0c84a', frost: '#9fd8ff', frostHi: '#eaf8ff', frostDk: '#2a5a7a',
     spark: '#ffd23a', sparkHi: '#fff6b8', blight: '#9a3cd8', blightDk: '#3a0a5a', blightHi: '#d49aff',
     sap: '#ffb020', sapHi: '#ffe48a', sapDk: '#8a4a0a',
+    life: '#7bd05a', lifeHi: '#d8ffb0', lifeDk: '#1c4a14', lifeGold: '#ffe58a',   // the living seed (Greenseed): green and gold, rising, where the Hunger is dark and sinking
     cleaver: '#ff8a2a', cleaverHi: '#ffd08a', cleaverDk: '#5a2208', share: '#3d8bff', shareHi: '#cfe4ff',
     brood: '#b8ef5a', broodHi: '#e8ffb0', broodDk: '#3a5a14', silk: '#e4eadc',
     storm: '#7fe8ff', stormHi: '#ffffff', stormDk: '#0a4a6a', lantern: '#6dff9a', lanternHi: '#d8ffe8', lanternDk: '#14542c',
@@ -43,7 +44,7 @@ const MG_FX = (() => {
   }
   const shakeNow = n => { try { if (typeof vfxShake === 'function') vfxShake(n, 'boss'); } catch (e) { /* cosmetic */ } };
   const SPLIT = -96;   // how far above his feet the Hunger's split sits on the screen (the chest of the trunk)
-  Object.assign(S, { lip: new Map(), lipAt: new Map(), holeAt: new Map(), rumbleAt: -99 });
+  Object.assign(S, { lip: new Map(), lipAt: new Map(), holeAt: new Map(), rumbleAt: -99, boss: null, graft: null, openAt: -99 });
   const isMe = u => typeof Net !== 'undefined' && Net && u && u.id === Net.id;
   const once = key => { if (S.fired.has(key)) return false; if (S.fired.size > 500) S.fired.clear(); S.fired.add(key); return true; };
   // a whole-screen layer in screen space (your own view only), over everything on the arena canvas
@@ -222,6 +223,104 @@ const MG_FX = (() => {
     gem(ctx, sx, sy, sz, t, k * (locked ? 1 - 0.3 * q : 1), pulse);
   } };
 
+  // ---------------------------------------------------------------- Greenseed and Take Root (Extreme)
+  // Both are blue rings that harm nobody (the shared rim stays blue: stand in it). What is painted inside tells them from the Hunger Seed at a glance:
+  // the Hunger's is dark, cracked and falling inward; the living seed's is gold-green light that rises and breathes outward; the root rings are bark.
+  const holesOf = env => (env && env.room && env.room.floor ? env.room.floor : []).filter(h => h.kind === 'hole');
+  // the living seed: a plump gold-green seed with two leaves opening on it (the Hunger's gem is black crystal)
+  function lifeSeed(c, x, y, sz, t, k, pulse, grow = 1) {
+    c.save(); c.translate(x, y);
+    glow(c, 0, -4 * sz, 58 * sz * (0.85 + 0.25 * pulse), C.life, 0.5 * k);
+    c.beginPath(); c.ellipse(0, 0, 11 * sz, 15 * sz, 0, 0, TAU);
+    const g = c.createRadialGradient(-3 * sz, -5 * sz, 1, 0, 0, 16 * sz); g.addColorStop(0, rgba(C.lifeHi, 0.98 * k)); g.addColorStop(0.55, rgba(C.life, 0.98 * k)); g.addColorStop(1, rgba(C.lifeDk, 0.98 * k));
+    c.fillStyle = g; c.fill(); c.lineWidth = 2.2; c.strokeStyle = rgba('#0e2a08', 0.9 * k); c.stroke();
+    c.beginPath(); c.moveTo(0, -14 * sz); c.quadraticCurveTo(-5 * sz, 0, 0, 14 * sz); c.strokeStyle = rgba(C.lifeHi, 0.6 * k); c.lineWidth = 1; c.stroke();
+    const sway = Math.sin(t * 3) * 0.12, top = -30 * sz * (0.55 + 0.45 * grow);
+    c.beginPath(); c.moveTo(0, -14 * sz); c.quadraticCurveTo(3 * sz, -22 * sz, 0, top); c.strokeStyle = rgba(C.lifeDk, 0.95 * k); c.lineWidth = 3; c.stroke(); c.strokeStyle = rgba(C.life, 0.95 * k); c.lineWidth = 1.4; c.stroke();
+    leaf(c, -8 * sz, top + 2 * sz, -0.55 + sway, 10 * sz, C.life, k); leaf(c, 8 * sz, top + 2 * sz, 0.55 - sway, 10 * sz, C.lifeHi, k);
+    for (let i = 0; i < 3; i++) { const a = t * (1.6 + 2 * pulse) + i * TAU / 3; circle(c, Math.cos(a) * 22 * sz, Math.sin(a) * 8 * sz - 6 * sz - ((t * 0.7 + i / 3) % 1) * 10 * sz, 2.2 * sz, rgba(C.lifeGold, 0.85 * k)); }
+    c.restore();
+  }
+  // Greenseed's living seed: a ring that follows its carrier (the blue rim is the shared one). Light rises off the floor and breathes out in rings
+  // (the Hunger's ring closes in), a wreath of sprouts stands round the edge, and the seed hangs over the carrier's head. At the lock (1.6 s before it
+  // bursts) the seed settles into the ring's middle and a sapling grows there; where the ring touches a hole, stitches of green light cross the lip.
+  TELLS.mgGreen = { ground(ctx, tg, s, p, k, t, env) {
+    const left = (1 - p) * tg.dur, lock = tg.lockAt || 1.6, locked = left <= lock, q = locked ? clamp((lock - left) / 0.6, 0, 1) : 0, r = s.r;
+    const e = tg.follow != null && env.entById ? env.entById(tg.follow) : null, pulse = 0.5 + 0.5 * Math.sin(t * (3 + 8 * p));
+    ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+    const g = ctx.createRadialGradient(s.x, s.y, 4, s.x, s.y, r);
+    g.addColorStop(0, rgba(C.lifeHi, (0.1 + 0.22 * p) * k)); g.addColorStop(0.7, rgba(C.life, (0.07 + 0.1 * p) * k)); g.addColorStop(1, rgba(C.lifeDk, 0.05 * k));
+    ctx.fillStyle = g; ctx.fillRect(s.x - r, s.y - r, r * 2, r * 2);
+    // life spreading out from the middle: rings that widen and fade (the Hunger's closes in)
+    for (let i = 0; i < 3; i++) { const u = (t * (0.35 + 0.5 * p) + i / 3) % 1; ctx.beginPath(); ctx.arc(s.x, s.y, r * (0.15 + 0.8 * u), 0, TAU); ctx.strokeStyle = rgba(C.lifeHi, (1 - u) * (0.18 + 0.5 * p) * k); ctx.lineWidth = 2.4; ctx.stroke(); }
+    // a wreath of sprouts standing round the edge, taller as it nears (and again at the lock)
+    const gr = easeOut(clamp(p * 1.6, 0, 1)) * (1 + 0.5 * q);
+    for (let i = 0; i < 12; i++) {
+      const a = i * TAU / 12 + t * 0.15, x = s.x + Math.cos(a) * r * 0.86, y = s.y + Math.sin(a) * r * 0.86 * 0.9, h = (10 + 14 * hash(i, 2)) * gr;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - h); ctx.strokeStyle = rgba(C.lifeDk, 0.9 * k); ctx.lineWidth = 2.4; ctx.stroke();
+      leaf(ctx, x - 4 * gr, y - h, -0.6 + Math.sin(t * 2 + i) * 0.1, 6 + 4 * gr, i % 2 ? C.life : C.lifeHi, 0.9 * k); leaf(ctx, x + 4 * gr, y - h, 0.6 - Math.sin(t * 2 + i) * 0.1, 6 + 4 * gr, i % 2 ? C.lifeHi : C.life, 0.9 * k);
+    }
+    // light lifting off the ground, gold and green
+    for (let i = 0; i < 16; i++) { const u = (t * 0.45 + hash(i, 3)) % 1, a = hash(i, tg.id) * TAU, d = r * (0.15 + 0.75 * hash(i, 4)); glow(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d * 0.9 - u * 58, 5 + 5 * u, i % 3 ? C.life : C.lifeGold, 0.7 * Math.sin(u * Math.PI) * (0.4 + 0.6 * p) * k); }
+    // where it touches the hole it would close: stitches of green light across the lip (exactly the reach the script uses)
+    let near = null, nd = 1e9;
+    for (const h of holesOf(env)) { const dd = Math.hypot(h.x - s.x, h.y - s.y); if (dd < h.r + r && dd < nd) { nd = dd; near = h; } }
+    if (near) {
+      const al = (0.3 + 0.4 * p + 0.3 * q) * k * (0.75 + 0.25 * Math.sin(t * 7));
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 28; i++) { const a = i * TAU / 28, c1 = Math.cos(a), s1 = Math.sin(a); ctx.beginPath(); ctx.moveTo(near.x + c1 * (near.r - 9), near.y + s1 * (near.r - 9)); ctx.lineTo(near.x + c1 * (near.r + 9), near.y + s1 * (near.r + 9)); ctx.strokeStyle = rgba(i % 2 ? C.lifeHi : C.life, al); ctx.lineWidth = 2; ctx.stroke(); }
+      ctx.beginPath(); ctx.arc(near.x, near.y, near.r, 0, TAU); ctx.strokeStyle = rgba(C.lifeGold, 0.5 * al); ctx.lineWidth = 1.4; ctx.stroke();
+    }
+    if (locked) {
+      if (once('greenlock' + tg.id)) { closing(s.x, s.y + 6, r * 1.4, r * 0.6, C.lifeHi, 6, 0.45, 0); for (let i = 0; i < 6; i++) { const a = rand(0, TAU); VFX.spawn({ x: s.x + Math.cos(a) * r * 0.5, y: s.y + Math.sin(a) * r * 0.45, z: 6, vx: Math.cos(a) * 30, vy: Math.sin(a) * 20, vz: rand(90, 170), g: 120, life: rand(0.8, 1.3), size: rand(7, 11), size1: 2, color: i % 2 ? C.life : C.lifeGold, kind: 'leaf', add: false, vr: rand(-6, 6), flutter: 6 }); } }
+      // the seed has settled and a sapling stands up out of the middle
+      glow(ctx, s.x, s.y, r * 0.8, C.life, 0.22 * q * k * (0.75 + 0.25 * Math.sin(t * 9)));
+      const h2 = 46 * easeOut(q);
+      ctx.beginPath(); ctx.moveTo(s.x, s.y + 4); ctx.quadraticCurveTo(s.x + 6, s.y - h2 * 0.5, s.x, s.y - h2); ctx.strokeStyle = rgba(C.lifeDk, 0.95 * k); ctx.lineWidth = 5; ctx.stroke(); ctx.strokeStyle = rgba(C.life, 0.95 * k); ctx.lineWidth = 2.4; ctx.stroke();
+      for (let i = 0; i < 4; i++) { const hh = h2 * (0.35 + 0.2 * i), sd = i % 2 ? 1 : -1; leaf(ctx, s.x + sd * 12 * q, s.y - hh, sd * 0.6, 9 * q + 2, i % 2 ? C.lifeHi : C.life, q * k); }
+      leaf(ctx, s.x, s.y - h2 - 4, -Math.PI / 2, 10 * q + 2, C.lifeGold, q * k);
+    }
+    ctx.restore();
+    // the seed itself over the carrier's head (it settles into the ring at the lock)
+    const hy = (e ? e.y - (e.lift || 0) : s.y) - 98 + Math.sin(t * 5) * 3, hx = e && !locked ? e.x : s.x;
+    if (q < 0.98) lifeSeed(ctx, lerp(hx, s.x, q), locked ? lerp(hy, s.y - 10, easeIn(q)) : hy, locked ? 1.3 - 0.5 * q : 1.3 + 0.12 * pulse, t, k * (1 - 0.85 * q), pulse, 1 + 0.6 * p);
+  } };
+
+  // Take Root's rings: where the pull finds you, a ring of living bark holds you (rooted until the petals snap). Until the pull lands the roots lie
+  // coiled and dormant; as it lands they heave up out of the ground and clench inward, and a hero standing inside is wound at the feet. The rings
+  // are all alike: nothing paints which one the petals miss.
+  const pullAt = (tg, env) => { if (env.tgs) for (const o of env.tgs.values()) if (o.tag === 'mgInhale' && Math.abs(o.start - tg.start) < 0.4) return o.start + o.dur; return null; };
+  TELLS.mgRing = { ground(ctx, tg, s, p, k, t, env) {
+    const r = s.r, pa = pullAt(tg, env), landed = pa != null && t >= pa, up = landed ? easeOut(clamp((t - pa) / 0.4, 0, 1)) : 0, wake = pa != null ? clamp(1 - (pa - t) / 1.4, 0, 1) : 0;
+    ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+    const g = ctx.createRadialGradient(s.x, s.y, 4, s.x, s.y, r);
+    g.addColorStop(0, rgba('#0a0604', (0.16 + 0.2 * up) * k)); g.addColorStop(1, rgba(C.earthDk, (0.18 + 0.12 * up) * k));
+    ctx.fillStyle = g; ctx.fillRect(s.x - r, s.y - r, r * 2, r * 2);
+    crackStar(ctx, s.x, s.y, r * 0.95 * (0.5 + 0.5 * easeOut(clamp(p * 3, 0, 1))), 8, tg.id, (0.3 + 0.4 * up) * k, { w: 1.6, jag: 5, col: '#c05a30', ink: '#1a0804' });
+    // bark roots coiled round the ring: lying flat and still, then heaving up and drawing in on the middle
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    for (let i = 0; i < 8; i++) {
+      const a0 = i * TAU / 8 + hash(i, tg.id) * 0.3, sw = i % 2 ? 1 : -1, pts = [], N = 8, reach = 0.5 + 0.35 * (1 - up) - 0.25 * wake * (1 - up);
+      for (let j = 0; j <= N; j++) { const u = j / N, d = r * (1.0 - (1 - reach) * u * (0.55 + 0.45 * up)), an = a0 + sw * 0.9 * u * (1 + 0.4 * up); pts.push([s.x + Math.cos(an) * d, s.y + Math.sin(an) * d * 0.92 - up * 20 * Math.sin(u * Math.PI) * (0.6 + 0.4 * Math.sin(t * 5 + i))]); }
+      taper(ctx, pts, 13, 3, rgba(C.bark, (0.55 + 0.4 * up) * k), rgba('#120a04', (0.7 + 0.25 * up) * k), 1.2);
+      if (up > 0.02) { ctx.beginPath(); pts.forEach(([x, y], j) => (j ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.strokeStyle = rgba('#ff9a5a', 0.4 * up * k); ctx.lineWidth = 1.2; ctx.stroke(); }
+      const [tx, ty] = pts[N]; circle(ctx, tx, ty, 3 + 1.5 * up, rgba(C.leaf, (0.4 + 0.5 * up) * k));
+    }
+    // the heartwood light waking in the seams as the pull nears
+    glow(ctx, s.x, s.y, r * 0.75, C.sap, (0.05 + 0.2 * wake + 0.15 * up) * k * (0.8 + 0.2 * Math.sin(t * 6)));
+    // whoever is inside when it lands is wound at the feet: the bark loops round them
+    if (landed && env.units) for (const u of env.units) {
+      if (Math.hypot(u.x - s.x, u.y - s.y) >= r) continue;
+      const w = easeOut(clamp((t - pa) / 0.3, 0, 1));
+      ellipse(ctx, u.x, u.y + 12, 25 * w, 9 * w, 0, rgba('#0a0604', 0.5 * k), rgba(C.bark, 0.95 * k), 3.2);
+      ellipse(ctx, u.x, u.y + 12, 25 * w, 9 * w, 0, null, rgba('#ff9a5a', 0.5 * k), 1);
+      for (let i = 0; i < 4; i++) { const a = i * TAU / 4 + 0.6; ctx.beginPath(); ctx.moveTo(u.x + Math.cos(a) * 24 * w, u.y + 12 + Math.sin(a) * 8 * w); ctx.quadraticCurveTo(u.x + Math.cos(a) * 14, u.y + 4 - 6 * w, u.x + Math.cos(a + 1.2) * 9, u.y - 4 * w); ctx.strokeStyle = rgba(C.barkDk, 0.9 * k); ctx.lineWidth = 3; ctx.stroke(); ctx.strokeStyle = rgba(C.bark, 0.9 * k); ctx.lineWidth = 1.4; ctx.stroke(); }
+    }
+    ctx.restore();
+    // the ground gives a thump as the roots seize (once, softly)
+    if (landed && t - pa < 0.3 && once('rootgrip' + tg.id)) { VFX.shock(s.x, s.y, { r: r * 1.15, color: C.bark, w: 6, dur: 0.4, flat: 0.8 }); groveUp(s.x, s.y, 5, { size: 0.9, speed: 0.9 }); }
+  } };
+
   // Twin Seed's tether (ArenaView.tether hands over): a rope of dark root, straining; taut and bright once they are far enough apart,
   // slack and sagging, with a knot of dark gathering at the middle, when they are not
   function twin(ctx, a, b, th, t, d, ok) {
@@ -302,7 +401,7 @@ const MG_FX = (() => {
   // turned, and a swept smear shows the way it went.
   function bloomInfo(tg) {
     const ev = evs().mgbloom, dir = ev ? (ev.dir || 1) : 1;
-    return { dir, second: !!ev && tg.start - ev.start > (ev.at || 3) * 0.6 };
+    return { dir, second: !!ev && tg.start - ev.start > (ev.at || 3) * 0.6, long: !!ev && (ev.at || 0) > 5.8 };   // (long: Take Root's petals, painted from the start of its bar)
   }
   // the turn arrows: two chevrons curling along an arc, pointing the way the petals will go
   function turnArrows(c, s, o, col, k, reach) {
@@ -422,8 +521,10 @@ const MG_FX = (() => {
       const reach = L * (bi.second ? 0.6 + 0.4 * easeOut(p) : easeOut(clamp(p * 1.3, 0, 1)));
       const lean = bi.second ? 0 : 0.5 * bi.dir, half = s.arc / 2;
       const pt = (d, th) => { const a = s.angle + th + lean * (d / 700); return [s.x + Math.cos(a) * d, s.y + Math.sin(a) * d]; };
+      // (Take Root paints the first petals through its whole bar so a ring can be chosen: while the pull is still coming they are quieter inside, the red rim as ever)
+      const kk = bi.long && !bi.second ? k * (0.5 + 0.5 * clamp((p - 0.5) / 0.14, 0, 1)) : k;
       ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
-      PETAL[kind](ctx, { s, p, k, t, pt, reach, half, lean, dir: bi.dir, second: bi.second });
+      PETAL[kind](ctx, { s, p, k: kk, t, pt, reach, half, lean, dir: bi.dir, second: bi.second });
       // the second snap: the smear of the turn just made, curling away behind the petal
       if (bi.second) {
         const sm = 1 - clamp((t - tg.start) / 0.7, 0, 1);
@@ -789,7 +890,7 @@ const MG_FX = (() => {
   } };
   // Sap Tide's ebb: the ground heaving after the tide, amber welling up through the ring (a circle at his feet, or the ring round them)
   TELLS.mgEbb = { ground(ctx, tg, s, p, k, t) {
-    const R = s.kind === 'donut' ? AR() * 1.1 : s.r, r0 = s.kind === 'donut' ? (s.r2 || 300) : 0;
+    const R = s.kind === 'donut' ? Math.min(AR() * 1.1, s.r) : s.r, r0 = s.kind === 'donut' ? (s.r2 || 300) : 0;
     ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
     ctx.fillStyle = rgba(C.sap, (0.06 + 0.14 * p) * k); ctx.fillRect(s.x - 1500, s.y - 1500, 3000, 3000);
     for (let i = 0; i < 4; i++) { const q = (t * 0.6 + i / 4) % 1, rr = s.kind === 'donut' ? r0 + 40 + q * (R - r0) : R * (0.2 + 0.8 * q); ctx.beginPath(); ctx.arc(s.x, s.y, rr, 0, TAU); ctx.strokeStyle = rgba(C.sapHi, 0.5 * Math.sin(q * Math.PI) * (0.3 + p) * k); ctx.lineWidth = 3; ctx.stroke(); }
@@ -883,6 +984,20 @@ const MG_FX = (() => {
           ellipse(ctx, s.x, s.y, s.r * 0.55, s.r * 0.46, 0, null, rgba(C.storm, 0.55 * k * (0.7 + 0.3 * Math.sin(age * 12))), 2.2);
           ellipse(ctx, s.x, s.y, s.r * 0.88, s.r * 0.74, 0, null, rgba(C.storm, 0.3 * k), 1.4);
           crackStar(ctx, s.x, s.y, s.r * 0.9, 9, seed, 0.7 * k, { w: 1.4, jag: 6, col: C.storm, ink: '#02080c' });
+        }, id);
+        break;
+      case 'mgGreen':
+        mark(T.short, { x: s.x, y: s.y, r: s.r }, (ctx, q, k, age, seed) => {
+          // the living seed's ground: a faint green ring and a few sprouts left standing
+          ellipse(ctx, s.x, s.y + 4, s.r * 0.7, s.r * 0.6, 0, rgba(C.lifeDk, 0.2 * k), rgba(C.life, 0.4 * k), 1.6);
+          for (let i = 0; i < 6; i++) { const a = hash(i, seed) * TAU, d = Math.sqrt(hash(i, seed + 1)) * s.r * 0.6, x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d * 0.85, h = 8 + 8 * hash(i, 3); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - h); ctx.strokeStyle = rgba(C.lifeDk, 0.85 * k); ctx.lineWidth = 2; ctx.stroke(); leaf(ctx, x - 3, y - h, -0.6, 5, C.life, 0.85 * k); leaf(ctx, x + 3, y - h, 0.6, 5, C.lifeHi, 0.85 * k); }
+        }, id);
+        break;
+      case 'mgRing':
+        mark(T.short, { x: s.x, y: s.y, r: s.r }, (ctx, q, k, age, seed) => {
+          // the loosened ring: torn bark fibres lying where the roots let go, a few ember seams cooling
+          crackStar(ctx, s.x, s.y + 4, s.r * 0.9, 7, seed, 0.6 * k, { w: 1.4, jag: 5, col: '#c05a30', ink: '#1a0804' });
+          for (let i = 0; i < 6; i++) { const a = hash(i, seed) * TAU, d0 = s.r * 0.3, d1 = s.r * (0.65 + 0.3 * hash(i, seed + 1)); ctx.beginPath(); zigPath(ctx, s.x + Math.cos(a) * d0, s.y + 4 + Math.sin(a) * d0 * 0.8, s.x + Math.cos(a + 0.6) * d1, s.y + 4 + Math.sin(a + 0.6) * d1 * 0.8, seed + i, 5, 12); ctx.strokeStyle = rgba(C.bark, 0.85 * k); ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.stroke(); }
         }, id);
         break;
       case 'mgLantern':
@@ -1142,7 +1257,7 @@ const MG_FX = (() => {
   };
   // Sap Tide's ebb: the amber heaves up through the ring, drops thrown off it
   IMP.mgEbb = (tg, msg, ctx, H) => {
-    const s = tg.live, x = s.x, y = s.y, r0 = s.kind === 'donut' ? (s.r2 || 300) : 0, R = s.kind === 'donut' ? H.AR * 1.1 : s.r;
+    const s = tg.live, x = s.x, y = s.y, r0 = s.kind === 'donut' ? (s.r2 || 300) : 0, R = s.kind === 'donut' ? Math.min(H.AR * 1.1, s.r) : s.r;
     H.shapeFlash(s, C.sap, { a: 0.3, dur: 0.5 });
     for (let i = 0; i < 3; i++) H.shockAt(x, y, { r: r0 ? r0 + (R - r0) * (0.4 + 0.3 * i) : R * (1 - i * 0.25), r0: r0 || undefined, color: i % 2 ? C.sapHi : C.sap, w: 11 - i * 3, dur: 0.55 + i * 0.1, flat: 0.8, delay: i * 0.06 });
     for (const q of H.scatter(s.kind === 'donut' ? { kind: 'circle', x: 0, y: 0, r: H.AR - 30 } : { kind: 'circle', x, y, r: R * 0.9 }, 9)) {
@@ -1152,8 +1267,36 @@ const MG_FX = (() => {
     for (const u of inside(ctx, s, 6)) VFX.hit(u.x, u.y, C.sapHi, 1.5);
     H.shake(6);
   };
+  // The living seed opens (Greenseed): a soft green bloom of light and leaves lifting; the hole it mends has its own moment (propfx mgmend)
+  IMP.mgGreen = (tg, msg, ctx, H) => {
+    const s = tg.live, x = s.x, y = s.y;
+    H.shapeFlash(s, C.life, { a: 0.16, dur: 0.5 });
+    H.shockAt(x, y, { r: s.r * 1.25, color: C.life, w: 6, dur: 0.55, flat: 0.8 });
+    H.shockAt(x, y, { r: s.r * 0.7, color: C.lifeHi, w: 3, dur: 0.45, flat: 0.8, delay: 0.06 });
+    VFX.pillar(x, y, { r: 26, h: 220, color: C.life, dur: 0.6 });
+    for (let i = 0; i < 12; i++) { const a = rand(0, TAU), d = rand(0, s.r * 0.8); VFX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.9, z: rand(4, 16), vx: Math.cos(a) * 24, vy: Math.sin(a) * 16, vz: rand(90, 200), g: 90, drag: 0.03, life: rand(0.9, 1.5), size: rand(7, 12), size1: 2, color: i % 3 ? C.life : C.lifeGold, kind: i % 2 ? 'leaf' : 'glow', add: i % 2 === 0, vr: rand(-6, 6), flutter: 6 }); }
+    for (const u of inside(ctx, s, 6)) VFX.hit(u.x, u.y, C.lifeHi, 1.2);
+    H.shake(3);
+  };
+  // Take Root's rings let go as the petals snap: the bark loosens in a puff of dust and splinters (no damage; quiet beside the petals)
+  IMP.mgRing = (tg, msg, ctx, H) => {
+    const s = tg.live, x = s.x, y = s.y;
+    H.shockAt(x, y, { r: s.r * 1.2, color: C.bark, w: 5, dur: 0.45, flat: 0.8 });
+    groveUp(x, y, 7, { size: 1.0, speed: 1.0, r: s.r * 0.7 });
+    for (let i = 0; i < 6; i++) { const a = rand(0, TAU), d = s.r * rand(0.5, 0.95); VFX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.9, z: 8, vx: Math.cos(a) * 40, vy: Math.sin(a) * 26, vz: rand(60, 140), g: 420, life: rand(0.5, 0.9), size: rand(6, 11), size1: 1, color: i % 2 ? C.bark : C.barkDk, kind: 'shard', add: false, vr: rand(-10, 10) }); }
+    for (const u of inside(ctx, s, 6)) VFX.smoke(u.x, u.y + 6, { n: 2, color: '#8a7a64', size: 22, a: 0.45, speed: 70 });
+  };
+  // An act's opening blow (The Hunger Stirs / Starved): light and hidden, so only the room tells it: his split flares, a ring runs out from his feet, bark and leaves come down
+  IMP.mgStir = (tg, msg, ctx, H) => {
+    const b = ctx.bossDraw, x = b ? b.x : 0, y = b ? b.y : -40;
+    VFX.flash(x, y + SPLIT, 120, C.violetHi, 0.28);
+    for (let i = 0; i < 2; i++) H.shockAt(x, y + 14, { r: 380 + 130 * i, color: i ? C.violetHi : C.violet, w: 8 - 3 * i, dur: 0.7 + 0.1 * i, flat: 0.8, delay: i * 0.08 });
+    groveUp(x, y + 10, 8, { size: 1.2, speed: 1.2 });
+    hungerUp(x, y + SPLIT + 30, 8, { size: 0.9, speed: 200 });
+    H.roomTint(C.violetDk, 0.12, 0.6); H.shake(5);
+  };
   // Hydra Head: the breath: a rush of sea-green water down the lane, spray and foam
-  IMP.mgHead = (tg, msg, ctx, H) => {
+  IMP.mgHead =(tg, msg, ctx, H) => {
     const s = tg.live, ca = Math.cos(s.angle), sa = Math.sin(s.angle), Ld = Math.min(s.len, H.AR * 1.8);
     H.shapeFlash(s, C.head, { a: 0.24, dur: 0.5 });
     H.streak(s.x, s.y, s.angle, C.head, { len: Ld, w: 26, dur: 0.4 });
@@ -1270,7 +1413,90 @@ const MG_FX = (() => {
     }
     H.shake(11); cam(0.1, 0.035, 0.45, 2);
   }
+  // a hole mended (Greenseed): the floor entry is gone the moment this arrives, so the closing is drawn here: the dark mouth drawing shut with green
+  // light stitching across it, a ring of life closing in then breathing out, a green column, leaves; sprouts are left on the scar for a few seconds
+  // (r 0: the living seed found no hole; a sprout opens, gives a small flare and thins out)
+  function mend(msg, H) {
+    const x = msg.x, y = msg.y, r = msg.r || 0;
+    if (!r) {
+      VFX.fx({ dur: 1.6, layer: 'ground', draw: (c, p, t, e) => {
+        const k = e.a * (1 - clamp((p - 0.55) / 0.45, 0, 1)), q = easeOut(clamp(p / 0.35, 0, 1));
+        glow(c, x, y, 70 * q, C.life, 0.3 * k);
+        c.save(); c.translate(x, y); c.scale(q, q); c.beginPath(); c.moveTo(0, 4); c.quadraticCurveTo(6, -18, 0, -38); c.strokeStyle = rgba(C.lifeDk, 0.95 * k); c.lineWidth = 5; c.stroke(); c.strokeStyle = rgba(C.life, 0.95 * k); c.lineWidth = 2.4; c.stroke(); c.restore();
+        leaf(c, x - 12 * q, y - 30 * q, -0.6, 10 * q, C.life, k); leaf(c, x + 12 * q, y - 34 * q, 0.6, 10 * q, C.lifeHi, k);
+      } });
+      H.shockAt(x, y, { r: 130, color: C.life, w: 5, dur: 0.5, flat: 0.8 });
+      for (let i = 0; i < 8; i++) { const a = rand(0, TAU), sp = rand(30, 90); VFX.spawn({ x, y, z: 8, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rand(80, 170), g: 130, life: rand(0.8, 1.3), size: rand(6, 10), size1: 2, color: i % 2 ? C.life : C.lifeGold, kind: 'leaf', add: false, vr: rand(-6, 6), flutter: 6 }); }
+      return;
+    }
+    VFX.fx({ dur: 1.6, layer: 'ground', draw: (c, p, t, e) => {
+      const close = easeIO(clamp(p / 0.55, 0, 1)), rr = r * (1 - close), k = e.a * (1 - clamp((p - 0.7) / 0.3, 0, 1));
+      c.save();
+      if (rr > 3) pit(c, x, y, rr, k * (1 - 0.25 * close), 9);
+      // green stitches drawn across the mouth, one after another, and a ring of life shrinking with it
+      c.lineCap = 'round';
+      for (let i = 0; i < 14; i++) {
+        const a = i * TAU / 14 + hash(i, 4) * 0.2, u = clamp(close * 1.4 - hash(i, 5) * 0.4, 0, 1); if (u <= 0) continue;
+        c.beginPath(); c.moveTo(x + Math.cos(a) * r * 1.02, y + Math.sin(a) * r * 0.86);
+        for (let j = 1; j <= 4; j++) { const d = r * (1.02 - 1.02 * u * j / 4), o = (hash(i * 5 + j, 6) - 0.5) * 14; c.lineTo(x + Math.cos(a) * d - Math.sin(a) * o, y + Math.sin(a) * d * 0.86 + Math.cos(a) * o * 0.86); }
+        c.strokeStyle = rgba(C.lifeDk, 0.7 * k); c.lineWidth = 5; c.stroke(); c.strokeStyle = rgba(i % 2 ? C.lifeHi : C.life, 0.95 * k); c.lineWidth = 2.2; c.stroke();
+      }
+      c.beginPath(); c.ellipse(x, y, Math.max(2, r * (1.02 - 0.5 * close)), Math.max(2, r * (1.02 - 0.5 * close)) * 0.86, 0, 0, TAU); c.strokeStyle = rgba(C.lifeHi, 0.8 * k); c.lineWidth = 3; c.stroke();
+      glow(c, x, y, r * 1.5, C.life, 0.3 * k * (0.5 + 0.5 * close));
+      c.restore();
+    } });
+    // what is left: sprouts coming up on the scar, thinning out after a few seconds
+    VFX.fx({ dur: 5, layer: 'ground', delay: 0.7, draw: (c, p, t, e) => {
+      const k = e.a * (1 - clamp((t - 3.4) / 1.6, 0, 1)), gr = easeOut(clamp(t / 1.2, 0, 1));
+      c.save();
+      ellipse(c, x, y, r * 0.95, r * 0.8, 0, rgba(C.lifeDk, 0.3 * k), rgba(C.life, 0.35 * k), 1.6);
+      for (let i = 0; i < 9; i++) {
+        const a = hash(i, 11) * TAU, d = Math.sqrt(hash(i, 12)) * r * 0.8, sx = x + Math.cos(a) * d, sy = y + Math.sin(a) * d * 0.84, h = (9 + 12 * hash(i, 13)) * gr;
+        c.beginPath(); c.moveTo(sx, sy); c.lineTo(sx, sy - h); c.strokeStyle = rgba(C.lifeDk, 0.9 * k); c.lineWidth = 2; c.stroke();
+        leaf(c, sx - 4, sy - h, -0.6, 5 + 3 * gr, C.life, 0.9 * k); leaf(c, sx + 4, sy - h, 0.6, 5 + 3 * gr, C.lifeHi, 0.9 * k);
+      }
+      c.restore();
+    } });
+    closing(x, y, r * 1.9, r * 0.7, C.lifeHi, 8, 0.55, 0);
+    H.shockAt(x, y, { r: r * 1.6, color: C.life, w: 8, dur: 0.6, flat: 0.8, delay: 0.5 });
+    later(0.4, () => VFX.pillar(x, y, { r: r * 0.5, h: 300, color: C.life, dur: 0.9 }));
+    later(0.5, () => VFX.pillar(x, y, { r: r * 0.18, h: 340, color: '#ffffff', dur: 0.55 }));
+    for (let i = 0; i < 16; i++) { const a = rand(0, TAU), d = r * rand(0.2, 1.1); VFX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.84, z: rand(4, 20), vx: Math.cos(a) * 26, vy: Math.sin(a) * 18, vz: rand(100, 230), g: 110, drag: 0.03, life: rand(1.0, 1.7), size: rand(7, 12), size1: 2, color: i % 3 ? C.life : C.lifeGold, kind: i % 2 ? 'leaf' : 'glow', add: i % 2 === 0, vr: rand(-6, 6), flutter: 6 }); }
+    VFX.smoke(x, y, { n: 4, color: '#7a8a58', size: 30, a: 0.4, speed: 70, r: r * 0.8 });
+    H.shake(4); cam(0.04, 0.02, 0.4, 2.5);
+  }
+  // a broken limb's move runs into the limb beside it (Grafting): a root of bark and light grows along the floor from the stump to the host, its
+  // light shifting from the broken limb's colour to the host's, and the host takes it with a flare. (roomev morrowoak-graft then pulses on the host.)
+  function graftRoot(msg, H) {
+    const A = LIMBFX[msg.limb] || LIMBFX.cleaver, Bc = LIMBFX[msg.host] || LIMBFX.cleaver, x0 = msg.x, y0 = msg.y, x1 = msg.tx, y1 = msg.ty;
+    const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, bow = L * 0.2, full = curve(x0, y0, (x0 + x1) / 2 - dy / L * bow, (y0 + y1) / 2 + dx / L * bow, x1, y1, 22);
+    S.graft = { tx: x1, ty: y1, host: msg.host, at: nowS(), col: Bc.col, hi: Bc.hi };
+    VFX.flash(x0, y0 - 24, 90, A.hi, 0.26);
+    VFX.sparks(x0, y0 - 10, { color: A.hi, n: 8, speed: 180 });
+    VFX.fx({ dur: 3.2, layer: 'ground', draw: (c, p, t, e) => {
+      const grow = easeOut(clamp(t / 1.1, 0, 1)), k = e.a * (1 - clamp((t - 2.5) / 0.7, 0, 1)), n = Math.max(2, Math.round(full.length * grow)), pts = full.slice(0, n);
+      c.save(); c.lineJoin = 'round'; c.lineCap = 'round';
+      // the glow in the two colours, the bark body, the lit seam down it
+      const gr = c.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, rgba(A.col, 0.5 * k)); gr.addColorStop(1, rgba(Bc.col, 0.5 * k));
+      c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.strokeStyle = gr; c.lineWidth = 26; c.stroke();
+      taper(c, pts, 20, 8, rgba('#4a3826', 0.96 * k), rgba('#120a04', 0.96 * k), 2);
+      const gr2 = c.createLinearGradient(x0, y0, x1, y1); gr2.addColorStop(0, rgba(A.hi, 0.9 * k)); gr2.addColorStop(1, rgba(Bc.hi, 0.9 * k));
+      c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.strokeStyle = gr2; c.lineWidth = 2.6; c.stroke();
+      // beads of light running down it toward the host, quicker as it grows
+      for (let i = 0; i < 3; i++) { const u = ((t * 0.8 + i / 3) % 1) * (n - 1), a0 = Math.floor(u), b0 = pts[Math.min(n - 1, a0 + 1)], a1 = pts[a0]; glow(c, lerp(a1[0], b0[0], u - a0), lerp(a1[1], b0[1], u - a0) - 4, 14, i % 2 ? A.hi : Bc.hi, 0.75 * k); }
+      c.restore();
+    } });
+    later(1.0, () => {
+      VFX.flash(x1, y1 - 30, 110, Bc.hi, 0.3);
+      VFX.spikeburst(x1, y1, { r: 80, n: 10, color: Bc.col, core: Bc.hi, ink: Bc.ink, dur: 0.45 });
+      H.shockAt(x1, y1, { r: 150, color: Bc.col, w: 7, dur: 0.5, flat: 0.8 });
+      for (let i = 0; i < 8; i++) { const a = rand(0, TAU), sp = rand(80, 200); VFX.spawn({ x: x1, y: y1, z: 14, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rand(90, 200), g: 520, life: rand(0.5, 0.9), size: rand(6, 11), size1: 1, color: Bc.bits[i % 3], kind: 'shard', add: false, vr: rand(-10, 10) }); }
+      H.shake(5);
+    });
+  }
   function prop(msg, H) {
+    if (msg.k === 'mgmend') { mend(msg, H); return true; }
+    if (msg.k === 'mggraft') { graftRoot(msg, H); return true; }
     if (msg.k === 'mgdig') { dig(msg, H); return true; }
     if (msg.k === 'mggrow') { grow(msg, H); return true; }
     if (msg.k === 'mgfall') { fall(msg, H); return true; }
@@ -1438,6 +1664,64 @@ const MG_FX = (() => {
   function floor(ctx, room, t) {
     const ev = room && room.ev; if (!ev) return;
     if (ev.swallow && t < ev.swallow.end + 1.4) swallowFloor(ctx, ev.swallow, t);
+    if (ev['morrowoak-stirs'] && t < ev['morrowoak-stirs'].end + 1.2) openingFloor(ctx, ev['morrowoak-stirs'], t, false);
+    if (ev['morrowoak-starved'] && t < ev['morrowoak-starved'].end + 1.2) openingFloor(ctx, ev['morrowoak-starved'], t, true);
+  }
+
+  // ---------------------------------------------------------------- the act openings (roomev morrowoak-stirs / morrowoak-starved: a named bar, then a light blow)
+  // The Hunger Stirs (Act II): the heartwood splits wider. Cracks run out of his feet with violet in them, the ground beats like a pulse that quickens, bark
+  // flakes come off the trunk and his split glows brighter; at the blow the cracks flare and go quiet.
+  // Starved (Act IV): the same Hunger gone ravenous. What light is left in the grove is drawn across the floor into his split, the rim of the room dims,
+  // dead leaves are swept in, his split opens wide; then the blow.
+  // (Under the units: the floor part; over them: only the glow in his chest and the particles. Nothing here covers a telegraph or a hero.)
+  const openBlow = ev => Math.max(1, ev.end - ev.start - 1);   // the bar is the whole roomev but its last second
+  function openingFloor(c, ev, t, starved) {
+    const u = t - ev.start; if (u < 0) return;
+    const blow = openBlow(ev), q = clamp(u / blow, 0, 1), k = (1 - clamp((u - blow) / 1.0, 0, 1)) * Math.min(1, u / 0.4), b = S.boss || CORE, bx = b.x, by = b.y + 14;
+    if (k <= 0.01) return;
+    c.save(); ARENA.trace(c, 2); c.clip();
+    if (!starved) {
+      crackStar(c, bx, by, 470 * easeOut(clamp(u / (blow * 0.9), 0, 1)), 12, 21, 0.65 * k, { w: 2.2, jag: 9, seg: 28 });
+      glow(c, bx, by, 150 + 120 * q, C.void, 0.3 * q * k);
+      const ph = u * (0.9 + 0.9 * q);
+      for (let i = 0; i < 2; i++) { const w = (ph + i * 0.5) % 1; c.beginPath(); c.ellipse(bx, by + 4, 40 + 300 * w, (40 + 300 * w) * 0.5, 0, 0, TAU); c.strokeStyle = rgba(C.violet, (1 - w) * (0.14 + 0.36 * q) * k); c.lineWidth = 3; c.stroke(); }
+    } else {
+      const R = AR() + 20, rim = easeOut(q), g = c.createRadialGradient(0, 0, R * (0.95 - 0.35 * rim), 0, 0, R * 1.2);
+      g.addColorStop(0, rgba(C.void, 0)); g.addColorStop(1, rgba(C.void, 0.32 * rim * k));
+      c.fillStyle = g; c.fillRect(-R * 1.3, -R * 1.3, R * 2.6, R * 2.6);
+      c.beginPath(); c.arc(0, 0, R * (1.0 - 0.38 * rim), 0, TAU); c.strokeStyle = rgba(C.violet, 0.3 * rim * k); c.lineWidth = 2; c.stroke();
+      crackStar(c, bx, by, 330 * easeOut(clamp(u / (blow * 0.9), 0, 1)), 9, 33, 0.5 * k, { w: 1.8, jag: 8, seg: 26 });
+      // what light is left, streaming across the floor into the split
+      for (let i = 0; i < 22; i++) { const a = hash(i, 6) * TAU, w = (u * 0.55 * (0.6 + hash(i, 7)) + hash(i, 8)) % 1, d0 = R * (0.55 + 0.4 * hash(i, 9)), x = lerp(Math.cos(a) * d0, bx, w), y = lerp(Math.sin(a) * d0 * 0.9, by, w); glow(c, x, y, 7 + 5 * w, i % 3 ? C.bone : C.violetHi, 0.6 * Math.sin(w * Math.PI) * (0.3 + 0.7 * q) * k); }
+    }
+    c.restore();
+  }
+  function openingOver(c, ev, t, env, starved) {
+    const u = t - ev.start; if (u < 0 || !env || !env.boss) return;
+    const blow = openBlow(ev), q = clamp(u / blow, 0, 1), k = 1 - clamp((u - blow) / 0.9, 0, 1), b = env.boss;
+    if (k <= 0.01) return;
+    if (once('open' + ev.start)) { groveUp(b.x, b.y + 10, 6, { size: 1.1, speed: 1.0 }); shakeNow(3); }
+    glow(c, b.x, b.y + SPLIT, (44 + 80 * q) * (starved ? 1.3 : 1), C.violet, (0.14 + 0.45 * q) * k * (0.8 + 0.2 * Math.sin(t * (8 + 10 * q))));
+    glow(c, b.x, b.y + SPLIT, (16 + 22 * q) * (starved ? 1.3 : 1), C.violetHi, (0.15 + 0.45 * q) * k);
+    const n = nowS();
+    if (n - S.rumbleAt > 0.45) { S.rumbleAt = n; shakeNow(1 + 2.5 * q); }
+    if (n - S.openAt > (starved ? 0.07 : 0.1)) {
+      S.openAt = n;
+      if (!starved) VFX.spawn({ x: b.x + rand(-130, 130), y: b.y + rand(-30, 40), z: rand(120, 220), vx: rand(-14, 14), vy: rand(-8, 8), vz: rand(-90, -30), g: 160, drag: 0.05, life: rand(0.9, 1.4), size: rand(5, 9), size1: 2, color: Math.random() < 0.6 ? C.barkDk : C.bark, kind: 'shard', add: false, vr: rand(-8, 8) });
+      else { const a = rand(0, TAU), d = rand(160, 460); VFX.spawn({ x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d * 0.9, z: rand(6, 26), vx: -Math.cos(a) * 150, vy: -Math.sin(a) * 135, g: 0, drag: 0.4, life: rand(0.5, 0.8), size: rand(7, 11), size1: 2, color: Math.random() < 0.7 ? C.leaf : '#8a6a2a', kind: 'leaf', add: false, vr: rand(-10, 10) }); }
+    }
+    if (u >= blow - 0.05 && u < blow + 0.5 && once('openblow' + ev.start)) VFX.flash(b.x, b.y + SPLIT, 90, C.violetHi, 0.22);
+  }
+  // Grafting (roomev morrowoak-graft, after propfx mggraft): the bar while the host takes the broken limb's move: rings of the host's colour draw into it,
+  // and as the bar ends it flares once
+  function graftOver(c, ev, t, env) {
+    const g = S.graft; if (!g || nowS() - g.at > 8) return;
+    const u = t - ev.start; if (u < 0) return;
+    const dur = Math.max(0.8, ev.end - ev.start - 0.6), q = clamp(u / dur, 0, 1), k = 1 - clamp((u - dur) / 0.6, 0, 1), P = limbPos(env, g.host) || { x: g.tx, y: g.ty };
+    if (k <= 0.01) return;
+    glow(c, P.x, P.y - 18, 40 + 60 * q, g.col, (0.15 + 0.35 * q) * k * (0.8 + 0.2 * Math.sin(t * 12)));
+    for (let i = 0; i < 3; i++) { const w = (u * 0.9 + i / 3) % 1, rr = 150 * (1 - w); c.beginPath(); c.ellipse(P.x, P.y + 4, rr, rr * 0.5, 0, 0, TAU); c.strokeStyle = rgba(g.hi, (0.15 + 0.5 * w) * k); c.lineWidth = 2.4; c.stroke(); }
+    if (u >= dur - 0.05 && once('graftend' + ev.start)) { VFX.flash(P.x, P.y - 24, 110, g.hi, 0.3); VFX.shock(P.x, P.y, { r: 160, color: g.col, w: 8, dur: 0.5, flat: 0.8 }); shakeNow(4); }
   }
   // the holes, living: violet light lifting off each one, an odd dead leaf pulled in; (the pits themselves are drawn by morrowoak-art.js)
   function holeLife(room) {
@@ -1473,6 +1757,10 @@ const MG_FX = (() => {
   function roomOver(ctx, room, t, env) {
     const ev = room && room.ev; if (!ev) return;
     S.units = env && env.units;
+    if (env && env.boss) S.boss = env.boss;   // (the openings' floor part is drawn before this and reads where he stands from the frame before)
+    if (ev['morrowoak-stirs'] && t < ev['morrowoak-stirs'].end + 0.2) openingOver(ctx, ev['morrowoak-stirs'], t, env, false);
+    if (ev['morrowoak-starved'] && t < ev['morrowoak-starved'].end + 0.2) openingOver(ctx, ev['morrowoak-starved'], t, env, true);
+    if (ev['morrowoak-graft'] && t < ev['morrowoak-graft'].end + 0.2) graftOver(ctx, ev['morrowoak-graft'], t, env);
     if (room.floor && room.floor.length) { holeLife(room); lipGraze(room, env); }
     if (ev.swallow && t < ev.swallow.end + 1.4) swallowOver(ctx, ev.swallow, t, env);
     if (ev.mglimbs && env && env.boss) { const L = ev.mglimbs; if (S.limbs !== L.start) { if (t - L.start > 1.5) S.limbs = L.start; else limbsGrow(L, env); } }

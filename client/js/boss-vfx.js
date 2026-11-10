@@ -790,6 +790,26 @@ const BOSS_VFX = (() => {
     // Volkar, Hard: the storm cell over Chain Lightning's target breaks (the leaps come in their own message), and
     // the sky falling
     chain(tg) { const s = tg.live; shockAt(s.x, s.y, { r: s.r, color: '#9ff4ff', w: 4, dur: 0.4, flat: 1 }); roomTint('#bfe8ff', 0.1, 0.3); },
+    // Split Current (Volkar, Extreme): the sky splits at the ring and each side lands in its own charge's colour: inside blue, outside gold, a spark on every hero it struck
+    splitin(tg, ctx) {
+      const s = tg.live, us = (ctx && ctx.units) || [], pol = ctx && ctx.pol;
+      bang(s.x, s.y, s.r * 1.1, { n: 18, color: '#38c4ff', core: '#eaffff', ink: '#0a1a3a', dur: 0.5, layer: 'ground' });
+      shockAt(s.x, s.y, { r: s.r, color: '#38c4ff', w: 8, dur: 0.5, flat: 1 });
+      for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + rand(-0.2, 0.2); VFX.lightning(s.x, s.y - 20, s.x + Math.cos(a) * s.r, s.y + Math.sin(a) * s.r * 0.9, { color: i % 2 ? '#ffffff' : '#7fdcff', jag: 16, dur: 0.35 }); }
+      for (const u of us) if (pol && pol.get(u.id) < 0 && Math.hypot(u.x - s.x, u.y - s.y) <= s.r) { VFX.hit(u.x, u.y, '#7fdcff', 2); VFX.sparks(u.x, u.y - 14, { color: '#7fdcff', n: 8, speed: 240 }); }
+      cam('flash', '#cfeeff', 0.18, 0.25); shake(8);
+    },
+    splitout(tg, ctx) {
+      const s = tg.live, us = (ctx && ctx.units) || [], pol = ctx && ctx.pol;
+      bang(s.x, s.y, 480, { hole: 0.44, n: 26, color: '#ffb31f', core: '#fff4c8', ink: '#2a1a04', dur: 0.55, layer: 'ground' });
+      shockAt(s.x, s.y, { r: AR() * 1.05, color: '#ffb31f', w: 10, dur: 0.6, flat: 1 });
+      for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + rand(-0.15, 0.15), L = rand(260, 420); VFX.lightning(s.x + Math.cos(a) * s.r2, s.y + Math.sin(a) * s.r2 * 0.9 - 20, s.x + Math.cos(a) * L, s.y + Math.sin(a) * L * 0.9, { color: i % 2 ? '#ffffff' : '#ffd27a', jag: 20, dur: 0.4 }); }
+      for (const u of us) if (pol && pol.get(u.id) > 0 && Math.hypot(u.x - s.x, u.y - s.y) >= s.r2) { VFX.hit(u.x, u.y, '#ffd27a', 2); VFX.sparks(u.x, u.y - 14, { color: '#ffd27a', n: 8, speed: 240 }); }
+      roomTint('#ffe9b0', 0.12, 0.3); cam('flash', '#fff0c8', 0.2, 0.3); cam('punch', 0.02, 0.35); shake(10);
+    },
+    // Static Lash's wide band (the sting for the charge the tank does not carry) and Magnetize's rings: the lighter beats of moves that already have their own big one
+    lashwide(tg) { shapeFlash(tg.live, '#cfe0ff', { a: 0.12, dur: 0.3 }); },
+    magfield(tg) { IMPACT.static(tg); },
     skyfall(tg) {
       const s = tg.live;
       for (let i = 0; i < 4; i++) VFX.lightning(s.x + rand(-50, 50), s.y - 460, s.x + rand(-20, 20), s.y, { color: i % 2 ? '#ffffff' : '#bfe8ff', jag: 30, dur: 0.5 });
@@ -1123,6 +1143,7 @@ const BOSS_VFX = (() => {
     if (kind === 'warden') return coffinBurst(x, y);   // (the Hollow King's Grave Warden climbs down from the dais)
     if (kind === 'whelp' && typeof WYRM_ART !== 'undefined') return WYRM_ART.whelpSpawn(x, y, { shockAt, shake });   // (an ember whelp: wyrm-art.js)
     if (kind === 'wisp' && typeof CV_FX !== 'undefined') return CV_FX.wispSpawn(x, y, { shockAt, shake });   // (Corvane's cold wisps: corvane-fx.js)
+    if (kind === 'sous' && typeof GR_FX !== 'undefined') return GR_FX.sousSpawn(x, y, { shockAt, shake });   // (Grubnak's sous-chefs, Extreme: grubnak-fx.js)
     if (kind === 'tidehand' && typeof BR_FX !== 'undefined') return BR_FX.handSpawn(x, y, { shockAt, shake });   // (the Tidewrought's hand: brannoc-fx.js)
     VFX.swirl(x, y, { r: 60, color: '#c8ff6a', dur: 0.7, arms: 3 });
     VFX.burst(x, y, { color: '#e8ff9a', color2: '#ffffff', n: 14, speed: 200 });
@@ -1131,6 +1152,7 @@ const BOSS_VFX = (() => {
   function addDeath(x, y, kind) {
     if (kind === 'whelp' && typeof WYRM_ART !== 'undefined') return WYRM_ART.whelpDeath(x, y, { shockAt, shake, after });
     if (kind === 'wisp' && typeof CV_FX !== 'undefined') return CV_FX.wispDeath(x, y, { shockAt, shake });
+    if (kind === 'sous' && typeof GR_FX !== 'undefined') return GR_FX.sousDeath(x, y, { shockAt, shake });   // (Grubnak's sous-chefs, Extreme: grubnak-fx.js)
     if (kind === 'tidehand' && typeof BR_FX !== 'undefined') return BR_FX.handDeath(x, y, { shockAt, shake });
     VFX.charge(x, y - 10, { color: '#c070ff', n: 10, r: 60, dur: 0.3 });
     after(0.28, () => {
@@ -1507,6 +1529,7 @@ const BOSS_VFX = (() => {
     if (bossKind === 'brannoc' && typeof BR_FX !== 'undefined' && BR_FX.prop(msg, { shockAt, shake })) return;   // (Brannoc's leap and crush: brannoc-fx.js)
     if (bossKind === 'morrowoak' && typeof MG_FX !== 'undefined' && MG_FX.prop(msg, { shockAt, shake, entById })) return;   // (Morrow-Oak's holes, a hero falling in, a limb breaking: morrowoak-fx.js)
     if (bossKind === 'caelum' && typeof CL_FX !== 'undefined' && CL_FX.prop(msg, { shockAt, shake })) return;   // (Caelum's Dark Ember and the star's shards breaking: caelum-fx.js)
+    if (bossKind === 'skitterra' && typeof SK_FX !== 'undefined' && SK_FX.prop(msg)) return;   // (the cocoon prop breaking: skitterra-fx.js)
     if (bossKind === 'grubnak' && typeof GR_FX !== 'undefined') GR_FX.prop(msg, { shockAt, shake });   // (the charge ending: a held beat on top; the dust and grit below still play)
     if (bossKind === 'titan' && typeof TI_ART !== 'undefined' && TI_ART.propFx(msg, room, entById, { shockAt })) return;   // (Hrimgar: frozen solid, warmed: titan-art.js)
     const st = PROP_STUFF[msg.kind] || { color: '#6a6a72', dust: '#b0b0b8', size: 1 };

@@ -1197,4 +1197,208 @@
       },
     };
   }
+
+  // ---------------------------------------------------------------------- Taking the bite
+  // A head ties a strand of spit to a hero before a Rending Maul: the hero carries a 'chain' mark (fight.js mark(), key 'hystrand') whose n is the
+  // place of the head that tied it (1 to 9, the first due north; 0 when the Mother herself tied it). The strand is drawn here, from that head to the hero, a sagging thread of
+  // green spit that the shield walks through to take it. Drawn with the mark, so it follows the hero until the cast ends.
+  if (typeof ArenaView !== 'undefined' && ArenaView.headMark && !ArenaView._hyStrand) {
+    ArenaView._hyStrand = true;
+    const plain = ArenaView.headMark;
+    ArenaView.headMark = function (ctx, x, y, m, frac, t) {
+      if (m && m.key === 'hystrand' && m.n >= 0 && m.n <= 9) {
+        const a = -Math.PI / 2 + (m.n - 1) * TAU / 9, hx = m.n ? Math.cos(a) * 210 : 0, hy = m.n ? Math.sin(a) * 210 - 34 : -70, tx = x, ty = y + 78;
+        const mx = (hx + tx) / 2, my = (hy + ty) / 2 + 26 + Math.sin(t * 5) * 5, hot = frac < 0.3;
+        ctx.save(); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(hx, hy); ctx.quadraticCurveTo(mx, my, tx, ty);
+        ctx.strokeStyle = rgba('#2a4a10', 0.55); ctx.lineWidth = 9; ctx.stroke();
+        ctx.strokeStyle = rgba('#b8e86a', hot ? 0.75 + 0.25 * Math.sin(t * 16) : 0.9); ctx.lineWidth = 4.5; ctx.stroke();
+        ctx.strokeStyle = rgba('#eaffb0', 0.8); ctx.lineWidth = 1.4; ctx.stroke();
+        for (let i = 0; i < 3; i++) {   // beads of spit running down it
+          const q = (t * 0.7 + i / 3) % 1, u = 1 - q, bx = u * u * hx + 2 * u * q * mx + q * q * tx, by = u * u * hy + 2 * u * q * my + q * q * ty;
+          circle(ctx, bx, by, 3.2, rgba('#eaffb0', 0.9), null, 0);
+        }
+        circle(ctx, hx, hy, 6, rgba('#b8e86a', 0.9), rgba('#2a4a10', 0.8), 1.5);
+        // spit at the mouth, drops falling off the sag, and a wet loop drawn tight round the one it is tied to
+        glow(ctx, hx, hy, 18 + 4 * Math.sin(t * 6), '#b8e86a', 0.3);
+        for (let i = 0; i < 2; i++) { const q = (t * 0.9 + i * 0.5) % 1; circle(ctx, mx + (i ? 18 : -14), my + 3 + q * 22, 2.4 * (1 - q * 0.5), rgba('#d4f890', 0.85 * (1 - q)), null, 0); }
+        ellipse(ctx, tx, ty, 14, 7, 0, null, rgba('#2a4a10', 0.6), 5); ellipse(ctx, tx, ty, 14, 7, 0, null, rgba('#b8e86a', hot ? 0.95 : 0.8), 2.4);
+        ctx.restore();
+      }
+      return plain.apply(this, arguments);
+    };
+  }
+
+  // ---------------------------------------------------------------------- the revamp: Scalding, Entwined Necks, Breach, the Cry that raises the heads
+  // Scalding's two rings reuse the Searing tell (same tag), told apart by their size (52 against 62): the water boils in them and the dot
+  // that a scalded hero carries (orange, the same as the mark over their head) lies on the stone, the sign of who cannot step in.
+  if (HY_TELLS.sear && !HY_TELLS.sear._scald) {
+    const plainSear = HY_TELLS.sear.ground;
+    HY_TELLS.sear.ground = function (ctx, tg, s, p, k, t) {
+      plainSear.apply(this, arguments);
+      if (s.r >= 58) return;
+      for (let i = 0; i < 4; i++) {   // steam coming off the boil
+        const q = (t * 0.55 + i / 4 + tg.id * 0.17) % 1, a = i * 1.9 + tg.id;
+        ellipse(ctx, s.x + Math.cos(a) * s.r * 0.45, s.y - 4 - q * 34, 7 + q * 9, 4 + q * 5, 0, rgba('#e8f0ea', 0.3 * (1 - q) * k * (0.4 + p)));
+      }
+      for (let i = 0; i < 5; i++) { const q = (t * 0.9 + i / 5) % 1, a = i * 2.4 + tg.id; circle(ctx, s.x + Math.cos(a) * s.r * 0.5, s.y + Math.sin(a) * s.r * 0.45, 1.6 + q * 4, null, rgba('#ffe2b0', 0.7 * (1 - q) * k), 1.3); }
+      circle(ctx, s.x, s.y, 6.5, rgba('#ff9a4a', (0.35 + 0.4 * p) * k), rgba('#2a1004', 0.6 * k), 1.4);
+      circle(ctx, s.x, s.y, 11 + 3 * Math.sin(t * 6), null, rgba('#ff9a4a', (0.3 + 0.4 * p) * k), 1.6);
+    };
+    HY_TELLS.sear._scald = true;
+  }
+
+  // Breach: the wall ring (r 470 to 580). The wave comes from the middle, so the foam runs outward across the band and chevrons point the way
+  // everyone is thrown; only the band itself is painted, never the ground inside it.
+  HY_TELLS.breach = { ground(ctx, tg, s, p, k, t) {
+    ctx.save(); ARENA.trace(ctx, 6); ctx.clip(); SHAPES.trace(ctx, s); ctx.clip('evenodd');
+    const R = s.r, r2 = s.r2, w = R - r2;
+    ctx.fillStyle = rgba('#052a30', (0.12 + 0.22 * p) * k); ctx.fillRect(s.x - R, s.y - R, R * 2, R * 2);
+    ctx.lineJoin = 'round';
+    for (let i = 0; i < 3; i++) {
+      const q = (t * (0.45 + 1.1 * p) + i / 3) % 1, r = r2 + w * q;
+      ripple(ctx, s.x, s.y, r, 2.5, t * 4 + i, 80); ctx.strokeStyle = rgba('#e8fffc', 0.6 * Math.sin(q * Math.PI) * k * (0.35 + p)); ctx.lineWidth = 3; ctx.stroke();
+    }
+    const mid = r2 + w * 0.5, n = 22;
+    for (let j = 0; j < n; j++) {   // chevrons pointing outward
+      const a = j * TAU / n + t * 0.05, ux = Math.cos(a), uy = Math.sin(a), nx = -uy, ny = ux, off = ((t * (30 + 90 * p) + j * 13) % w) - w * 0.5, x = s.x + ux * (mid + off), y = s.y + uy * (mid + off);
+      ctx.beginPath(); ctx.moveTo(x - ux * 9 + nx * 10, y - uy * 9 + ny * 10); ctx.lineTo(x + ux * 6, y + uy * 6); ctx.lineTo(x - ux * 9 - nx * 10, y - uy * 9 - ny * 10);
+      ctx.strokeStyle = rgba('#aef8ec', (0.14 + 0.4 * p) * k); ctx.lineWidth = 2.2; ctx.stroke();
+    }
+    ctx.restore();
+    // the surf line along the wall, foam running off it
+    ctx.save(); ARENA.trace(ctx, 6); ctx.clip(); ctx.setLineDash([12, 10]); ctx.lineDashOffset = -t * 30; ctx.lineCap = 'butt';
+    ctx.beginPath(); ctx.arc(s.x, s.y, R - 4, 0, TAU); ctx.strokeStyle = rgba('#d8fff4', (0.25 + 0.4 * p) * k); ctx.lineWidth = 2.4; ctx.stroke();
+    ctx.restore();
+  } };
+  CAMS.breach = [0.09, 0.04];
+
+  // Breach lands: the wave breaks on the wall and on every column, and falls back across the band
+  IMP.breach = function (tg, ctx, H) {
+    const s = tg.live;
+    H.shapeFlash(s, '#7ffff0', { a: 0.3, dur: 0.5 });
+    H.roomTint('#4fd8cc', 0.26, 0.9); H.shake(11);
+    VFX.fx({ dur: 1.2, layer: 'ground', draw: (c, p, t, e) => {
+      c.save(); ARENA.trace(c, 6); c.clip(); SHAPES.trace(c, s); c.clip('evenodd'); c.lineJoin = 'round';
+      const rim = s.r - 6, k = e.a * (1 - p * p);
+      const g = c.createRadialGradient(s.x, s.y, s.r2, s.x, s.y, s.r);
+      g.addColorStop(0, rgba('#7ff0e0', 0)); g.addColorStop(1, rgba('#eafffa', 0.7 * k));
+      c.fillStyle = g; c.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+      for (let i = 0; i < 3; i++) {
+        const q = clamp((p - i * 0.1) / 0.6, 0, 1); if (q <= 0) continue;
+        const r = rim - (s.r - s.r2) * 0.85 * easeOut(q), kk = e.a * (1 - q * q);
+        ripple(c, s.x, s.y, r, 3.5, t * 9 + i); c.strokeStyle = rgba('#031a1c', 0.5 * kk); c.lineWidth = 12; c.stroke(); c.strokeStyle = rgba('#7ff0e0', kk); c.lineWidth = 6.5; c.stroke(); c.strokeStyle = rgba('#ffffff', kk); c.lineWidth = 2; c.stroke();
+        for (let j = 0; j < 40; j++) { const a = j * TAU / 40 + hy(j, 7) * 0.1, len = 10 + 18 * hy(j, 8); line(c, s.x + Math.cos(a) * (r + len), s.y + Math.sin(a) * (r + len), s.x + Math.cos(a) * r, s.y + Math.sin(a) * r, rgba('#f4ffff', 0.85 * kk), 2.4); }
+      }
+      c.restore();
+    } });
+    for (let i = 0; i < 9; i++) {   // the columns stand in the band: the wave goes up the face of each
+      const a = -Math.PI / 2 + i * TAU / 9, x = Math.cos(a) * 470, y = Math.sin(a) * 470;
+      H.after(i * 0.03, () => { VFX.pillar(x, y, { r: 34, h: 130, color: '#bff8ee', dur: 0.7 }); VFX.splash(x, y - 10, { color: '#d8fff4', n: 8, speed: 1.2 }); });
+    }
+    for (const q of H.scatter(s, 10)) H.after(rnd(0, 0.35), () => VFX.splash(q.x, q.y, { color: '#d8fff4', n: 4, speed: 1.0 }));
+    H.shockAt(s.x, s.y, { r: s.r2 * 0.95, color: '#d8fff4', w: 8, dur: 0.6, flat: 1, delay: 0.2 });
+  };
+  if (window.HY_BT && window.HY_BT.AFTERMATH.hydra) {
+    const { mark: bmark, AFTER: BAFTER } = window.HY_BT;
+    // Breach: wet streaks and scattered foam left across the wall band while it drains back
+    window.HY_BT.AFTERMATH.hydra.breach = function (tg) {
+      bmark(BAFTER.tier.short, tg.live, (ctx, s, k, age, seed) => {
+        ctx.save(); ARENA.trace(ctx, 6); ctx.clip(); SHAPES.trace(ctx, s); ctx.clip('evenodd');
+        ctx.fillStyle = rgba('#03242a', k * 0.3); ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 16; i++) {
+          const a = hy(i, seed) * TAU, r0 = s.r2 + (s.r - s.r2) * (0.15 + 0.7 * hy(i, seed + 2)), len = 0.07 + 0.08 * hy(i, seed + 3);
+          ctx.beginPath(); ctx.arc(s.x, s.y, r0, a, a + len); ctx.strokeStyle = rgba('#e8fffc', k * 0.65); ctx.lineWidth = 2; ctx.stroke();
+        }
+        for (let i = 0; i < 30; i++) { const a = hy(i, seed + 5) * TAU, r0 = s.r2 + (s.r - s.r2) * hy(i, seed + 6); circle(ctx, s.x + Math.cos(a) * r0, s.y + Math.sin(a) * r0, 1.5 + 2 * hy(i, seed + 7), rgba('#f4ffff', k * 0.6)); }
+        ctx.restore();
+      }, tg.id);
+    };
+  }
+
+  // ---------------------------------------------------------------------- room moments (hydra.js roomev): drawn under the units, never over a hero or a telegraph's meaning
+  const hyEnv = (ev, t, fadeIn, fadeOut) => Math.min(1, (t - ev.start) / fadeIn) * clamp((ev.end + fadeOut - t) / fadeOut, 0, 1);
+  // Mother's Cry that raises the heads (Act II, and the Submerge's end): rings of old gold run out of her, quicker and brighter, and the water stirs along the nine lines
+  function cryRoom(ctx, ev, t) {
+    const age = t - ev.start, u = clamp(age / Math.max(0.5, ev.dur), 0, 1), k = hyEnv(ev, t, 0.6, 0.5), R = ARENA.R;
+    ctx.save(); clipRoom(ctx); ctx.lineJoin = 'round';
+    glow(ctx, 0, 0, 150 + 50 * u, '#c8a83a', (0.08 + 0.16 * u) * k * (0.8 + 0.2 * Math.sin(t * 5)));
+    for (let i = 0; i < 4; i++) {
+      const q = (age * (0.3 + 0.45 * u) + i / 4) % 1, r = 100 + q * (R - 90), a = 0.5 * (1 - q) * k * (0.3 + 0.7 * u);
+      ripple(ctx, 0, 0, r, 2 + 4 * q, t * 3 + i, 72);
+      ctx.strokeStyle = rgba('#1a1204', 0.3 * a); ctx.lineWidth = 7; ctx.stroke(); ctx.strokeStyle = rgba('#ffe9a8', a); ctx.lineWidth = 3.2; ctx.stroke(); ctx.strokeStyle = rgba('#bff8e8', 0.7 * a); ctx.lineWidth = 1.2; ctx.stroke();
+    }
+    for (let i = 0; i < 9; i++) {   // bubbles climbing the lines the heads will come up along
+      const an = -Math.PI / 2 + i * TAU / 9, q = (age * 0.55 + hy(i, 2)) % 1, d = 150 + q * 180;
+      circle(ctx, Math.cos(an) * d, Math.sin(an) * d, 1.8 + q * 3, null, rgba('#d8fff4', 0.7 * (1 - q) * k * u), 1.4);
+    }
+    ctx.restore();
+  }
+  // Entwined Necks: two necks twist round each other between the two places. Each is its own head's colour with the other's attack glowing in it.
+  function braid(ctx, ev, t) {
+    const age = t - ev.start, wind = clamp(age / Math.max(0.5, ev.dur - 2), 0, 1), k = hyEnv(ev, t, 0.5, 0.8);
+    const EA = HY_EL[ev.ea] || HY_EL.acid, EB = HY_EL[ev.eb] || HY_EL.acid;
+    const ax = ev.ax, ay = ev.ay - 8, bx = ev.bx, by = ev.by - 8, mx = (ax + bx) / 2 * 0.5, my = (ay + by) / 2 * 0.5;   // (bowed in toward the middle)
+    const N = 26, amp = 24 - 12 * wind, spd = 2 + 3 * wind;
+    ctx.save(); clipRoom(ctx); ctx.lineCap = 'round';
+    const pg = 0.5 + 0.5 * Math.sin(t * 7);
+    glow(ctx, ax, ay - 12, 46, EB.glow, (0.14 + 0.18 * wind) * k * (0.8 + 0.2 * pg));   // (each end glows in the colour of the attack it will give)
+    glow(ctx, bx, by - 12, 46, EA.glow, (0.14 + 0.18 * wind) * k * (0.8 + 0.2 * pg));
+    for (let pass = 0; pass < 2; pass++) {
+      for (let st = 0; st < 2; st++) {
+        const body = st ? EB : EA, glowC = st ? EA.glow : EB.glow;   // (strand 0 is A's neck: A's colour, carrying B's attack)
+        let px = 0, py = 0;
+        for (let i = 0; i <= N; i++) {
+          const u = i / N, v = 1 - u, bx0 = v * v * ax + 2 * u * v * mx + u * u * bx, by0 = v * v * ay + 2 * u * v * my + u * u * by;
+          const dx = 2 * v * (mx - ax) + 2 * u * (bx - mx), dy = 2 * v * (my - ay) + 2 * u * (by - my), L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+          const ph = u * Math.PI * 5 + t * spd + (st ? Math.PI : 0), env = Math.sin(u * Math.PI) ** 0.7, off = Math.sin(ph) * amp * env;
+          const x = bx0 + nx * off, y = by0 + ny * off;
+          if (i && (Math.cos(ph) >= 0) === !!pass) {   // (the half of the strand that is in front is drawn second)
+            ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y);
+            ctx.strokeStyle = rgba('#071410', 0.7 * k); ctx.lineWidth = 11; ctx.stroke();
+            ctx.strokeStyle = rgba(mixHex(body.dark, body.col, 0.55), 0.95 * k); ctx.lineWidth = 7; ctx.stroke();
+            ctx.strokeStyle = rgba(glowC, (0.4 + 0.4 * pg) * k * (0.5 + 0.5 * wind)); ctx.lineWidth = 2.4; ctx.stroke();
+          }
+          px = x; py = y;
+        }
+      }
+    }
+    ctx.restore();
+  }
+  // Breach: the pool swells, then a ridge of water runs out from the middle toward the wall and arrives with the cast
+  function breachRoom(ctx, ev, t) {
+    const age = t - ev.start, land = Math.max(1, ev.dur - 1.8), lead = land * 0.4, R = ARENA.R;
+    const k = Math.min(1, age / 0.4) * (age < land ? 1 : clamp(1 - (age - land) / 1.6, 0, 1));
+    if (k <= 0) return;
+    ctx.save(); clipRoom(ctx); ctx.lineJoin = 'round';
+    const heave = clamp(age / lead, 0, 1);
+    glow(ctx, 0, 0, 160 + 40 * heave, '#4fd8cc', (0.1 + 0.22 * heave) * k * (0.85 + 0.15 * Math.sin(t * 8)));
+    for (let i = 0; i < 3; i++) {   // the pool swelling over its brass curb, rippling harder
+      ripple(ctx, 0, 0, 128 + (6 + 12 * i) * heave, 2 + 6 * heave, t * 5 + i, 64);
+      ctx.strokeStyle = rgba('#d8fff4', (0.55 - 0.12 * i) * heave * k); ctx.lineWidth = 3 - 0.6 * i; ctx.stroke();
+    }
+    if (age > lead * 0.9) {
+      const u = clamp((age - lead) / Math.max(0.5, land - lead), 0, 1), rf = 128 + (R + 14 - 128) * Math.pow(u, 1.7);
+      const g = ctx.createRadialGradient(0, 0, Math.max(1, rf - 110), 0, 0, rf + 6);
+      g.addColorStop(0, rgba('#0a5a68', 0)); g.addColorStop(0.75, rgba('#2ec8c0', 0.24 * k)); g.addColorStop(1, rgba('#d8fff4', 0.4 * k));
+      ctx.fillStyle = g; ctx.fillRect(-R - 40, -R - 40, R * 2 + 80, R * 2 + 80);
+      ripple(ctx, 0, 0, rf, 4, t * 8, 80);
+      ctx.strokeStyle = rgba('#031a1c', 0.5 * k); ctx.lineWidth = 12; ctx.stroke(); ctx.strokeStyle = rgba('#7ff0e0', 0.95 * k); ctx.lineWidth = 6.5; ctx.stroke(); ctx.strokeStyle = rgba('#ffffff', k); ctx.lineWidth = 2; ctx.stroke();
+      for (let j = 0; j < 36; j++) { const a = j * TAU / 36 + hy(j, 3) * 0.1, len = 8 + 16 * hy(j, 6) * (0.4 + u); line(ctx, Math.cos(a) * rf, Math.sin(a) * rf, Math.cos(a) * (rf + len), Math.sin(a) * (rf + len), rgba('#f4ffff', 0.85 * k), 2.2); }
+    }
+    ctx.restore();
+  }
+  if (!ArenaView._hyEv) {
+    ArenaView._hyEv = true;
+    const under = ArenaView.drawRoomUnder;
+    ArenaView.drawRoomUnder = function (ctx, room, t, v) {
+      under.apply(this, arguments);
+      const ev = room && room.ev; if (!ev) return;
+      const cr = ev['hydra-cry'], en = ev['hydra-entwine'], br = ev['hydra-breach'];
+      if (cr && t < cr.end + 0.5) cryRoom(ctx, cr, t);
+      if (en && t < en.end + 0.8) braid(ctx, en, t);
+      if (br && t < br.end) breachRoom(ctx, br, t);
+    };
+  }
 })();

@@ -12,7 +12,7 @@
 // Overview: docs/plans/story.md.
 
 const FEAT_CATS = [
-  ['road', 'The road'], ['hard', 'Hard'], ['clean', 'Clean clears'], ['party', 'The party'], ['mastery', 'Mastery'],
+  ['road', 'The road'], ['hard', 'Hard'], ['extreme', 'Extreme'], ['clean', 'Clean clears'], ['party', 'The party'], ['mastery', 'Mastery'],
   ['self', 'Your own fights'], ['arena', 'The Arena'], ['town', 'In town'], ['founding', 'The Founding'],
 ];
 
@@ -69,6 +69,38 @@ const FEATS = [
     check: { type: 'hplusSet', set: 2, heat: 10 } },
   { id: 'white-hot', cat: 'hard', name: 'White-Hot', desc: 'Defeat every boss of the third set on Hard+ at heat 10 or more.', title: 'White-Hot', hidden: false, needs: 'corvane',
     check: { type: 'hplusSet', set: 3, heat: 10 } },
+
+  // ---------------------------------------------------------------- extreme
+  { id: 'no-tip', cat: 'extreme', name: 'Left No Tip', desc: 'Defeat Grubnak on Extreme.', title: null, hidden: false,
+    check: { type: 'clear', boss: 'grubnak', mode: 'extreme' } },
+  { id: 'last-thread', cat: 'extreme', name: 'Nothing Left to Spin', desc: 'Defeat Queen Skitterra on Extreme.', title: null, hidden: false,
+    check: { type: 'clear', boss: 'skitterra', mode: 'extreme' } },
+  { id: 'fair-weather', cat: 'extreme', name: 'Fair Weather', desc: 'Defeat Volkar on Extreme.', title: null, hidden: false,
+    check: { type: 'clear', boss: 'volkar', mode: 'extreme' } },
+  { id: 'long-live-nobody', cat: 'extreme', name: 'Long Live Nobody', desc: 'Defeat the Hollow King on Extreme.', title: null, hidden: false,
+    check: { type: 'clear', boss: 'hollowking', mode: 'extreme' } },
+  { id: 'nothing-to-burn', cat: 'extreme', name: 'Nothing Left to Burn', desc: 'Defeat Vhalgrath on Extreme.', title: null, hidden: false,
+    check: { type: 'clear', boss: 'wyrm', mode: 'extreme' } },
+  { id: 'cold-shoulder', cat: 'extreme', name: 'Cold Shoulder', desc: 'Defeat Hrimgar on Extreme.', title: null, hidden: false,
+    check: { type: 'clear', boss: 'titan', mode: 'extreme' } },
+  { id: 'final-exam', cat: 'extreme', name: 'Final Exam', desc: 'Defeat Azerath on Extreme.', title: null, hidden: false,
+    check: { type: 'clear', boss: 'archmage', mode: 'extreme' } },
+  { id: 'heads-will-roll', cat: 'extreme', name: 'Heads Will Roll', desc: 'Defeat the Hydra on Extreme.', title: null, hidden: false,
+    check: { type: 'clear', boss: 'hydra', mode: 'extreme' } },
+  { id: 'relieved-of-duty', cat: 'extreme', name: 'Relieved of Duty', desc: 'Defeat Corvane on Extreme.', title: null, hidden: false,
+    check: { type: 'clear', boss: 'corvane', mode: 'extreme' } },
+  { id: 'crowd-went-quiet', cat: 'extreme', name: 'The Crowd Went Quiet', desc: 'Defeat Brannoc on Extreme.', title: null, hidden: false,
+    check: { type: 'clear', boss: 'brannoc', mode: 'extreme' } },
+  { id: 'timber', cat: 'extreme', name: 'Timber', desc: 'Defeat Morrow-Oak on Extreme.', title: null, hidden: false,
+    check: { type: 'clear', boss: 'morrowoak', mode: 'extreme' } },
+  { id: 'star-chose-wrong', cat: 'extreme', name: 'The Star Chose Wrong', desc: 'Defeat Caelum Vey on Extreme.', title: null, hidden: false,
+    check: { type: 'clear', boss: 'caelum', mode: 'extreme' } },
+  { id: 'extreme-hask', cat: 'extreme', name: 'Hask Stopped Counting', desc: 'Defeat all four bosses on Extreme.', title: 'Beyond Counting', hidden: false,
+    check: { type: 'clearAll', mode: 'extreme' } },
+  { id: 'extreme-road', cat: 'extreme', name: 'No Easy Way Down', desc: 'Defeat all four bosses beyond the Barrow on Extreme.', title: 'Unyielding', hidden: false, needs: 'wyrm',
+    check: { type: 'clearAll', mode: 'extreme', set: 2 } },
+  { id: 'extreme-star', cat: 'extreme', name: 'Starproof', desc: 'Defeat every boss of the third set on Extreme.', title: 'Starproof', hidden: false, needs: 'corvane',
+    check: { type: 'clearAll', mode: 'extreme', set: 3 } },
 
   // ---------------------------------------------------------------- clean clears
   { id: 'nobody-carried', cat: 'clean', name: 'Nobody Carried Out', desc: 'Defeat any boss without anyone dying.', title: null, hidden: false,

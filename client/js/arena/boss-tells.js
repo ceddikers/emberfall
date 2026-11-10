@@ -326,6 +326,113 @@ const BossTells = (() => {
       air(ctx, tg, s, p, k, t) {
         for (let i = 0; i < 3; i++) { const q = (t * 0.7 + i / 3 + tg.id * 0.1) % 1; circle(ctx, s.x + (i - 1) * 14 + Math.sin(t * 2 + i) * 5, s.y - 30 - q * 60, 6 + q * 8, `rgba(240,240,240,${0.35 * (1 - q) * k})`); }
         cloche(ctx, s.x, s.y - 4, s.r * 0.78, 0.9 * k, true);
+        // Extreme, Table Numbers: the plate's number (a platter shows both of its two), in the colour of the ticket over its holder's head
+        if (tg.slot) {
+          const txt = String(tg.slot).split('').join('\u00b7');
+          ctx.save(); ctx.globalAlpha = k; ctx.font = '700 22px Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          const sw = 14 + 11 * txt.length;   // (an order slip pinned over the plate: dark, so any hero's colour reads on it, the ticket colour as its lower edge)
+          rrect(ctx, s.x - sw / 2, s.y - s.r - 49, sw, 30, 4, 'rgba(30,22,16,0.82)', OUT, 2);
+          rrect(ctx, s.x - sw / 2 + 2, s.y - s.r - 23, sw - 4, 3, 1.5, tg.color || '#ffffff');
+          ctx.lineWidth = 4; ctx.strokeStyle = OUT; ctx.strokeText(txt, s.x, s.y - s.r - 36); ctx.fillStyle = tg.color || '#ffffff'; ctx.fillText(txt, s.x, s.y - s.r - 36);
+          ctx.restore();
+        }
+      },
+    },
+    // Long Skewer: a blue line through the tank to share (the outline and wash every telegraph gets; blue because it is shared)
+    // (the iron hangs over the lane on every difficulty, sinking as it nears; blue chevrons stream down the lane toward the far wall, and the tank, who
+    // weighs two, wears a ring with two pips; the rim and wash every telegraph gets mark the exact lane)
+    longskewer: {
+      color: '#3d8bff',
+      ground(ctx, tg, s, p, k, t, env) {
+        const ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = toWall(s.x, s.y, s.angle, s.len), hw = s.w / 2;
+        const locked = p > 1 - (tg.lockAt || 1) / tg.dur;
+        ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#0a1a3a', (0.08 + 0.16 * p) * k); ctx.fill(); ctx.restore();
+        for (const side of [-1, 1]) {
+          const ox = -sa * hw * side, oy = ca * hw * side;
+          line(ctx, s.x + ox, s.y + oy, s.x + ox + ca * L, s.y + oy + sa * L, rgba(locked ? '#ffffff' : COL.shareHi, (locked ? 0.7 : 0.35) * k), locked ? 2.5 : 1.5);
+        }
+        for (let i = 0; i < 8; i++) {
+          const q = (t * (0.7 + p * 1.1) + i / 8) % 1, d = 70 + q * (L - 70);
+          ctx.save(); ctx.translate(s.x + ca * d, s.y + sa * d); ctx.rotate(s.angle);
+          poly(ctx, [-9, -15, 9, 0, -9, 15, -3, 0], rgba(locked ? '#ffffff' : '#cfe4ff', (0.22 + 0.4 * p) * (1 - q) * k), null);
+          ctx.restore();
+        }
+        // the tank, who takes the larger share: a ring with two pips (the others on the lane take one each)
+        const e = tg.aimFromBoss != null && env.entById ? env.entById(tg.aimFromBoss) : null;
+        if (e) {
+          ctx.save(); ctx.setLineDash([7, 6]); ctx.lineDashOffset = -t * 18;
+          circle(ctx, e.x, e.y + 4, 40, null, rgba(COL.shareHi, (0.45 + 0.4 * p) * k), 2.5);
+          ctx.restore();
+          for (const sx of [-1, 1]) circle(ctx, e.x + sx * 8, e.y - 40, 4.5, rgba(COL.shareHi, k), OUT, 1.5);
+        }
+      },
+      air(ctx, tg, s, p, k, t) {
+        const ca = Math.cos(s.angle), sa = Math.sin(s.angle), L = toWall(s.x, s.y, s.angle, s.len) - 20;
+        if (L < 160) return;
+        const lift = 120 * (1 - easeIn(p)) + 14, wob = Math.sin(t * 22) * 2 * (1 - p), a = (0.35 + 0.55 * p) * k;
+        const X = d => s.x + ca * d - sa * wob, Y = d => s.y + sa * d + ca * wob - lift;
+        line(ctx, s.x + ca * 50, s.y + sa * 50, s.x + ca * L, s.y + sa * L, rgba('#0a0506', 0.28 * p * k), 6);   // (its shadow on the tiles, darkening as it sinks)
+        ctx.save(); ctx.globalAlpha = a; ctx.lineCap = 'round';
+        line(ctx, X(46), Y(46), X(L), Y(L), OUT, 10); line(ctx, X(46), Y(46), X(L), Y(L), '#c7ccd4', 6); line(ctx, X(46), Y(46), X(L), Y(L), '#ffffff', 1.5);
+        poly(ctx, [X(L), Y(L) - 6, X(L + 34), Y(L + 34), X(L), Y(L) + 6], '#e4e9ef', OUT, 2);   // (the point)
+        circle(ctx, X(40), Y(40), 9, null, '#c7ccd4', 4); circle(ctx, X(40), Y(40), 11.5, null, OUT, 1.5);   // (the ring handle by his hand)
+        // what is spitted on it
+        const kinds = ['onion', 'tomato', 'meat', 'pepper'];
+        for (let d = 150, i = 0; d < L - 40; d += 105, i++) {
+          const kd = kinds[(i + tg.id) % 4], x = X(d), y = Y(d);
+          if (kd === 'onion') { ellipse(ctx, x, y, 17, 13, s.angle, '#e8d8b8', OUT, 2); line(ctx, x - 8, y - 4, x + 8, y - 4, 'rgba(160,130,90,0.7)', 1.2); }
+          else if (kd === 'tomato') { circle(ctx, x, y, 13, '#c8382a', OUT, 2); circle(ctx, x - 4, y - 4, 3.5, 'rgba(255,200,190,0.6)'); }
+          else if (kd === 'meat') { ellipse(ctx, x, y, 17, 12, s.angle + 0.3, '#9a3a2a', OUT, 2); ellipse(ctx, x - 3, y - 3, 9, 4, s.angle + 0.3, '#c25a44'); }
+          else { ellipse(ctx, x, y, 18, 8, s.angle, '#8ab04a', OUT, 2); circle(ctx, x + ca * 18, y + sa * 18, 3, '#4a6a22', OUT, 1); }
+        }
+        ctx.restore();
+      },
+    },
+    // Grease Fire's rings (greaseflare, Normal and Hard): round every grease stain the grease heats: a glow rising out of it, blisters popping, and in the last
+    // moments flames standing up (the rim and wash are the shared red)
+    greaseflare: {
+      color: '#ff7a1a',
+      ground(ctx, tg, s, p, k, t) {
+        glow(ctx, s.x, s.y, s.r * 1.1, '#ff6a1a', (0.08 + 0.2 * p) * k);
+        for (let i = 0; i < 7; i++) {
+          const q = (t * (0.9 + 1.6 * p) + hash(i, tg.id)) % 1, a = hash(i + 3, tg.id) * TAU, d = Math.sqrt(hash(i + 7, tg.id)) * s.r * 0.78;
+          circle(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d * 0.9, 2 + q * 8, null, `rgba(255,214,150,${(0.7 * (1 - q) * (0.3 + 0.7 * p)) * k})`, 1.6);
+        }
+      },
+      air(ctx, tg, s, p, k, t) {
+        if (p < 0.55) return;
+        const f = (p - 0.55) / 0.45;
+        ctx.save(); ctx.globalAlpha = k * f;
+        for (let i = 0; i < 5; i++) { const a = i * 2.4 + tg.id, d = s.r * 0.5 * (i ? 1 : 0); ArenaView.fireTongue(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d * 0.8, (8 + 22 * f) * (0.75 + 0.25 * Math.sin(t * 8 + i)), 8, t + i * 0.6); }
+        ctx.restore();
+      },
+    },
+    // Flashover (Extreme): a blast that follows its marked hero: white-gold heat gathers in it, sparks spiral inward to the middle, and every grease stain it
+    // touches flickers, since that is what it will light (the orange mark over the hero's head is the shared one)
+    flashover: {
+      color: '#ff8a2a',
+      ground(ctx, tg, s, p, k, t, env) {
+        ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+        const g = ctx.createRadialGradient(s.x, s.y, 10, s.x, s.y, s.r);
+        g.addColorStop(0, rgba('#fff0c0', (0.1 + 0.3 * p * p) * k)); g.addColorStop(0.55, rgba('#ff8a2a', (0.06 + 0.14 * p) * k)); g.addColorStop(1, rgba('#ff4a1a', 0.02 * k));
+        ctx.fillStyle = g; ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+        for (let i = 0; i < 16; i++) {
+          const q = (t * (0.5 + p * 1.2) + i / 16) % 1, a = i * 2.4 + t * 1.2, d = s.r * (1 - q) * 0.95;
+          circle(ctx, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d * 0.9, 1.8 + 1.6 * q, rgba(i % 3 ? '#ffd890' : '#ffffff', (0.3 + 0.5 * p) * Math.sin(q * Math.PI) * k));
+        }
+        ctx.restore();
+        const fl = env.room && env.room.floor;
+        if (fl) for (const f of fl) {
+          if (f.kind !== 'grease' || Math.hypot(f.x - s.x, f.y - s.y) > s.r + f.r * 0.6) continue;
+          glow(ctx, f.x, f.y, f.r * 1.1, '#ff7a1a', (0.12 + 0.3 * p) * k * (0.7 + 0.3 * Math.sin(t * 9 + f.id)));
+        }
+      },
+      air(ctx, tg, s, p, k, t) {
+        if (p < 0.4) return;
+        const f = (p - 0.4) / 0.6;
+        ctx.save(); ctx.globalAlpha = k * f;
+        for (let i = 0; i < 14; i++) { const a = i * TAU / 14 + t * 0.3; ArenaView.fireTongue(ctx, s.x + Math.cos(a) * (s.r - 14), s.y + Math.sin(a) * (s.r - 14) * 0.92, (6 + 18 * f) * (0.7 + 0.3 * Math.sin(t * 9 + i)), 7, t + i * 0.5); }
+        ctx.restore();
       },
     },
     // Dinner Rush (Hard): a hot plate held up over the hero, a cloche on it, steaming harder as it nears; under them,
@@ -1056,6 +1163,64 @@ const BossTells = (() => {
 
   // Still Air's stone: its charge comes in its colour (volkar.js: gold '#ffd84a' is +, blue is −)
   const stillSign = tg => (String(tg.color || '').toLowerCase() === '#ffd84a' ? 1 : -1);
+  // (revamp) Charge-coloured red: an area that hurts ONE charge. The heroes wear their charge as a ring (arena-view.js polarityAuras): + warm gold,
+  // - cold blue. Split Current's two areas and Static Lash's side bands are red (they hurt), and each strikes one charge only, so the red carries that
+  // charge's colour inside it: slanted bars, small signs of the charge (+ gold, a bar for blue) drifting over it, a lit inner rim. The area tinted with
+  // your own charge's colour is the one that hurts you; a hero of that charge standing in it is already being reached for. Nothing safe is painted.
+  const chgCol = sg => (sg > 0 ? '#ffb31f' : '#38c4ff');
+  // o: { trace (a path function, default the shape's), ang/ox/oy (the bars' frame), drift (how fast they march), skip(x, y) (ground inside the shape that is not
+  // this area), reach (crackle to the heroes of that charge standing in it) }
+  function chargeWash(ctx, tg, s, p, k, t, env, sg, o) {
+    const R = AR(), col = chgCol(sg), late = clamp(1 - (1 - p) * tg.dur / 0.6, 0, 1), trace = o.trace || (() => SHAPES.trace(ctx, s));
+    ctx.save(); trace(); ctx.clip();
+    ctx.fillStyle = rgba(COL.danger, (0.1 + 0.08 * p + 0.06 * late) * k); ctx.fillRect(-R - 80, -R - 80, R * 2 + 160, R * 2 + 160);
+    if (sg) {
+      ctx.fillStyle = rgba(col, (0.1 + 0.1 * p + 0.06 * late) * k); ctx.fillRect(-R - 80, -R - 80, R * 2 + 160, R * 2 + 160);
+      // bars across it, marching
+      ctx.save(); ctx.translate(o.ox || 0, o.oy || 0); ctx.rotate(o.ang || 0);
+      const gap = 46, off = (((t * (o.drift || 12)) % gap) + gap) % gap;
+      ctx.beginPath();
+      for (let x = -R * 1.5 + off; x < R * 1.5; x += gap) { ctx.moveTo(x, -R * 1.5); ctx.lineTo(x, R * 1.5); }
+      ctx.strokeStyle = rgba(col, (0.1 + 0.12 * p) * k); ctx.lineWidth = 7; ctx.stroke();
+      ctx.restore();
+      // the signs of the charge, a staggered lattice drifting up
+      const sp = 84, dy = (t * 9) % sp;
+      ctx.beginPath();
+      for (let iy = -6; iy <= 6; iy++) for (let ix = -6; ix <= 6; ix++) {
+        const x = ix * sp + (iy & 1 ? sp / 2 : 0), y = iy * sp - dy;
+        if (Math.abs(x) > R || Math.abs(y) > R || !SHAPES.contains(s, x, y, -18) || (o.skip && o.skip(x, y))) continue;
+        ctx.moveTo(x - 6, y); ctx.lineTo(x + 6, y);
+        if (sg > 0) { ctx.moveTo(x, y - 6); ctx.lineTo(x, y + 6); }
+      }
+      ctx.lineCap = 'round'; ctx.strokeStyle = rgba(col, (0.34 + 0.3 * p) * k); ctx.lineWidth = 3; ctx.stroke();
+      // the area's inner rim, lit in the charge
+      trace(); ctx.strokeStyle = rgba(col, (0.3 + 0.25 * p + 0.2 * late) * k); ctx.lineWidth = 18; ctx.stroke();
+    }
+    ctx.restore();
+    // the charge reaching for a hero of it standing here: a crackle from the source, and a red ring at their feet (they will be struck)
+    const pol = env.pol;
+    if (sg && o.reach && pol) for (const u of env.units || []) {
+      if (pol.get(u.id) !== sg || !SHAPES.contains(s, u.x, u.y) || (o.skip && o.skip(u.x, u.y))) continue;
+      if (p > 0.3 && Math.floor(t * 14 + u.id) % 2) { ctx.save(); ctx.globalAlpha = (0.4 + 0.5 * p) * k; jagged(ctx, s.x, s.y, u.x, u.y - 16, Math.floor(t * 14) * 3 + u.id, col, 1.4 + p); ctx.restore(); }
+      ellipse(ctx, u.x, u.y + 4, 34, 25, 0, null, rgba(COL.danger, (0.3 + 0.5 * p) * k * (0.7 + 0.3 * Math.sin(t * 9))), 2.5);
+    }
+  }
+  // Split Current's seam: the ring where the sky splits, its inside lit blue and its outside gold, zipping shut round from the north as the cast runs
+  function splitSeam(ctx, s, p, k, t) {
+    const reveal = clamp(p / 0.4, 0, 1), a0 = -Math.PI / 2, a1 = a0 + TAU * reveal, fr = Math.floor(t * 12);
+    ctx.save(); ctx.lineCap = 'round';
+    for (const [dr, col] of [[-5, '#38c4ff'], [5, '#ffb31f']]) { ctx.beginPath(); ctx.arc(s.x, s.y, s.r + dr, a0, a1); ctx.strokeStyle = rgba(col, (0.55 + 0.4 * p) * k); ctx.lineWidth = 3; ctx.stroke(); }
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, a0, a1); ctx.strokeStyle = rgba('#ffffff', (0.5 + 0.4 * p) * k); ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.globalAlpha = (0.4 + 0.5 * p) * k;
+    for (let i = 0; i < 14; i++) {
+      if ((fr + i) % 3 === 0) continue;
+      const a = a0 + hash(i, 5) * TAU * reveal, d = 16 + hash(i, fr % 5 + 9) * 26;
+      jagged(ctx, s.x + Math.cos(a) * (s.r - d), s.y + Math.sin(a) * (s.r - d), s.x + Math.cos(a + 0.12) * (s.r + d), s.y + Math.sin(a + 0.12) * (s.r + d), fr * 3 + i, i % 2 ? '#ffb31f' : '#38c4ff', 1.3);
+    }
+    ctx.globalAlpha = 1;
+    if (reveal < 1) glow(ctx, s.x + Math.cos(a1) * s.r, s.y + Math.sin(a1) * s.r, 22, '#ffffff', 0.7 * k);
+    ctx.restore();
+  }
   const V = {
     // Thunderclap (raidwide): storm clouds roll in over the summit and it goes dark, flickering, before the clap
     clap: {
@@ -1411,6 +1576,62 @@ const BossTells = (() => {
       air(ctx, tg, s, p, k, t) {
         stormCloud(ctx, s.x, s.y - 230, 110 + p * 50, (0.45 + 0.45 * p) * k, t, tg.id);
         if (p > 0.6) glow(ctx, s.x, s.y - 120, 40 + (p - 0.6) * 160, '#e8f6ff', (p - 0.6) * 1.4 * k);
+      },
+    },
+    // Split Current (Extreme): one cast, two red areas, one on each side of the ring round him. The inside strikes BLUE (tinted blue, with the bar sign), the
+    // outside strikes GOLD (tinted gold, with the plus sign): look at your own charge's colour, and the area tinted with it is the one that hurts you. The seam is
+    // where the sky splits (it zips shut from the north as the cast runs).
+    splitin: {
+      ground(ctx, tg, s, p, k, t, env) {
+        chargeWash(ctx, tg, s, p, k, t, env, -1, { ang: Math.PI / 4, drift: 10, reach: true });
+        splitSeam(ctx, s, p, k, t);
+      },
+    },
+    splitout: {
+      ground(ctx, tg, s, p, k, t, env) { chargeWash(ctx, tg, s, p, k, t, env, 1, { ang: Math.PI / 4, drift: -10, reach: true }); },
+    },
+    // Static Lash's wide band (the Lash carries the tank's charge): the lane itself is the plain red rope (everyone in it is hit); the two side bands are red too and
+    // are tinted with the charge they hurt, the OTHER charge to the tank's (a hero of the tank's own charge is spared). Bars march down them from him with the rope.
+    lashwide: {
+      ground(ctx, tg, s, p, k, t, env) {
+        const tc = env.pol && tg.aim != null ? env.pol.get(tg.aim) : 0, ca = Math.cos(s.angle), sa = Math.sin(s.angle), half = s.w / 2, mid = 50;
+        const P = (u, v) => [s.x + ca * u - sa * v, s.y + sa * u + ca * v];
+        const trace = () => {
+          ctx.beginPath();
+          for (const side of [-1, 1]) {
+            const q = [P(0, side * mid), P(s.len, side * mid), P(s.len, side * half), P(0, side * half)];
+            ctx.moveTo(q[0][0], q[0][1]); for (let i = 1; i < 4; i++) ctx.lineTo(q[i][0], q[i][1]); ctx.closePath();
+          }
+        };
+        chargeWash(ctx, tg, s, p, k, t, env, tc ? -tc : 0, { trace, ox: s.x, oy: s.y, ang: s.angle, drift: 40, reach: true, skip: (x, y) => Math.abs(-(x - s.x) * sa + (y - s.y) * ca) < mid });
+      },
+    },
+    // Magnetize's rings (revamp): the same crackling ring as Static Field (keep it off the others; it lands after the move), and a ghost foot where the pull or the
+    // throw will leave you: a dashed ring and an arrow from where you stand, in the colour of your head mark (warm for thrown apart, pale for pulled together)
+    magfield: {
+      color: '#c070ff', outline: false,
+      ground(ctx, tg, s, p, k, t, env) {
+        V.static.ground(ctx, tg, s, p, k, t, env);
+        const ev = env.room && env.room.ev && env.room.ev['volkar-magnetize'];
+        if (!ev || tg.follow == null || t >= ev.end) return;
+        const pr = (ev.pairs || []).find(q => q[0] === tg.follow || q[1] === tg.follow);
+        const me = env.entById(tg.follow), pt = pr ? env.entById(pr[0] === tg.follow ? pr[1] : pr[0]) : null;
+        if (!me || !pt) return;
+        const dx = pt.x - me.x, dy = pt.y - me.y, g = Math.hypot(dx, dy);
+        if (g < 24) return;
+        const ux = dx / g, uy = dy / g, push = pr[2] === 'push', dist = push ? (ev.dist || 130) : Math.max(0, Math.min(ev.dist || 130, g / 2 - 20));
+        const to = ARENA.clamp({ x: me.x + (push ? -ux : ux) * dist, y: me.y + (push ? -uy : uy) * dist }, 12);
+        try { PROPS.clipMove({ x: me.x, y: me.y }, to, env.props || [], 14); } catch (e) { /* (a ghost foot only) */ }
+        const mx = to.x - me.x, my = to.y - me.y, L = Math.hypot(mx, my);
+        if (L < 14) return;
+        const col = push ? '#ffb27a' : '#9fd8ff', a = (0.4 + 0.35 * p) * k, nx = mx / L, ny = my / L;
+        ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.setLineDash([8, 7]); ctx.lineDashOffset = -t * 24;
+        ctx.beginPath(); ctx.moveTo(me.x + nx * 30, me.y + ny * 30 + 4); ctx.lineTo(to.x - nx * 24, to.y - ny * 24 + 4); ctx.strokeStyle = rgba(col, a * 0.8); ctx.lineWidth = 2; ctx.stroke();
+        ctx.setLineDash([5, 5]); ellipse(ctx, to.x, to.y + 4, 26, 19, 0, rgba(col, 0.08 * k), rgba(col, a), 2); ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(to.x - nx * 34 - ny * 7, to.y - ny * 34 + nx * 7 + 4); ctx.lineTo(to.x - nx * 24, to.y - ny * 24 + 4); ctx.lineTo(to.x - nx * 34 + ny * 7, to.y - ny * 34 - nx * 7 + 4);
+        ctx.strokeStyle = rgba(col, a); ctx.lineWidth = 2.4; ctx.stroke();
+        ctx.restore();
       },
     },
   };
@@ -1793,9 +2014,85 @@ const BossTells = (() => {
     const base = K[kind];
     K['e' + kind] = { color: '#d8d4cc', ground(ctx, tg, s, p, k, t, env) {
       base.ground(ctx, tg, s, p, k, t, env);
-      ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba('#d8d4cc', (0.05 + 0.1 * p) * k); ctx.fill(); ctx.restore();
+      // (Extreme, Contempt of Court: a knight that knelt answers with its swing turned inside out: a stomp's rest of the hall, a crown's circle, a sweep's all but the wedge.
+      // Only those shapes are told by their size; inside the red the court's gold takes the place of the memory's grey, with a gold line along the turned edge)
+      const inv = tg.tag === 'ering' ? s.r2 === 290 : tg.tag === 'estomp' ? s.r === 250 : tg.tag === 'esweep' ? s.arc > 3 : false;
+      ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba(inv ? '#ffe19a' : '#d8d4cc', (0.05 + 0.1 * p) * k); ctx.fill();
+      if (inv) { ctx.setLineDash([14, 9]); ctx.lineDashOffset = t * 26; ctx.strokeStyle = rgba('#ffe19a', (0.45 + 0.4 * p) * k); ctx.lineWidth = 2.6; ctx.stroke(); }
+      ctx.restore();
     } };
   }
+  // The Extreme judgements (the Hollow King). Exile (the Sentence): a ring that follows the Exiled hero, r 240, and hits whoever stands in it; it is the red area drawn by the
+  // outline, and inside it the sign of the 'apart' mark (chevrons running out from the middle) and the grave-light of the court, with iron stakes driven in at the rim once it sets.
+  K.exile = {
+    color: '#c8d8ff',
+    ground(ctx, tg, s, p, k, t) {
+      const left = (1 - p) * tg.dur, lock = tg.lockAt || 0, set = left <= lock, q0 = lock > 0 ? clamp(1 - left / lock, 0, 1) : 1, R = s.r;
+      graveLight(ctx, s, p, k, t, '#c8d8ff', tg.id);
+      if (set) { ctx.save(); SHAPES.trace(ctx, s); ctx.fillStyle = rgba(COL.danger, (0.08 + 0.1 * q0) * k); ctx.fill(); ctx.restore(); }
+      // chevrons running out from the exile, quickening as the ring nears its landing: the way the court parts them from everyone
+      ctx.save(); SHAPES.trace(ctx, s); ctx.clip(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      for (let i = 0; i < 10; i++) {
+        const q = (t * (0.35 + 0.5 * p) + hash(i, tg.id) * 0.4 + (i % 2) * 0.5) % 1, a = i * TAU / 10 + 0.3, d = R * (0.22 + 0.7 * q), c = Math.cos(a), sn = Math.sin(a);
+        const x = s.x + c * d, y = s.y + sn * d, al = Math.sin(q * Math.PI) * (0.25 + 0.45 * p) * k;
+        ctx.beginPath(); ctx.moveTo(x - c * 6 - sn * 7, y - sn * 6 + c * 7); ctx.lineTo(x + c * 9, y + sn * 9); ctx.lineTo(x - c * 6 + sn * 7, y - sn * 6 - c * 7);
+        ctx.strokeStyle = rgba('#e8f0ff', al); ctx.lineWidth = 2.6; ctx.stroke();
+      }
+      ctx.restore();
+      // the ward at the rim: a ring of ticks turning slowly; once the ring sets, an iron stake is driven in at each tick
+      for (let i = 0; i < 16; i++) {
+        const a = i * TAU / 16 + t * 0.15, c = Math.cos(a), sn = Math.sin(a), x = s.x + c * (R - 9), y = s.y + sn * (R - 9);
+        if (set) {
+          const dr = easeOut(clamp(q0 * 1.6 - (i % 4) * 0.12, 0, 1));
+          poly(ctx, [x + c * 5 - sn * 3.5, y + sn * 5 + c * 3.5, x + c * 5 + sn * 3.5, y + sn * 5 - c * 3.5, x - c * (16 * dr), y - sn * (16 * dr)], rgba('#8a94a0', 0.95 * k), rgba('#0a0c10', 0.8 * k), 1.4);
+        } else line(ctx, x - c * 4, y - sn * 4, x + c * 4, y + sn * 4, rgba('#e8f0ff', (0.25 + 0.3 * p) * k), 2);
+      }
+    },
+  };
+  // Roll Call (the Hollow King, Extreme): the same eye as the Royal Gaze, but it turns on one hero at a time. The hero it looks at (the eye mark over their head, ArenaView._called)
+  // must face him and is shown a sightline; everyone else's cone is red if it faces him. Under every hero the cone of the way they face, as the Gaze does it.
+  K.rollcall = {
+    outline: false,
+    ground(ctx, tg, s, p, k, t, env) {
+      const c = ArenaView._called, called = c && t - c.t < 0.4 ? c.id : null, b = env.boss;
+      for (const u of env.units || []) {
+        if (u.a == null) continue;
+        let d = Math.atan2(b.y - u.y, b.x - u.x) - u.a;
+        while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU;
+        const mine = called != null && u.id === called, caught = called != null && (Math.abs(d) < 1.2) !== mine, col = caught ? COL.danger : mine ? '#ffe9a8' : '#d8d4cc';
+        const R = 95, kk = k * (0.55 + 0.45 * p);
+        ctx.save(); ctx.translate(u.x, u.y);
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, u.a - 1.2, u.a + 1.2); ctx.closePath();
+        const g = ctx.createRadialGradient(0, 0, 10, 0, 0, R);
+        g.addColorStop(0, rgba(col, (caught ? 0.6 : mine ? 0.45 : 0.34) * kk)); g.addColorStop(1, rgba(col, (caught ? 0.12 : 0.04) * kk));
+        ctx.fillStyle = g; ctx.fill();
+        ctx.beginPath(); ctx.arc(0, 0, R, u.a - 1.2, u.a + 1.2);
+        ctx.strokeStyle = rgba(col, (caught ? 0.9 : mine ? 0.8 : 0.5) * kk); ctx.lineWidth = caught ? 3 : 2; ctx.stroke();
+        ctx.restore();
+      }
+    },
+    air(ctx, tg, s, p, k, t, env) {
+      const b = env.boss, y = b.y - 175, open = easeOut(Math.min(1, p * 1.3)), c = ArenaView._called, e = c && t - c.t < 0.4 ? env.entById(c.id) : null;
+      ctx.save(); ctx.globalAlpha = k;
+      glow(ctx, b.x, y, 90 + 40 * p, '#fff4c8', 0.3 + 0.4 * p);
+      ctx.beginPath(); ctx.ellipse(b.x, y, 52, 24 * open + 0.5, 0, 0, TAU);
+      ctx.fillStyle = 'rgba(10,20,14,0.9)'; ctx.fill(); ctx.strokeStyle = rgba('#ffe9a8', 0.95); ctx.lineWidth = 3.5; ctx.stroke();
+      if (open > 0.15) {
+        // the iris slides toward the hero it is looking at
+        let ox = 0, oy = 0;
+        if (e) { const dx = e.x - b.x, dy = e.y - 60 - y, dd = Math.hypot(dx, dy) || 1; ox = dx / dd * 14 * open; oy = dy / dd * 5 * open; }
+        circle(ctx, b.x + ox, y + oy, 14 * open, '#6dff9a'); circle(ctx, b.x + ox, y + oy, 6 * open, '#ffffff');
+      }
+      for (let i = 0; i < 10; i++) { const a = i * TAU / 10 + t * 0.4; line(ctx, b.x + Math.cos(a) * 64, y + Math.sin(a) * 34, b.x + Math.cos(a) * (76 + 14 * p), y + Math.sin(a) * (42 + 8 * p), rgba('#ffe9a8', 0.6), 2.5); }
+      // the sightline: a gold thread from the eye to the head of the hero it has called
+      if (e && open > 0.5) {
+        ctx.setLineDash([10, 8]); ctx.lineDashOffset = -t * 40; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(b.x, y + 12); ctx.lineTo(e.x, e.y - (e.lift || 0) - 64);
+        ctx.strokeStyle = rgba('#ffe9a8', (0.25 + 0.5 * p) * k); ctx.lineWidth = 2.2; ctx.stroke(); ctx.setLineDash([]);
+      }
+      ctx.restore();
+    },
+  };
 
   // Titan Fist's mark: the outline of a great stone fist on the floor, knuckles toward where it's headed
   function fistMark(ctx, x, y, ang, a) {
@@ -2224,6 +2521,18 @@ const BossTells = (() => {
           ctx.restore();
         }, tg.id);
       },
+      // Split Current: the ring where the sky split stays scorched a while, its inside edge fringed blue and its outside gold, with cracks running off it
+      splitin(tg) {
+        mark(AFTER.tier.short, tg.live, (ctx, s, k, age, seed) => {
+          circle(ctx, s.x, s.y, s.r, null, rgba('#0a0e18', 0.7 * k), 9);
+          circle(ctx, s.x, s.y, s.r - 6, null, rgba('#38c4ff', 0.6 * k), 2.5);
+          circle(ctx, s.x, s.y, s.r + 6, null, rgba('#ffb31f', 0.6 * k), 2.5);
+          for (let i = 0; i < 16; i++) {
+            const a = hash(i, seed) * TAU, d0 = s.r - 4, d1 = s.r + 12 + hash(i, seed + 3) * 36, side = i % 2 ? 1 : -1;
+            line(ctx, s.x + Math.cos(a) * d0, s.y + Math.sin(a) * d0, s.x + Math.cos(a + side * 0.04) * d1, s.y + Math.sin(a + side * 0.04) * d1, rgba('#0a0e18', 0.65 * k), 2);
+          }
+        }, tg.id);
+      },
     },
   };
   // note the mechanics that just landed (once each; a telegraph cleared early, on a wipe or a phase change, leaves
@@ -2275,7 +2584,7 @@ const BossTells = (() => {
   function get(tg, env) {
     if (env.bossId === 'wyrm') return (typeof WYRM_ART !== 'undefined' && WYRM_ART.tell(tg.tag, tg.type)) || null;
     if (tg.type === 'buster') return (env.bossId === 'titan' && typeof TI_ART !== 'undefined' && TI_ART.tell(tg.tag)) || buster;
-    if (env.bossId === 'skitterra') return S[tg.tag] || null;
+    if (env.bossId === 'skitterra') return S[tg.tag] || (typeof SK_FX !== 'undefined' && SK_FX.tell(tg.tag)) || null;   // (the Fang Strike's lane: skitterra-fx.js)
     if (env.bossId === 'volkar') return V[tg.tag] || null;
     if (env.bossId === 'hollowking') return K[tg.tag] || null;
     if (env.bossId === 'hydra') return (typeof HY_TELLS !== 'undefined' && HY_TELLS[tg.tag]) || null;

@@ -1,7 +1,7 @@
 // Lints the boss journals (client/js/journal/*.js) against docs/plans/journal-voices.md:
 // no digits, a word cap, no banned game words, no empty or duplicated entries, no two heroes reading as one voice on the
 // same move, and every move key must be a real cast
-// in client/js/arena/bosses/<id>.js. `node tools/journal-lint.js` (exit code 1 on any problem; --verbose lists warnings).
+// in client/js/arena/bosses/<id>.js (a move may carry hard: true or extreme: true, like the Hard-only moves; both must be booleans). `node tools/journal-lint.js` (exit code 1 on any problem; --verbose lists warnings).
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.join(__dirname, '..');
@@ -49,6 +49,7 @@ function lint() {
     const heroes = Object.keys(d.meet || {});
     for (const m in (d.moves || {})) {
       const mv = d.moves[m];
+      for (const flag of ['hard', 'extreme']) if (mv[flag] !== undefined && typeof mv[flag] !== 'boolean') problems.push(`${b}.moves.${m}: ${flag} must be true or false`);   // (hard: true marks a move only Hard uses, extreme: true one only Extreme uses; the flags only mark the entry, the lint reads them like any other move)
       const q = [`'${m}'`, `"${m}"`, `\`${m}\``];
       if (!q.some(x => src.includes(x))) problems.push(`${b}.moves.${m}: no such cast in arena/bosses/${b}.js`);
       for (const h of heroes) check(`${b}.moves.${m}.${h}`, (mv.learned || {})[h]);

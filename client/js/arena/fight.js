@@ -57,6 +57,8 @@ const FIGHT = {
 };
 const NO_SLIP_CAP = { buster: 1, auto: 1, 'tower-fail': 1, 'stack-miss': 1, fall: 1, enrage: 1, doom: 1, self: 1, settle: 1, ledger: 1, pvp: 1 };   // (hits FIGHT.NORMAL_SLIP_CAP leaves alone)
 const playerBaseHp = role => Math.round((role === 'tank' ? FIGHT.TANK_HP : FIGHT.HP) * FIGHT.NUM_SCALE);
+// a boss def's per-difficulty table (hp, enrage, autoDmg...): Extreme reads its own entry, or Hard's when it has none
+const byMode = (tbl, mode) => (tbl[mode] !== undefined || mode !== 'extreme' ? tbl[mode] : tbl.hard);
 
 // distance from (px, py) to the segment (ax, ay)-(bx, by)
 function segDist(px, py, ax, ay, bx, by) {
@@ -73,13 +75,17 @@ class FightSim {
   // getPlayers: () => [{ id, name, role, cls, x, y, a }]. emit(msg) broadcasts to everyone (incl. host).
   // opts: { hpPct } extra max HP for everyone (the gear party bonus, items.js)
   constructor(def, mode, getPlayers, emit, seed = Date.now(), opts = {}) {
-    this.def = def; this.mode = mode; this.hard = mode === 'hard';
-    this.mods = this.hard && !def.trial && typeof HARDPLUS !== 'undefined' ? HARDPLUS.clean(opts.mods) : {};   // (Hard+ modifiers, { id: true }: client/js/hardplus.js)
+    this.def = def; this.mode = mode; this.hard = mode === 'hard' || mode === 'extreme'; this.extreme = mode === 'extreme';   // (Extreme is Hard plus a boss's own extra moves, read as f.extreme)
+    this.mods = mode === 'hard' && !def.trial && typeof HARDPLUS !== 'undefined' ? HARDPLUS.clean(opts.mods) : {};   // (Hard+ modifiers, { id: true }: client/js/hardplus.js)
     this.hpPct = Math.max(0, Math.min(0.1, opts.hpPct || 0));
     ARENA.use(def.id);
     FIGHT.BOSS_R = FIGHT.BOSS_R0;   // (a form that swelled the boss last fight has gone)
     this.getPlayers = getPlayers; this.emit = emit;
     this.rngState = (seed >>> 0) || 1;
+    // The dance (docs/plans/2026-11-boss-revamp.md): Hard draws one of three fixed set orders per pull, Normal and Extreme always run dance 0. It is
+    // taken from the seed without touching the rng stream, and opts.dance forces one (tools/bot-raid.js dance=N). A script draws its set orders from
+    // danceRng(salt), so the same dance is the same order on every pull that draws it.
+    this.dance = mode !== 'hard' ? 0 : opts.dance != null ? ((opts.dance | 0) % 3 + 3) % 3 : (Math.imul((seed >>> 0) ^ 0x9E3779B9, 0x85EBCA6B) >>> 16) % 3;
     // opts.waitPull: no countdown; the party has the room to itself until someone hits the boss ('prepull', see pull())
     this.t = 0; this.state = opts.waitPull ? 'prepull' : 'countdown'; this.countdown = 8;
     // practice: start at this course (phase) number; the ones before it are passed over at the pull (course())
@@ -90,6 +96,7 @@ class FightSim {
     this.sp = null; this.spShift = 0; this.spHooks = [];   // a set piece (setPiece below): the one running or last run, the seconds the clock has been stopped in all, hooks for a script's own timers
     this.lb = 0; this.lbUsedAt = -99; this.avoidCount = 0;   // the Limit Break gauge (FIGHT.LB), and avoidable hits so far
     this.events = []; this.mechs = new Map(); this.nextMechId = 1; this.puddles = [];
+    this.marks = new Map();   // (head marks, mark() below)
     this.tethers = new Map(); this.adds = new Map(); this.zones = []; this.addsDirty = false;
     this.rollers = new Map(); this.reels = new Map(); this.sweeps = new Map();
     this.edgeGrace = 0;   // a moving wall (Volkar) leaves people outside it for a moment; don't count that as a fall
@@ -107,7 +114,7 @@ class FightSim {
     this.ps = new Map();
     const n = Math.max(1, Math.min(4, getPlayers().length));
     this.scale = { hp: FIGHT.NUM_SCALE, dmg: [0.6, 0.8, 0.92, 1][n - 1] * FIGHT.NUM_SCALE * RAID_PRESSURE, n };
-    const hp = Math.round(def.hp[mode] * this.scale.hp);
+    const hp = Math.round(byMode(def.hp, mode) * this.scale.hp);
     // def.spawn: where the boss stands at the pull; def.anchor: it never walks after the tank (Volkar holds the middle)
     const sp = def.spawn || { x: 0, y: -40 };
     this.boss = {
@@ -123,10 +130,18 @@ class FightSim {
   }
 
   rng() { let t = (this.rngState += 0x6D2B79F5) >>> 0; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+  // a generator of its own for a script's order draws: seeded by the boss, the dance and a salt (a number or a string, e.g. the act), never by the pull
+  danceRng(salt = 0, dance = this.dance) {   // (dance: read another dance's generator, e.g. to check that the three orders differ)
+    let h = 2166136261; for (const c of this.def.id + ':' + dance + ':' + salt) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+    let s = h >>> 0 || 1;
+    return () => { let t = (s += 0x6D2B79F5) >>> 0; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
   pick(arr) { return arr[Math.floor(this.rng() * arr.length)]; }
   shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   // casts are faster on Hard
   ct(sec) { const s = this.hard ? sec * 0.85 : sec; return this.mods.quickcasts ? HARDPLUS.quick(s, this.mods) : s; }   // (Hard+ Quick Casts: hardplus.js)
+  // a boss's own damage multiplier for this difficulty (def.normalDmg, def.hardDmg, def.extremeDmg: Extreme falls back to Hard's)
+  dmgMult() { return this.extreme ? this.def.extremeDmg ?? this.def.hardDmg ?? 1.25 : this.hard ? this.def.hardDmg ?? 1.25 : this.def.normalDmg ?? 1; }
 
   addPlayer(p) {
     if (this.ps.has(p.id)) return;
@@ -415,6 +430,7 @@ class FightSim {
     this.updateMechs();
     this.updatePuddles(dt);
     this.updateTethers();
+    if (this.marks.size) for (const [k, m] of this.marks) if (m.end <= this.t) this.marks.delete(k);
     this.updateAdds(dt);
     this.updateZones();
     this.updateRollers();
@@ -449,7 +465,7 @@ class FightSim {
 
   // when the enrage begins, from the pull. A practice start in a later act (def.practiceCut: { act: seconds of the fight already behind it }) counts it from that act, so
   // the act has about the time it would have left in a full pull (the closing passes ramp from the act's end, not from a pull that skipped the acts before it)
-  enrageAt() { const e = this.mods.shortfuse ? HARDPLUS.enrage(this.def.enrage[this.mode], this.mods) : this.def.enrage[this.mode], cut = this.skipTo && this.def.practiceCut ? this.def.practiceCut[this.skipTo] || 0 : 0; return cut ? Math.max(30, e - cut) : e; }
+  enrageAt() { const e = this.mods.shortfuse ? HARDPLUS.enrage(byMode(this.def.enrage, this.mode), this.mods) : byMode(this.def.enrage, this.mode), cut = this.skipTo && this.def.practiceCut ? this.def.practiceCut[this.skipTo] || 0 : 0; return cut ? Math.max(30, e - cut) : e; }
   enrage() {
     if (this.noEnrage) return;   // (a failed check can call it too: Skitterra)
     this.cast(this.def.enrageName || 'Enrage', 8, 'enrage');
@@ -511,7 +527,7 @@ class FightSim {
       const d = Math.hypot(tank.x - b.x, tank.y - b.y);
       if (d < FIGHT.MELEE * 1.5) {
         this.emit({ t: 'banim', name: 'auto', dur: 0.5 });
-        this.damagePlayer(tank, this.def.autoDmg[this.mode] * (b.duelUntil > this.t ? KENSEI.DUEL_SOFT : 1), { kind: 'auto' });
+        this.damagePlayer(tank, byMode(this.def.autoDmg, this.mode) * (b.duelUntil > this.t ? KENSEI.DUEL_SOFT : 1), { kind: 'auto' });
       }
     }
   }
@@ -933,7 +949,7 @@ class FightSim {
     // (opts.scaled: already in small numbers, e.g. a share passed along a thread, but still mitigated as usual)
     // (opts.pct, 0..1: a share of the victim's current health, taken before mitigation. It skips the act scale, difficulty and ramp multipliers, Heavy Hands, Recovering, Vulnerability, Brittle, defence and the slip cap, and never gives Vulnerability or Damage Down; cooldowns, shields, threads and class hooks still act on it.)
     const pcHit = opts.pct > 0;
-    let amt = pcHit ? s.hp * Math.min(1, opts.pct) : opts.raw || opts.scaled ? raw : raw * this.scale.dmg * (this.hard ? this.def.hardDmg ?? 1.25 : this.def.normalDmg ?? 1) * (1 + this.boss.dmgUp) * (this.mods.heavyhands ? 1 + HARDPLUS.T.HANDS : 1);   // (Hard+ Heavy Hands.) (def.hardDmg / def.normalDmg: a boss's own multiplier on each difficulty)
+    let amt = pcHit ? s.hp * Math.min(1, opts.pct) : opts.raw || opts.scaled ? raw : raw * this.scale.dmg * this.dmgMult() * (1 + this.boss.dmgUp) * (this.mods.heavyhands ? 1 + HARDPLUS.T.HANDS : 1);   // (Hard+ Heavy Hands.) (def.hardDmg / def.normalDmg: a boss's own multiplier on each difficulty)
     if (this.recoverEnd > this.t && !opts.raw && !pcHit) amt *= 1 - FIGHT.REC.CUT;   // recovering after a death (Hard)
     if (!opts.shared) amt = this.threadSplit(p, s, amt, opts);   // threads split the hit evenly along them (classes-c)
     // Normal: one avoidable slip never kills from full (Vulnerability still lands on top of the capped base, so a second one inside it can)
@@ -1396,6 +1412,19 @@ class FightSim {
     return th;
   }
   clearTethers() { this.tethers.clear(); this.emit({ t: 'tethx', clear: true }); }
+  // Head marks: a small sign a move puts over a hero's head and takes away again (a number, a role, a rule to keep, a timer). A mark is a tell, never an
+  // instruction. mark(pid, { sym, n, col, dur, key }): sym is one of the signs the client draws (arena-view.js headMark: num, tank, healer, dps, move,
+  // still, chain, apart, eye, post, low, high, sheath, flip, seed, star, prey, duel, dot), n a number 1 to 9 for 'num', col its colour, dur its life in
+  // seconds (the ring round it burns down; 0 = until unmark). One mark per hero per key (default 'm'); a new one replaces it. Bots read view.marks.
+  mark(pid, o = {}) {
+    const key = o.key || 'm', dur = o.dur > 0 ? o.dur : 0, m = { pid, key, sym: o.sym || 'dot', n: o.n | 0, col: o.col || null, start: this.t, end: dur ? this.t + dur : Infinity };
+    this.marks.set(pid + ':' + key, m);
+    this.emit({ t: 'hmark', pid, key, sym: m.sym, n: m.n, col: m.col, dur });
+    return m;
+  }
+  unmark(pid, key = 'm') { if (this.marks.delete(pid + ':' + key)) this.emit({ t: 'hmarkx', pid, key }); }
+  markOf(pid, key = 'm') { const m = this.marks.get(pid + ':' + key); return m && m.end > this.t ? m : null; }
+  clearMarks(key) { for (const [k, m] of [...this.marks]) if (!key || m.key === key) this.marks.delete(k); this.emit({ t: 'hmarkx', clear: true, key: key || null }); }
   updateTethers() {
     for (const [id, th] of this.tethers) {
       if (this.t < th.resolveAt) continue;

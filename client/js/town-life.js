@@ -650,6 +650,16 @@ const TownLife = (() => {
       if (q > 0 && q < 1) circle(ctx, F.x, F.y, 10 + q * 60, null, wishFx.col, 2.2 * (1 - q) + 0.5);
     }
   }
+  // a boss cleared on Extreme: one quiet mark on its pedestal, a thin pale arc along the front rim with a small diamond at its middle. The trophy and the
+  // Hard+ flame stand at the plinth's right edge, so the front of the rim is always clear of both
+  function drawExtremeMark(ctx, x, y) {
+    const R = 57 * PED_S;
+    ctx.save(); ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(190,218,238,0.7)'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(x, y, R, Math.PI * 0.36, Math.PI * 0.64); ctx.stroke();
+    ctx.restore();
+    poly(ctx, [x, y + R - 3.6, x + 2.8, y + R, x, y + R + 3.6, x - 2.8, y + R], '#dcecf7', '#4a6378', 1);
+  }
   // the ground layer (decor and trophies) and the folk themselves (as entities sorted with everyone else)
   function drawGround(ctx, now, pedestals, bossIds) {
     if (!deps) return;
@@ -659,6 +669,7 @@ const TownLife = (() => {
       const i = bossIds.indexOf(b);
       if (u.trophy && pedestals[i]) drawTrophy(ctx, u.trophy, pedestals[i].x + 52 * PED_S, pedestals[i].y + 18 * PED_S, now);
       if (u.trophy && pedestals[i] && deps.heat && typeof HARDPLUS !== 'undefined') HARDPLUS.flame(ctx, pedestals[i].x + 52 * PED_S, pedestals[i].y + 8 * PED_S, deps.heat(b), now, PED_S);   // (Hard+: a flame over the trophy, bigger with the best heat cleared)
+      if (pedestals[i] && deps.extreme && deps.extreme(b)) drawExtremeMark(ctx, pedestals[i].x, pedestals[i].y);   // (Extreme: the quiet mark on the rim)
     }
     if (deps.beaten('sovereign') || (typeof SvRewards !== 'undefined' && SvRewards.TEST)) drawSovereignPlinth(ctx, now);
     if (deps.beaten('seraph') || (typeof UnRewards !== 'undefined' && UnRewards.TEST)) drawUnspokenPlinth(ctx, now);

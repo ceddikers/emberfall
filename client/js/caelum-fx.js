@@ -471,7 +471,7 @@ const CL_FX = (() => {
     c.restore();
   }
   function wyrm(ctx, room, t) {
-    const e = room.ev, sum = e.clsummon; if (!sum || t < sum.start) return;
+    const e = room.ev, sum = e.clsummon; if (!sum || t < sum.start || isSky()) return;   // (the serpent is the crater's: room.ev keeps its summon for the whole pull, so the cloud's own Constellation Fall must not wake it again: rimFall draws that one)
     let wy = null;
     for (const k in e) if (k.startsWith('clwyrm:')) { const w = e[k]; if (!w.dive && w.start >= sum.start - 0.5 && w.start <= sum.start + 14 && (!wy || w.start < wy.start)) wy = w; }
     const rear = e.clrear && e.clrear.start >= sum.start - 0.5 ? e.clrear : null;
@@ -715,6 +715,137 @@ const CL_FX = (() => {
     if (T > 3.2 && T < 8 && Math.random() < 0.35) { const a = rand(0, TAU); VFX.spawn({ x: Math.cos(a) * 500, y: Math.sin(a) * 480, z: 0, vz: rand(40, 110), vx: rand(-10, 10), life: rand(1.2, 2), size: rand(14, 28), size1: 3, color: Math.random() < 0.5 ? '#ffb870' : '#ffffff', kind: 'smoke', add: false, a: 0.35 }); }
   }
 
+  // ---------------------------------------------------------------- the acts' openers and the Extreme moments (roomev 'caelum-*')
+  // Each is a short, quiet set piece under or over the room, never over a hero or a telegraph's meaning; every one returns at once once its
+  // moment is over (room.ev keeps old entries for the whole pull, so each checks its own clock first).
+  // The Shadow Lengthens (roomev 'caelum-lengthens', r = the new radius, dur 3.2; under the units): the blade lifts and the dark between the old
+  // edge and the new one thickens, a line of violet light drawn round the new edge by a bright head; at 2.2 s the shadow itself spreads out to it
+  // (shadowFloor's own wave and shake).
+  function lengthensFloor(ctx, ev, t, room) {
+    const T = t - ev.start, cs = room.ev.clshadow; if (T < 0 || T > (ev.dur || 3.2) + 1.2) return;
+    const x = cs ? cs.x : 0, y = cs ? cs.y : 0, R1 = ev.r || 270, R0 = S.sh && T < 2.6 ? Math.min(S.sh.r, R1) : R1, u = easeIO(clamp(T / 2.2, 0, 1)), fd = 1 - clamp((T - 2.4) / 1.0, 0, 1), sky = isSky();
+    if (fd <= 0.01) return;
+    ctx.save(); ARENA.trace(ctx, 2); ctx.clip();
+    if (R1 > R0 + 6) { ctx.beginPath(); ctx.moveTo(x + R1, y); ctx.arc(x, y, R1, 0, TAU); ctx.moveTo(x + R0, y); ctx.arc(x, y, R0, 0, TAU, true); ctx.fillStyle = rgba(sky ? '#16104a' : '#02030a', 0.3 * u * fd); ctx.fill('evenodd'); }
+    const head = -Math.PI / 2 + TAU * u;
+    ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(x, y, R1, -Math.PI / 2, head);
+    ctx.strokeStyle = rgba(C.violet, 0.4 * fd); ctx.lineWidth = 6; ctx.stroke(); ctx.strokeStyle = rgba(sky ? C.violetDk : C.violetHi, 0.6 * fd); ctx.lineWidth = 1.6; ctx.stroke();
+    if (!sky) ctx.globalCompositeOperation = 'lighter';
+    glow(ctx, x + Math.cos(head) * R1, y + Math.sin(head) * R1, 26, sky ? C.violet : C.violetHi, 0.6 * fd * clamp(u * 6, 0, 1));
+    for (let i = 0; i < 16; i++) { const ph = (T * 0.45 + hash(i, 3)) % 1, a = hash(i, 4) * TAU, r = lerp(R0, R1, ph); glow(ctx, x + Math.cos(a) * r, y + Math.sin(a) * r - ph * 14, 5, i % 2 ? C.ember : C.violetHi, Math.sin(ph * Math.PI) * 0.45 * u * fd); }
+    ctx.restore();
+  }
+  // Sunless (roomev 'caelum-sunless', dur 3.4): the light leaves the room (motes lifting off the whole floor, the edges of the screen closing in a
+  // little), the shadow's disc goes black, and in the last second seams of ember open across it before it ignites (shadowFloor's own burn takes over)
+  function sunlessFloor(ctx, ev, t, room) {
+    const T = t - ev.start, dur = ev.dur || 3.4; if (T < 0 || T > dur + 1.0) return;
+    if (once('sunless' + ev.start)) {
+      screenFx(dur + 0.4, (c, W, Hh, tt, p, e) => { vig(c, W, Hh, 0.38 * easeIn(clamp(tt / (dur - 0.6), 0, 1)) * (1 - clamp((tt - dur) / 0.4, 0, 1)) * e.a, 0.34, '2,3,12'); });
+    }
+    const cs = room.ev.clshadow, x = cs ? cs.x : 0, y = cs ? cs.y : 0, R = S.sh ? S.sh.r : (cs ? cs.r : 200), u = easeIn(clamp(T / (dur - 0.2), 0, 1)), fd = 1 - clamp((T - dur) / 1.0, 0, 1), sky = isSky();
+    if (fd <= 0.01) return;
+    ctx.save(); ARENA.trace(ctx, 2); ctx.clip();
+    ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); ctx.fillStyle = rgba(sky ? '#06041a' : '#000004', 0.5 * u * fd); ctx.fill();
+    if (!sky) ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 28; i++) {
+      const ph = (T * (0.22 + 0.4 * u) + hash(i, 3)) % 1, a = hash(i, 4) * TAU, rr = Math.sqrt(hash(i, 5)) * AR() * 0.88;
+      glow(ctx, Math.cos(a) * rr, Math.sin(a) * rr * 0.92 - ph * 150, 4 + 3 * hash(i, 6), i % 3 ? '#fff4cc' : C.silverHi, Math.sin(ph * Math.PI) * 0.5 * (1 - 0.5 * u) * fd);
+    }
+    const ig = clamp((T - (dur - 1.1)) / 1.0, 0, 1);
+    if (ig > 0.01) {
+      ctx.globalCompositeOperation = 'source-over'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      for (let i = 0; i < 14; i++) {
+        const a = i * TAU / 14 + hash(i, 11) * 0.3, r0 = R * (0.1 + 0.3 * hash(i, 12)), r1 = r0 + (R * 0.96 - r0) * ig * (0.6 + 0.4 * hash(i, 13));
+        ctx.beginPath(); zigPath(ctx, x + Math.cos(a) * r0, y + Math.sin(a) * r0, x + Math.cos(a) * r1, y + Math.sin(a) * r1, i * 3, 9, 24);
+        ctx.strokeStyle = rgba(C.fire, 0.35 * ig * fd); ctx.lineWidth = 5; ctx.stroke(); ctx.strokeStyle = rgba(C.emberHi, 0.65 * ig * fd); ctx.lineWidth = 1.5; ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+  // The Star's Pull (Extreme; roomev 'caelum-pull', x, y = the shadow's centre, dur = the whole dance; under the units): dust and thin lines of
+  // light drawn across the floor toward the middle of the shadow, quickening as they come in, a ring drawing in on the centre. The drift of the
+  // heroes is straight at that point, so the lines run straight at it too.
+  function pullFloor(ctx, ev, t) {
+    const T = t - ev.start, dur = ev.dur || 8; if (T < 0 || T > dur + 0.8) return;
+    const k = clamp(T / 0.9, 0, 1) * (1 - clamp((T - dur) / 0.7, 0, 1)), sky = isSky(), x = ev.x || 0, y = ev.y || 0, R = AR() * 0.96;
+    if (k <= 0.01) return;
+    ctx.save(); ARENA.trace(ctx, 2); ctx.clip(); ctx.lineCap = 'round';
+    if (!sky) ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 30; i++) {
+      const ph = (T * 0.3 * (0.7 + 0.6 * hash(i, 2)) + hash(i, 3)) % 1, a = hash(i, 1) * TAU, rr = lerp(R, 34, easeIn(ph)), ln = 26 + 58 * (1 - ph) + 30 * hash(i, 4), al = Math.sin(ph * Math.PI) * k;
+      const ux = Math.cos(a), uy = Math.sin(a);
+      ctx.beginPath(); ctx.moveTo(x + ux * (rr + ln), y + uy * (rr + ln)); ctx.lineTo(x + ux * rr, y + uy * rr);
+      ctx.strokeStyle = rgba(sky ? C.violetDk : C.violetHi, 0.34 * al); ctx.lineWidth = 3.4; ctx.stroke(); ctx.strokeStyle = rgba(sky ? C.violet : '#ffffff', 0.5 * al); ctx.lineWidth = 1.1; ctx.stroke();
+      if (i % 3 === 0) glow(ctx, x + ux * rr, y + uy * rr, 6, sky ? C.violet : '#ffffff', 0.5 * al);
+    }
+    for (let i = 0; i < 2; i++) { const q = (T * 0.45 + i / 2) % 1; ctx.beginPath(); ctx.arc(x, y, lerp(R * 0.5, 40, easeIn(q)), 0, TAU); ctx.strokeStyle = rgba(sky ? C.violetDk : C.violetHi, 0.28 * Math.sin(q * Math.PI) * k); ctx.lineWidth = 2; ctx.stroke(); }
+    glow(ctx, x, y, 90, sky ? C.violetDk : C.violet, 0.2 * k * (0.7 + 0.3 * Math.sin(T * 3)));
+    ctx.restore();
+  }
+  // Carried Shadow (Extreme; roomev 'caelum-carried', pid): the dark disc round the carrier is the telegraph's own (TELLS.clShadowCarry, under
+  // the units); this is the small shadow at their feet and the embers it lifts
+  function carriedOver(ctx, ev, t, env) {
+    const T = t - ev.start; if (T < 0 || t > ev.end + 0.2) return;
+    const u = env && env.entById ? env.entById(ev.pid) : null; if (!u) return;
+    const k = easeOut(clamp(T / 0.5, 0, 1)) * clamp((ev.end - t) / 0.5, 0, 1), sky = isSky();
+    if (k <= 0.01) return;
+    ctx.save();
+    ellipse(ctx, u.x, u.y + 8, 36, 13, 0, null, rgba(sky ? C.violetDk : C.violetHi, 0.45 * k), 1.6);
+    if (!sky) ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 7; i++) { const q = (t * 0.5 + hash(i, 3)) % 1, a = hash(i, 4) * TAU, d = 14 + 22 * hash(i, 5); glow(ctx, u.x + Math.cos(a) * d, u.y - (u.lift || 0) + 6 + Math.sin(a) * d * 0.35 - q * 46, 4, i % 2 ? C.ember : C.violetHi, Math.sin(q * Math.PI) * 0.6 * k); }
+    ctx.restore();
+  }
+  // Fallen Stars (Extreme; roomev 'caelum-fallen', dur 7, optional pids = the marked): a thin shower of star-light draws down across the screen
+  // for the six seconds the marks burn; with pids, the shadow of a star grows at each marked hero's feet. The stars themselves fall in
+  // caelum-art.js (the prop lands where the hero stood).
+  function fallenOver(ctx, ev, t, env) {
+    const T = t - ev.start, dur = ev.dur || 7; if (T < 0 || t > ev.end + 0.2) return;
+    if (once('fallen' + ev.start)) {
+      const sky = isSky();
+      screenFx(Math.max(1, dur - 0.5), (c, W, Hh, tt, p, e) => {
+        const k = e.a * clamp(tt / 0.8, 0, 1) * (0.25 + 0.75 * clamp(tt / (dur - 1.5), 0, 1)) * (1 - clamp((tt - (dur - 1.2)) / 0.6, 0, 1)), sc = Hh / 900;
+        if (k <= 0.01) return;
+        c.lineCap = 'round'; c.globalCompositeOperation = sky ? 'source-over' : 'lighter';
+        for (let i = 0; i < 20; i++) {
+          const x = (hash(i, 5) * 1.2 - 0.1) * W, v = (500 + 900 * hash(i, 6)) * sc, ln = (70 + 160 * hash(i, 7)) * sc, y = ((hash(i, 8) * Hh * 1.6 + tt * v) % (Hh * 1.6)) - ln;
+          c.beginPath(); c.moveTo(x, y); c.lineTo(x - ln * 0.25, y - ln); c.strokeStyle = rgba(sky ? '#e8a830' : '#fff0c0', (0.08 + 0.2 * hash(i, 9)) * k); c.lineWidth = (1.5 + 2.5 * hash(i, 10)) * sc; c.stroke();
+        }
+      });
+    }
+    if (!ev.pids || !env || !env.entById) return;
+    const q = clamp(T / Math.max(1, dur - 1), 0, 1), k = clamp(T / 0.4, 0, 1) * (1 - clamp((T - (dur - 0.6)) / 0.6, 0, 1)), sky = isSky();
+    ctx.save();
+    for (const id of ev.pids) {
+      const u = env.entById(id); if (!u) continue;
+      ellipse(ctx, u.x, u.y + 8, 16 + 30 * q, 6 + 11 * q, 0, rgba(sky ? '#16104a' : '#02030a', 0.12 + 0.22 * q), rgba(sky ? '#8a6a18' : '#fff0c0', (0.2 + 0.4 * q) * k), 1.4);
+    }
+    ctx.restore();
+  }
+  // Constellation Fall with no serpent to draw it (the cloud: the Extreme Fallen Stars' breath; the Starwyrm draws its own in the crater): the
+  // light gathers at the point on the rim it will come from. A ring draws in on it, a shaft of light stands up out of it, motes are drawn in, a
+  // star opens, and chevrons march from it across the floor the way the light will pour. Once the Fall lands the floor's own light takes over.
+  function rimFall(ctx, rim, t) {
+    const land = rim.end - 2, T = t - rim.start; if (T < 0) return;
+    const q = clamp(T / Math.max(1, land - rim.start), 0, 1), out = 1 - clamp((t - land) / 0.35, 0, 1);
+    if (out <= 0.01) return;
+    const sky = isSky(), P = pal(), x = rim.x, y = rim.y, a = Math.atan2(-y, -x), g = easeOut(clamp(T / 0.9, 0, 1)) * out;
+    if (once('rimfall' + rim.start)) { VFX.shock(x, y, { r: 200, color: sky ? C.gold : C.goldHi, w: 6, dur: 0.7, flat: 1 }); shakeNow(4); }
+    ctx.save();
+    const rr = 150 - 100 * q;
+    ellipse(ctx, x, y + 8, rr, rr * 0.8, 0, rgba(P.core, 0.06 * g), rgba(sky ? P.core : P.hi, (0.35 + 0.35 * q) * g), 2);
+    ellipse(ctx, x, y + 8, rr * 0.55, rr * 0.44, 0, null, rgba(P.hi, 0.4 * g), 1.2);
+    const w = 8 + 16 * q, h = (80 + 250 * q) * g;
+    ctx.lineCap = 'round';
+    if (sky) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - h); ctx.strokeStyle = rgba(P.ink, 0.22 * g); ctx.lineWidth = w * 2.2; ctx.stroke(); }
+    else ctx.globalCompositeOperation = 'lighter';
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - h); ctx.strokeStyle = rgba(C.gold, (sky ? 0.5 : 0.22) * g); ctx.lineWidth = w * 1.8; ctx.stroke(); ctx.strokeStyle = rgba('#fff4cc', 0.7 * g); ctx.lineWidth = w * 0.7; ctx.stroke(); ctx.strokeStyle = rgba('#ffffff', 0.85 * g); ctx.lineWidth = w * 0.22; ctx.stroke();
+    for (let i = 0; i < 12; i++) { const ph = (T * 1.2 + hash(i, 71)) % 1, an = hash(i, 72) * TAU, d = lerp(160, 18, ph); ctx.beginPath(); ctx.moveTo(x + Math.cos(an) * d * 1.15, y - 36 + Math.sin(an) * d * 0.9); ctx.lineTo(x + Math.cos(an) * d * 0.85, y - 36 + Math.sin(an) * d * 0.65); ctx.strokeStyle = rgba(sky ? '#d89a20' : '#fff4cc', 0.75 * Math.sin(ph * Math.PI) * g); ctx.lineWidth = 1.6; ctx.stroke(); }
+    star4(ctx, x, y - 36, 6 + 20 * q, T * 0.7, C.gold, '#ffffff', g);
+    ctx.globalCompositeOperation = 'source-over'; ctx.translate(x, y + 8); ctx.rotate(a);
+    for (let i = 0; i < 3; i++) { const d = 70 + ((T * 90 + i * 74) % 222); chev(ctx, d, 12, 9, sky ? P.core : P.hi, 0.55 * q * g * (1 - (d - 70) / 240)); }
+    ctx.restore();
+  }
+
   // ---------------------------------------------------------------- the room over the units (ArenaView.drawRoomOver hands it over) and under them (floor)
   function roomOver(ctx, room, t, env) {
     const ev = room && room.ev; if (!ev) return;
@@ -728,11 +859,20 @@ const CL_FX = (() => {
     if (ev.clgrace && t < ev.clgrace.end + 0.2) graceOver(ctx, ev.clgrace, t, env);
     if (ev.clascend && t < ev.clascend.end + 0.2) ascendOver(ctx, ev.clascend, t, env);
     if (ev.clsummon) wyrm(ctx, room, t);
+    if (ev['caelum-carried']) carriedOver(ctx, ev['caelum-carried'], t, env);
+    if (ev['caelum-fallen']) fallenOver(ctx, ev['caelum-fallen'], t, env);
+    const rim = ev.clrear;
+    if (rim && t < rim.end + 0.3 && (isSky() || !(ev.clsummon && rim.start >= ev.clsummon.start - 0.5))) rimFall(ctx, rim, t);
   }
   function floor(ctx, room, t) {
     const gr = room && room.ev && room.ev.clgrace; S.graceEnd = gr ? gr.end : 0;
     shadowFloor(ctx, room, t);
     const ev = room && room.ev; if (ev && ev.clascend) ascendFloor(ctx, ev.clascend, t);
+    if (ev) {
+      if (ev['caelum-lengthens']) lengthensFloor(ctx, ev['caelum-lengthens'], t, room);
+      if (ev['caelum-sunless']) sunlessFloor(ctx, ev['caelum-sunless'], t, room);
+      if (ev['caelum-pull']) pullFloor(ctx, ev['caelum-pull'], t);
+    }
   }
 
   // ---------------------------------------------------------------- the warnings (boss-tells.js get() reads TELLS[tag])
@@ -946,6 +1086,44 @@ const CL_FX = (() => {
     ctx.restore();
   } };
 
+  // Carried Shadow (Extreme; a drop ring on the carrier, no damage of its own): a small second shadow lying on the floor round them, dark glass
+  // with ember drifting in it and a violet rim (the shared red rim is switched off: it is not a danger, and the blue ring of the tower riding
+  // the carrier is what must be read). It follows them; when it locks, a white flash runs round it.
+  TELLS.clShadowCarry = { outline: false, ground(ctx, tg, s, p, k, t) {
+    const sky = isSky(), R = s.r, left = (1 - p) * tg.dur, lk = tg.lockAt || 0, lockQ = lk && left < lk && left > lk - 0.3 ? 1 - (lk - left) / 0.3 : 0, c0 = sky ? '22,16,64' : '2,3,10';
+    ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+    const g = ctx.createRadialGradient(s.x, s.y, R * 0.08, s.x, s.y, R * 1.02);
+    g.addColorStop(0, `rgba(${c0},${(0.5 + 0.18 * p) * k})`); g.addColorStop(0.7, `rgba(${c0},${(0.42 + 0.14 * p) * k})`); g.addColorStop(1, `rgba(${c0},${0.1 * k})`);
+    ctx.fillStyle = g; ctx.fillRect(s.x - R, s.y - R, R * 2, R * 2);
+    if (!sky) ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 9; i++) { const ph = (t * (0.08 + 0.05 * hash(i, 1)) + hash(i, 2)) % 1, a = hash(i, 3) * TAU, rr = Math.sqrt(hash(i, 4)) * R * 0.86; glow(ctx, s.x + Math.cos(a) * rr, s.y + Math.sin(a) * rr * 0.9 - ph * 34, 4 + 3 * hash(i, 5), hash(i, 6) < 0.5 ? C.ember : C.violetHi, Math.sin(ph * Math.PI) * 0.4 * k); }
+    ctx.restore();
+    ctx.save(); ctx.lineJoin = 'round';
+    SHAPES.trace(ctx, s); ctx.strokeStyle = rgba(sky ? C.violetDk : C.violet, 0.4 * k); ctx.lineWidth = 6; ctx.stroke();
+    ctx.setLineDash([14, 10]); ctx.lineDashOffset = -t * 20; ctx.strokeStyle = rgba(C.violetHi, (0.55 + 0.2 * p) * k); ctx.lineWidth = 1.8; ctx.stroke(); ctx.setLineDash([]);
+    if (lockQ > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba('#ffffff', 0.85 * lockQ * k); ctx.lineWidth = 5; ctx.stroke(); }
+    ctx.restore();
+  } };
+
+  // Fallen Stars, two stars too close (Extreme; a red ring on each fallen star, 1.6 s): the star is overloading. Cracks of white light run out of
+  // it across the floor and the light in it climbs; rings of the same pale red as the outline go out from it faster and faster. The shared red
+  // outline is the danger; what is painted here is only the clue.
+  TELLS.clStarBurst = { ground(ctx, tg, s, p, k, t) {
+    const R = s.r, hi = BossTells.COL.dangerHi;
+    ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+    const g = ctx.createRadialGradient(s.x, s.y, 4, s.x, s.y, R); g.addColorStop(0, rgba('#ffffff', (0.14 + 0.34 * p) * k)); g.addColorStop(0.5, rgba(C.violetHi, (0.05 + 0.14 * p) * k)); g.addColorStop(1, rgba(C.violet, 0.03 * k));
+    ctx.fillStyle = g; ctx.fillRect(s.x - R, s.y - R, R * 2, R * 2);
+    const grow = easeOut(clamp(p / 0.7, 0, 1));
+    for (let i = 0; i < 9; i++) {
+      const a = i * TAU / 9 + hash(i, tg.id) * 0.3, d = R * (0.45 + 0.5 * hash(i, 7)) * grow;
+      crackLine(ctx, s.x + Math.cos(a) * 20, s.y + Math.sin(a) * 20 * 0.9, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d * 0.9, tg.id + i, (0.35 + 0.55 * p) * k, { w: 1.6, jag: 6, seg: 20, col: i % 2 ? '#ffffff' : C.violetHi });
+    }
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 3; i++) { const q = (t * (1.1 + 1.6 * p) + i / 3) % 1; circle(ctx, s.x, s.y, 24 + (R - 24) * q, null, rgba(hi, (0.12 + 0.4 * p) * (1 - q) * k), 2); }
+    glow(ctx, s.x, s.y - 20, 50 + 40 * p, '#ffffff', (0.2 + 0.4 * p) * k);
+    ctx.restore();
+  } };
+
   // Horizon Cut: the cut itself, a line of light drawn along each band's length and sweeping toward the gap's edge; the gold shards are in
   // the room's own layer (roomev 'clhorizon'), none over the gap
   TELLS.clHorizon = { ground(ctx, tg, s, p, k, t) {
@@ -1082,6 +1260,17 @@ const CL_FX = (() => {
           crackStar(ctx, cx, cy + 6, 100, 9, seed, k * 0.8, { w: 1.6, flat: 0.74, col: '#cdbfff' });
           glow(ctx, cx, cy - 10, 70, C.violet, 0.4 * k * (0.7 + 0.3 * Math.sin(age * 2.4)));
           for (let i = 0; i < 6; i++) { const a = i * 1.05 + hash(i, seed), d = i ? 20 + 24 * hash(i, seed + 1) : 0, bx = cx + Math.cos(a) * d, by = cy + 8 + Math.sin(a) * d * 0.6, h = i ? 30 + 24 * hash(i, seed + 2) : 70, w = i ? 8 : 15; poly(ctx, [bx - w, by, bx - w * 0.3, by - h * 0.6, bx + w * 0.1, by - h, bx + w, by - h * 0.3, bx + w * 0.8, by], rgba('#1c1740', 0.95 * k), rgba('#cdbfff', 0.9 * k), 1.4); }
+        }, id);
+        break;
+      }
+      case 'clStarBurst': {
+        // two stars gone off: the floor cracked white round where they stood, a few pieces of glass lying in it
+        const cx = s.x, cy = s.y;
+        mark(T.short, { x: cx, y: cy, r: s.r }, (ctx, q, k, age, seed) => {
+          ellipse(ctx, cx, cy + 6, 70, 52, 0, rgba('#0a0618', 0.35 * k));
+          crackStar(ctx, cx, cy + 6, 120, 9, seed, k * 0.8, { w: 1.8, flat: 0.74, col: '#e8e0ff' });
+          glow(ctx, cx, cy - 4, 60, C.violet, 0.3 * k * (0.7 + 0.3 * Math.sin(age * 2.4)));
+          for (let i = 0; i < 5; i++) { const a = hash(i, seed) * TAU, d = 16 + 60 * hash(i, seed + 1), bx = cx + Math.cos(a) * d, by = cy + 8 + Math.sin(a) * d * 0.7, h = 8 + 14 * hash(i, seed + 2); poly(ctx, [bx - 5, by, bx - 1, by - h, bx + 5, by], rgba('#cdbfff', 0.8 * k), rgba('#1c1740', 0.9 * k), 1.2); }
         }, id);
         break;
       }
@@ -1260,6 +1449,20 @@ const CL_FX = (() => {
       H.shake(7); cam(0.06, 0.025, 0.4, 2);
     }
   };
+  // Carried Shadow: the small shadow lets go: a dark ring goes out of it and the ember in it flares, quietly (it does no damage)
+  IMP.clShadowCarry = (tg, msg, ctx, H) => {
+    const s = tg.live; H.shockAt(s.x, s.y, { r: s.r * 1.1, color: C.violet, w: 6, dur: 0.6, flat: 1 });
+    VFX.flash(s.x, s.y - 14, 70, C.ember, 0.22); VFX.sparks(s.x, s.y, { color: C.emberHi, n: 8, speed: 220 });
+  };
+  // Fallen Stars, two stars too close: the pair go up in a ring of pale red and white glass (their own break is propfx, how 'burst')
+  IMP.clStarBurst = (tg, msg, ctx, H) => {
+    const s = tg.live, hi = BossTells.COL.dangerHi;
+    H.shapeFlash(s, '#ff8a7a', { a: 0.34, dur: 0.5 });
+    VFX.hit(s.x, s.y - 20, '#ffffff', 2.6); H.bang(s.x, s.y, s.r * 0.9, { n: 12, color: C.violet, core: '#ffffff', ink: '#0a0618' });
+    H.shockAt(s.x, s.y, { r: s.r * 1.15, color: hi, w: 8, dur: 0.5, flat: 1 }); H.shockAt(s.x, s.y, { r: s.r * 0.7, color: '#ffffff', w: 4, dur: 0.4, flat: 1, delay: 0.06 });
+    for (const u of inside(ctx, s, 4)) VFX.hit(u.x, u.y, '#ffd4cc', 1.8);
+    H.shake(8);
+  };
   IMP.clStarRain = (tg, msg, ctx, H) => {
     H.roomTint(C.violetHi, 0.12, 0.6);
     for (const q of H.scatter({ kind: 'circle', x: 0, y: 0, r: AR() - 40 }, 10)) H.after(rand(0, 0.35), () => { VFX.sparks(q.x, q.y, { color: '#cdbfff', n: 3, speed: 220 }); VFX.flash(q.x, q.y - 12, 26, '#cdbfff', 0.25); });
@@ -1335,6 +1538,15 @@ const CL_FX = (() => {
     H.shake(10); cam(0.1, 0.035, 0.5, 2);
   };
 
+  // a fallen star (caelum-art.js fallenStar) has just touched down on the spot a marked hero stood: once per prop, a ring of light and glass dust
+  function starLanded(pr) {
+    if (!once('starland' + pr.id)) return;
+    try {
+      VFX.shock(pr.x, pr.y, { r: 150, color: '#e8e0ff', w: 6, dur: 0.55, flat: 1 }); VFX.shock(pr.x, pr.y, { r: 80, color: '#ffffff', w: 3, dur: 0.4, flat: 1, delay: 0.05 });
+      dust(pr.x, pr.y, 8, { color: '#e8e0ff', speed: 200 }); shards(pr.x, pr.y - 12, 6, { color: '#e8e0ff', color2: '#5a4fb0', size: 0.9, speed: 240 }); shakeNow(5);
+    } catch (e) { /* cosmetic */ }
+  }
+
   // ---------------------------------------------------------------- propfx (boss-vfx.js propFx() asks first when the fight is his)
   function prop(msg, H) {
     if (msg.k === 'clember') {
@@ -1350,6 +1562,22 @@ const CL_FX = (() => {
         H.shockAt(x, y, { r: 130, color: C.fire, w: 7, dur: 0.5, flat: 1 }); VFX.sparks(x, y, { color: C.emberHi, n: 12, speed: 300 }); H.shake(6);
       }
       return true;
+    }
+    if (msg.kind === 'starshard' && msg.k === 'break' && msg.how === 'fall') {
+      // a fallen star spent by Constellation Fall: the light that poured over it cracks it through and it dims, falling in on itself in dull glass
+      const x = msg.x, y = msg.y, r = msg.r || 34;
+      VFX.crystals(x, y, { r: r * 1.1, n: 7, h: 56, color: '#9a8cd8', dur: 0.9 }); shards(x, y - 16, 9, { color: '#cfc8f4', color2: '#4a3f98', size: 1.0, min: 70, speed: 220 });
+      VFX.flash(x, y - 24, r * 2.2, '#fff4dc', 0.3); VFX.sparks(x, y - 18, { color: '#fff0c4', n: 10, speed: 260 });
+      H.shockAt(x, y, { r: r * 2.2, color: '#cdbfff', w: 5, dur: 0.5, flat: 1 }); VFX.smoke(x, y - 8, { n: 4, color: '#5a4fb0', size: 30, a: 0.4, speed: 70 });
+      H.shake(4); return true;
+    }
+    if (msg.kind === 'starshard' && msg.k === 'break' && msg.how === 'burst') {
+      // two fallen stars too close: the glass goes off, hard and bright, thrown wide
+      const x = msg.x, y = msg.y, r = msg.r || 34;
+      VFX.crystals(x, y, { r: r * 1.8, n: 14, h: 110, color: '#e8e0ff', dur: 1.2 }); shards(x, y - 24, 22, { color: '#f4f2ff', color2: '#6a5ac8', size: 1.3, speed: 420 });
+      VFX.flash(x, y - 30, r * 4.4, '#ffffff', 0.6); VFX.sparks(x, y - 20, { color: '#fff0c4', n: 26, speed: 480 }); VFX.pillar(x, y, { r: r * 1.1, h: 340, color: '#e8e0ff', dur: 0.6 });
+      H.shockAt(x, y, { r: r * 4, color: '#ffffff', w: 7, dur: 0.5, flat: 1 }); VFX.smoke(x, y - 10, { n: 5, color: '#5a4fb0', size: 38, a: 0.5, speed: 100 });
+      H.shake(10); return true;
     }
     if (msg.kind === 'starshard' && msg.k === 'break') {
       // a piece of the star breaking: star-glass in bright, sharp pieces, a burst of light
@@ -1471,7 +1699,7 @@ const CL_FX = (() => {
   }
 
   return {
-    tell: tag => TELLS[tag] || null, buster, zone, puddle, floor, roomOver, aftermath, prop, enrage, enrageLand, intro, death,
+    tell: tag => TELLS[tag] || null, buster, zone, puddle, floor, roomOver, aftermath, prop, starLanded, enrage, enrageLand, intro, death,
     // (boss-vfx.js impact(): his moves land here; a tag it does not know falls through to the shared ones)
     impact(tg, msg, ctx, H) {
       const f = tg.type === 'buster' ? IMP.buster : IMP[tg.tag]; if (!f) return false;

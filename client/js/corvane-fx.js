@@ -18,7 +18,8 @@ const CV_FX = (() => {
   const nowS = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
   // what the moves remember between frames: when the last Sundering Cut landed (so Cracked Guard reads as the second blow), the
   // angle of the first Rising Crane (so the second can show its turn), when the camera last held, the afterimages already shown
-  const S = { out: new Set(), cutAt: -99, guard: false, craneA: null, camAt: -99, img: { n: 0, at: {} }, n: null, over: 0 };
+  const S = { out: new Set(), cutAt: -99, guard: false, craneA: null, camAt: -99, img: { n: 0, at: {} }, n: null, over: 0,
+    parryAt: -99, gz: null, now: 0, vigilEnd: 0 };   // (Still Water's glass as last drawn, when it last answered a blow, the room clock, when the Vigil ends)
   // how far a line from (x, y) along a runs before it meets the wall
   const wall = (x, y, a, max = 2400) => { const c = Math.cos(a), s = Math.sin(a); let d = 0; while (d < max && ARENA.sd(x + c * d, y + s * d) < -10) d += 12; return d; };
   const inPoly = (poly, x, y) => { let r = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) r = !r; } return r; };
@@ -279,6 +280,67 @@ const CV_FX = (() => {
     glow(ctx, b.x, b.y - 20, 120 * (0.4 + 0.6 * p), C.silverHi, (0.1 + 0.3 * p) * k);
   } };
 
+  // Answering Cut's second blow (Hard): the same quick fan of cracks as the first, and a hair of light running out along its middle
+  TELLS.cvAnswer2 = { ground(ctx, tg, s, p, k, t) {
+    ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+    const reach = s.r * easeOut(clamp(p * 1.3, 0, 1));
+    const g = ctx.createRadialGradient(s.x, s.y, 20, s.x, s.y, s.r);
+    g.addColorStop(0, rgba(C.ice, (0.12 + 0.14 * p) * k)); g.addColorStop(1, rgba(C.frost, (0.03 + 0.05 * p) * k));
+    ctx.fillStyle = g; ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+    for (let i = 0; i < 6; i++) {
+      const an = s.angle - s.arc / 2 + s.arc * (i + 0.5) / 6 + (hash(i, tg.id) - 0.5) * 0.08, d1 = Math.min(reach, 90 + hash(i, tg.id + 1) * (s.r - 80));
+      if (d1 < 60) continue;
+      crackLine(ctx, s.x + Math.cos(an) * 46, s.y + Math.sin(an) * 46, s.x + Math.cos(an) * d1, s.y + Math.sin(an) * d1, tg.id + i, (0.25 + 0.4 * p) * k, { w: 1.3, jag: 7, seg: 22 });
+    }
+    const ex = s.x + Math.cos(s.angle) * reach, ey = s.y + Math.sin(s.angle) * reach;
+    ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(s.x + Math.cos(s.angle) * 50, s.y + Math.sin(s.angle) * 50); ctx.lineTo(ex, ey);
+    ctx.strokeStyle = rgba(C.frost, (0.3 + 0.4 * p) * k); ctx.lineWidth = 3.4; ctx.stroke(); ctx.strokeStyle = rgba(C.white, (0.6 + 0.4 * p) * k); ctx.lineWidth = 1.3; ctx.stroke();
+    glow(ctx, ex, ey, 18 + 12 * p, C.white, (0.25 + 0.4 * p) * k);
+    ctx.restore();
+  } };
+
+  // The Shrine (Act II's opening): a shaft of pale light comes down on him where he stands before the shrine, rings of it on the snow
+  // widening round his feet, and in the last moments a thin ring of cold goes out across the pass. Light and quiet: nothing here is red.
+  TELLS.cvShrine = { raidwide: true, ground(ctx, tg, s, p, k, t, env) {
+    const b = env.boss || { x: 0, y: -250 }, R = AR() * 1.05, w = 26 + 34 * p;
+    ctx.save();
+    ctx.fillStyle = rgba(C.silverHi, (0.015 + 0.06 * p * p) * k); ctx.fillRect(-R, -R, R * 2, R * 2);
+    const g = ctx.createLinearGradient(0, b.y - 420, 0, b.y + 10);
+    g.addColorStop(0, rgba(C.white, 0)); g.addColorStop(1, rgba(C.white, (0.06 + 0.22 * p) * k));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(b.x - w * 0.5, b.y - 420); ctx.lineTo(b.x + w * 0.5, b.y - 420); ctx.lineTo(b.x + w, b.y + 8); ctx.lineTo(b.x - w, b.y + 8); ctx.closePath(); ctx.fill();
+    for (let i = 0; i < 2; i++) { const q = (t * 0.45 + i / 2) % 1, r = 40 + q * (80 + 160 * p); ellipse(ctx, b.x, b.y + 8, r, r * 0.8, 0, null, rgba(C.silverHi, (1 - q) * (0.25 + 0.4 * p) * k), 1.8); }
+    for (let i = 0; i < 9; i++) { const q = (t * 0.5 + i / 9) % 1, a = hash(i, tg.id) - 0.5; circle(ctx, b.x + a * w * 1.6, b.y - q * 360, 1.6 + 1.4 * (1 - q), rgba('#ffffff', (1 - q) * (0.3 + 0.5 * p) * k)); }
+    if (p > 0.75) { const q = (p - 0.75) / 0.25; ellipse(ctx, b.x, b.y + 8, 120 + q * R * 0.9, (120 + q * R * 0.9) * 0.8, 0, null, rgba(C.ice, 0.35 * (1 - q * 0.6) * k), 2); }
+    ctx.restore();
+  } };
+
+  // Gale Through the Pass (Extreme): the whole pass blown from the west, long streaks and arrows running east, a bar of light and chevrons at the
+  // west end where the wind begins. The lee of every standing lantern is cut out of it by the caller, so what is left clear is simply not painted.
+  TELLS.cvGaleLine = { ground(ctx, tg, s, p, k, t) {
+    lane(ctx, s, (L, hw) => {
+      const g = ctx.createLinearGradient(0, 0, L, 0); g.addColorStop(0, rgba(C.navy, (0.12 + 0.24 * p) * k)); g.addColorStop(1, rgba(C.navy, (0.03 + 0.1 * p) * k));
+      ctx.fillStyle = g; ctx.fillRect(0, -hw, L, hw * 2);
+      ctx.lineCap = 'round';
+      const W0 = -(ARENA.hw || 560) - s.x, E0 = (ARENA.hw || 560) - s.x, span = E0 - W0 + 600;   // (the room's west and east walls, in the lane's own frame)
+      for (let i = 0; i < 56; i++) {
+        const y = (hash(i, 3) * 2 - 1) * hw * 0.97, v = (260 + 820 * p) * (0.6 + hash(i, 5) * 0.9), len = 90 + 240 * hash(i, 7) * (0.4 + p), x = W0 - 300 + ((hash(i, 9) * span + t * v) % span) + len;
+        ctx.beginPath(); ctx.moveTo(x - len, y - len * 0.03); ctx.lineTo(x, y);
+        ctx.strokeStyle = rgba(i % 4 ? C.ice : C.white, (0.14 + 0.3 * p) * (0.5 + hash(i, 11) * 0.5) * k); ctx.lineWidth = 1.4 + hash(i, 13) * 2.8; ctx.stroke();
+      }
+      for (let r = 0; r < 5; r++) {
+        const y = -hw * 0.72 + r * hw * 0.36, x = W0 - 200 + ((t * 200 * (0.7 + p) + r * 233) % (E0 - W0 + 400));
+        ctx.beginPath(); ctx.moveTo(x - 340, y); ctx.lineTo(x, y); ctx.moveTo(x - 20, y - 14); ctx.lineTo(x, y); ctx.lineTo(x - 20, y + 14);
+        ctx.strokeStyle = rgba(C.frost, (0.12 + 0.34 * p) * k); ctx.lineWidth = 2.4; ctx.stroke();
+      }
+      // where the wind begins: a bar of light and chevrons breathing out of it
+      const wg = ctx.createLinearGradient(W0, 0, W0 + 150, 0); wg.addColorStop(0, rgba(C.white, (0.1 + 0.2 * p) * k)); wg.addColorStop(1, rgba(C.white, 0));
+      ctx.fillStyle = wg; ctx.fillRect(W0, -hw, 150, hw * 2);
+      for (let r = 0; r < 7; r++) { const y = -hw * 0.9 + r * hw * 0.3, q = (t * 0.9 + r * 0.31) % 1, x = W0 + 10 + q * 110; ctx.beginPath(); ctx.moveTo(x - 16, y - 12); ctx.lineTo(x, y); ctx.lineTo(x - 16, y + 12); ctx.strokeStyle = rgba(C.white, (1 - q) * (0.3 + 0.4 * p) * k); ctx.lineWidth = 2.2; ctx.stroke(); }
+      // the east end, where the wind is stopped: frost glints along the wall
+      ctx.setLineDash([10, 14]); ctx.lineDashOffset = -t * 18; ctx.beginPath(); ctx.moveTo(E0 - 3, -hw); ctx.lineTo(E0 - 3, hw); ctx.strokeStyle = rgba(C.ice, (0.15 + 0.3 * p) * k); ctx.lineWidth = 3; ctx.stroke(); ctx.setLineDash([]);
+    });
+  } };
+
   // Sundering Cut / Cracked Guard (the shared tankbuster draws its red wash, then hands over): glass cracking out along the cone
   // from him, a blade of light coming down on the tank. The second blow of the pair is more broken.
   function buster(ctx, tg, s, p, k, t, env) {
@@ -327,10 +389,59 @@ const CV_FX = (() => {
     for (let i = 0; i < rings.length - 1; i++) for (let j = 0; j < m; j++) cells.push({ p: [v[i][j], v[i][j + 1], v[i + 1][j + 1], v[i + 1][j]], r0: rings[i] * s.r, r1: rings[i + 1] * s.r, a: 0.04 + 0.14 * hash(i * 13 + j, id + 2), ph: hash(i, j + id) * 6 });
     return cells;
   }
+  // The Circle (Extreme): the duel ring. A thin ring of cold light is drawn round from where it begins; once it is set it is a standing wall of
+  // ice shards over a frosted band, gold on its inner rim (the duel's colour), white outside. It is never red: it is not damage, it is a wall,
+  // and nothing inside it or outside it is painted. When it lets go the shards drop. (ArenaView.drawZones hands it over, under the units.)
+  function ringShards(R, hb, id) {
+    const n = Math.min(120, Math.max(24, Math.round(TAU * R / 34))), out = [];
+    for (let i = 0; i < n; i++) out.push({ a: (i + hash(i, id) * 0.8) * TAU / n, w: 7 + 6 * hash(i, id + 1), h: 22 + 24 * hash(i, id + 2), off: (hash(i, id + 3) - 0.5) * hb * 0.8, ph: hash(i, id + 4) * 6 });
+    return out;
+  }
+  function circleZone(ctx, z, k, t) {
+    const s = z.shape, at = z.at != null ? z.at : z.start, live = t >= at, warm = clamp((t - z.start) / Math.max(0.3, at - z.start), 0, 1);
+    const R = (s.r + (s.r2 || s.r - 48)) / 2, hb = Math.max(8, (s.r - (s.r2 || s.r - 48)) / 2), cx = s.x, cy = s.y, ending = clamp(1 - (z.end - t) / 0.8, 0, 1);
+    const id = Math.round(cx * 3 + cy * 5), a0 = hash(id, 1) * TAU;
+    const shards = z._cvc || (z._cvc = ringShards(R, hb, id));
+    if (live && !z._cvSet) {   // the moment it sets: a ring runs out through it and ice stands up along it
+      z._cvSet = 1;
+      VFX.shock(cx, cy, { r: R * 1.04, color: '#ffffff', w: 5, dur: 0.5, flat: 1 });
+      for (let i = 0; i < 7; i++) { const a = rand(0, TAU); VFX.crystals(cx + Math.cos(a) * R, cy + Math.sin(a) * R, { r: 22, n: 3, h: 40, color: '#cfeeff', dur: 0.8 }); }
+      flurry(cx, cy, 10, { speed: 200 });
+    }
+    if (ending > 0.9 && !z._cvGone) { z._cvGone = 1; VFX.shock(cx, cy, { r: R * 1.1, color: '#cfeeff', w: 4, dur: 0.5, flat: 1 }); flurry(cx + Math.cos(a0) * R, cy + Math.sin(a0) * R, 8, { speed: 150 }); }
+    ctx.save(); ARENA.trace(ctx, 2); ctx.clip();
+    ctx.lineCap = 'round';
+    if (!live) {
+      // forming: the ring is laid round from one point, a bright head running ahead of it
+      const sweep = TAU * easeOut(warm), hx = cx + Math.cos(a0 + sweep) * R, hy = cy + Math.sin(a0 + sweep) * R;
+      ctx.setLineDash([14, 10]); ctx.lineDashOffset = -t * 20;
+      for (const [r, col, w, al] of [[R, C.deep, 7, 0.4], [R, '#f0d890', 2.2, 0.55], [R + hb, C.ice, 1.4, 0.35], [R - hb, C.ice, 1.4, 0.35]]) { ctx.beginPath(); ctx.arc(cx, cy, r, a0, a0 + sweep); ctx.strokeStyle = rgba(col, al * k); ctx.lineWidth = w; ctx.stroke(); }
+      ctx.setLineDash([]);
+      glow(ctx, hx, hy, 30, C.white, 0.5 * k); glow(ctx, hx, hy, 12, '#f0d890', 0.6 * k);
+    } else {
+      const lift = 1 - ending, fade = 1 - ending * 0.55;
+      // the band: frosted glass, its two edges drawn
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.strokeStyle = rgba('#cfeeff', 0.14 * k * fade); ctx.lineWidth = hb * 2; ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.strokeStyle = rgba(C.white, 0.1 * k * fade); ctx.lineWidth = hb; ctx.stroke();
+      for (const [r, col, w, al] of [[R - hb, C.deep, 6, 0.4], [R - hb, '#f0d890', 2.2, 0.7], [R + hb, C.deep, 6, 0.4], [R + hb, '#eaf6ff', 2, 0.75]]) { ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.strokeStyle = rgba(col, al * k * fade); ctx.lineWidth = w; ctx.stroke(); }
+      // the standing shards, a little taller on the glint
+      ctx.lineJoin = 'round';
+      for (const q of shards) {
+        const r = R + q.off, x = cx + Math.cos(q.a) * r + ending * (hash(q.ph, 1) - 0.5) * 20, y = cy + Math.sin(q.a) * r + ending * 10, gl = Math.max(0, Math.sin(t * 1.3 + q.ph)) ** 8, h = q.h * lift * (1 + 0.3 * gl), w = q.w;
+        if (h < 2) continue;
+        poly(ctx, [x - w, y, x - w * 0.15, y - h, x + w * 0.2, y - h * 0.72, x + w, y], rgba(gl > 0.2 ? '#ffffff' : '#dff2ff', (0.5 + 0.4 * gl) * k * fade), rgba(C.deep, 0.55 * k * fade), 1.4);
+        poly(ctx, [x + w * 0.2, y - h * 0.72, x + w, y, x + w * 0.1, y], rgba('#8ec6ea', 0.5 * k * fade));
+      }
+      for (let i = 0; i < 6; i++) { const a = t * 0.35 + i * TAU / 6 + a0; glow(ctx, cx + Math.cos(a) * R, cy + Math.sin(a) * R, 18, C.white, 0.35 * k * fade); }
+    }
+    ctx.restore();
+  }
   function zone(ctx, z, k, t) {
+    if (z.tag === 'cvCircle') return circleZone(ctx, z, k, t);
     const s = z.shape, at = z.at != null ? z.at : z.start, live = t >= at, warm = clamp((t - z.start) / Math.max(0.3, at - z.start), 0, 1), spread = live ? 1 : easeOut(warm), R = s.r * spread;
     const cells = z._cv || (z._cv = iceCells(s, Math.round(s.x * 7 + s.y * 3)));
     const ending = clamp(1 - (z.end - t) / 0.9, 0, 1);
+    S.gz = { start: z.start, at, end: z.end, t, ending }; S.now = t;   // (the glass he stands behind is drawn on his body: corvane-art.js asks glass())
     ctx.save(); ARENA.trace(ctx, 2); ctx.clip();
     SHAPES.trace(ctx, s); ctx.save(); ctx.clip();
     const g = ctx.createRadialGradient(s.x, s.y, 30, s.x, s.y, s.r);
@@ -357,7 +468,60 @@ const CV_FX = (() => {
 
   // ---------------------------------------------------------------- the Parting's afterimages (ArenaView.drawRoomOver hands it over)
   // numbered silver ghosts of him standing where each hero stood, until the slash
+  // The Shrine (roomev 'corvane-shrine'): the lanterns flare one after another, nearest the shrine first, and a column of pale light stands on him
+  // where he bows, its ring on the snow. Additive and thin: nothing under it is hidden.
+  function shrineOver(ctx, ev, t, env) {
+    const u = (t - ev.start) / Math.max(0.5, ev.dur), bb = env && env.boss, lans = ((env && env.props) || []).filter(p => p.kind === 'stonelantern' && !S.out.has(Math.round(p.x) + ',' + Math.round(p.y)));
+    const order = lans.slice().sort((a, b) => Math.hypot(a.x, a.y + 400) - Math.hypot(b.x, b.y + 400));
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    order.forEach((pr, i) => { const f = Math.sin(clamp((u - 0.04 - i * 0.07) / 0.5, 0, 1) * Math.PI); if (f > 0.02) { glow(ctx, pr.x, pr.y - 36, 70 + 40 * f, C.amber, 0.42 * f); glow(ctx, pr.x, pr.y - 36, 24, '#fff0c0', 0.4 * f); } });
+    if (bb) {
+      const f = Math.sin(clamp((u - 0.3) / 0.6, 0, 1) * Math.PI);   // the bow
+      if (f > 0.02) {
+        const g = ctx.createLinearGradient(0, bb.y - 300, 0, bb.y);
+        g.addColorStop(0, rgba(C.white, 0)); g.addColorStop(1, rgba(C.white, 0.2 * f));
+        ctx.fillStyle = g; ctx.fillRect(bb.x - 30 - 12 * f, bb.y - 300, 60 + 24 * f, 300);
+        ellipse(ctx, bb.x, bb.y + 8, 40 + 90 * u, (40 + 90 * u) * 0.8, 0, null, rgba(C.silverHi, 0.55 * f), 1.8);
+      }
+    }
+    ctx.restore();
+  }
+  // The Circle (roomev 'cvcircle'): while the zone's ring is still being drawn, a second thin ring of light closes on it from outside, and when
+  // the ring lets go one runs out. The ring itself is the zone (circleZone), under the units.
+  function circleOver(ctx, ev, t) {
+    const u = t - ev.start, left = ev.end - t; let a = 0, r = ev.r;
+    if (u < 2.4) { const q = easeOut(clamp(u / 2.0, 0, 1)); r = ev.r * (1 + 0.55 * (1 - q)); a = 0.55 * Math.sin(clamp(u / 2.4, 0, 1) * Math.PI); }
+    else if (left < 0.6 && left > -0.3) { const q = 1 - clamp(left / 0.6, 0, 1); r = ev.r * (1 + 0.3 * q); a = 0.5 * (1 - q); }
+    if (a < 0.02) return;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ARENA.trace(ctx, 2); ctx.clip();
+    ctx.beginPath(); ctx.arc(ev.x, ev.y, r, 0, TAU); ctx.strokeStyle = rgba('#f0d890', a); ctx.lineWidth = 2.2; ctx.stroke();
+    ctx.strokeStyle = rgba('#ffffff', a * 0.5); ctx.lineWidth = 0.9; ctx.stroke();
+    ctx.restore();
+  }
+  // Gale Through the Pass (roomev 'cvgalepass'): the blizzard begins at the west wall and fills the pass, thin streaks over everything (never thick enough to hide a hero),
+  // a band of light and a march of arrows on the west wall
+  function galeOver(ctx, ev, t) {
+    const u = clamp((t - ev.start) / Math.max(0.5, ev.dur), 0, 1), W = (ARENA.hw || 560), Hh = (ARENA.hh || 400), span = W * 2 + 500, k = Math.min(1, (t - ev.start) / 0.5) * (t > ev.end ? clamp(1 - (t - ev.end) / 0.3, 0, 1) : 1);
+    if (k <= 0.01) return;
+    ctx.save(); ARENA.trace(ctx, 2); ctx.clip(); ctx.lineCap = 'round';
+    const g = ctx.createLinearGradient(-W, 0, -W + 200, 0); g.addColorStop(0, rgba(C.white, (0.08 + 0.2 * u) * k)); g.addColorStop(1, rgba(C.white, 0));
+    ctx.fillStyle = g; ctx.fillRect(-W, -Hh, 200, Hh * 2);
+    for (let i = 0; i < 26; i++) {
+      const y = -Hh + hash(i, 41) * Hh * 2, v = (500 + 1300 * u) * (0.6 + hash(i, 42) * 0.9), len = 80 + 220 * hash(i, 43), x = -W - 200 + ((hash(i, 44) * span + (t - ev.start) * v) % span);
+      ctx.beginPath(); ctx.moveTo(x - len, y - len * 0.03); ctx.lineTo(x, y); ctx.strokeStyle = rgba(i % 3 ? C.ice : C.white, (0.06 + 0.2 * u) * k * (0.5 + hash(i, 45) * 0.5)); ctx.lineWidth = 1 + hash(i, 46) * 1.8; ctx.stroke();
+    }
+    for (let r = 0; r < 5; r++) { const y = -Hh * 0.8 + r * Hh * 0.4, q = ((t - ev.start) * 0.7 + r * 0.37) % 1, x = -W + 20 + q * 260; ctx.beginPath(); ctx.moveTo(x - 16, y - 12); ctx.lineTo(x, y); ctx.lineTo(x - 16, y + 12); ctx.strokeStyle = rgba(C.white, (1 - q) * (0.2 + 0.4 * u) * k); ctx.lineWidth = 2.2; ctx.stroke(); }
+    ctx.restore();
+  }
   function roomOver(ctx, room, t, env) {
+    S.now = t; const vg = room && room.ev && room.ev.vigil; S.vigilEnd = vg ? vg.end : 0;
+    const rev = room && room.ev;
+    if (rev) {
+      const sh = rev['corvane-shrine'], cc = rev.cvcircle, gp = rev.cvgalepass;
+      if (sh && t >= sh.start && t < sh.end + 0.6) shrineOver(ctx, sh, t, env);
+      if (cc && t >= cc.start && t < cc.end + 0.3) circleOver(ctx, cc, t);
+      if (gp && t >= gp.start && t < gp.end + 0.3) galeOver(ctx, gp, t);
+    }
     // the Whetstone gaining a notch: the edge flares where he stands (the gauge is a roomev, 'whet')
     const w = room && room.ev && room.ev.whet, bb = env && env.boss;
     if (w && bb) {
@@ -476,6 +640,30 @@ const CV_FX = (() => {
         }, id);
         break;
       }
+      case 'cvAnswer2': {
+        const a0 = s.angle - s.arc / 2, cx = s.x, cy = s.y, R = s.r, arc = s.arc;
+        mark(T.short, { x: s.x, y: s.y }, (ctx, q, k, age, seed) => {
+          for (let i = 0; i < 6; i++) { const an = a0 + arc * (i + 0.5) / 6, rr = R * (0.6 + 0.4 * hash(i, seed)); crackLine(ctx, cx + Math.cos(an) * 60, cy + Math.sin(an) * 60, cx + Math.cos(an) * rr, cy + Math.sin(an) * rr, seed + i, k * 0.7, { w: 1.4, jag: 7, seg: 24 }); }
+        }, id);
+        break;
+      }
+      case 'cvShrine': {
+        const b = env.boss || { x: 0, y: -250 }, bx = b.x, by = b.y;
+        mark(T.short, { x: bx, y: by }, (ctx, q, k, age, seed) => {
+          ellipse(ctx, bx, by + 8, 90, 70, 0, rgba(C.ice, 0.07 * k), rgba(C.white, 0.35 * k), 1.6);
+          crackStar(ctx, bx, by + 8, 120, 8, seed, k * 0.6, { w: 1.4, jag: 6 });
+        }, id);
+        break;
+      }
+      case 'cvGaleLine':
+        mark(T.short, {}, (ctx, q, k, age, seed) => {
+          // the snow scoured into long lines running east, and drifted up against the east wall
+          ctx.save(); ctx.lineCap = 'round';
+          for (let i = 0; i < 18; i++) { const y = -360 + hash(i, seed) * 720, x0 = -520 + hash(i, seed + 1) * 600, L = 160 + hash(i, seed + 2) * 380; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + L, y + L * 0.03); ctx.strokeStyle = rgba('#eef6ff', 0.3 * k); ctx.lineWidth = 2.5 + hash(i, seed + 3) * 4; ctx.stroke(); }
+          for (let i = 0; i < 9; i++) { const y = -340 + hash(i, seed + 5) * 680; ellipse(ctx, (ARENA.hw || 560) - 14, y, 22 + 20 * hash(i, seed + 6), 10 + 8 * hash(i, seed + 7), 0, rgba('#e8f2fc', 0.4 * k)); }
+          ctx.restore();
+        }, id);
+        break;
       case 'cvGale':
         mark(T.short, {}, (ctx, q, k, age, seed) => {
           ctx.save(); ctx.lineCap = 'round';
@@ -643,6 +831,48 @@ const CV_FX = (() => {
     VFX.slash(ex, ey - 20, s.angle + Math.PI, { r: 80, span: 1.8, color: C.silver, core: '#ffffff', dur: 0.3, sparks: 3 });
     H.shake(5);
     cam(0.1, 0.03, 0.5, 1.2);
+  };
+
+  // Answering Cut's second blow: a short crescent of the blade and ice standing up along the fan
+  IMP.cvAnswer2 = (tg, ctx, H) => {
+    const s = tg.live;
+    H.shapeFlash(s, '#cfeeff', { a: 0.22, dur: 0.4 });
+    VFX.slash(s.x, s.y - 26, s.angle, { r: 110, span: Math.min(2.2, s.arc * 1.6), color: C.frost, core: '#ffffff', dur: 0.32, sparks: 5 });
+    for (const q of H.scatter(s, 6)) H.after(rand(0, 0.2), () => { VFX.crystals(q.x, q.y, { r: 20, n: 3, h: 38, color: '#cfeeff', dur: 0.7 }); VFX.sparks(q.x, q.y, { color: '#eaf8ff', n: 3, speed: 220 }); });
+    H.shake(6);
+    cam(0.04, 0.02, 0.35, 1.2);
+  };
+
+  // The Shrine: the light comes down on him as a column and a ring goes out across the pass; the lanterns answer with a flare. Light, no hit-stop.
+  IMP.cvShrine = (tg, ctx, H) => {
+    const b = ctx.bossDraw || { x: 0, y: -250 };
+    H.roomTint('#eaf6ff', 0.16, 0.8);
+    VFX.pillar(b.x, b.y, { r: 46, h: 420, color: '#cfeeff', dur: 0.9 });
+    H.shockAt(b.x, b.y, { r: 240, color: '#ffffff', w: 5, dur: 0.8, flat: 1 });
+    H.shockAt(b.x, b.y, { r: H.AR * 0.9, color: '#cfeeff', w: 3, dur: 1.1, flat: 1, delay: 0.1 });
+    lanterns().forEach((pr, i) => H.after(0.1 + i * 0.06, () => { VFX.flash(pr.x, pr.y - 32, 56, C.amber, 0.32); VFX.sparks(pr.x, pr.y - 32, { color: C.amber, n: 4, speed: 150 }); }));
+    flurry(b.x, b.y, 10, { speed: 170 });
+    H.shake(3);
+  };
+
+  // Gale Through the Pass: a wall of wind runs from the west to the east across the whole pass (the lee of a lantern left alone), whoever stood in it is
+  // thrown, and where the east wall stops one the ice bursts
+  IMP.cvGaleLine = (tg, ctx, H) => {
+    IMP.cvGale(tg, ctx, H);
+    const s = tg.live, src = Array.isArray(tg.cover) ? tg.cover : [-4000, 0], sh = H.coverShadows(src[0], src[1], ctx && ctx.props);
+    VFX.fx({ dur: 0.9, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - p) * (1 - p), front = s.x + s.len * easeOut(clamp(p / 0.4, 0, 1));
+      c.save(); clipRoom(c); H.clipOut(c, sh);
+      const g = c.createLinearGradient(front - 600, 0, front, 0); g.addColorStop(0, rgba('#ffffff', 0)); g.addColorStop(0.8, rgba('#eaf6ff', 0.22 * k)); g.addColorStop(1, rgba('#eaf6ff', 0));
+      c.fillStyle = g; c.fillRect(front - 600, s.y - s.w / 2, 600, s.w);
+      c.restore();
+    } });
+    for (const u of ctx.units || []) {
+      if (u.x < s.x || u.x > s.x + s.len || Math.abs(u.y - s.y) > s.w / 2 || sh.some(poly => inPoly(poly, u.x, u.y))) continue;
+      VFX.hit(u.x, u.y, '#bfe8ff', 1.6); flurry(u.x, u.y, 6, { speed: 180 });
+      const d = wall(u.x, u.y, 0);
+      if (d <= 520) H.after(0.25, () => { const ex = u.x + d; VFX.crystals(ex, u.y, { r: 30, n: 5, h: 48, color: '#cfeeff', dur: 0.8 }); H.shockAt(ex, u.y, { r: 110, color: '#dff4ff', w: 5, dur: 0.45, flat: 1 }); flurry(ex, u.y, 8, { speed: 200 }); H.shake(5); });
+    }
   };
 
   // Cold Sheathe: the blade goes home; a ring of cold goes out from him across the pass
@@ -903,7 +1133,27 @@ const CV_FX = (() => {
       cam(0.1, 0.04, 0.6, 0);
     } });
   }
+  // Still Water answers a blow: a white line runs out of the glass in front of him to the one who struck, a crescent cuts across them, the glass flashes
+  function counter(msg, H) {
+    const x = msg.x, y = msg.y, x2 = msg.x2, y2 = msg.y2, ang = Math.atan2(y2 - y, x2 - x), gx = x + Math.cos(ang) * 44, gy = y - 36;
+    S.parryAt = nowS();
+    VFX.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - p) * (1 - p), q = easeOut(clamp(p / 0.25, 0, 1));
+      c.save(); clipRoom(c); c.lineCap = 'round';
+      VFX.neonPath(c, '#8fe0ff', 14 * (1 - p * 0.5), k, () => { c.moveTo(gx, gy); c.lineTo(gx + (x2 - gx) * q, gy + (y2 - 22 - gy) * q); });
+      c.beginPath(); c.moveTo(gx, gy); c.lineTo(gx + (x2 - gx) * q, gy + (y2 - 22 - gy) * q); c.strokeStyle = rgba('#ffffff', k); c.lineWidth = 3.2; c.stroke();
+      c.restore();
+    } });
+    VFX.flash(gx, gy, 84, '#ffffff', 0.3);
+    VFX.sparks(gx, gy, { color: '#eaf8ff', n: 8, speed: 280 });
+    VFX.slash(x2, y2 - 24, ang + Math.PI / 2, { r: 66, span: 1.7, color: '#ffffff', core: '#ffffff', dur: 0.24, sparks: 4 });
+    VFX.hit(x2, y2, '#ffffff', 1.5);
+    VFX.crystals(x2, y2, { r: 22, n: 4, h: 36, color: '#cfeeff', dur: 0.6 });
+    H.shockAt(x2, y2, { r: 70, color: '#dff4ff', w: 4, dur: 0.35, flat: 1 });
+    H.shake(3);
+  }
   function prop(msg, H) {
+    if (msg.k === 'cvcounter') { counter(msg, H); return true; }
     if (msg.k === 'cvdash') { dash(msg, H); return true; }
     if (msg.k === 'cvlast') { lastVigilFx(msg, H); return true; }
     if (msg.k === 'cvwisp') { wispBurst(msg.x, msg.y, H, true); return true; }
@@ -993,6 +1243,14 @@ const CV_FX = (() => {
     wispDeath(x, y, H) { wispBurst(x, y, H, false); },
     // the room and lantern art may read these
     ghostFig, flurry,
+    // Still Water's glass as it was last drawn (corvane-art.js stands a pane of it in front of him): grow 0..1 as it forms and again as it lets go,
+    // flash 0..1 right after it answered a blow; null when no glass stands
+    glass() {
+      const g = S.gz; if (!g || Math.abs(S.now - g.t) > 0.35) return null;
+      return { grow: easeOut(clamp((g.t - g.start) / Math.max(0.4, g.at - g.start), 0, 1)) * (1 - g.ending), flash: clamp(1 - (nowS() - S.parryAt) / 0.4, 0, 1) };
+    },
+    // true for a wisp that is something to strike (a stance's two wisps), false for the Vigil's, which are drifting to him
+    stanceWisp: () => S.now > 0 && !(S.vigilEnd > S.now),
     out: pr => S.out.has(Math.round(pr.x) + ',' + Math.round(pr.y)),   // true while that lantern's flame is out (the enrage; a Vigil wisp struck down)
   };
 })();

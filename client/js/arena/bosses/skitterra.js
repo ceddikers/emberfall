@@ -51,10 +51,11 @@
 const SKITTERRA = {
   id: 'skitterra', name: 'Queen Skitterra', title: 'Spider Broodmother',
   normalDmg: 1.08,   // (Normal's damage multiplier, fight.js default 1; 2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven))
-  hp: { normal: 4095000, hard: 4410000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 3700000 / 3800000; Hard 4.3M before 2026-10-27, 4.0M before the Moth Queen heals a bar and a half as she emerges: the 15000 she gets back is this much less to kill first)
+  hp: { normal: 4095000, hard: 4410000, extreme: 7010000 },   // (Extreme: Hard's plus about 6%, to be tuned)   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 3700000 / 3800000; Hard 4.3M before 2026-10-27, 4.0M before the Moth Queen heals a bar and a half as she emerges: the 15000 she gets back is this much less to kill first)
   hardDmg: 1.45,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.09; Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
-  autoDmg: { normal: 1800, hard: 1650 },
-  enrage: { normal: 602, hard: 595 },   // the cast starts here and lands 8 s later (10:10 / 10:03)
+  extremeDmg: 1.72,   // (Extreme: the same as Hard's to start; tuning comes later)
+  autoDmg: { normal: 1800, hard: 1650, extreme: 1650 },
+  enrage: { normal: 602, hard: 595, extreme: 595 },   // the cast starts here and lands 8 s later (10:10 / 10:03)
   enrageName: 'Devour',
   vuln: 0.5,
   arena: { theme: 'webcave' },
@@ -84,10 +85,15 @@ const SKITTERRA = {
       // the Moth Queen (Hard only): the burst of the cocoon (a pass: wings still wet; a fail: the whole cocoon's worth), the two ripples of Scale Wave,
       // a pass of Flutter, Moonlight's shared hit and the dust it leaves (a tick)
       ecloPass: 6400, ecloFail: 15500, wave: 13200, wave2: 14800, flutter: 13200, moon: 22500, scales: 3100,
+      // the strands the Fang Strike leaves (one hit of a knot cuts one), the Venom that Venom Spit leaves on whoever it hits (a tick every 2 s)
+      strandKnotHp: 4000, venomTick: H ? 1300 : 1500,
+      // Extreme: Cat's Cradle (a burn each second the strands cross, then a raidwide by how long they did), the Lure's drop, Imprint's pools
+      cradleBurn: 2200, cradleEnd: 4200, cradleStep: 1700, cradleMax: 15500, lure: 12500, acid: 2600,
     };
+    const X = f.extreme;
     const LONG = 420, SHORT = 150;
     const S = (...steps) => steps.filter(Boolean);
-    const room = f.room = { threads: [], dark: false, fallen: Infinity, warn: null, safe: null };
+    const room = f.room = { threads: [], strands: [], dark: false, fallen: Infinity, warn: null, safe: null, runList: [0, 1, 2], runIdx: 0, cradle: null, lure: null };
 
     // --- building blocks ------------------------------------------------------------------
     const venomMist = () => {
@@ -158,7 +164,35 @@ const SKITTERRA = {
           tag: 'fangstrike' });
       };
       lane(d);
+      // (the lane is fixed from the cast: the strand it leaves lies along it)
+      layStrand(B.x, B.y, Math.atan2(tank.y - B.y, tank.x - B.x), d);
       if (H && twin) f.afterKeep(d + 0.05, () => lane(1.4));
+    };
+    // The strand a Fang Strike leaves: a line of silk along the lane, from beside her out toward the wall, with a knot at its far end
+    // (one hit cuts it). It lies there until someone cuts it; walking through it slows you. At most STRAND_MAX lie at once (the oldest
+    // goes slack when another is laid), and the Chrysalis spins the hub afresh and takes them all.
+    const STRAND_MAX = 3;
+    const cutStrand = st => {
+      if (st.cut) return;
+      st.cut = true;
+      if (st.fl) f.removeFloor(st.fl);
+      if (st.knot && f.adds.has(st.knot.id)) { f.adds.delete(st.knot.id); f.addsDirty = true; f.emit({ t: 'addev', k: 'gone', id: st.knot.id }); }
+      room.strands = room.strands.filter(s => s !== st);
+      f.emit({ t: 'propfx', k: 'chip', x: Math.round(st.kx), y: Math.round(st.ky), kind: 'pillar' });
+    };
+    const layStrand = (x0, y0, a, delay) => {
+      f.afterKeep(delay, () => {
+        const c = Math.cos(a), s = Math.sin(a);
+        let len = 200;
+        while (len < 720 && ARENA.sd(x0 + c * (len + 30), y0 + s * (len + 30)) < -90) len += 30;
+        if (len < 260) return;   // (she is at the wall: nothing to lay)
+        while (room.strands.length >= STRAND_MAX) cutStrand(room.strands[0]);
+        const x1 = x0 + c * 130, y1 = y0 + s * 130, x2 = x0 + c * len, y2 = y0 + s * len;
+        const st = { x1, y1, x2, y2, kx: x2 - c * 34, ky: y2 - s * 34, cut: false };
+        st.fl = f.addFloor({ kind: 'thread', x: Math.round((x1 + x2) / 2), y: Math.round((y1 + y2) / 2), r: Math.round((len - 130) / 2), x1: Math.round(x1), y1: Math.round(y1), x2: Math.round(x2), y2: Math.round(y2) });
+        st.knot = f.spawnAdd({ kind: 'knot', x: st.kx, y: st.ky, hp: dmg.strandKnotHp, r: 22, inert: true, onDeath: () => cutStrand(st) });
+        room.strands.push(st);
+      });
     };
     // a Fang Strike laid on the tail of a set, dt s after its last step; it takes `trim` s out of the calm before the next set (weave)
     const withFS = (set, dt, trim, twin = false) => { set.push([dt, twin ? () => fangStrike(true) : () => fangStrike(), 'Fang Strike']); set.trim = trim; return set; };
@@ -186,6 +220,67 @@ const SKITTERRA = {
       }
     };
 
+    // Venom: whoever Venom Spit hits carries Venom, a mark over the head and a small hurt every 2 s, until the healer has brought them
+    // back to full health. (The tick is light: it is a job for the healer, not a clock on the hero.)
+    const venomed = new Map();
+    const infect = id => {
+      if (venomed.has(id) || !f.alive().some(p => p.id === id)) return;
+      venomed.set(id, f.t + 2);
+      f.mark(id, { sym: 'dot', col: '#86d65a', key: 'venom' });
+    };
+    const cure = id => { venomed.delete(id); f.unmark(id, 'venom'); };
+    f.ticker(() => {
+      for (const [id, at] of [...venomed]) {
+        const p = f.alive().find(q => q.id === id);
+        if (!p) { cure(id); continue; }
+        if (p.s.hp >= p.s.maxHp - 0.5) { cure(id); continue; }   // (healed to full: it ends)
+        if (f.t < at) continue;
+        venomed.set(id, f.t + 2);
+        f.damagePlayer(p, dmg.venomTick, { kind: 'venom', avoidable: false, noVuln: true, ddown: false });
+      }
+    });
+    // Cat's Cradle (Extreme): all four heroes are tied in two pairs by strands (a chain over each head in the pair's colour, a silk line between them).
+    // While one pair's strand crosses the other's, it burns all four every second; the party has to untangle before the web tightens (the cast's end), and
+    // the tightening is a raidwide that grows with every second the strands crossed. The pairing is the one that crosses: where heroes stood at the cast.
+    const segX = (ax, ay, bx, by, cx, cy, dx, dy) => {
+      const o = (px, py, qx, qy, rx, ry) => (qx - px) * (ry - py) - (qy - py) * (rx - px);
+      return o(ax, ay, bx, by, cx, cy) * o(ax, ay, bx, by, dx, dy) < 0 && o(cx, cy, dx, dy, ax, ay) * o(cx, cy, dx, dy, bx, by) < 0;
+    };
+    const cradleEnd = cr => {
+      f.raidwide(Math.min(dmg.cradleMax, dmg.cradleEnd + dmg.cradleStep * cr.crossed), 0);
+      f.emit({ t: 'roomev', k: 'cradle-tighten', dur: 1 });
+      if (room.cradle === cr) room.cradle = null;
+    };
+    const cradle = () => {
+      const al = f.alive();
+      if (al.length < 4) return;
+      const T = f.ct(11), lead = f.ct(3);
+      const pairings = [[[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]]].map(pr => pr.map(([i, j]) => [al[i], al[j]]));
+      const pick = pairings.find(([A, B]) => segX(A[0].x, A[0].y, A[1].x, A[1].y, B[0].x, B[0].y, B[1].x, B[1].y)) || pairings[0];
+      const cols = ['#e8c860', '#b48cff'];
+      pick.forEach((pr, i) => { for (const q of pr) f.mark(q.id, { sym: 'chain', col: cols[i], dur: T, key: 'cradle' }); });
+      f.cast("Cat's Cradle", T, 'silk');
+      const ids = pick.map(pr => pr.map(q => q.id));
+      // the one who walks to untangle (for the bots): the lowest id of them who is not the tank
+      const mover = [...ids[0], ...ids[1]].filter(id => !al.find(q => q.id === id && q.role === 'tank')).sort((a, b) => a - b)[0];
+      const cr = { pairs: ids, mover, start: f.t + lead, end: f.t + T, crossed: 0, burnAt: f.t + lead + 1 };
+      room.cradle = cr;
+      pick.forEach(([a, b], i) => f.tether(a.id, b.id, T, { kind: 'short', len: 99999, dmg: 0, tag: 'cradle', onResolve: i === 0 ? () => cradleEnd(cr) : undefined }));
+    };
+    f.ticker(dt => {
+      const cr = room.cradle;
+      if (!cr || f.t < cr.start || f.t >= cr.end) return;
+      const al = f.alive(), P = id => al.find(q => q.id === id);
+      const [a, b] = cr.pairs[0].map(P), [c, d] = cr.pairs[1].map(P);
+      if (!a || !b || !c || !d || !segX(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y)) return;
+      cr.crossed += dt;
+      if (f.t >= cr.burnAt) {
+        cr.burnAt = f.t + 1;
+        f.emit({ t: 'roomev', k: 'cradle-burn', pts: [[Math.round(a.x), Math.round(a.y), Math.round(b.x), Math.round(b.y)], [Math.round(c.x), Math.round(c.y), Math.round(d.x), Math.round(d.y)]], dur: 1 });
+        for (const q of [a, b, c, d]) f.damagePlayer(q, dmg.cradleBurn, { kind: 'cradle', avoidable: true });
+      }
+    });
+
     const farthest = (pool, n) => [...pool].sort((a, b) => Math.hypot(b.x - B.x, b.y - B.y) - Math.hypot(a.x - B.x, a.y - B.y)).slice(0, n);
     // Venom Spit: a narrow cone at each of the two farthest players; a slowing pool stays where it lands.
     const venomSpit = () => {
@@ -196,7 +291,8 @@ const SKITTERRA = {
       for (const p of far) {
         const m = f.mech({ type: 'aoe', shape: { kind: 'cone', x: B.x, y: B.y, r: 1300, arc: 0.42, angle: 0 }, delay: d, dmg: dmg.spit,
           tag: 'venom', ddown: true, aimFromBoss: p.id, lockAt: H ? 1.5 : 1.8,   // (the aim freezes this long before the hit)
-          onResolve: () => {
+          onResolve: (inside, hits) => {
+            for (const id of hits || []) infect(id);   // (whoever the spit struck carries Venom)
             const q = f.players().find(z => z.id === p.id);
             const dist = q ? Math.hypot(q.x - m.shape.x, q.y - m.shape.y) : 380;
             const L = Math.max(200, dist) + 180;   // (the pool lands past the target, so a clean dodge is not standing in it)
@@ -458,22 +554,59 @@ const SKITTERRA = {
       if (sw) swarmAt = sw.t + f.ct(3); else if (swarmAt != null && swarmAt > f.t) swarmAt += dur;
       if (liveClutches().length) broodClock(br ? br.t - f.t + f.ct(3) : 0, swarmAt != null ? swarmAt - f.t : 0);
     };
+    // Imprint (Extreme): the next brood hatches fixed on the hero nearest each hatchling, which then follows only that hero (a mark over the hero's
+    // head while it has one). A fixed hatchling cannot be hurt until it has been led through one of the acid pools the cast lays on the floor (red:
+    // they hurt and slow a hero who stands in them): each hero kites their own across a pool, then kills it. (The pair-link and its beam are
+    // dropped for these: the fixing is their rule.)
+    const POOLS = [[270, 0], [-270, 0], [0, -200]], POOL_R = 110;
+    const acidPools = () => {
+      for (const [x, y] of POOLS) { const pd = f.puddle(x, y, POOL_R, 50, dmg.acid, 1, 'venom', { slow: true }); pd.acid = true; }
+    };
+    const imprint = made => {
+      for (const a of made) {
+        const near = f.alive().sort((p, q) => Math.hypot(p.x - a.x, p.y - a.y) - Math.hypot(q.x - a.x, q.y - a.y))[0];
+        if (!near) continue;
+        a.link = null; a.linkDmg = 0; a.leash = 0; a.imprint = near.id; a.fix = { id: near.id, until: Infinity };
+        a.realHp = a.maxHp; a.maxHp = a.hp = a.realHp * 40; a.immune = true;   // (the bar stays full: nothing a hero does can bring it down)
+        f.mark(near.id, { sym: 'prey', col: '#ffa24a', key: 'imprint' });
+      }
+      f.addsDirty = true;
+      f.emit({ t: 'roomev', k: 'imprint', ids: made.map(a => a.id), dur: 60 });
+    };
+    f.ticker(() => {
+      const pools = f.puddles.filter(pd => pd.acid && pd.end > f.t);
+      for (const a of f.adds.values()) {
+        if (!a.immune) continue;
+        if (pools.some(pd => Math.hypot(a.x - pd.x, a.y - pd.y) < pd.r)) {
+          a.immune = false; a.maxHp = a.realHp; a.hp = a.realHp; f.addsDirty = true;
+          f.emit({ t: 'roomev', k: 'imprint-wash', id: a.id, x: Math.round(a.x), y: Math.round(a.y), dur: 0.8 });
+        } else a.hp = a.maxHp;
+      }
+      for (const pid of new Set([...f.marks.values()].filter(m => m.key === 'imprint').map(m => m.pid))) {
+        if (![...f.adds.values()].some(a => a.immune && a.imprint === pid) || !f.alive().some(q => q.id === pid)) f.unmark(pid, 'imprint');
+      }
+    });
     // Brood (Act I): the two ripest clutches hatch, one spiderling each: a pair across the web
     const brood = () => {
       const d = f.ct(3);
       f.moveBoss(0, 0, 600);   // (she broods from the hub)
-      f.cast('Brood', d, 'brood');
+      f.cast(X ? 'Imprint' : 'Brood', d, 'brood');
+      if (X) acidPools();
       f.after(d, () => {
-        spiderlings(liveClutches().filter(c => c.ripe).flatMap(c => hatch(c, 1)), dmg.broodHp);
+        const made = spiderlings(liveClutches().filter(c => c.ripe).flatMap(c => hatch(c, 1)), dmg.broodHp);
+        if (X) imprint(made);
         broodClock(0, swarmAt != null ? swarmAt - f.t : 0);
       });
     };
     // the Swarm (Act II): every clutch still standing hatches at once, two to a clutch (three on Hard)
     const swarm = () => {
       const d = f.ct(3);
-      f.cast('The Swarm', d, 'brood');
+      f.cast(X ? 'Imprint' : 'The Swarm', d, 'brood');
+      if (X) acidPools();
       f.after(d, () => {
-        for (const c of liveClutches()) spiderlings(hatch(c, H ? 3 : 2), dmg.swarmHp);
+        const all = [];
+        for (const c of liveClutches()) all.push(...spiderlings(hatch(c, H ? 3 : 2), dmg.swarmHp));
+        if (X) imprint(all);
         f.emit({ t: 'roomev', k: 'brood', dur: 0, l: [] });
       });
     };
@@ -522,12 +655,17 @@ const SKITTERRA = {
           f.debuff(p.id, 'rooted', 0.7);
         }
       }
+      // a strand a Fang Strike left slows whoever wades through it (the knot at its end is clear)
+      for (const st of room.strands) for (const p of f.alive()) {
+        if (PROPS.segDist(p.x, p.y, st.x1, st.y1, st.x2, st.y2) > 26 || Math.hypot(p.x - st.kx, p.y - st.ky) < 50) continue;
+        f.debuff(p.id, 'slowed', 0.6);
+      }
       // what the bots break (once no spiderling is loose): in the dark, the knot she's running to next, then the eggs (the ones
       // about to split first); in the light, an unripe clutch or two while more than four stand
       const hostile = [...f.adds.values()].some(a => !a.inert);
-      const next = room.dark && !room.grounded ? uncut().find(th => th.order >= room.runAt) : null;
+      const next = room.dark && !room.grounded ? room.runList.slice(room.runIdx).map(o => uncut().find(th => th.order === o)).find(Boolean) || null : null;
       for (const th of room.threads) if (th.knot && f.adds.has(th.knot.id)) th.knot.prio = next === th && !hostile ? 6 : 0;
-      for (const c of liveClutches()) c.prio = hostile || room.grounded ? 0 : room.dark ? (c.hatchAt ? 3 : 0) : liveClutches().length > 4 && !c.ripe ? 2 : 0;
+      for (const c of liveClutches()) c.prio = X || hostile || room.grounded ? 0 : room.dark ? (c.hatchAt ? 3 : 0) : liveClutches().length > 4 && !c.ripe ? 2 : 0;
     });
 
     // --- The Dark Between: she's gone into the dark for about 30 s --------------------------------------
@@ -535,7 +673,7 @@ const SKITTERRA = {
     // The brood does not wait while she is up there: three times the clutch with the shortest clock splits (the clock
     // shows on the egg) and what comes out runs at the tank: one spiderling, on Hard a linked pair with its beam. A
     // clutch broken first sends nothing.
-    const HATCH_AT = H ? [3.5, 13, 24] : [3, 11, 19.5];
+    const HATCH_AT = X ? [3.5, 27, 32] : H ? [3.5, 13, 24] : [3, 11, 19.5];   // (Extreme: the last two ripen to the Lure's two drops)
     const strayHp = H ? 42000 : 55000;
     const darkHatch = c => {
       c.hatchAt = 0;
@@ -548,7 +686,7 @@ const SKITTERRA = {
       f.cast('Into the Dark', 2, 'ambush');
       f.afterKeep(2, () => {
         B.untargetable = true; B.lockFacing = true;
-        room.dark = true; room.runAt = 0; from = { x: B.x, y: B.y };
+        room.dark = true; room.runIdx = 0; from = { x: B.x, y: B.y };
         f.emit({ t: 'roomev', k: 'lightsout', r: 120, extra: f.props.filter(p => p.kind === 'pillar').map(p => ({ x: p.x, y: p.y })), dur: H ? 35.5 : 30.5 });
         const stand = liveClutches().slice(0, Math.max(0, liveClutches().length - 1));   // (one is always left for the Swarm)
         HATCH_AT.forEach((at, i) => {
@@ -594,13 +732,41 @@ const SKITTERRA = {
     };
     // one drop of the hunt: her shadow goes to whoever stands farthest from where she last landed, and she drops there
     // (the circle follows its mark until LOCK s out)
-    const huntDrop = (wait, mul, shadow = true, stay = 0) => {
+    // Lure (Extreme): a hunted drop is led onto a ripening egg clutch. The hero it follows (a mark over the head) walks it there: a drop that lands
+    // on a clutch crushes it; one that lands on bare floor splits the nearest clutch at once, and what hatches runs at the tank.
+    const lureLand = m => {
+      room.lure = null;
+      const live = liveClutches(), at = m.shape, r = m.shape.r;
+      if (!live.length) return;
+      const on = live.filter(c => Math.hypot(c.x - at.x, c.y - at.y) < r).sort((a, b) => (b.hatchAt ? 1 : 0) - (a.hatchAt ? 1 : 0) || Math.hypot(a.x - at.x, a.y - at.y) - Math.hypot(b.x - at.x, b.y - at.y))[0];
+      if (on) {
+        on.hatchAt = 0; f.adds.delete(on.id); f.addsDirty = true;
+        f.emit({ t: 'addev', k: 'gone', id: on.id }); f.emit({ t: 'eggs', pts: [[on.x, on.y]], dur: 0.6 });
+        f.emit({ t: 'roomev', k: 'lure-crush', x: Math.round(on.x), y: Math.round(on.y), dur: 0.8 });
+        broodClock(0, swarmAt != null ? swarmAt - f.t : 0);
+      } else {
+        const near = [...live].sort((a, b) => Math.hypot(a.x - at.x, a.y - at.y) - Math.hypot(b.x - at.x, b.y - at.y))[0];
+        f.emit({ t: 'roomev', k: 'lure-hatch', x: Math.round(near.x), y: Math.round(near.y), dur: 0.8 });
+        darkHatch(near);
+      }
+    };
+    const huntDrop = (wait, mul, shadow = true, stay = 0, lure = false) => {
       const al = f.alive();
       if (!al.length) return;
-      const far = [...al].sort((a, b) => Math.hypot(b.x - from.x, b.y - from.y) - Math.hypot(a.x - from.x, a.y - from.y))[0];
+      let far = [...al].sort((a, b) => Math.hypot(b.x - from.x, b.y - from.y) - Math.hypot(a.x - from.x, a.y - from.y))[0];
+      // (the Lure's prey is the hero closest to a standing clutch, never the tank: the drop has somewhere to be led)
+      if (lure && liveClutches().length) {
+        const near = p => Math.min(...liveClutches().map(c => Math.hypot(c.x - p.x, c.y - p.y)));
+        const pool = al.filter(p => p.role !== 'tank');
+        if (pool.length) far = [...pool].sort((a, b) => near(a) - near(b))[0];
+      }
       const lock = Math.min(LOCK, wait - 1.5);
       const m = f.mech({ type: 'aoe', shape: { kind: 'circle', x: far.x, y: far.y, r: H ? 170 : 150 }, delay: wait, dmg: dmg.drop * mul,
-        follow: far.id, lockAt: lock, tag: 'ambush' });
+        follow: far.id, lockAt: lock, tag: 'ambush', lure, onResolve: lure ? () => lureLand(m) : undefined });
+      if (lure) {
+        f.mark(far.id, { sym: 'prey', col: '#ff7ac8', dur: wait, key: 'lure' });
+        room.lure = { pid: far.id, until: f.t + wait - lock, x: 0, y: 0, has: false };
+      }
       let spot = null;
       f.afterKeep(wait - lock, () => {
         const at = ARENA.clamp({ x: m.shape.x, y: m.shape.y }, 90);
@@ -613,11 +779,27 @@ const SKITTERRA = {
     };
     // Hard: once she has landed she hunts the next farthest from where she came down, 3.6 s later (a circle that only
     // appears when the first has landed, not stacked behind it)
-    const hunt = () => {
-      f.cast('From the Dark', DROP, 'ambush');
-      huntDrop(DROP, H ? 1 : 0.7, true, STAY_HUNT);
-      if (H) f.afterKeep(DROP + 0.05, () => huntDrop(GAP2, 1, true, STAY_HUNT));
+    const hunt = (lure = X) => {
+      f.cast(lure ? 'Lure' : 'From the Dark', DROP, 'ambush');
+      huntDrop(DROP, H ? 1 : 0.7, true, STAY_HUNT, lure);
+      if (H) f.afterKeep(DROP + 0.05, () => huntDrop(GAP2, 1, true, STAY_HUNT, lure));
     };
+    // one Lure drop of its own (Extreme), where the Dark's Venom Drip and last thread drop were
+    const lureOne = () => {
+      f.cast('Lure', DROP, 'ambush');
+      huntDrop(DROP, 1, true, STAY_HUNT, true);
+    };
+    // where the Lure's mark should lead: the ripening clutch nearest the hero (any standing clutch if none ripens)
+    f.ticker(() => {
+      const lr = room.lure;
+      if (!lr) return;
+      if (f.t > lr.until + 3) { room.lure = null; return; }
+      const p = f.alive().find(q => q.id === lr.pid), live = liveClutches();
+      if (!p || !live.length) { lr.has = false; return; }
+      const pool = live.filter(c => c.hatchAt).length ? live.filter(c => c.hatchAt) : live;
+      const c = [...pool].sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
+      lr.x = c.x; lr.y = c.y; lr.has = true;
+    });
     // The finale's hunt: she does not need to leave to find you. From the web overhead her weight falls on whoever stands
     // farthest out on the silk, then on whoever is farthest from where it landed, three times in turn (four on Hard,
     // closer together): run it along the silk without stepping off.
@@ -629,7 +811,7 @@ const SKITTERRA = {
       for (let i = 0; i < more; i++) f.afterKeep(DROP + 0.05 + i * gap, () => huntDrop(gap, H ? 0.9 : 0.7, false));
     };
     const dropFrom = k => {
-      room.runAt = k + 1;
+      room.runIdx = room.runList.indexOf(k) + 1;
       const th = room.threads.find(t => t.order === k);
       if (!th || th.cut) return hunt();
       f.cast('From the Dark', DROP, 'ambush');
@@ -653,8 +835,15 @@ const SKITTERRA = {
       if (al.length < 2) return;
       const p = f.pick(f.nonTanks().length ? f.nonTanks() : al), d = f.ct(5);
       f.cast('Cocoon Drop', f.ct(3), 'brood');
-      f.mech({ type: 'stack', shape: { kind: 'circle', x: p.x, y: p.y, r: 115 }, delay: d, dmg: dmg.cocoon * Math.min(al.length, 4) / 4, follow: p.id,
-        need: H ? al.length : Math.max(1, al.length - 1), tag: 'stack' });
+      // the cocoon stays where it lands: a breakable cover (two hits) for the next Acid Deluge, so the party has chosen where it stands
+      const m = f.mech({ type: 'stack', shape: { kind: 'circle', x: p.x, y: p.y, r: 115 }, delay: d, dmg: dmg.cocoon * Math.min(al.length, 4) / 4, follow: p.id,
+        need: H ? al.length : Math.max(1, al.length - 1), tag: 'stack',
+        onResolve: () => {
+          const old = f.props.filter(q => q.kind === 'cocoon');
+          while (old.length >= 2) f.removeProp(old.shift());   // (two at most: the oldest is spent)
+          const w = ARENA.clamp({ x: m.shape.x, y: m.shape.y }, 90);
+          f.addProp({ kind: 'cocoon', x: Math.round(w.x), y: Math.round(w.y), r: 30, hp: 2, solid: true, cover: true, rubble: false });
+        } });
     };
     const venomDrip = noCast => {
       const d = f.ct(4);
@@ -829,6 +1018,7 @@ const SKITTERRA = {
     };
     const CHECK = 24;
     const chrysalis = () => {
+      for (const st of [...room.strands]) cutStrand(st);   // (the hub is spun afresh: every strand lying on the web is taken up in it)
       if (H) {
         let decided = false;
         // venom drips from the cocoon as it strains (only if the check is still running by then)
@@ -864,21 +1054,24 @@ const SKITTERRA = {
     ];
     const oneH = () => {
       // the N sets (no healer beat) are kept apart by Mists, the Reel and the Deluge; the brood and the charges trade places each pull
-      const g1 = [S([13, brood, 'Brood']), fsIn(S([13, eggSacs, 'Egg Sacs']), 8)];
-      const g2 = [S([13, strandReel, 'Strand Reel']), fsIn(S([14, fangRush, 'Fang Rush']), 7)];
-      const [a, b] = f.rng() < 0.5 ? [g1, g2] : [g2, g1];
+      // (Extreme: the Cat's Cradle is tied to the Brood, in its set, and takes the Venom Drip's slot)
+      const g1 = [X ? fsIn(S([13, brood, 'Brood'], [8, cradle, "Cat's Cradle"]), 12) : S([13, brood, 'Brood']), fsIn(S([13, eggSacs, 'Egg Sacs']), 8)];
+      const g2 = [S([13, strandReel, 'Strand Reel']), fsIn(S([12, fangRush, 'Fang Rush']), 7)];
+      // The dance (f.dance, drawn once a pull on Hard, always 0 on Extreme): the first of the three differs in the first of these sets,
+      // the act's second movement: Brood (dance 0), Strand Reel (dance 1) or Fang Rush (dance 2)
+      const [a, b] = f.dance === 1 ? [g2, g1] : f.dance === 2 ? [[g2[1], g2[0]], g1] : [g1, g2];
       return [
         S([5, venomMist, 'Venom Mist'], [9, () => silkWrap(), 'Silk Wrap']),
         a[0], a[1],
-        fsIn(S([13, () => venomDrip(), 'Venom Drip']), 7),
+        X ? null : fsIn(S([13, () => venomDrip(), 'Venom Drip']), 7),
         fsIn(S([13, venomSpit, 'Venom Spit'], [6.5, () => lunge(), 'Eightfold Lunge']), 12.5),
         S([16, () => silkReel(), 'Silk Reel']),
         b[0],
-        fsIn(S([14, venomMist, 'Venom Mist']), 7),
+        fsIn(S([12, venomMist, 'Venom Mist']), 7),
         b[1],
         S([13, spin, 'Spin'], [12, deluge, 'Acid Deluge']),
-        fsIn(S([14, () => silkLines(), 'Silk Lines']), 8.5),
-        S([18, wrapLunge, 'Eightfold Lunge']),
+        fsIn(S([12, () => silkLines(), 'Silk Lines']), 8.5),
+        S([16, wrapLunge, 'Eightfold Lunge']),
         S([13, venomMist, 'Venom Mist']),
       ];
     };
@@ -905,22 +1098,24 @@ const SKITTERRA = {
 
     const actOne = at => f.course({
       until: 0.7,
-      sets: weave(H ? oneH() : oneN()),
+      sets: weave(H ? oneH().filter(Boolean) : oneN()),
       closing: closeOne(), ramp: 0.12,   // (a party that is behind meets the Reel and the Strand, not a Lunge over the Spit pools and the threads)
       next: dark,
     }, at);
 
     // (cast-free gaps stay under 4 s whatever the party cuts; the Hard drop's second landing is 3.6 s behind its first)
     // (Hard: the cocoon and the drip trade places each pull, read from their casts)
-    const dark = at => { const dripFirst = H && f.rng() < 0.5; return f.course({
+    // (The dance, Hard: dance 0 the cocoon first, dance 1 the drip first, dance 2 the cocoon first again but the shadow runs her threads in another order:
+    // the first drop's shadow tells it from dance 0 at once, the cocoon and the drip tell dance 1 from the other two)
+    const dark = at => { const dripFirst = H && f.dance === 1; const ORD = H && f.dance === 2 ? [2, 3, 1] : [0, 1, 2]; room.runList = ORD; return f.course({
       onStart: () => { f.clearTethers(); f.clearReels(); },
       sets: [
         S([2, intoDark, 'Into the Dark']),
-        S([3, () => dropFrom(0), 'From the Dark']),
+        S([3, () => dropFrom(ORD[0]), 'From the Dark']),
         S([H ? 6 : 4, ...(dripFirst ? [() => venomDrip(), 'Venom Drip'] : [cocoonDrop, 'Cocoon Drop'])]),   // (the stack lands at least 5 s before the next drop)
-        S([dripFirst ? 3.5 : H ? 5 : 5.5, () => dropFrom(1), 'From the Dark']),
-        S([H ? 8 : 5.5, ...(dripFirst ? [cocoonDrop, 'Cocoon Drop'] : [() => venomDrip(), 'Venom Drip'])]),
-        S([H ? 5.25 : 4.5, () => dropFrom(2), 'From the Dark']),
+        S([dripFirst ? 3.5 : H ? 5 : 5.5, () => dropFrom(ORD[1]), 'From the Dark']),
+        S([H ? 8 : 5.5, ...(X ? [lureOne, 'Lure'] : dripFirst ? [cocoonDrop, 'Cocoon Drop'] : [() => venomDrip(), 'Venom Drip'])]),
+        S([H ? 5.25 : 4.5, ...(X ? [lureOne, 'Lure'] : [() => dropFrom(ORD[2]), 'From the Dark'])]),
         S([H ? 8 : 6, comeBack, 'Tightening Web']),   // (three drops: the dark ran long with four; the cast waits out the last window)
         S([6]),
       ],
@@ -940,23 +1135,26 @@ const SKITTERRA = {
     // is not in this act (its 45 s pools could not avoid lying under a Lunge), the Swarm needs the middle of the act for the clutches
     // to be broken first, and the Mists keep the healer's beats about 35 s apart, so those movements keep their places.
     const hardTwo = () => {
-      const swap = (a, b) => (f.rng() < 0.5 ? [a, b] : [b, a]);
       const mkW = (c, wl) => wl ? S([c, wrapLunge, 'Eightfold Lunge']) : S([c, volley, 'Spinneret Volley'], [9, () => { silkReel('healer'); silkWrap(); }, 'Silk Reel']);
-      const wlFirst = f.rng() < 0.5;
-      const [w1, w2] = [mkW(9.5, wlFirst), mkW(15.5, !wlFirst)];
-      const [e1, e2] = swap(fsIn(S([14, eggSacs, 'Egg Sacs']), 8), S([14, molt, 'Molt']));
+      // The dance (f.dance; always 0 on Extreme): the act's first movement tells it. Dance 0 opens on the Wrap-Lunge, dance 1 on the Volley (with
+      // its Reel and Wrap), dance 2 on Egg Sacs, the Wrap-Lunge coming second; the Molt and the other charge keep to the middle and the end
+      const sacs = c => fsIn(S([c, eggSacs, 'Egg Sacs']), 8), moltSet = S([14, molt, 'Molt']);
+      const d = H ? f.dance : 0;
+      const [w1, e1, e2, w2] = d === 1 ? [mkW(9.5, false), moltSet, sacs(14), mkW(15.5, true)]
+        : d === 2 ? [sacs(9.5), mkW(14, true), moltSet, mkW(15.5, false)]
+        : [mkW(9.5, true), sacs(14), moltSet, mkW(15.5, false)];
       return [
         w1,
         e1,
-        fsIn(S([14, venomMist, 'Venom Mist']), 7),
+        X ? fsIn(S([14, cradle, "Cat's Cradle"]), 12) : fsIn(S([14, venomMist, 'Venom Mist']), 7),   // (Extreme: the Cradle's tightening is this slot's raidwide)
         e2,
         S([14, swarm, 'The Swarm'], [9, () => silkWrap(), 'Silk Wrap']),
         S([14, strandReel, 'Strand Reel'], [6, rimLunge, 'Eightfold Lunge']),
         S([14, snareWeave, 'Snare Weave'], [9, deluge, 'Acid Deluge']),
-        fsIn(S([14, ambush, 'Ceiling Ambush']), 9.5),
-        fsIn(S([14, () => venomDrip(), 'Venom Drip']), 7),
-        fsIn(S([14, () => silkLines(), 'Silk Lines'], [4, () => lunge(), 'Eightfold Lunge']), 14),
-        S([14, venomMist, 'Venom Mist']),
+        fsIn(S([12, ambush, 'Ceiling Ambush']), 9.5),
+        fsIn(S([12, () => venomDrip(), 'Venom Drip']), 7),
+        fsIn(S([12, () => silkLines(), 'Silk Lines'], [4, () => lunge(), 'Eightfold Lunge']), 14),
+        S([12, venomMist, 'Venom Mist']),
         w2,
       ];
     };
@@ -967,12 +1165,12 @@ const SKITTERRA = {
       fsIn(S([15.5, venomSpit, 'Venom Spit']), 8),
       fsIn(S([15.5, venomMist, 'Venom Mist']), 7),
       fsIn(S([15.5, () => silkLines(), 'Silk Lines']), 10),
-      S([15.5, () => silkReel(), 'Silk Reel']),
+      S([15.5, cocoonDrop, 'Cocoon Drop']),
       S([15.5, strandReel, 'Strand Reel'], [6, rimLunge, 'Eightfold Lunge']),
       S([15.5, deluge, 'Acid Deluge']),
       fsIn(S([15.5, swarm, 'The Swarm']), 7),
       S([15.5, () => silkWrap(), 'Silk Wrap']),
-      fsIn(S([15.5, cocoonDrop, 'Cocoon Drop']), 7),
+      fsIn(S([15.5, () => silkReel(), 'Silk Reel']), 7),
       S([15.5, () => silkLines(), 'Silk Lines'], [4, () => lunge(), 'Eightfold Lunge']),
       S([15.5, venomMist, 'Venom Mist']),
     ];
@@ -1001,8 +1199,10 @@ const SKITTERRA = {
       let R = [wrapStep, [6, venomMist, 'Venom Mist'], [6, () => silkReel(), 'Silk Reel']];
       // Hard: the Wrap comes first (then the Wrap-Lunge in the middle) or last (the Wrap-Lunge early), the Mist and the Reel
       // fill the other two rings, so the tank's two blows are always a long way apart and the order is read each pull
-      const wrapFirst = !H || f.rng() < 0.5;
-      if (H) { const ends = f.shuffle([mistStep, reelStep]); R = wrapFirst ? [wrapStep, ends[0], ends[1]] : [ends[0], ends[1], wrapStep]; }
+      // The dance (f.dance; 0 on Extreme): dance 0 the Wrap first and the Mist before the Reel, dance 1 the Wrap last and the Reel before the Mist,
+      // dance 2 the Wrap first and the Reel before the Mist (what it opens with tells it first: see the Moth Queen's opener below)
+      const wrapFirst = !H || f.dance !== 1;
+      if (H) { const ends = f.dance === 0 ? [mistStep, reelStep] : [reelStep, mistStep]; R = wrapFirst ? [wrapStep, ends[0], ends[1]] : [ends[0], ends[1], wrapStep]; }
       const ring1 = S([H ? 7 : 6, () => giveWay(1), 'The Web Gives Way'], H ? R[1] : [6, venomMist, 'Venom Mist']);
       const ring2 = S([H ? 7 : 5, () => giveWay(2), 'The Web Gives Way'], [6, () => venomDrip(), 'Venom Drip']);
       const ring3 = S([H ? 7 : 4, () => giveWay(3), 'The Web Gives Way'], R[2]);
@@ -1030,14 +1230,12 @@ const SKITTERRA = {
       // moves return (the Wrap, Mist, Reel, Lines, Drip, Volley and the tank's Fang Strikes), and the finale (Lines into From the Dark) closes it.
       {
         const OPEN = 6.5;   // (s from the burst to her first cast: the wings unfurl and the bars refill first)
-        const flutterFirst = f.rng() < 0.5;
-        const wingA = flutterFirst ? [flutter, 'Flutter'] : [moonlight, 'Moonlight'], wingB = flutterFirst ? [moonlight, 'Moonlight'] : [flutter, 'Flutter'];
-        const opener = [
-          S([CHECK + CRACK + OPEN, scaleWave, 'Scale Wave']),
-          S([8, ...wingA]),
-          S([9, ...wingB]),
-        ];
-        const ring0 = S([flutterFirst ? 8 : 9, () => giveWay(0), 'The Web Gives Way'], R[0]);
+        // Her three wing moves, in the dance's order: Scale Wave, Flutter, Moonlight (dance 0); Moonlight, Scale Wave, Flutter (dance 1); Flutter,
+        // Moonlight, Scale Wave (dance 2). The first of them is what tells the three apart.
+        const WINGS = { 'Scale Wave': scaleWave, Flutter: flutter, Moonlight: moonlight };
+        const order = f.dance === 1 ? ['Moonlight', 'Scale Wave', 'Flutter'] : f.dance === 2 ? ['Flutter', 'Moonlight', 'Scale Wave'] : ['Scale Wave', 'Flutter', 'Moonlight'];
+        const opener = order.map((nm, i) => S([i === 0 ? CHECK + CRACK + OPEN : i === 1 ? 8 : 9, WINGS[nm], nm]));
+        const ring0 = S([order[2] === 'Moonlight' ? 8 : 9, () => giveWay(0), 'The Web Gives Way'], R[0]);
         const linesSet = S([9, () => silkLines(), 'Silk Lines']);
         const volleySet = S([8, volley, 'Spinneret Volley'], [3.5, () => silkWrap(), 'Silk Wrap']);
         if (!wrapFirst) withFS(ring1, 5.5, 3, true);
@@ -1065,7 +1263,7 @@ const SKITTERRA = {
     { const br = f.events.find(e => e.step && e.name === 'Brood'); broodClock(br ? br.t - f.t + f.ct(3) : 0, 0); }   // (the Brood step's time, plus its cast)
 
     f.moves = { venomMist, lunge, silkWrap, wrapLunge, silkLines, venomSpit, brood, swarm, molt, silkReel, eggSacs, fangRush, volley, deluge,
-      strandReel, ambush, snareWeave, fangStrike, spin, intoDark, dropFrom, venomDrip, comeBack, giveWay, lastHunt, scaleWave, flutter, moonlight, wrapMoon, chrysalis };
+      strandReel, ambush, snareWeave, fangStrike, spin, intoDark, dropFrom, venomDrip, comeBack, giveWay, lastHunt, scaleWave, flutter, moonlight, wrapMoon, chrysalis, cradle, lureOne };
   },
 };
 

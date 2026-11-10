@@ -688,10 +688,11 @@ function partyBonus(counts) {
 // rarity from the boss's table. Class items only roll for classes a human in the run plays (bots don't count).
 // The chest is first come: anyone takes an item and the party can trade it on (loot.js).
 const BOSS_TIER = { grubnak: 1, skitterra: 2, volkar: 3, hollowking: 4, wyrm: 5, titan: 6, archmage: 7, hydra: 8, corvane: 9, brannoc: 10, morrowoak: 11, caelum: 12 };
-const CHEST_SIZE = { normal: 4, hard: 5 };
+const CHEST_SIZE = { normal: 4, hard: 5, extreme: 5 };   // (an Extreme chest is the Hard chest)
 const CHEST_ODDS = {   // percent by rarity: [Uncommon, Rare, Legendary, Mythic]
   normal: [55, 30, 12, 3],
   hard: [30, 40, 22, 8],
+  extreme: [30, 40, 22, 8],
 };
 // each boss's table: { rarity: [item keys] }, everything that boss drops (Recruit gear never drops)
 const LOOT_TABLES = {};
@@ -699,9 +700,9 @@ for (const [boss, tier] of Object.entries(BOSS_TIER)) {
   const t = LOOT_TABLES[boss] = { [R_UNCOMMON]: [], [R_RARE]: [], [R_LEGENDARY]: [], [R_MYTHIC]: [] };
   for (const it of Object.values(ITEMS)) if (it.tier === tier && t[it.rarity]) t[it.rarity].push(it.key);
 }
-// gold for clearing a boss (Hard doubles it; wipes and trials give nothing)
+// gold for clearing a boss (Hard doubles it, Extreme triples it; wipes and trials give nothing)
 const CLEAR_GOLD = { grubnak: 40, skitterra: 45, volkar: 50, hollowking: 60, wyrm: 65, titan: 70, archmage: 75, hydra: 85, corvane: 95, brannoc: 105, morrowoak: 115, caelum: 125 };
-const clearGold = (bossId, mode) => (CLEAR_GOLD[bossId] || 0) * (mode === 'hard' ? 2 : 1);
+const clearGold = (bossId, mode) => (CLEAR_GOLD[bossId] || 0) * (mode === 'extreme' ? 3 : mode === 'hard' ? 2 : 1);
 
 // classes: the classes the humans in the run play. -> [item keys]
 function rollChest(bossId, mode, classes, rng) {

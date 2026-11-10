@@ -424,7 +424,41 @@ const CL_ART = (() => {
     ctx.restore();
   }
   // a shard (r 38): two or three jagged pieces of the same glass standing out of a heap of rock
+  // a fallen star (Extreme, Fallen Stars; r 34, maxHp 0: it takes no hits, only the Fall spends it). It drops out of the sky on the spot a marked
+  // hero stood and stays there as solid cover: a crown of pale star-glass spires in a ring of fused, scorched glass, clean outlines on every face
+  // so it reads on the dark crater and on the cloud alike, a heart of white-gold light in it.
+  function fallenStar(ctx, pr, t) {
+    const { x, y, r } = pr, age = t - (pr.born ?? t - 9), q = clamp(age / 0.5, 0, 1), sd = 300 + (pr.id | 0) * 7, pul = 0.5 + 0.5 * Math.sin(t * 2.1 + sd), drop = (1 - q) * (1 - q) * 560, sc = 0.35 + 0.65 * q;
+    if (q >= 1 && typeof CL_FX !== 'undefined' && CL_FX.starLanded) CL_FX.starLanded(pr);
+    ctx.save(); ctx.translate(x, y);
+    // where it lands: the scorch widening, a ring of fused glass, white cracks running out
+    ellipse(ctx, 2, 9, r * 1.55 * sc, r * 0.78 * sc, 0, rgba('#05030f', 0.55 * sc));
+    ellipse(ctx, 2, 8, r * 1.2 * sc, r * 0.58 * sc, 0, null, rgba('#cdbfff', 0.55 * q), 1.6);
+    if (q > 0.7) for (let i = 0; i < 6; i++) crack(ctx, Math.cos(i * 1.05 + 0.3) * 14, 12 + Math.sin(i * 1.05 + 0.3) * 5, i * 1.05 + 0.3 + (hash(sd, i) - 0.5) * 0.4, 24 + hash(sd, i + 5) * 16, sd + i, (q - 0.7) / 0.3, 0.9);
+    // the fall: a streak of light above it, the star coming down inside it
+    if (q < 1) { const a = Math.min(1, q * 4); line(ctx, 0, -drop - 150, 0, -drop, rgba('#fff4cc', 0.5 * a), 12); line(ctx, 0, -drop - 100, 0, -drop, rgba('#ffffff', 0.7 * a), 4); }
+    ctx.translate(0, -drop);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(ctx, 0, -22, r * 2.1, K.violetH, (0.14 + 0.06 * pul) * q); ctx.restore();
+    const lean = (hash(sd, 1) - 0.5) * 10;
+    spire(ctx, -22, 12, 11, 42 + hash(sd, 2) * 8, -10 + lean * 0.3, { lit: 0.8 });
+    spire(ctx, 23, 13, 11, 38 + hash(sd, 3) * 8, 9 + lean * 0.3, { lit: 0.75 });
+    spire(ctx, -8, 17, 13, 54 + hash(sd, 4) * 8, -4 + lean * 0.4, { lit: 0.9 });
+    spire(ctx, 10, 18, 13, 60 + hash(sd, 5) * 8, 5 + lean * 0.4, { lit: 0.9 });
+    spire(ctx, 0, 21, 17, 84 + hash(sd, 6) * 6, lean, { lit: 1, hot: 0.4 * (0.7 + 0.3 * pul) });
+    // the heart of it, showing through the facets
+    glow(ctx, 0, -34, 22, '#fff0c4', (0.4 + 0.15 * pul) * q); glow(ctx, 0, -34, 9, '#ffffff', 0.8 * q);
+    ctx.restore();
+    // glass lying round its foot (drawn after, so it sits in front of the base)
+    ctx.save(); ctx.translate(x, y);
+    for (let i = 0; i < 7; i++) {
+      const a = 0.2 + i * 0.85 + hash(sd, i + 10) * 0.3, d = r * (0.72 + 0.3 * hash(sd, i + 20)), bx = Math.cos(a) * d, by = 16 + Math.sin(a) * d * 0.4, s = 4 + hash(sd, i + 30) * 6, p = hash(sd, i + 40) * TAU;
+      poly(ctx, [bx + Math.cos(p) * s, by + Math.sin(p) * s * 0.7, bx + Math.cos(p + 2.3) * s * 0.7, by + Math.sin(p + 2.3) * s * 0.5, bx + Math.cos(p + 4.1) * s * 0.9, by + Math.sin(p + 4.1) * s * 0.6], i % 2 ? K.sgM : K.sgL, OUT, 1.2);
+    }
+    ctx.restore();
+    if (q >= 1) { ctx.save(); twinkle(ctx, x + 6, y - 66 + 3 * Math.sin(t * 2.3), 7 + 3 * pul, 0.5 + 0.4 * pul); ctx.restore(); }
+  }
   function starShard(ctx, pr, t) {
+    if (pr.maxHp === 0) return fallenStar(ctx, pr, t);
     const { x, y, r } = pr, i0 = pr.i | 0, pul = 0.5 + 0.5 * Math.sin(t * 1.5 + i0 * 1.3), sd = 200 + i0 * 13;
     ctx.save(); ctx.translate(x, y);
     ellipse(ctx, 2, 9, r * 1.25, r * 0.6, 0, rgba('#05030f', 0.5));

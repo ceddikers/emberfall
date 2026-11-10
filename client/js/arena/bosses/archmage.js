@@ -29,6 +29,20 @@
 //     circles overlap a reaction fills the lens between them. The floor between the sigils, out near the wall, is clear. Then the
 //     sets, and the last Convergence when he falls under 6% (a course of its own, so a party that clears meets it), and the closing
 //     passes until he falls or the tide comes in.
+// The revamp (2026-11-10, docs/plans/2026-11-boss-revamp.md):
+//   Each act opens under a named cast of its own (Circle of Fire, Frost, Lightning, the Void, The Seven Circles): the floor turns to the
+//   element, and from then on the act's Arcane Burst and Arcane Lance carry a small rider of that element: fire a burn to heal through,
+//   frost a short slow, lightning an arc to whoever stands within reach of the struck hero (a ring on each hero for a Burst, on the
+//   shield for a Lance), the void a tug a step toward the middle (the finale takes the four in turn).
+//   The Leaping Bolt prefers a rune bearer as its next jump (two heroes bear a bolt rune; the chain is set a moment before the first circle).
+//   Void Rifts: once a pull, opening the void act. Hard draws each act's order of middle sets from the dance (f.danceRng): three fixed
+//   timelines, told apart by the act's first middle set; Extreme and Normal are always dance 0.
+//   Extreme (f.extreme) adds three of its own:
+//     Spellweave:  three glyphs held before any spell: three heroes numbered 1 to 3 in the colour of their element, each spell falling on its hero
+//                  in turn; a reversal glyph on the fourth hero, when there is one, turns the order round.
+//     Runic Clock: two pairs of runes at once, a together pair and an apart pair, each pair's heroes wearing a sign whose ring burns down to
+//                  their pair's spell: the two spells land at different moments, together first or apart first.
+//     Cascading Convergence: the four sigils go off one after another, in the order they light; the last blow falls on the clear floor.
 // Acts use PUSH: a party that reaches a gate early cuts the rest of the act and moves on (no wall in this fight).
 // Every telegraph shows on the floor on every difficulty. Hard: casts 15% faster, 25% more damage, and:
 //   Counterspell: the last spell's areas (at most three) come again, thrown to the far side of the room, a few seconds later.
@@ -71,11 +85,12 @@ const AZ = {
 
 const AZERATH = {
   id: 'archmage', name: 'Azerath', title: 'Master of the Seven Circles',
-  hp: { normal: 7185000, hard: 7830000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 5880000 / 6100000; Normal 6.1M and Hard 6.4M before 2026-10-27)
+  hp: { normal: 7185000, hard: 7830000, extreme: 9130000 },   // (Extreme: Hard's and about 6%, a first number, tuning comes later) (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 5880000 / 6100000; Normal 6.1M and Hard 6.4M before 2026-10-27)
   normalDmg: 0.87,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 0.76; Normal's damage multiplier, fight.js default 1: 2026-10-27, tuned for a human party rather than perfect bots, CLAUDE.md)
   hardDmg: 1.19,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.1; Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
+  extremeDmg: 1.33,   // (Extreme: Hard's, to start with)
   autoDmg: { normal: 2000, hard: 1850 },
-  enrage: { normal: 600, hard: 605 },   // the cast starts here and lands 8 s later
+  enrage: { normal: 600, hard: 605, extreme: 605 },   // the cast starts here and lands 8 s later
   enrageName: 'The Tide Rises',
   vuln: 0.5,
   spawn: { x: 0, y: 0 }, anchor: true,
@@ -85,6 +100,7 @@ const AZERATH = {
 
   script(f) {
     const H = f.hard;
+    const X = f.extreme;   // (Extreme: Hard's moves and three of its own: Spellweave, Runic Clock, Cascading Convergence)
     const B = f.boss;
     const TAU = Math.PI * 2;
     const { ELS, RULE, SPELL, TAG, SIG, NAME } = AZ;
@@ -94,6 +110,8 @@ const AZERATH = {
       conv: H ? 27900 : 24600, lens: H ? 18000 : 15900, counter: H ? 21500 : 19100, mark: H ? 47500 : 49600, pulse: H ? 16200 : 14300, surge: H ? 21600 : 23900,
       elBite: H ? 1500 : 1300, flare: H ? 16000 : 15500, flens: H ? 13500 : 13000,
       brand: H ? 9000 : 8000, brandVoid: H ? 12100 : 11000, brandSelf: H ? 5500 : 5000, brandStack: H ? 4000 : 3600, brandStackSelf: H ? 6600 : 6000,
+      arc: H ? 3600 : 3200, burn: H ? 2200 : 2000,   // (the elemental riders on a Burst and a Lance: the lightning's arc, a tick of the fire's burn)
+      settle: H ? 17000 : 15400,   // (Extreme: the last blow of a Cascading Convergence)
     };
     const S = (...steps) => steps.filter(Boolean);
     const live = id => f.alive().find(p => p.id === id);
@@ -105,12 +123,15 @@ const AZERATH = {
     // between the tank's own beats (a Lance, a Circle Brand, the Binding), or when a run of more than three sets has no raidwide or
     // stack. prev: the last big hits of the act before, [seconds before this act began, 0 Burst | 1 stack];
     // closing: the act's closing passes, whose first step comes right after the last set
-    const mix = (head, mid, tail, prev = [], closing = null) => {
+    // (The dance: the order is drawn from f.danceRng(salt), so Hard has three fixed timelines and Extreme one. Each act names, by hand, which of
+    // its middle sets opens the middle in each of the three dances (lead: indexes into mid, one per dance), so the first set that is not
+    // common to the three tells the party which dance this pull is. xlead: the set Extreme puts in the place of one of the Hard sets, which opens its middle.)
+    const mix = (head, mid, tail, prev = [], closing = null, salt = '', lead = null, xlead = -1) => {
       if (!H) return [...head, ...mid, ...tail];
       const has = (set, n) => set.some(st => st[2] === n);
       const bad = o => {
         const all = [...head, ...o, ...tail], seq = closing ? [...all, [closing[0]]] : all;
-        for (let i = 1; i < seq.length; i++) for (const n of ['Arcane Lance', 'Pyre Rings']) if (has(seq[i], n) && has(seq[i - 1], n)) return true;
+        for (let i = 1; i < seq.length; i++) for (const n of ['Arcane Lance', 'Pyre Rings', 'Sigil Flare']) if (has(seq[i], n) && has(seq[i - 1], n)) return true;
         // Bursts at least 33 s apart, a stack (Arcane Mark, Rime Rune) 14 s from a Burst and 20 s from another stack
         const hits = [...prev];
         let t = 0;
@@ -152,14 +173,23 @@ const AZERATH = {
         }
         for (let i = 1; i < tb.length; i++) if (tb[i] - tb[i - 1] > 40) return true;
         let hr = 0;
-        for (const st of all) { if (['Arcane Burst', 'Sigil Flare', 'Convergence', 'Counterspell', 'Arcane Mark', 'Rime Rune', 'The Binding'].some(n => has(st, n))) hr = 0; else if (++hr > 3) return true; }
+        for (const st of all) { if (['Arcane Burst', 'Sigil Flare', 'Convergence', 'Cascading Convergence', 'Counterspell', 'Arcane Mark', 'Rime Rune', 'The Binding', 'Spellweave', 'Runic Clock'].some(n => has(st, n))) hr = 0; else if (++hr > 3) return true; }
         return false;
       };
-      let o = f.shuffle(mid), k = 0;
-      for (; k < 80 && bad(o); k++) o = f.shuffle(mid);
-      if (k >= 80) o = mid;   // (no order passed: the written order, which does)
+      const first = X && mid[xlead] ? mid[xlead] : lead && mid[lead[f.dance]] ? mid[lead[f.dance]] : null;   // (Extreme: the set it adds opens the middle, so it comes early in the act)
+      let o = null;
+      for (let k = 0; k < 200 && !o; k++) {
+        const rg = f.danceRng(salt + ':' + k), c = [...mid];
+        for (let i = c.length - 1; i > 0; i--) { const j = Math.floor(rg() * (i + 1)); [c[i], c[j]] = [c[j], c[i]]; }
+        if (first) c.splice(0, 0, ...c.splice(c.indexOf(first), 1));
+        if (!bad(c)) o = c;
+      }
+      if (!o) o = first ? [first, ...mid.filter(s => s !== first)] : mid;   // (no order passed: the written order)
       return [...head, ...o, ...tail];
     };
+    // which of two runes is live in a rune set laid into the act's script: on Hard and Extreme it is drawn from the dance, so each dance names the same
+    // spell in the same place on every pull (it is named in the upcoming feed long before it matters); on Normal it is a plain draw
+    const epick = (salt, arr) => (H ? arr[Math.floor(f.danceRng('el:' + salt)() * arr.length)] : f.pick(arr));
     // the calm before a set: Hard's is a little shorter (its casts are faster too)
     const g = n => (H ? Math.round((n - 0.2) * 100) / 100 : n);
     // a Circle Brand laid into the calm before a set: its cast begins once the cast before has ended (every cast is 4.8 s at most; a Pyre
@@ -202,16 +232,42 @@ const AZERATH = {
     const rec = (shape, delay, dm, extra = {}) => { const m = f.aoe(shape, delay, dm, Object.assign({}, extra, { onResolve: () => memo(m) })); return m; };
 
     // --- the core moves --------------------------------------------------------------------------------------------
+    // The element of the act a Burst or a Lance is cast in, and its small rider: fire leaves a burn to heal through, frost a short slow,
+    // lightning arcs to whoever stands within a short reach of the struck hero (a ring on each hero for a Burst, which strikes all four; a
+    // ring on the shield for a Lance), the void tugs a step toward the middle. (The finale and the last Convergence take the four in turn.)
+    let actEl = 'fire', riderN = 0;
+    const riderEl = () => (actEl === 'any' ? ELS[riderN++ % ELS.length] : actEl);
+    const burn = id => {
+      f.debuff(id, 'burning', 6.2);
+      for (let i = 1; i <= 4; i++) f.afterKeep(i * 1.5, () => { const p = live(id); if (p && f.hasDebuff(id, 'burning')) f.damagePlayer(p, dmg.burn, { kind: 'burn', n: 'Burning', noVuln: true }); });
+    };
+    const tug = (p, dist) => {   // a step toward the middle (a throw away from a point just behind the hero, as the Sovereign's pull is laid)
+      const d0 = Math.hypot(p.x, p.y), step = Math.min(dist, d0 - 70);
+      if (step < 20) return;
+      f.knock(p, p.x + p.x / d0 * 20, p.y + p.y / d0 * 20, step);
+    };
+    const rider = (el, who, d) => {
+      f.afterKeep(d + 0.05, () => {
+        for (const id of who) {
+          const p = live(id); if (!p) continue;
+          if (el === 'fire') burn(id); else if (el === 'frost') f.debuff(id, 'slowed', 3); else if (el === 'void') tug(p, who.length > 1 ? 130 : 110);
+        }
+      });
+    };
     const burst = () => {
-      const d = f.ct(4.4);
+      const d = f.ct(4.4), el = riderEl();
       f.cast('Arcane Burst', d, 'burst');
       f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.burst, hidden: true, tag: 'azBurst' });
+      if (el === 'bolt') for (const p of f.alive()) f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 100 }, delay: d, dmg: dmg.arc, follow: p.id, lockAt: 1.2, tag: 'azBolt' });
+      else rider(el, f.alive().map(p => p.id), d);
     };
     const lance = () => {
       const tank = f.tank(); if (!tank) return;
-      const d = f.ct(4.4);
+      const d = f.ct(4.4), el = riderEl();
       f.cast('Arcane Lance', d, 'lance');
       f.mech({ type: 'buster', shape: { kind: 'cone', x: B.x, y: B.y, r: 380, arc: 1.3, angle: B.facing }, delay: d, dmg: dmg.lance, target: tank.id, aimFromBoss: tank.id, tag: 'buster' });
+      if (el === 'bolt') f.mech({ type: 'spread', shape: { kind: 'circle', x: tank.x, y: tank.y, r: 130 }, delay: d, dmg: dmg.arc, follow: tank.id, lockAt: 1.2, tag: 'azBolt' });
+      else rider(el, [tank.id], d);
     };
     // Circle Brand: the Rune Pair's rule for the shield alone. A rune of the act's element is laid on the tank (the orb takes the colour,
     // the sigil lights) and the spell it brings is drawn at the tank's feet from the first moment, following him until a moment before
@@ -269,22 +325,36 @@ const AZERATH = {
       });
     };
     // Leaping Bolt: a circle on one hero, then on the hero nearest them, and on, a heartbeat apart
+    // The bolt prefers a rune bearer as its next jump: two heroes carry a bolt rune (a linked sign over the head, its ring burning down to the
+    // moment the chain is set, a moment before the first circle lands), and the chain runs to a bearer before it runs to whoever is nearest,
+    // so where the bearers stand steers it. The first circle is laid at the cast; the rest are laid when the chain is set, with the party
+    // standing where it stands then.
     const leapingBolt = () => {
       const al = f.alive(); if (!al.length) return;
-      const d0 = f.ct(4.6), step = f.ct(H ? 0.82 : 0.95);
+      const d0 = f.ct(4.6), step = f.ct(H ? 0.82 : 0.95), nj = H ? 5 : 4, setAt = d0 - 1.7;
       f.cast('Leaping Bolt', d0, 'chain');
-      // (every other Bolt starts on the tank, who then steps out of the circle and leaves the chain to hop on to whoever is nearest)
+      // (every other Bolt starts on the tank, who then steps out of the circle and leaves the chain to hop on to a bearer, or whoever is nearest)
       const tk = f.tank();
-      let cur = boltN++ % 2 === 0 && tk ? tk : f.pick(f.nonTanks().length ? f.nonTanks() : al);
-      const seq = [];
-      while (cur && seq.length < (H ? 5 : 4)) {
-        seq.push(cur);
-        let best = null, bd = 520;
-        for (const p of al) { if (seq.some(q => q.id === p.id)) continue; const dd = Math.hypot(p.x - cur.x, p.y - cur.y); if (dd < bd) { bd = dd; best = p; } }
-        cur = best;
-      }
-      seq.forEach((p, i) => {
-        const m = f.mech({ type: 'aoe', shape: { kind: 'circle', x: p.x, y: p.y, r: 105 }, delay: d0 + i * step, dmg: dmg.bolt, follow: p.id, lockAt: 1.0, tag: 'azBolt', onResolve: () => memo(m) });
+      const start = boltN++ % 2 === 0 && tk ? tk : f.pick(f.nonTanks().length ? f.nonTanks() : al);
+      const bearers = f.shuffle(al.filter(p => p.id !== start.id)).slice(0, 2).map(p => p.id);
+      for (const id of bearers) f.mark(id, { sym: 'chain', col: AZ.COL.bolt, dur: setAt, key: 'azbolt' });
+      const m0 = f.mech({ type: 'aoe', shape: { kind: 'circle', x: start.x, y: start.y, r: 105 }, delay: d0, dmg: dmg.bolt, follow: start.id, lockAt: 1.0, tag: 'azBolt', onResolve: () => memo(m0) });
+      f.afterKeep(setAt, () => {
+        f.clearMarks('azbolt');
+        const now = f.alive(), s0 = now.find(p => p.id === start.id);
+        const seq = [s0 || { id: start.id, x: m0.shape.x, y: m0.shape.y, gone: true }];
+        for (;;) {
+          if (seq.length >= nj) break;
+          const cur = seq[seq.length - 1], left = now.filter(p => !seq.some(q => q.id === p.id));
+          const nearest = (list, reach) => { let best = null, bd = reach; for (const p of list) { const dd = Math.hypot(p.x - cur.x, p.y - cur.y); if (dd < bd) { bd = dd; best = p; } } return best; };
+          const best = nearest(left.filter(p => bearers.includes(p.id)), 900) || nearest(left, 520);
+          if (!best) break;
+          seq.push(best);
+        }
+        seq.forEach((p, i) => {
+          if (!i) return;
+          const m = f.mech({ type: 'aoe', shape: { kind: 'circle', x: Math.round(p.x), y: Math.round(p.y), r: 105 }, delay: d0 - setAt + i * step, dmg: dmg.bolt, follow: p.id, lockAt: 1.0, tag: 'azBolt', onResolve: () => memo(m) });
+        });
       });
     };
     // Void Rifts: rifts open where heroes stand now, and again a moment later where they went
@@ -305,7 +375,8 @@ const AZERATH = {
     };
     let holdUntil = 0, tankHad = false, boltN = 0, spellDue = false;
     // an act cut short by its gate drops the spell of a Rune Mark it had begun: the pair would stay on the bots' map for good. The next act clears it
-    const unpair = () => { if (spellDue) { spellDue = false; f.runePair = null; f.clearTethers(); } };
+    const unpair = () => { if (spellDue) { spellDue = false; f.runePair = null; f.clearTethers(); } clk = null; f.clearMarks('azclock'); f.clearMarks('azweave'); };
+    let clk = null;   // Extreme's Runic Clock in progress: { p1, p2 } the two pairs, the first to resolve and the second
     // hold: seconds from now until the spell has landed (the link on the two stays until then)
     const runeMark = (el, hold, swap) => {
       f.cast('Rune Mark', f.ct(2.4), 'rune');
@@ -339,8 +410,8 @@ const AZERATH = {
       });
     };
     // two heroes too close when a split spell is about to land: a circle of their two runes' flame or void blooms between them
-    const reactCheck = d => {
-      const rp = f.runePair; if (!rp || rp.b == null) return;
+    const reactCheck = (d, rp) => {
+      if (!rp || rp.b == null) return;
       f.afterKeep(d - 1.45, () => {
         const a = live(rp.a), b = live(rp.b);
         if (!a || !b || Math.hypot(a.x - b.x, a.y - b.y) > (H ? 290 : 250)) return;
@@ -348,22 +419,23 @@ const AZERATH = {
       });
     };
     // the spell: one of the two runes' elements, and the rule that goes with it
-    const runeSpell = el => {
-      const rp = f.runePair;
-      spellDue = false;
+    // (rp0 and after: Extreme's Runic Clock casts one pair's spell at a time; `after` runs when the spell has landed, instead of the pair being done)
+    const runeSpell = (el, rp0, after) => {
+      const rp = rp0 || f.runePair;
+      if (!after) spellDue = false;
       const d = f.ct(4.6);
       f.cast(SPELL[el], d, el);
       if (!rp) return;
       const A = live(rp.a), Bp = rp.b != null ? live(rp.b) : null;
       const ids = [rp.a, rp.b].filter(x => x != null);
-      if (RULE[el] === 'pair') { const tkn = f.tank(); tankHad = !!tkn && ids.includes(tkn.id); }   // (did the tank bear this one? the next together-rune brings it in if not)
+      if (RULE[el] === 'pair' && !after) { const tkn = f.tank(); tankHad = !!tkn && ids.includes(tkn.id); }   // (did the tank bear this one? the next together-rune brings it in if not)
       let ok = () => true;
       if (el === 'fire') {
         for (const id of ids) {
           const p = live(id); if (!p) continue;
           const m = f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: 125 }, delay: d, dmg: dmg.fire, follow: id, lockAt: 1.1, tag: 'azFire', onResolve: () => memo(m) });
         }
-        reactCheck(d);
+        reactCheck(d, rp);
         ok = () => { const a = live(rp.a), b = live(rp.b); return !a || !b || Math.hypot(a.x - b.x, a.y - b.y) > (H ? 290 : 250); };
       } else if (el === 'void') {
         for (const id of ids) {
@@ -371,7 +443,7 @@ const AZERATH = {
           const m = f.mech({ type: 'aoe', shape: { kind: 'donut', x: p.x, y: p.y, r: 255, r2: 90 }, delay: d, dmg: dmg.void, follow: id, lockAt: 1.1, tag: 'azVoid', onResolve: () => memo(m) });
           f.afterKeep(d + 0.03, () => { const q = live(id); if (q) f.damagePlayer(q, dmg.voidSelf, { kind: 'azVoid', n: SPELL.void }); });
         }
-        reactCheck(d);
+        reactCheck(d, rp);
         ok = () => { const a = live(rp.a), b = live(rp.b); return !a || !b || Math.hypot(a.x - b.x, a.y - b.y) > (H ? 290 : 250); };
       } else if (el === 'frost') {
         const n = f.alive().length;
@@ -394,7 +466,7 @@ const AZERATH = {
       // the pair is done a moment after the spell lands; a pair that stood the way the element wanted counts as a soak for both
       f.afterKeep(d + 0.05, () => {
         if (ok()) for (const id of ids) { const st = f.stats[id]; if (st && live(id)) st.soaked++; }
-        f.runePair = null; f.clearTethers();
+        if (after) after(); else { f.runePair = null; f.clearTethers(); }
       });
     };
     // a Rune Mark and the spell that follows it (the spell's name is laid out now, so the upcoming feed already says which element it is)
@@ -402,6 +474,73 @@ const AZERATH = {
       // (a Swap leaves the new bearers about six seconds from the jump to the lock: the spell begins 5.4 s after the Swap's cast does)
       const swap = H && o.swap, g2 = swap ? 5.4 : 7.4, hold = (swap ? 4.2 : 0) + g2 + f.ct(4.6) + 0.35;
       return [[gap, () => runeMark(el, hold, swap), 'Rune Mark'], swap && [4.2, runeSwap, 'Rune Swap'], [g2, () => runeSpell(el), SPELL[el]]].filter(Boolean);
+    };
+
+    // --- Extreme: Spellweave -----------------------------------------------------------------------------------------------
+    // He holds three spells as glyphs over his staff before casting any. Three heroes carry the glyphs, numbered 1 to 3 in the colour of
+    // their element; each spell falls on its hero (a ring, a line, a bolt or a void), one after another. A fourth hero carries the reversal
+    // glyph when there is one: then the spells fall in reverse order, the third glyph's first.
+    const weaveSpell = (el, q, delay) => {
+      if (el === 'fire') f.mech({ type: 'spread', shape: { kind: 'circle', x: Math.round(q.x), y: Math.round(q.y), r: 125 }, delay, dmg: dmg.fire * 0.9, follow: q.id, lockAt: 1.1, tag: 'azFire' });
+      else if (el === 'frost') f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: Math.atan2(q.y - B.y, q.x - B.x), len: 620, w: 110 }, delay, dmg: dmg.ice, tag: 'azFrost', ddown: true, aimFromBoss: q.id, lockAt: 1.1 });
+      else if (el === 'bolt') f.mech({ type: 'aoe', shape: { kind: 'circle', x: Math.round(q.x), y: Math.round(q.y), r: 105 }, delay, dmg: dmg.bolt, follow: q.id, lockAt: 1.0, tag: 'azBolt' });
+      else f.mech({ type: 'aoe', shape: { kind: 'donut', x: Math.round(q.x), y: Math.round(q.y), r: 255, r2: 90 }, delay, dmg: dmg.void * 0.9, follow: q.id, lockAt: 1.1, tag: 'azVoid', ddown: true });
+    };
+    const weave = () => {
+      const al = f.alive(); if (al.length < 2) return;
+      const heroes = f.shuffle(al), nn = Math.min(3, heroes.length), nums = heroes.slice(0, nn), flipper = heroes[nn] || null;
+      const rev = !!flipper && f.rng() < 0.5, els = f.shuffle(ELS).slice(0, nn);
+      const d = f.ct(4.4), gap = f.ct(2.4), total = d + gap * (nn - 1);
+      f.cast('Spellweave', d, 'mark');
+      f.emit({ t: 'roomev', k: 'archmage-weave', els, rev, dur: total + 0.6 });   // (the glyphs over his staff, in order; the reversal glyph among them)
+      const order = [...Array(nn).keys()]; if (rev) order.reverse();
+      order.forEach((k, j) => {
+        const tj = d + j * gap, id = nums[k].id;
+        f.mark(id, { sym: 'num', n: k + 1, col: AZ.COL[els[k]], dur: tj + 0.2, key: 'azweave' });
+        if (!j) weaveSpell(els[k], nums[k], tj);
+        else f.afterKeep(tj - 3.2, () => { const q = live(id); if (q) weaveSpell(els[k], q, 3.2); });
+      });
+      if (rev) f.mark(flipper.id, { sym: 'flip', col: '#e8e0c8', dur: total + 0.3, key: 'azweave' });
+    };
+    // (Together with the Rune Pair: the Mark, then the Weave while the runes are held, then the rune's spell after the last weave spell has landed)
+    const weaveRuneSet = (gap, el) => {
+      const dW = f.ct(4.4), gW = f.ct(2.4), toSpell = dW + 2 * gW + 1.5 - f.ct(4.6), hold = 2.7 + toSpell + f.ct(4.6) + 0.35;
+      return [[gap, () => runeMark(el, hold, false), 'Rune Mark'], [2.7, weave, 'Spellweave'], [toSpell, () => runeSpell(el), SPELL[el]]];
+    };
+
+    // --- Extreme: Runic Clock ----------------------------------------------------------------------------------------------
+    // Two pairs of runes at once, a together pair and an apart pair, each pair's heroes wearing a sign whose ring burns down to the moment
+    // their pair's spell lands: the two pairs resolve at different moments, the together pair first and then the apart pair, or the other way
+    // round. The bots follow the pair whose spell is next (f.runePair).
+    const clockSet = (gap, first) => {
+      const tEl = epick('ct' + first, ['frost', 'bolt']), aEl = epick('ca' + first, ['fire', 'void']);
+      const T = { el: tEl, other: ELS.find(e => RULE[e] === 'split' && e !== aEl) }, A = { el: aEl, other: ELS.find(e => RULE[e] === 'pair' && e !== tEl) };
+      const P1 = first === 'pair' ? T : A, P2 = first === 'pair' ? A : T, g2 = 7.4, gB = 5.0;
+      const mark = () => {
+        f.cast('Runic Clock', f.ct(2.4), 'rune');
+        const al = f.alive();
+        if (al.length < 4) { clk = null; return; }
+        const pr = f.shuffle(al), h1 = g2 + f.ct(4.6) + 0.35, h2 = g2 + gB + f.ct(4.6) + 0.35;
+        const mk = (P, a, b, hold) => {
+          const flip = f.rng() < 0.5, ea = flip ? P.other : P.el, eb = flip ? P.el : P.other;
+          const rp = { a: a.id, b: b.id, ea, eb, el: P.el, rule: RULE[P.el], on: 1 };
+          f.tether(a.id, b.id, hold, { kind: 'short', len: 99999, dmg: 0, tag: 'rune:' + ea + ':' + eb + ':' + P.el });
+          for (const q of [a, b]) f.mark(q.id, { sym: 'chain', col: AZ.COL[P.el], dur: hold, key: 'azclock' });
+          return rp;
+        };
+        f.clearTethers();
+        clk = { p1: mk(P1, pr[0], pr[1], h1), p2: mk(P2, pr[2], pr[3], h2) };
+        f.runePair = clk.p1; spellDue = true;
+        f.emit({ t: 'roomev', k: 'live', el: P1.el, dur: h1 });
+        f.emit({ t: 'roomev', k: 'archmage-clock', els: [P1.el, P2.el], d1: h1, d2: h2, dur: h2 });
+      };
+      const spell = n => () => {
+        const c = clk; if (!c) return;
+        const rp = n === 1 ? c.p1 : c.p2;
+        if (n === 1) runeSpell(P1.el, rp, () => { if (clk === c) { f.runePair = c.p2; f.emit({ t: 'roomev', k: 'live', el: P2.el, dur: 6 }); } });
+        else runeSpell(P2.el, rp, () => { if (clk === c) { clk = null; spellDue = false; f.runePair = null; f.clearTethers(); f.clearMarks('azclock'); } });
+      };
+      return [[gap, mark, 'Runic Clock'], [g2, spell(1), SPELL[P1.el]], [gB, spell(2), SPELL[P2.el]]];
     };
 
     // --- the Binding (the seam): lead each elemental to its own sigil ------------------------------------------------
@@ -474,7 +613,30 @@ const AZERATH = {
       const mx = (A[0] + C[0]) / 2, my = (A[1] + C[1]) / 2, ang = Math.atan2(C[1] - A[1], C[0] - A[0]) + Math.PI / 2;
       f.aoe({ kind: 'rect', x: Math.round(mx - Math.cos(ang) * 125), y: Math.round(my - Math.sin(ang) * 125), angle: ang, len: 250, w: 74 }, delay, dm, { tag: 'azReact:' + e + ':' + e2 });
     };
+    // Extreme: Cascading Convergence. The four sigils go off one after another, in the order they light (the lit one is the next to go), and
+    // the last blow falls on the clear ground the first Convergence left: the floor between the sigils and the middle. So the party moves
+    // onto ground that has already gone off. The order is the same on every pull: it turns over a little each time it comes.
+    const CASC = [[0, 1, 2, 3], [2, 1, 0, 3], [1, 0, 3, 2], [3, 2, 1, 0]];
+    let cascN = 0;
+    const cascade = () => {
+      const d = f.ct(7.2), gap = f.ct(2.0), ord = CASC[cascN++ % CASC.length], T = ELS.map((e, i) => d + ord.indexOf(i) * gap);
+      f.cast('Cascading Convergence', d, 'conv');
+      ord.forEach((i, j) => {
+        const e = ELS[i];
+        f.afterKeep(j ? d + (j - 1) * gap : 0, () => f.emit({ t: 'roomev', k: 'live', el: e, dur: (j ? gap : d) + 0.2 }));   // (the sigil that is next to go burns)
+        f.aoe({ kind: 'circle', x: SIG[e][0], y: SIG[e][1], r: SR }, T[i], dmg.conv, { tag: TAG[e] });
+      });
+      ELS.forEach((e, i) => lens(i, Math.max(T[i], T[(i + 1) % N]), dmg.lens));
+      f.emit({ t: 'roomev', k: 'archmage-cascade', order: ord, gap, dur: d + 3 * gap + 2 });
+      // the last blow: the middle and the four diagonals, laid as the third sigil goes, landing a moment after the fourth
+      f.afterKeep(d + 2 * gap, () => {
+        const dl = gap + 1.8, sh = (x, y, r) => f.aoe({ kind: 'circle', x, y, r }, dl, dmg.settle, { tag: 'azReact:fire:void', ddown: true });
+        sh(0, 0, 95);
+        for (const sx of [-1, 1]) for (const sy of [-1, 1]) sh(sx * 283, sy * 283, 140);
+      });
+    };
     const convergence = () => {
+      if (X) return cascade();
       const d = f.ct(7.2), group = new Set();
       f.cast('Convergence', d, 'conv');
       f.emit({ t: 'roomev', k: 'conv', dur: d + 0.6 });
@@ -525,21 +687,30 @@ const AZERATH = {
     // --- the acts ------------------------------------------------------------------------------------------------------
     // (an act opens 5 s after the last step of the one before, or after the gate when a party pushes through it, so its first cast never
     // cuts the last one's bar. The Bursts keep their old places: a Burst takes most of a hero's health, so they stay well apart)
+    // Each act opens under a named cast of its own: the floor turns to the act's element (a room change the clients draw, the sigil of the
+    // element lit), then the act's first move, about as late as before
+    const turn = (el, name) => () => {
+      const d = f.ct(3);
+      f.cast(name, d, 'conv');
+      if (el === 'all') f.emit({ t: 'roomev', k: 'flare', els: ELS, dur: d + 0.6 }); else f.emit({ t: 'roomev', k: 'live', el, dur: d + 0.4 });
+      f.emit({ t: 'roomev', k: 'archmage-circle', el, dur: d + 0.6 });
+    };
+    const CONV = X ? 'Cascading Convergence' : 'Convergence';
     const runeS = (gap, el, o) => S(...runeSet(gap, el, o));
     const withCounter = (steps, after = 6.2) => S(...steps, H && [after, counterspell, 'Counterspell']);
 
     // I. Fire
     const close1 = [[10, lance, 'Arcane Lance'], [10, burst, 'Arcane Burst'], [10, pyre, 'Pyre Rings']];
     const fire1 = from => f.course({
-      onStart: unpair,
+      onStart: () => { actEl = 'fire'; unpair(); },
       until: 0.78, push: true,
-      sets: mix([S([4, burst, 'Arcane Burst']), brandIn('fire', S([g(12), pyre, 'Pyre Rings']), H ? 4.5 : 4.8)], [
+      sets: mix([S([1.5, turn('fire', 'Circle of Fire'), 'Circle of Fire'], [3.5, burst, 'Arcane Burst']), brandIn('fire', S([g(12), pyre, 'Pyre Rings']), H ? 4.5 : 4.8)], [
         S([g(12), lance, 'Arcane Lance']),
         H ? brandIn('fire', withCounter(runeSet(g(12), 'fire'))) : withCounter(runeSet(g(12), 'fire')),   // (Hard: this long chain, the act's longest with no tank beat, takes a Brand)
-        brandIn('fire', S([g(12), pyre, 'Pyre Rings'])),
+        X ? brandIn('fire', S([g(12), weave, 'Spellweave'])) : brandIn('fire', S([g(12), pyre, 'Pyre Rings'])),   // (Extreme: Spellweave, alone, in the place of a Pyre Rings set)
         S([g(12), lance, 'Arcane Lance'], [7.5, burst, 'Arcane Burst']),
         H ? runeS(g(12), 'fire', { swap: true }) : brandIn('fire', runeS(g(12), 'fire', { swap: true }), 4.8),
-      ], [brandIn('fire', S([g(12), burst, 'Arcane Burst']))], [], close1),   // (the act ends on a Burst, so no Burst opens its closing passes: an act's script must last as long as it did, or a party meets the closing passes' extra damage before the gate)
+      ], [brandIn('fire', S([g(12), burst, 'Arcane Burst']))], [], close1, 'fire', [0, 1, 4], 2),   // (the act ends on a Burst, so no Burst opens its closing passes: an act's script must last as long as it did, or a party meets the closing passes' extra damage before the gate)
       closing: close1,
       next: frost1,
     }, from);
@@ -547,17 +718,17 @@ const AZERATH = {
     // II. Frost
     const close2 = [[10, burst, 'Arcane Burst'], [10, lance, 'Arcane Lance'], [10, iceLances, 'Ice Lances']];
     const frost1 = from => f.course({
-      onStart: unpair,
+      onStart: () => { actEl = 'frost'; unpair(); },
       until: 0.55, push: true,
-      sets: mix([S([5, iceLances, 'Ice Lances'])], [
+      sets: mix([S([1.8, turn('frost', 'Circle of Frost'), 'Circle of Frost'], [3.7, iceLances, 'Ice Lances'])], [
         S([g(12), lance, 'Arcane Lance']),
-        runeS(g(12), 'frost'),
+        X ? brandIn('frost', S(...clockSet(g(12), 'pair'))) : runeS(g(12), 'frost'),   // (Extreme: the Runic Clock, the together pair first, in the place of a rune set)
         H ? brandIn('frost', S([g(12), pyre, 'Pyre Rings'], [8, iceLances, 'Ice Lances'])) : S([g(12), pyre, 'Pyre Rings'], [8, iceLances, 'Ice Lances']),
         brandIn('frost', H ? S([g(12), arcaneMark, 'Arcane Mark']) : S([g(12), burst, 'Arcane Burst'])),   // (Hard: the Mark is a shared blow for everyone, the act's heal check, where Normal has a Burst)
       ], [
-        brandIn('frost', withCounter(runeSet(g(12), f.pick(['frost', 'fire', 'frost']), { swap: true }))),
-        S([g(12), lance, 'Arcane Lance'], [7.5, pyre, 'Pyre Rings']),
-      ], [], close2),
+        brandIn('frost', withCounter(runeSet(g(12), epick('f2', ['frost', 'fire', 'frost']), { swap: true }))),
+        X ? S([g(12), lance, 'Arcane Lance']) : S([g(12), lance, 'Arcane Lance'], [7.5, pyre, 'Pyre Rings']),   // (Extreme: the Pyre Rings after this Lance make room for the Runic Clock)
+      ], [], close2, 'frost', [1, 2, 3], 1),
       closing: close2,
       next: bound,
     }, from);
@@ -566,38 +737,39 @@ const AZERATH = {
     const close3 = [[10, burst, 'Arcane Burst'], [10, lance, 'Arcane Lance'], [10, leapingBolt, 'Leaping Bolt']];
     const els = f.shuffle(ELS).slice(0, 3);
     const bound = from => f.course({
-      onStart: unpair,
+      onStart: () => { actEl = 'bolt'; unpair(); },
       until: 0.32, push: true,
       sets: mix([
-        S([5, bindStart, 'The Binding'], [5, () => call(els[0]), 'Call of the Circle'], [8, () => call(els[1]), 'Call of the Circle'], [8, () => call(els[2]), 'Call of the Circle']),
+        S([1.8, turn('bolt', 'Circle of Lightning'), 'Circle of Lightning'], [3.7, bindStart, 'The Binding'], [5, () => call(els[0]), 'Call of the Circle'], [8, () => call(els[1]), 'Call of the Circle'], [8, () => call(els[2]), 'Call of the Circle']),
         S([10, burst, 'Arcane Burst']),
       ], [
         S([g(12), leapingBolt, 'Leaping Bolt']),
-        brandIn('bolt', runeS(g(12), 'bolt')),
-        S([g(12), lance, 'Arcane Lance'], [7.5, leapingBolt, 'Leaping Bolt']),
+        X ? brandIn('bolt', S(...clockSet(g(12), 'split'))) : brandIn('bolt', runeS(g(12), 'bolt')),   // (Extreme: the Runic Clock, the apart pair first, in the place of a rune set)
+        X ? S([g(12), lance, 'Arcane Lance']) : S([g(12), lance, 'Arcane Lance'], [7.5, leapingBolt, 'Leaping Bolt']),   // (Extreme: the Bolt after this Lance makes room for the Runic Clock)
       ], [
-        withCounter(runeSet(g(12), f.pick(['bolt', 'frost', 'bolt']), { swap: true })),
+        H ? brandIn('bolt', withCounter(runeSet(g(12), epick('f3', ['bolt', 'frost', 'bolt']), { swap: true }))) : withCounter(runeSet(g(12), epick('f3', ['bolt', 'frost', 'bolt']), { swap: true })),   // (Hard: a Brand rides on this chain, as in the act before, so the dances have room to move)
         brandIn('bolt', S([g(12), burst, 'Arcane Burst'], [8, sigilFlare, 'Sigil Flare'])),
-      ]),   // (its tail ends on a Burst and a Flare, so the closing passes' Burst is always near it: nothing to choose)
+      ], [], null, 'bolt', [0, 1, 2], 1),   // (its tail ends on a Burst and a Flare, so the closing passes' Burst is always near it: nothing to choose)
       closing: close3,
       next: void1,
     }, from);
 
-    // IV. Void
-    const close4 = [[10, lance, 'Arcane Lance'], [10, burst, 'Arcane Burst'], [10, voidRifts, 'Void Rifts']];
+    // IV. Void (Void Rifts are cut to the one opening it: the second slot, and the closing passes, are a Sigil Flare and a Leaping Bolt now)
+    const close4 = [[10, lance, 'Arcane Lance'], [10, burst, 'Arcane Burst'], [10, leapingBolt, 'Leaping Bolt']];
     const void1 = from => f.course({
-      onStart: unpair,
+      onStart: () => { actEl = 'void'; unpair(); },
       until: 0.14, push: true,
-      sets: mix([S([5, voidRifts, 'Void Rifts'])], [
-        brandIn('void', S([g(12), leapingBolt, 'Leaping Bolt'], [8, voidRifts, 'Void Rifts']), H ? 5.4 : 0),
+      sets: mix([S([1.8, turn('void', 'Circle of the Void'), 'Circle of the Void'], [3.7, voidRifts, 'Void Rifts'])], [
+        brandIn('void', S([g(12), leapingBolt, 'Leaping Bolt'], [8, sigilFlare, 'Sigil Flare']), H ? 5.4 : 0),
         S([g(12), lance, 'Arcane Lance']),
-        ...(H ? [brandIn('void', S(...runeSet(g(12), 'void'), [8.5, lance, 'Arcane Lance']))] : []),   // (the act's second Lance: it used to hold the fight's longest stretch with none)
+        ...(H ? [X ? brandIn('void', S(...weaveRuneSet(g(12), 'void'))) : brandIn('void', S(...runeSet(g(12), 'void'), [8.5, lance, 'Arcane Lance']))] : []),   // (Extreme: Spellweave together with the Rune Pair, in the place of the rune set and Lance)
+   // (the act's second Lance: it used to hold the fight's longest stretch with none)
         H ? brandIn('void', S([g(12), burst, 'Arcane Burst'], [8, sigilFlare, 'Sigil Flare']), 5.4) : S([g(12), burst, 'Arcane Burst'], [8, sigilFlare, 'Sigil Flare']),
-        ...(H ? [] : [brandIn('void', withCounter(runeSet(g(12), f.pick(['void', 'fire', 'void']), { swap: true }))), brandIn('void', S(...runeSet(g(12), 'void'), [8.5, lance, 'Arcane Lance']))]),   // (Normal: the Brand's rune set sits ahead of the second Lance, so no Brand comes straight after a Lance)
+        ...(H ? [] : [brandIn('void', withCounter(runeSet(g(12), epick('f41', ['void', 'fire', 'void']), { swap: true }))), brandIn('void', S(...runeSet(g(12), 'void'), [8.5, lance, 'Arcane Lance']))]),   // (Normal: the Brand's rune set sits ahead of the second Lance, so no Brand comes straight after a Lance)
       ], [
-        ...(H ? [brandIn('void', withCounter(runeSet(g(12), f.pick(['void', 'fire', 'void']), { swap: true })))] : []),
+        ...(H ? [brandIn('void', withCounter(runeSet(g(12), epick('f42', ['void', 'fire', 'void']), { swap: true })))] : []),
         H ? S([g(12), burst, 'Arcane Burst']) : S([12, lance, 'Arcane Lance'], [8.5, burst, 'Arcane Burst']),   // (Normal: a Lance before the last Burst, so the stretch up to the finale has a tank beat in it)
-      ], [[-8, 0]], close4),   // (Act III ended on a Burst and a Sigil Flare eight seconds after it)
+      ], [[-8, 0]], close4, 'void', [0, 1, 2], 2),   // (Act III ended on a Burst and a Sigil Flare eight seconds after it)
       closing: close4,
       next: finale,
     }, from);
@@ -605,21 +777,21 @@ const AZERATH = {
     // V. Convergence. It is two courses: the sets up to 6% of his health, and the last Convergence, which opens when he falls under 6%
     // (a party that clears in about 80 s meets it with half a minute still to go; the sets after it only play for a slow party). Then the
     // closing passes until he falls.
-    const close5 = [[10, burst, 'Arcane Burst'], [10, convergence, 'Convergence'], [10, lance, 'Arcane Lance']];
+    const close5 = [[10, burst, 'Arcane Burst'], [10, convergence, CONV], [10, lance, 'Arcane Lance']];
     const lastAct = from => f.course({
-      onStart: unpair,
-      sets: [S([5, convergence, 'Convergence'])],
+      onStart: () => { actEl = 'any'; unpair(); },
+      sets: [S([5, convergence, CONV])],
       closing: close5,
       ramp: 0.08,
     }, from);
     const finale = from => f.course({
-      onStart: unpair,
+      onStart: () => { actEl = 'any'; unpair(); },
       until: 0.06, push: true,
-      sets: mix([S([5, convergence, 'Convergence']), S([g(13), lance, 'Arcane Lance'])], [   // (the Lance after the first Convergence is the finale's sure tank beat)
-        runeS(g(12), f.pick(ELS)),
-        H ? brandIn(null, withCounter(runeSet(g(12), f.pick(ELS), { swap: true }))) : brandIn(null, S([g(12), burst, 'Arcane Burst'])),   // (Hard's long rune chains carry the finale's time: no plain Burst between them)
+      sets: mix([S([1.8, turn('all', 'The Seven Circles'), 'The Seven Circles'], [3.7, convergence, CONV]), S([g(13), lance, 'Arcane Lance'])], [   // (the Lance after the first Convergence is the finale's sure tank beat)
+        X ? brandIn(null, S([g(12), weave, 'Spellweave'])) : runeS(g(12), epick('f51', ELS)),   // (Extreme: Spellweave, alone, in the place of the first rune set)
+        H ? brandIn(null, withCounter(runeSet(g(12), epick('f52', ELS), { swap: true }))) : brandIn(null, S([g(12), burst, 'Arcane Burst'])),   // (Hard's long rune chains carry the finale's time: no plain Burst between them)
         H ? brandIn(null, S([g(13), arcaneMark, 'Arcane Mark'], [7, leapingBolt, 'Leaping Bolt'])) : S([g(13), iceLances, 'Ice Lances'], [7, leapingBolt, 'Leaping Bolt']),
-      ], [], [[0, 0]], close5),   // (Act IV ended on a Burst)
+      ], [], [[0, 0]], close5, 'finale', [0, 1, 2], 0),   // (Act IV ended on a Burst)
       closing: close5,
       ramp: 0.08,
       next: lastAct,
@@ -628,7 +800,7 @@ const AZERATH = {
     fire1(0);
 
     // every move by name, for tools and testing (window.__game.raidHost.sim.moves.pyre())
-    f.moves = { burst, lance, pyre, iceLances, leapingBolt, voidRifts, runeMark, runeSpell, runeSwap, bindStart, call, convergence, sigilFlare, counterspell, arcaneMark };
+    f.moves = { burst, lance, pyre, iceLances, leapingBolt, voidRifts, runeMark, runeSpell, runeSwap, bindStart, call, convergence, sigilFlare, counterspell, arcaneMark, weave };
   },
 };
 

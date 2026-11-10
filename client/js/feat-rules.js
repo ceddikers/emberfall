@@ -16,8 +16,9 @@ const FeatRules = (() => {
 
   function clear(d, env = {}) {
     const marks = [], list = party(d.stats), me = list.find(p => p.id === d.myId), n = list.length;
-    const hard = d.mode === 'hard';
-    marks.push(`clear:${d.boss}:${hard ? 'hard' : 'normal'}`);
+    // hard: Hard or Extreme (Extreme is harder, so every Hard mark below fires on it too); the clear mark itself names the exact mode, and an Extreme clear is not a Hard one
+    const extreme = d.mode === 'extreme', hard = d.mode === 'hard' || extreme;
+    marks.push(`clear:${d.boss}:${extreme ? 'extreme' : hard ? 'hard' : 'normal'}`);
     // the party that stood there (bots count: a party is who was in the fight)
     const healers = count(list, 'healer'), tanks = count(list, 'tank'), dps = count(list, 'dps');
     if (healers === 2) marks.push('comp:twoHealers');

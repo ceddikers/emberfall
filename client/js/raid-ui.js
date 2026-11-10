@@ -4,7 +4,9 @@
 // when a raid's enrage lands, from its pull: a practice start in a later act counts from that act (fight.js enrageAt, def.practiceCut)
 function raidEnrageAt(raid, mode) {
   if (raid.px && raid.px.noEnrage) return 0;   // (a Practice Hall run with the enrage off)
-  let e = raid.def.enrage && raid.def.enrage[mode || raid.mode]; if (e && raid.mods && raid.mods.shortfuse) e = HARDPLUS.enrage(e, raid.mods);   // (Hard+ Short Fuse: fight.js enrageAt)
+  const m = mode || raid.mode;
+  let e = raid.def.enrage && (raid.def.enrage[m] ?? (m === 'extreme' ? raid.def.enrage.hard : undefined));   // (an Extreme with no enrage of its own reads Hard's)
+  if (e && raid.mods && raid.mods.shortfuse) e = HARDPLUS.enrage(e, raid.mods);   // (Hard+ Short Fuse: fight.js enrageAt)
   const cut = raid.practice && raid.def.practiceCut ? raid.def.practiceCut[raid.practice] || 0 : 0;
   return e && cut ? Math.max(30, e - cut) : e;
 }
@@ -291,9 +293,10 @@ const RaidUI = (() => {
     if (fm) q('#boss-bar').dataset.form = raid.form; else delete q('#boss-bar').dataset.form;
     const mode = q('.bb-mode');
     const hpHeat = raid.mode === 'hard' ? HARDPLUS.heat(raid.mods) : 0;
-    setText(mode, raid.def && raid.def.bars ? '' : raid.mode === 'hard' ? (hpHeat ? 'Hard+ ' + hpHeat : 'Hard') : 'Normal');   // (a fight shown in bars has one difficulty: no badge)
+    setText(mode, raid.def && raid.def.bars ? '' : raid.mode === 'extreme' ? 'Extreme' : raid.mode === 'hard' ? (hpHeat ? 'Hard+ ' + hpHeat : 'Hard') : 'Normal');   // (a fight shown in bars has one difficulty: no badge)
     HARDPLUS.hud(q('.bb-mods'), hpHeat ? raid.mods : null);   // (Hard+: the modifiers as small icons with tips)
     mode.classList.toggle('hard', raid.mode === 'hard');
+    mode.classList.toggle('extreme', raid.mode === 'extreme');
     // who the boss is on, right in its bar (so targeting the boss needs no second frame)
     const totR = raid.state === 'live' && b.tg != null ? raid.roster.find(x => x.id === b.tg) : null, tot = q('.bb-tot');
     setText(tot, totR ? `→ ${totR.id === myId ? 'You' : totR.name}` : '');
@@ -444,7 +447,8 @@ const RaidUI = (() => {
   function intro(def, mode, firstMeet, short) {
     const el = $('boss-intro');
     clearTimeout(introTimer);
-    el.querySelector('small').textContent = mode === 'hard' ? 'Hard' : '';
+    el.querySelector('small').textContent = mode === 'extreme' ? 'Extreme' : mode === 'hard' ? 'Hard' : '';
+    el.querySelector('small').classList.toggle('extreme', mode === 'extreme');
     el.querySelector('b').textContent = def.name;
     el.querySelector('i').textContent = def.title || '';
     const line = !short && firstMeet && INTRO_LINES[def.id];
@@ -469,7 +473,8 @@ const RaidUI = (() => {
   function victory(def, mode, secs, rec) {
     const el = $('kill-banner');
     clearTimeout(killTimer);
-    el.querySelector('small').textContent = mode === 'hard' ? 'Hard' : '';
+    el.querySelector('small').textContent = mode === 'extreme' ? 'Extreme' : mode === 'hard' ? 'Hard' : '';
+    el.querySelector('small').classList.toggle('extreme', mode === 'extreme');
     el.querySelector('b').textContent = def.name;
     el.querySelector('p span').textContent = mmss(secs);
     el.querySelector('p em').textContent = rec ? `New record · was ${mmss(rec.prev)}` : '';
@@ -1065,7 +1070,7 @@ const RaidUI = (() => {
       <div class="res-card">
         <button type="button" class="res-hide" data-a="hide" data-tip="Hide the results to see the room${typeof Loot !== 'undefined' && Loot.has() ? ' and the chest' : ''} (Esc)">Hide</button>
         <h2 class="${clear ? 'win' : 'lose'}">${clear ? 'Cleared' : 'Wiped'}</h2>
-        <p class="res-sub">${esc(raid.def.name)} · ${raid.def.bars ? '' : (msg.mode === 'hard' ? 'Hard' : 'Normal') + ' · '}${mmss(dur)}${clear ? '' : ` · boss at ${(msg.hp / msg.maxHp * 100).toFixed(1)}%`}${msg.falls != null ? ` · ${msg.falls} ${msg.falls === 1 ? 'fall' : 'falls'}` : ''}</p>
+        <p class="res-sub">${esc(raid.def.name)} · ${raid.def.bars ? '' : (msg.mode === 'extreme' ? 'Extreme' : msg.mode === 'hard' ? 'Hard' : 'Normal') + ' · '}${mmss(dur)}${clear ? '' : ` · boss at ${(msg.hp / msg.maxHp * 100).toFixed(1)}%`}${msg.falls != null ? ` · ${msg.falls} ${msg.falls === 1 ? 'fall' : 'falls'}` : ''}</p>
         ${clear && raid.hpRes ? `<p class="res-hp"><b>Hard+</b><span>Heat ${raid.hpRes.heat} cleared</span>${raid.hpRes.up ? '<em class="res-hp-new">New best heat</em>' : `<span>Best heat ${raid.hpRes.best}</span>`}<span class="res-hp-gold">+${raid.hpRes.gold}% gold</span></p>` : ''}
         ${clear ? '' : wipeSummary(msg, raid, deaths, deathName, dur)}
         ${clear && lastPull && lastPull.rec && lastPull.prevFast > 0 ? `<p class="res-best rec">New record: ${mmss(lastPull.time)}<span>was ${mmss(lastPull.prevFast)}</span></p>` : ''}

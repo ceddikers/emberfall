@@ -46,10 +46,11 @@
 const HYDRA = {
   id: 'hydra', name: 'The Hydra', title: 'Mother of Nine Heads',
   normalDmg: 1.1,   // (Normal's damage multiplier, fight.js default 1; 2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven))
-  hp: { normal: 5940000, hard: 6830000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 4950000 / 5600000)
+  hp: { normal: 5940000, hard: 6830000, extreme: 7240000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 4950000 / 5600000)
   hardDmg: 1.49,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.13; Hard's damage multiplier; fight.js default 1.25. 2026-10-27: tuned for a human party rather than perfect bots, CLAUDE.md)
   autoDmg: { normal: 1500, hard: 1650 },
-  enrage: { normal: 612, hard: 622 },   // the cast starts here and lands 8 s later (10:20 / 10:30)
+  enrage: { normal: 612, hard: 622, extreme: 622 },   // the cast starts here and lands 8 s later (10:20 / 10:30)
+  extremeDmg: 1.49,   // (Extreme: Hard's damage multiplier to start; tuning comes later)
   enrageName: 'The Drowning',
   vuln: 0.5,
   spawn: { x: 0, y: 0 }, anchor: true,
@@ -68,13 +69,14 @@ const HYDRA = {
 
   script(f) {
     const H = f.hard;
+    const X = f.extreme;   // (Extreme: Hard's whole fight plus Scalding, Entwined Necks and Breach)
     const B = f.boss;
     const TAU = Math.PI * 2;
     const dmg = {
       cry: H ? 10800 : 10800, thrash: H ? 9800 : 9200, undertow: H ? 9000 : 8200, maul: H ? 22000 : 18000, gazeAll: H ? 21000 : 0, dance: H ? 12700 : 0, heart: H ? 16600 : 16600,
       acid: H ? 16600 : 16200, pool: H ? 2200 : 2200, tide: H ? 18700 : 18700, bloom: H ? 30700 : 29800, bloomPool: H ? 1700 : 1700,
       flame: H ? 13200 : 13200, ember: H ? 2000 : 2000, frost: H ? 15600 : 15600, storm: H ? 13500 : 13500, gaze: H ? 21500 : 21200,
-      mire: H ? 7300 : 7400, mirePool: H ? 1700 : 1700, sear: 1400, rise: H ? 7500 : 7500,
+      mire: H ? 7300 : 7400, mirePool: H ? 1700 : 1700, sear: 1400, rise: H ? 7500 : 7500, breach: 19000,
       headHp: 34000, elderHp: 52000, lesserHp: 14000, surfHp: 16000,
     };
     // (Normal is tuned for a party in set-1 gear after set 2's step (items.js SET2_STEP): every hit, not the heads' HP, a notch up)
@@ -320,10 +322,11 @@ const HYDRA = {
     const stump = h => {
       const col = columns()[h.slot], pos = slotPos(h.slot, SEAR_R), st = { el: h.el, seared: false };
       stumps.set(h.slot, st);
-      f.cast('Searing', 2.4, 'head');   // (the stump bleeds: the cast bar names it, and the ring at the column opens a moment later)
+      f.cast(X ? 'Scalding' : 'Searing', 2.4, 'head');   // (the stump bleeds: the cast bar names it, and the ring at the column opens a moment later)
       f.emit({ t: 'propfx', k: 'stump', x: Math.round(h.x), y: Math.round(h.y), el: h.el, slot: h.slot });
       if (col) f.setPropState(col, 1);
       f.afterKeep(1.0, () => {
+        if (X) return scald(h, col, pos, st);
         f.mech({ type: 'tower', shape: { kind: 'circle', x: pos.x, y: pos.y, r: 62 }, delay: f.ct(10), dmg: dmg.sear, failDmg: dmg.sear * 3.5, need: 1, tag: 'sear', from: 'Searing',
           onResolve: (inside) => {
             if (col) f.setPropState(col, 0);
@@ -337,6 +340,37 @@ const HYDRA = {
             }
           } });
       });
+    };
+    // Scalding (Extreme): a stump takes two sears, not one: two rings open side by side at the column's foot, and a hero in each at the end
+    // sears it. Searing scalds them: a mark over their head (sym dot) for a while, and a marked hero cannot sear again until it has burned
+    // down (one who stands in a ring marked does not count: the ring is as good as empty). So the party rotates who steps in. (With fewer
+    // than two unmarked heroes left to take the rings, the mark is let go: nobody is asked for what they cannot do.)
+    const SCALD = 'hyscald', SCALD_DUR = 13;
+    const scalded = p => !!f.markOf(p.id, SCALD);
+    const scald = (h, col, pos, st) => {
+      const ta = slotAng(h.slot) + Math.PI / 2, got = [];
+      const lenient = f.alive().filter(p => !scalded(p)).length < 2;
+      let done = 0;
+      for (const sd of [-1, 1]) {
+        const at = { x: Math.round(pos.x + Math.cos(ta) * sd * 58), y: Math.round(pos.y + Math.sin(ta) * sd * 58) };
+        f.mech({ type: 'tower', shape: { kind: 'circle', x: at.x, y: at.y, r: 52 }, delay: f.ct(10), dmg: dmg.sear, failDmg: dmg.sear * 2.4, need: 1, tag: 'sear', from: 'Scalding',
+          onResolve: (inside) => {
+            const fit = inside.filter(p => lenient || !scalded(p));
+            got.push({ fit, inside });
+            if (inside.length && !fit.length) for (const p of f.alive()) f.damagePlayer(p, dmg.sear * 2.4, { kind: 'tower-fail', avoidable: false, n: 'Scalding' });   // (a scalded hero's ring is empty: the ring fails like one nobody stood in)
+            if (++done < 2) return;
+            if (col) f.setPropState(col, 0);
+            for (const g of got) for (const p of g.fit) f.mark(p.id, { sym: 'dot', col: '#ff9a4a', dur: SCALD_DUR, key: SCALD });
+            if (got.every(g => g.fit.length)) {
+              st.seared = true;
+              f.emit({ t: 'propfx', k: 'sear', x: Math.round(h.x), y: Math.round(h.y), px: pos.x, py: pos.y, el: h.el });
+            } else {
+              f.emit({ t: 'propfx', k: 'regrow', x: Math.round(h.x), y: Math.round(h.y), el: h.el });
+              f.cast('Regrowth', 1.6, 'head');
+              sprout(h);
+            }
+          } });
+      }
     };
     const sprout = h => {
       const hs = [mkHead(h.el, h.slot, { lesser: true, side: -1 }), mkHead(h.el, h.slot, { lesser: true, side: 1 })];
@@ -409,13 +443,49 @@ const HYDRA = {
     };
     // the heads hold their round for a while (Gaze and Tidal Dance run alone)
     const quiet = dur => { holdUntil = Math.max(holdUntil, f.t + dur); relay(rot()[0] ? rot()[0].t : undefined); };
-    const cry = () => {
+    // (rising: the Cry that raises a new set of heads, Acts II and III: they come up out of the water as it lands)
+    const cry = (rising) => {
       const d = f.ct(4.4);
       bodyAt(d, () => {
         f.cast("Mother's Cry", d, 'cry');
         f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.cry, hidden: true, tag: 'cry' });
+        if (typeof rising === 'function') {
+          f.emit({ t: 'roomev', k: 'hydra-cry', dur: +(d + 1.2).toFixed(2) });
+          f.afterKeep(d, () => { if (!paused) rising(); });
+        }
       });
     };
+    // Taking the bite: before a Rending Maul a great head ties a strand of spit to a random hero who is not the tank (a sign over
+    // their head, and the strand itself drawn from the head to them: hydra-view.js). Whoever holds the strand when the cast ends
+    // takes the Maul, the cone turning to them. The tank takes the strand by walking through it (the shield's own job); the strand
+    // can no longer pass in the last second, as the cone locks. A hero who falls while holding it hands it to the tank.
+    // (n on the mark is the head's place plus one: 1 to 9; 0 is the Mother herself)
+    const STRAND = 'hystrand', STRAND_LOCK = 1.0, STRAND_COL = '#b8e86a';
+    let strand = null;   // { holder, head: { x, y, slot }, m, end }
+    const segD = (px, py, ax, ay, bx, by) => {
+      const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy, u = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0;
+      return Math.hypot(px - ax - dx * u, py - ay - dy * u);
+    };
+    const layMaul = (tid, delay) => f.mech({ type: 'buster', shape: { kind: 'cone', x: B.x, y: B.y, r: 340, arc: 1.4, angle: B.facing }, delay, dmg: dmg.maul * (strand && tid !== strand.tank ? 0.6 : 1), target: tid, aimFromBoss: tid, tag: 'buster', from: 'Rending Maul' });
+    const strandTo = (p) => {
+      if (!strand) return;
+      f.cancel(strand.m);
+      f.unmark(strand.holder, STRAND);
+      strand.holder = p.id;
+      const left = Math.max(0.2, strand.end - f.t);
+      strand.m = layMaul(p.id, left);
+      f.mark(p.id, { sym: 'chain', n: strand.head.slot + 1, col: STRAND_COL, dur: left, key: STRAND });
+    };
+    f.ticker(() => {
+      if (!strand) return;
+      if (f.t >= strand.end - 0.02 || !f.mechs.has(strand.m.id)) { strand = null; return; }
+      const al = f.alive(), tanks = al.filter(p => p.role === 'tank'), holder = al.find(p => p.id === strand.holder);
+      if (!tanks.length) return;
+      if (holder && tanks.some(t => t.id === holder.id)) return;
+      if (!holder) { if (f.t < strand.end - STRAND_LOCK) strandTo(tanks[0]); return; }
+      if (f.t >= strand.end - STRAND_LOCK) return;
+      for (const tk of tanks) if (segD(tk.x, tk.y, strand.head.x, strand.head.y, holder.x, holder.y) < 50) { strandTo(tk); return; }
+    });
     // two Mauls are never closer than 13 s: when a gate cuts an act the next act's first Maul waits for the last one's room
     let lastMaul = -99;
     const maul = (seam) => {
@@ -427,7 +497,18 @@ const HYDRA = {
       const d = f.ct(4.4);
       bodyAt(d, () => {
         f.cast('Rending Maul', d, 'maul');
-        f.mech({ type: 'buster', shape: { kind: 'cone', x: B.x, y: B.y, r: 340, arc: 1.4, angle: B.facing }, delay: d, dmg: dmg.maul, target: tank.id, aimFromBoss: tank.id, tag: 'buster' });
+        const hs = greats(), loose = f.nonTanks().filter(p => p.role !== 'tank');
+        if (loose.length && tank.role === 'tank') {
+          // (a great head ties it; with none left standing the Mother does, from her own mouth: place 0)
+          const h = hs.length ? f.pick(hs) : { x: B.x, y: B.y - 40, slot: -1, el: null }, who = f.pick(loose);
+          strand = { holder: who.id, tank: tank.id, head: { x: h.x, y: h.y, slot: h.slot }, m: null, end: f.t + d };
+          strand.m = layMaul(who.id, d);
+          f.mark(who.id, { sym: 'chain', n: h.slot + 1, col: STRAND_COL, dur: d, key: STRAND });
+          if (h.el) f.emit({ t: 'propfx', k: 'rear', x: Math.round(h.x), y: Math.round(h.y), el: h.el, dur: +Math.min(d, 1.6).toFixed(2), s: 1, st: 0 });
+        } else {
+          strand = null;
+          layMaul(tank.id, d);
+        }
       });
     };
     // Tail Thrash: the Mother's tail sweeps the ring of water at her feet; whoever stands by her (the knight, a melee hand) steps out
@@ -471,6 +552,54 @@ const HYDRA = {
       }
     };
 
+    // Entwined Necks (Extreme): two heads wind together, and then each fires the other's attack from its own place. The places are the great
+    // heads standing and the stumps of those cut (a stump remembers, as in the Heart), so the knot is always there to be tied; two with
+    // different elements. The cast bar names the knot; a glow gathers at both places in the colour of the attack they will fire (the
+    // other's); then the two attacks come one after the other, each with its own bar and its own floor shape drawn from the wrong head.
+    const places = () => {
+      const out = [];
+      for (const h of greats()) out.push({ slot: h.slot, x: h.x, y: h.y, el: h.el, pw: h.pw, sz: h.sz, add: h.add });
+      for (const [slot, st] of stumps) if (!out.some(o => o.slot === slot)) { const q = slotPos(slot); out.push({ slot, x: q.x, y: q.y, el: st.el, pw: 0.85, sz: 1 }); }
+      return out;
+    };
+    const knot = (d0 = 0, heart) => {   // (heart: in the Heart's own run, where the heads' round is held on purpose)
+      const ps = f.shuffle(places()), a = ps[0], b = a && ps.find(o => o.el !== a.el);
+      if (!a || !b) return 0;
+      f.cast('Entwined Necks', d0, 'head');
+      f.emit({ t: 'roomev', k: 'hydra-entwine', dur: +(d0 + 2).toFixed(2), ax: Math.round(a.x), ay: Math.round(a.y), bx: Math.round(b.x), by: Math.round(b.y), ea: a.el, eb: b.el });
+      for (const [o, el] of [[a, b.el], [b, a.el]]) f.emit({ t: 'propfx', k: 'rear', x: Math.round(o.x), y: Math.round(o.y), el, dur: +d0.toFixed(2), s: 1, st: 0 });
+      let t = d0 + 0.4, total = t;
+      for (const [o, el] of [[a, b.el], [b, a.el]]) {
+        const c = cd({ lesser: false, fast: false }, EL[el].base);
+        f.afterKeep(t, () => { if (heart || !paused) EL[el].run({ x: o.x, y: o.y, el, pw: o.pw, sz: o.sz, lesser: false, fast: false, add: o.add && f.adds.has(o.add.id) ? o.add : null }); }, EL[el].name);
+        t += c + 0.5; total = t;
+      }
+      return total;
+    };
+    const entwine = () => {
+      const d = f.ct(2.6);
+      bodyAt(d, () => { const total = knot(d); if (total) quiet(total + 0.6); });
+    };
+    // Breach (Extreme): she heaves herself out of the pool and the wave throws everyone outward from the middle, far enough to reach the wall.
+    // A hero who is stopped by a column is caught (the throw ends against its foot); one who reaches the wall is swept under for a heavy hit
+    // (the red ring at the wall is where it lands). A column whose head has been cut and is still bleeding gives no shelter: a hero thrown
+    // against one takes the hit just the same.
+    const breachMech = (d) => {
+      f.emit({ t: 'roomev', k: 'hydra-breach', dur: +(d + 1.8).toFixed(2) });
+      f.mech({ type: 'aoe', shape: { kind: 'donut', x: 0, y: 0, r: 580, r2: 470 }, delay: d, dmg: dmg.breach, tag: 'breach', ddown: true, from: 'Breach',
+        onResolve: (inside) => {
+          for (const p of f.alive()) {
+            const r = f.knock(p, 0, 0, 800), c = r.prop && r.prop.kind === 'column' ? r.prop : null;
+            if (c && c.state === 0) continue;
+            if (!inside.some(q => q.id === p.id)) f.damagePlayer(p, dmg.breach, { kind: 'breach', avoidable: true, ddown: true, n: 'Breach' });
+          }
+        } });
+    };
+    const breach = () => {
+      const d = f.ct(4.2);
+      bodyAt(d, () => { quiet(d + 0.6); f.cast('Breach', d, 'dive'); breachMech(d); });
+    };
+
     // --- the births ---------------------------------------------------------------------------------------------
     // which element stands where: drawn fresh each pull (what a cut wakes is whatever stands beside it, so the answer is never learned)
     const place = (els, slots) => { const sl = f.shuffle(slots); return els.map((el, i) => [el, sl[i]]); };
@@ -479,20 +608,29 @@ const HYDRA = {
       const first = rot()[0];
       relay(first ? first.t : f.t + (o.late ?? 6));
     };
+    // Acts II and III: a new set of heads rises on a Mother's Cry (the act's first Cry for II, the Cry that ends the Submerge for III),
+    // so the act change is a beat and not only heads appearing. Each is once only: a pull that skips ahead (practice) raises them at once.
+    let bornII = false, bornIII = false;
+    const riseII = () => {
+      if (bornII) return; bornII = true;
+      f.emit({ t: 'propfx', k: 'rise', x: 0, y: 0, n: 3 });
+      birth(place(['flame', 'frost', 'storm'], [1, 4, 7]), { late: 6 });
+    };
+    const riseIII = () => {
+      if (bornIII) return; bornIII = true;
+      f.emit({ t: 'propfx', k: 'rise', x: 0, y: 0, n: 3 });
+      const elder = (order[0] && order[0].el) || 'acid';
+      const sl = f.shuffle([2, 5, 8]);
+      mkHead('gaze', sl[0], { late: 6 }); mkHead('mire', sl[1], { late: 6 }); mkHead(elder, sl[2], { elder: true, late: 9 });
+      const first = rot()[0];
+      relay(first ? first.t : f.t + 6);
+    };
+    const skipping = () => !!(f.skipTo && f.courseN < f.skipTo);   // (practice: this act is being passed over)
     const actStart = n => () => {
       B.untargetable = false;
       if (n === 1) birth(place(['acid', 'tide', 'venom'], [0, 3, 6]), { late: 7 });
-      else if (n === 2) {
-        f.emit({ t: 'propfx', k: 'rise', x: 0, y: 0, n: 3 });
-        birth(place(['flame', 'frost', 'storm'], [1, 4, 7]), { late: 6 });
-      } else {
-        f.emit({ t: 'propfx', k: 'rise', x: 0, y: 0, n: 3 });
-        const elder = (order[0] && order[0].el) || 'acid';
-        const sl = f.shuffle([2, 5, 8]);
-        mkHead('gaze', sl[0], { late: 6 }); mkHead('mire', sl[1], { late: 6 }); mkHead(elder, sl[2], { elder: true, late: 9 });
-        const first = rot()[0];
-        relay(first ? first.t : f.t + 6);
-      }
+      else if (n === 2) { if (skipping()) riseII(); }
+      else riseIII();
     };
 
     // --- the Submerge (the seam) ----------------------------------------------------------------------------------
@@ -526,15 +664,19 @@ const HYDRA = {
       });
     };
     const emerge = () => {
-      const d = f.ct(3.0);
-      f.cast("Mother's Cry", d, 'cry');
-      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: dmg.cry, hidden: true, tag: 'cry' });
+      const d = f.ct(X ? 5.0 : 3.0);
+      // (Extreme: she comes up out of the flood as a Breach, and the Cry's blow lands with it)
+      f.cast(X ? 'Breach' : "Mother's Cry", d, X ? 'dive' : 'cry');
+      f.mech({ type: 'raidwide', shape: { kind: 'circle', x: 0, y: 0, r: 0 }, delay: d, dmg: X ? dmg.cry * 0.8 : dmg.cry, hidden: true, tag: 'cry' });
+      if (X) { bodyEnd = Math.max(bodyEnd, f.t + d); breachMech(d); }
+      f.emit({ t: 'roomev', k: 'hydra-cry', dur: +(d + 1.2).toFixed(2) });
       f.afterKeep(d, () => {
         B.untargetable = false; paused = false;
         for (const h of heads.values()) h.sunk = false;
         // anything of the flood still rising is gone now
         for (const h of [...heads.values()]) if (h.surf && f.adds.has(h.add.id)) { h.add.onDeath = null; heads.delete(h.add.id); f.killAdd(h.add); }
         for (const h of heads.values()) h.last = Math.min(h.last, f.t - 1);
+        riseIII();   // (the nine-headed act's new heads rise as the Cry lands)
         relay(f.t + 2);
       });
     };
@@ -577,6 +719,8 @@ const HYDRA = {
       // the first five cut heads answer, in the order they fell. A stump that was never seared strikes harder than one that was, and each
       // head cut beyond the fifth (up to four) adds to every echo: cutting everything is paid for here.
       let t = 3.2;
+      // Extreme: before the stumps answer, two necks wind together and strike each other's way (Entwined Necks; the longest it can run is laid out for)
+      if (X) { const d0 = f.ct(2.4); f.afterKeep(t, () => knot(d0, true)); t += d0 + 0.4 + 2 * (f.ct(4.4) + 0.5) + 0.2; }
       order.slice(0, 5).forEach((o, i) => {
         const pos = slotPos(o.slot);
         f.afterKeep(t, () => {
@@ -614,11 +758,12 @@ const HYDRA = {
     // Mother, and for the healer to catch up, once every cycle of three beats. `span`: the act's length in seconds (the last beat
     // that starts inside it is the last one).
     const BR = 7;
-    const rhythm = (span, first, from, swap = {}) => {
+    // (o.cry0: the act's first Cry is the one that raises its heads)
+    const rhythm = (span, first, from, swap = {}, o = {}) => {
       const seq = [[maul, 'Rending Maul'], [thrash, 'Tail Thrash'], [cry, "Mother's Cry"]], out = [];
       let after = null, t = 0;
       for (let i = 0; ; i++) {
-        const sw = H && swap[i], [fn, name] = sw ? [sw[0], sw[1]] : seq[(i + from) % 3];
+        const sw = H && swap[i], [fn, name] = sw ? [sw[0], sw[1]] : i === 0 && o.cry0 && seq[from % 3][1] === "Mother's Cry" ? [o.cry0, "Mother's Cry"] : seq[(i + from) % 3];
         // Normal: the Thrash comes every other cycle (the melee hands lose their ground to it, and the Maul and the Cry keep the beat)
         if (!H && name === 'Tail Thrash' && Math.floor((i + from) / 3) % 2 === 1) continue;
         const d = i === 0 ? first : after || BEAT;
@@ -631,27 +776,32 @@ const HYDRA = {
       }
       return out;
     };
-    const DANCE = [tidalDance, 'Tidal Dance', 10.5], GAZE = [hydraGaze, "Hydra's Gaze", 9];
-    // Hard draws which beats are given over to the big moves each pull: a Dance or a Gaze takes a Tail Thrash's place (the tank
-    // keeps his Mauls, the healer every Cry), never two within three beats of each other. `from` is where the act's rhythm
-    // starts (0 Maul, 1 Thrash, 2 Cry); `win` the beats to choose from; which of them is a Dance and which a Gaze is drawn too.
-    const drawSwaps = (from, win, dances, gazes) => {
-      if (!H) return {};
-      const n = dances + gazes, pool = range(win[0], win[1]).filter(i => (i + from) % 3 === 1);
-      for (let tries = 0; tries < 200; tries++) {
-        const at = f.shuffle(pool).slice(0, n).sort((a, b) => a - b);
-        if (at.length < n || !at.every((i, k) => !k || i - at[k - 1] >= 3)) continue;
-        const kinds = f.shuffle([...Array(dances).fill(DANCE), ...Array(gazes).fill(GAZE)]);
-        return Object.fromEntries(at.map((i, k) => [i, kinds[k]]));
-      }
-      return {};
+    const DANCE = [tidalDance, 'Tidal Dance', 10.5], GAZE = [hydraGaze, "Hydra's Gaze", 9], KNOT = [entwine, 'Entwined Necks', 11], BREACH = [breach, 'Breach', 9.5];
+    // Hard runs one of three fixed dances a pull (f.dance, drawn at the pull; Normal and Extreme run none of Hard's draws: Extreme is dance 0).
+    // A Dance or a Gaze takes a Tail Thrash's place (the tank keeps his Mauls, the healer every Cry), never two within three beats of each
+    // other. `from` is where the act's rhythm starts (0 Maul, 1 Thrash, 2 Cry), so the Thrash beats are the ones that fall on every third
+    // from there. Each dance of an act differs from the others at the first beat they do not share, so that beat tells the party which
+    // dance this is. (Before the dances these were drawn fresh every pull, three draws: one for each of Acts I to III.)
+    const swapTable = {
+      1: [[5], [8], [11]],                                                       // Act I: one Dance
+      2: [[2, 8], [5, 11], [5, 8]],                                              // Act II: two Dances
+      3: [[DANCE, GAZE, GAZE, DANCE], [GAZE, DANCE, DANCE, GAZE], [GAZE, DANCE, GAZE, DANCE]],   // Act III: two Dances and two Gazes, on beats 4, 7, 10, 13
     };
-    const range = (a, b) => { const o = []; for (let i = a; i <= b; i++) o.push(i); return o; };
+    // (Extreme runs dance 0 and gives the Thrash beats the dances leave free to its three: a knot in Acts I and II, a Breach late in Act III
+    // and again at the start of the last stand, with a third at the Submerge's end and a knot in the Heart; Scalding is every stump's)
+    const drawSwaps = (act) => {
+      if (!H) return {};
+      const dn = f.dance % 3;
+      if (act === 1) return { [swapTable[1][dn][0]]: DANCE, ...(X ? { 8: KNOT } : null) };
+      if (act === 2) return { ...Object.fromEntries(swapTable[2][dn].map(i => [i, DANCE])), ...(X ? { 5: KNOT } : null) };
+      if (act === 4) return X ? { 1: BREACH } : {};
+      return { ...Object.fromEntries([4, 7, 10, 13].map((i, k) => [i, swapTable[3][dn][k]])), ...(X ? { 16: BREACH } : null) };
+    };
     const closingBeats = [[10, cry, "Mother's Cry"], [10, maul, 'Rending Maul'], [10, thrash, 'Tail Thrash'], [10, cry, "Mother's Cry"]];
     // I. Three Heads
     const actI = from => f.course({
       until: 0.75, push: true, onStart: actStart(1),
-      sets: rhythm(141, 5, 2, drawSwaps(2, [4, 10], 1, 0)),
+      sets: rhythm(141, 5, 2, drawSwaps(1)),
       closing: closingBeats,
       next: actII,
     }, from);
@@ -659,7 +809,7 @@ const HYDRA = {
     // II. Six Heads
     const actII = from => f.course({
       until: 0.45, push: true, onStart: actStart(2),
-      sets: rhythm(156, 3, 2, drawSwaps(2, [2, 12], 2, 0)),
+      sets: rhythm(156, 3, 2, drawSwaps(2), { cry0: () => cry(riseII) }),
       closing: closingBeats,
       next: submerged,
     }, from);
@@ -674,7 +824,7 @@ const HYDRA = {
     const actIII = from => f.course({
       until: 0.1, push: true, onStart: actStart(3),
       wall: { label: "Mother's Heart", run: heartRun, until: 'resolved', timeout: 80 },
-      sets: rhythm(190, 4, 0, drawSwaps(0, [3, 15], 2, 2)),
+      sets: rhythm(190, 4, 0, drawSwaps(3)),
       closing: closingBeats,
       next: lastHeads,
     }, from);
@@ -682,7 +832,7 @@ const HYDRA = {
     // Last Heads: the Heart has beaten
     const lastHeads = from => f.course({
       onStart: () => { B.untargetable = false; },
-      sets: rhythm(51, 9, 0),   // (laid out a head before the Heart's end: the tank's Maul comes first, well after the beat)
+      sets: rhythm(51, 9, 0, drawSwaps(4)),   // (laid out a head before the Heart's end: the tank's Maul comes first, well after the beat)
       closing: closingBeats,
       ramp: 0.08,
     }, from);

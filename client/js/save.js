@@ -4,7 +4,7 @@
 // so an update never costs anyone their gear.
 //
 //   v1: { v, name, inv: { next, items: [{ uid, key, q }], equip: { classId: { slot: uid } } },
-//         heroes: { classId: { clears: { bossId: { normal, hard } }, spec } }, settings: { debug } }
+//         heroes: { classId: { clears: { bossId: { normal, hard, extreme } }, spec } }, settings: { debug } }
 //   (spec and trials were added later without a version bump: both optional; a missing spec means the base kit,
 //   missing trials mean none passed: heroes[classId].trials = { specId: 1 }; likewise heroes[classId].found = [ids],
 //   the hidden recipes a hero has brewed, the Alembist's Reactions; and lastHero = { cls, spec }, the hero chosen last,
@@ -212,8 +212,9 @@ const Save = (() => {
     // a boss clear counts for the hero you cleared it with (specializations will unlock from these)
     recordClear(classId, bossId, mode) {
       const h = data.heroes[classId] = data.heroes[classId] || { clears: {} };
-      const b = h.clears[bossId] = h.clears[bossId] || { normal: 0, hard: 0 };
-      b[mode === 'hard' ? 'hard' : 'normal'] += 1;
+      const b = h.clears[bossId] = h.clears[bossId] || { normal: 0, hard: 0, extreme: 0 };
+      const k = mode === 'extreme' ? 'extreme' : mode === 'hard' ? 'hard' : 'normal';   // (an old record has no extreme count: it starts from 0)
+      b[k] = (b[k] | 0) + 1;
       if (bossId === 'sovereign') h.svr = 1;   // the Ultimate's cosmetic rewards (cinder wings, ember glow): earned by the hero who cleared it (heroes.js SvRewards)
       if (bossId === 'seraph') h.unr = 1;   // the last road's cosmetics (a frost edge, a faint halo): earned by the hero who cleared it (heroes.js UnRewards)
       write();
@@ -267,16 +268,18 @@ const Save = (() => {
     },
     // has any hero on this account cleared this boss (either difficulty)? The next boss opens on it, and the Hollow
     // King's first fall reveals the specializations.
-    bossBeaten: bossId => Object.values(data.heroes).some(h => h && h.clears && h.clears[bossId] && (h.clears[bossId].normal | 0) + (h.clears[bossId].hard | 0) > 0),
+    bossBeaten: bossId => Object.values(data.heroes).some(h => h && h.clears && h.clears[bossId] && (h.clears[bossId].normal | 0) + (h.clears[bossId].hard | 0) + (h.clears[bossId].extreme | 0) > 0),
     // Hard opens once every boss has fallen on Normal (any hero on this account), then one boss at a time from Grubnak:
     // each Hard fight opens on the Hard clear of the one before it.
     normalBeaten: bossId => Object.values(data.heroes).some(h => h && h.clears && h.clears[bossId] && (h.clears[bossId].normal | 0) > 0),
     hardBeaten: bossId => Object.values(data.heroes).some(h => h && h.clears && h.clears[bossId] && (h.clears[bossId].hard | 0) > 0),
-    clears: (classId, bossId) => ((data.heroes[classId] || { clears: {} }).clears[bossId] || { normal: 0, hard: 0 }),
+    // Extreme opens for a boss once it has fallen on Hard; extremeBeaten is the Extreme clear itself (old saves have no count: 0)
+    extremeBeaten: bossId => Object.values(data.heroes).some(h => h && h.clears && h.clears[bossId] && (h.clears[bossId].extreme | 0) > 0),
+    clears: (classId, bossId) => ((data.heroes[classId] || { clears: {} }).clears[bossId] || { normal: 0, hard: 0, extreme: 0 }),
     // specializations: a hero's trials open once any hero has cleared the Hollow King (any difficulty), and passing a
     // spec's trial unlocks that spec for the hero (trials.js)
     // spec trials open for every hero once any hero has cleared the Hollow King (account-wide; each spec still needs its own trial)
-    trialsOpen(classId) { return Object.keys(data.heroes).some(id => { const c = this.clears(id, 'hollowking'); return c.normal + c.hard > 0; }); },
+    trialsOpen(classId) { return Object.keys(data.heroes).some(id => { const c = this.clears(id, 'hollowking'); return (c.normal | 0) + (c.hard | 0) + (c.extreme | 0) > 0; }); },
     trialDone: (classId, specId) => !!(((data.heroes[classId] || {}).trials || {})[specId]),
     recordTrial(classId, specId) {
       const h = data.heroes[classId] = data.heroes[classId] || { clears: {} };

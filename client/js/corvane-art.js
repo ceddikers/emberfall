@@ -174,6 +174,35 @@ const CV_ART = (() => {
     line(ctx, sx, sy, mx - dy / L * bend, my + dx / L * bend, rgba(K.lacH, 0.45), 1.4);
   }
 
+  // Still Water's glass, stood up in front of him: a pane of ice that always faces the player, rim bright, a glint sweeping across it, rippling white when
+  // it answers a blow. The glass is the zone's (corvane-fx.js glass() says how formed it is); with the blade sheathed and held across, this is the whole
+  // of "do not strike him": nothing about him is reaching, and the glass is between you and him.
+  function ward(ctx, angle, t) {
+    const gl = typeof CV_FX !== 'undefined' && CV_FX.glass ? CV_FX.glass() : { grow: 1, flash: 0 };
+    if (!gl || gl.grow < 0.03) return;
+    const bx = Math.cos(angle) * 44, by = Math.sin(angle) * 44, g = gl.grow, fl = gl.flash;
+    const hh = 37 * g, w = 21 * (0.55 + 0.45 * g), cy = by - 30 * g - 6;
+    ctx.save(); ctx.rotate(-angle);
+    glow(ctx, bx, cy, 62, K.cyan, 0.14 + 0.22 * fl);
+    ellipse(ctx, bx, by + 4, 31 * g, 9 * g, 0, rgba('#dff2ff', 0.22), rgba('#ffffff', 0.7), 1.4);   // where it stands on the snow
+    for (let i = 0; i < 4; i++) { const x = bx + (i - 1.5) * 15 * g; poly(ctx, [x - 3, by + 3, x, by - 6 - 5 * hash(i, 4), x + 3, by + 3], '#eaf9ff', rgba('#04101e', 0.6), 1); }   // frost standing at its foot
+    const pts = [bx, cy - hh, bx + w, cy - hh * 0.45, bx + w, cy + hh * 0.45, bx, cy + hh, bx - w, cy + hh * 0.45, bx - w, cy - hh * 0.45];
+    poly(ctx, pts, rgba('#bfeaff', 0.17 + 0.4 * fl), rgba('#04101e', 0.55), 4.4);
+    ctx.save(); tracePath(ctx, pts); ctx.closePath(); ctx.clip();
+    for (const [x1, y1, x2, y2] of [[0, -1, -0.3, 0.8], [0, -1, 0.35, 0.7], [-1, -0.45, 1, 0.45]]) line(ctx, bx + x1 * w, cy + y1 * hh, bx + x2 * w, cy + y2 * hh, rgba('#ffffff', 0.3), 1);   // its facets
+    const sweep = ((t * 0.45) % 1.6) - 0.3;
+    ctx.globalCompositeOperation = 'lighter';
+    poly(ctx, [bx - w + sweep * w * 2, cy - hh, bx - w + sweep * w * 2 + 9, cy - hh, bx - w + sweep * w * 2 - 11, cy + hh, bx - w + sweep * w * 2 - 20, cy + hh], rgba('#ffffff', 0.4 + 0.4 * fl));
+    ctx.restore();
+    poly(ctx, pts, null, rgba('#eaf9ff', 0.9), 1.8);
+    crack(ctx, bx - 7, cy + 12, -0.5, 14, 21, 0.7);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    glow(ctx, bx, cy - hh, 14, '#ffffff', 0.5 + 0.3 * Math.sin(t * 5));
+    if (fl > 0.02) { ellipse(ctx, bx, cy, 16 + 60 * (1 - fl), (16 + 60 * (1 - fl)) * 1.3, 0, null, rgba('#ffffff', 0.8 * fl), 2.4); glow(ctx, bx, cy, 50, '#ffffff', 0.6 * fl); }
+    ctx.restore();
+    ctx.restore();
+  }
+
   // the body. Facing +x like the others; the hands and blade are laid out on the screen's axes (up is up) so a raised blade and a
   // point-down blade read the same whichever way he faces, and a blade lying low is laid in the floor's own plane.
   function corvane(ctx, st, angle = 0) {
@@ -201,6 +230,7 @@ const CV_ART = (() => {
 
     // the cold round him; more of it the fuller the gauge
     glow(ctx, 0, 0, 62 + notch * 5, K.cyan, 0.08 + 0.05 * notch + (full ? 0.12 : 0));
+    if (pose === 'still' && Math.sin(angle) < 0) ward(ctx, angle, t);   // (facing away from us: the glass stands behind him)
     if (pose === 'kneel') {   // the snow heaped about his knees
       ellipse(ctx, 6, 0, 36, 40, 0, rgba('#cddcf0', 0.55)); ellipse(ctx, 6, 0, 28, 31, 0, rgba('#e8f2ff', 0.5));
     }
@@ -238,7 +268,12 @@ const CV_ART = (() => {
       arm(ctx, L[0], L[1], lh[0], lh[1] + 1, 4); arm(ctx, R[0], R[1], hand[0], hand[1], -4);
       swordOf(g, tip); fist(ctx, hand[0], hand[1]); fist(ctx, lh[0], lh[1] + 1);
       circle(ctx, tip[0], tip[1], 5, null, rgba('#e8f4ff', 0.4), 1.4);   // where the point rests in the snow
-    } else if (pose === 'plant' || pose === 'still') {
+    } else if (pose === 'still') {
+      // Still Water: the blade stays in its scabbard, held crosswise before him in both hands: a guard, not a stroke
+      const g = S(15, 21), tip = S(15, -35), h1 = S(15, 12), h2 = S(15, -9);
+      arm(ctx, L[0], L[1], h2[0], h2[1], 3); arm(ctx, R[0], R[1], h1[0], h1[1], -3);
+      scabbard(ctx, g[0], g[1], tip[0], tip[1], { n: notch, t }); fist(ctx, h1[0], h1[1]); fist(ctx, h2[0], h2[1]);
+    } else if (pose === 'plant') {
       // planted point-down in the snow in front of him, both hands on the pommel
       const p = S(21, 0), hand = [p[0], p[1] - 6 + breathe * 0.4], g = [hand[0], hand[1] + 9], tip = [hand[0], hand[1] + 58];
       const l1 = [hand[0] - 3, hand[1] + 1], l2 = [hand[0] + 3, hand[1] - 2];
@@ -303,6 +338,7 @@ const CV_ART = (() => {
     ctx.save(); if (pose === 'kneel') ctx.scale(0.92, 0.92);
     head(ctx, t, pose === 'kneel' ? 4 : crouch ? 5 : pose === 'plant' ? 2 : 0, Math.min(1, notch / 4 + full), pose === 'kneel' || pr.breath ? 1 : 0);
     ctx.restore();
+    if (pose === 'still' && Math.sin(angle) >= 0) ward(ctx, angle, t);   // (facing us or side-on: the glass stands in front of him)
     if (pr.breath) {   // Hollow Breath: cold pouring from the helm
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       for (let i = 0; i < 6; i++) { const q = (t * 0.9 + i / 6) % 1; glow(ctx, 12 + q * 48, (hash(i, 6) - 0.5) * 18 * q, 12 + q * 22, '#dff2ff', 0.38 * (1 - q)); }
@@ -315,6 +351,19 @@ const CV_ART = (() => {
   function wisp(ctx, st) {
     const t = st.t || 0, bob = Math.sin(t * 3.1) * 1.5;
     glow(ctx, -2, bob, 36, K.cyan, 0.45 + 0.1 * Math.sin(t * 6));
+    if (typeof CV_FX !== 'undefined' && CV_FX.stanceWisp && CV_FX.stanceWisp()) {
+      // a stance's wisp, the thing to strike while he is not to be struck: a brighter heart and a slow ring of four marks closing in on it
+      glow(ctx, -2, bob, 30, '#ffffff', 0.3 + 0.1 * Math.sin(t * 7));
+      ctx.save(); ctx.rotate(t * 0.8);
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2, d = 27 + 3 * Math.sin(t * 4 + i);
+        ctx.save(); ctx.translate(Math.cos(a) * d, bob + Math.sin(a) * d); ctx.rotate(a + Math.PI);
+        poly(ctx, [-5, -5, 3, 0, -5, 5], rgba('#ffffff', 0.9), rgba('#06182a', 0.7), 1.2);
+        ctx.restore();
+      }
+      ctx.beginPath(); ctx.arc(0, bob, 21, 0, TAU); ctx.setLineDash([5, 9]); ctx.strokeStyle = rgba('#dff6ff', 0.75); ctx.lineWidth = 1.6; ctx.stroke(); ctx.setLineDash([]);
+      ctx.restore();
+    }
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < 4; i++) {   // tail strands
       const ph = i * 1.7, y0 = (i - 1.5) * 2.4;

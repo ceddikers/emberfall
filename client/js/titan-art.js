@@ -181,6 +181,124 @@ const TI_ART = (() => {
     }, { max: 0.6 });
   }
 
+  // ---------------------------------------------------------------- the Ice Tomb (prop kind icetomb, tell titomb)
+  // a hexagonal block of clear ice standing over a hero. It is glass: translucent, so whoever is sealed in it, and every telegraph, shows
+  // through; the weight is in the ink edges, the lit left face, the crystals round its foot and (late) the cracks that mean it will crush.
+  // grow 0..1 is how far up it has risen, a the overall opacity, age the seconds it has stood (cracks come in the last stretch).
+  function drawTomb(c, x, y, r, grow, a, age, seed) {
+    if (grow <= 0 || a <= 0) return;
+    const W = r * 0.95, H = 88 * grow, tw = 0.84, by0 = y + 4, bp = [], tp = [];
+    for (let i = 0; i < 6; i++) { const an = i * TAU / 6 + 0.26, ca = Math.cos(an), sa = Math.sin(an); bp.push([x + ca * W, by0 + sa * W * 0.5]); tp.push([x + ca * W * tw, by0 - H + sa * W * tw * 0.5]); }
+    c.save(); c.globalAlpha = cl(a);
+    ellipse(c, x + 6, y + 9, r * 1.25, r * 0.62, 0, rgba(INK, 0.4));
+    // the shadow of a figure standing in it, laid across the floor
+    c.save(); c.globalAlpha = 0.2 * cl(a) * grow; c.lineCap = 'round'; c.strokeStyle = INK; c.lineWidth = 11; c.beginPath(); c.moveTo(x + 8, y + 10); c.lineTo(x + 38, y + 19); c.stroke(); circle(c, x + 46, y + 21, 6, INK); c.restore();
+    // crystals behind the block, then the block, then the ones in front of its foot
+    for (let i = 0; i < 7; i++) { const an = i * TAU / 7 + 0.5, sn = Math.sin(an); if (sn < -0.15) spike(c, x + Math.cos(an) * W * 1.1, y + 4 + sn * W * 0.58, (20 + 18 * hash(i, seed)) * grow, 6.5, Math.cos(an) * 0.25, 0.9, { mid: '#a6d4f6' }); }
+    const hull = [bp[0], bp[1], bp[2], bp[3], tp[3], tp[4], tp[5], tp[0]].flatMap(q => q);
+    const g = c.createLinearGradient(x - W, by0 - H, x + W, by0); g.addColorStop(0, 'rgba(246,253,255,0.5)'); g.addColorStop(0.55, 'rgba(150,204,246,0.3)'); g.addColorStop(1, 'rgba(70,130,200,0.42)');
+    poly(c, hull, g, INK, 2.8);
+    // a dark column in the heart of it, the shape of whoever is held
+    c.save(); c.globalAlpha = 0.15 * cl(a) * grow; ellipse(c, x, by0 - H * 0.42, W * 0.34, H * 0.4, 0, '#0a2a5a'); circle(c, x, by0 - H * 0.86, W * 0.2, '#0a2a5a'); c.restore();
+    const shade = ['rgba(40,100,180,0.34)', 'rgba(150,204,246,0.18)', 'rgba(255,255,255,0.3)'];
+    for (let i = 0; i < 3; i++) poly(c, [bp[i][0], bp[i][1], bp[i + 1][0], bp[i + 1][1], tp[i + 1][0], tp[i + 1][1], tp[i][0], tp[i][1]], shade[i]);
+    poly(c, tp.flatMap(q => q), 'rgba(236,248,255,0.55)', INK, 1.8);
+    poly(c, [tp[4][0], tp[4][1], tp[5][0], tp[5][1], x + (tp[5][0] - x) * 0.3, by0 - H, x + (tp[4][0] - x) * 0.3, by0 - H + 3], 'rgba(255,255,255,0.45)');
+    for (let i = 0; i < 4; i++) { line(c, bp[i][0], bp[i][1], tp[i][0], tp[i][1], rgba(INK, 0.8), 3); line(c, bp[i][0], bp[i][1], tp[i][0], tp[i][1], 'rgba(255,255,255,0.75)', 1.1); }
+    line(c, x - W * 0.55, by0 - H * 0.2, x - W * 0.3, by0 - H * 0.8, 'rgba(255,255,255,0.5)', 2.4);
+    line(c, x + W * 0.35, by0 - H * 0.35, x + W * 0.5, by0 - H * 0.65, 'rgba(255,255,255,0.35)', 1.6);
+    const gl = (Math.sin(age * 1.7 + seed) * 0.5 + 0.5); glow(c, x - W * 0.45 + gl * W * 0.7, by0 - H * (0.25 + 0.5 * gl), 11, '#ffffff', 0.5 * grow);
+    for (let i = 0; i < 7; i++) { const an = i * TAU / 7 + 0.5, sn = Math.sin(an); if (sn >= -0.15) spike(c, x + Math.cos(an) * W * 1.1, y + 6 + sn * W * 0.58, (20 + 18 * hash(i, seed)) * grow, 6.5, Math.cos(an) * 0.25, 0.95, { mid: '#a6d4f6' }); }
+    // it has stood too long: cracks web the block, and in the last stretch their lips run hot
+    const crack = cl((age - 10) / 14);
+    if (crack > 0 && grow >= 1) { const hot = age > 21; cracks(c, x, by0 - H * 0.5, 44, crack, seed, { n: 6, wi: 2.8, wc: 1, glow: hot ? C.red : null, core: hot ? C.redHi : '#ffffff', a: 0.9 }); }
+    c.restore();
+  }
+  // the moment a tomb gives way: the block bursts into plates that fly and fall, a ring of crystals leaps and melts, the cold ring runs out
+  function tombBreak(x, y, r, H) {
+    const sd = Math.random() * 9;
+    VFX.fx({ dur: 0.9, layer: 'air', draw: (c, p, t, e) => {
+      for (let i = 0; i < 12; i++) {
+        const an = hash(i, sd) * TAU, sp = 70 + 150 * hash(i, sd + 1), x0 = x + Math.cos(an) * r * 0.5, y0 = y - 10 - 50 * hash(i, sd + 2);
+        const px = x0 + Math.cos(an) * sp * p, py = y0 + Math.sin(an) * sp * 0.45 * p - 90 * Math.sin(Math.min(1, p * 1.6) * Math.PI) * hash(i, sd + 3) + 260 * p * p;
+        chunk(c, px, Math.min(py, y + 30 + 14 * Math.sin(i)), 8 + 8 * hash(i, sd + 4), an + p * 5 * (hash(i, sd + 5) - 0.5), (1 - cl((p - 0.55) / 0.45)) * e.a, sd + i);
+      }
+    } });
+    core(x, y, 150, { dur: 0.5 }); ringSpikes(x, y, r * 0.9, 9, 24, 56, { dur: 0.95, hold: 0.2 });
+    chips(x, y, 14, 1.5); VFX.hit(x, y - 20, '#bfe8ff', 1.8); cam(0.04, 0.02, 0.4, 0.6);
+    decal(4.5, (c, k, T) => {
+      ellipse(c, x, y + 6, 40 + 10 * Math.min(1, T), 20 + 5 * Math.min(1, T), 0, rgba('#5fa8e8', 0.5 * k), rgba('#e6f6ff', 0.6 * k), 1.6);
+      for (let i = 0; i < 7; i++) { const a = i * TAU / 7 + hash(i, sd), d = 30 + 36 * hash(i, sd + 6); chunk(c, x + Math.cos(a) * d, y + 6 + Math.sin(a) * d * 0.6, 6 + 6 * hash(i, sd + 7), a, k * 1.5, sd + i); }
+    }, { max: 0.65 });
+  }
+
+  // ---------------------------------------------------------------- the room's two act-opening moments (arena-view.js glacierLife asks; under every unit)
+  // The Ice Groans (Act II): hairline cracks run out along the seams between the sheets, ice dust sifts down them, and the aurora shudders.
+  // Deep Winter (Act IV): the aurora goes out to a dark band round the plateau, then comes back pale; whatever sheets were water glaze over white.
+  // Both are quiet: thin lines and soft light, nothing over the sheets that a telegraph or a hero would be lost under.
+  const SEAMS = (() => {
+    const out = [], J = (i, n) => (hash(i, n) - 0.5) * 9;
+    [-300, -100, 100, 300].forEach((sx, k) => { const pts = []; for (let i = 0; i <= 16; i++) pts.push([sx + (i % 4 === 0 ? 0 : J(i, k)), -400 + i * 50]); out.push(pts); });
+    [-200, 0, 200].forEach((sy, k) => { const pts = []; for (let i = 0; i <= 20; i++) pts.push([-500 + i * 50, sy + (i % 4 === 0 ? 0 : J(i, k + 9))]); out.push(pts); });
+    return out;
+  })();
+  let outerPath = null;   // everything outside the plateau, for the dark band
+  const outside = () => { if (!outerPath && typeof ArenaView !== 'undefined' && ArenaView._tracePath) { outerPath = new Path2D(); outerPath.rect(-1600, -1300, 3200, 2600); ArenaView._tracePath(outerPath, 0); } return outerPath; };
+  function groans(c, ev, t) {
+    const u = t - ev.start, D = ev.end - ev.start, env = Math.min(1, u / 0.5) * cl((D - u) / 1.4);
+    if (env <= 0) return;
+    const grow = easeOut(cl(u / 2.6)), hw = ARENA.hw, hh = ARENA.hh;
+    c.save(); clipArena(c); c.lineCap = 'round'; c.lineJoin = 'round';
+    SEAMS.forEach((pts, si) => {
+      let i0 = 0, bd = 1e9; for (let i = 0; i < pts.length; i++) { const d = Math.hypot(pts[i][0], pts[i][1] + 250); if (d < bd) { bd = d; i0 = i; } }
+      const reach = Math.floor(grow * (pts.length - 1) * (0.55 + 0.45 * hash(si, 4))), a = Math.max(0, i0 - reach), b = Math.min(pts.length - 1, i0 + reach);
+      if (b - a < 1) return;
+      c.beginPath(); c.moveTo(pts[a][0], pts[a][1]); for (let i = a + 1; i <= b; i++) c.lineTo(pts[i][0], pts[i][1]);
+      c.strokeStyle = rgba(INK, 0.5 * env); c.lineWidth = 4; c.stroke();
+      c.strokeStyle = rgba('#eaf8ff', 0.55 * env); c.lineWidth = 1.2; c.stroke();
+      // ice dust sifting off the seam
+      for (let i = a; i <= b; i += 3) { const q = (t * 0.6 + hash(i, si)) % 1; glow(c, pts[i][0] + Math.sin(i + t) * 6, pts[i][1] + q * 22 - 6, 8, '#eaf6ff', 0.18 * env * (1 - q)); }
+    });
+    c.restore();
+    // the aurora shudders: bands of green and violet jitter over the far margin
+    c.save(); c.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 6; i++) glow(c, -hw + 90 + i * (hw * 2 - 180) / 5 + Math.sin(t * 9 + i * 2.1) * 14, -hh - 40 + Math.sin(t * 7 + i) * 10, 120, i % 2 ? C.vio : C.aur, 0.1 * env * (0.6 + 0.4 * Math.sin(t * 8 + i * 1.7)));
+    c.restore();
+  }
+  function deepWinter(c, ev, t, room) {
+    const u = t - ev.start, D = ev.end - ev.start, hw = ARENA.hw, hh = ARENA.hh;
+    if (!ev._w) { ev._w = []; for (const fl of (room && room.floor) || []) if (fl.kind === 'sheet' && fl.st === 3) ev._w.push({ x: fl.x, y: fl.y, i: fl.i }); }
+    const dim = u < 1.0 ? easeOut(u / 1.0) : u < 3.2 ? 1 : cl(1 - (u - 3.2) / 1.8);
+    const pale = cl((u - 3.0) / 0.8) * cl((D - u) / 1.2);
+    const op = outside();
+    if (op && dim > 0) {
+      c.save(); c.fillStyle = rgba('#020814', 0.5 * dim); c.fill(op, 'evenodd');
+      // a dark band along the top where the aurora hung
+      const g = c.createLinearGradient(0, -hh - 150, 0, -hh + 30); g.addColorStop(0, rgba('#020814', 0.4 * dim)); g.addColorStop(1, rgba('#020814', 0));
+      c.fillStyle = g; c.fillRect(-hw - 200, -hh - 150, hw * 2 + 400, 180); c.restore();
+    }
+    if (pale > 0) {
+      c.save(); c.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 6; i++) glow(c, -hw + 90 + i * (hw * 2 - 180) / 5 + Math.sin(t * 0.7 + i) * 40, -hh - 50 + Math.sin(t * 0.9 + i * 2) * 10, 140, i % 2 ? '#cfe4ff' : '#c8fff0', 0.1 * pale);
+      c.restore();
+    }
+    // water going to glass: a milky film spreads from the middle of each sunk sheet, flakes frosting in it
+    const glaze = cl((u - 1.0) / 2.2) * cl((D - u) / 1.4);
+    if (glaze > 0) for (const w of ev._w) {
+      c.save(); clipArena(c); c.beginPath(); c.rect(w.x - 100, w.y - 100, 200, 200); c.clip();
+      circle(c, w.x, w.y, 30 + 130 * easeOut(cl((u - 1.0) / 2.2)), rgba('#dff2ff', 0.3 * glaze));
+      for (let k = 0; k < 3; k++) flake(c, w.x, w.y, 26 + k * 26, rgba('#ffffff', 0.5 * glaze), 1.6, k * 0.5 + w.i);
+      c.strokeStyle = rgba('#ffffff', 0.5 * glaze); c.lineWidth = 3; c.strokeRect(w.x - 98, w.y - 98, 196, 196);
+      c.restore();
+    }
+  }
+  function room(c, rm, t) {
+    const ev = rm && rm.ev; if (!ev) return;
+    const g = ev['titan-ice-groans'], d = ev['titan-deep-winter'];
+    if (g && t >= g.start && t < g.end) groans(c, g, t);
+    if (d && t >= d.start && t < d.end) deepWinter(c, d, t, rm);
+  }
+
   // ---------------------------------------------------------------- tells (boss-tells.js get() asks for one by tag)
   const TELLS = {};
   // Winter's Howl: the room goes cold, rings of frost spreading out of him over a lace of snowflakes
@@ -508,6 +626,64 @@ const TI_ART = (() => {
     },
   };
 
+  // Ice Tomb (a drop that follows its victim; the rim is ice-blue, not red: nothing here hurts). The cold gathers: a ring of frost closes on
+  // the hero, crystals lean up round their feet and a glass block rises round them, faint, so they and the floor stay in plain sight.
+  TELLS.titomb = {
+    ground(ctx, tg, s, p, k, t) {
+      glow(ctx, s.x, s.y, s.r * 1.1, C.frost, (0.1 + 0.3 * p) * k);
+      circle(ctx, s.x, s.y, s.r * 0.9, null, rgba('#4aa0f0', (0.16 + 0.26 * p) * k), 9);
+      circle(ctx, s.x, s.y, s.r * (0.9 - 0.42 * eIn(p)), null, rgba('#ffffff', (0.4 + 0.4 * p) * k), 2);
+      for (let m = 0; m < 14; m++) { const a = m * TAU / 14 - t * 0.3; line(ctx, s.x + Math.cos(a) * (s.r * 0.9 - 7), s.y + Math.sin(a) * (s.r * 0.9 - 7), s.x + Math.cos(a) * (s.r * 0.9 + 3), s.y + Math.sin(a) * (s.r * 0.9 + 3), rgba('#ffffff', 0.55 * p * k), 1.6); }
+      flake(ctx, s.x, s.y, s.r * 0.5, rgba('#ffffff', (0.25 + 0.4 * p) * k), 1.8, t * 0.2);
+    },
+    air(ctx, tg, s, p, k, t) {
+      drawTomb(ctx, s.x, s.y, 46, eIn(p) * 0.9, 0.5 * p * k, 0, tg.id);
+    },
+  };
+  // Sunk Towers: a soak (blue) standing on a sheet that went under: a pillar of pale ice-light, crystals rising round its ring, the pip for the one hero it wants
+  TELLS.titower = {
+    ground(ctx, tg, s, p, k, t) {
+      if (s.r > 5) { tg._tx = s.x; tg._ty = s.y; }   // (a tower on still water is moved away at the last moment: the impact wants where it stood)
+      glow(ctx, s.x, s.y, s.r * 1.5, '#3d8bff', 0.26 * k);
+      circle(ctx, s.x, s.y, s.r, rgba('#3d8bff', 0.12 * k));
+      circle(ctx, s.x, s.y, s.r * 0.78, null, rgba('#b4d4ff', 0.5 * k), 2);
+      flake(ctx, s.x, s.y, s.r * 0.6, rgba('#e8f6ff', (0.3 + 0.3 * p) * k), 2, t * 0.12);
+      for (let m = 0; m < 20; m++) { const a = m * TAU / 20 + t * 0.2; line(ctx, s.x + Math.cos(a) * (s.r + 3), s.y + Math.sin(a) * (s.r + 3), s.x + Math.cos(a) * (s.r + 10), s.y + Math.sin(a) * (s.r + 10), rgba('#b4d4ff', 0.45 * k), 1.6); }
+      circle(ctx, s.x + 0, s.y - s.r - 12, 4.5, rgba('#b4d4ff', k), INK, 1.5);
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 4, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p)); ctx.strokeStyle = rgba('#ffffff', 0.8 * k); ctx.lineWidth = 2; ctx.stroke();
+    },
+    air(ctx, tg, s, p, k, t) {
+      const g = ctx.createLinearGradient(0, s.y - 190, 0, s.y); g.addColorStop(0, rgba('#cfe8ff', 0)); g.addColorStop(1, rgba('#cfe8ff', 0.32 * k));
+      ctx.fillStyle = g; ctx.fillRect(s.x - s.r * 0.36, s.y - 190, s.r * 0.72, 190);
+      for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + 0.3, h = (26 + 30 * hash(i, tg.id)) * (0.7 + 0.3 * Math.sin(t * 2 + i)); spike(ctx, s.x + Math.cos(a) * s.r * 0.82, s.y + 6 + Math.sin(a) * s.r * 0.5, h, 6, Math.cos(a) * 0.2, 0.85 * k, { mid: '#a6d4f6' }); }
+    },
+  };
+  // Icebreaker (the tankbuster cone; Extreme makes it wider to carry through a tomb): night-blue at the root, cold light along the lanes, a crack running down each
+  TELLS.tiice = {
+    ground(ctx, tg, s, p, k, t, env) {
+      const tgt = tg.target != null && env.entById ? env.entById(tg.target) : null;
+      ctx.save(); SHAPES.trace(ctx, s); ctx.clip();
+      const g = ctx.createRadialGradient(s.x, s.y, 30, s.x, s.y, s.r);
+      g.addColorStop(0, rgba('#0a1e3c', (0.3 + 0.2 * p) * k)); g.addColorStop(1, rgba(C.frost, (0.04 + 0.14 * p) * k));
+      ctx.fillStyle = g; ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      for (let i = 0; i < 5; i++) {
+        const a = s.angle - s.arc * 0.4 + s.arc * 0.8 * i / 4, L = s.r * (0.25 + 0.75 * easeOut(p));
+        ctx.beginPath(); ctx.moveTo(s.x, s.y); for (let j = 1; j <= 12; j++) { const u = j / 12, off = (hash(j, tg.id + i) - 0.5) * 22 * u; ctx.lineTo(s.x + Math.cos(a) * L * u - Math.sin(a) * off, s.y + Math.sin(a) * L * u + Math.cos(a) * off); }
+        ctx.strokeStyle = rgba(INK, 0.7 * k); ctx.lineWidth = 6; ctx.stroke(); ctx.strokeStyle = rgba('#eaf8ff', (0.4 + 0.4 * p) * k); ctx.lineWidth = 1.6; ctx.stroke();
+      }
+      for (let i = 0; i < 8; i++) {
+        const a = s.angle - s.arc / 2 + (i + 0.5) / 8 * s.arc, q = (t * 0.8 + i * 0.27) % 1, d0 = 70 + q * (s.r - 130);
+        line(ctx, s.x + Math.cos(a) * d0, s.y + Math.sin(a) * d0, s.x + Math.cos(a) * (d0 + 50), s.y + Math.sin(a) * (d0 + 50), rgba('#ffffff', 0.55 * (1 - q) * k * (0.4 + p)), 2.4);
+      }
+      ctx.restore();
+      if (tgt) {
+        const r0 = 54 - 12 * p;
+        circle(ctx, tgt.x, tgt.y, r0 + 7, null, rgba(C.frost, 0.3 * k), 9); circle(ctx, tgt.x, tgt.y, r0, null, rgba('#eaf8ff', (0.5 + 0.4 * p) * k), 3);
+      }
+    },
+  };
+
   // ---------------------------------------------------------------- impacts (boss-vfx.js impact() hands every tag of his over)
   // H: { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep } from boss-vfx.js. Returns false for a tag it does not know.
   function impact(tg, msg, ctx, H) {
@@ -796,6 +972,51 @@ const TI_ART = (() => {
         core(s.x, s.y, s.r * 1.1, { dur: 0.5, col: '#7fb8ff' }); ringSpikes(s.x, s.y, s.r * 0.7, 8, 30, 60, { dur: 1.2, hold: 0.3 });
         H.shockAt(s.x, s.y, { r: s.r * 1.3, color: '#bfe0ff', w: 6, dur: 0.5, flat: 1 }); VFX.debris(s.x, s.y - 40, { color: '#cfeaff', n: 10, speed: 1.2, up: 1.2 }); H.shake(5); return true;
       }
+      case 'titomb': {
+        // the block closes over them: a hot white core, the crystals leaping up round the hero, the cold ringing out
+        H.shapeFlash(s, '#cfeaff', { a: 0.28, dur: 0.5 });
+        core(s.x, s.y, 130, { dur: 0.5, col: '#5fa8e8' }); ringSpikes(s.x, s.y, 52, 9, 52, 96, { dur: 1.4, hold: 0.55 });
+        H.shockAt(s.x, s.y, { r: s.r * 1.5, color: '#f6fcff', w: 9, dur: 0.5, flat: 1 }); H.shockAt(s.x, s.y, { r: s.r * 2.2, color: '#5fa8e8', w: 5, dur: 0.7, flat: 1, delay: 0.12 });
+        chips(s.x, s.y, 10, 1.3); H.shake(6); return true;
+      }
+      case 'titower': {
+        // soaked: the pillar of ice-light breaks up into the sky and crystals ring the sheet. Failed (water under it, or nobody in it): the black water heaves and the ring cracks
+        const x = tg._tx != null ? tg._tx : s.x, y = tg._ty != null ? tg._ty : s.y, shape = { kind: 'circle', x, y, r: 90 };
+        if (msg && msg.fail) {
+          H.shapeFlash(shape, '#5fa8e8', { a: 0.22, dur: 0.6 });
+          H.shockAt(x, y, { r: 150, color: '#1f4d8c', w: 10, dur: 0.7, flat: 1 }); VFX.splash(x, y, { color: '#4a8ac8', n: 14 }); H.shake(7);
+          const sd = Math.random() * 9;
+          decal(3.5, (c, k, T) => { cracks(c, x, y, 90, 1, sd, { n: 8, glow: T < 1.5 ? C.red : C.frost, core: T < 1.5 ? C.redHi : '#ffffff', a: 0.9 }); for (let i = 0; i < 3; i++) { const q = (T * 0.55 + i / 3) % 1; ellipse(c, x, y, 20 + q * 80, 12 + q * 48, 0, null, rgba('#9fd8ff', 0.8 * k * (1 - q)), 2); } }, { max: 0.7 });
+          return true;
+        }
+        H.shapeFlash(shape, '#bfe0ff', { a: 0.3, dur: 0.5 });
+        VFX.pillar(x, y, { r: 36, h: 240, color: '#cfeaff', dur: 0.7 });
+        core(x, y, 130, { dur: 0.5, col: '#5fa8e8' }); ringSpikes(x, y, 62, 10, 40, 84, { dur: 1.3, hold: 0.4 });
+        H.shockAt(x, y, { r: 120, color: '#f6fcff', w: 8, dur: 0.5, flat: 1 }); chips(x, y, 8, 1.1); H.shake(5); return true;
+      }
+      case 'tiice': {
+        // Icebreaker: crystals thrust up through the cone from its root outward, a wave of cold light, the ice left cracked
+        const list = [];
+        H.shapeFlash(s, '#cfeaff', { a: 0.3, dur: 0.6 });
+        for (let i = 0; i < 26; i++) {
+          const a = s.angle + (Math.random() - 0.5) * s.arc * 0.92, d = s.r * (0.1 + 0.88 * Math.random());
+          list.push({ x: s.x + Math.cos(a) * d, y: s.y + Math.sin(a) * d, h: rand(50, 110), w: rand(7, 12), lean: rand(-0.25, 0.25), delay: d / s.r * 0.45 });
+        }
+        eruption(list, { dur: 1.9, hold: 0.7 });
+        VFX.fx({ dur: 0.6, layer: 'air', draw: (c, p, t, e) => {
+          const q = easeOut(p), fade = 1 - cl((p - 0.6) / 0.4); c.save(); clipArena(c); c.lineCap = 'round';
+          for (let i = 0; i < 4; i++) { const a = s.angle - s.arc * 0.4 + s.arc * 0.8 * i / 3; c.beginPath(); c.moveTo(s.x + Math.cos(a) * s.r * Math.max(0, q - 0.3), s.y + Math.sin(a) * s.r * Math.max(0, q - 0.3)); c.lineTo(s.x + Math.cos(a) * s.r * q, s.y + Math.sin(a) * s.r * q); c.strokeStyle = rgba('#eaf8ff', 0.8 * fade * e.a); c.lineWidth = 5; c.stroke(); }
+          c.restore();
+        } });
+        for (const q of H.scatter(s, 10)) H.after(rand(0, 0.3), () => chips(q.x, q.y, 3, 1.1));
+        cam(0.06, 0.03);
+        const sd = Math.random() * 9;
+        decal(4.5, (c, k) => {
+          for (let i = 0; i < 5; i++) { const a = s.angle - s.arc * 0.4 + s.arc * 0.8 * i / 4; cracks(c, s.x + Math.cos(a) * s.r * 0.35, s.y + Math.sin(a) * s.r * 0.35, s.r * 0.3, 1, sd + i, { n: 5, core: '#ffffff', wi: 3.4 }); }
+          for (let i = 0; i < 10; i++) { const a = s.angle + (hash(i, sd) - 0.5) * s.arc * 0.9, d = s.r * (0.15 + 0.8 * hash(i, sd + 1)); chunk(c, s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 7 + 8 * hash(i, sd + 2), a, k * 1.5, sd + i); }
+        }, { max: 0.6 });
+        H.shake(11); return true;
+      }
       default: return false;
     }
   }
@@ -812,6 +1033,7 @@ const TI_ART = (() => {
       H.shockAt(x, y, { r: 90, color: '#cfeaff', w: 6, dur: 0.45, flat: 1 }); VFX.sparks(x, y - 10, { color: '#f6fcff', n: 12, speed: 220 });
       return true;
     }
+    if (msg.k === 'break' && msg.kind === 'icetomb') { tombBreak(msg.x, msg.y, msg.r || 46); return true; }
     if (msg.k === 'warm') {
       VFX.smoke(msg.x, msg.y - 6, { n: 4, color: '#f2f8ff', size: 28, a: 0.5, speed: 60 }); VFX.sparks(msg.x, msg.y - 10, { color: '#ffd890', n: 8, speed: 180 });
       return true;
@@ -833,5 +1055,5 @@ const TI_ART = (() => {
     for (let i = 0; i < 6; i++) { const q = (t * 0.7 + i / 6) % 1, a = (i - 2.5) * 0.3; glow(c, 30 + Math.cos(a) * (10 + q * 60), Math.sin(a) * (10 + q * 60), 10 + q * 12, i % 2 ? C.vio : C.aur, 0.35 * (1 - q)); }
   }
 
-  return { tell: tag => TELLS[tag] || null, impact, propFx, fistGlow, howlAura, iceFist, spike, flake, chunk, cracks };
+  return { tell: tag => TELLS[tag] || null, impact, propFx, fistGlow, howlAura, iceFist, spike, flake, chunk, cracks, tomb: (c, pr, t) => { const age = pr.born != null ? t - pr.born : 1; drawTomb(c, pr.x, pr.y, pr.r || 46, easeOut(cl(age / 0.4)), 1, age, pr.id || 0); }, room };
 })();

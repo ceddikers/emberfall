@@ -385,9 +385,160 @@ const VK_STORM = (() => {
     ctx.restore();
   }
 
+  // ---------------------------------------------------------------------------------------------------------- the revamp's moments
+  // roomev 'volkar-skylowers' (Normal's last act: the cloud comes down and the ring closes), 'volkar-split' (Extreme: the sky about to split),
+  // 'volkar-conduct-burst' (Extreme: the bolt goes everywhere) are drawn under the units (moments, from `under`); 'volkar-magnetize' (the throw or
+  // pull happening), 'volkar-conduction' (a storm gathering over the marked hero, the first strike) and 'volkar-shift' (the swap flare) over them
+  // (fx, from `over`, which has the heroes), and the threads between heroes (Magnetize's links, Conduction's leaps) are `thread` (ArenaView.tether).
+  // Every one of them is additive light, thin rings and short lines: none covers a hero, a telegraph or the boss for more than a flicker.
+  const GOLD = '#ffb31f', BLUE = '#38c4ff', PUSH = '#ffb27a', PULL = '#9fd8ff', LEAP = '#ffe26a';   // (a charge as the heroes' rings wear it; the throw and the pull as their head marks do; the bolt)
+  const chgc = sg => (sg > 0 ? GOLD : BLUE);
+  const seen = { pol: null };           // (the charges as the last frame saw them: drawRoomOver sets it before the tethers, which want them)
+  const lastSign = new Map(), flares = [];
+  // a chevron, tip at (x, y) + (dx, dy) * sz
+  function chevron(ctx, x, y, dx, dy, col, a, sz = 7) {
+    ctx.beginPath(); ctx.moveTo(x - dx * sz - dy * sz * 0.9, y - dy * sz + dx * sz * 0.9); ctx.lineTo(x + dx * sz, y + dy * sz); ctx.lineTo(x - dx * sz + dy * sz * 0.9, y - dy * sz - dx * sz * 0.9);
+    ctx.strokeStyle = rgba(col, a); ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+  }
+  function moments(ctx, room, t) {
+    const ev = room && room.ev; if (!ev) return;
+    let c = 0;
+    // The Sky Lowers: the cloud presses down over the summit (the dark rises round it, with lightning in it) while a pale ring of pressure draws in to where the edge will close
+    const sk = ev['volkar-skylowers'];
+    if (sk && t >= sk.start) {
+      const age = t - sk.start, d = Math.max(0.5, sk.dur || 3.5), q = ease(c01(age / d));
+      c = 0.62 * (age < d ? q : 1 - c01((age - d) / 4));
+      if (age < d + 0.6) {
+        const k = age < d ? 1 : 1 - (age - d) / 0.6, rr = lerp(580, 345, q);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        ellipse(ctx, 0, 0, rr, rr, 0, null, rgba('#cfe8ff', (0.1 + 0.16 * q) * k), 2 + 3 * q);
+        ellipse(ctx, 0, 0, rr + 22, rr + 22, 0, null, rgba('#7fc8ff', 0.08 * k), 1.5);
+        ctx.restore();
+      }
+    }
+    // Split Current: the light drains from the summit as the sky gets ready to split (the seam itself is the red area's own tell)
+    const sp = ev['volkar-split'];
+    if (sp && t >= sp.start) { const age = t - sp.start, d = Math.max(0.5, sp.dur || 5); c = Math.max(c, 0.28 * (age < d ? ease(c01(age / d)) : 1 - c01((age - d) / 1.2))); }
+    if (c > 0.02) canopy(ctx, t, c, 0.7);
+    // Conduction's burst: a ring of white light runs out over the summit and veins of both charges crawl over the rock
+    const cb = ev['volkar-conduct-burst'];
+    if (cb && t >= cb.start && t < cb.start + 1.1) {
+      const age = t - cb.start, q = c01(age / 1.0), k = 1 - q, R = ARENA.full, rr = 50 + easeOut(q) * R * 0.95;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ellipse(ctx, 0, 0, rr, rr, 0, null, rgba('#eaffff', 0.5 * k), 5 * k + 1);
+      ellipse(ctx, 0, 0, rr * 0.86, rr * 0.86, 0, null, rgba(BLUE, 0.3 * k), 3);
+      ellipse(ctx, 0, 0, rr * 0.7, rr * 0.7, 0, null, rgba(GOLD, 0.3 * k), 3);
+      for (let i = 0; i < 12; i++) { const a = hs(i, 41) * TAU2, L = (R - 60) * (0.55 + 0.45 * hs(i, 42)); crack(ctx, Math.cos(a) * 50, Math.sin(a) * 50, Math.cos(a) * L, Math.sin(a) * L, t, i * 3 + 1, i % 2 ? BLUE : GOLD, 1.8, 0.85 * k, 22, 8, 0.14); }
+      ctx.restore();
+    }
+  }
+  function fx(ctx, room, t, env) {
+    const ev = room && room.ev; if (!ev || !env || !env.entById) return;
+    const pol = env.pol, ent = env.entById;
+    seen.pol = pol || null;
+    // Polarity Shift: when two heroes swap charge (their rings ended) the old colour draws in, the new one rings out from their feet, and a bolt joins them
+    const sh = ev['volkar-shift'], shEnd = sh ? sh.start + Math.max(0, ...(sh.times || [0])) + 1.6 : 0;
+    for (const u of env.units || []) {
+      const sg = pol && pol.get(u.id), prev = lastSign.get(u.id);
+      if (sg && prev && prev !== sg && sh && t >= sh.start - 0.05 && t < shEnd) flares.push({ id: u.id, at: t, from: prev, to: sg });
+      if (sg) lastSign.set(u.id, sg);
+    }
+    for (let i = flares.length - 1; i >= 0; i--) {
+      const f = flares[i], age = t - f.at;
+      if (age < 0 || age > 0.9) { flares.splice(i, 1); continue; }
+      const e = ent(f.id); if (!e) continue;
+      const q = c01(age / 0.8), k = 1 - q, y = e.y + 4;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ellipse(ctx, e.x, y, 14 + 46 * (1 - q), 10 + 34 * (1 - q), 0, null, rgba(chgc(f.from), 0.8 * k), 3);
+      ellipse(ctx, e.x, y, 14 + 62 * easeOut(q), 10 + 46 * easeOut(q), 0, null, rgba(chgc(f.to), 0.9 * k), 3.5 * k + 1);
+      glow(ctx, e.x, y - 10, 46, chgc(f.to), 0.35 * k);
+      for (let n = 0; n < 5; n++) { const a = n * TAU2 / 5 + f.id, d0 = 20 + 50 * easeOut(q); line(ctx, e.x + Math.cos(a) * d0, y + Math.sin(a) * d0 * 0.72, e.x + Math.cos(a) * (d0 + 9), y + Math.sin(a) * (d0 + 9) * 0.72, rgba(chgc(f.to), k), 2); }
+      ctx.restore();
+      for (let j = 0; j < i; j++) { const g = flares[j]; if (Math.abs(g.at - f.at) > 0.2 || g.from === f.from) continue; const e2 = ent(g.id); if (e2) crack(ctx, e.x, e.y - 18, e2.x, e2.y - 18, t, f.id + g.id, '#ffffff', 2, 0.8 * k, 18, 8, 0.1); }
+    }
+    // Magnetize: at the move, a ring and streaks at the middle of each pair: out for a throw (same charge), in for a pull (opposite)
+    const mg = ev['volkar-magnetize'];
+    if (mg && t >= mg.end && t < mg.end + 0.7) {
+      const q = c01((t - mg.end) / 0.6), k = 1 - q;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (const [ia, ib, kind] of mg.pairs || []) {
+        const a = ent(ia), b = ent(ib); if (!a || !b) continue;
+        const col = kind === 'push' ? PUSH : PULL, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, y = my + 4;
+        ellipse(ctx, mx, y, 16 + 64 * easeOut(q), 12 + 48 * easeOut(q), 0, null, rgba(col, 0.75 * k), 3 * k + 1);
+        glow(ctx, mx, my - 8, 50, col, 0.3 * k);
+        for (let n = 0; n < 8; n++) {
+          const an = n * TAU2 / 8 + 0.3, ux = Math.cos(an), uy = Math.sin(an) * 0.72, d0 = kind === 'push' ? 14 + 70 * easeOut(q) : 84 - 70 * easeOut(q);
+          line(ctx, mx + ux * d0, y + uy * d0, mx + ux * (d0 + 12), y + uy * (d0 + 12), rgba(col, 0.9 * k), 2);
+        }
+      }
+      ctx.restore();
+    }
+    // Conduction: a storm gathers high over the marked hero (above their mark), a pole of light falls toward them as it nears, and the first strike lands
+    const cd = ev['volkar-conduction'];
+    if (cd && t >= cd.start && t < cd.end + 1.2) {
+      const e = ent(cd.pid);
+      if (e) {
+        const p = c01((t - cd.start) / Math.max(0.5, cd.dur)), post = t - cd.end, fade = post > 0 ? 1 - c01(post / 1.0) : 1;
+        const lift = e.lift || 0, cx = e.x, cy = e.y - lift - 178 + 22 * p, sz = 44 + 40 * p, fr = Math.floor(t * 11);
+        ctx.save();
+        for (let i = 0; i < 6; i++) glow(ctx, cx + Math.cos(i * 1.9) * sz * 0.6 + Math.sin(t * 0.9 + i) * 4, cy + Math.sin(i * 2.7) * sz * 0.22, sz * (0.5 + hs(i, 3) * 0.3), i % 2 ? '#141d2e' : '#1d2a40', (0.45 + 0.4 * p) * fade);
+        ctx.globalCompositeOperation = 'lighter';
+        glow(ctx, cx, cy, sz * 0.9, '#7fc8ff', (0.1 + 0.2 * p) * fade);
+        for (let i = 0, n = 1 + Math.floor(p * 4); i < n; i++) if ((fr + i * 3) % 3 !== 0) crack(ctx, cx + (hs(fr, i) - 0.5) * sz, cy, cx + (hs(fr + 5, i) - 0.5) * sz * 1.6, cy + 30 + hs(i, 7) * 40, t, i * 9 + 4, i % 2 ? LEAP : K.cy, 1.6, 0.8 * fade, 11, 6, 0.3);
+        if (p > 0.45) column(ctx, e.x, e.y - lift - 112, cy + 20, 16 + 10 * p, '#fff2b0', 0.45 * c01((p - 0.45) / 0.55) * fade, 0.25);
+        ctx.restore();
+        if (post >= 0 && post < 0.7) impact(ctx, t, e.x, e.y, 62, post, LEAP, false);
+      }
+    }
+  }
+  // the threads between heroes (ArenaView.tether hands them over): Magnetize's links and Conduction's leaps
+  function thread(ctx, a, b, th, t) {
+    const pol = seen.pol, room = typeof ArenaView !== 'undefined' ? ArenaView.liveRoom : null, ev = (room && room.ev) || {};
+    const left = Math.max(0, th.end - t), p = 1 - left / Math.max(0.1, th.end - th.start), id = th.id || 0;
+    const ax = a.x, ay = a.y - 20, bx = b.x, by = b.y - 20, mx = (ax + bx) / 2, my = (ay + by) / 2;
+    const d = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / d, uy = (by - ay) / d;
+    const sa = pol && pol.get(th.a), sb = pol && pol.get(th.b);
+    let ea, eb;
+    ctx.save();
+    if (th.tag === 'conduct') {
+      // the bolt about to leap to the nearest hero: it brightens and thickens as it nears the leap; a leap to the SAME charge crackles in that charge with a red
+      // glow at its middle (as the Surge's same-charge arcs do): it will burst; the next hero has a ring at their feet
+      const same = !!sa && sa === sb, col = same ? chgc(sa) : LEAP;
+      crack(ctx, ax, ay, bx, by, t, id * 5 + 1, col, 1.8 + 2.4 * p, 0.5 + 0.5 * p, 20, 10, 0.08);
+      if (same) glow(ctx, mx, my, 34, '#ff6a5a', 0.3 * p);
+      ctx.globalCompositeOperation = 'lighter';
+      ellipse(ctx, b.x, b.y + 4, 26 + 12 * p + 3 * Math.sin(t * (6 + 12 * p)), 19 + 9 * p, 0, null, rgba(col, 0.35 + 0.5 * p), 2.5);
+      glow(ctx, ax, ay, 16 + 10 * p, col, 0.4);
+      ea = eb = col;
+    } else {
+      // Magnetize's link: a throw (same charge) is a taut thread spitting in their charge with chevrons pointing away from the middle; a pull (opposite
+      // charges) is a steady bond, gold running to blue, with chevrons pointing in. They quicken toward the move.
+      const mgv = ev['volkar-magnetize'], pr = mgv && (mgv.pairs || []).find(q => (q[0] === th.a && q[1] === th.b) || (q[0] === th.b && q[1] === th.a));
+      const push = pr ? pr[2] === 'push' : sa === sb, ca = chgc(sa), cb = chgc(sb), col = push ? PUSH : PULL;
+      if (push) crack(ctx, ax, ay, bx, by, t, id * 3 + 2, ca, 2.2 + p, 0.65 + 0.3 * p, 16, 9, 0.05);
+      else {
+        const g = ctx.createLinearGradient(ax, ay, bx, by);
+        g.addColorStop(0, rgba(ca, 0.9)); g.addColorStop(1, rgba(cb, 0.9));
+        ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
+        ctx.strokeStyle = rgba('#ffffff', 0.12); ctx.lineWidth = 11; ctx.stroke();
+        ctx.strokeStyle = g; ctx.lineWidth = 4.5 + 1.5 * Math.sin(t * 4); ctx.stroke();
+      }
+      if (d > 80) for (const u of [0.14, 0.27, 0.4]) {
+        const al = (0.55 + 0.35 * p) * (0.7 + 0.3 * Math.sin(t * (4 + 6 * p) - u * 14)), dir = push ? -1 : 1;
+        chevron(ctx, ax + (bx - ax) * u, ay + (by - ay) * u, ux * dir, uy * dir, col, al);
+        chevron(ctx, ax + (bx - ax) * (1 - u), ay + (by - ay) * (1 - u), -ux * dir, -uy * dir, col, al);
+      }
+      ea = ca; eb = cb;
+    }
+    circle(ctx, a.x, a.y - 20, 5, rgba(ea, 0.9), OUT, 1.5);
+    circle(ctx, b.x, b.y - 20, 5, rgba(eb, 0.9), OUT, 1.5);
+    ctx.restore();
+  }
+
   function under(ctx, room, t) {
     const s = seq(room, t);
     if (typeof ArenaView !== 'undefined' && ArenaView.amb) ArenaView.amb.calm = s.hush;   // (the wind dies: the summit's own rain, grass and grit read this, arena-view.js peakLife)
+    moments(ctx, room, t);   // (the revamp's moments that sit under the units)
     if (!s.storm && s.brk <= 0) return;
     canopy(ctx, t, s.c, s.storm ? 1 : c01((s.brk - 0.3) / 0.4) * (1 - s.hush), s.tw);
     if (!s.storm) dread(ctx, t, s, room);
@@ -488,6 +639,7 @@ const VK_STORM = (() => {
   }
 
   function over(ctx, room, t, env) {
+    fx(ctx, room, t, env);   // (the revamp's moments that need the heroes)
     const s = seq(room, t);
     if (!s.storm) return;
     pour(ctx, t, room);
@@ -642,10 +794,24 @@ const VK_STORM = (() => {
         if (typeof VFX !== 'undefined') { try { VFX.sparks(0, 0, { color: POUR[i % 3], n: 26 + 8 * i, speed: 380 }); } catch (e) { /* (cosmetic) */ } }
       });
       h.later(at + (n - 1) * every + 1.0, () => play('bm-volkar-storm-heart', { vol: 0.85 }));
+    } else if (msg.k === 'volkar-skylowers') {
+      // the cloud comes down: a low rumble, and the weight of it as the ring closes
+      const d = Math.max(1, msg.dur || 3.5);
+      h.later(d * 0.5, () => shake(4));
+      h.later(Math.max(0, d - 0.15), () => { shake(13); if (FX.cam && FX.cam.punch) FX.cam.punch(0.02, 0.4); });
+    } else if (msg.k === 'volkar-conduct-burst') {
+      shake(15); flash('#eaf6ff', 0.4, 0.4);
+      if (FX.cam && FX.cam.punch) FX.cam.punch(0.03, 0.45);
+    } else if (msg.k === 'volkar-conduction') {
+      h.later(Math.max(0, msg.dur || 5.5), () => { shake(8); flash(LEAP, 0.16, 0.25); });
+    } else if (msg.k === 'volkar-magnetize') {
+      h.later(Math.max(0, msg.dur || 4.5), () => shake(6));
+    } else if (msg.k === 'volkar-shift') {
+      for (const T of msg.times || []) h.later(Math.max(0, T), () => shake(3));
     }
   }
 
-  return { under, over, heart, crumble, tremble, event, buildStormPeak, seq, props, charge, FACE, SHOULDER, BURST, HUSH };
+  return { under, over, thread, heart, crumble, tremble, event, buildStormPeak, seq, props, charge, FACE, SHOULDER, BURST, HUSH };
 })();
 
 if (typeof ArenaView !== 'undefined') ArenaView.buildStormPeak = VK_STORM.buildStormPeak;

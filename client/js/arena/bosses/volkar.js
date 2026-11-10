@@ -49,10 +49,11 @@
 const VOLKAR = {
   id: 'volkar', name: 'Volkar', title: 'The Storm Titan',
   normalDmg: 1.08,   // (Normal's damage multiplier, fight.js default 1; 2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven))
-  hp: { normal: 4220000, hard: 3840000 },   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 3800000 / 3400000; Hard 4.6M before 2026-10-27; 4.4M until the Storm Unbound healed three bars, 2026-10-28)
+  hp: { normal: 4220000, hard: 3840000, extreme: 7120000 },   // (Extreme: Hard's health and about six percent, first guess; tuning comes later)   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 3800000 / 3400000; Hard 4.6M before 2026-10-27; 4.4M until the Storm Unbound healed three bars, 2026-10-28)
   hardDmg: 1.23,   // (2026-10-31: retuned for bots and parties holding talents (set 1 two/three rows, set 2 four/five, set 3 six/seven), was 1.06; 1.02 until the heal: 96 runs HUMAN=dps GEAR=mid about 30% a pull, mean clear 556 s of 607; perfect bots 69%; Hard's damage multiplier, fight.js default 1.25, tuned for a human party rather than perfect bots, CLAUDE.md)
-  autoDmg: { normal: 1450, hard: 1550 },
-  enrage: { normal: 592, hard: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
+  extremeDmg: 1.6,   // (Extreme starts at Hard's damage multiplier)
+  autoDmg: { normal: 1450, hard: 1550, extreme: 1550 },
+  enrage: { normal: 592, hard: 607, extreme: 607 },   // the cast starts here and lands 8 s later (10:00 / 10:15)
   enrageName: 'Skybreak',
   vuln: 0.5,
   spawn: { x: 0, y: 0 }, anchor: true,
@@ -76,13 +77,14 @@ const VOLKAR = {
     const TAU = Math.PI * 2;
     const dmg = {
       clap: H ? 8600 : 7450, fist: H ? 26500 : 23000, surgeAlone: H ? 10800 : 9800, surgeSame: H ? 19100 : 17250, surgePair: H ? 2500 : 2300,
-      lash: H ? 9000 : 7800,
+      lash: H ? 9000 : 7800, lashSting: H ? 5400 : 4700,   // (the Lash's charge: what a hero of the other charge takes for standing near the line)
       storm: H ? 2100 : 1850, thunderhead: H ? 6700 : 5750,
       crash: H ? 16500 : 14950, field: H ? 7000 : 6300, rod: H ? 6400 : 5750, rodAgain: H ? 15300 : 13800, rodFail: H ? 15300 : 13800, slam: H ? 11400 : 10350, wall: H ? 12100 : 12650, edge: H ? 15300 : 13800, pulse: H ? 330 : 300,
       chain: H ? 8900 : 8050, orb: H ? 15300 : 13800, skyfall: H ? 45800 : 41400,
       strike: H ? 11400 : 9200, strikeOpen: H ? 22900 : 17250, discharge: H ? 15300 : 13800, grounded: H ? 11400 : 10350, boulder: H ? 15300 : 12650, fall: H ? 19100 : 17250,
       squall: H ? 7600 : 6900, still: H ? 11400 : 10350, stillWrong: H ? 15300 : 13800, heavens: H ? 37000 : 32200, front: H ? 9500 : 8650,
       // the Storm Unbound's moves (Hard only; tuned 2026-10-28 so a human-like party clears Hard about a third of its pulls: 144 runs over three seed sets)
+      conduct: 9000, conductBurst: 11000, split: 14000,   // (Extreme's Conduction strike and burst, and Split Current)
       burst: 15000, armSlam: 36000, cross: 27000, armFail: 24000, armWrong: 28000, armSoak: 6000,
     };
     const S = (...steps) => steps.filter(Boolean);
@@ -138,18 +140,26 @@ const VOLKAR = {
     // takes it too, so nobody stands behind the tank. Hard: cast quicker and fixed sooner (a polarity fork to the tank's own charge was
     // tried and cost the bots about 20 points of Hard clears, so it is not in).
     const LASH_LOCK = H ? 1.0 : 1.4;
+    // (revamp) The Lash carries the tank's charge: a hero of the OTHER charge within LASH_REACH of the line is stung as well (a wider band, shown
+    // from the cast with the line; heroes of the tank's charge are not in it), so half the party gives the line a wider berth than the other half.
+    const LASH_REACH = 110;
     const lash = () => {
       const tank = f.tank(); if (!tank) return;
-      const d = f.ct(3.2);
+      const d = f.ct(3.2), ang = Math.atan2(tank.y - B.y, tank.x - B.x);
       f.cast('Static Lash', d, 'chain');
-      f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: Math.atan2(tank.y - B.y, tank.x - B.x), len: 640, w: 100 }, delay: d, dmg: dmg.lash,
+      f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: ang, len: 640, w: 100 }, delay: d, dmg: dmg.lash,
         tag: 'lash', aimFromBoss: tank.id, lockAt: LASH_LOCK });
+      const spared = new Set(), tid = tank.id;
+      f.mech({ type: 'aoe', shape: { kind: 'rect', x: B.x, y: B.y, angle: ang, len: 640, w: 100 + LASH_REACH * 2 }, delay: d, dmg: dmg.lashSting,
+        tag: 'lashwide', aimFromBoss: tid, lockAt: LASH_LOCK, group: spared, charge: charge(tid), tank: tid,
+        tick: m => { m.charge = charge(tid); spared.clear(); for (const p of f.players()) if (charge(p.id) === m.charge) spared.add(p.id); } });   // (the tank's own charge is spared: a flip mid-cast moves with it)
     };
 
     // Polarity Surge: same charges together arc; opposite charges together cancel out; alone takes it all
-    const surge = () => {
+    const surgeCore = shift => {
       const d = f.ct(6);
       f.cast('Polarity Surge', d, 'surge');
+      if (shift && f.extreme) polarityShift([d * 0.5]);   // (Extreme: a pair swaps charge half way through the cast, so the Surge is judged on the new charges)
       f.mech({ type: 'polarity', shape: { kind: 'circle', x: 0, y: 0, r: PAIR }, delay: d, dmg: 0, tag: 'surge', avoidable: false,
         onResolve: () => {
           const al = f.alive();
@@ -162,6 +172,8 @@ const VOLKAR = {
         } });
       return d;
     };
+    const surge = () => surgeCore(false);
+    const surgeX = () => surgeCore(true);   // (the Surge that Extreme's Polarity Shift rides on; plain everywhere else)
     // pair, then split at once: a Surge wants a partner within 150, and the Static Field that follows wants everyone 115 apart, so for a
     // moment the partner stands in the one ring of ground (115 to 150 away) that answers both (the field shows once the Surge has landed)
     const surgeField = () => { const d = surge(); f.afterKeep(d + 0.1, () => field(H ? 2.8 : 3.4, true, H ? 0.55 : 0.55)); };
@@ -183,6 +195,63 @@ const VOLKAR = {
     };
     // stack in pairs, then scatter (Normal leaves a moment to heal in between)
     const crashField = () => { const d = crash(); f.afterKeep(d + 0.1, () => (H ? field(3.3, true, 0.55) : field(3.8, true, 0.6))); };
+
+    // Magnetize (revamp): he links the party in two pairs with threads (a head mark on each says what the pair will do). A pair of OPPOSITE
+    // charges is pulled together MAG_D; a pair of the SAME charge is thrown apart MAG_D (a pull stops where they meet; a throw stops at the wall,
+    // a standing stone, or the broken edge, and hurts). Every hero's Static Field ring is shown from the cast and lands MAG_LAND s after the
+    // move, so the place to be is where the move leaves you clear of everyone (and of the wall, the stones and any broken edge).
+    // room.magDest is the move's own arithmetic, shared with the bots.
+    const MAG_D = 130, MAG_R = 105;
+    const magThrow = (sx, sy, tx, ty, same, salt) => {
+      let dx = tx - sx, dy = ty - sy, g = Math.hypot(dx, dy);
+      if (g < 24) { dx = Math.cos(salt); dy = Math.sin(salt); g = 1; }   // (on top of each other: a fixed line, the one thrown one way and the other the other)
+      const ux = dx / g, uy = dy / g;
+      if (same) return { fx: sx + ux * 20, fy: sy + uy * 20, dist: MAG_D };   // (thrown away from the partner)
+      return { fx: sx - ux * 20, fy: sy - uy * 20, dist: Math.max(0, Math.min(MAG_D, g / 2 - 20)) };   // (pulled to them, no further than half way)
+    };
+    room.magDest = (sx, sy, tx, ty, same, props, salt = 0) => {
+      const t = magThrow(sx, sy, tx, ty, same, salt);
+      if (t.dist <= 0) return { x: sx, y: sy };
+      const a = Math.atan2(sy - t.fy, sx - t.fx), to = ARENA.clamp({ x: sx + Math.cos(a) * t.dist, y: sy + Math.sin(a) * t.dist }, 12);
+      PROPS.clipMove({ x: sx, y: sy }, to, props || [], 14);
+      return to;
+    };
+    const magnetize = () => {
+      const d = f.ct(4.5), land = d + (H ? 1.5 : 1.8), al = f.shuffle(f.alive());
+      const pairs = [];
+      for (let i = 0; i + 1 < al.length; i += 2) pairs.push([al[i], al[i + 1]]);
+      if (!pairs.length) return;
+      f.cast('Magnetize', d, 'surge');
+      f.emit({ t: 'roomev', k: 'volkar-magnetize', dur: +d.toFixed(2), land: +land.toFixed(2), dist: MAG_D,
+        pairs: pairs.map(([a, b]) => [a.id, b.id, charge(a.id) === charge(b.id) ? 'push' : 'pull']) });
+      pairs.forEach(([a, b]) => {
+        const same = charge(a.id) === charge(b.id);
+        f.tether(a.id, b.id, d, { kind: 'short', len: 9999, dmg: 0, tag: 'magnet' });
+        for (const p of [a, b]) f.mark(p.id, { sym: same ? 'apart' : 'chain', col: same ? '#ffb27a' : '#9fd8ff', dur: d, key: 'magnet' });
+      });
+      // every hero's ring, shown now, landing once the move is over (the heroes it follows are moved first)
+      for (const p of f.alive()) f.mech({ type: 'spread', shape: { kind: 'circle', x: p.x, y: p.y, r: MAG_R }, delay: land, dmg: dmg.field * 0.8, follow: p.id, tag: 'magfield', ddown: true, moveAt: f.t + d });
+      f.afterKeep(d, () => {
+        const live = new Map(f.alive().map(p => [p.id, p]));
+        pairs.forEach(([a, b], i) => {
+          const A = live.get(a.id), Bp = live.get(b.id);
+          if (!A || !Bp) return;
+          const ax = A.x, ay = A.y, bx = Bp.x, by = Bp.y, same = charge(A.id) === charge(Bp.id);
+          const ta = magThrow(ax, ay, bx, by, same, 0.6 + i), tb = magThrow(bx, by, ax, ay, same, 0.6 + i + Math.PI);
+          for (const [p, th] of [[A, ta], [Bp, tb]]) {
+            if (th.dist <= 0) continue;
+            const res = f.knock(p, th.fx, th.fy, th.dist);
+            if (!res.slam) continue;
+            // thrown into the wall or a standing stone: it hurts and holds you a moment; off a broken edge (Hard) it is a fall
+            const ang = Math.atan2(res.dest.y, res.dest.x);
+            if (!res.prop && ARENA.cuts.length && ARENA.radiusAt(ang) < ARENA.r - 1) { fall(p); continue; }
+            f.damagePlayer(p, dmg.slam, { kind: 'slam', avoidable: true, ddown: true });
+            f.debuff(p.id, 'rooted', 1.2);
+            f.emit({ t: 'propfx', k: 'slam', x: Math.round(res.dest.x), y: Math.round(res.dest.y), a: +Math.atan2(p.y - th.fy, p.x - th.fx).toFixed(2), id: res.prop ? res.prop.id : null, pid: p.id });
+          }
+        });
+      });
+    };
 
     // Lightning Rods, and the posts they leave behind
     const post = (x, y, dur = 30) => {
@@ -582,14 +651,17 @@ const VOLKAR = {
           } });
       });
     };
-    const twinFall = () => {
+    const twinCore = shift => {
       if (f.alive().length < 2) { heavensFall(); return; }
       const d = f.ct(5.5), a0 = fallN++ * Math.PI * 0.75 + Math.PI / 4 + 0.4;
       f.cast('Twin Fall', d, 'skyfall');
+      if (shift && f.extreme) polarityShift([d * 0.5, d + 1.7]);   // (Extreme: one pair swaps before the first columns land, another between the two sets)
       twinCols(a0, d, 1, 1);
       if (H) twinCols(a0 + Math.PI / 2, d + 3.4, 3, 0.5);
       else twinCols(a0 + Math.PI / 2, d + 4.4, 3, 0.45);   // (Normal: a lighter second pair too, a little later)
     };
+    const twinFall = () => twinCore(false);
+    const twinX = () => twinCore(true);
 
 
     // --- the Storm Unbound (Hard, from Heavens Fall): a face in the clouds, a heart in the middle ------------------------
@@ -687,6 +759,84 @@ const VOLKAR = {
       });
     };
 
+    // ===== Extreme (f.extreme only): Polarity Shift, Conduction and Split Current, woven into the acts =====================
+    // Polarity Shift: pairs of heroes (one gold, one blue) carry a timer over their heads (head mark 'flip', its ring burning down); when it ends the
+    // two swap charge. Short and long timers are dealt, so a pairing right for the first half of a move is wrong for the second. Rides on the
+    // Polarity Surge and the Twin Fall (surgeCore / twinCore above). The bots read the timers from view.marks (key 'shift').
+    const shiftPair = (ids, t) => {
+      for (const id of ids) f.mark(id, { sym: 'flip', col: charge(id) > 0 ? '#ffd84a' : '#6ab8ff', dur: t, key: 'shift' });
+      f.afterKeep(t, () => {
+        for (const id of ids) { f.unmark(id, 'shift'); f.polarity.set(id, -charge(id)); }
+        sendPolarity(false);
+      });
+    };
+    const polarityShift = times => {
+      const al = f.alive(), plus = f.shuffle(al.filter(p => charge(p.id) > 0)), minus = f.shuffle(al.filter(p => charge(p.id) < 0));
+      f.emit({ t: 'roomev', k: 'volkar-shift', times: times.map(t => +t.toFixed(2)) });
+      times.forEach((t, i) => { if (plus[i] && minus[i]) shiftPair([plus[i].id, minus[i].id], t); });
+    };
+
+    // Conduction: a bolt marks one hero ('prey' over the head), then strikes them and leaps to the NEAREST hero not yet struck, each leap drawn as a
+    // thread CONDUCT_J before it goes. A leap to a hero of the SAME charge, or to nobody within reach, bursts on everyone. The last hero struck
+    // (up to four) must be touching a standing stone, which grounds it. (The charges alternate down the chain: stand in a line, opposite charges
+    // side by side, with the end of it at a stone.)
+    const CONDUCT_J = 1.4, CONDUCT_REACH = 330;
+    const conductionBurst = () => {
+      for (const p of f.alive()) f.damagePlayer(p, dmg.conductBurst, { kind: 'conduct', avoidable: false });
+      f.emit({ t: 'roomev', k: 'volkar-conduct-burst', dur: 0.6 });
+    };
+    const conduction = () => {
+      const al = f.alive(); if (al.length < 2) return;
+      const plus = al.filter(p => charge(p.id) > 0).length, total = Math.min(4, al.length);
+      const can = p => { const c1 = charge(p.id) > 0 ? plus : al.length - plus; return c1 >= Math.ceil(total / 2) && al.length - c1 >= Math.floor(total / 2); };
+      const starts = al.filter(can); if (!starts.length) return;
+      const h1 = f.pick(starts), d = f.ct(5.5), life = d + (total - 1) * CONDUCT_J + 0.8, list = stones();
+      f.cast('Conduction', d, 'chain');
+      f.mark(h1.id, { sym: 'prey', col: '#ffe26a', dur: life, key: 'conduct' });
+      f.emit({ t: 'roomev', k: 'volkar-conduction', pid: h1.id, dur: +d.toFixed(2), jump: CONDUCT_J });
+      for (const st of list) f.setPropState(st, 1);   // (the stones wake: one of them takes the end of the chain)
+      const done = () => { f.unmark(h1.id, 'conduct'); for (const st of list) f.setPropState(st, 0); };
+      const struck = [];
+      const hit = id => {
+        const p = f.alive().find(o => o.id === id);
+        if (!p) { conductionBurst(); done(); return; }
+        struck.push(id);
+        f.damagePlayer(p, dmg.conduct, { kind: 'chain', avoidable: false, ddown: true });
+        f.emit({ t: 'chain', ids: [...struck] });
+        if (struck.length >= total) {
+          const st = list.find(s => PROPS.sd(s, p.x, p.y) <= STONE_REACH);
+          if (st) f.emit({ t: 'propfx', k: 'bolt', kind: 'stone', id: st.id, x: st.x, y: st.y });
+          else conductionBurst();
+          done(); return;
+        }
+        let next = null, nd = CONDUCT_REACH;
+        for (const q of f.alive()) { if (struck.includes(q.id)) continue; const dd = Math.hypot(q.x - p.x, q.y - p.y); if (dd < nd) { nd = dd; next = q; } }
+        if (!next) { conductionBurst(); done(); return; }
+        f.tether(p.id, next.id, CONDUCT_J, { kind: 'short', len: 9999, dmg: 0, tag: 'conduct',
+          onResolve: () => { if (charge(next.id) === charge(p.id)) { conductionBurst(); done(); } else hit(next.id); } });
+      };
+      f.afterKeep(d, () => hit(h1.id));
+    };
+    // Conduction and a Polarity Surge together (an alternating line, opposite charges side by side, answers both)
+    const conductSurge = () => { surge(); conduction(); };
+
+    // Split Current: one cast, two shapes. A ring round him: heroes carrying gold must be inside it, heroes carrying blue outside it (the
+    // wrong side is struck). Both areas are drawn from the cast (red: damage); each hurts one charge only.
+    const SPLIT_R = 210;
+    const splitCurrent = () => {
+      const d = f.ct(5);
+      f.cast('Split Current', d, 'surge');
+      f.emit({ t: 'roomev', k: 'volkar-split', r: SPLIT_R, dur: +d.toFixed(2) });
+      const mk = (shape, tag, hurts) => {
+        const spared = new Set();
+        f.mech({ type: 'aoe', shape, delay: d, dmg: dmg.split, tag, group: spared, hurts, ringR: SPLIT_R,
+          tick: () => { spared.clear(); for (const p of f.players()) if (charge(p.id) !== hurts) spared.add(p.id); } });
+      };
+      mk({ kind: 'circle', x: B.x, y: B.y, r: SPLIT_R }, 'splitin', -1);               // inside the ring: it strikes blue
+      mk({ kind: 'donut', x: B.x, y: B.y, r: 900, r2: SPLIT_R }, 'splitout', 1);       // outside the ring: it strikes gold
+    };
+    const XT = (on, ...steps) => (f.extreme ? steps : []);   // (steps that exist on Extreme only)
+
     // --- the storm -----------------------------------------------------------------------------------
     assignPolarity();
     f.afterKeep(6, pulse);
@@ -706,11 +856,21 @@ const VOLKAR = {
     };
     // Hard: a two-group shuffle, one group with a tank beat and one without, taken in turn
     const weave = (a, b) => { const out = []; for (let i = 0; i < Math.max(a.length, b.length); i++) { if (a[i]) out.push(a[i]); if (b[i]) out.push(b[i]); } return out; };
+    // (revamp) Hard's three dances: an order of units drawn from f.danceRng(salt), the same on every pull that draws that dance. `lead`: the first
+    // unit is number f.dance of the list, so the three dances differ at the first set of the act that they do not share.
+    const dancing = (items, salt, lead = false) => {
+      const r = f.danceRng(salt), a = [...items];
+      for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+      if (lead) { const k = a.indexOf(items[f.dance % items.length]); [a[0], a[k]] = [a[k], a[0]]; }
+      return a;
+    };
     const CLAP = [0, thunderclap, 'Thunderclap'];
     const CLAP_AT = off => [off, thunderclap, 'Thunderclap'];
+    const stepMag = off => [off, magnetize, 'Magnetize'];
     const stepFist = off => [off, titanFist, 'Titan Fist'];
     const stepLash = off => [off, lash, 'Static Lash'];
     const stepSurge = off => [off, surge, 'Polarity Surge'];
+    const stepSurgeX = off => [off, surgeX, 'Polarity Surge'];   // (Extreme: the Surge Polarity Shift rides on)
     const stepField = off => [off, () => field(), 'Static Field'];
     const stepCF = off => [off, crashField, 'Thunder Crash'];
     const stepSC = off => [off, () => { surge(); crash(f.ct(6)); }, 'Polarity Surge'];
@@ -726,54 +886,55 @@ const VOLKAR = {
     const stepReach = off => [off, reachingArms, 'Reaching Arms'];
     const stepHF = off => [off, heavensFall, 'Heavens Fall'];
     const stepTwin = off => [off, twinFall, 'Twin Fall'];
+    const stepTwinX = off => [off, twinX, 'Twin Fall'];
 
     const front = at => f.course({
       until: 0.55,
       sets: lay(H ? [
         // (de-cook pass: Hard keeps the layers and the dances, but a move stands on its own with room after it; the pairs left are the
         // Squall Line's Surge, the Surge and the Crash at once, the Chain Lightning on the healer as the fist lands, and the Supercell)
-        U(12, CLAP),
+        U(10, stepMag(0)),   // (revamp: Magnetize where the opening Thunderclap stood; the Front's Avalanche stays, its boulders shelter the walls after it)
         U(15, stepFist(0)),
-        U(15, stepSurge(0), stepLash(9.8)),
-        U(14.5, stepCF(0)),
+        U(14, stepSurgeX(0), stepFist(9.8)),   // (revamp: the Lash's slot goes to a Fist; Extreme: Polarity Shift on this Surge)
+        U(13.5, stepCF(0)),
         // (the Squall Line comes early: the storm's circle drifts round him and the pairs walk it, the fist and a Surge landing inside)
-        U(30, stepSquall(0), stepFist(9.5), stepSurge(18.5)),
-        U(15.2, stepStrike(0), stepLash(11.2)),
+        U(30, stepSquall(0), stepFist(9.5), stepSurge(18.5), ...XT(1, [24.5, splitCurrent, 'Split Current'])),   // (Extreme: Split Current inside the walk)
+        U(14.2, stepStrike(0), stepLash(11.2)),
         // (Hard: the rest comes in a fresh order each pull, one group without a Titan Fist and one with, taken in turn)
         // (a Thunderclap first and the Supercell dance in the middle, so the party always has a raidwide to heal within a couple of minutes)
-        ...weave([U(13, CLAP, stepFist(7.5)), ...f.shuffle([
+        ...weave([f.extreme ? U(13.5, [0, conduction, 'Conduction'], stepFist(9.5)) : U(13, CLAP, stepFist(7.5)), ...dancing([
           U(15, stepGale(0), stepFist(8)),
           U(13, [0, () => { titanFist(); chainLightning('healer'); }, 'Chain Lightning']),
           U(16, stepRods(0, RODS + 1), stepFist(9.5)),
           U(14, [0, skyfall, 'Skyfall'], stepFist(8.5)),
-        ]).flatMap((u, i) => (i === 2 ? [
+        ], 'front-a').flatMap((u, i) => (i === 2 ? [
           // the Supercell instead of the first Rods + Gale: the + players plant the rods, three fronts march past them, and the cell breaks
-          // over the summit as the last one passes
-          U(43, stepFist(0), stepLash(7.5), [12, groundingRods, 'Grounding Rods'], [12 + f.ct(4.5) + 0.6, supercell, 'Supercell'], [12 + f.ct(4.5) + 0.6 + f.ct(3) + 11, thunderclap, 'Thunderclap'], stepFist(34)), u] : [u]))],
-        f.shuffle([
+          // over the summit as the last one passes (revamp: the Lash that stood in this unit has gone: the party has its hands full)
+          U(43, stepFist(0), [12, groundingRods, 'Grounding Rods'], [12 + f.ct(4.5) + 0.6, supercell, 'Supercell'], [12 + f.ct(4.5) + 0.6 + f.ct(3) + 11, thunderclap, 'Thunderclap'], stepFist(34)), u] : [u]))],
+        dancing([
           U(12, stepWalls(0, WALL, 1)),
           U(20, stepAv(0, AV), stepLash(4.5), stepWalls(8.5, WALL + 1, -1)),   // (the lash between the boulders and the walls)
           U(14, stepSC(0), stepLash(8.8)),
           U(15, stepSF(0), stepLash(11)),
-        ])),
+        ], 'front-b', true)),
       ] : [
         // (de-cook pass: the Front keeps three pairs, the Crash into the Field, the Surge inside the Squall Line and the Surge in the turning
         // Storm Walls; everything else stands alone with room after it, and a breather opens about every 40 s)
-        U(12, CLAP),
+        U(12, stepMag(0)),   // (revamp: Magnetize where the opening Thunderclap stood; the Front's Avalanche stays, its boulders shelter the walls after it)
         U(15, stepFist(0)),
-        U(16, stepSurge(0), stepLash(10.5)),
+        U(15, stepSurge(0), stepFist(10.5)),   // (revamp: this Lash's slot goes to a Fist)
         U(13, stepCF(0)),
         U(33.5, stepSquall(0), stepFist(10), stepSurge(19), stepLash(27.5)),
-        U(16, stepStrike(0)),
+        U(14, stepStrike(0)),
         U(16, stepGale(0), stepFist(7)),
         U(18, stepWalls(0, WALL, 1), stepSurge(4)),   // (Surge lands in the walls: pair up and walk the gap together)
-        U(14, stepLash(0), CLAP_AT(6)),
-        U(15.8, stepRods(0, RODS)),
-        U(13, stepFist(0)),
+        U(14, stepFist(0), CLAP_AT(6)),   // (revamp: a Fist where the Lash stood)
+        U(14.5, stepRods(0, RODS)),
+        U(11, stepFist(0)),
         U(24, stepAv(0, AV), stepLash(4.8), stepWalls(9, WALL + 1, -1)),
         U(14, stepSC(0), stepFist(8.5)),
         U(14, stepSF(0), stepLash(11)),
-        U(15.8, stepRods(0, RODS + 1)),
+        U(14.5, stepRods(0, RODS + 1)),
         U(11, CLAP, stepFist(7)),
       ], 4),
       closing: [[8, surge, 'Polarity Surge'], [8, thunderclap, 'Thunderclap']],
@@ -825,55 +986,64 @@ const VOLKAR = {
       sets: lay(H ? [
         // (de-cook pass: Hard's Back keeps the Fist with the Surge, the rods with the Surge after the gale, the Chain Lightning on the healer
         // as the fist lands, the Squall Line's Surge and Field, and one wedge with each unit; the rest stands alone with room after it)
-        U(14.5, stepLash(0), [5.5, () => crash(f.ct(6)), 'Thunder Crash']),   // straight off the stones: a lash, then into pairs
+        U(13, stepLash(0), [5.5, () => crash(f.ct(6)), 'Thunder Crash']),   // straight off the stones: a lash, then into pairs
         // (the doubled front: the ones with a Titan Fist in them and the Ball Lightning, taken in turn)
-        ...weave([U(15, CLAP, stepFist(8)), ...f.shuffle([
-          U(13, [0, () => { titanFist(); surge(); }, 'Titan Fist']),
-          U(16, [0, rodStrike, 'Rod Strike'], stepLash(11)),
-        ])], f.shuffle([
+        ...weave([f.extreme ? U(15, [0, conductSurge, 'Conduction'], CLAP_AT(5.3), stepFist(9.5)) : U(15, CLAP, stepFist(8)), ...dancing([
+          U(13, [0, () => { titanFist(); surgeX(); }, 'Titan Fist']),
+          U(14.5, [0, rodStrike, 'Rod Strike']),   // (revamp: the Lash that stood here has gone)
+        ], 'back-a')], dancing([
           U(20, stepAv(0, AV + Math.PI), stepLash(4.5), stepWalls(8.5, WALL + Math.PI, -1)),
           U(13, [0, () => ballLightning(0.3), 'Ball Lightning'], [7, thunderclap, 'Thunderclap']),
           U(21.5, stepRods(0, RODS + Math.PI), stepSurge(9.8), stepLash(17.3)),
-        ])),
+        ], 'back-b', true)),
         gsUnit(GS_P + 9, stepLash(3.4)),
         // --- the breaking of the summit begins here
-        U(12, [0, () => { titanFist(); chainLightning('healer'); }, 'Chain Lightning']),
+        U(11, [0, () => { titanFist(); chainLightning('healer'); }, 'Chain Lightning']),
         U(28, [0, () => { squall(-1, -Math.PI / 2, 320, 120, 24, 232); brk(0); }, 'Squall Line'], stepFist(9), stepSF(17)),
-        ...weave(f.shuffle([
+        ...weave(dancing([
           U(14, stepFist(0), [7, () => { rods(RODS + 2); brk(2, 4); }, 'Lightning Rods']),
           U(11, stepFist(0), [6, () => { thunderclap(); brk(3, 5); }, 'Thunderclap']),
-        ]), f.shuffle([
+        ], 'back2-a'), dancing([
           U(14.2, [0, () => { crashField(); brk(1, 6); }, 'Thunder Crash']),
-          U(13, [0, () => { ballLightning(2.2); brk(4, 5); }, 'Ball Lightning'], stepField(7)),
-        ])),
+          // (revamp: Magnetize in the lone Static Field's slot, first, then the orbs; the wedge cracks as before, five seconds after them)
+          U(15, stepMag(0), [6.5, () => { ballLightning(2.2); brk(4, 5); }, 'Ball Lightning']),
+        ], 'back2-b')),
       ] : [
         // (de-cook pass: the Back keeps the Rods and then a Surge after the gale, the Surge in the turning walls and the Crash in the Squall Line
         // as its pairs; the rest stands alone with room after it)
-        U(16, stepLash(0), [6.8, () => crash(f.ct(6)), 'Thunder Crash']),   // straight off the stones: a lash, then into pairs
-        U(12, stepFist(0)),
-        U(14, CLAP, stepLash(8)),
+        U(15, stepLash(0), [6.8, () => crash(f.ct(6)), 'Thunder Crash']),   // straight off the stones: a lash, then into pairs
+        U(10, stepFist(0)),
+        U(13, CLAP, stepFist(8)),   // (revamp: a Fist where the Lash stood)
         U(27, stepRods(0, RODS + Math.PI), stepFist(15.5)),
         U(28, stepAv(0, AV + Math.PI), stepLash(4.8), stepWalls(9, WALL + Math.PI, -1), stepSurge(16)),   // (the marked run for a stone with the walls turning: the Surge)
-        U(22, stepLash(0), [9.5, rodStrike, 'Rod Strike']),   // (a lone lash in the calm after the Surge, then the Rod Strike)
+        U(20, stepLash(0), [9.5, rodStrike, 'Rod Strike']),   // (a lone lash in the calm after the Surge, then the Rod Strike)
         gsUnit(GS_P + 9.5, stepLash(4.5)),
         U(15, [0, () => squall(-1, -Math.PI / 2, 320, 120, 24, 270), 'Squall Line'], stepFist(7)),
         U(15.5, stepCF(0)),
-        U(17, stepSF(0), stepLash(11)),
-        U(15.8, stepRods(0, RODS + 2)),
+        U(17, stepSF(0), stepFist(11)),   // (revamp: a Fist where the Lash stood)
+        U(14.5, stepRods(0, RODS + 2)),
         U(13, stepFist(0)),
         U(13, stepCF(0)),
         U(12, CLAP, stepFist(7.2)),
-        U(11, stepField(0)),
+        U(8, stepMag(0)),   // (revamp: Magnetize in the lone Static Field's slot)
       ], 3),
       closing: [[10, surge, 'Polarity Surge'], [8, thunderclap, 'Thunderclap']],
       next: finale,
     }, at);
 
+    // The Sky Lowers (Normal's last act, revamp): the cloud comes down over the summit and the ring closes to its last width as the cast ends
+    const skyLowers = () => {
+      const d = f.ct(3.5);
+      f.cast('The Sky Lowers', d, 'skyfall');
+      f.emit({ t: 'roomev', k: 'volkar-skylowers', dur: +d.toFixed(2) });
+      edgeStep(RINGS[2], d);
+    };
+
     // the sky coming down: the summit closes to its last ring; the whole party holds each fall up together, and then the sky splits
     // in two and a gold and a blue hold each half. A Titan Fist follows each Heavens Fall once it has landed (Hard: once the scatter
     // has too), while the next column is still to be shown.
     const finale = at => f.course({
-      onStart: () => { if (!H) edgeStep(330, 5); },
+      onStart: () => { if (!H) f.afterKeep(0.3, skyLowers); },   // (revamp: the ring closes under a named cast; Hard opens with the Storm Unbound)
       sets: lay(H ? [
         // Hard: a lash, then the Storm Unbound (his body breaks apart and he rises as a face over the summit; the party now hits the Storm Heart),
         // then the sky comes down from the face in a fixed order, each Heavens Fall and Twin Fall as it was, with Reaching Arms and Crossing Arms
@@ -881,16 +1051,16 @@ const VOLKAR = {
         // (the change takes its time: the build-up, the calm, the burst and the three bolts; the Arm falls once the heart is charged)
         U(3 + UNB + 4.2 + 4.3, stepLash(0), [3, unbound, 'Storm Unbound'], stepArm(3 + UNB + 4.2)),
         U(14.5, stepHF(0), stepReach(9.5)),
-        U(14.5, stepTwin(0), stepLash(10.3)),
+        U(14.5, stepTwinX(0), stepArm(10.3)),   // (revamp: the Arm where the Lash stood)
         U(14.5, stepHF(0), stepCross(9.5)),
-        U(13, stepTwin(0)),
+        U(13, stepTwinX(0), ...XT(1, [8.5, splitCurrent, 'Split Current'])),
       ] : [
         U(13.5, stepLash(0), [6.5, heavensFall, 'Heavens Fall']),
         U(14, [0, heavensFall, 'Heavens Fall'], stepFist(7.5)),
         U(15.95, [0, twinFall, 'Twin Fall']),
-        U(15, [0, heavensFall, 'Heavens Fall'], stepLash(8)),
+        U(15, [0, heavensFall, 'Heavens Fall'], stepFist(8)),   // (revamp: a Fist where the Lash stood)
         U(14, [0, twinFall, 'Twin Fall']),
-      ], 3),
+      ], H ? 3 : 4),
       closing: H ? [[13, heavensFall, 'Heavens Fall'], [8.5, lash, 'Static Lash'], [5.5, crossingArms, 'Crossing Arms'], [10, twinFall, 'Twin Fall'], [10.3, reachingArms, 'Reaching Arms'], [9.5, stormArm, 'Storm Arm']]
         : [[15, heavensFall, 'Heavens Fall'], [5.2, lash, 'Static Lash'], [4.3, titanFist, 'Titan Fist'], [5.5, twinFall, 'Twin Fall']],
       ramp: H ? 0.07 : 0.1,   // (Hard: the ramp is gentler; the scatter after each Heavens Fall is what bites)
@@ -900,7 +1070,7 @@ const VOLKAR = {
     front(0);
 
     f.moves = { thunderclap, titanFist, lash, surge, surgeField, crash, field, rods, galeSlam, rodsGale, stormWalls, chainLightning, ballLightning, skyfall, rodStrike, avalanche, crumble,
-      edgeStep, squall, eyeOpen, stillAir, eyeCloses, heavensFall, twinFall, groundingRods, supercell, unbound, stormArm, crossingArms, reachingArms };
+      edgeStep, squall, eyeOpen, stillAir, eyeCloses, heavensFall, twinFall, groundingRods, supercell, unbound, stormArm, crossingArms, reachingArms, magnetize, skyLowers, polarityShift, conduction, splitCurrent };
   },
 };
 

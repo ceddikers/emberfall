@@ -203,6 +203,8 @@ const SoundHooks = (() => {
   // a cast starting: the move's own cue (SfxMap.forBossMove), heard from the first moment of the bar
   function bossCast(bossId, name, anim) {
     if (!has()) return;
+    s1Note(bossId);   // (set one's revamp: its room's moments, below)
+    s3Note(bossId);   // (set three's revamp: its room's moments, below)
     safe(() => {
       const r = typeof SfxMap !== 'undefined' && SfxMap.forBossMove ? SfxMap.forBossMove(bossId, name, anim) : null;
       const names = Array.isArray(r) ? r : r ? [r] : [];
@@ -694,6 +696,209 @@ const SoundHooks = (() => {
   // a percentage hit on you (pdmg with pc): the hollow weight, no crack
   function hoodFrostHit() { play('hd-frost-hit', { vol: 0.8, key: 'hdfrost', minGap: 0.25 }); }
 
+  // ---------------------------------------------------------------- set one's revamp (boss ids grubnak, skitterra, volkar, hollowking)
+  // The casts sound from bossCast (SfxMap: bm-<boss>-*). What a cast cannot say is read off the host's messages. main.js keeps one handler per message type, so, as svWire does for the Ultimate,
+  // they are wrapped once (the original is always called first) the first time one of the four fights names itself (bossTrack at the pull, or a cast), and they sound only while the boss is one
+  // of the four. Delayed sounds go through svLater, so leaving the fight drops them. The recipes are bm-<boss>-* (sfx-synth.js, the "revamp's moves" block under each boss).
+  //   grubnak     roomev grubnak-served (an order over the counter) · roomev grubnak-flashover (the blast goes off) · hmark ticket (Table Numbers' signs) · tgx of a plate that failed (it spoils)
+  //   skitterra   roomev cradle-burn, cradle-tighten, lure-crush, lure-hatch, imprint-wash · propfx chip of a pillar with no id (a strand cut) · propfx chip or break of a cocoon · hmarkx venom (cured)
+  //   volkar      roomev volkar-magnetize (the pull or the throw as its bar ends, one for each kind of pair) · roomev volkar-shift (a swap at each of its times) · roomev volkar-conduction opens a window
+  //               in which each chain message is a strike (a step higher each) and propfx bolt on a stone is the grounding; roomev volkar-conduct-burst the failure · tgx splitin (Split Current lands)
+  //   hollowking  (Extreme only: none of these happens on Normal or Hard, and nothing either plays has changed) roomev kneel (one more knight kneeling: the bow; one fewer: that knight answers
+  //               turned inside out) · tg exile (the ring drawn) · teth bind while a Sentence's marks stand (the shackle) · tg rollcall (a number called), tgx rollcall (judged), gazed inside its window (caught)
+  const S1_BOSS = new Set(['grubnak', 'skitterra', 'volkar', 'hollowking']);
+  let s1Wired = false, s1Boss = null, s1Conduct = 0, s1Roll = 0, s1Kneels = 0, s1Sentence = false;
+  const s1Tags = new Map();   // tg id -> tag until it lands
+  const s1Clock = () => Date.now() / 1000;
+  const s1Pt = (x, y) => (x == null || y == null ? null : { x, y });
+  function s1Note(bossId, pull) {
+    s1Boss = bossId;
+    if (pull) { s1Tags.clear(); s1Conduct = s1Roll = s1Kneels = 0; s1Sentence = false; }
+    if (S1_BOSS.has(bossId)) s1Wire();
+  }
+  function s1Wire() {
+    if (s1Wired || typeof Net === 'undefined' || !Net.handlers) return;
+    s1Wired = true;
+    const wrap = (type, fn) => { const old = Net.handlers[type]; Net.handlers[type] = msg => { try { if (old) old(msg); } finally { safe(() => { if (has() && msg && S1_BOSS.has(s1Boss)) fn(msg); }); } }; };
+    wrap('tg', m => {
+      if (typeof m.tag !== 'string') return;
+      s1Tags.set(m.id, m.tag);
+      if (s1Tags.size > 80) s1Tags.delete(s1Tags.keys().next().value);
+      if (s1Boss !== 'hollowking') return;
+      if (m.tag === 'exile') play('bm-hollowking-exile', { vol: 0.8, at: m.shape ? s1Pt(m.shape.x, m.shape.y) : null, key: 'hk-exile', minGap: 0.4 });
+      else if (m.tag === 'rollcall') { s1Roll = s1Clock() + (+m.dur || 1.8) + 0.8; play('bm-hollowking-roll-called', { vol: 0.8, key: 'hk-called', minGap: 0.5 }); }
+    });
+    wrap('tgx', m => {
+      const tag = s1Tags.get(m.id); if (!tag) return;
+      s1Tags.delete(m.id);
+      if (m.x) return;   // (taken off the floor before it landed)
+      if (s1Boss === 'grubnak' && tag === 'plate' && m.fail) play('bm-grubnak-plate-spoiled', { vol: 0.85, key: 'gr-spoiled', minGap: 0.4 });
+      else if (s1Boss === 'volkar' && tag === 'splitin') play('bm-volkar-split-land', { vol: 0.85, key: 'vk-split', minGap: 1 });
+      else if (s1Boss === 'hollowking' && tag === 'rollcall') play('bm-hollowking-roll-judged', { vol: 0.75, key: 'hk-judged', minGap: 0.5 });
+    });
+    wrap('hmark', m => {
+      if (s1Boss === 'grubnak' && m.key === 'ticket') play('bm-grubnak-ticket', { vol: 0.7, key: 'gr-ticket', minGap: 1.5 });   // (one for the four signs handed out together)
+      else if (s1Boss === 'hollowking' && m.key === 'sentence') s1Sentence = true;
+    });
+    wrap('hmarkx', m => {
+      if (s1Boss === 'skitterra' && m.key === 'venom' && !m.clear) play('bm-skitterra-venom-cure', { vol: 0.5, key: 'sk-cure', minGap: 0.5 });
+      else if (s1Boss === 'hollowking' && m.key === 'sentence') s1Sentence = false;
+    });
+    wrap('teth', m => { if (s1Boss === 'hollowking' && s1Sentence && m.tag === 'bind') play('bm-hollowking-shackle', { vol: 0.8, key: 'hk-shackle', minGap: 0.4 }); });
+    wrap('gazed', () => { if (s1Boss === 'hollowking' && s1Clock() < s1Roll) play('bm-hollowking-roll-caught', { vol: 0.8, key: 'hk-caught', minGap: 0.3 }); });
+    wrap('chain', m => {   // (a Conduction strike: the host sends the struck heroes so far)
+      if (s1Boss === 'volkar' && s1Clock() < s1Conduct && Array.isArray(m.ids)) play('bm-volkar-conduct-leap', { vol: 0.85, rate: 1 + 0.12 * Math.max(0, m.ids.length - 1), key: 'vk-leap', minGap: 0.2 });
+    });
+    wrap('propfx', m => {
+      const at = s1Pt(m.x, m.y), k = m.k;
+      if (s1Boss === 'skitterra') {
+        if (k === 'chip' && m.kind === 'pillar' && m.id == null) play('bm-skitterra-strand-cut', { vol: 0.8, at, key: 'sk-cut', minGap: 0.1 });   // (a strand's knot: the prop chip carries no id)
+        else if ((k === 'chip' || k === 'break') && m.kind === 'cocoon') play('bm-skitterra-cocoon-crack', { vol: k === 'break' ? 0.85 : 0.6, at, key: 'sk-cocoon', minGap: 0.1 });
+      } else if (s1Boss === 'volkar' && k === 'bolt' && m.kind === 'stone' && s1Clock() < s1Conduct) play('bm-volkar-conduct-ground', { vol: 0.9, at, key: 'vk-ground', minGap: 0.5 });
+    });
+    wrap('roomev', m => {
+      if (typeof m.k !== 'string') return;
+      const k = m.k, at = s1Pt(m.x, m.y);
+      if (s1Boss === 'grubnak') {
+        if (k === 'grubnak-served') play('bm-grubnak-order-served', { vol: 0.8, at, key: 'gr-served', minGap: 0.3 });
+        else if (k === 'grubnak-flashover') play('bm-grubnak-flashover-burst', { vol: 0.95, at, key: 'gr-flash', minGap: 0.5 });
+      } else if (s1Boss === 'skitterra') {
+        if (k === 'cradle-burn') play('bm-skitterra-cradle-burn', { vol: 0.7, key: 'sk-burn', minGap: 0.5 });
+        else if (k === 'cradle-tighten') play('bm-skitterra-cradle-tighten', { vol: 0.95, key: 'sk-tighten', minGap: 1 });
+        else if (k === 'lure-crush') play('bm-skitterra-lure-crush', { vol: 0.85, at, key: 'sk-crush', minGap: 0.3 });
+        else if (k === 'lure-hatch') play('bm-skitterra-lure-hatch', { vol: 0.85, at, key: 'sk-hatch', minGap: 0.3 });
+        else if (k === 'imprint-wash') play('bm-skitterra-imprint-wash', { vol: 0.8, at, key: 'sk-wash:' + m.id, minGap: 0.2 });
+      } else if (s1Boss === 'volkar') {
+        if (k === 'volkar-magnetize' && Array.isArray(m.pairs)) {   // (the move comes as the bar ends: the pull's clang is 0.58 s into its recipe)
+          const d = +m.dur || 0;
+          if (m.pairs.some(p => p[2] === 'pull')) svLater(d - 0.55, () => play('bm-volkar-magnet-pull', { vol: 0.9, key: 'vk-pull', minGap: 0.5 }));
+          if (m.pairs.some(p => p[2] === 'push')) svLater(d, () => play('bm-volkar-magnet-push', { vol: 0.9, key: 'vk-push', minGap: 0.5 }));
+        } else if (k === 'volkar-shift' && Array.isArray(m.times)) m.times.forEach((t, i) => svLater((+t || 0) - 0.25, () => play('bm-volkar-charge-swap', { vol: 0.8, key: 'vk-swap:' + i, minGap: 0.1 })));   // (the spark is 0.25 s in)
+        else if (k === 'volkar-conduction') s1Conduct = s1Clock() + (+m.dur || 5.5) + 4 * (+m.jump || 1.4) + 1.5;
+        else if (k === 'volkar-conduct-burst') { s1Conduct = 0; play('bm-volkar-conduct-burst', { vol: 1, key: 'vk-burst', minGap: 0.6 }); }
+      } else if (s1Boss === 'hollowking' && k === 'kneel') {
+        const n = Array.isArray(m.l) ? m.l.length : 0, last = n ? m.l[n - 1] : null;
+        if (n > s1Kneels) play('bm-hollowking-kneel', { vol: 0.7, at: last ? s1Pt(last[0], last[1]) : null, key: 'hk-kneel', minGap: 0.5 });
+        else if (n < s1Kneels) play('bm-hollowking-turned-out', { vol: 0.85, key: 'hk-turned', minGap: 0.8 });
+        s1Kneels = n;
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------- set three's revamp (boss ids corvane, brannoc, morrowoak, caelum)
+  // The casts sound from bossCast (SfxMap: bm-<boss>-*). What a cast cannot say is read off the room. main.js has no hook for these four rooms and keeps one handler per message type, so, as svWire does
+  // for the Ultimate, the handlers are wrapped once (the original is always called first) the first time one of the four fights names itself (bossTrack at the pull, or a cast). Every sound here is a
+  // recipe bm-<boss>-m-* (sfx-synth.js, the "revamp's moves and moments" block under each boss); delayed ones go through svLater, so leaving the fight drops them.
+  //   corvane    propfx cvcounter (Still Water's cut across the hero who struck him) · tgx cvShrine (the Shrine's light blow) · roomev cvcircle (the ring shutting when its bar ends; a hero thrown in or out of it, kb)
+  //              · tg cvGaleLine / roomev cvgalepass (a window in which propfx slam is the east wall) and tgx cvGaleLine (the blow) · hmark cvLesson / cvDuel on you · pdmg cvLesson (a lesson failed)
+  //   brannoc    tgx brBanner (a banner down) · tgx brRoar after Crowd-Pleaser (the cheer) · hmark brpost on you, roomev brpath with re and a 0.05 s life (the post locking), tgx brPost (the wheel's blow on it)
+  //              · tg brCatch with a slot (the role's sigil, tank / healer / damage) and tgx brCatch failed (a wrong catch) · kb of 300 on you (Carry-through's throw), propfx slam (its wall)
+  //   morrowoak  tgx mgStir (the opening blow of Act II and IV) · hmark mgGreen / mgHunger on you · propfx mgmend (a hole closing) · propfx mggraft (a limb breaking into its neighbour)
+  //   caelum     tgx clGlow right after The Shadow Lengthens or Sunless · roomev caelum-carried · roomev caelum-fallen (the stars land 1 s before it ends) · hmark clStar on you
+  //              · propfx break of a starshard (burst or spent) · roomev caelum-pull wires the drift hum (svWire: the Pull is the same svdrift message the Sovereign's drift is)
+  const S3_BOSS = new Set(['corvane', 'brannoc', 'morrowoak', 'caelum']);
+  let s3Wired = false, s3Boss = null, s3Cast = { name: '', at: 0, dur: 0 }, s3Gale = 0, s3Circle = 0, s3PostAt = 0;
+  const s3Tags = new Map();   // tg id -> { tag, slot, cast, at } until it lands
+  const s3Clock = () => Date.now() / 1000;
+  const s3Mine = id => typeof Net !== 'undefined' && id != null && id === Net.id;
+  const s3Pt = (x, y) => (x == null || y == null ? null : { x, y });
+  function s3Note(bossId, pull) {
+    s3Boss = bossId;
+    if (pull) { s3Tags.clear(); s3Gale = s3Circle = s3PostAt = 0; s3Cast = { name: '', at: 0, dur: 0 }; }
+    if (S3_BOSS.has(bossId)) s3Wire();
+  }
+  function s3Wire() {
+    if (s3Wired || typeof Net === 'undefined' || !Net.handlers) return;
+    s3Wired = true;
+    svWire();   // (the Pull's drift hum: the same message as the Ultimate's)
+    const wrap = (type, fn) => { const old = Net.handlers[type]; Net.handlers[type] = msg => { try { if (old) old(msg); } finally { safe(() => { if (has() && msg && S3_BOSS.has(s3Boss)) fn(msg); }); } }; };
+    wrap('bcast', m => { s3Cast = { name: String(m.name), at: s3Clock(), dur: +m.dur || 0 }; });
+    wrap('tg', m => {
+      if (typeof m.tag !== 'string') return;
+      const d = +m.dur || 0, cast = s3Clock() - s3Cast.at < s3Cast.dur + 1.5 ? s3Cast.name : '', at = m.shape ? s3Pt(m.shape.x, m.shape.y) : null;
+      s3Tags.set(m.id, { tag: m.tag, slot: m.slot | 0, cast, at });
+      if (s3Tags.size > 80) s3Tags.delete(s3Tags.keys().next().value);
+      if (m.tag === 'cvGaleLine') s3Gale = s3Clock() + d + 1.5;
+      else if (m.tag === 'brCatch' && m.slot > 0) play('bm-brannoc-m-sigil', { vol: 0.75, at, rate: [1, 0.75, 1, 1.4][m.slot] || 1, key: 'brsig:' + m.slot, minGap: 0.2 });   // (a ring carrying a role's sigil)
+    });
+    wrap('tgx', m => {
+      const t = s3Tags.get(m.id); if (!t) return;
+      s3Tags.delete(m.id);
+      if (m.x) return;   // (taken off the floor before it landed)
+      const n = t.tag, c = t.cast;
+      if (s3Boss === 'corvane') {
+        if (n === 'cvShrine') play('bm-corvane-m-shrine', { vol: 0.85, key: 'cv-shrine', minGap: 1 });
+        else if (n === 'cvGaleLine') play('bm-corvane-m-gale', { vol: 0.85, key: 'cv-gale', minGap: 1 });
+      } else if (s3Boss === 'brannoc') {
+        if (n === 'brBanner') play('bm-brannoc-m-banner', { vol: 0.8, at: t.at, key: 'br-banner', minGap: 0.25 });
+        else if (n === 'brRoar' && c === 'Crowd-Pleaser') play('bm-brannoc-m-cheer', { vol: 0.85, key: 'br-cheer', minGap: 1 });
+        else if (n === 'brPost') play('bm-brannoc-m-post-hit', { vol: 0.85, at: t.at, key: 'br-posthit', minGap: 0.3 });
+        else if (n === 'brCatch' && t.slot > 0 && m.fail) play('bm-brannoc-m-wrong', { vol: 0.85, at: t.at, key: 'br-wrong', minGap: 0.3 });
+      } else if (s3Boss === 'morrowoak') {
+        if (n === 'mgStir') play('bm-morrowoak-m-stir', { vol: 0.85, key: 'mg-stir', minGap: 1 });
+      } else if (s3Boss === 'caelum') {
+        if (n === 'clGlow' && c === 'The Shadow Lengthens') play('bm-caelum-m-lengthens', { vol: 0.85, key: 'cl-lengthens', minGap: 1 });
+        else if (n === 'clGlow' && c === 'Sunless') play('bm-caelum-m-sunless', { vol: 0.85, key: 'cl-sunless', minGap: 1 });
+      }
+    });
+    wrap('roomev', m => {
+      const k = m.k; if (typeof k !== 'string') return;
+      if (s3Boss === 'corvane') {
+        if (k === 'cvcircle') {   // the ring shuts when the cast ends (the bar named it just before this message)
+          const d = s3Cast.name === 'The Circle' && s3Cast.dur > 0 ? s3Cast.dur : 2.4;
+          s3Circle = s3Clock() + (+m.dur || 0) + 1;
+          svLater(Math.max(0, d - 0.06), () => play('bm-corvane-m-ring', { vol: 0.85, key: 'cv-ring', minGap: 1 }));
+        } else if (k === 'cvgalepass') s3Gale = Math.max(s3Gale, s3Clock() + (+m.dur || 4.4) + 1.5);
+      } else if (s3Boss === 'brannoc') {
+        if (/^brpath:/.test(k) && m.re && +m.dur <= 0.06) play('bm-brannoc-m-post-lock', { vol: 0.8, key: 'br-lock', minGap: 0.5 });   // (the post's road stops being redrawn: it is locked)
+      } else if (s3Boss === 'caelum') {
+        if (k === 'caelum-carried') play('bm-caelum-m-carried', s3Mine(m.pid) ? { vol: 0.9, key: 'cl-carried', minGap: 0.5 } : { vol: 0.45, key: 'cl-carried', minGap: 0.5 });
+        else if (k === 'caelum-fallen') {   // (the marks run 6 s, the message 7: the stars stand where the marked did, a little apart in time)
+          const at = Math.max(0, (+m.dur || 7) - 1);
+          svLater(at, () => play('bm-caelum-m-star-drop', { vol: 0.7, key: 'cl-stardrop', minGap: 0.1 }));
+          svLater(at + 0.17, () => play('bm-caelum-m-star-drop', { vol: 0.5, rate: 1.12, key: 'cl-stardrop2', minGap: 0.1 }));
+        }
+      }
+    });
+    wrap('propfx', m => {
+      const k = m.k;
+      if (s3Boss === 'corvane') {
+        if (k === 'cvcounter') play('bm-corvane-m-counter', { vol: s3Mine(m.pid) ? 0.95 : 0.7, at: s3Pt(m.x2, m.y2), key: 'cv-counter:' + m.pid, minGap: 0.3 });
+        else if (k === 'slam' && s3Clock() < s3Gale) play('bm-corvane-m-wall', { vol: 0.8, at: s3Pt(m.x, m.y), key: 'cv-wall', minGap: 0.15 });
+      } else if (s3Boss === 'brannoc') {
+        if (k === 'slam') play('bm-brannoc-m-carry-slam', { vol: 0.85, at: s3Pt(m.x, m.y), key: 'br-slam', minGap: 0.2 });
+      } else if (s3Boss === 'morrowoak') {
+        if (k === 'mgmend') play('bm-morrowoak-m-mend', m.r > 0 ? { vol: 0.85, at: s3Pt(m.x, m.y), key: 'mg-mend', minGap: 0.5 } : { vol: 0.45, rate: 0.8, at: s3Pt(m.x, m.y), key: 'mg-mend', minGap: 0.5 });   // (r 0: a living seed that found no hole)
+        else if (k === 'mggraft') play('bm-morrowoak-m-graft', { vol: 0.8, at: s3Pt(m.x, m.y), key: 'mg-graft', minGap: 0.4 });
+      } else if (s3Boss === 'caelum') {
+        if (k === 'break' && m.kind === 'starshard') play('bm-caelum-m-star-burst', m.how === 'burst' ? { vol: 0.85, at: s3Pt(m.x, m.y), key: 'cl-starburst', minGap: 0.1 } : { vol: 0.45, rate: 0.8, at: s3Pt(m.x, m.y), key: 'cl-starburst', minGap: 0.1 });
+      }
+    });
+    wrap('hmark', m => {   // a mark on you
+      if (!s3Mine(m.pid)) return;
+      const k = m.key;
+      if (s3Boss === 'corvane') {
+        if (k === 'cvLesson') play('bm-corvane-m-mark', { vol: 0.7, rate: m.sym === 'low' ? 0.8 : m.sym === 'high' ? 1.35 : 1, key: 'cv-lesson', minGap: 0.2 });
+        else if (k === 'cvDuel') play('bm-corvane-m-mark', { vol: 0.8, rate: 0.62, key: 'cv-duel', minGap: 0.5 });
+      } else if (s3Boss === 'brannoc') {
+        if (k === 'brpost' && s3Clock() - s3PostAt > 4) { s3PostAt = s3Clock(); play('bm-brannoc-m-mark', { vol: 0.8, key: 'br-postmark', minGap: 1 }); }   // (the mark is laid again at the lock: that one is the lock's sound)
+      } else if (s3Boss === 'morrowoak') {
+        if (k === 'mgGreen') play('bm-morrowoak-m-seed-mark', { vol: 0.75, key: 'mg-seed', minGap: 0.5 });
+        else if (k === 'mgHunger') play('bm-morrowoak-m-seed-mark', { vol: 0.7, rate: 0.62, key: 'mg-seed2', minGap: 0.5 });
+      } else if (s3Boss === 'caelum') {
+        if (k === 'clStar') play('bm-caelum-m-star-mark', { vol: 0.75, key: 'cl-starmark', minGap: 0.3 });
+      }
+    });
+    wrap('pdmg', m => {   // a lesson failed
+      if (s3Boss === 'corvane' && m.k === 'cvLesson' && s3Mine(m.id) && m.a > 0) play('bm-corvane-m-lesson-fail', { vol: 0.9, key: 'cv-lessonfail', minGap: 0.3 });
+    });
+    wrap('kb', m => {   // thrown: back into the ring or out of it, or on along a caught wheel
+      if (!s3Mine(m.id)) return;
+      if (s3Boss === 'corvane' && s3Clock() < s3Circle && s3Clock() >= s3Gale) play('bm-corvane-m-ring-throw', { vol: 0.8, key: 'cv-ringthrow', minGap: 0.3 });
+      else if (s3Boss === 'brannoc' && m.d === 300) play('bm-brannoc-m-carry-throw', { vol: 0.85, key: 'br-carry', minGap: 0.5 });
+    });
+  }
+
   // ---------------------------------------------------------------- music
   const music = (id, o) => { if (has()) safe(() => Sound.music.set(id, o)); };
   // The Founding's music (founding/client.js picks the slot from what the run shows; the prompts are in docs/art/music-prompts.md). A slot is the track mus-fd-<slot>. Until that
@@ -718,11 +923,13 @@ const SoundHooks = (() => {
   // the fight's track: 'mus-<boss>-hard' on Hard if that track exists, else 'mus-<boss>'
   // act: for the Ultimate, the act in play (a practice start, a rejoin; absent or 0 is the first); other bosses ignore it
   function bossTrack(bossId, mode, act) {
+    s1Note(bossId, true);   // (the pull: set one's revamp wires its room's moments once, below)
+    s3Note(bossId, true);   // (the pull: set three's revamp wires its room's moments once, below)
     if (bossId === 'sovereign') { svClear(svMusT); svClear(svFxT); svMusOn = true; svAct = act >= 1 && act <= 4 ? Math.floor(act) : 1; svSlot = svAct; return (SV_MUS[svAct] || SV_MUS[1]).ids; }   // (the act the room is in: Act I on a normal pull; the chain, see SV_MUS)
     if (bossId === 'hood') return ['mus-hood', 'mus-hollowking'];      // (the first court's own tune, else the Hollow King's)
     if (bossId === 'seraph') return ['mus-seraph', 'mus-hydra-hard'];  // (the second court's, else the Mother's harder tune)
     const hard = 'mus-' + bossId + '-hard';
-    return mode === 'hard' && !TURN.has(bossId) && has() && Sound.music.has && Sound.music.has(hard) ? hard : 'mus-' + bossId;
+    return (mode === 'hard' || mode === 'extreme') && !TURN.has(bossId) && has() && Sound.music.has && Sound.music.has(hard) ? hard : 'mus-' + bossId;
   }
 
   // ---------------------------------------------------------------- the scene's beds, once a frame
