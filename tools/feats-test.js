@@ -43,7 +43,7 @@ const check = (ok, what) => { if (!ok) probs.push(what); };
     check(f && f.title, `set ${set}: no Extreme set feat with a title`);
     if (set > 1 && f) check(f.needs, `set ${set}: its Extreme set feat needs a gate`);
   }
-  check(xf.length === 15, `expected 15 Extreme feats, have ${xf.length}`);
+  check(xf.length === 16, `expected 16 Extreme feats, have ${xf.length}`);
 }
 
 // ---------------------------------------------------------------- 2. the rules

@@ -796,7 +796,8 @@ const SoundHooks = (() => {
   //   morrowoak  tgx mgStir (the opening blow of Act II and IV) · hmark mgGreen / mgHunger on you · propfx mgmend (a hole closing) · propfx mggraft (a limb breaking into its neighbour)
   //   caelum     tgx clGlow right after The Shadow Lengthens or Sunless · roomev caelum-carried · roomev caelum-fallen (the stars land 1 s before it ends) · hmark clStar on you
   //              · propfx break of a starshard (burst or spent) · roomev caelum-pull wires the drift hum (svWire: the Pull is the same svdrift message the Sovereign's drift is)
-  const S3_BOSS = new Set(['corvane', 'brannoc', 'morrowoak', 'caelum']);
+  //   garrow     (set six) see the Long Mere block below s3Wire: its moments ride the same wrapped handlers (gwWire)
+  const S3_BOSS = new Set(['corvane', 'brannoc', 'morrowoak', 'caelum', 'garrow']);
   let s3Wired = false, s3Boss = null, s3Cast = { name: '', at: 0, dur: 0 }, s3Gale = 0, s3Circle = 0, s3PostAt = 0;
   const s3Tags = new Map();   // tg id -> { tag, slot, cast, at } until it lands
   const s3Clock = () => Date.now() / 1000;
@@ -804,7 +805,7 @@ const SoundHooks = (() => {
   const s3Pt = (x, y) => (x == null || y == null ? null : { x, y });
   function s3Note(bossId, pull) {
     s3Boss = bossId;
-    if (pull) { s3Tags.clear(); s3Gale = s3Circle = s3PostAt = 0; s3Cast = { name: '', at: 0, dur: 0 }; }
+    if (pull) { s3Tags.clear(); s3Gale = s3Circle = s3PostAt = 0; s3Cast = { name: '', at: 0, dur: 0 }; gwReset(); }
     if (S3_BOSS.has(bossId)) s3Wire();
   }
   function s3Wire() {
@@ -897,6 +898,113 @@ const SoundHooks = (() => {
       if (s3Boss === 'corvane' && s3Clock() < s3Circle && s3Clock() >= s3Gale) play('bm-corvane-m-ring-throw', { vol: 0.8, key: 'cv-ringthrow', minGap: 0.3 });
       else if (s3Boss === 'brannoc' && m.d === 300) play('bm-brannoc-m-carry-throw', { vol: 0.85, key: 'br-carry', minGap: 0.5 });
     });
+    gwWire(wrap);
+  }
+
+  // ---------------------------------------------------------------- the Long Mere (boss id garrow, set 6, Season 2)
+  // The casts sound from bossCast (SfxMap: bm-garrow-*). The room's moments are read off the host's messages, wired in s3Wire above (gwWire is handed its wrap). Every sound is a recipe
+  // bm-garrow-m-* (sfx-synth.js, the Garrow block). The bed amb-garrow-mere plays from the pull until the fight ends or is left (svLoops), and bends with the room:
+  //   hmark gwprey (the scent taken: a low close breath, yours full, another's faint) / gwprey2 (the shade's, lower) · gwfol on you (a hound has your scent) · gwstill (asked to be still)
+  //   roomev gwpath:<n> (the trail locks: its line lit, and the push-off when the run starts, m.at s on; kd 'still' is the burst, tgx gwStill) · gwdrift (a flurry; Snowdrift's cast has it in
+  //   its own recipe) · gwwipe (the hush: the bed and the music dip) · gwfrost (Act III opens) · gwlast (Act IV: the snow stops, the bed falls to a whisper and the music sinks)
+  //   tgx gwRun / gwBack / gwShade (a rush as each piece of a run lands, placed at its end; the shade's paler and higher) · gwPounce (the landing; heavier when the circle is wide, for a hero
+  //   who stood still) · gwStill (Stillness bursting) · gwRing (Circle the Prey's track bursting) · zone gwRime (the breath of frost lands where the slick mist stays)
+  //   addev of a misthound: spawn, bite (yours full), death (a soft fade, unless two hounds met) · propfx gwcancel (two hounds meet and go out), gwmist (he goes into the mist / comes out of it)
+  //   · props: a new ridge of ice standing
+  let gwBed = null, gwBase = 0.6, gwSeen = false, gwLastCancel = 0, gwLastIn = null, gwFolAt = 0;
+  const gwAdds = new Map(), gwTags = new Map(), gwRidges = new Set();   // add id -> kind, tg id -> { tag, at, r }, ridge ids standing
+  const GW_RUN = { gwRun: 1, gwBack: 0.85, gwShade: 1.3 };
+  function gwBedSet(v, fade) { if (gwBed) gwBed.setVol(v, fade == null ? 1.5 : fade); }
+  function gwBedStop(fade) { if (gwBed) { svLoops.delete(gwBed); gwBed.stop(fade == null ? 1.5 : fade); gwBed = null; } }
+  function gwBedStart() {
+    if (!has()) return;
+    safe(() => { gwBedStop(0.3); gwBase = 0.6; gwBed = Sound.loop('amb-garrow-mere', { bus: 'amb', vol: gwBase, fade: 3 }); if (gwBed) svLoops.add(gwBed); });
+  }
+  function gwReset() { gwTags.clear(); gwAdds.clear(); gwRidges.clear(); gwSeen = false; gwLastCancel = gwFolAt = 0; gwLastIn = null; gwBedStop(0.3); }
+  function gwWire(wrap) {
+    wrap('tg', m => {
+      if (s3Boss !== 'garrow' || typeof m.tag !== 'string' || m.tag.slice(0, 2) !== 'gw') return;
+      const sh = m.shape || {};
+      const at = sh.kind === 'rect' ? { x: sh.x + Math.cos(sh.angle || 0) * (sh.len || 0), y: sh.y + Math.sin(sh.angle || 0) * (sh.len || 0) } : sh.x != null ? { x: sh.x, y: sh.y } : null;   // (a run's piece lands where he reaches its end)
+      gwTags.set(m.id, { tag: m.tag, at, r: +sh.r || 0 });
+      if (gwTags.size > 120) gwTags.delete(gwTags.keys().next().value);
+    });
+    wrap('tgx', m => {
+      if (s3Boss !== 'garrow') return;
+      const t = gwTags.get(m.id); if (!t) return;
+      gwTags.delete(m.id);
+      if (m.x) return;   // (taken off the floor before it landed)
+      const n = t.tag;
+      if (GW_RUN[n]) play('bm-garrow-m-run', { vol: n === 'gwShade' ? 0.28 : 0.4, rate: GW_RUN[n], at: t.at, key: 'gw-run:' + n, minGap: 0.14 });
+      else if (n === 'gwPounce') play(t.r >= 300 ? 'bm-garrow-m-pounce-wide' : 'bm-garrow-m-pounce', { vol: t.r >= 300 ? 0.95 : 0.85, at: t.at, key: 'gw-pounce', minGap: 0.1 });
+      else if (n === 'gwStill') play('bm-garrow-m-still-burst', { vol: 0.8, at: t.at, key: 'gw-still', minGap: 0.3 });
+      else if (n === 'gwRing') play('bm-garrow-m-ring-burst', { vol: 0.9, key: 'gw-ring', minGap: 0.5 });
+    });
+    wrap('zone', m => {
+      if (s3Boss !== 'garrow' || m.clear || m.tag !== 'gwRime') return;
+      const sh = m.shape || {};
+      play('bm-garrow-m-rime-land', { vol: 0.8, at: sh.x != null ? { x: sh.x, y: sh.y } : null, key: 'gw-rime:' + m.id, minGap: 0.1 });
+    });
+    wrap('addev', m => {
+      if (s3Boss !== 'garrow') return;
+      if (m.k === 'spawn') {
+        gwAdds.set(m.id, m.kind); if (gwAdds.size > 40) gwAdds.delete(gwAdds.keys().next().value);
+        if (m.kind === 'misthound') play('bm-garrow-m-hound-spawn', { vol: 0.45, at: s3Pt(m.x, m.y), key: 'gw-hspawn:' + m.id, minGap: 0.1 });
+        return;
+      }
+      if (gwAdds.get(m.id) !== 'misthound') return;
+      if (m.k === 'bite') play('bm-garrow-m-hound-bite', s3Mine(m.tg) ? { vol: 0.9, key: 'gw-bite', minGap: 0.2 } : { vol: 0.45, key: 'gw-bite', minGap: 0.2 });
+      else if (m.k === 'death') { gwAdds.delete(m.id); if (s3Clock() - gwLastCancel > 0.4) play('bm-garrow-m-hound-fade', { vol: 0.3, at: s3Pt(m.x, m.y), key: 'gw-hfade', minGap: 0.3 }); }   // (two that met already went out with gwcancel)
+      else if (m.k === 'gone') gwAdds.delete(m.id);
+    });
+    wrap('propfx', m => {
+      if (s3Boss !== 'garrow') return;
+      if (m.k === 'gwcancel') { gwLastCancel = s3Clock(); play('bm-garrow-m-hounds-meet', { vol: 0.8, at: s3Pt(m.x, m.y), key: 'gw-meet', minGap: 0.3 }); }
+      else if (m.k === 'gwmist') {
+        if (!m.in) { gwLastIn = { x: m.x, y: m.y, t: s3Clock() }; play('bm-garrow-m-mist-in', { vol: 0.75, at: s3Pt(m.x, m.y), key: 'gw-mistin', minGap: 0.3 }); }
+        else svLater(0.35, () => play('bm-garrow-m-mist-out', { vol: 0.75, at: s3Pt(m.x, m.y), key: 'gw-mistout', minGap: 0.3 }));   // (he is gone a beat before he is there)
+      }
+    });
+    wrap('props', m => {   // a new ridge of ice standing (Hard Frost: one for each stretch of a run, all at once)
+      if (s3Boss !== 'garrow' || !Array.isArray(m.p)) return;
+      const here = new Set(), fresh = [];
+      for (const a of m.p) if (a && a[1] === 'ridge') { here.add(a[0]); if (!gwRidges.has(a[0]) && gwSeen) fresh.push(a); }
+      gwRidges.clear(); for (const id of here) gwRidges.add(id);
+      gwSeen = true;
+      fresh.slice(0, 3).forEach((a, i) => svLater(i * 0.07, () => play('bm-garrow-m-ridge', { vol: 0.85, at: s3Pt(a[3], a[4]), rate: 1 - i * 0.08, key: 'gw-ridge:' + i, minGap: 0.05 })));
+    });
+    wrap('hmark', m => {
+      if (s3Boss !== 'garrow') return;
+      const k = m.key, mine = s3Mine(m.pid);
+      if (k === 'gwprey') play('bm-garrow-m-scent', mine ? { vol: 0.8, key: 'gw-scent:' + m.pid, minGap: 1 } : { vol: 0.3, key: 'gw-scent:' + m.pid, minGap: 1 });
+      else if (k === 'gwprey2') play('bm-garrow-m-scent', mine ? { vol: 0.65, rate: 0.75, key: 'gw-scent2:' + m.pid, minGap: 1 } : { vol: 0.25, rate: 0.75, key: 'gw-scent2:' + m.pid, minGap: 1 });
+      else if (k === 'gwfol' && mine && s3Clock() - gwFolAt > 2.5) { gwFolAt = s3Clock(); play('bm-garrow-m-hound-scent', { vol: 0.5, key: 'gw-fol', minGap: 1 }); }   // (laid again when the hound spawns: the spawn has its own sound)
+      else if (k === 'gwstill') play('bm-garrow-m-still-mark', mine ? { vol: 0.7, key: 'gw-stillmark:' + m.pid, minGap: 0.5 } : { vol: 0.3, key: 'gw-stillmark:' + m.pid, minGap: 0.5 });
+    });
+    wrap('roomev', m => {
+      if (s3Boss !== 'garrow' || typeof m.k !== 'string') return;
+      const k = m.k;
+      if (k.slice(0, 7) === 'gwpath:') {
+        if (m.kd === 'still') return;   // (a burst of walked steps: tgx gwStill)
+        play('bm-garrow-m-lock', { vol: 0.6, key: 'gw-lock', minGap: 0.5 });
+        const l = Array.isArray(m.l) && m.l.length ? m.l[0] : null;
+        if (l && +m.at >= 0) svLater(Math.max(0, +m.at - 0.05), () => play('bm-garrow-m-run-start', { vol: 0.7, at: s3Pt(l[0], l[1]), key: 'gw-runstart', minGap: 0.4 }));
+      } else if (k === 'gwdrift') {
+        const d = +m.dur || 2.6;
+        if (s3Cast.name !== 'Snowdrift') svLater(Math.max(0, d - 2.6), () => play('bm-garrow-m-flurry', { vol: 0.8, key: 'gw-flurry', minGap: 1 }));   // (Buried Scent's; Snowdrift's cast carries its own)
+        gwBedSet(gwBase * 1.6, 1.2); svLater(d, () => gwBedSet(gwBase, 2));
+      } else if (k === 'gwwipe') {
+        play('bm-garrow-m-wipe', { vol: 0.5, key: 'gw-wipe', minGap: 0.5 });
+        if (has()) Sound.music.duck(0.5, 1.4);
+        gwBedSet(gwBase * 0.15, 0.15); svLater(1.2, () => gwBedSet(gwBase, 2.5));
+      } else if (k === 'gwfrost') play('bm-garrow-m-frost', { vol: 0.85, key: 'gw-frost', minGap: 2 });
+      else if (k === 'gwlast') {
+        play('bm-garrow-m-last', { vol: 0.85, key: 'gw-last', minGap: 5 });
+        gwBase = 0.12; gwBedSet(gwBase, 4);
+        if (has()) Sound.music.duck(0.55, 6);
+      }
+    });
+    wrap('fight', m => { if (s3Boss === 'garrow' && (m.s === 'clear' || m.s === 'wipe')) gwBedStop(2.5); });   // (the result: the lake's bed goes with the fight)
   }
 
   // ---------------------------------------------------------------- music
@@ -912,7 +1020,7 @@ const SoundHooks = (() => {
     return true;
   }
   // the phase (course) where Normal crossfades into the boss's Hard track, late in the fight
-  const LAYER_AT = { grubnak: 3, skitterra: 3, volkar: 3, hollowking: 5, wyrm: 4, titan: 3, archmage: 4, hydra: 4, corvane: 3, brannoc: 3, morrowoak: 3, caelum: 3 };
+  const LAYER_AT = { grubnak: 3, skitterra: 3, volkar: 3, hollowking: 5, wyrm: 4, titan: 3, archmage: 4, hydra: 4, corvane: 3, brannoc: 3, morrowoak: 3, caelum: 3, garrow: 3 };   // (garrow: as the Whiteout begins)
   // a boss whose second track is its second form's music, not a harder take of the first: both difficulties start on the
   // first track and turn at the form change
   const TURN = new Set(['brannoc', 'morrowoak', 'caelum']);
@@ -925,6 +1033,7 @@ const SoundHooks = (() => {
   function bossTrack(bossId, mode, act) {
     s1Note(bossId, true);   // (the pull: set one's revamp wires its room's moments once, below)
     s3Note(bossId, true);   // (the pull: set three's revamp wires its room's moments once, below)
+    if (bossId === 'garrow') gwBedStart();   // (the Long Mere's bed, until the fight ends)
     if (bossId === 'sovereign') { svClear(svMusT); svClear(svFxT); svMusOn = true; svAct = act >= 1 && act <= 4 ? Math.floor(act) : 1; svSlot = svAct; return (SV_MUS[svAct] || SV_MUS[1]).ids; }   // (the act the room is in: Act I on a normal pull; the chain, see SV_MUS)
     if (bossId === 'hood') return ['mus-hood', 'mus-hollowking'];      // (the first court's own tune, else the Hollow King's)
     if (bossId === 'seraph') return ['mus-seraph', 'mus-hydra-hard'];  // (the second court's, else the Mother's harder tune)
@@ -936,7 +1045,7 @@ const SoundHooks = (() => {
   let amb = null, hum = null, heart = null, wasLow = false, musicScene = null, lastStep = 0;
   const STEP = { grass: 'step-grass', stone: 'step-stone', wood: 'step-wood' }, STEP_O = { vol: 0.2 };   // (made once: nothing new per frame)
   // what each room's floor is, as far as the three step recipes go (the soft crunch stands in for snow, sand, mud and leaves)
-  const ARENA_GROUND = { grubnak: 'wood', hydra: 'grass', morrowoak: 'grass', titan: 'grass', corvane: 'grass', brannoc: 'grass' };   // (any other room is stone)
+  const ARENA_GROUND = { grubnak: 'wood', hydra: 'grass', morrowoak: 'grass', titan: 'grass', corvane: 'grass', brannoc: 'grass', garrow: 'grass' };   // (any other room is stone; the soft crunch stands in for snow)
   // a footstep in the fight: yours at 0.12, anyone else's at 0.05 and placed where they stand; k is a landing's extra weight
   function step(bossId, mine, e, k = 1) {
     if (!has() || !e) return;

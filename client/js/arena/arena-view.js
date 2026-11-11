@@ -13,7 +13,7 @@ const ArenaView = {
     // a round room is drawn at its full size (Volkar's closes in later; the dead ground is drawn over it)
     const ex = ARENA.kind === 'poly' ? ARENA.R : ARENA.kind === 'circle' ? ARENA.full : ARENA.hw;
     const ey = ARENA.kind === 'poly' ? ARENA.R : ARENA.kind === 'circle' ? ARENA.full : ARENA.hh;
-    const M = bossId === 'volkar' || bossId === 'volkar:storm' ? 260 : bossId === 'hollowking' ? 160 : bossId === 'brannoc' ? 260 : bossId === 'brannoc:sea' ? 340 : bossId === 'morrowoak' ? 220 : bossId === 'morrowoak:remade' ? 300 : bossId === 'caelum' ? 300 : bossId === 'caelum:sky' ? 320 : (bossId === 'wyrm' || bossId === 'corvane') ? 200 : 120, bx = Math.ceil(ex + M), by = Math.ceil(ey + M);
+    const M = bossId === 'volkar' || bossId === 'volkar:storm' ? 260 : bossId === 'hollowking' ? 160 : bossId === 'brannoc' ? 260 : bossId === 'brannoc:sea' ? 340 : bossId === 'morrowoak' ? 220 : bossId === 'morrowoak:remade' ? 300 : bossId === 'caelum' ? 300 : bossId === 'caelum:sky' ? 320 : (bossId === 'wyrm' || bossId === 'corvane') ? 200 : bossId === 'garrow' ? 380 : 120, bx = Math.ceil(ex + M), by = Math.ceil(ey + M);
     const cv = document.createElement('canvas');
     cv.width = Math.ceil(bx * 2 * scale); cv.height = Math.ceil(by * 2 * scale);
     const c = cv.getContext('2d');
@@ -33,6 +33,7 @@ const ArenaView = {
     else if (bossId === 'morrowoak') this.buildGrove(c, bx, by);   // (morrowoak-art.js)
     else if (bossId === 'morrowoak:remade') this.buildRemade(c, bx, by);   // (morrowoak-art.js: the second form's room)
     else if (bossId === 'caelum') this.buildStarCrater(c, bx, by);   // (caelum-art.js: the crater round the half-buried star)
+    else if (bossId === 'garrow') this.buildMere(c, bx, by);   // (garrow-room.js: the Long Mere, a frozen lake under fresh snow)
     else if (bossId === 'caelum:sky') this.buildSky(c, bx, by);   // (caelum-art.js: the second form's room, the cloud above the meteor)
     else this.buildKitchen(c, bx, by);
     this.floor = cv; this.floorFor = bossId + '@' + scale; this.floorBox = { bx, by };
@@ -844,6 +845,7 @@ const ArenaView = {
     else if (a.kind === 'remade') this.remadeLife(ctx, a, t);   // (morrowoak-art.js)
     else if (a.kind === 'starcrater') this.starCraterLife(ctx, a, t);   // (caelum-art.js)
     else if (a.kind === 'skyring') this.skyLife(ctx, a, t);   // (caelum-art.js)
+    else if (a.kind === 'mere') this.mereLife(ctx, a, t);   // (garrow-room.js)
     else if (a.kind === 'temple') this.templeLife(ctx, a, t);
   },
 
@@ -1318,6 +1320,7 @@ const ArenaView = {
     if (typeof CL_FX !== 'undefined' && this.liveRoom) CL_FX.floor(ctx, this.liveRoom, t);   // (Caelum's meteor shadow, and the crater breaking under Ascendant: caelum-fx.js)
     BossTells.drawAftermath(ctx, t);   // the faint marks landed mechanics leave: under every zone, puddle and telegraph
     if (typeof BR_FX !== 'undefined' && this.liveRoom) BR_FX.floor(ctx, this.liveRoom, t);   // (Brannoc's bank shot: every thrown path painted bounce by bounce: brannoc-fx.js)
+    if (typeof GW_FX !== 'undefined' && this.liveRoom) GW_FX.floor(ctx, this.liveRoom, t);   // (Garrow's lit trails, furrows and his prints round the ring: garrow-fx.js)
     if (typeof MG_FX !== 'undefined' && this.liveRoom) MG_FX.floor(ctx, this.liveRoom, t);   // (Morrow-Oak's Swallowing under the units: morrowoak-fx.js)
     const R = ARENA.R;
     for (const z of zones.values()) {
@@ -1333,6 +1336,7 @@ const ArenaView = {
       if (z.tag === 'lava') { this.moltenFloor(ctx, z, k, t); continue; }
       if (z.tag === 'cvStill' || z.tag === 'cvCircle') { if (typeof CV_FX !== 'undefined') CV_FX.zone(ctx, z, k, t); continue; }   // (Corvane's Still Water and The Circle: corvane-fx.js)
       if (z.tag === 'brFurrow') { if (typeof BR_FX !== 'undefined') BR_FX.zone(ctx, z, k, t); continue; }   // (Brannoc's Sand Furrow: brannoc-fx.js)
+      if (z.tag === 'gwRime') { if (typeof GW_FX !== 'undefined') GW_FX.zone(ctx, z, k, t); continue; }   // (Garrow's slick mist: garrow-fx.js)
       if (z.tag === 'clShadowBurn' || z.tag === 'clCrownRing') { if (typeof CL_FX !== 'undefined') CL_FX.zone(ctx, z, k, t); continue; }   // (Caelum's burning shadow and Cinder Crown's ring of fire: caelum-fx.js)
       ctx.save();
       ARENA.trace(ctx, 2); ctx.clip();   // the web stops at the walls, whatever shape they are
@@ -2262,6 +2266,7 @@ const ArenaView = {
       case 'debris': this.debrisProp(ctx, pr, t); break;   // (brannoc-art.js)
       case 'starcore': this.starCore(ctx, pr, t); break;   // (caelum-art.js)
       case 'starshard': this.starShard(ctx, pr, t); break;   // (caelum-art.js)
+      case 'ridge': if (this.ridgeProp) this.ridgeProp(ctx, pr, t); break;   // (garrow-art.js)
       default: ellipse(ctx, pr.x + 4, pr.y + 6, pr.r * 1.1, pr.r * 0.6, 0, 'rgba(0,0,0,0.4)'); circle(ctx, pr.x, pr.y, pr.r, '#6a6a72', OUT, 2.5);
     }
     ctx.restore();

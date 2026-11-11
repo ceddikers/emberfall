@@ -55,8 +55,8 @@ const HARDPLUS = (() => {
   }
   const ids = m => MODS.filter(d => m && m[d.id]).map(d => d.id);
   const heat = m => MODS.reduce((n, d) => n + (m && m[d.id] ? d.heat : 0), 0);
-  // the twelve bosses of the sets (data.js: playable, set 1-3); the Ultimate is set 4 and not playable on the board, trials are 'trial:...'
-  const eligible = id => typeof BOSSES !== 'undefined' && BOSSES.some(b => b.id === id && b.playable && (b.set || 1) <= 3);
+  // the bosses of the sets (data.js: playable, set 1-3, and set 6, the fourth set); the Ultimate is set 4 and not playable on the board, the secret raid is set 5, trials are 'trial:...'
+  const eligible = id => typeof BOSSES !== 'undefined' && BOSSES.some(b => b.id === id && b.playable && ((b.set || 1) <= 3 || b.set === 6));
   const goldMult = h => 1 + T.GOLD_PER_HEAT * h;
 
   // ---------------------------------------------------------------- the sim's side (fight.js)

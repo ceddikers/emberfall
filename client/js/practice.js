@@ -24,6 +24,7 @@ const PracticeHall = (() => {
     brannoc: ['First Blood', 'Crowd-Pleaser', 'The Tide Rises', 'The Tidewrought', 'Last Round'],
     morrowoak: ['The Grove', 'Hollowing', 'The Grove Remade', 'Last Bloom'],
     caelum: ['Descent', 'Starfall', 'Ascendant', 'The Sky Comes Down'],
+    garrow: ['First Snow', 'The Pack', 'Whiteout', 'Hard Frost', 'Last Light'],   // (set 6, Boss XIII)
     // the two fights found in town (data.js SECRET_BOSSES): one difficulty like the Ultimate, listed only once found, offered up to the account's reach (deps.reach)
     hood: ['The Oath', 'Severance', 'The Procession', 'The Tolling', 'The Hunt', 'Rimelight', 'Hollowing', 'The Scales', 'Dead Calm', 'Interment', 'Two Hands', 'Communion', 'Verdict'],
     seraph: ['Broken Halo', 'Radiance', 'Wingfall', 'Second Shard', 'Benediction', 'Third Shard', 'Last Rites', 'Fourth and Fifth', 'Sixth Shard', 'Six Wings'],

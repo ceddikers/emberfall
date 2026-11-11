@@ -140,6 +140,7 @@ const ARENA_DEFS = {
   'caelum:sky': { kind: 'circle', r: 520 },   // ...then a circle of cloud above the falling meteor   // ...then the floating pieces of the grove over the dark, the holes still in them
   hood: { kind: 'circle', r: 520 },   // a long frozen court (hood.js); the same court with its roof gone is seraph.js's
   seraph: { kind: 'circle', r: 520 },
+  garrow: { kind: 'rect', hw: 560, hh: 400, corner: 40 },   // Season 2, XIII: the Long Mere, a frozen lake under fresh snow that keeps every step (garrow.js)
 };
 let POLY_NORMALS = null;   // ARENA.sd's cos/sin of a 'poly' room's side normals, for the current side count
 const ARENA = {

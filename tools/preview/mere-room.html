@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Garrow: the Long Mere</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body { margin: 0; background: #0b0b0d; color: #cfc8bc; font: 13px/1.4 system-ui, sans-serif; }
+  header { padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; border-bottom: 1px solid #222; }
+  select, button { background: #17171b; color: #cfc8bc; border: 1px solid #333; border-radius: 5px; padding: 4px 8px; font: inherit; }
+  canvas { width: auto; max-width: 100%; max-height: calc(100vh - 48px); display: block; margin: 0 auto; background: #000; }
+</style></head>
+<body>
+<header>
+  <b>Garrow: the Long Mere</b>
+  <label>view <select id="view"><option value="full">whole room box</option><option value="mid">game view, centre</option><option value="north">game view, north</option><option value="south">game view, south</option></select></label>
+  <label>room event <select id="ev"><option value="">none</option><option value="drift">gwdrift (flurry)</option><option value="last">gwlast (last act)</option></select></label>
+  <label><input type="checkbox" id="tells" checked> sample telegraphs</label>
+  <label><input type="checkbox" id="pause"> pause</label>
+  <span id="fps"></span>
+</header>
+<canvas id="cv" width="1600" height="900"></canvas>
+<script src="../../client/js/draw-util.js"></script>
+<script src="../../client/js/arena/shapes.js"></script>
+<script src="../../client/js/arena/arena-view.js"></script>
+<script src="../../client/js/garrow-room.js"></script>
+<script>
+  // ?view=full|mid|north|south  ?ev=drift|last  ?t=seconds  ?tells=0  ?z= ?cx= ?cy= (a free camera)  ?scale=1.5 (the floor's pixel scale)
+  const q = new URLSearchParams(location.search), $ = id => document.getElementById(id);
+  for (const k of ['view', 'ev']) if (q.has(k)) $(k).value = q.get(k);
+  if (q.get('tells') === '0') $('tells').checked = false;
+  ARENA.use('garrow');
+  ArenaView.buildFloor('garrow', Number(q.get('scale')) || 1);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  let t = Number(q.get('t')) || 30, last = performance.now(), frames = 0, acc = 0, evStart = t;
+  function draw() {
+    const W = cv.width, H = cv.height, { bx, by } = ArenaView.floorBox, hh = ARENA.hh, hw = ARENA.hw;
+    ArenaView.liveRoom = { ev: {} };
+    const e = $('ev').value;
+    if (e === 'drift') ArenaView.liveRoom.ev.gwdrift = { k: 'gwdrift', dur: 8, start: evStart, end: evStart + 8 };
+    if (e === 'last') ArenaView.liveRoom.ev.gwlast = { k: 'gwlast', dur: 9999, start: evStart, end: evStart + 9999 };
+    const view = $('view').value;
+    // the game's zoom for a 1600x900 window is min(W, H) / 960 = 0.94; the camera centre as the game would lean it
+    const z = q.has('z') ? Number(q.get('z')) : view === 'full' ? Math.min(W / (bx * 2), H / (by * 2)) : 0.94 * 1.0;
+    const cy = view === 'north' ? -(hh + 180) + H / z / 2 : view === 'south' ? (hh + 110) - H / z / 2 : 0;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(z, z); ctx.translate(-(Number(q.get('cx')) || 0), q.has('cy') ? -Number(q.get('cy')) : -cy);
+    ArenaView.drawFloor(ctx, 'garrow', 1);
+    ArenaView.drawAmbient(ctx, t);
+    if ($('tells').checked) {   // (the tells' red and blue, roughly: a wash and a solid rim)
+      const tl = (fill, rim) => { ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = rim; ctx.lineWidth = 2.5; ctx.stroke(); };
+      ctx.beginPath(); ctx.rect(-300, -200, 640, 130); tl('rgba(255,59,47,0.28)', '#ff3b2f');
+      ctx.beginPath(); ctx.arc(-260, 120, 90, 0, TAU); tl('rgba(80,150,255,0.26)', '#5aa0ff');
+      ctx.beginPath(); ctx.arc(300, 200, 120, 0, TAU); ctx.arc(300, 200, 50, 0, TAU, true); tl('rgba(255,59,47,0.28)', '#ff3b2f');
+      ctx.beginPath(); ctx.arc(40, 10, 70, 0, TAU); tl('rgba(80,150,255,0.26)', '#5aa0ff');
+      // some dark prints, as the effects file will lay them
+      for (let i = 0; i < 14; i++) for (const s of [-5, 5]) ellipse(ctx, -420 + i * 28, 280 + (i % 2 ? 6 : -6) + s * 0.3, 5, 2.4, 0.2, 'rgba(34,46,80,0.55)');
+      [['#7aa0ff', -200, 20], ['#ffd27a', 120, -140], ['#7aff9a', 220, 70], ['#ff9ad0', -60, 180]].forEach(([col, x, y]) => circle(ctx, x, y, 11, col, OUT, 2.5));
+    }
+    ctx.restore();
+  }
+  window.__mere = { draw, setT: v => { t = v; evStart = v; draw(); } };
+  function frame(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (!$('pause').checked) t += dt;
+    draw(); frames++; acc += dt;
+    if (acc > 1) { $('fps').textContent = Math.round(frames / acc) + ' fps'; frames = 0; acc = 0; }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+</script>
+</body></html>

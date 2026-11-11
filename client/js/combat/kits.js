@@ -466,7 +466,7 @@ const KITS = {
         k.g.heat = 0;
         if (k.talent('pyromancer_boil')) { k.g.heat = 50; k.damage(450, { ab: abBase(k, 'fireball'), extra: true }); k.fx('flashpoint'); }   // (Boil Over, Cataclysm's spec row VII: it goes out as a blast, not a burn)
         else {
-          k.selfDamage(k.perk('pyromancer_a2') ? 0.075 : 0.15);
+          k.selfDamage(k.perk('pyromancer_a2') ? 0.04 : 0.08);   // (8%, the Thermist's own price, since 2026-11-11: at 15% an overheat before a raid hit was most of what killed Pyromancers)
           k.buff('burnt', 5);
           k.stats.overheats = (k.stats.overheats || 0) + 1;
           k.fx('overheat');
@@ -802,7 +802,7 @@ const KITS = {
       'Slow stance: Temporal Bolt heals your linked ally (the tank) for 150% of its damage, and Flux fills. Haste stance: 20% faster casts, +10% damage, and every Bolt heals the WHOLE party a little, but Flux drains.',
       'Shift back to Slow before your Flux runs dry and Paradox goes off: a hit for {d:14} for every Flux that Haste spent, and half of it heals the whole party. Run out and you stumble (3s of slow casts) with no Paradox. Plan Haste for raidwides and burst windows.',
       'Rewind sets an ally\'s HP back to what it was 4s ago, and even revives someone who died in the last 4s. Fire it right after a tankbuster for a massive heal. In Haste it costs 25 Flux instead of a charge, and that Flux feeds Paradox.',
-      'Stasis holds your Bolts\' heals for 8s (25% stronger) and lets them all go at once to the whole party. Start it before a raidwide and release it once the hit has landed.',
+      'Stasis holds your Bolts\' heals for 8s (25% stronger) and lets them all go at once to the whole party, and the party takes 10% less damage while it runs. Start it before a raidwide and release it once the hit has landed.',
       'Accelerando hastens the party, and the ally you aim it at is Quickened on top: give it to the damage dealer with the most to cast.',
     ],
     abilities: [
@@ -863,7 +863,7 @@ const KITS = {
       {
         id: 'stasis', name: 'Stasis', type: 'ogcd', target: 'self', cd: 60, anim: 'big',
         label: k => (k.g.stash ? 'Release' : 'Stasis'),
-        desc: 'Hold time still around your Bolts for 8s: their heals are stored instead of landing, and grow 25%. Press again, or let it run out, to release everything at once, shared evenly by the whole party. ' +
+        desc: 'Hold time still around your Bolts for 8s: their heals are stored instead of landing, and grow 25%. Press again, or let it run out, to release everything at once, shared evenly by the whole party. For those 8s the party takes 10% less damage. ' +
           'Nothing is lost: line the release up with a raidwide that just landed. Its cooldown starts on the release.',
         glow: k => (k.g.stash ? chronoWideDone(k) : !!(bossNow(k) && bossNow(k).wide)),
         effect(k) { chronoStasis(k, this); },
@@ -1719,12 +1719,13 @@ function chronoRewindCost(k, ab) {
 function chronoQuicken(k, ab, t) { if (t != null && t !== true) k.allyBuff(t, 'quickened', { ab }); }
 // Stasis: the first press starts holding your Bolts' heals (chronoBolt adds to the stash), the second (or the end of its
 // 8s) releases them to the party. The cooldown runs from the release.
-const CHRONO_STASIS = { dur: 8, grow: 1.25 };
+const CHRONO_STASIS = { dur: 8, grow: 1.25, mit: 0.1 };   // (mit, 2026-11-11: the Chronomancer was the one healer with nothing to put between the party and a hit)
 function chronoStasis(k, ab) {
   if (k.g.stash) { chronoRelease(k); return; }
   k.g.stash = { amt: 0, at: k.now, end: k.now + CHRONO_STASIS.dur, ab };
   k.cd[ab.id] = k.now + 0.8;   // (the press that releases it can follow straight away)
   k.buff('stasis', CHRONO_STASIS.dur);
+  k.mitigate('party', CHRONO_STASIS.mit, CHRONO_STASIS.dur, { ab });   // (time runs slow round the party for the whole hold, released early or not)
   k.fx('stasis-hold');
 }
 function chronoRelease(k) {

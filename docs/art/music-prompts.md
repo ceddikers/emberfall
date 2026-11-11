@@ -9,7 +9,7 @@ Instrumental only. The game is dusky low fantasy: warm and a little rustic in to
 - **Two fields on most generators.** Suno-style tools have a short **Style** field (about 120 to 200 characters) and a longer **description / lyrics** field. Each piece below gives both: paste the style line into Style, and the structure block into the lyrics field (the `[Instrumental]` and `[Section]` tags tell it not to sing). For tools with one long box (Udio, ElevenLabs Music and similar), paste the **Full prompt** instead.
 - **Always add "no vocals, instrumental"** (already in each prompt). For the Hollow King, a wordless choir is wanted, so that prompt says "wordless choir, no lyrics".
 - **Looping.** No generator loops perfectly. Ask for the piece to start and end on the same chord or on a held drone, then trim it in an audio editor to a clean loop point (or crossfade the last 4 seconds into the first 4). Aim for 1:30 to 2:30 per track. Boss tracks come in two parts: a main loop, and a harder variant in the same key. On Normal the game crossfades into it at a bar line late in the fight (the moment is in brackets after each harder variant); on Hard it plays the whole fight.
-- **File names** follow `docs/art/sounds.md`: `mus-title`, `mus-town`, `mus-grubnak`, `mus-skitterra`, `mus-volkar`, `mus-hollowking`, `mus-wyrm`, `mus-titan`, `mus-archmage`, `mus-hydra`, `mus-corvane`, `mus-brannoc`, `mus-morrowoak`, `mus-caelum`, `mus-pull`, `mus-victory`, `mus-wipe`. The harder variant adds `-hard` (`mus-grubnak-hard`). Export `.ogg` (or `.mp3`), stereo, 44.1 kHz, about -16 LUFS so nothing is much louder than the rest.
+- **File names** follow `docs/art/sounds.md`: `mus-title`, `mus-town`, `mus-grubnak`, `mus-skitterra`, `mus-volkar`, `mus-hollowking`, `mus-wyrm`, `mus-titan`, `mus-archmage`, `mus-hydra`, `mus-corvane`, `mus-brannoc`, `mus-morrowoak`, `mus-caelum`, `mus-garrow`, `mus-silver-road`, `mus-pull`, `mus-victory`, `mus-wipe`. The harder variant adds `-hard` (`mus-grubnak-hard`). Export `.ogg` (or `.mp3`), stereo, 44.1 kHz, about -16 LUFS so nothing is much louder than the rest.
 - **Mix note.** Music sits under the telegraph and warning sounds: avoid a constant loud snare or cymbal wash in the top frequencies, and keep the low end tidy so effects stay readable. Each prompt already asks for that.
 - **Tempo and key** are given so the main loop and its harder variant can be switched at a bar line without a clash.
 
@@ -398,6 +398,70 @@ If a take of either half turns into pop, anime rock or EDM, add `no pop, no EDM,
 **Full prompt:** The same melody and key as the duel theme, now for the radiant second form of the swordsman above the clouds, around 88 BPM in F-sharp minor, the same tempo but everything larger, brighter and higher. Every section opens on a rising roar of fire and air, like a meteor falling close, under a held bright chord. The old tune is sung by a full wordless choir over soaring strings with horns holding long open chords, the cello pulses now deep drums on every other bar, and the calm of the first half is still there under the size of it. The tune is echoed one bar late by a second choir, higher, and a third, higher still, with tuned bells falling through it. A quiet middle of only the low rolling roar, one held choir chord, one glass note and one great blade strike, then the whole melody in full choir and orchestra with brass and bells and the meteor's roar at full, over booming drums, rising a step in the last four bars. Vast, bright and relentless, the end of a long journey, never silent, never cheerful, never frantic, leaving room in the mix for sound effects. No lyrics (the choir is wordless), no electric guitars, no synth leads, no cymbal wash. Starts and ends on the roar and one blade strike so it loops.
 
 If a take of either half turns into pop, anime rock or EDM, add `no pop, no EDM, no guitar`. If the first half is too busy or too warm, add `sparse, cold, lots of space between phrases`. If the second half is not bright enough, add `radiant, major-key colour, soaring high strings and sopranos`; if it speeds up, add `same tempo, steady and slow`.
+
+---
+
+## 6k. Garrow, the Moon's Hound (Season 2, `mus-garrow`, second half `mus-garrow-hard`)
+
+**What it is:** a cold night hunt on a frozen lake, and two moods in one fight. First the patient hound: close, quiet menace rather than bombast, a creature that never hurries because the snow keeps every step you take. Low strings and breath, a distant horn (or one wordless voice) like a howl heard across ice, soft percussion like paws on snow, small silver glints (a celesta, a bowed vibraphone, bowed metal). Then, from the Whiteout on, the chase: the same tune driven and hard, the paws running, the horn close, bowed metal ringing like a chain, never warm and never heroic. The town's far windows are the only warmth in this picture and the music never goes there. Mood: black water, fresh snow, silver, a pale moon, breath you can see.
+
+**How the two halves are played (the same system as Brannoc's, Morrow-Oak's and Caelum's).** `LAYER_AT` in `client/js/sound-hooks.js` already lists `garrow: 4` (a course phase the code agent set; the intent is the Whiteout, the set piece at the 52% gate, so check it lands there), and `Sound.music.layer` crossfades from `mus-garrow` into `mus-garrow-hard` on the next bar line, starting the second at the same position in time as the first. One gap to close in code, as for the set 3 bosses: `garrow` is not yet in `TURN`, so on Hard the fight would start on the `-hard` file; for Garrow both difficulties must start on `mus-garrow` and layer into `mus-garrow-hard` at the Whiteout, because `-hard` here means "the second half", not "the harder fight". Until the files exist `audio.js` borrows Hrimgar's tracks. The two files must be built as a pair:
+
+- **Same key, same tempo, same bar count** (40 bars at 76 BPM is 2:06), so the bar-line crossfade lands clean. The second half keeps the bar grid and doubles the feel: the percussion runs at twice the speed (the paws run), while the harmony still moves every two bars.
+- **Same section order and the same tune.** The first half states a short, plain, falling four-note tune low and close; the second plays the same four notes driven. Because the second file starts wherever the first happens to be, every section of it must stand alone; none may depend on a quiet intro before it.
+- **The first beat of every section in the second half is a gust of white wind** (a short rush of noise with a bowed-metal ring in it), so a short crossfade is covered by the storm and never sounds like a cut. The first half's sections end on one dry soft paw-tick on a felted drum, not a long tail, for the same reason.
+- **Percussion stays light and low-pitched**: felted frame drum, brushes, muted toms, never a snare crack or a cymbal wash, so the telegraph sounds stay readable. The silver sounds sit high and thin and are never constant.
+
+**First half, the patient hound, main loop (Style):** `cold cinematic night hunt boss theme, low bowed cellos and basses, breathy bass flute, distant solo horn howl across ice, celesta and bowed vibraphone glints, soft felted frame drum like paws on snow, patient, close, quiet menace, instrumental, no lyrics`
+
+**Structure block:**
+```
+[Instrumental]
+[Breath: a long exhale of low breath and wind over a bowed drone, one far-off horn call that dies away, one soft paw-tick, 4 bars]
+[Track: the four-note tune on solo cello, low and close, a felted frame drum and brushes walking at a patient pace, a single celesta glint every other bar, 12 bars]
+[Pack: a second and third cello answer the tune a bar late, a little lower each time, like steps following steps, the brushes quicken, bowed metal rings once like a chain, 8 bars]
+[Hush: only the drone, breath and one far horn, the tune stops, a single celesta note, 8 bars]
+[Scent: the tune in full low strings with the horn close for the first time, the drum at full weight but still soft, a step higher in the last 4 bars, 8 bars]
+```
+(40 bars. It ends on one soft paw-tick and starts on the breath, so it loops.)
+
+**Full prompt:** Cold, patient, quietly menacing cinematic boss music for a giant frost-wolf hunting by tracks across a frozen lake at night, around 76 BPM in B minor. It begins with a long exhale of low breath and wind over a bowed drone, one distant horn call like a howl heard across ice, and one soft paw-tick on a felted drum. A solo cello states a short, plain, falling four-note tune, low and close, over a felted frame drum and brushes that walk at a patient pace like paws on snow, with a single celesta glint every other bar. A second and a third cello answer the tune one bar late, each a little lower, like steps following steps, while the brushes quicken and bowed metal rings once like a chain. A quiet middle of only the drone, breath, one far horn and a single celesta note, then the tune in full low strings with the horn close for the first time, rising a step in the last four bars. Menace through patience and closeness, never bombast, never heroic, never warm, leaving room in the mix for sound effects. No lyrics, no choir, no electric guitars, no synth leads, no snare crack, no cymbal wash. Starts and ends on the breath and one soft paw-tick so it loops.
+
+**Chase half `mus-garrow-hard` (layered in when the Whiteout begins; the whole second half of the fight) (Style):** `driven cold fantasy chase boss theme, running low cello and bass ostinato, felted toms and frame drum running like paws, bowed metal and bowed vibraphone ringing like a chain, close brass horn howl, one wordless solo voice sliding like a wolf call, white wind, relentless, never warm, instrumental, no lyrics`
+
+**Structure block:**
+```
+[Instrumental]
+[Breath: a gust of white wind with a bowed-metal ring in it, the drone drops a step, one close horn call, 4 bars]
+[Track: the four-note tune driven on cellos and basses over a running ostinato, felted toms and frame drum at double speed like paws, a bowed-metal ring on the first beat of every other bar, 12 bars]
+[Pack: the tune answered a bar late by violas, then violins above, stacked like a pack closing in, the drums running, a solo wordless voice slides up and breaks off, 8 bars]
+[Hush: the wind low and rolling, one held bowed-metal note like a chain pulled taut, one far horn, the ostinato drops to its bare pulse, 8 bars]
+[Scent: the tune in full strings and low brass, the horn at full, the toms booming softly, a step higher in the last 4 bars, 8 bars]
+```
+(40 bars, same grid as the first half. Each section opens on a gust of white wind. It ends on the wind falling away and one dry paw-tick so it loops.)
+
+**Full prompt:** The same four-note tune and key as the hunting theme, now for the chase across the white, around 76 BPM in B minor but felt in double time: the percussion runs at twice the speed while the harmony still changes every two bars. Every section opens on a gust of white wind with a bowed-metal ring in it. The old tune is driven on cellos and basses over a running ostinato, felted toms and a frame drum running like paws on snow, a bowed-metal ring on the first beat of every other bar. The tune is answered a bar late by violas, then violins above, stacked like a pack closing in, while a single wordless voice slides upward like a wolf call and breaks off. A quiet middle of low rolling wind, one held bowed-metal note like a chain pulled taut, one far horn and the ostinato down to its bare pulse, then the whole tune in full strings and low brass with the horn close, the toms booming softly, rising a step in the last four bars. Driven, hard and relentless but never warm, never heroic and never cheerful, leaving room in the mix for sound effects. No lyrics (the voice is wordless and single), no choir, no electric guitars, no synth leads, no snare crack, no cymbal wash. Starts and ends on the wind and one dry paw-tick so it loops.
+
+If a take of either half turns into pop, anime rock or EDM, add `no pop, no EDM, no guitar`. If the first half is too busy or too big, add `sparse, quiet, lots of space between phrases, close and patient`. If the second half is not driven enough, add `running ostinato, double-time felt drums`; if it turns warm or heroic, add `cold, minor, no major-key colour, no fanfare`; if it speeds up, add `same tempo, steady`.
+
+---
+
+## 6l. The Silver Road, Season 2's set theme (`mus-silver-road`) — not wired yet
+
+**What it is:** one short piece for the whole of Season 2, the way the Raid Board and the approach to a Season 2 fight could sound: the Moon's road of moon-silver coming down to the valley, and her household coming down it. No set has a theme of its own so far (the Raid Board and boss rooms use `mus-pull` before a pull and each boss's track after), so nothing plays this yet: it is not wired, and the code agent decides where it goes (the Raid Board's Season 2 heading, or the walk into a Season 2 room before the pull). It must not carry Garrow's tune, only the same cold colour, so it can sit beside any of the four fights. 1:00 to 1:30 loop. Quiet, wide and patient: a pale road laid across a dark sky. Mood: night, silver, distance, something far off and slowly coming nearer.
+
+**Style (short):** `cold cinematic fantasy night road, sustained low strings, harp harmonics, celesta, bowed crystal glasses, distant solo horn, slow, vast, still, quiet menace, instrumental, no lyrics`
+
+**Structure block:**
+```
+[Instrumental]
+[Road: a very low bowed drone, one harp harmonic, wind far away, 4 bars]
+[Silver: a slow rising line of bowed crystal and celesta climbs like a road, long low strings holding open fifths under it, 8 bars]
+[Far horn: one distant solo horn calls twice across the sky, answered by one high bowed-metal note, the strings thinning, 8 bars]
+[Return: back to the drone and the single harp harmonic, ready to loop, 4 bars]
+```
+
+**Full prompt:** A slow, still, cold instrumental for the approach to a set of night-time boss fights, around 60 BPM in B minor (the key of the Season 2 fights, so the music can run into theirs). A very low bowed drone and one harp harmonic, wind far away, then a slow rising line of bowed crystal glasses and celesta climbing like a pale road across a dark sky over long, low, open-fifth strings. A distant solo horn calls twice across ice and is answered by one high bowed-metal note, the strings thinning, then back to the drone and the single harmonic. Vast and quiet, something far off and slowly coming nearer, never a fanfare, never warm, no drums, no melody that could be hummed, soft in the mix. No lyrics, no choir, no electric guitar, no electronics. Starts and ends on the same drone and harmonic so it loops.
 
 ---
 

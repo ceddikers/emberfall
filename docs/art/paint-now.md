@@ -298,6 +298,21 @@ Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid
 
 ---
 
+## Season 2 boss icons
+**This section contains move art for a boss you may not have fought.** Same format as set 3. After slicing, tell me so I add the boss folder `garrow` to `PAINTED` in `client/js/boss-icons.js`. Garrow's palette has one warm colour only (the tiny amber windows far across the ice); red is danger, and there is no pale blue soak ring in this set. No wolf's head and no people: his jaw, prints, chain and mist only. The longer brief is in `icon-prompts.md`.
+
+**Garrow, sheet 1 (9 icons)** → save the whole sheet, then slice (256 × 256) into `client/icons/boss/garrow/<name>.png` in reading order: `on-the-scent`, `throat-snap`, `howl`, `rime`, `mist-hounds`, `circle-the-prey`, `snowdrift`, `the-long-chase`, `the-whole-trail`
+```text
+Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid with thin plain gaps, read left to right, top to bottom; use all nine cells. Each icon is one bold object with a thick dark outline, flat colours, one hard shadow, light from the upper left, the corners empty, no glow. Palette: night-black and deep blue-black background with a skin of snow, silver, bone white and cold steel-teal frost blue objects, red only for a danger lane, ring, cone or pounce, no pale blue ring anywhere, tiny warm amber windows only where named. The nine icons: (1) On the Scent: a long line of small round-toed bootprints crossing fresh snow from the lower left to the upper right, a thin red lane under the whole line ending in a red ring, two small flat silver moon discs low over the start of the line, a row of four tiny amber windows far along the top edge. (2) Throat Snap: a huge silver skeletal jaw, long pointed teeth above and below, no head and no eyes, snapping shut across a red cone-shaped wedge on dark ice, frost mist curling off the teeth, two thick impact lines. (3) Howl: three big silver-white rings of sound rolling outward across the whole square from a tall column of frost-blue mist, a thin silver crescent moon at the top, tiny frost crystals riding the rings. (4) Rime: two small red rings on black ice, a spreading patch of frost-blue slick mist with a starburst of ice crystals growing out of each ring, a few snowflakes. (5) Mist-Hounds: two low hound-shaped wisps of frost-blue mist trotting nose to tail along a line of bootprints, each with one tiny silver moon for an eye, a short broken silver chain link trailing behind the rear one. (6) Circle the Prey: a ring of large four-toed silver pawprints in fresh snow, the snow inside and outside it plain, a wide red band bursting out along the ring itself. (7) Snowdrift: a smooth swept drift of fresh white snow rolling across the square and half burying a line of bootprints, the last prints gone, a few flat six-point snowflakes and three wind streaks. (8) The Long Chase: three lines of bootprints running out from one point in a fan, each ending in a small four-toed pawprint stamped over it in turn, a broad pale white sweep of whiteout streaking behind them. (9) The Whole Trail: one very long winding line of small bootprints looping in an S and crossing itself, a red lane under the whole line, a big four-toed pawprint at its end, a row of four tiny amber windows far along the bottom edge. No people, no faces, no text.
+```
+
+**Garrow, sheet 2 (8 icons)** → save the whole sheet, then slice (256 × 256) into `client/icons/boss/garrow/<name>.png` in reading order: `cold-trail`, `crossed-trails`, `double-scent`, `doubling-back`, `buried-scent`, `blood-on-the-snow`, `the-second-hound`, `stillness`
+```text
+Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid with thin plain gaps, read left to right, top to bottom; use the first eight cells, leave the ninth empty. Each icon is one bold object with a thick dark outline, flat colours, one hard shadow, light from the upper left, the corners empty, no glow. Palette: night-black and deep blue-black background with a skin of snow, silver, bone white and cold steel-teal frost blue objects, red only for a danger lane, ring or pounce, no pale blue ring anywhere, tiny warm amber windows only where named. The eight icons: (1) Cold Trail: one huge silver four-toed pawprint pressed over the whole square, frost creeping along the edges of its pads, a line of small bootprints running into it from the left and ending inside one pad, a snapped silver chain link lying beside it, one small flat moon disc low in the corner. (2) Crossed Trails: two lines of bootprints crossing in an X on the snow, a bold red lane following the one line to the crossing and then turning sharply along the other, a small four-toed pawprint at the turn. (3) Double Scent: two lines of bootprints side by side, one dot over the start of the first line and two dots over the start of the second, a red lane under both, the second lane starting exactly where the first ends. (4) Doubling Back: one line of bootprints with a line of four-toed pawprints running along it to the right and a second line running back along it to the left, a sharp hairpin arrowhead at the turn, a red ring where the line began. (5) Buried Scent: a thick flurry of snow dropping from the top over the first half of a line of bootprints so they are only faint dents, the last few prints crisp and clear after it, a thin red lane beginning only at the clear prints, flat six-point snowflakes. (6) Blood on the Snow: a short line of red bootprints crossing a line of white bootprints, a small red dot hanging over the first red print, the crossing prints drawn red over white. (7) The Second Hound: two separate lines of bootprints, each ending in a red ring, a solid silver four-toed pawprint at the end of one and a pale see-through ghost outline of the same pawprint at the end of the other, a thin broken chain link joining the two lines at the top. (8) Stillness: a quiet snowfield with just two single pairs of bootprints planted far apart, a thin skin of frost-blue ice crusting round each pair, short red dashes bursting along a line of bootprints between them, a row of four tiny amber windows far along the top edge. No people, no faces, no text.
+```
+
+---
+
 ## Set 1 Hard second-form icons
 **This section shows the new Hard moves.** Save each sheet, then slice it (256 × 256) into the folder named, in reading order. The folders are already in `PAINTED`, so the icons show as soon as the files are in place.
 
@@ -318,7 +333,7 @@ Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid
 
 ---
 
-## Checklist (280 files)
+## Checklist (297 files)
 
 ### Gloomsworn (25)
 - [x] `client/portraits/gloomsworn.png`
@@ -612,6 +627,25 @@ Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid
 - [ ] `client/icons/boss/caelum/chorus-of-the-fallen.png`
 - [ ] `client/icons/boss/caelum/dark-ember.png`
 
+### Garrow boss icons (17)
+- [ ] `client/icons/boss/garrow/on-the-scent.png`
+- [ ] `client/icons/boss/garrow/throat-snap.png`
+- [ ] `client/icons/boss/garrow/howl.png`
+- [ ] `client/icons/boss/garrow/rime.png`
+- [ ] `client/icons/boss/garrow/mist-hounds.png`
+- [ ] `client/icons/boss/garrow/circle-the-prey.png`
+- [ ] `client/icons/boss/garrow/snowdrift.png`
+- [ ] `client/icons/boss/garrow/the-long-chase.png`
+- [ ] `client/icons/boss/garrow/the-whole-trail.png`
+- [ ] `client/icons/boss/garrow/cold-trail.png`
+- [ ] `client/icons/boss/garrow/crossed-trails.png`
+- [ ] `client/icons/boss/garrow/double-scent.png`
+- [ ] `client/icons/boss/garrow/doubling-back.png`
+- [ ] `client/icons/boss/garrow/buried-scent.png`
+- [ ] `client/icons/boss/garrow/blood-on-the-snow.png`
+- [ ] `client/icons/boss/garrow/the-second-hound.png`
+- [ ] `client/icons/boss/garrow/stillness.png`
+
 ### Set 1 Hard second-form icons (11)
 - [x] `client/icons/boss/grubnak/clean-plate.png`
 - [x] `client/icons/boss/grubnak/spit-up.png`
@@ -625,4 +659,4 @@ Cel-shaded cartoon fantasy game ability icons on one square sheet, a 3 × 3 grid
 - [x] `client/icons/boss/volkar/crossing-arms.png`
 - [x] `client/icons/boss/volkar/reaching-arms.png`
 
-Total: 280 files (Gloomsworn 25, Reaper 23, Tidecaller 23, Lanternkeeper 24, Marionettist and Threadweaver 3, Set 2 general items 32, Set 2 boss icons 69, Corvane boss icons 17, Brannoc 15, Morrow-Oak 20, Caelum 18, set 1 second forms 11).
+Total: 297 files (Gloomsworn 25, Reaper 23, Tidecaller 23, Lanternkeeper 24, Marionettist and Threadweaver 3, Set 2 general items 32, Set 2 boss icons 69, Corvane boss icons 17, Brannoc 15, Morrow-Oak 20, Caelum 18, Garrow 17, set 1 second forms 11).

@@ -16,6 +16,8 @@
 //   post3: post2 + a set-2 Hard clear: two set-2 Mythics and more Legendaries. SET 3 NORMAL, SET 2 EXTREME
 //   post4: post3 + a set-3 Normal clear: one set-3 Rare and two set-3 Legendaries swapped in (items.js SET3_STEP). SET 3 HARD
 //   post5: post4 + a set-3 Hard clear: two set-3 Mythics (Crown of Dead Leaves, The Sunwheel) and two more set-3 Legendaries (Halo Shard Pendant, Last Watch Medal) swapped in. THE ULTIMATE, SET 3 EXTREME
+//   post6: post5 + a set-4 Normal clear: two set-4 Rares and one set-4 Legendary swapped in (Broken Link Charm, Snowprint Ring, Moon-Silver Whistle; items.js SET4_STEP). SET 4 HARD
+//   post7: post6 + a set-4 Hard clear: both set-4 Mythics (The Broken Silver Chain, Mantle of the Long Mere) and two more Moon-Silver Whistles swapped in (set 4 has one Legendary so far; more arrive with its other bosses). SET 4 EXTREME
 const BotGear = (() => {
   const I = typeof module !== 'undefined' ? require('./items.js') : null;   // (Node: the tools; the browser has items.js's globals)
   const items = () => (I ? I : { ITEMS, CLASS_MAIN, gearTotals, gearMods, sanitizeGear, gearSources, partyBonus });
@@ -57,9 +59,25 @@ const BotGear = (() => {
     { m_crown: 'm_leafcrown', g_ninthhead: 'g_lastwatch' },          // M4 to M11, L8 to L9
     { m_broodeye: 'm_sunwheel' },                                    // M2 to M10
   ];
-  const LEVELS = ['fresh', 'mid', 'full', 'post1', 'post2', 'post3', 'post4', 'post5'];
+  // post6: set 4's Normal clear (Garrow's tier 13): the tank's Pass Lantern to a Broken Link Charm, the healer's Halo Shard to a Whistle, one dps's Pit Champion's Laurel
+  // to a Snowprint Ring. Tier 13 then has three wearers (a 3-piece party bonus); Corvane's 2-piece bonus goes (the tank no longer wears Pass Lantern).
+  const POST6 = [
+    { g_passlantern: 'g_brokenlink' },                                // R9 to R13 (the tank keeps its health and defence)
+    { g_haloshard: 'g_moonwhistle' },                                // L12 to L13
+    {},
+    { g_champlaurel: 'g_snowprint' },                                // L10 to R13
+  ];
+  // post7: set 4's Hard clear: both Mythics and two more Whistles (the set's only Legendary so far), four wearers of tier 13 (the 4-piece bonus)
+  const POST7 = [
+    { g_ninthhead: 'g_moonwhistle' },                                // L8 to L13
+    {},
+    { m_titanfur: 'm_longmere', g_lastwatch: 'g_moonwhistle' },      // M6 to M13, L9 to L13
+    { m_sunwheel: 'm_silverchain' },                                 // M10 to M13
+  ];
+  const LEVELS = ['fresh', 'mid', 'full', 'post1', 'post2', 'post3', 'post4', 'post5', 'post6', 'post7'];
   // the gear a fight is tuned for (CLAUDE.md "Tuning gear"): each set's Normal and Hard, and Extreme (the party that has cleared that set's Hard)
-  const TUNED = { 1: { normal: 'fresh', hard: 'mid', extreme: 'full' }, 2: { normal: 'post1', hard: 'post2', extreme: 'post3' }, 3: { normal: 'post3', hard: 'post4', extreme: 'post5' } };
+  const TUNED = { 1: { normal: 'fresh', hard: 'mid', extreme: 'full' }, 2: { normal: 'post1', hard: 'post2', extreme: 'post3' }, 3: { normal: 'post3', hard: 'post4', extreme: 'post5' },
+    6: { normal: 'post5', hard: 'post6', extreme: 'post7' } };   // (set 6 is Season 2's: Garrow first; 4 is the Ultimate and 5 the secret raid, which levelFor names)
   function levelFor(bossId, mode) {
     if (bossId === 'sovereign' || bossId === 'hood' || bossId === 'seraph') return 'post5';   // (the Ultimate: a party that cleared everything, set 3's Hard included)
     const b =typeof BOSSES !== 'undefined' ? BOSSES.find(x => x.id === bossId) : null;
@@ -73,12 +91,15 @@ const BotGear = (() => {
     if (level === 'fresh') { const t = i + 1; return [w(t), GEN[t][2], GEN[t][3]]; }
     if (level === 'mid') { const tiers = [[1, 1, 1, 1], [1, 1, 1, 1], [2, 2, 3, 3], [4, 4, 4, 4]][i]; return [w(tiers[0]), GEN[tiers[1]][2], GEN[tiers[2]][3], GEN[tiers[3]][4]]; }
     if (level === 'full') return [`${cls}_w1`, 'm_deadcourt', 'm_broodeye', 'm_torc'];
-    if (!/^post[1-5]$/.test(level)) return null;
+    if (!/^post[1-7]$/.test(level)) return null;
+    const n = +level.slice(4);   // (each level is the one before plus its swaps)
     let keys = POST1[i].map(k => k.replace('{c}', cls));
-    if (level !== 'post1') keys = keys.map((k, j) => POST2[i][POST1[i][j]] || k);
-    if (level === 'post3' || level === 'post4' || level === 'post5') keys = keys.map(k => POST3[i][k] || k);
-    if (level === 'post4' || level === 'post5') keys = keys.map(k => POST4[i][k] || k);
-    if (level === 'post5') keys = keys.map(k => POST5[i][k] || k);
+    if (n >= 2) keys = keys.map((k, j) => POST2[i][POST1[i][j]] || k);
+    if (n >= 3) keys = keys.map(k => POST3[i][k] || k);
+    if (n >= 4) keys = keys.map(k => POST4[i][k] || k);
+    if (n >= 5) keys = keys.map(k => POST5[i][k] || k);
+    if (n >= 6) keys = keys.map(k => POST6[i][k] || k);
+    if (n >= 7) keys = keys.map(k => POST7[i][k] || k);
     return keys;
   }
   // a hero's gear at a level: { cls, insts, totals, mods, host, src }, or null for no gear ('base' or an unknown level)
@@ -114,7 +135,7 @@ const BotGear = (() => {
     const want = role === 'tank' ? [0, 2, 3, 1] : role === 'healer' ? [1, 2, 3, 0] : [2, 3, 0, 1];
     return want.find(s => !taken.has(s)) ?? 0;
   }
-  return { LEVELS, TUNED, GEN, POST1, POST2, POST3, POST4, POST5, FEASTS, levelFor, keysFor, forHero, build, slotFor };
+  return { LEVELS, TUNED, GEN, POST1, POST2, POST3, POST4, POST5, POST6, POST7, FEASTS, levelFor, keysFor, forHero, build, slotFor };
 })();
 
 if (typeof module !== 'undefined') module.exports = { BotGear };

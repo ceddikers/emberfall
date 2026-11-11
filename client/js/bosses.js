@@ -857,6 +857,6 @@ function drawBoss(ctx, boss, x, y, angle, st, scale = 1) {
   ctx.scale(scale, scale);
   ellipse(ctx, 4, 10, 50, 40, 0, 'rgba(0,0,0,0.3)');
   ctx.rotate(angle);
-  BOSS_ART[boss.id](ctx, st, angle);
+  if (BOSS_ART[boss.id]) BOSS_ART[boss.id](ctx, st, angle);   // (a boss whose art file has not loaded yet leaves its shadow on the Raid Board instead of stopping the page)
   ctx.restore();
 }

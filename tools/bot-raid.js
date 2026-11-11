@@ -12,7 +12,7 @@
 //   seed=N uses another set of seeds; first=K starts at run K (0-based) of the set, so first=5 with 5 runs plays what runs 6-10 of a
 //   10-run job play (tools/check.js cuts long jobs into pieces that way); WHY=1 prints the last hits before each death, NEXT=1 the upcoming-moves feed,
 //   TRACE=1 the boss's casts, walls, adds and props as they happen
-//   gear=fresh|mid|full|post1|post2|post3|post4|post5 (or GEAR=...) gives every bot representative player gear (see buildGear below); FEAST=pie|stew|broth|tarts
+//   gear=fresh|mid|full|post1|post2|post3|post4|post5|post6|post7 (or GEAR=...) gives every bot representative player gear (see buildGear below); FEAST=pie|stew|broth|tarts
 //   picks the meal for 'full', 'post1' and 'post2' (default pie, none at the other levels). SUMMARY=1 prints one machine-readable line only.
 //   until=N (with phase=N) ends the run as a clear once the fight passes act N's gate, so check.js can play one act of the Sovereign.
 //   phase=N starts at course (phase) N like a Practice Hall run (the boss starts at that act's health); the Sovereign has one per act.
@@ -50,6 +50,11 @@ const { HOOD } = load('arena/bosses/hood.js');
 DEFS.hood = HOOD;   // (gate 1 of the found fight; one difficulty, play it as normal)
 const { SERAPH } = load('arena/bosses/seraph.js');
 DEFS.seraph = SERAPH;   // (gate 2)
+const { GARROW } = load('arena/bosses/garrow.js');
+DEFS.garrow = GARROW;   // (Season 2, Boss XIII)
+// (Season 2, Bosses XIV to XVI: each joins the list once its script file exists, so a boss still being built never breaks the tool)
+for (const [id, name] of [['vesper', 'VESPER'], ['ormun', 'ORMUN'], ['maelis', 'MAELIS']])
+  if (require('fs').existsSync(path.join(__dirname, '../client/js/arena/bosses', id + '.js'))) DEFS[id] = load('arena/bosses/' + id + '.js')[name];
 const { TRIALS, trialDef } = load('arena/trials.js');
 
 let gearLevel = process.env.GEAR || '', modsArg = process.env.MODS || '';

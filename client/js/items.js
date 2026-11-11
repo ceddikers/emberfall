@@ -45,10 +45,19 @@ const STAT_INFO = {
 // is a further step: SET3_STEP times a set-2 piece (so about 1.32 times set 1). The ilvl offsets are from set 1.
 const SET2_STEP = 1.15, SET2_ILVL = 8;
 const SET3_STEP = 1.15, SET3_ILVL = 16;
-const gearStep = tier => (tier >= 9 ? SET2_STEP * SET3_STEP : tier >= 5 ? SET2_STEP : 1);
-const gearIlvl = tier => (tier >= 9 ? SET3_ILVL : tier >= 5 ? SET2_ILVL : 0);
+// Set 4 (Season 2, tiers 13 on: Garrow first; the other three bosses' tiers 14-16 read the same step) is the item level one more step
+// up (SET4_ILVL 24) but a smaller budget step. Caps arithmetic: set 3's best Physical or Magical loadout is already 171-174 of
+// GEAR_CAPS 175 (a Caelum or Corvane weapon about 122, two Barrow Bell Pendants 26 each; only Main stats are capped, so this is the
+// one that binds). A tier-13 Uncommon weapon at base 86 is 86 x (1.15 x 1.15 x SET4_STEP) x 1.0: 123 at 1.08 (best loadout 123 + 26 +
+// 26 = 175, exactly the cap) and 124 at 1.09 (176, a point wasted), so SET4_STEP is 1.08, not a full 1.15 (which would be 131 and 183).
+// Haste and Critical are untouched (best loadouts already read 16-17 against 13 before this tier, and tier 13 does not raise them);
+// HP and Defence have no cap. Set 4's reward is therefore HP, Defence, party bonuses and the new effects, not more Main stat.
+const SET4_STEP = 1.08, SET4_ILVL = 24;
+const gearStep = tier => (tier >= 13 ? SET2_STEP * SET3_STEP * SET4_STEP : tier >= 9 ? SET2_STEP * SET3_STEP : tier >= 5 ? SET2_STEP : 1);
+const gearIlvl = tier => (tier >= 13 ? SET4_ILVL : tier >= 9 ? SET3_ILVL : tier >= 5 ? SET2_ILVL : 0);
 const TIERS = { 0: { name: 'Recruit' }, 1: { name: 'Grubnak' }, 2: { name: 'Skitterra' }, 3: { name: 'Volkar' }, 4: { name: 'Hollow King' },
-  5: { name: 'Vhalgrath' }, 6: { name: 'Hrimgar' }, 7: { name: 'Azerath' }, 8: { name: 'The Hydra' }, 9: { name: 'Corvane' }, 10: { name: 'Brannoc' }, 11: { name: 'Morrow-Oak' }, 12: { name: 'Caelum Vey' } };
+  5: { name: 'Vhalgrath' }, 6: { name: 'Hrimgar' }, 7: { name: 'Azerath' }, 8: { name: 'The Hydra' }, 9: { name: 'Corvane' }, 10: { name: 'Brannoc' }, 11: { name: 'Morrow-Oak' }, 12: { name: 'Caelum Vey' },
+  13: { name: 'Garrow' } };
 
 const CLASS_GEAR = {
   bastion: { wtype: 'sword', w: ["Recruit's Arming Sword", 'Cleaverguard Sword', 'Silkrend Oathblade', 'Stormward Oathblade', 'Barrowking Oathblade'], a: ['Iron Skillet Plate', 'Broodwarden Plate', 'Thunderforged Plate', 'Gravewarden Plate'] },
@@ -517,6 +526,24 @@ const ITEMS = {};
       fx: [{ on: 'dash', icd: 10, buff: { dmg: 0.05 }, dur: 6, name: 'First There' }, { on: 'gcd', chance: 0.2, strike: 110 }], fxText: 'First There: after you dash (once every 10 s), +5% damage for 6 s; and each GCD has a 20% chance to leave an afterimage that cuts for about 55 extra damage.' },
     { key: 'm_fallenmantle', name: 'Mantle of the Fallen Star', slot: 'armor', atype: 'thunderhead', tier: 12, rarity: M, base: { hp: 75, def: 50 },
       fx: [{ on: 'ogcd', icd: 12, ward: 160, dur: 6 }, { while: 'always', recast: 0.05 }], fxText: 'Starfall: an oGCD (once every 12 s) draws a ward of about 80 over you for 6 s, and your oGCD cooldowns are 5% shorter.' },
+
+    // Garrow, the Moon's Hound (set 4, the Silver Road; tier 13): the wolf-hound of frost-mist over a silver skeleton, come down the
+    // road to the Long Mere. Hound-tooth, a broken silver chain, hoarfrost, footprints in snow and a whistle; fresh tracks, links and
+    // mist that closes behind you. General items only. Caps: see SET4_STEP above (the weapon is the one capped stat that moves; the new Mythic
+    // accessory gives 25 Main against the Barrow Bell Pendant's 26, so Garrow's gain is in HP, Defence, haste and the effects).
+    { key: 'g_houndtooth', name: 'Hound-Tooth Blade', slot: 'weapon', main: 'phys', wtype: 'fang', tier: 13, rarity: U, base: { main: 86, crit: 2, haste: 1 } },
+    { key: 'g_chainfocus', name: 'Chain-Link Focus', slot: 'weapon', main: 'mag', wtype: 'focus', tier: 13, rarity: U, base: { main: 86, crit: 1, haste: 2 } },
+    { key: 'g_hoarpelt', name: 'Hoarfrost Pelt', slot: 'armor', tier: 13, rarity: U, atype: 'chitin', base: { hp: 84, def: 50 } },
+    { key: 'g_snowprint', name: 'Snowprint Ring', slot: 'accessory', atype: 'ring', tier: 13, rarity: R, base: { crit: 3, main: 12 },
+      fx: [{ on: 'dash', icd: 8, buff: { haste: 0.05 }, dur: 5, name: 'Fresh Tracks' }], fxText: 'Fresh Tracks: after you dash (once every 8 s), +5% haste for 5 s.' },
+    { key: 'g_brokenlink', name: 'Broken Link Charm', slot: 'accessory', atype: 'charm', tier: 13, rarity: R, base: { hp: 55, def: 25 },
+      fx: [{ on: 'crit', icd: 12, ward: 120, dur: 6 }], fxText: 'Snapped Link: your critical hits (once every 12 s) close a silver link around you: a ward of about 60 for 6 s.' },
+    { key: 'g_moonwhistle', name: 'Moon-Silver Whistle', slot: 'accessory', atype: 'amulet', tier: 13, rarity: L, base: { crit: 3, main: 12 },
+      fx: [{ on: 'crit', icd: 6, buff: { dmg: 0.06 }, dur: 6, name: 'On the Scent' }], fxText: 'On the Scent: a critical hit (at most once every 6 s) puts you on the trail: +6% damage for 6 s.' },
+    { key: 'm_silverchain', name: 'The Broken Silver Chain', slot: 'accessory', atype: 'torc', tier: 13, rarity: M, base: { main: 12, haste: 3 },
+      fx: [{ on: 'gcd', buff: { dmg: 0.01 }, dur: 8, stacks: 5, name: 'Link' }], fxText: 'Link by Link: each GCD forges a silver link: +1% damage for 8 s, stacking up to 5 times. Stop and the chain falls away.' },
+    { key: 'm_longmere', name: 'Mantle of the Long Mere', slot: 'armor', atype: 'shroud', tier: 13, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ while: 'always', recast: 0.06 }, { on: 'dash', icd: 10, ward: 160, dur: 6 }], fxText: 'Whiteout: your oGCD cooldowns are 6% shorter, and after you dash (once every 10 s) the mist closes round you: a ward of about 80 for 6 s.' },
   ];
   for (const it of gen) ITEMS[it.key] = it;
   // every effect gets an id (its proc cooldowns and buffs are tracked by it)
@@ -660,6 +687,9 @@ const PARTY_BONUS = {
     tiers: { 2: { dmg: 0.04, hp: 0.04 }, 3: { dmg: 0.05, hp: 0.05, haste: 0.03 }, 4: { dmg: 0.06, hp: 0.06, haste: 0.04 } } },
   12: { name: 'Eightfold Wake', boss: 'Caelum Vey', flavor: 'He was always going to be there first. Be there together.',
     tiers: { 2: { dmg: 0.05, hp: 0.05 }, 3: { dmg: 0.06, hp: 0.06, haste: 0.04 }, 4: { dmg: 0.07, hp: 0.07, haste: 0.05 } } },
+  // set 4 (Season 2: one more step, kept small like its gear; the first boss of the set starts near set 3's first)
+  13: { name: 'One Trail', boss: 'Garrow', flavor: 'He follows where you have walked. Walk the same road, together.',
+    tiers: { 2: { dmg: 0.04, haste: 0.03 }, 3: { dmg: 0.05, haste: 0.03, crit: 0.03 }, 4: { dmg: 0.06, haste: 0.04, crit: 0.04 } } },
 };
 const BONUS_STAT = { hp: 'max HP', dmg: 'damage', crit: 'critical chance', haste: 'haste' };
 const bonusText = m => Object.entries(m).map(([k, v]) => `+${Math.round(v * 100)}% ${BONUS_STAT[k]}`).join(', ');
@@ -687,7 +717,7 @@ function partyBonus(counts) {
 // A clear drops a chest: 4 items on Normal, 5 on Hard. Each item rolls its rarity first, then picks an item of that
 // rarity from the boss's table. Class items only roll for classes a human in the run plays (bots don't count).
 // The chest is first come: anyone takes an item and the party can trade it on (loot.js).
-const BOSS_TIER = { grubnak: 1, skitterra: 2, volkar: 3, hollowking: 4, wyrm: 5, titan: 6, archmage: 7, hydra: 8, corvane: 9, brannoc: 10, morrowoak: 11, caelum: 12 };
+const BOSS_TIER = { grubnak: 1, skitterra: 2, volkar: 3, hollowking: 4, wyrm: 5, titan: 6, archmage: 7, hydra: 8, corvane: 9, brannoc: 10, morrowoak: 11, caelum: 12, garrow: 13 };
 const CHEST_SIZE = { normal: 4, hard: 5, extreme: 5 };   // (an Extreme chest is the Hard chest)
 const CHEST_ODDS = {   // percent by rarity: [Uncommon, Rare, Legendary, Mythic]
   normal: [55, 30, 12, 3],
@@ -701,7 +731,7 @@ for (const [boss, tier] of Object.entries(BOSS_TIER)) {
   for (const it of Object.values(ITEMS)) if (it.tier === tier && t[it.rarity]) t[it.rarity].push(it.key);
 }
 // gold for clearing a boss (Hard doubles it, Extreme triples it; wipes and trials give nothing)
-const CLEAR_GOLD = { grubnak: 40, skitterra: 45, volkar: 50, hollowking: 60, wyrm: 65, titan: 70, archmage: 75, hydra: 85, corvane: 95, brannoc: 105, morrowoak: 115, caelum: 125 };
+const CLEAR_GOLD = { grubnak: 40, skitterra: 45, volkar: 50, hollowking: 60, wyrm: 65, titan: 70, archmage: 75, hydra: 85, corvane: 95, brannoc: 105, morrowoak: 115, caelum: 125, garrow: 140 };
 const clearGold = (bossId, mode) => (CLEAR_GOLD[bossId] || 0) * (mode === 'extreme' ? 3 : mode === 'hard' ? 2 : 1);
 
 // classes: the classes the humans in the run play. -> [item keys]

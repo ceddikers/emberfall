@@ -27,9 +27,10 @@ const SvPortal = (() => {
 
   // every boss of sets 1-3 beaten on Hard on this account (mine), and on the town's road (the host's, while you are in a friend's game: main.js road.hard)
   const hardOf = id => (deps && deps.hard ? deps.hard(id) : Save.hardBeaten(id));
-  const sets = () => typeof BOSSES !== 'undefined' && BOSSES.length > 0;
-  const earnedMine = () => sets() && BOSSES.every(b => Save.hardBeaten(b.id));
-  const earned = () => sets() && BOSSES.every(b => hardOf(b.id));
+  const roadBosses = () => (typeof BOSSES !== 'undefined' ? BOSSES.filter(b => (b.set || 1) <= 3) : []);   // (Season 2, set 6, comes after the Ultimate: it never counts toward opening it)
+  const sets = () => roadBosses().length > 0;
+  const earnedMine = () => sets() && roadBosses().every(b => Save.hardBeaten(b.id));
+  const earned = () => sets() && roadBosses().every(b => hardOf(b.id));
   const visiting = () => !!(deps && deps.visiting && deps.visiting());
   const unlocked = () => flag() || earned();
   // starting a pull from the console or a test (main.js startRaid): the unlock, or a local dev host

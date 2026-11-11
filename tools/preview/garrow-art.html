@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Garrow art: poses, hounds, ridge</title>
+<style>
+  body { margin: 0; background: #1a2230; color: #b8cce0; font: 12px Georgia, serif; }
+  #grid { display: grid; grid-template-columns: repeat(4, 400px); gap: 4px; padding: 4px; }
+  canvas { display: block; }
+  #err { color: #ff9a8a; padding: 4px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="err"></div>
+<div id="grid"></div>
+<script>window.__errs = []; window.onerror = (m, s, l) => { window.__errs.push(m + ' (' + String(s).split('/').pop() + ':' + l + ')'); document.getElementById('err').textContent = window.__errs.join(' | '); };</script>
+<script src="../../client/js/draw-util.js"></script>
+<script src="../../client/js/data.js"></script>
+<script src="../../client/js/bosses.js"></script>
+<script src="../../client/js/arena/shapes.js"></script>
+<script src="../../client/js/arena/boss-tells.js"></script>
+<script src="../../client/js/arena/arena-view.js"></script>
+<script src="../../client/js/garrow-art.js"></script>
+<script>
+  // ?pose=howl&tp=1.2&zoom=3&angle=0  draws one cell large; no query draws the whole sheet. tp is seconds since the pose turned on.
+  const Q = new URLSearchParams(location.search);
+  const W = 400, H = 300;
+  // the lake's real floor: pale blue-grey snow (#9fb0ca .. #b6c4da, highlights #dbe5f3). ?bg=dark gives the old night-black.
+  const DARK = Q.get('bg') === 'dark';
+  function backdrop(c, w, h, seed) {
+    c.fillStyle = DARK ? '#0a1424' : '#adbcd2'; c.fillRect(0, 0, w, h);
+    const r = rng(seed || 7);
+    for (let i = 0; i < 160; i++) { c.fillStyle = DARK ? 'rgba(210,230,250,' + (0.03 + r() * 0.06) + ')' : (r() < 0.5 ? 'rgba(219,229,243,' + (0.35 + r() * 0.4) + ')' : 'rgba(159,176,202,' + (0.3 + r() * 0.4) + ')'); c.fillRect(r() * w, r() * h, 3 + r() * 14, 1 + r() * 3); }
+    for (let i = 0; i < 5; i++) { c.strokeStyle = DARK ? 'rgba(120,160,200,0.08)' : 'rgba(110,130,165,0.18)'; c.lineWidth = 1; c.beginPath(); c.moveTo(r() * w, r() * h); c.lineTo(r() * w, r() * h); c.stroke(); }
+  }
+  // Runs him from rest, turns the pose on at 1 s and draws the frame tp seconds into it (so the smoothing and the sequences are as they are in play).
+  function bossCell(c, o) {
+    const sc = o.scale || 1.3, st = { t: 0, moving: false, action: null, phase: 0, props: {} };
+    const scratch = document.createElement('canvas'); scratch.width = scratch.height = 8; const sx = scratch.getContext('2d');
+    const T = 1 + (o.tp || 0), ang = tt => (o.angle || 0) + (o.turn ? o.turn * Math.max(0, tt - 0.4) : 0);
+    for (let tt = 0; tt <= T + 1e-6; tt += 1 / 30) {
+      st.t = tt; st.moving = !!(o.moving && tt > 0.6); st.props = {}; st.action = null;
+      if (o.pose && tt >= 1) st.props[GA_ART.KEYS[GA_ART.POSES.indexOf(o.pose)]] = true;
+      if (o.bite != null && tt >= 1) st.action = { type: 'attack', t0: 1 + o.bite, dur: 1 };
+      if (tt < T - 1e-6) { sx.save(); sx.clearRect(0, 0, 8, 8); BOSS_ART.garrow(sx, st, ang(tt)); sx.restore(); }
+    }
+    const a = ang(T);
+    c.save(); c.translate(W / 2 + (o.dx || 0), H / 2 + (o.dy || 0)); c.scale(o.zoom || 1, o.zoom || 1);
+    drawBoss(c, { id: 'garrow' }, 0, 0, a, st, sc);
+    c.restore();
+  }
+  function addCell(c, kind, o) {
+    const st = { t: 0, moving: !!o.moving, action: null, phase: 0, props: {} };
+    st.t = o.t || 3;
+    if (o.bite != null) st.action = { type: 'attack', t0: st.t - o.bite, dur: 1 };
+    if (kind === 'gwshade') { const sx = document.createElement('canvas').getContext('2d'); for (let tt = 0; tt < st.t; tt += 1 / 30) { const s2 = Object.assign(st, { t: tt }); drawAdd(sx, kind, 0, 0, o.angle || 0, s2, false, 1.5); } st.t = o.t || 3; }
+    c.save(); c.translate(W / 2, H / 2); c.scale(o.zoom || 1, o.zoom || 1); drawAdd(c, kind, 0, 0, o.angle || 0, st, !!o.enr, 1.5); c.restore();
+  }
+  function ridgeCell(c, o) {
+    const pr = { id: o.id || 3, kind: 'ridge', shape: 'rect', x: W / 2, y: H / 2, w: o.w || 220, h: 36, a: o.a || 0, state: o.state || 0, born: 0, hp: 0, maxHp: 0 };
+    const t0 = o.age == null ? 5 : o.age;
+    if (o.state) { for (let tt = 0; tt <= o.cr; tt += 1 / 30) { c.save(); c.globalAlpha = 0; ridgeDraw(c, pr, 5 + tt); c.restore(); } ridgeDraw(c, pr, 5 + o.cr); return; }
+    c.save(); c.translate(0, 0); c.scale(o.zoom || 1, o.zoom || 1); pr.x = W / 2 / (o.zoom || 1); pr.y = H / 2 / (o.zoom || 1);
+    ridgeDraw(c, pr, t0); c.restore();
+  }
+  const ridgeDraw = (c, pr, t) => { c.save(); c.globalAlpha = Math.min(1, (t - pr.born) / 0.25); ArenaView.drawProp(c, pr, t, null); c.restore(); };   // (through the game's own prop switch, so the hook is exercised)
+
+  const CELLS = [
+    ['idle', c => bossCell(c, { tp: 0.0 })],
+    ['trot (moving)', c => bossCell(c, { moving: true, tp: 1.2 })],
+    ['scent, 1.0 s', c => bossCell(c, { pose: 'scent', tp: 1.0 })],
+    ['run, 1.0 s', c => bossCell(c, { pose: 'run', moving: true, tp: 1.0 })],
+    ['pounce gather .22', c => bossCell(c, { pose: 'pounce', tp: 0.22, angle: 0.5 })],
+    ['pounce air .44', c => bossCell(c, { pose: 'pounce', tp: 0.44, angle: 0.5 })],
+    ['pounce land .85', c => bossCell(c, { pose: 'pounce', tp: 0.85, angle: 0.5 })],
+    ['snap wind .3', c => bossCell(c, { pose: 'snap', tp: 0.3 })],
+    ['snap wide .58', c => bossCell(c, { pose: 'snap', tp: 0.58 })],
+    ['snap bite .72', c => bossCell(c, { pose: 'snap', tp: 0.72 })],
+    ['howl 1.4 s', c => bossCell(c, { pose: 'howl', tp: 1.4 })],
+    ['rime 1.0 s', c => bossCell(c, { pose: 'rime', tp: 1.0 })],
+    ['pack .9 s', c => bossCell(c, { pose: 'pack', tp: 0.9 })],
+    ['circle (turning)', c => bossCell(c, { pose: 'circle', moving: true, tp: 1.6, turn: 0.9 })],
+    ['drift 2.2 s', c => bossCell(c, { pose: 'drift', tp: 2.2 })],
+    ['enrage 1.2 s', c => bossCell(c, { pose: 'enrage', tp: 1.2 })],
+    ['auto bite .4', c => bossCell(c, { bite: -0.4, tp: 0.4 })],
+    ['facing up (idle)', c => bossCell(c, { angle: -Math.PI / 2, tp: 0 })],
+    ['facing down, scent', c => bossCell(c, { angle: Math.PI / 2, pose: 'scent', tp: 1 })],
+    ['facing left, howl', c => bossCell(c, { angle: Math.PI, pose: 'howl', tp: 1.4 })],
+    ['gwshade (running)', c => addCell(c, 'gwshade', { moving: true, t: 3, angle: 0.4 })],
+    ['misthound idle', c => addCell(c, 'misthound', { zoom: 2.6 })],
+    ['misthound walking', c => addCell(c, 'misthound', { moving: true, zoom: 2.6, angle: 0.7 })],
+    ['misthound biting', c => addCell(c, 'misthound', { bite: 0.4, zoom: 2.6 })],
+    ['ridge rising .15', c => ridgeCell(c, { age: 0.15 })],
+    ['ridge .5', c => ridgeCell(c, { age: 0.5, a: 0.3 })],
+    ['ridge, standing', c => ridgeCell(c, { a: -0.35 })],
+    ['ridge crumbling', c => ridgeCell(c, { state: 1, cr: 0.6, a: 0.2 })],
+  ];
+  if (Q.get('perf')) {   // how long a frame of each costs
+    const cv = document.createElement('canvas'); cv.width = 600; cv.height = 400; const c = cv.getContext('2d'), st = { t: 0, moving: true, action: null, phase: 0, props: { gaRun: true } };
+    const time = (n, fn) => { const t0 = performance.now(); for (let i = 0; i < n; i++) fn(i); return ((performance.now() - t0) / n).toFixed(3); };
+    const body = time(400, i => { st.t = i / 60; c.save(); c.translate(300, 200); c.scale(1.3, 1.3); BOSS_ART.garrow(c, st, i * 0.01); c.restore(); });
+    const hs = { t: 0, moving: true, action: null, phase: 0, props: {} };
+    const hound = time(400, i => { hs.t = i / 60; c.save(); c.translate(300, 200); drawAdd(c, 'misthound', 0, 0, 0, hs, false, 1.5); c.restore(); });
+    const pr = { id: 4, kind: 'ridge', shape: 'rect', x: 300, y: 200, w: 600, h: 34, a: 0.4, born: 0 };
+    const rise = time(100, i => { c.save(); ArenaView.drawProp(c, pr, 0.05 + (i % 40) * 0.02, null); c.restore(); });
+    const stand = time(400, i => { c.save(); ArenaView.drawProp(c, pr, 5 + i * 0.016, null); c.restore(); });
+    document.getElementById('err').textContent = 'ms/frame: body ' + body + ', hound ' + hound + ', ridge rising ' + rise + ', ridge standing ' + stand;
+  }
+  const grid = document.getElementById('grid');
+  if (Q.get('kind')) {
+    const cv = document.createElement('canvas'); cv.width = 960; cv.height = 500; grid.style.display = 'block'; grid.append(cv);
+    const c = cv.getContext('2d'); backdrop(c, 960, 500, 3); const z = +Q.get('zoom') || 3, k = Q.get('kind');
+    c.save(); c.translate(480 - W / 2, 250 - H / 2);
+    if (k === 'hound') addCell(c, 'misthound', { zoom: z, moving: Q.get('moving') === '1', bite: Q.get('bite') ? +Q.get('bite') : null, angle: +Q.get('angle') || 0 });
+    else ridgeCell(c, { zoom: z, a: +Q.get('a') || 0, age: Q.get('age') ? +Q.get('age') : null, w: +Q.get('w') || 220, state: Q.get('crumble') ? 1 : 0, cr: +Q.get('crumble') || 0 });
+    c.restore();
+  } else if (Q.get('pose') || Q.get('one')) {
+    const cv = document.createElement('canvas'); cv.width = 960; cv.height = 760; grid.style.display = 'block'; grid.append(cv);
+    const c = cv.getContext('2d'); backdrop(c, 960, 760, 3);
+    const z = +Q.get('zoom') || 3;
+    c.save(); c.translate(480 - W / 2, 380 - H / 2);
+    const o = { pose: Q.get('pose') === 'idle' ? null : Q.get('pose'), tp: +Q.get('tp') || 0, angle: +Q.get('angle') || 0, moving: Q.get('moving') === '1', zoom: z, turn: +Q.get('turn') || 0 };
+    bossCell(c, o); c.restore();
+  } else for (const [label, fn] of CELLS) {
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; grid.append(cv);
+    const c = cv.getContext('2d'); backdrop(c, W, H, label.length * 13);
+    try { fn(c); } catch (e) { window.__errs.push(label + ': ' + e.message + ' ' + (e.stack || '').split('\n')[1]); document.getElementById('err').textContent = window.__errs.join(' | '); }
+    c.font = '12px Georgia'; c.fillStyle = DARK ? 'rgba(190,210,235,0.9)' : 'rgba(20,30,50,0.9)'; c.fillText(label, 8, 16);
+  }
+</script>
+</body>
+</html>

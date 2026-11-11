@@ -3,13 +3,13 @@
 //   e.g. node tools/comp-sweep.js hard skitterra gear=mid comps=6 runs=5
 //        node tools/comp-sweep.js hard skitterra only=pyromancer:sigilmancer,driftblade:orbit mix=dps1:post1,dps2:fresh comps=8 runs=5
 // Arguments (any order):
-//   normal|hard, boss id  (grubnak skitterra volkar hollowking wyrm titan hydra archmage corvane brannoc morrowoak caelum)
+//   normal|hard, boss id  (grubnak skitterra volkar hollowking wyrm titan hydra archmage corvane brannoc morrowoak caelum garrow)
 //   comps=N   parties to draw (default 20); runs=N  pulls per party (default 10); seed=N  base seed (default 1000)
-//   gear=L    gear level for every member: fresh|mid|full|post1|post2|post3|post4 (same as bot-raid.js; default mid, 'base' = no gear)
+//   gear=L    gear level for every member: fresh|mid|full|post1|post2|post3|post4|post5|post6|post7 (same as bot-raid.js; default mid, 'base' = no gear)
 //   mix=SPEC  members with different gear. Either explicit, "slot:level" pairs, slots tank healer dps1 dps2 (others keep gear=):
 //               mix=dps1:post1,dps2:fresh
 //             or random, each member's level drawn per comp between two levels (inclusive, in the order
-//             fresh mid post1 post2 post3 post4 full): mix=random:fresh-mid
+//             fresh mid post1 post2 post3 post4 post5 post6 post7 full): mix=random:fresh-mid
 //   only=...  force members by class (or class:spec; a bare class gets a random spec). Roles come from the class; forced DPS fill
 //             the DPS slots, the rest of the party is drawn as usual. e.g. only=pyromancer:sigilmancer,driftblade:orbit
 //   jobs=N    worker processes (default 2)         SUMMARY=1  print one JSON line only      FEAST=pie|stew|broth|tarts  as bot-raid.js
@@ -30,7 +30,7 @@ const path = require('path');
 const fs = require('fs');
 const { fork } = require('child_process');
 const load = (p) => require(path.join(__dirname, '../client/js', p));
-const LEVELS = ['fresh', 'mid', 'post1', 'post2', 'post3', 'post4', 'full'];
+const LEVELS = ['fresh', 'mid', 'post1', 'post2', 'post3', 'post4', 'post5', 'post6', 'post7', 'full'];
 const SLOTS = ['tank', 'healer', 'dps1', 'dps2'];
 
 function loadGame() {

@@ -748,7 +748,7 @@ const SPECS = {
     {
       id: 'cataclysm', name: 'Cataclysm', title: 'The Falling Star', accent: '#ff4a2a',
       blurb: 'Call the sky down. Big, slow, and worth the wait.',
-      gaugeTip: 'Fireball gives 12, Meteor 20 (10 with Hot Streak) and Fire Blast 6. Every point of Heat adds 0.3% damage. At 100 you overheat: you lose 15% of your HP, Heat resets and you deal 20% less damage for 5s. Heat cools slowly while you aren\'t casting. Vent spends it all (at 90 or more it also lights Hot Streak), and brings a falling Meteor down at once with your Heat burning in its crater. While Smolder is up it can\'t boil over: it stops at 99.',
+      gaugeTip: 'Fireball gives 12, Meteor 20 (10 with Hot Streak) and Fire Blast 6. Every point of Heat adds 0.3% damage. At 100 you overheat: you lose 8% of your HP, Heat resets and you deal 20% less damage for 5s. Heat cools slowly while you aren\'t casting. Vent spends it all (at 90 or more it also lights Hot Streak), and brings a falling Meteor down at once with your Heat burning in its crater. While Smolder is up it can\'t boil over: it stops at 99.',
       focus: 'Huge single hits. Pyroblast becomes Meteor: a rune circle on the boss, then a meteor smashes it 1.5s later and leaves a burning crater.',
       passive: { name: 'Meteor', desc: 'Pyroblast becomes Meteor: it lands 1.5s after you cast it, hits for {d:700}, and leaves a burning crater. Hot Streak still makes it instant.' },
       // (the lowest spec in a raid, level with its class on the dummy: a standing 3s cast costs it more among a raid's moving and dodging, so it aims above its class here and its Meteor casts a little quicker)
@@ -802,7 +802,7 @@ const SPECS = {
     {
       id: 'sigilmancer', name: 'Sigilmancer', title: 'The Burning Circle', accent: '#ffb347',
       blurb: 'Draw the circle, stand inside, and burn brighter than anyone. Step out and the fire fades.',
-      gaugeTip: 'Fireball gives 12, Pyroblast 20 (10 with Hot Streak) and Fire Blast 6. Every point of Heat adds 0.3% damage. At 100 you overheat: you lose 15% of your HP, Heat resets and you deal 20% less damage for 5s. Heat cools slowly while you aren\'t casting. Vent spends it all (at 90 or more it also lights Hot Streak). While you stand in your Ember Circle you cast 20% faster and hit 15% harder.',
+      gaugeTip: 'Fireball gives 12, Pyroblast 20 (10 with Hot Streak) and Fire Blast 6. Every point of Heat adds 0.3% damage. At 100 you overheat: you lose 8% of your HP, Heat resets and you deal 20% less damage for 5s. Heat cools slowly while you aren\'t casting. Vent spends it all (at 90 or more it also lights Hot Streak). While you stand in your Ember Circle you cast 20% faster and hit 15% harder.',
       focus: 'Positioning. Ember Circle makes you much stronger, but only while you stand in it, so where you plant it is the skill.',
       passive: { name: 'Ember Circle', desc: 'Combustion becomes Ember Circle: a circle of fire at your feet for 20s. Inside it you cast 20% faster and deal 15% more damage. Outside, nothing.' },
       build: base => {

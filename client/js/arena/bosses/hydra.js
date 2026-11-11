@@ -797,6 +797,8 @@ const HYDRA = {
       if (act === 4) return X ? { 1: BREACH } : {};
       return { ...Object.fromEntries([4, 7, 10, 13].map((i, k) => [i, swapTable[3][dn][k]])), ...(X ? { 16: BREACH } : null) };
     };
+    // (the order this dance plays her body's beats in, for tools/check.js: the heads' own round is drawn from the board each pull and is not part of it)
+    if (H) { const dn = f.dance % 3; f.setOrder = ['I ' + swapTable[1][dn].join(','), 'II ' + swapTable[2][dn].join(','), 'III ' + swapTable[3][dn].map(x => (x === DANCE ? 'dance' : 'gaze')).join(',')]; }
     const closingBeats = [[10, cry, "Mother's Cry"], [10, maul, 'Rending Maul'], [10, thrash, 'Tail Thrash'], [10, cry, "Mother's Cry"]];
     // I. Three Heads
     const actI = from => f.course({

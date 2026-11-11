@@ -39,6 +39,9 @@ const FEATS = [
   { id: 'second-road', cat: 'road', name: 'The Second Road', desc: 'Defeat all four of the bosses beyond the Barrow.', title: 'Walker of the Second Road', hidden: false, needs: 'wyrm',
     check: { type: 'clearAll', mode: 'normal', set: 2 } },
 
+  { id: 'called-off', cat: 'road', name: 'Called Off', desc: 'Defeat Garrow.', title: null, hidden: false,
+    check: { type: 'clear', boss: 'garrow', mode: 'normal' } },
+
   { id: 'who-walked-home', cat: 'road', name: 'The Last Door', desc: 'Defeat the Cinder Sovereign.', title: 'Who Walked Home', hidden: true, hint: 'Something in town is still sealed.', needs: 'sovereign', ultimate: true,
     check: { type: 'clear', boss: 'sovereign' } },
 
@@ -69,6 +72,8 @@ const FEATS = [
     check: { type: 'hplusSet', set: 2, heat: 10 } },
   { id: 'white-hot', cat: 'hard', name: 'White-Hot', desc: 'Defeat every boss of the third set on Hard+ at heat 10 or more.', title: 'White-Hot', hidden: false, needs: 'corvane',
     check: { type: 'hplusSet', set: 3, heat: 10 } },
+  { id: 'run-to-ground', cat: 'hard', name: 'Run to Ground', desc: 'Defeat Garrow on Hard.', title: null, hidden: false,
+    check: { type: 'clear', boss: 'garrow', mode: 'hard' } },
 
   // ---------------------------------------------------------------- extreme
   { id: 'no-tip', cat: 'extreme', name: 'Left No Tip', desc: 'Defeat Grubnak on Extreme.', title: null, hidden: false,
@@ -95,6 +100,8 @@ const FEATS = [
     check: { type: 'clear', boss: 'morrowoak', mode: 'extreme' } },
   { id: 'star-chose-wrong', cat: 'extreme', name: 'The Star Chose Wrong', desc: 'Defeat Caelum Vey on Extreme.', title: null, hidden: false,
     check: { type: 'clear', boss: 'caelum', mode: 'extreme' } },
+  { id: 'fresh-snow', cat: 'extreme', name: 'Fresh Snow', desc: 'Defeat Garrow on Extreme.', title: null, hidden: false,
+    check: { type: 'clear', boss: 'garrow', mode: 'extreme' } },
   { id: 'extreme-hask', cat: 'extreme', name: 'Hask Stopped Counting', desc: 'Defeat all four bosses on Extreme.', title: 'Beyond Counting', hidden: false,
     check: { type: 'clearAll', mode: 'extreme' } },
   { id: 'extreme-road', cat: 'extreme', name: 'No Easy Way Down', desc: 'Defeat all four bosses beyond the Barrow on Extreme.', title: 'Unyielding', hidden: false, needs: 'wyrm',

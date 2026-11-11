@@ -130,6 +130,51 @@ vast bright epic fantasy finale boss theme, 88 BPM, F-sharp minor, the same melo
 
 ---
 
+## Season 2, the Silver Road
+
+### Garrow, the Moon's Hound · `mus-garrow`
+A cold night hunt on a frozen lake, first half of the fight: a giant frost-wolf that never hurries because the snow keeps every step you take. Close, quiet menace rather than bombast: low bowed cellos and basses, breath, a distant solo horn like a howl across ice, soft felted percussion like paws on snow, small silver glints (celesta, bowed vibraphone, bowed metal). A short, plain, falling four-note tune on a solo cello. Never warm, never heroic. This pairs with the next track, which is the same tune driven and hard and plays from the Whiteout on: make both in the same key (B minor), the same tempo (76 BPM) and the same length (40 bars, about 2:06), and keep the sections in the same order. End each section of this one on one dry soft paw-tick on a felted drum, not a long tail. If it turns into pop or anime rock, add `no pop, no EDM, no guitar`; if it is too busy or too big, add `sparse, quiet, lots of space between phrases, close and patient`; if it has a snare crack or cymbals, add `no snare, no cymbals`.
+```text
+cold cinematic night hunt boss theme, 76 BPM, B minor, low bowed cellos and basses, breathy bass flute, distant solo horn howl across ice, celesta and bowed vibraphone glints, soft felted frame drum like paws on snow, patient, close, quiet menace, instrumental, no lyrics
+```
+```text
+[Instrumental]
+[Breath: a long exhale of low breath and wind over a bowed drone, one far-off horn call that dies away, one soft paw-tick]
+[Track: the four-note tune on solo cello, low and close, a felted frame drum and brushes walking at a patient pace, a single celesta glint every other bar]
+[Pack: a second and third cello answer the tune a bar late, a little lower each time, like steps following steps, the brushes quicken, bowed metal rings once like a chain]
+[Hush: only the drone, breath and one far horn, the tune stops, a single celesta note]
+[Scent: the tune in full low strings with the horn close for the first time, the drum at full weight but still soft, a step higher in the last bars]
+```
+
+### Garrow, the Chase · `mus-garrow-hard`
+The second half: the chase across the white, from the Whiteout on. This is not a harder track: it is the same four-note tune, key and tempo as `mus-garrow`, driven and hard, and the game crossfades into it on a bar line when the Whiteout begins, starting it at the same position in time. So it must be the same length with the same section order, and every section must work on its own (open each on a gust of white wind with a bowed-metal ring in it; no quiet intro it depends on). The percussion runs at twice the speed on the same bar grid, like paws running: felted toms and a frame drum, never a snare crack or a cymbal wash. The horn is close now, and one single wordless voice may slide up like a wolf call and break off. Hard and relentless but never warm. Keep the tempo the same. If it speeds up, add `same tempo, steady`; if it is not driven enough, add `running ostinato, double-time felt drums`; if it turns warm or heroic, add `cold, minor, no major-key colour, no fanfare`.
+```text
+driven cold fantasy chase boss theme, 76 BPM felt in double time, B minor, running low cello and bass ostinato, felted toms and frame drum running like paws, bowed metal and bowed vibraphone ringing like a chain, close brass horn howl, one wordless solo voice sliding like a wolf call, white wind, relentless, never warm, instrumental, no lyrics
+```
+```text
+[Instrumental]
+[Breath: a gust of white wind with a bowed-metal ring in it, the drone drops a step, one close horn call]
+[Track: the four-note tune driven on cellos and basses over a running ostinato, felted toms and frame drum at double speed like paws, a bowed-metal ring on the first beat of every other bar]
+[Pack: the tune answered a bar late by violas, then violins above, stacked like a pack closing in, the drums running, a solo wordless voice slides up and breaks off]
+[Hush: the wind low and rolling, one held bowed-metal note like a chain pulled taut, one far horn, the ostinato drops to its bare pulse]
+[Scent: the tune in full strings and low brass, the horn at full, the toms booming softly, a step higher in the last bars]
+```
+
+### The Silver Road · `mus-silver-road` (1:00 to 1:30 loop, not wired yet)
+One short piece for the whole of Season 2, for the Raid Board's Season 2 heading or the walk into a Season 2 room: the Moon's road of moon-silver coming down to the valley, and something far off slowly coming nearer. Quiet, wide and still, with no drums and no tune to hum, and not Garrow's four-note tune, so it can sit beside any of the four fights. Same key as Garrow (B minor) so it can run into his track. Nothing plays it yet: the game does not have a set theme for any set, so send it over and I'll decide where it goes. If it turns into a fanfare, add `no fanfare, no drums, quiet and still`.
+```text
+cold cinematic fantasy night road, 60 BPM, B minor, sustained low strings in open fifths, harp harmonics, celesta, bowed crystal glasses, distant solo horn, slow, vast, still, quiet menace, instrumental, no lyrics
+```
+```text
+[Instrumental]
+[Road: a very low bowed drone, one harp harmonic, wind far away]
+[Silver: a slow rising line of bowed crystal and celesta climbs like a road, long low strings holding open fifths under it]
+[Far horn: one distant solo horn calls twice across the sky, answered by one high bowed-metal note, the strings thinning]
+[Return: back to the drone and the single harp harmonic, ready to loop]
+```
+
+---
+
 ## The Ultimate (the Cinder Sovereign)
 
 One theme runs through all six tracks: **the Sovereign's theme**, a slow five-note figure that climbs and then falls back a step. All six are in **D minor**, the key of the title screen, so the last fight of the game echoes the first thing a player hears. The acts change at set pieces that open on silence, so the tempos can differ.
@@ -369,7 +414,7 @@ somber short fantasy sting, D minor, slow sinking low strings, a lone whistle, a
 
 ---
 
-## Checklist (25 tracks still to make)
+## Checklist (28 tracks still to make)
 
 Already in the game: title, town, and every set 1 and set 2 boss track.
 
@@ -382,6 +427,11 @@ Already in the game: title, town, and every set 1 and set 2 boss track.
 - [ ] `mus-morrowoak-hard`
 - [ ] `mus-caelum`
 - [ ] `mus-caelum-hard`
+
+**Season 2**
+- [ ] `mus-garrow`
+- [ ] `mus-garrow-hard`
+- [ ] `mus-silver-road` (not wired yet)
 
 **The Ultimate**
 - [ ] `mus-ult-1`

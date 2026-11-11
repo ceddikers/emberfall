@@ -44,7 +44,7 @@ const GAUGE_TIPS = {
   ranger: { desc: 'Quick Shot gives 10, or 30 with Barrage, and Hunter\'s Cloak 40. Rapid Fire spends 50, or 25 while Hunter\'s Mark is up. Anything past 100 is lost. The eye is Keen Eye; ×2 means a second one is banked.' },
   shadowblade: { desc: 'Strike gives 1 point, or 2 from behind. Eviscerate spends every point and hits for {d:115} more for each, with a {d:160} bonus at 5. A sixth point is lost. Shadow Dance entered at 5 points lets the first Eviscerate in it keep them.' },
   pyromancer: {
-    desc: 'Fireball gives 12, Pyroblast 20 (10 with Hot Streak) and Fire Blast 6. Every point of Heat adds 0.3% damage. At 100 you overheat: you lose 15% of your HP, Heat resets and you deal 20% less damage for 5s. Heat cools slowly while you aren\'t casting. Vent spends it all (at 90 or more it also lights Hot Streak). While Smolder is up it can\'t boil over: it stops at 99.',
+    desc: 'Fireball gives 12, Pyroblast 20 (10 with Hot Streak) and Fire Blast 6. Every point of Heat adds 0.3% damage. At 100 you overheat: you lose 8% of your HP, Heat resets and you deal 20% less damage for 5s. Heat cools slowly while you aren\'t casting. Vent spends it all (at 90 or more it also lights Hot Streak). While Smolder is up it can\'t boil over: it stops at 99.',
     state: k => `+${Math.round(k.g.heat * 0.3)}% damage`,
   },
   cleric: {

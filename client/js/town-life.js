@@ -90,6 +90,7 @@ const TownLife = (() => {
     if (!deps || !inTown) return;
     // a boss beaten that town hasn't marked yet: its moment, one at a time
     if (!scene) for (const b of Object.keys(UNLOCKS)) if (deps.beaten(b) && !state().seen[b]) { startArrival(b); break; }
+    if (!state().flags['moon-road'] && moonReady()) { state().flags['moon-road'] = 1; moonBorn = now; commit(); }   // (the way in to Season 2: the first visit after the Ultimate's epilogue has been read)
     const p = deps.player;
     for (const f of folk) {
       f.st.t = now;
@@ -157,6 +158,8 @@ const TownLife = (() => {
         }
       }
     }
+    const pip = folk.find(f => f.d.id === 'pip');
+    if (pip && strayHere()) tickStray(pip, dt, now);
     chatter(now);
   }
 
@@ -301,6 +304,16 @@ const TownLife = (() => {
       poly(ctx, [10, -14, 13, -7, 10, -1, 7, -7], '#dfe8f6', OUT, 1); poly(ctx, [-11, -10, -8, -4, -11, 1, -14, -4], '#c4d0e6', OUT, 1);   // two shards of the halo
       ellipse(ctx, 0, 0, 8, 11.5, 0, '#c9d2de', OUT, 1.6); ellipse(ctx, -2.4, -3, 2.8, 5.6, 0.2, 'rgba(255,255,255,0.6)');   // a smooth mask, no face on it
       line(ctx, 1.5, -9, 2, 8, 'rgba(110,122,150,0.55)', 0.8);
+    }
+    else if (kind === 'broken-chain') {
+      // a short length of silver chain, links alternately flat and edge-on, the last one sprung open
+      for (let i = 0; i < 5; i++) {
+        const lx = -10 + i * 5, ly = Math.sin(i * 1.1) * 2.2;
+        if (i % 2 === 0) ellipse(ctx, lx, ly, 3.9, 2.5, 0, null, OUT, 3.4), ellipse(ctx, lx, ly, 3.9, 2.5, 0, null, '#cdd5e0', 1.7);
+        else line(ctx, lx - 2.4, ly, lx + 2.4, ly, OUT, 3.6), line(ctx, lx - 2.4, ly, lx + 2.4, ly, '#aeb8c6', 2);
+      }
+      ctx.strokeStyle = OUT; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.arc(13, 2.4, 3.2, 0.5, Math.PI * 1.7); ctx.stroke();
+      ctx.strokeStyle = '#cdd5e0'; ctx.lineWidth = 1.7; ctx.beginPath(); ctx.arc(13, 2.4, 3.2, 0.5, Math.PI * 1.7); ctx.stroke();
     }
     ctx.restore();
   }
@@ -660,6 +673,109 @@ const TownLife = (() => {
     ctx.restore();
     poly(ctx, [x, y + R - 3.6, x + 2.8, y + R, x, y + R + 3.6, x - 2.8, y + R], '#dcecf7', '#4a6378', 1);
   }
+  // ---------------------------------------------------------------- Season 2's way in: a line of moonlight on the pond
+  // A single straight bar on the water beside Bram, lying where it lies whatever the hour. It shows once the Ultimate has been cleared and its epilogue read (the
+  // first visit after: flag 'moon-road'); nothing of it before. Stepping onto its shore end (main.js) or using it opens the Raid Board on Season 2 alone.
+  const POND_AT = { x: 590, y: 1370, rx: 120, ry: 62 };   // (pastimes.js POND: the water the line lies on)
+  const MOON = { x: 650 };
+  MOON.y0 = POND_AT.y - POND_AT.ry * Math.sqrt(1 - ((MOON.x - POND_AT.x) / POND_AT.rx) ** 2);   // where it meets the north shore, and where it leaves by the south
+  MOON.y1 = 2 * POND_AT.y - MOON.y0;
+  let moonBorn = null;   // (the moment it appeared in this session, so it comes up slowly; null once it was there before the page loaded)
+  const epilogueRead = () => { const p = Save.get('pastimes'); return !!(p && p.story && p.story.epilogue); };
+  const moonReady = () => !!deps && deps.beaten('sovereign') && epilogueRead();
+  const moonRoadOn = () => !!deps && deps.beaten('sovereign') && !!state().flags['moon-road'];
+  // the stepping-on spot: the shore end, where you stand when you walk down the bank to it
+  const moonRoad = () => (moonRoadOn() ? { x: MOON.x, y: MOON.y0 + 4, r: 26 } : null);
+  // the player's own clock, as a smooth 0..1: the day is 0, 21:00 to 05:00 is 1, with two hours of dusk and of dawn
+  function nightK() {
+    const d = new Date(), h = d.getHours() + d.getMinutes() / 60;
+    const k = h >= 21 || h < 5 ? 1 : h >= 19 ? (h - 19) / 2 : h < 7 ? 1 - (h - 5) / 2 : 0;
+    return k * k * (3 - 2 * k);
+  }
+  function drawMoonRoad(ctx, now) {
+    const t = moonBorn == null ? 1 : Math.min(1, (now - moonBorn) / 9), up = t * t * (3 - 2 * t);
+    if (up <= 0) return;
+    const n = nightK(), a = up * (0.55 + 0.45 * n), x = MOON.x, y0 = MOON.y0, y1 = MOON.y1, len = y1 - y0;
+    const rgba = (c, al) => 'rgba(' + c + ',' + Math.max(0, al).toFixed(3) + ')';
+    const vert = (ya, yb, stops) => { const g = ctx.createLinearGradient(0, ya, 0, yb); for (const [o, c, al] of stops) g.addColorStop(o, rgba(c, al)); return g; };
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(POND_AT.x, POND_AT.y, POND_AT.rx + 1.5, POND_AT.ry + 1.5, 0, 0, Math.PI * 2); ctx.clip();
+    // the water either side of it lies darker, so the light is the only thing on it
+    const dk = ctx.createLinearGradient(x - 34, 0, x + 34, 0);
+    dk.addColorStop(0, 'rgba(6,16,34,0)'); dk.addColorStop(0.5, rgba('6,16,34', 0.42 * (0.45 + 0.55 * n) * up)); dk.addColorStop(1, 'rgba(6,16,34,0)');
+    ctx.fillStyle = dk; ctx.fillRect(x - 34, y0 - 4, 68, len + 8);
+    // the bar: three thin layers, soft at the edge and bright in the middle, brightest at the shore and thinning out toward the far bank. Nothing in it moves
+    for (const [hw, al] of [[11, 0.07], [8.5, 0.09], [6.2, 0.12], [4.2, 0.16], [2.6, 0.2], [1.3, 0.24]]) {
+      ctx.fillStyle = vert(y0, y1, [[0, '226,236,250', al * a * 1.5], [0.5, '200,218,242', al * a], [0.86, '186,208,238', al * a * 0.55], [1, '186,208,238', 0]]);
+      ctx.fillRect(x - hw, y0 - 4, hw * 2, len + 8);
+    }
+    ctx.globalCompositeOperation = 'lighter';
+    glow(ctx, x, y0 + 3, 30, '#bcd4f0', (0.09 + 0.2 * n) * up);   // where it meets the shore
+    glow(ctx, x, y0 + len * 0.5, 40, '#a8c6ec', (0.025 + 0.06 * n) * up);
+    ctx.restore();
+    // a faint mist over it, drifting so slowly it hardly seems to, hanging a little over the bank at the near end
+    for (let i = 0; i < 7; i++) {
+      const p = (now * 0.012 + i / 7) % 1, my = y0 - 8 + p * (len + 14), mx = x + Math.sin(now * 0.12 + i * 2.3) * 10;
+      glow(ctx, mx, my, 15 + (i % 3) * 5, '#d6e2f0', 0.11 * Math.sin(p * Math.PI) * (0.5 + 0.5 * n) * up);
+    }
+  }
+
+  // ---------------------------------------------------------------- the stray (Garrow's town addition)
+  // A lean, mist-grey hound with no collar that follows the child Pip about a little way behind her. It sits when she stops, and now and then turns its head
+  // toward the pond. Drawn as an entity (heroes pass in front of and behind it).
+  let stray = null;
+  const strayHere = () => !!deps && deps.beaten('garrow') && !!state().seen.garrow;
+  const angDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
+  function tickStray(pip, dt, now) {
+    if (!stray) stray = { x: pip.x - 52, y: pip.y + 40, angle: -0.6, moving: false, sit: 1, still: 2, born: now, yaw: 0, look: 0, nextLook: now + 5, step: 0 };
+    const d = stray, dx = pip.x - d.x, dy = pip.y - d.y, dist = Math.hypot(dx, dy) || 1;
+    if (dist > 340) { d.x = pip.x - 52; d.y = pip.y + 40; d.moving = false; }   // (left far behind: it is beside her again)
+    if (!d.moving && dist > 58) d.moving = true; else if (d.moving && dist < 38) d.moving = false;
+    if (d.moving) {
+      const tx = pip.x - dx / dist * 34, ty = pip.y - dy / dist * 34, ex = tx - d.x, ey = ty - d.y, ed = Math.hypot(ex, ey) || 1;
+      const st = Math.min(ed, Math.min(ed * 3.2, dist > 170 ? 130 : 68) * dt);
+      d.x += ex / ed * st; d.y += ey / ed * st; d.step += st * 0.34;
+      d.angle = angTo(d.angle, Math.atan2(ey, ex), Math.min(1, dt * 9));
+      deps.collide(d);
+    }
+    d.still = d.moving ? 0 : d.still + dt;
+    d.sit += ((d.still > 0.9 ? 1 : 0) - d.sit) * Math.min(1, dt * 5);
+    if (!d.moving) {
+      d.angle = angTo(d.angle, Math.atan2(dy, dx), Math.min(1, dt * 2.5));
+      if (d.sit > 0.9 && now > d.nextLook) { d.look = now + 2.4 + Math.random() * 1.2; d.nextLook = now + 10 + Math.random() * 9; }
+    }
+    const yawTo = !d.moving && now < d.look ? clamp(angDiff(Math.atan2(POND_AT.y - d.y, POND_AT.x - d.x), d.angle), -1.1, 1.1) : 0;
+    d.yaw += (yawTo - d.yaw) * Math.min(1, dt * 3);
+  }
+  function drawStray(ctx, d, scale, now) {
+    const k = d.sit, FUR = '#aeb7c2', LIGHT = '#ccd4de', DARK = '#7f8a99', sw = d.moving ? Math.sin(d.step) : 0;
+    ctx.save(); ctx.translate(d.x, d.y); ctx.scale(scale * 0.7, scale * 0.7); ctx.globalAlpha = Math.min(1, (now - d.born) / 3);
+    ellipse(ctx, 1, 4, 15 - k * 3, 7, 0, 'rgba(0,0,0,0.26)');
+    ctx.rotate(d.angle);
+    const cx = -2 - k * 2.5, rx = 11 - k * 2.4, ry = 4.3 + k * 0.7, lerp = (a, b) => a + (b - a) * k;
+    // four paws: a diagonal stride when it walks, the hind ones tucked wide and the fore ones set straight when it sits
+    for (const sd of [-1, 1]) {
+      const ph = sw * 3 * sd;
+      ellipse(ctx, lerp(7 + ph, 8.5), sd * lerp(4.4, 2.8), 2.7, 1.9, 0, FUR, OUT, 1.2);
+      ellipse(ctx, lerp(-7 - ph, -5.5), sd * lerp(4.4, 5.8), 2.9, 2, 0, FUR, OUT, 1.2);
+    }
+    // the tail: a thin trailing line, curled round to one side when it sits
+    const tl = Math.sin(now * 2.1 + d.x * 0.01) * 1.6, tx = lerp(-19, -13), ty = lerp(tl + sw * 1.4, 7);
+    limb(ctx, [cx - rx + 1, 0, (cx - rx + tx) / 2 - 1, lerp(tl * 0.4, 3.5), tx, ty], FUR, 2);
+    circle(ctx, tx, ty, 1.5, DARK);
+    ellipse(ctx, cx, 0, rx, ry, 0, FUR, OUT, 1.6);
+    ellipse(ctx, cx - 0.5, -0.9, rx * 0.66, ry * 0.3, 0, LIGHT);
+    // the head, turned about the neck by the look toward the pond
+    ctx.save(); ctx.translate(lerp(8, 6.4), 0); ctx.rotate(d.yaw);
+    poly(ctx, [2.6, -2.2, -0.4, -6.4, -1, -2.4], DARK, OUT, 1.2); poly(ctx, [2.6, 2.2, -0.4, 6.4, -1, 2.4], DARK, OUT, 1.2);
+    circle(ctx, 3.2, 0, 4.4, FUR, OUT, 1.5);
+    ellipse(ctx, 8.4, 0, 3.4, 2.3, 0, LIGHT, OUT, 1.3);
+    circle(ctx, 11.2, 0, 1.15, '#2a2630');
+    circle(ctx, 5.8, -1.9, 0.75, OUT); circle(ctx, 5.8, 1.9, 0.75, OUT);
+    ctx.restore();
+    ctx.restore();
+  }
+
   // the ground layer (decor and trophies) and the folk themselves (as entities sorted with everyone else)
   function drawGround(ctx, now, pedestals, bossIds) {
     if (!deps) return;
@@ -674,10 +790,12 @@ const TownLife = (() => {
     if (deps.beaten('sovereign') || (typeof SvRewards !== 'undefined' && SvRewards.TEST)) drawSovereignPlinth(ctx, now);
     if (deps.beaten('seraph') || (typeof UnRewards !== 'undefined' && UnRewards.TEST)) drawUnspokenPlinth(ctx, now);
     if (deps.beaten('seraph') || (typeof UnRewards !== 'undefined' && UnRewards.TEST)) { drawFrostRim(ctx, now); if (nightNow() || (typeof UnRewards !== 'undefined' && UnRewards.TEST)) drawUpSnow(ctx, now); }
+    if (moonRoadOn()) drawMoonRoad(ctx, now);
     groundMeal(ctx, now);
   }
   function entities(scale) {
     const out = folk.filter(f => deps && present(f)).map(f => ({ kind: 'stagecraft', y: f.y, draw: ctx => drawFolk(ctx, f, scale) }));
+    if (stray && strayHere()) out.push({ kind: 'stagecraft', y: stray.y, draw: ctx => drawStray(ctx, stray, scale, deps.now ? deps.now() : 0) });
     if (deps && deps.beaten('titan') && state().seen.titan) for (const m of SNOWMEN) out.push({ kind: 'stagecraft', y: m.y, draw: ctx => drawSnowman(ctx, m) });
     if (deps && deps.beaten('corvane') && state().seen.corvane) for (const l of PASS_LANTERNS) out.push({ kind: 'stagecraft', y: l.y, draw: ctx => drawPassLantern(ctx, l, deps.now ? deps.now() : 0) });
     if (deps && deps.beaten('brannoc') && state().seen.brannoc) for (const b of SUN_BANNERS) out.push({ kind: 'stagecraft', y: b.y, draw: ctx => drawSunBanner(ctx, b, deps.now ? deps.now() : 0) });
@@ -1059,6 +1177,8 @@ const TownLife = (() => {
     const out = folk.filter(f => deps && present(f) && !f.walk).map(f => ({ get x() { return f.x; }, get y() { return f.y; }, r: 22, reach: 80, label: f.d.name, open: () => startTalk(f) }));
     // the town fountain, once it has something to say (reach is from its middle: the basin is solid out to about 90)
     if (deps && WISH && deps.beaten('hydra') && state().seen.hydra) out.push({ x: POOL_AT.x, y: POOL_AT.y, r: 70, reach: 125, label: 'Wishing pool', open: () => startTalk(POOL) });
+    const mr = moonRoad();
+    if (mr && deps.moonRoad) out.push({ x: mr.x, y: mr.y, r: 34, reach: 120, label: "The Moon's Road", open: () => deps.moonRoad() });   // (the way in to Season 2, as the portals are: main.js)
     return out;
   }
   // the pool talks like a townsperson (the same dialogue box), but it is not one of the folk
@@ -1079,6 +1199,7 @@ const TownLife = (() => {
   };
   function startTalk(f) {
     const entry = f.d.talk.find(t => matches(t.when)) || f.d.talk[f.d.talk.length - 1];
+    if (entry.set) { state().flags[entry.set] = 1; commit(); }   // (a line that is told once, with no choice to set it: heard now, never again)
     talk = { f, lines: entry.lines || [], i: 0, choices: entry.choices || null, node: entry };
     render();
   }
@@ -1254,7 +1375,7 @@ const TownLife = (() => {
     if (!feastSc || e.repeat || (e.type === 'keydown' && ['Shift', 'Control', 'Alt', 'Meta'].includes(e.key))) return;
     if (deps.now() - feastSc.t0 > 0.25) endFeastScene(true);
   }
-  return { init(d) { deps = d; if (!listening && typeof window !== 'undefined') { listening = true; window.addEventListener('keydown', skipInput, true); window.addEventListener('mousedown', skipInput, true); } }, update, entities, drawGround, drawLabels, interactables, isTalking, endTalk, remarkPull, checkDistance, feast, feastTotals, eat, startArrival, hides, feastScene: () => feastSc,
+  return { init(d) { deps = d; if (!listening && typeof window !== 'undefined') { listening = true; window.addEventListener('keydown', skipInput, true); window.addEventListener('mousedown', skipInput, true); } }, update, entities, drawGround, drawLabels, interactables, moonRoad, isTalking, endTalk, remarkPull, checkDistance, feast, feastTotals, eat, startArrival, hides, feastScene: () => feastSc,
     // a boss's own town moment is playing or still due (the Barrow Gate, barrow-gate.js, waits its turn), and the banner they share
     busy: () => !!scene || !!feastSc || Object.keys(UNLOCKS).some(b => deps && deps.beaten(b) && !state().seen[b]), banner };
 })();

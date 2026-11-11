@@ -74,7 +74,7 @@ const BOT_BUILDS = {
   'tidecaller:springtide': ['tidecaller_lowwater', 'tidecaller_kelp', 'tidecaller_maelstrom', 'tidecaller_twin', 'tidecaller_neap', 'tidecaller_roguewave', 'tidecaller_table'],
   'tidecaller:undertow': ['tidecaller_foam', 'tidecaller_seawall', 'tidecaller_maelstrom', 'tidecaller_sealegs', 'tidecaller_neap', 'tidecaller_grip', 'tidecaller_slack'],
 };
-const BOT_TALENT_ROWS = { 1: [2, 3], 2: [4, 5], 3: [6, 7], 4: [7, 7], 5: [7, 7] };   // (set 5: the fights found after the Ultimate, data.js SECRET_BOSSES: every row)
+const BOT_TALENT_ROWS = { 1: [2, 3], 2: [4, 5], 3: [6, 7], 4: [7, 7], 5: [7, 7], 6: [7, 7] };   // (set 5: the fights found after the Ultimate, data.js SECRET_BOSSES: every row; set 6: the fourth set, every row)
 function botTalentSet(cls, spec, set, mode) {
   const b = BOT_BUILDS[spec ? cls + ':' + spec : cls] || BOT_BUILDS[cls], r = BOT_TALENT_ROWS[set];
   if (!b || !r) return new Set();

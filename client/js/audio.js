@@ -342,6 +342,7 @@ const Sound = (() => {
   const MUSIC_STAND_IN = {
     'mus-corvane': 'mus-wyrm', 'mus-corvane-hard': 'mus-wyrm-hard', 'mus-brannoc': 'mus-titan', 'mus-brannoc-hard': 'mus-titan-hard',
     'mus-morrowoak': 'mus-archmage', 'mus-morrowoak-hard': 'mus-archmage-hard', 'mus-caelum': 'mus-hydra', 'mus-caelum-hard': 'mus-hydra-hard',
+    'mus-garrow': 'mus-titan', 'mus-garrow-hard': 'mus-titan-hard',   // (Season 2: a cold night hunt; Hrimgar's glacier theme until his own track lands)
     'mus-sovereign': 'mus-hydra-hard', 'mus-sovereign-hard': 'mus-hydra-hard',
     'mus-hood': 'mus-hollowking', 'mus-seraph': 'mus-hydra-hard',
   };

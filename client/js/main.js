@@ -90,20 +90,46 @@
   const townBeaten = id => unlockAll || (Save.bossBeaten(id) && road.beaten(id));
   const ROAD_BOSSES = [...BOSSES, ULTIMATE_BOSS, ...SECRET_BOSSES];   // (the road carries the Ultimate too: its town lines, the epilogue, the Trophy Hall plinth and the whole-inscription secret read townBeaten)
   const myRoad = () => { const o = {}; for (const b of ROAD_BOSSES) { const n = Save.normalBeaten(b.id), h = Save.hardBeaten(b.id), x = Save.extremeBeaten(b.id); if (n || h || x) o[b.id] = [n ? 1 : 0, h ? 1 : 0, x ? 1 : 0]; } return o; };
-  function bossOpen(boss, beaten = road.beaten) { const i = BOSSES.indexOf(boss); return unlockAll || i <= 0 || beaten(BOSSES[i - 1].id); }
+  // (Season 2, set 6: its first boss opens once the Ultimate has been cleared on the account, the host's road in a friend's game; the rest in order as before)
+  function bossOpen(boss, beaten = road.beaten) { const i = BOSSES.indexOf(boss); return unlockAll || i <= 0 || (season2First(boss) ? beaten(ULTIMATE_BOSS.id) : beaten(BOSSES[i - 1].id)); }
   // Hard, set by set (data.js BOSSES[].set): locked until every playable boss of the set has fallen on Normal, then it opens a boss at a
   // time, starting with the set's first (Grubnak; Vhalgrath for set 2)
   const bossSet = boss => boss.set || 1;
+  const season2First = boss => bossSet(boss) >= 6 && firstOfSet(boss);
+  const inHall = boss => bossSet(boss) <= 3;   // (the town's hall has twelve pedestals: the statues, plaques and the next-boss hint are Season 1's only)
+  const season2Seen = () => unlockAll || road.beaten(ULTIMATE_BOSS.id);   // (nothing of Season 2 is listed, on the Raid Board or anywhere else, until this is true)
   const hardUnlocked = (set = 1) => unlockAll || BOSSES.filter(b => b.playable && bossSet(b) === set).every(b => road.normal(b.id));
   const firstOfSet = boss => { const i = BOSSES.indexOf(boss); return i <= 0 || bossSet(BOSSES[i - 1]) !== bossSet(boss); };
   function hardOpen(boss) { const i = BOSSES.indexOf(boss); return unlockAll || (hardUnlocked(bossSet(boss)) && (firstOfSet(boss) || road.hard(BOSSES[i - 1].id))); }
-  const hardWhy = boss => { const i = BOSSES.indexOf(boss); return !hardUnlocked(bossSet(boss)) ? (bossSet(boss) === 1 ? 'Clear all four bosses on Normal first.' : bossSet(boss) === 2 ? 'Clear every boss of the wild realm on Normal first.' : 'Clear every boss of the Fallen Star on Normal first.') : `Beat ${BOSSES[i - 1].name} on Hard first.`; };
+  const hardWhy = boss => { const i = BOSSES.indexOf(boss); return !hardUnlocked(bossSet(boss)) ? (bossSet(boss) === 1 ? 'Clear all four bosses on Normal first.' : bossSet(boss) === 2 ? 'Clear every boss of the wild realm on Normal first.' : bossSet(boss) === 3 ? 'Clear every boss of the Fallen Star on Normal first.' : 'Clear every boss of the Silver Road on Normal first.') : `Beat ${BOSSES[i - 1].name} on Hard first.`; };
   // Extreme: open for a boss once it has fallen on Hard (the road, so in a friend's game the host's), and while it is shut a pull starts on Hard
   const extremeOpen = boss => unlockAll || road.hard(boss.id);
   const extremeWhy = () => 'Defeat this boss on Hard to open it.';
   const modeLabel = m => (m === 'extreme' ? 'Extreme' : m === 'hard' ? 'Hard' : 'Normal');
+  // What a player can expect of each difficulty: the Raid Board's tooltips (one a button, and the three side by side under them). General rules only,
+  // never a boss's own moves, so nothing a party has not met is given away. Chest sizes and gold are read from items.js for the boss on the board.
+  const modeFacts = boss => {
+    const chest = m => `${CHEST_SIZE[m]} items`, gold = m => `${clearGold(boss.id, m)} gold`;
+    return {
+      normal: { when: 'When the boss before it falls', fight: 'The fight as it is written', order: 'One order, the same every pull', spare: 'About a minute before the enrage', chest: chest('normal'), gold: gold('normal'), more: '' },
+      hard: { when: 'When its whole set has fallen on Normal, then boss by boss', fight: 'Shorter wind-ups, harder hits, and attacks Normal never uses', order: 'Three orders; each pull draws one', spare: 'About 45 seconds before the enrage',
+        chest: `${chest('hard')}, better odds`, gold: gold('hard'), more: HARDPLUS.eligible(boss.id) ? 'Hard+ modifiers, once it falls' : '' },
+      extreme: { when: 'When this boss has fallen on Hard', fight: 'All of Hard, and three more mechanics of the boss\'s own', order: 'One order, the same every pull', spare: 'Less than Hard, on the same clock with more health',
+        chest: 'Hard\'s chest, no new gear', gold: gold('extreme'), more: 'A feat, a mark in town, a title for a whole set' },
+    };
+  };
+  const lowerFirst = s => s.charAt(0).toLowerCase() + s.slice(1);
+  const modeTip = (boss, m) => {
+    const f = modeFacts(boss)[m], li = [f.fight, f.order, `Time to spare: ${lowerFirst(f.spare)}`, `Chest: ${/^Hard/.test(f.chest) ? f.chest : lowerFirst(f.chest)}`, `${f.gold} for a clear`, f.more].filter(Boolean);
+    return `<b>${modeLabel(m)}</b><em>Opens ${lowerFirst(f.when)}</em><ul class="mode-tip">${li.map(x => `<li>${x}.</li>`).join('')}</ul>`;
+  };
+  const modeCompareTip = boss => {
+    const f = modeFacts(boss), M = ['normal', 'hard', 'extreme'], row = (name, k) => `<i>${name}</i>${M.map(m => `<span>${f[m][k] || '&ndash;'}</span>`).join('')}`;
+    return `<div class="cmp-tip"><i></i>${M.map(m => `<b>${modeLabel(m)}</b>`).join('')}${row('Opens', 'when')}${row('The fight', 'fight')}${row('The order', 'order')}${row('Time to spare', 'spare')}${row('Chest', 'chest')}${row('Clear gold', 'gold')}${row('Also', 'more')}</div>` +
+      '<div class="lt-tipnote">On all three, every attack is shown on the floor before it lands. Who is targeted and which side is safe are always random.</div>';
+  };
   const hardish = m => m === 'hard' || m === 'extreme';   // (Extreme plays every Hard move, cast speed and rule: what Hard looks and sounds like, it does too)
-  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI'];
   // a portal opens the raid board at the latest open boss of its own set (null while none of the set's bosses is open yet)
   const setOpenBoss = set => [...BOSSES].reverse().find(b => b.playable && bossSet(b) === set && bossOpen(b)) || null;
   const portalOpen = P => !P.sealed && (P.set === 4 ? SvPortal.isOpen() : !!setOpenBoss(P.set));
@@ -113,14 +139,16 @@
     if (boss) openBossPanel(boss);
     else toast(P.sealed ? 'Chained and shrouded. Whatever is behind it is not ready yet.' : `${P.name} is sealed. The road behind it has not been walked.`);
   }
+  // the line of moonlight on the pond (town-life.js) opens the board on Season 2 alone, at its latest open boss
+  function moonRoadUse() { const boss = setOpenBoss(6); if (boss) openBossPanel(boss); }
   // the specializations stay a secret until the Hollow King has fallen once on this account
   const specsRevealed = () => unlockAll || Save.bossBeaten('hollowking');
   const HALL_FIT = { morrowoak: 0.55 };   // (a statue far taller than the rest is drawn smaller in the hall, so its crown doesn't hide the row behind it)
-  const statues = BOSSES.map((boss, i) => ({
+  const statues = BOSSES.filter(inHall).map((boss, i) => ({
     kind: 'boss', boss, x: TOWN.pedestals[i].x, y: TOWN.pedestals[i].y - 5, sc: PED_S, fit: HALL_FIT[boss.id] || 1, angle: Math.PI / 2, st: newSt(i), nextAct: 2 + i * 1.5,
   }));
   // each statue's name plaque is an entity too: drawn over the next row's statue (a tall one would hide it), but under a hero standing in front of the last row's
-  const plaques = TOWN.pedestals.map((pd, i) => ({ kind: 'stagecraft', x: pd.x, y: pd.y + (i < TOWN.pedestals.length - 4 ? 152 : 62), draw: c => { if (BOSSES[i]) drawPlaque(c, pd, bossOpen(BOSSES[i]) ? BOSSES[i].name : 'Sealed'); } }));
+  const plaques = TOWN.pedestals.map((pd, i) => ({ kind: 'stagecraft', x: pd.x, y: pd.y + (i < TOWN.pedestals.length - 4 ? 152 : 62), draw: c => { if (BOSSES[i] && inHall(BOSSES[i])) drawPlaque(c, pd, bossOpen(BOSSES[i]) ? BOSSES[i].name : 'Sealed'); } }));
   // The first dummy fights back (every 2.8s, like a raid boss's auto-attack) so tanks can practice their defensives.
   const dummies = TOWN.dummies.map((d, i) => ({ kind: 'dummy', x: d.x, y: d.y, st: { t: 0, hit: -10 }, spar: i === 0, nextSwing: 0, windup: 0 }));
 
@@ -1145,6 +1173,7 @@
   RAID_DEFS.brannoc = BRANNOC;   // (set 3, Boss X: brannoc.js)
   RAID_DEFS.morrowoak = MORROWOAK;   // (set 3, Boss XI: morrowoak.js)
   RAID_DEFS.caelum = CAELUM;   // (set 3, Boss XII: caelum.js)
+  if (typeof GARROW !== 'undefined') RAID_DEFS.garrow = GARROW;   // (set 6, Boss XIII, Season 2: garrow.js)
   RAID_DEFS.sovereign = SOVEREIGN;   // (the Ultimate: sovereign.js. Not on the Raid Board yet; window.__game.startRaid('normal', true, 'sovereign') starts it for testing)
   RAID_DEFS.hood = HOOD; RAID_DEFS.seraph = SERAPH;   // (the two gates of the fight found in town: hood.js, seraph.js)
   // an echo's flame leaves from the halo's real sigil (sovereign-art.js sigilPos, read off the boss as it is drawn)
@@ -2339,7 +2368,7 @@
       sendRoad();   // (the host's road just grew: everyone in its game walks it)
       if (first) {
         const i = BOSSES.findIndex(b => b.id === raid.def.id), next = i >= 0 ? BOSSES[i + 1] : null;
-        if (next && next.playable) later(3.5, () => toast(`Somewhere past the portal, ${next.name} stirs.`));
+        if (next && next.playable && inHall(next)) later(3.5, () => toast(`Somewhere past the portal, ${next.name} stirs.`));
         if (raid.def.id === 'hollowking') later(3.5, () => toast('Every hero feels it: something new has woken in them. Look again at your hero.'));
       }
     }
@@ -2549,6 +2578,7 @@
     else if (msg.name === 'field') { raid.props.charge = true; raid.propsUntil.charge = now + msg.dur + 0.3; }
     else if (msg.name === 'ascendant') { raid.props.clAscendant = true; raid.propsUntil.clAscendant = now + msg.dur + 0.2; }   // (Caelum risen: caelum-art.js)
     else if (msg.name === 'pose' || msg.name === 'risen') { raid.props[msg.name] = true; raid.propsUntil[msg.name] = now + msg.dur + 0.2; }   // (Brannoc: arms up for the crowd; the Tidewrought risen: brannoc-art.js)
+    else if (raid.def.id === 'garrow' && typeof GA_ART !== 'undefined' && GA_ART.POSES.includes(msg.name)) { const k = 'ga' + msg.name[0].toUpperCase() + msg.name.slice(1); raid.props[k] = true; raid.propsUntil[k] = now + msg.dur + 0.3; }   // (Garrow's poses that are not casts: garrow-art.js)
   });
   // --- adds, tethers, zones and Skitterra's legs (all host-driven)
   Net.on('adds', msg => {
@@ -3064,6 +3094,7 @@
     moving: () => (player.dashMove ? 'dash' : player.target || null),
     inTown: () => scene === 'town' && started,
     now: () => now,
+    moonRoad: () => moonRoadUse(),   // (the line of light on the pond: the Raid Board on Season 2 alone)
     onFeast: () => { Inventory.refresh(); sendGear(); },
   });
   // ---- the Barrow Gate (barrow-gate.js): appears once a hero has cleared the Hollow King; its panel is openBarrow
@@ -3278,7 +3309,7 @@
   }
 
   let lastSent = 0, lastSentR = 0, lastSentKey = '';
-  let wasInPortal = -1;
+  let wasInPortal = -1, wasInMoon = false;
 
   function update(dt) {
     FX.update(now, dt);
@@ -3403,6 +3434,10 @@
     const inPortal = TOWN.portals.findIndex(P => Math.hypot(player.x - P.x, player.y - P.y) < P.r - 10);
     if (inPortal >= 0 && inPortal !== wasInPortal) portalUse(TOWN.portals[inPortal]);
     wasInPortal = inPortal;
+    // the same for the line of moonlight on the pond, once it is there (town-life.js): the board on Season 2 alone
+    const mr = TownLife.moonRoad(), inMoon = !!mr && Math.hypot(player.x - mr.x, player.y - mr.y) < mr.r;
+    if (inMoon && !wasInMoon) moonRoadUse();
+    wasInMoon = inMoon;
     trophyStep();
   }
 
@@ -3821,7 +3856,7 @@
     ctx.restore();
   }
   // the dust a foot lifts in each room (stone grey when a room is not listed)
-  const ARENA_DUST = { grubnak: '#c8b690', hydra: '#8fa890', morrowoak: '#a4b07c', titan: '#e6eef6', corvane: '#e6eef6', brannoc: '#d8bc84' };
+  const ARENA_DUST = { grubnak: '#c8b690', hydra: '#8fa890', morrowoak: '#a4b07c', titan: '#e6eef6', corvane: '#e6eef6', brannoc: '#d8bc84', garrow: '#e6eef6' };
   function drawEntity(e) {
     switch (e.kind) {
       case 'hero': drawHero(ctx, e.cls, e.x, e.y, e.angle, e.st, HERO_SCALE); break;
@@ -4123,7 +4158,7 @@
   // from his silhouette, instead of a CSS filter with a drop-shadow on a canvas up to ~1320 px a side every frame.
 
   function renderArena() {
-    ctx.fillStyle = { volkar: '#080b11', hollowking: '#0a0c0e', wyrm: '#0b0706', titan: '#070d14' }[raid.def.id] || (raid.def.id === 'hydra' ? '#04100c' : raid.def.id === 'archmage' ? '#04141a' : raid.def.id === 'corvane' ? '#070a14' : raid.def.id === 'brannoc' ? '#04121a' : raid.def.id === 'morrowoak' ? '#07080a' : raid.def.id === 'caelum' ? '#05060e' : '#120d0a'); ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = { volkar: '#080b11', hollowking: '#0a0c0e', wyrm: '#0b0706', titan: '#070d14' }[raid.def.id] || (raid.def.id === 'hydra' ? '#04100c' : raid.def.id === 'archmage' ? '#04141a' : raid.def.id === 'corvane' ? '#070a14' : raid.def.id === 'brannoc' ? '#04121a' : raid.def.id === 'morrowoak' ? '#07080a' : raid.def.id === 'caelum' ? '#05060e' : raid.def.id === 'garrow' ? '#050912' : '#120d0a'); ctx.fillRect(0, 0, W, H);
     const [sx, sy] = shakeOffset(), px = DPR * zoom;
     ctx.scale(zoom, zoom);
     // (snapped to device pixels, like the town's camera, so a resting or shaking view never shimmers half a pixel)
@@ -4413,6 +4448,7 @@
     c.drawImage(minimapBase, 0, 0, MW, MH);
     const dot = (x, y, r, col) => circle(c, x * s, y * s, r, col, OUT, 1);
     for (const P of TOWN.portals) dot(P.x, P.y, 4.5, P.sealed ? '#5a5660' : !portalOpen(P) ? '#6a5a80' : P.set === 4 ? '#ff8a3a' : P.set === 1 ? '#b080ff' : P.set === 2 ? '#9be05a' : '#8fb0ff');
+    const moonDot = TownLife.moonRoad(); if (moonDot) dot(moonDot.x, moonDot.y + 18, 3.5, '#d4dde8');   // (the line of light on the pond, once it is there; cold silver)
     for (const b of TOWN.houses) if (b.hall) dot(b.x + b.w / 2, b.y + b.h / 2, 4, '#7fd0a0');
     dot(TOWN.trophy.x + TOWN.trophy.w / 2, TOWN.trophy.y + TOWN.trophy.h / 2, 4, '#e8c15a');   // (the Trophy Hall)
     if (TOWN.arena) dot(TOWN.arena.x + TOWN.arena.w / 2, TOWN.arena.y + TOWN.arena.h / 2, 4, '#e8a05a');
@@ -4449,7 +4485,7 @@
   // the hint in the corner follows the road: the yard and the portal at first, then the next boss still standing
   function townObjective() {
     if (!player.cls) return;
-    const next = BOSSES.find(b => !(unlockAll || road.beaten(b.id)));
+    const next = BOSSES.find(b => inHall(b) && !(unlockAll || road.beaten(b.id)));   // (Season 1's road only: Season 2 has its own way in)
     if (!BOSSES.some(b => road.beaten(b.id))) setObjective('Try your skills on the <b>Training Yard</b> dummies (east). The red one swings back. When you\'re ready, step into <b>The King\'s Road</b>, the first portal (north).');
     else if (next) setObjective(`Next: <b>${next.name}</b>. Step into <b>${(TOWN.portals.find(P => P.set === bossSet(next)) || TOWN.portals[0]).name}</b> (north) when your party is ready.`);
     else setObjective('The road is quiet, for now. Try a boss on <b>Hard</b>, or look around town: not everything in Emberfall is out in the open.');
@@ -4905,9 +4941,9 @@
     sendGear();
   }
 
-  const bossThumbs = [], secretThumbs = [];
+  const bossThumbs = [], secretThumbs = [], seasonHeads = {};
   (function buildBossList() {
-    const list = $('boss-list');
+    const list = $('boss-list'), season2 = [];
     BOSSES.forEach((boss, i) => {
       const b = document.createElement('button');
       b.className = 'item'; b.dataset.id = boss.id;
@@ -4915,7 +4951,7 @@
       b.appendChild(cv);
       b.insertAdjacentHTML('beforeend', `<span><b></b><small></small></span>`);
       b.addEventListener('click', () => showBoss(boss));
-      list.appendChild(b);
+      if (bossSet(boss) >= 6) season2.push(b); else list.appendChild(b);   // (Season 2 goes under its own heading, after the fights found in town)
       bossThumbs.push({ cv, boss, b });
     });
     // the two frost-rimmed entries at the foot of the list (data.js SECRET_BOSSES): hidden until the first pull, then a blank card, then a name once the gate has fallen
@@ -4929,6 +4965,10 @@
       list.appendChild(b);
       secretThumbs.push({ cv, def, b });
     });
+    // the season headings: not shown (and nothing of Season 2 listed) until the Ultimate has been cleared, see refreshBossList
+    for (const [k, name] of [['s1', 'Season 1'], ['s2', 'Season 2']]) { const h = document.createElement('div'); h.className = `season ${k} hidden`; h.textContent = name; seasonHeads[k] = h; }
+    list.prepend(seasonHeads.s1);
+    list.append(seasonHeads.s2, ...season2);
     refreshBossList();
   })();
   // what the Raid Board shows of a secret fight: shown (the first pull has been made, or the first gate has fallen for the second), named (it has fallen), clickable
@@ -4947,10 +4987,16 @@
   }
   // names and thumbnails for the bosses that are open; the rest read as sealed. Given a set, only that set's bosses are listed
   // (a portal or a statue shows the raids of its own set)
+  // (Season 2, set 6, is listed under its own heading whenever the Ultimate has been cleared, whichever portal or statue opened the board; asked for on its own
+  // (set 6) the board lists only it: that is the line of moonlight on the town pond, moonRoadUse.)
   function refreshBossList(set = null) {
+    const s2 = season2Seen();
+    seasonHeads.s1.classList.toggle('hidden', !s2 || (set != null && set >= 6));
+    seasonHeads.s2.classList.toggle('hidden', !s2);
     BOSSES.forEach((boss, i) => {
       const t = bossThumbs[i], open = bossOpen(boss);
-      t.b.classList.toggle('hidden', set != null && bossSet(boss) !== set);
+      const late = bossSet(boss) >= 6, only6 = set != null && set >= 6 && s2;   // (only6: asked for on Season 2 alone)
+      t.b.classList.toggle('hidden', late ? !s2 : only6 || (set != null && set < 6 && bossSet(boss) !== set));
       t.b.classList.toggle('sealed', !open);
       t.b.querySelector('b').textContent = open ? boss.name : 'Sealed';
       t.b.querySelector('small').textContent = open ? `Boss ${ROMAN[i]} · ${boss.title}` : `Boss ${ROMAN[i]} · after ${bossOpen(BOSSES[i - 1]) ? BOSSES[i - 1].name : `Boss ${ROMAN[i - 1]}`}`;
@@ -5105,6 +5151,7 @@
         <button data-mode="hard" class="${raidMode === 'hard' ? 'on' : ''}"${hardOk ? '' : ' disabled'}><b>Hard</b><small>${hardOk ? 'Faster and deadlier, with attacks Normal never uses.' : hardWhy(bossDef)}</small></button>
         <button data-mode="extreme" class="${raidMode === 'extreme' ? 'on' : ''}"${extremeOk ? '' : ' disabled'}><b>Extreme</b><small>${extremeOk ? 'Hard, with attacks Hard never uses.' : extremeWhy(bossDef)}</small></button>
       </div>
+      <p class="mode-cmp"><span tabindex="0">How the three differ</span></p>
       ${HARDPLUS.panelHtml(bossDef, hpSel, hpOpen, raidMode === 'hard')}
       ${recs ? `<div class="raid-rec">${recs}</div>` : ''}
       <label class="fill"><input type="checkbox" ${raidFill ? 'checked' : ''} ${Net.isHost ? '' : 'disabled'}> Fill empty slots with bots</label>
@@ -5113,6 +5160,8 @@
       ${extra}
       <button class="cta" ${canStart ? '' : 'disabled'}>${canStart ? `Start raid · ${raidMode === 'extreme' ? 'Extreme' : raidMode === 'hard' ? (hpHeat ? 'Hard+ ' + hpHeat : 'Hard') : 'Normal'}` : why}</button>`;
     el.querySelectorAll('.mode-pick button:not([disabled])').forEach(b => b.addEventListener('click', () => { raidMode = b.dataset.mode; renderRaidSetup(el); }));
+    el.querySelectorAll('.mode-pick button').forEach(b => Tip.set(b, () => modeTip(bossDef, b.dataset.mode)));   // (a dimmed button answers too: what it would be)
+    Tip.set(el.querySelector('.mode-cmp span'), () => modeCompareTip(bossDef));
     el.querySelector('.fill input').addEventListener('change', e => { raidFill = e.target.checked; renderRaidSetup(el); });
     HARDPLUS.wirePanel(el, bossDef, hpSel, () => renderRaidSetup(el), () => { if (hardOk) { raidMode = 'hard'; renderRaidSetup(el); } });
     el.querySelector('.cta').addEventListener('click', () => { HARDPLUS.arm(el.dataset.boss, raidMode === 'hard' && hpOpen ? hpSel : null); startRaid(raidMode, raidFill, el.dataset.boss); });

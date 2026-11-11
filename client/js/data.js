@@ -332,6 +332,21 @@ const BOSSES = [
       { name: 'Extreme: Carried Shadow, Fallen Stars, The Star\'s Pull', desc: 'One of you carries a shadow, stars fall where you stand, and the meteor draws everything toward it.' },
     ],
   },
+  // ---- set 6: the Silver Road (docs/plans/2026-11-season-2-design.md). Opens once the Ultimate has been cleared on the account (main.js bossOpen); the Raid Board lists it under "Season 2".
+  {
+    id: 'garrow', name: 'Garrow', title: "the Moon's Hound", color: '#bcd6ea', playable: true, set: 6,
+    blurb: 'The first thing down the Moon\'s road is her hound. He does not hurry and he does not bark. The snow on the Long Mere is fresh, and it keeps every step you take.',
+    mechanics: [
+      { name: 'On the Scent', desc: 'He lowers his head and looks at one of you. Then he goes where they went.' },
+      { name: 'Throat Snap', desc: 'His jaws, for whoever holds his attention.' },
+      { name: 'Howl', desc: 'It carries across the whole lake.' },
+      { name: 'Mist-Hounds', desc: 'Lesser hounds come out of the mist, each with one scent in its nose.' },
+      { name: 'Whiteout', desc: 'Halfway through, the snow comes down hard and the lake is clean again.' },
+      { name: 'Hard Frost', desc: 'Where he runs, the ice stands up behind him.' },
+      { name: 'Hard: Crossed Trails, Double Scent, Doubling Back, Buried Scent', desc: 'He changes trails where two cross, hunts two of you in turn, comes back the way he went, and the snow falls in the middle of the hunt.' },
+      { name: 'Extreme: Blood on the Snow, The Second Hound, Stillness', desc: 'A wound leaves a redder trail, he does not hunt alone, and some of you are asked not to move.' },
+    ],
+  },
 ];
 
 // The Ultimate (set 4, docs/plans/2026-10-ultimate-raid.md). NOT in BOSSES on purpose: the Raid Board, the town statues and every per-boss list read that array, and the

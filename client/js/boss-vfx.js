@@ -927,6 +927,8 @@ const BOSS_VFX = (() => {
     if (ctx && ctx.boss === 'morrowoak' && typeof MG_FX !== 'undefined' && MG_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
     // Caelum: every move of his lands in caelum-fx.js (CL_FX); a tag it does not know falls through to the shared ones
     if (ctx && ctx.boss === 'caelum' && typeof CL_FX !== 'undefined' && CL_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
+    // Garrow: every move of his lands in garrow-fx.js (GW_FX); a tag it does not know falls through to the shared ones
+    if (ctx && ctx.boss === 'garrow' && typeof GW_FX !== 'undefined' && GW_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
     // The Hollow King: the beat on top of his landings (hit-stop, the thrown sceptre) lands in hollowking-fx.js (HK_FX); it returns true only for a landing it draws whole
     if (ctx && ctx.boss === 'hollowking' && typeof HK_FX !== 'undefined' && HK_FX.impact(tg, msg, ctx, { shapeFlash, shockAt, scatter, after, shake, roomTint, sweep, streak, bang, AFT, coverShadows, clipOut, AR: AR() })) return;
     // Grubnak: the beat on top of his landings (hit-stop, the kitchen bits flung) lands in grubnak-fx.js (GR_FX); it only adds, so the landing below still plays
@@ -1012,6 +1014,7 @@ const BOSS_VFX = (() => {
     morrowoak: { def: '#a064ff', seed: '#a064ff', inhale: '#dcc4ff', bloom: '#d8e08a', lash: '#c8a070', tide: '#ffb020', saplings: '#b8d070', dark: '#a064ff', swallow: '#a064ff', unfold: '#dcc4ff',
       cleaver: '#ff8a2a', roots: '#b8ef5a', storm: '#7fe8ff', lantern: '#6dff9a', wing: '#ff6a2a', fist: '#8ad0ee', rune: '#3fe0c8', head: '#4ad8a0' },
     caelum: { def: '#cfd6f2', glint: '#e8ecff', wake: '#e8ecff', crown: '#cdbfff', thrust: '#cdbfff', grace: '#f4f7ff', night: '#8c70ff', starfall: '#cdbfff', ember: '#ff9a4a', summon: '#ffd36a', embers: '#ff9a4a', constellation: '#fff0b8', ascend: '#ffffff', horizon: '#ffd36a', coil: '#ffd36a' },
+    garrow: { def: '#bcd6ea', scent: '#e8f4ff', snap: '#dff0ff', howl: '#cfe6ff', rime: '#9fd0ff', pack: '#cfe3f4', circle: '#e8f4ff', drift: '#f4faff' },   // (silver and frost blue: garrow-fx.js)
     sovereign: { def: '#ff9a3c', call: '#ffd36a', kindling: '#ff7a2a', brand: '#ff5a2a', sweep: '#ff9a3c', ember: '#ffb86a', scatter: '#ff9a3c', haloturn: '#ffd36a', rebirth: '#fff0c8', enrage: '#fff0c8' },   // (sovereign-art.js; effects come with sovereign-fx.js)
     hood: { def: '#bfe8ff' }, seraph: { def: '#e8dcb0' },
   };
@@ -1145,6 +1148,7 @@ const BOSS_VFX = (() => {
     if (kind === 'wisp' && typeof CV_FX !== 'undefined') return CV_FX.wispSpawn(x, y, { shockAt, shake });   // (Corvane's cold wisps: corvane-fx.js)
     if (kind === 'sous' && typeof GR_FX !== 'undefined') return GR_FX.sousSpawn(x, y, { shockAt, shake });   // (Grubnak's sous-chefs, Extreme: grubnak-fx.js)
     if (kind === 'tidehand' && typeof BR_FX !== 'undefined') return BR_FX.handSpawn(x, y, { shockAt, shake });   // (the Tidewrought's hand: brannoc-fx.js)
+    if ((kind === 'misthound' || kind === 'gwshade') && typeof GW_FX !== 'undefined' && GW_FX.addSpawn(kind, x, y, { shockAt, shake })) return;   // (Garrow's lesser hounds and his shade: garrow-fx.js)
     VFX.swirl(x, y, { r: 60, color: '#c8ff6a', dur: 0.7, arms: 3 });
     VFX.burst(x, y, { color: '#e8ff9a', color2: '#ffffff', n: 14, speed: 200 });
     VFX.smoke(x, y, { color: '#d8e8b0', n: 6, size: 26, a: 0.6, speed: 70 });
@@ -1154,6 +1158,7 @@ const BOSS_VFX = (() => {
     if (kind === 'wisp' && typeof CV_FX !== 'undefined') return CV_FX.wispDeath(x, y, { shockAt, shake });
     if (kind === 'sous' && typeof GR_FX !== 'undefined') return GR_FX.sousDeath(x, y, { shockAt, shake });   // (Grubnak's sous-chefs, Extreme: grubnak-fx.js)
     if (kind === 'tidehand' && typeof BR_FX !== 'undefined') return BR_FX.handDeath(x, y, { shockAt, shake });
+    if ((kind === 'misthound' || kind === 'gwshade') && typeof GW_FX !== 'undefined' && GW_FX.addDeath(kind, x, y, { shockAt, shake })) return;   // (garrow-fx.js)
     VFX.charge(x, y - 10, { color: '#c070ff', n: 10, r: 60, dur: 0.3 });
     after(0.28, () => {
       VFX.burst(x, y, { color: '#c070ff', color2: '#ffffff', n: 18, speed: 260, size: 15 });
@@ -1529,6 +1534,7 @@ const BOSS_VFX = (() => {
     if (bossKind === 'brannoc' && typeof BR_FX !== 'undefined' && BR_FX.prop(msg, { shockAt, shake })) return;   // (Brannoc's leap and crush: brannoc-fx.js)
     if (bossKind === 'morrowoak' && typeof MG_FX !== 'undefined' && MG_FX.prop(msg, { shockAt, shake, entById })) return;   // (Morrow-Oak's holes, a hero falling in, a limb breaking: morrowoak-fx.js)
     if (bossKind === 'caelum' && typeof CL_FX !== 'undefined' && CL_FX.prop(msg, { shockAt, shake })) return;   // (Caelum's Dark Ember and the star's shards breaking: caelum-fx.js)
+    if (bossKind === 'garrow' && typeof GW_FX !== 'undefined' && GW_FX.prop(msg, { shockAt, shake })) return;   // (Garrow's going into the mist and coming out of it, two hounds folding into each other: garrow-fx.js)
     if (bossKind === 'skitterra' && typeof SK_FX !== 'undefined' && SK_FX.prop(msg)) return;   // (the cocoon prop breaking: skitterra-fx.js)
     if (bossKind === 'grubnak' && typeof GR_FX !== 'undefined') GR_FX.prop(msg, { shockAt, shake });   // (the charge ending: a held beat on top; the dust and grit below still play)
     if (bossKind === 'titan' && typeof TI_ART !== 'undefined' && TI_ART.propFx(msg, room, entById, { shockAt })) return;   // (Hrimgar: frozen solid, warmed: titan-art.js)
@@ -1878,9 +1884,11 @@ const BOSS_VFX = (() => {
     caelum: { glint: [['clGlint', 0.3]], wake: [['clWake', 0.3]], crown: [['clCrown', 0.4]], thrust: [['clThrust', 0.4]], grace: [['clGrace', 0.6]], night: [['clNight', 0.4]],
       starfall: [['clSummon', 0.4]], ember: [['clEmber', 0.4]], summon: [['clSummon', 1.2]], embers: [['clSummon', 0.5]], constellation: [['clSummon', 0.6]],
       ascend: [['clAscend', 0.3]], horizon: [['clHorizon', 0.5]], coil: [['clHorizon', 0.5]], enrage: [['clRage', 0.5]] },   // (caelum-art.js)
+    garrow: { scent: [['gaScent', 0.2]], snap: [['gaSnap', 0.3]], howl: [['gaHowl', 0.4]], rime: [['gaRime', 0.4]], pack: [['gaPack', 0.4]], circle: [['gaCircle', 0.3]], drift: [['gaDrift', 0.3]], enrage: [['gaEnrage', 0.5]] },   // (garrow-art.js; his run and pounce poses come from the banim messages, garrow-fx.js)
     sovereign: { kindling: [['svKindling', 0.4]], brand: [['svBrand', 0.4]], sweep: [['svSweep', 0.4]], ember: [['svEmber', 0.4]], scatter: [['svScatter', 0.4]], haloturn: [['svHaloturn', 0.4]],
       call: [['svCallPose', 0.5]], rebirth: [['svRebirth', 0.5]], dance: [['svDance', 0.4]], crescent: [['svCrescent', 0.4]], lance: [['svLance', 0.4]], pyre: [['svPyre', 0.4]], enrage: [['svEnrage', 0.5]] },   // (sovereign-art.js)
     hood: { strike: [['hdStrike', 0.3]] }, seraph: { strike: [['hdStrike', 0.3]] },   // (Hollow Step's swing, the only pose: the hands come from the room's hdhand moments, hood-art.js)
+    garrow: { scent: [['gaScent', 0.3]], run: [['gaRun', 0.3]], pounce: [['gaPounce', 0.4]], snap: [['gaSnap', 0.3]], howl: [['gaHowl', 0.4]], rime: [['gaRime', 0.3]], pack: [['gaPack', 0.3]], circle: [['gaCircle', 0.3]], drift: [['gaDrift', 0.4]], enrage: [['gaEnrage', 0.5]] },   // (garrow-art.js: the pose for each cast; the plain bite is st.action)
   };
   const castKey = (kind, anim, name) => {
     if (kind === 'grubnak' && anim === 'boil' && name === 'Flare-Up') return 'heave';
@@ -2096,6 +2104,7 @@ const BOSS_VFX = (() => {
   ENR.brannoc = '#ffc23a';
   ENR.morrowoak = '#a064ff';
   ENR.caelum = '#ffb870';
+  ENR.garrow = '#bfe0ff';
   function enrageStart(kind, b, dur) {
     const sh = SH(b); if (sh.death) return;
     sh.enrAt = clk(); sh.enrDur = dur; sh.landed = false;
@@ -2193,6 +2202,8 @@ const BOSS_VFX = (() => {
   ENRAGE_SEQ.morrowoak = (sh, b, dur) => { if (typeof MG_FX !== 'undefined') MG_FX.enrage(sh, b, dur, { own, soon, emit, wash, scatter, shockAt, shake, roomTint, AR: AR() }); };
   // The Sky Comes Down: the meteor over every room of the set falls (caelum-fx.js)
   ENRAGE_SEQ.caelum = (sh, b, dur) => { if (typeof CL_FX !== 'undefined') CL_FX.enrage(sh, b, dur, { own, soon, emit, wash, scatter, shockAt, shake, roomTint, AR: AR() }); };
+  // Cold Trail: every trail on the lake lights at once (garrow-fx.js)
+  ENRAGE_SEQ.garrow = (sh, b, dur) => { if (typeof GW_FX !== 'undefined') GW_FX.enrage(sh, b, dur, { own, soon, emit, wash, scatter, shockAt, shake, roomTint, AR: AR() }); };
   // the lethal moment (once): each boss's own end of the world, then the wipe follows
   function enrageLand(kind, b) {
     const sh = SH(b); if (sh.landed || sh.death) return; sh.landed = true;
@@ -2202,6 +2213,7 @@ const BOSS_VFX = (() => {
     if (kind === 'brannoc' && typeof BR_FX !== 'undefined') { softFlash(sh, '#fff0a8', 0.5, 1.0); BR_FX.enrageLand(b, { shockAt, roomTint, scatter, shake, AR: AR() }); return; }
     if (kind === 'morrowoak' && typeof MG_FX !== 'undefined') { softFlash(sh, '#e8dcff', 0.5, 1.0); MG_FX.enrageLand(b, { shockAt, roomTint, scatter, shake, AR: AR() }); return; }
     if (kind === 'caelum' && typeof CL_FX !== 'undefined') { softFlash(sh, '#fff4dc', 0.5, 1.0); CL_FX.enrageLand(b, { shockAt, roomTint, scatter, shake, AR: AR() }); return; }
+    if (kind === 'garrow' && typeof GW_FX !== 'undefined') { softFlash(sh, '#e8f4ff', 0.5, 1.0); GW_FX.enrageLand(b, { shockAt, roomTint, scatter, shake, AR: AR() }); return; }
     if (kind === 'grubnak') {
       softFlash(sh, '#ff6a2a', 0.35, 0.7);
       bang(b.x, b.y - 20, 240, { n: 20, dur: 0.6, hole: 0.42, fill: '#ff8a2a', core: '#ffd27a' });   // (a ring of flame spikes round him: he stays in sight, no white-out)
@@ -2236,12 +2248,14 @@ const BOSS_VFX = (() => {
   INTRO_DUR.brannoc = 2.4;
   INTRO_DUR.morrowoak = 2.6;
   INTRO_DUR.caelum = 3.4;
+  INTRO_DUR.garrow = 3.2;
   function intro(kind, b) {
     const sh = SH(b); sh.intro = { at: clk(), kind };
     if (kind === 'corvane' && typeof CV_FX !== 'undefined') CV_FX.intro(sh, b, { soon, shockAt, shake });   // (corvane-fx.js)
     if (kind === 'brannoc' && typeof BR_FX !== 'undefined') BR_FX.intro(sh, b, { soon, shockAt, shake });   // (brannoc-fx.js)
     if (kind === 'morrowoak' && typeof MG_FX !== 'undefined') MG_FX.intro(sh, b, { soon, shockAt, shake });   // (morrowoak-fx.js)
     if (kind === 'caelum' && typeof CL_FX !== 'undefined') CL_FX.intro(sh, b, { soon, own, shockAt, shake });   // (caelum-fx.js)
+    if (kind === 'garrow' && typeof GW_FX !== 'undefined') GW_FX.intro(sh, b, { soon, emit, shockAt, shake });   // (garrow-fx.js)
     if (kind === 'grubnak') {
       // he slams a stockpot down in front of him: a clang, a ring, a gout of steam
       soon(sh, 0.7, () => {
@@ -2307,6 +2321,7 @@ const BOSS_VFX = (() => {
   DEATH_DUR.brannoc = 3.0;
   DEATH_DUR.morrowoak = 3.4;
   DEATH_DUR.caelum = 4.2;
+  DEATH_DUR.garrow = 3.8;
   function bossDeath(kind, b) {
     const sh = SH(b); if (sh.death) return;
     cut(sh); sh.enrAt = -9; sh.behind = 0; sh.death = { at: clk(), kind };
@@ -2314,6 +2329,7 @@ const BOSS_VFX = (() => {
     if (kind === 'brannoc' && typeof BR_FX !== 'undefined') { BR_FX.death(sh, b, { soon, emit, shockAt, shake }); return; }   // (brannoc-fx.js)
     if (kind === 'morrowoak' && typeof MG_FX !== 'undefined') { MG_FX.death(sh, b, { soon, emit, shockAt, shake }); return; }   // (morrowoak-fx.js)
     if (kind === 'caelum' && typeof CL_FX !== 'undefined') { CL_FX.death(sh, b, { soon, emit, own, scatter, roomTint, shockAt, shake, AR: AR() }); return; }   // (caelum-fx.js)
+    if (kind === 'garrow' && typeof GW_FX !== 'undefined') { GW_FX.death(sh, b, { soon, emit, shockAt, shake }); return; }   // (garrow-fx.js)
     if (kind === 'grubnak') {
       // he staggers, then goes down flat on his face; a pot lid clangs away across the tiles, steam everywhere
       emit(sh, 0.8, 0.25, () => VFX.smoke(b.x + rand(-30, 30), b.y - 30, { color: '#f6f2ee', n: 1, size: 24, a: 0.4, speed: 30 }));
@@ -2451,6 +2467,7 @@ const BOSS_VFX = (() => {
       else if (kind === 'corvane') { if (s < 0.3) q.alpha = 0; else { const u = Math.min(1, (s - 0.3) / 1.0); q.alpha = easeOut(u); q.ghost = Math.max(q.ghost, 1 - u); } }   // (he is seen coming through the snow)
       else if (kind === 'brannoc') { if (s < 0.5) q.alpha = 0; else { const u = Math.min(1, (s - 0.5) / 0.7); q.alpha = easeOut(u); q.oy += (1 - easeOut(u)) * 36; q.grow *= 1.1 - 0.1 * easeOut(u); } }   // (he strides out of the sand to the crowd's roar: brannoc-fx.js)
       else if (kind === 'morrowoak') { if (s < 0.4) q.alpha = 0; else { const u = Math.min(1, (s - 0.4) / 1.4); q.alpha = easeOut(u); q.oy += (1 - easeOut(u)) * 56; q.sy *= 0.92 + 0.08 * easeOut(u); } }   // (he rises out of the cracked floor: morrowoak-fx.js)
+      else if (kind === 'garrow') { if (s < 0.7) q.alpha = 0; else { const u = Math.min(1, (s - 0.7) / 1.6); q.alpha = easeOut(u); q.ghost = Math.max(q.ghost, 1 - u); } if (s < 2.6) X('gaScent', true); }   // (he comes out of the mist across the lake, silver and see-through at first, head low: garrow-fx.js)
       else if (kind === 'caelum') { if (s < 0.7) q.alpha = 0; else { const u = Math.min(1, (s - 0.7) / 1.5); q.alpha = easeOut(u); q.ghost = Math.max(q.ghost, 1 - u); q.oy -= (1 - easeOut(u)) * 60; } }   // (he walks out of the star's light, silver and see-through at first: caelum-fx.js)
     }
     // the fall
@@ -2493,6 +2510,12 @@ const BOSS_VFX = (() => {
         const u = Math.min(1, s / 3.2), g = Math.min(1, Math.max(0, (s - 0.9) / 2.0));
         if (s < 0.5) q.ox += Math.sin(s * 37) * 2 * (1 - s / 0.5);
         q.grow *= 1 - 0.03 * u; q.ghost = Math.max(q.ghost, easeOut(g)); q.oy -= 36 * easeOut(g); q.alpha = 1 - easeOut(Math.max(0, Math.min(1, (s - 1.5) / 1.7)));
+      } else if (kind === 'garrow') {
+        // the mist lets go of him and the body thins to the skeleton and the two moons; they sink into the snow, the chain last (garrow-fx.js has the rest)
+        const g = Math.min(1, Math.max(0, (s - 0.5) / 1.5)), u = Math.min(1, Math.max(0, (s - 1.4) / 2.0));
+        if (s < 0.5) q.ox += Math.sin(s * 37) * 2 * (1 - s / 0.5);
+        if (s > 1.3) X('gaDrift', true);
+        q.ghost = Math.max(q.ghost, easeOut(g)); q.oy += 34 * easeOut(u); q.grow *= 1 - 0.05 * u; q.alpha = 1 - easeOut(Math.min(1, Math.max(0, (s - 1.9) / 1.7)));
       } else if (kind === 'corvane') {
         // he goes to a knee, shudders, and crumbles into snow (corvane-fx.js has the rest)
         const u = Math.min(1, s / 2.4), g = Math.min(1, Math.max(0, (s - 1.0) / 1.5));
@@ -2574,6 +2597,7 @@ const BOSS_VFX = (() => {
   PAL_GHOST.brannoc = '#cfeee8';
   PAL_GHOST.morrowoak = '#d8c8f4';
   PAL_GHOST.caelum = '#dde2ee';
+  PAL_GHOST.garrow = '#dbe9f8';
   // how much of him is there (the hitbox ring fades with him: he's gone, falling or not yet come in)
   const presence = bd => (bd && bd.show ? bd.show.alpha : 1) * (bd && bd.show && bd.show.death ? Math.max(0, 1 - (clk() - bd.show.death.at) / 0.5) : 1);
   function setClock(fn) { clockFn = fn; }

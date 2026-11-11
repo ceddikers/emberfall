@@ -696,7 +696,7 @@ const HOLLOWKING = {
       f.mech({ type: 'stack', shape: { kind: 'circle', x: p.x, y: p.y, r: 115 }, delay: d, dmg: dmg.summons * Math.min(al.length, 4) / 4, follow: p.id,
         need: Math.max(1, al.length - 1), tag: 'stack' });
     };
-    // Hard (the Verdict and Judgement): the dead gather on a random hero (the party stacks in), and 3.5 s after it lands
+    // Hard (the Verdict and Judgement): the dead gather on a random hero (the party stacks in), and 5.5 s after it lands (3.5 s on Extreme)
     // each hero is marked: out again, spread. The stack is blue, the marks red, both on the floor the whole time.
     const gatherThenScatter = () => {
       const al = f.alive();
@@ -705,7 +705,7 @@ const HOLLOWKING = {
       f.cast('Grave Summons', d, 'rise');
       f.mech({ type: 'stack', shape: { kind: 'circle', x: p.x, y: p.y, r: 115 }, delay: d, dmg: dmg.summons * Math.min(al.length, 4) / 4, follow: p.id,
         need: Math.max(1, al.length - 1), tag: 'stack' });
-      f.afterKeep(d + 0.2, () => marks(3.5));
+      f.afterKeep(d + 0.2, () => marks(X ? 3.5 : 5.5));   // (Hard gives the healer one more cast between the gathering and the marks, since 2026-11-11; Extreme keeps the quick one)
     };
     const kingRises = () => {
       const d = 3;

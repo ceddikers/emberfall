@@ -122,6 +122,9 @@ const TOWN_NPCS = [
       { when: { flags: ['pip-marble'], notFlags: ['got-marble'] },
         lines: ["You've the look of someone on an errand. Somebody small sent you, I'd wager."],
         choices: [{ text: 'Pip wants her marble back', next: 'marble' }, { text: 'Goodbye' }] },
+      // (flag 'moon-road': town-life.js sets it the first time the pond's line of light is there; `set` on an entry marks it told as it is heard)
+      { when: { flags: ['moon-road'], notFlags: ['hask-moon-told'] }, set: 'hask-moon-told',
+        lines: ["Something's lying across the pond by Bram. I walked the bank to be sure it wasn't a reflection. It isn't. Not my portal, so not my count."] },
       { when: { beaten: ['sovereign'], notFlags: ['hask-four-told'] },
         lines: ["Four went in. Four came out. I counted twice, in case the first count was luck."],
         choices: [{ text: 'Was it luck?', next: 'four' }] },
@@ -411,6 +414,9 @@ const TOWN_NPCS = [
     arrives: null,
     entrance: null,
     talk: [
+      { when: { flags: ['moon-road'], notFlags: ['bram-moon-told'] }, set: 'bram-moon-told',
+        lines: ["There's a line across the pond that wasn't there. Dead straight, and not a ripple under it. The fish won't go near it, and I'm not about to ask them why."],
+        choices: [{ text: "I've got fish", next: 'shop' }, { text: 'Goodbye' }] },
       { when: { beaten: ['sovereign'], notFlags: ['bram-pond-told'] },
         lines: ["Fish have been strange all season. Sitting at the bottom of the pond, all facing the one way.",
           "This morning they turned round and started ignoring me again."],
@@ -693,6 +699,9 @@ const TOWN_UNLOCKS = {
   brannoc: { toast: 'The colosseum has stopped cheering. The Sunwheel hangs on the champion\'s statue, and two sun-banners now stand on the road in from the south.', trophy: 'sunwheel', decor: 'victory-banners' },
   morrowoak: { toast: 'The Hunger has gone quiet. A split length of Morrow-Oak\'s heartwood rests on his statue, and two green shoots have come up through the paving east of the fountain.', trophy: 'heartwood', decor: 'seedlings' },
   caelum: { toast: 'The meteor has broken. Stars are falling slowly over Emberfall tonight, Caelum\'s silver mask hangs on his statue, and a splinter of black star-glass stands in the paving between the statues.', trophy: 'silver-mask', decor: 'starfall' },
+  // set 6 (Season 2; there is no statue terrace for it yet, so the trophy is drawn only once a pedestal exists, and the toast says nothing of one)
+  //   moon-stray: a lean, mist-grey stray that follows Pip about at a little distance, sits when she stops and now and then looks toward the pond
+  garrow: { toast: 'The Long Mere is quiet. A lean grey stray with no collar has come down the valley road and taken up with Pip, who says she never asked it to.', trophy: 'broken-chain', decor: 'moon-stray' },
 };
 
 // Quill's wards (the Archmage's apprentice): a small hour-long buff on yourself that stacks with a feast. `buff.stat` is

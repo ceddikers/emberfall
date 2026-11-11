@@ -689,6 +689,16 @@
     'bm-corvane-m-ring-throw': 3.5, 'bm-corvane-m-shrine': 2.5, 'bm-corvane-m-wall': 2.5, 'bm-corvane-rising-crane': 1,
     'bm-corvane-scabbard-sweep': 2.5, 'bm-corvane-the-circle': 1.5, 'bm-corvane-the-last-vigil': -1.5, 'bm-corvane-the-shrine': 3.5,
     'bm-corvane-the-vigil': 1, 'bm-corvane-three-lessons': 4, 'bm-corvane-whetted-edge': -0.5, 'bm-corvane-white-gale': 3.5,
+    'amb-garrow-mere': -16.5, 'bm-garrow-buried-scent': 7, 'bm-garrow-circle-the-prey': 5.5, 'bm-garrow-cold-trail': -3.5,
+    'bm-garrow-double-scent': 5.5, 'bm-garrow-doubling-back': 5.5, 'bm-garrow-howl': -4, 'bm-garrow-intro': -1,
+    'bm-garrow-m-flurry': 4.5, 'bm-garrow-m-hound-bite': 11, 'bm-garrow-m-hound-fade': 16.5, 'bm-garrow-m-hound-scent': 10.5,
+    'bm-garrow-m-hound-spawn': 9.5, 'bm-garrow-m-hounds-meet': 4.5, 'bm-garrow-m-last': 6, 'bm-garrow-m-lock': 5,
+    'bm-garrow-m-mist-in': 5.5, 'bm-garrow-m-mist-out': 4.5, 'bm-garrow-m-pounce': 6, 'bm-garrow-m-pounce-wide': 1,
+    'bm-garrow-m-ridge': 2, 'bm-garrow-m-rime-land': 5, 'bm-garrow-m-ring-burst': 1.5, 'bm-garrow-m-run': 6,
+    'bm-garrow-m-run-start': 9, 'bm-garrow-m-scent': 4, 'bm-garrow-m-still-burst': 5, 'bm-garrow-m-still-mark': 8.5,
+    'bm-garrow-m-wipe': 7.5, 'bm-garrow-mist-hounds': 9, 'bm-garrow-on-the-scent': 6, 'bm-garrow-rime': 6.5,
+    'bm-garrow-snowdrift': 3.5, 'bm-garrow-stillness': 2.5, 'bm-garrow-the-long-chase': 2.5, 'bm-garrow-the-second-hound': 5,
+    'bm-garrow-the-whole-trail': 5.5, 'bm-garrow-throat-snap': 1.5,
     'bm-grubnak-belly-flop': -1, 'bm-grubnak-butchers-charge': -0.5, 'bm-grubnak-chop-chop': 1, 'bm-grubnak-clean-plate': -3,
     'bm-grubnak-cleaver-toss': 1.5, 'bm-grubnak-clogged-drains': 3.5, 'bm-grubnak-dessert-is-served': 2.5, 'bm-grubnak-dinner-bell': -1.5,
     'bm-grubnak-dinner-rush': 3.5, 'bm-grubnak-double-chop': 1, 'bm-grubnak-family-meal': 0.5, 'bm-grubnak-flambe': -0.5,
@@ -6212,6 +6222,318 @@
     caStars(S, 0, 6, 1.0, 0.03, 5600, 2200);
     S.thud({ at: 1.5, f: 50, f1: 26, dur: 0.7, drive: 2, peak: 0.3 });
   });
+
+  // ============================================================================================== Garrow, the Moon's Hound (Season 2, boss XIII: the Long Mere)
+  // Cold and close: breath, snow, mist, a silver chain, ice. No fire, no brass, no crowd, and he never snarls or barks: the worst he does is go quiet and look. A howl is one long clean
+  // note that carries over the frozen lake with the lake's own slap-back; running on snow is a soft fast drumming, not hooves; ice cracks upward. The hunts (On the Scent and its
+  // variants) share one voice, the sniff and the low close breath, and each adds a turn of its own. The m- cues are the moments sound-hooks.js reads off the room (its "garrow" block).
+  const gwSniff = (S, at, pk, pan = 0, k = 1) => S.noise({ at, color: 'pink', hp: 500, bp: 900 * k, bp1: 2300 * k, q: 1.1, dur: 0.24, pts: [[0.09, 1], [0.24, 0]], peak: pk, pan });   // cold air drawn in
+  const gwBreath = (S, at, dur, pk, f = 1300, pan = 0) => {       // the low close breath: a soft swell of air and a little chest under it
+    S.noise({ at, color: 'pink', bp: f, bp1: f * 0.7, q: 0.7, lp: 3200, dur, pts: [[dur * 0.45, 1], [dur, 0]], peak: pk, pan });
+    S.noise({ at: at + dur * 0.1, color: 'brown', lp: 380, dur: dur * 0.9, pts: [[dur * 0.4, 1], [dur * 0.9, 0]], peak: pk * 0.5, pan });
+  };
+  const gwPaws = (S, at, n, gap, pk, o = {}) => {                 // a soft fast drumming on snow: a muffled thump and a dry crunch (o.pf(i, n): where each lands, o.fade: dying away)
+    for (let i = 0; i < n; i++) {
+      const t = at + i * gap + (i % 2 ? gap * 0.1 : 0), f = (o.f || 96) * (i % 2 ? 0.9 : 1), pan = o.pf ? o.pf(i, n) : o.pan != null ? o.pan : Math.sin(i * 1.3) * 0.25;
+      const p2 = pk * (o.fade ? 1 - 0.8 * i / n : 1 - (i % 3) * 0.1);
+      S.thud({ at: t, f, f1: f * 0.5, dur: 0.14, peak: p2, click: 0, lp: 420, pan });
+      S.noise({ at: t, color: 'pink', hp: 1800, lp: 5200, dur: 0.07, pts: [[0.012, 1], [0.07, 0]], peak: p2 * 0.35, grain: 0.6, pan });
+    }
+  };
+  const gwWind = (S, at, dur, pk, f0, f1, peakAt = 0.6, pan = 0) => {   // wind and the hiss of fine snow in it (peakAt under 0.9)
+    S.whoosh({ at, color: 'pink', f: f0, f1, dur, peakAt, q: 0.9, peak: pk, pan });
+    S.sizzle({ at: at + dur * 0.05, dur: dur * 0.95, hp: 4500, lp: 9000, pts: [[dur * peakAt * 0.7, 0.4], [dur * peakAt, 1], [dur * 0.95, 0]], peak: pk * 0.2, pan });
+  };
+  const gwIce = (S, at, pk, f = 2600, pan = 0) => { S.crack({ at, peak: pk, dur: 0.12, f: 2400, pan }); S.glass({ at: at + 0.005, f, dur: 0.7, peak: pk * 0.35, pan }); };   // a crack and its small ring
+  const gwHowl = (S, at, dur, pk, f = 190, fb = 0.42) => {        // one long clean note, rising and then settling, with the lake's slap-back behind it (no growl in it)
+    S.echo({ time: 0.62, fb, lp: 1700, kill: at + dur + 3 });
+    const d1 = dur * 0.58, d2 = dur * 0.55;
+    S.voice({ at, f, f1: f * 1.55, dur: d1, vowel: 'o', vowel1: 'u', breath: 1.4, lp: 2400, peak: pk, ech: 0.5, rev: 0.4, pts: [[0.35, 0.7], [d1 - 0.05, 1], [d1, 0]] });
+    S.voice({ at: at + dur * 0.45, f: f * 1.55, f1: f * 0.92, dur: d2, vowel: 'u', vowel1: 'o', breath: 1.4, lp: 2200, peak: pk * 0.9, ech: 0.5, rev: 0.4, pts: [[0.2, 0.9], [d2 * 0.35, 1], [d2 * 0.75, 0.5], [d2, 0]] });
+    S.tone({ at: at + 0.2, f: f * 5.8, f1: f * 8.4, dur: dur * 0.7, a: dur * 0.3, peak: pk * 0.05, ech: 0.6 });   // the thin cold edge on the note
+  };
+  // his entrance: wind over the ice, a few links of the broken silver chain, one far howl, a breath out and the hush
+  def('bm-garrow-intro', 'sting', S => {
+    S.space('hall', 0.7);
+    gwWind(S, 0, 3.8, 0.18, 260, 800, 0.5);
+    S.rumble({ dur: 3.8, f: 55, peak: 0.14, a: 1.4 });
+    for (let i = 0; i < 5; i++) S.metal({ at: 0.8 + i * 0.12 + (i % 2) * 0.03, set: 'bar', f: 2500 + i * 190, dur: 0.45, peak: 0.045, strike: 0.2, pan: i % 2 ? 0.35 : -0.35 });
+    gwHowl(S, 1.3, 2.6, 0.16, 170);
+    gwBreath(S, 3.2, 0.9, 0.06, 1000);
+    S.thud({ at: 3.55, f: 52, f1: 28, dur: 0.9, drive: 1.4, peak: 0.22 });
+  });
+  // ---- the hunts: the sniff and the low close breath are the family; each adds its own turn
+  def('bm-garrow-on-the-scent', 'bm', S => {       // three sniffs, a thin cold note (the moon), the breath held, and the paws set as the trail locks
+    S.space('hall', 0.35);
+    gwSniff(S, 0.25, 0.22, -0.25); gwSniff(S, 0.75, 0.26, 0.25); gwSniff(S, 1.3, 0.18, 0, 0.85);
+    S.glass({ at: 0.5, f: mf(96), dur: 2.6, peak: 0.05 });
+    gwBreath(S, 1.9, 1.7, 0.16, 1100);
+    S.rumble({ at: 1.2, dur: 2.6, f: 55, peak: 0.12, a: 1.2 });
+    gwBreath(S, 3.5, 0.8, 0.07, 1700);
+    S.thud({ at: 3.55, f: 60, f1: 34, dur: 0.5, drive: 1.3, peak: 0.16 });
+  });
+  def('bm-garrow-double-scent', 'bm', S => {      // two scents one after the other: a pair of sniffs on the left under a low note, a pair on the right a fifth above it
+    S.space('hall', 0.35);
+    gwSniff(S, 0.25, 0.2, -0.6); gwSniff(S, 0.65, 0.22, -0.6); S.glass({ at: 0.45, f: mf(88), dur: 1.8, peak: 0.055, pan: -0.5 });
+    gwSniff(S, 1.45, 0.2, 0.6, 1.12); gwSniff(S, 1.85, 0.22, 0.6, 1.12); S.glass({ at: 1.65, f: mf(95), dur: 1.8, peak: 0.055, pan: 0.5 });
+    gwBreath(S, 2.5, 1.5, 0.14, 1100, -0.3); gwBreath(S, 2.7, 1.5, 0.12, 1250, 0.3);
+    S.rumble({ at: 1.5, dur: 2.4, f: 55, peak: 0.1, a: 1.0 });
+    S.thud({ at: 3.55, f: 60, f1: 34, dur: 0.5, drive: 1.3, peak: 0.16 });
+  });
+  def('bm-garrow-doubling-back', 'bm', S => {     // the trail run there (the drumming and a rising sweep) and then the same trail back (mirrored), a single glass note at the turn
+    S.space('hall', 0.35);
+    gwSniff(S, 0.25, 0.22, -0.2); gwSniff(S, 0.75, 0.24, 0.2);
+    gwBreath(S, 1.4, 1.2, 0.12, 1100);
+    S.whoosh({ at: 2.4, color: 'pink', f: 500, f1: 2600, dur: 0.9, peakAt: 0.85, q: 1.1, peak: 0.12 });
+    gwPaws(S, 2.4, 6, 0.14, 0.2, { pf: i => -0.6 + i * 0.24 });
+    S.glass({ at: 3.35, f: mf(98), dur: 0.9, peak: 0.07 });
+    gwPaws(S, 3.5, 6, 0.14, 0.2, { pf: i => 0.6 - i * 0.24 });
+    S.whoosh({ at: 3.5, color: 'pink', f: 2600, f1: 500, dur: 0.9, peakAt: 0.15, q: 1.1, peak: 0.12 });
+  });
+  def('bm-garrow-buried-scent', 'bm', S => {      // two clean sniffs, then the flurry lands over the trail and the next two come muffled, as through snow
+    S.space('hall', 0.35);
+    gwSniff(S, 0.25, 0.22, -0.2); gwSniff(S, 0.7, 0.22, 0.2);
+    gwWind(S, 1.0, 2.2, 0.13, 500, 1800, 0.55);
+    S.noise({ at: 1.5, color: 'brown', lp: 320, dur: 1.8, pts: [[0.7, 1], [1.8, 0]], peak: 0.12 });
+    [[1.6, 0.14, -0.3], [2.3, 0.1, 0.3]].forEach(([at, pk, pan]) => S.noise({ at, color: 'pink', bp: 600, bp1: 900, q: 0.9, lp: 900, dur: 0.3, pts: [[0.1, 1], [0.3, 0]], peak: pk, pan }));
+    S.glass({ at: 3.6, f: mf(90), dur: 1.0, peak: 0.04 });
+  });
+  def('bm-garrow-the-whole-trail', 'bm', S => {   // the snow has stopped: one long slow draw, and the whole line walked back step by step, low and sparse
+    S.space('hall', 0.45);
+    gwBreath(S, 0.2, 2.4, 0.15, 900);
+    S.rumble({ dur: 5.8, f: 50, peak: 0.12, a: 2.0 });
+    gwPaws(S, 1.4, 10, 0.4, 0.13, { f: 70, pf: (i, n) => -0.5 + i / (n - 1) });
+    S.glass({ at: 1.4, f: mf(84), dur: 4.4, peak: 0.04 });
+    gwBreath(S, 4.8, 1.4, 0.07, 800);
+  });
+  def('bm-garrow-the-second-hound', 'bm', S => {  // the same sniffs and a hollow second set, lower and far off, a beat behind: a shade takes a scent too
+    S.space('hall', 0.45);
+    gwSniff(S, 0.25, 0.2, -0.2); gwSniff(S, 0.75, 0.2, 0.2);
+    gwSniff(S, 0.55, 0.12, -0.7, 0.7); gwSniff(S, 1.05, 0.12, 0.7, 0.7);
+    S.partials({ at: 0.9, set: 'glass', f: mf(79), dur: 3.0, beat: 2.5, peak: 0.07, am: [5, 0.3] });
+    S.voice({ at: 1.4, f: 120, f1: 105, dur: 1.6, vowel: 'u', breath: 5, lp: 1200, peak: 0.05 });
+    gwBreath(S, 2.0, 1.6, 0.12, 1100); gwBreath(S, 2.3, 1.5, 0.07, 700, 0.5);
+    S.thud({ at: 3.55, f: 58, f1: 32, dur: 0.5, drive: 1.3, peak: 0.14 });
+  });
+  def('bm-garrow-stillness', 'bm', S => {         // one sniff and a breath, and then everything holds: a single cold note and almost nothing under it
+    S.space('hall', 0.5);
+    gwSniff(S, 0.25, 0.2, 0);
+    gwBreath(S, 0.8, 1.0, 0.1, 1200);
+    S.glass({ at: 1.9, f: mf(100), dur: 3.6, peak: 0.07, am: [6, 0.25] });
+    S.partials({ at: 1.95, set: 'glass', f: mf(88), dur: 3.4, peak: 0.04 });
+    S.tone({ at: 2.0, f: mf(52), dur: 3.0, a: 1.2, lp: 300, peak: 0.05 });
+    S.crack({ at: 3.6, peak: 0.06, dur: 0.1, f: 3000 });
+  });
+  // ---- the rest of his kit
+  def('bm-garrow-throat-snap', 'bm', S => {       // a breath drawn, the silver chain shifting, the jaws parting with a dry click, and the close on cold air
+    S.space('hall', 0.35);
+    gwBreath(S, 0.3, 1.3, 0.14, 1000);
+    for (let i = 0; i < 3; i++) S.metal({ at: 1.5 + i * 0.35, set: 'bar', f: 3000 + i * 260, dur: 0.3, peak: 0.04, strike: 0.2, pan: i % 2 ? 0.3 : -0.3 });
+    S.wood({ at: 2.6, f: 900, dur: 0.06, peak: 0.22 });
+    S.whoosh({ at: 2.9, color: 'pink', f: 300, f1: 1600, dur: 0.3, peakAt: 0.9, peak: 0.2 });
+    S.crack({ at: 3.3, peak: 0.34, dur: 0.18, f: 1500 });
+    S.wood({ at: 3.3, f: 520, dur: 0.12, peak: 0.45 });
+    S.thud({ at: 3.3, f: 82, f1: 38, dur: 0.6, drive: 2.2, peak: 0.5 });
+  });
+  def('bm-garrow-howl', 'bm', S => {              // the howl across the frozen lake: one long clean note and the lake's own answer
+    S.space('hall', 0.55);
+    gwHowl(S, 0.2, 4.0, 0.3, 190);
+    gwWind(S, 0, 4.4, 0.06, 200, 500, 0.5);
+    S.rumble({ at: 0.2, dur: 4.0, f: 60, peak: 0.12, a: 1.0 });
+  });
+  def('bm-garrow-rime', 'bm', S => {              // the draw, then a breath of frost out toward two of them (one either side), crystals hissing in it
+    S.space('hall', 0.4);
+    gwBreath(S, 0.3, 1.0, 0.1, 1300);
+    S.whoosh({ at: 1.2, color: 'pink', f: 1500, f1: 4200, dur: 2.6, peakAt: 0.5, q: 1.0, peak: 0.22, pan: -0.55 });
+    S.whoosh({ at: 1.5, color: 'pink', f: 1300, f1: 3600, dur: 2.6, peakAt: 0.5, q: 1.0, peak: 0.2, pan: 0.55 });
+    S.sizzle({ at: 1.4, dur: 2.4, hp: 6000, lp: 12000, pts: [[1.0, 1], [2.4, 0]], peak: 0.06 });
+    for (let i = 0; i < 6; i++) S.glass({ at: 1.8 + i * 0.28, f: 3600 + ((i * 517) % 2400), dur: 0.5, peak: 0.035, pan: i % 2 ? 0.5 : -0.5 });
+    S.glass({ at: 4.0, f: mf(100), dur: 1.4, peak: 0.06 });
+  });
+  def('bm-garrow-mist-hounds', 'bm', S => {       // almost silent: a stir of mist, a patter of paws in pairs out to either side, a thin whisper, a soft settling
+    S.space('hall', 0.3);
+    S.noise({ color: 'pink', bp: 700, bp1: 1300, q: 0.8, lp: 2400, dur: 3.0, pts: [[1.4, 0.6], [3.0, 0]], peak: 0.1 });
+    for (let i = 0; i < 8; i++) gwPaws(S, 0.5 + i * 0.3, 2, 0.1, 0.07, { f: 110, pan: i % 2 ? 0.7 : -0.7 });
+    S.noise({ at: 0.9, color: 'white', hp: 3500, bp: 5200, q: 1.5, dur: 1.2, pts: [[0.5, 1], [1.2, 0]], peak: 0.05 });
+    S.glass({ at: 2.2, f: mf(88), dur: 1.2, peak: 0.03 });
+    S.thud({ at: 2.9, f: 60, f1: 40, dur: 0.4, peak: 0.1, click: 0, lp: 300 });
+  });
+  def('bm-garrow-circle-the-prey', 'bm', S => {   // he trots a ring round the party: the drumming goes round the listener, and the ring's note rises as it closes
+    S.space('hall', 0.4);
+    gwBreath(S, 0.3, 0.9, 0.08, 1100);
+    gwPaws(S, 0.8, 15, 0.27, 0.2, { f: 100, pf: (i, n) => Math.sin(i / n * Math.PI * 2) * 0.8 });
+    S.rumble({ at: 0.8, dur: 4.2, f: 60, peak: 0.1, a: 2 });
+    gwWind(S, 3.4, 1.8, 0.08, 600, 1800, 0.85);
+    S.glass({ at: 4.7, f: mf(95), dur: 1.2, peak: 0.06 }); S.glass({ at: 4.75, f: mf(88), dur: 1.2, peak: 0.05 });
+  });
+  def('bm-garrow-snowdrift', 'bm', S => {         // a flurry sweeping the lake: wind and hiss swelling to the moment it wipes every track, a thin whistle in the gusts
+    S.space('hall', 0.35);
+    gwWind(S, 0, 4.0, 0.3, 350, 2600, 0.88);
+    S.rumble({ at: 0.6, dur: 3.4, f: 90, peak: 0.16, a: 2.4 });
+    S.tone({ at: 0.8, f: 900, f1: 1500, dur: 3.0, a: 1.6, peak: 0.018, am: [0.9, 0.8], lp: 2000 });
+  });
+  def('bm-garrow-the-long-chase', 'bm', S => {    // he has gone into the white: wind low and wide, one far howl, a few paws far off, a breath
+    S.space('hall', 0.5);
+    gwWind(S, 0, 9.0, 0.16, 260, 900, 0.3);
+    gwWind(S, 5.0, 4.5, 0.12, 300, 1100, 0.4);
+    gwHowl(S, 1.0, 3.0, 0.09, 150, 0.5);
+    gwPaws(S, 4.6, 5, 0.2, 0.05, { f: 80, fade: 1 });
+    S.rumble({ dur: 9.5, f: 50, peak: 0.12, a: 3.0 });
+    gwBreath(S, 8.0, 1.6, 0.06, 900);
+  });
+  def('bm-garrow-cold-trail', 'bm', S => {        // the enrage: the wind building over the whole lake, a vast low howl, then the lake goes quiet and one long crack runs under it
+    S.space('hall', 0.8);
+    gwWind(S, 0, 7.4, 0.28, 120, 1100, 0.88);
+    S.pad({ notes: [mf(34), mf(41)], dur: 7.6, type: 'sine', det: 5, lpEnv: [200, 600, 200, 5], peak: 0.1 });
+    gwHowl(S, 1.0, 5.0, 0.26, 120, 0.5);
+    S.rumble({ dur: 7.6, f: 45, peak: 0.22, a: 4 });
+    S.crack({ at: 7.5, peak: 0.3, dur: 0.4, f: 900 });
+    S.thud({ at: 7.5, f: 40, f1: 20, dur: 1.4, drive: 3, peak: 0.7 });
+    S.crackle({ at: 7.5, dens: 2.5, f: 3600, dur: 1.4, pts: [[0.05, 1], [1.4, 0]], peak: 0.2 });
+    S.glass({ at: 7.55, f: mf(100), dur: 2.4, peak: 0.07 });
+  });
+  // ---- the moments (sound-hooks.js reads them off the room)
+  def('bm-garrow-m-scent', 'bm', S => {           // the scent taken: a low, close breath and one thin note
+    S.space('hall', 0.3);
+    gwBreath(S, 0, 0.8, 0.2, 800);
+    S.thud({ at: 0.05, f: 58, f1: 36, dur: 0.5, click: 0, lp: 300, peak: 0.22 });
+    S.glass({ at: 0.1, f: mf(96), dur: 1.0, peak: 0.05 });
+  });
+  def('bm-garrow-m-hound-scent', 'bm', S => {     // a hound has your scent: a whisper of paws
+    gwPaws(S, 0, 4, 0.1, 0.1, { f: 110, fade: 1, pan: 0 });
+    S.noise({ color: 'white', hp: 3500, bp: 5200, q: 1.5, dur: 0.5, pts: [[0.2, 1], [0.5, 0]], peak: 0.05 });
+  });
+  def('bm-garrow-m-still-mark', 'bm', S => {      // asked to be still: a held thin note and a tick of ice
+    S.glass({ f: mf(100), dur: 1.4, peak: 0.07, am: [6, 0.25] });
+    S.crack({ at: 0.02, peak: 0.05, dur: 0.08, f: 3000 });
+  });
+  def('bm-garrow-m-lock', 'bm', S => {            // the trail lighting end to end: a thin bright line drawn across the ice and its ring
+    S.space('hall', 0.4);
+    S.whoosh({ color: 'pink', f: 1200, f1: 5200, dur: 0.55, peakAt: 0.9, q: 1.4, peak: 0.16 });
+    S.glass({ at: 0.45, f: mf(96), dur: 1.0, peak: 0.08 });
+    S.glass({ at: 0.5, f: mf(103), dur: 0.8, peak: 0.04 });
+  });
+  def('bm-garrow-m-run-start', 'bm', S => {       // he pushes off: a puff of snow and one low thump
+    S.noise({ color: 'pink', lp: 900, dur: 0.2, pts: [[0.03, 1], [0.2, 0]], peak: 0.2 });
+    S.thud({ f: 70, f1: 38, dur: 0.25, click: 0, lp: 360, peak: 0.4 });
+    S.whoosh({ at: 0.05, color: 'pink', f: 400, f1: 1500, dur: 0.25, peakAt: 0.5, peak: 0.1 });
+  });
+  def('bm-garrow-m-run', 'bm', S => {             // a rush along the snow: a hiss of air and a few quick soft footfalls
+    S.whoosh({ color: 'pink', f: 500, f1: 1800, dur: 0.4, peakAt: 0.45, q: 1.0, peak: 0.16 });
+    gwPaws(S, 0.02, 3, 0.09, 0.2, { f: 100, pan: 0 });
+  });
+  def('bm-garrow-m-pounce', 'imp', S => {         // landing: a flump of snow, a crisp crunch, a snap of air
+    S.space('hall', 0.25);
+    S.thud({ f: 78, f1: 34, dur: 0.4, drive: 1.6, click: 0.15, lp: 700, peak: 0.55 });
+    S.noise({ at: 0.01, color: 'pink', lp: 1100, dur: 0.3, pts: [[0.03, 1], [0.3, 0]], peak: 0.25 });
+    S.noise({ at: 0.02, color: 'white', hp: 3000, lp: 8000, dur: 0.14, pts: [[0.01, 1], [0.14, 0]], peak: 0.12, grain: 0.7 });
+    S.crack({ at: 0.01, peak: 0.12, dur: 0.1, f: 2000 });
+  });
+  def('bm-garrow-m-pounce-wide', 'imp', S => {    // a hero fallen on: the same landing, heavy and wide, the snow blown out in a ring
+    S.space('hall', 0.45);
+    S.thud({ f: 52, f1: 24, dur: 0.9, drive: 2.6, click: 0.15, lp: 600, peak: 0.8 });
+    S.noise({ at: 0.02, color: 'brown', bp: 300, bp1: 120, q: 0.8, dur: 1.0, pts: [[0.05, 1], [1.0, 0]], peak: 0.4 });
+    S.noise({ at: 0.03, color: 'pink', hp: 2500, lp: 9000, dur: 0.9, pts: [[0.06, 1], [0.9, 0]], peak: 0.16, grain: 0.7 });
+    S.rumble({ at: 0.05, dur: 1.2, f: 60, peak: 0.3, a: 0.05 });
+    S.crack({ at: 0.01, peak: 0.16, dur: 0.14, f: 1800 });
+  });
+  def('bm-garrow-m-still-burst', 'imp', S => {    // Stillness bursts: the walked steps going off along a line, a quick run of ice snaps
+    S.space('hall', 0.3);
+    for (let i = 0; i < 6; i++) gwIce(S, i * 0.045, 0.2 - i * 0.015, 2200 + i * 260, (i % 2 ? 0.4 : -0.4));
+    S.thud({ f: 64, f1: 30, dur: 0.5, drive: 2, peak: 0.45 });
+  });
+  def('bm-garrow-m-ring-burst', 'imp', S => {     // the ring of his track bursting: cracks all round the listener, a low boom under them
+    S.space('hall', 0.45);
+    for (let i = 0; i < 10; i++) gwIce(S, i * 0.03, 0.2, 1900 + ((i * 421) % 1800), Math.sin(i / 10 * Math.PI * 2) * 0.85);
+    S.thud({ f: 56, f1: 26, dur: 0.9, drive: 2.4, peak: 0.6 });
+    S.rumble({ at: 0.02, dur: 1.1, f: 70, peak: 0.25, a: 0.04 });
+    S.whoosh({ color: 'pink', f: 3000, f1: 700, dur: 0.6, peakAt: 0.1, peak: 0.1 });
+  });
+  def('bm-garrow-m-rime-land', 'imp', S => {      // the breath of frost lands: a soft burst of cold air, crystals tinkling down, the mist settling
+    S.space('hall', 0.4);
+    S.noise({ color: 'pink', bp: 3000, bp1: 1400, q: 0.9, dur: 0.5, pts: [[0.03, 1], [0.5, 0]], peak: 0.22 });
+    S.thud({ f: 70, f1: 34, dur: 0.35, click: 0, lp: 500, peak: 0.4 });
+    for (let i = 0; i < 6; i++) S.glass({ at: 0.04 + i * 0.07, f: 2800 + ((i * 631) % 2600), dur: 0.7, peak: 0.05, pan: Math.sin(i * 2.1) * 0.6 });
+    S.sizzle({ at: 0.1, dur: 0.8, hp: 5000, lp: 11000, pts: [[0.05, 1], [0.8, 0]], peak: 0.05 });
+  });
+  def('bm-garrow-m-hound-spawn', 'bm', S => {     // a mist-hound gathering out of the mist: a whisper that swells, two soft paws
+    S.noise({ color: 'pink', bp: 800, bp1: 1500, q: 0.8, lp: 2400, dur: 0.8, pts: [[0.4, 1], [0.8, 0]], peak: 0.1 });
+    gwPaws(S, 0.45, 2, 0.12, 0.08, { f: 110, pan: 0 });
+  });
+  def('bm-garrow-m-hound-bite', 'imp', S => {     // a snap: teeth closing on cold air and a small puff of breath
+    S.wood({ f: 1400, dur: 0.05, peak: 0.3 });
+    S.crack({ at: 0.005, peak: 0.16, dur: 0.1, f: 2200 });
+    S.noise({ at: 0.03, color: 'pink', bp: 1300, bp1: 800, q: 0.8, dur: 0.22, pts: [[0.05, 1], [0.22, 0]], peak: 0.1 });
+    S.thud({ at: 0.01, f: 90, f1: 46, dur: 0.15, click: 0, lp: 500, peak: 0.25 });
+  });
+  def('bm-garrow-m-hound-fade', 'bm', S => {      // a hound fading by itself: the whisper thinning to nothing
+    S.noise({ color: 'pink', bp: 900, bp1: 500, q: 0.8, lp: 1800, dur: 0.9, pts: [[0.15, 1], [0.9, 0]], peak: 0.08 });
+    S.glass({ at: 0.05, f: mf(88), dur: 0.8, peak: 0.02 });
+  });
+  def('bm-garrow-m-hounds-meet', 'bm', S => {     // two hounds meeting head-on and going out together: two whispers drawn in from either side, a soft folding hush, a last small chime
+    S.space('hall', 0.35);
+    S.noise({ color: 'pink', bp: 1500, bp1: 700, q: 0.9, lp: 2400, dur: 0.6, pts: [[0.4, 1], [0.6, 0.6]], peak: 0.12, pan: -0.7 });
+    S.noise({ color: 'pink', bp: 1400, bp1: 650, q: 0.9, lp: 2400, dur: 0.6, pts: [[0.4, 1], [0.6, 0.6]], peak: 0.12, pan: 0.7 });
+    S.thud({ at: 0.5, f: 62, f1: 38, dur: 0.5, click: 0, lp: 260, peak: 0.28 });
+    S.noise({ at: 0.5, color: 'pink', bp: 700, bp1: 300, q: 0.7, lp: 1200, dur: 0.9, pts: [[0.05, 1], [0.9, 0]], peak: 0.14 });
+    S.glass({ at: 0.55, f: mf(91), dur: 1.0, peak: 0.03 });
+  });
+  def('bm-garrow-m-mist-in', 'bm', S => {         // he goes into the mist: a breath drawn down and away, a faint run of chain links
+    S.space('hall', 0.4);
+    S.whoosh({ color: 'pink', f: 1500, f1: 400, dur: 0.8, peakAt: 0.2, q: 0.9, peak: 0.16 });
+    for (let i = 0; i < 3; i++) S.metal({ at: 0.1 + i * 0.1, set: 'bar', f: 2900 - i * 220, dur: 0.3, peak: 0.035, strike: 0.2 });
+    S.thud({ at: 0.3, f: 60, f1: 36, dur: 0.4, click: 0, lp: 260, peak: 0.16 });
+  });
+  def('bm-garrow-m-mist-out', 'bm', S => {        // he comes out of the mist: a breath swelling, the paws settling, a link of chain
+    S.space('hall', 0.4);
+    S.whoosh({ color: 'pink', f: 400, f1: 1300, dur: 0.9, peakAt: 0.7, q: 0.9, peak: 0.16 });
+    gwPaws(S, 0.6, 2, 0.14, 0.12, { f: 80, pan: 0 });
+    S.metal({ at: 0.7, set: 'bar', f: 2700, dur: 0.4, peak: 0.04, strike: 0.2 });
+    S.thud({ at: 0.65, f: 56, f1: 32, dur: 0.5, click: 0, lp: 260, peak: 0.25 });
+  });
+  def('bm-garrow-m-ridge', 'imp', S => {          // a ridge of ice standing up along the line he ran: cracks climbing, a shove of ice, shards falling
+    S.space('hall', 0.4);
+    for (let i = 0; i < 4; i++) gwIce(S, i * 0.08, 0.22, 1600 + i * 500);
+    S.whoosh({ color: 'pink', f: 300, f1: 2400, dur: 0.4, peakAt: 0.8, peak: 0.12 });
+    S.thud({ at: 0.15, f: 60, f1: 28, dur: 0.7, drive: 2.2, peak: 0.5 });
+    S.rumble({ at: 0.1, dur: 0.8, f: 80, peak: 0.2, a: 0.05 });
+    for (let i = 0; i < 4; i++) S.glass({ at: 0.4 + i * 0.07, f: 3000 + ((i * 577) % 2200), dur: 0.6, peak: 0.03, pan: Math.sin(i * 2.4) * 0.6 });
+  });
+  def('bm-garrow-m-flurry', 'bm', S => {          // a flurry landing on a hunt (Buried Scent): wind and hiss building to the moment it wipes the tracks
+    S.space('hall', 0.3);
+    gwWind(S, 0, 2.6, 0.28, 500, 2600, 0.85);
+    S.rumble({ at: 0.3, dur: 2.2, f: 90, peak: 0.12, a: 1.4 });
+  });
+  def('bm-garrow-m-wipe', 'bm', S => {            // the wipe: every footprint gone at once, a soft breath of air leaving and a sudden hush
+    S.noise({ color: 'pink', lp: 1600, dur: 0.35, pts: [[0.03, 1], [0.35, 0]], peak: 0.2 });
+    S.tone({ f: 70, f1: 36, dur: 0.6, a: 0.02, lp: 300, peak: 0.1 });
+    S.glass({ at: 0.1, f: mf(88), dur: 0.9, peak: 0.02 });
+  });
+  def('bm-garrow-m-frost', 'bm', S => {           // Act III: the cold bites. Low and wide: a slow drone, a long fracture running under the lake, one ring held above it
+    S.space('hall', 0.8);
+    S.pad({ notes: [mf(31), mf(38)], dur: 4.2, type: 'sine', det: 5, lpEnv: [180, 500, 160, 2.4], peak: 0.12 });
+    S.rumble({ dur: 4.0, f: 50, peak: 0.24, a: 1.4 });
+    S.crackle({ at: 0.5, dens: 0.6, f: 1800, dur: 3.2, pts: [[0.8, 1], [1.8, 0.6], [3.2, 0]], peak: 0.14 });
+    S.thud({ at: 1.2, f: 46, f1: 22, dur: 1.4, drive: 2.6, peak: 0.55 });
+    S.glass({ at: 1.3, f: mf(88), dur: 2.8, peak: 0.06 });
+  });
+  def('bm-garrow-m-last', 'bm', S => {            // Act IV: the snow stops. The wind draws away to nothing, one low breath, and near silence
+    S.space('hall', 0.7);
+    S.whoosh({ color: 'pink', f: 1800, f1: 160, dur: 2.8, peakAt: 0.05, q: 0.8, peak: 0.22 });
+    S.rumble({ dur: 3.4, f: 55, peak: 0.12, a: 0.3 });
+    gwBreath(S, 2.0, 1.4, 0.05, 700);
+    S.glass({ at: 3.0, f: mf(96), dur: 1.4, peak: 0.02 });
+  });
+  // the room's bed: the Long Mere at night, a thin wind across the snow, fine snow hissing, now and then a long low gust, the ice ticking far off
+  loop('amb-garrow-mere', 'amb', L => {
+    const wind = L.c(L.src('pink'), L.f('bandpass', 420, 0.5)), wg = L.g(0.4);
+    L.lfo(wind.frequency, 0.047, 180); L.lfo(wind.frequency, 0.019, 110); L.lfo(wg.gain, 0.031, 0.25);
+    L.c(wind, wg, L.out);
+    const gust = L.c(L.src('brown', 0.8), L.f('lowpass', 260), L.g(0.3)); L.lfo(gust.gain, 0.017, 0.22); gust.connect(L.out);
+    const hiss = L.c(L.src('white', 1.0), L.f('highpass', 5200), L.g(0.025)); L.lfo(hiss.gain, 0.061, 0.02); hiss.connect(L.out);
+    const wh = L.c(L.src('pink', 0.6), L.f('bandpass', 1700, 14)), wn = L.g(0.03); L.lfo(wh.frequency, 0.037, 420); L.lfo(wn.gain, 0.05, 0.03); L.c(wh, wn, L.out);
+    L.c(L.crackle(0.18), L.f('highpass', 3500), L.g(0.05), L.out);
+  }, 3);
 
   // ============================================================================================== 6. loops
   // Beds built from long looped material at unrelated lengths, moved by slow LFOs so they never feel like a loop.

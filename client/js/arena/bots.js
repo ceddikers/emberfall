@@ -31,6 +31,8 @@ const RAID_CASTS = /^(Grease Fire|Simmer|Venom Mist|Tightening Web|Thunderclap|T
 const BOT_RING = [];
 for (const r of [60, 130, 220, 330]) for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6 + r * 0.01; BOT_RING.push(Math.cos(a) * r, Math.sin(a) * r); }
 
+// A boss whose fight needs a read of its own names a BotAI method here (move() hands it the ordinary read's choice; a name with no method is skipped).
+const BOSS_RULES = { titan: 'titanRule', garrow: 'garrowRule', vesper: 'vesperRule', ormun: 'ormunRule', maelis: 'maelisRule' };
 const BotAI = {
   isMelee(cls) { const r = KITS[cls.id].abilities[0].range; return r === 'melee' || (typeof r === 'number' && r <= 130); },   // (a Reaper's scythe reaches 1.5x melee: it still stands in)
 
@@ -1320,7 +1322,53 @@ const BotAI = {
     if (bot.human && !bot.human.inner) return BotHuman.move(bot, view);   // (human-like play, below: off unless a bot carries .human)
     const prev = this._mc;
     this._mc = { view };
-    try { const r = this.think(bot, view); return view.bossId === 'titan' ? this.titanRule(bot, view, r) : r; } finally { this._mc = prev; }
+    try { const r = this.think(bot, view); const rule = BOSS_RULES[view.bossId]; return rule && this[rule] ? this[rule](bot, view, r) : r; } finally { this._mc = prev; }
+  },
+  // Garrow (garrow.js): the snow keeps every step, and he runs where a hero walked. `r` is what the ordinary read chose.
+  //   scented (the prey sign): write one long clean line away from everyone until the trail locks (he lands lighter the longer it is)
+  //   Stillness: do not move while the sign lasts, unless something is landing here
+  //   a mist-hound on this hero's trail: walk onto another hero's hound, so the two meet and go out; with no other hound left, keep ahead of it
+  garrowRule(bot, view, r) {
+    const t = view.t, mk = key => (view.marks || []).find(m => m.pid === bot.id && m.key === key && m.end > t);
+    if (this.danger(bot, bot.x, bot.y, view) >= 400) return r;
+    if (mk('gwstill')) return { x: bot.x, y: bot.y };
+    const prey = mk('gwprey') || mk('gwprey2');
+    if (prey) {
+      const g = bot.gwGoal && bot.gwGoal.end === prey.end ? bot.gwGoal : null;
+      if (g && hypot2(g.x - bot.x, g.y - bot.y) > 24) return { x: g.x, y: g.y };
+      // a new stretch: the longest clear walk, away from the others, never back over its own line
+      const want = Math.max(160, Math.min(640, (prey.end - t) * 225)), others = view.players.filter(p => p.alive && p.id !== bot.id);
+      let best = null, bs = -Infinity;
+      for (let k = 0; k < 16; k++) {
+        const a = k * Math.PI / 8;
+        if (g && Math.cos(a - g.a) < -0.2) continue;
+        const c = ARENA.clamp({ x: bot.x + Math.cos(a) * want, y: bot.y + Math.sin(a) * want }, 70), len = hypot2(c.x - bot.x, c.y - bot.y);
+        if (len < 60) continue;
+        let near = Infinity;
+        for (const o of others) near = Math.min(near, PROPS.segDist(o.x, o.y, bot.x, bot.y, c.x, c.y));
+        const sc = len + Math.min(near, 260) * 1.2 - this.danger(bot, c.x, c.y, view) * 0.5 - (g ? (1 - Math.cos(a - g.a)) * 120 : 0);
+        if (sc > bs) { bs = sc; best = { x: c.x, y: c.y, a, end: prey.end }; }
+      }
+      if (best) { bot.gwGoal = best; return { x: best.x, y: best.y }; }
+      return r;
+    }
+    const mine = (view.adds || []).find(a => a.kind === 'misthound' && a.fol === bot.id);
+    if (mine) {
+      const other = (view.adds || []).filter(a => a.kind === 'misthound' && a.fol !== bot.id).sort((p, q) => hypot2(p.x - mine.x, p.y - mine.y) - hypot2(q.x - mine.x, q.y - mine.y))[0];
+      if (other) return this.danger(bot, other.x, other.y, view) < 3000 ? { x: other.x, y: other.y } : r;
+      if (hypot2(mine.x - bot.x, mine.y - bot.y) < 170) {
+        const away = Math.atan2(bot.y - mine.y, bot.x - mine.x);
+        let best = null, bs = Infinity;
+        for (const k of [0, 1, -1, 2, -2, 3, -3]) {
+          const a = away + k * 0.45, c = ARENA.clamp({ x: bot.x + Math.cos(a) * 150, y: bot.y + Math.sin(a) * 150 }, 60);
+          if (hypot2(c.x - bot.x, c.y - bot.y) < 70) continue;
+          const sc = this.danger(bot, c.x, c.y, view) + Math.abs(k) * 30 - hypot2(c.x - mine.x, c.y - mine.y) * 0.5;
+          if (sc < bs) { bs = sc; best = c; }
+        }
+        if (best) return best;
+      }
+    }
+    return r;
   },
   // Hrimgar (titan.js): the sign over a hero's head is a rule to keep. Standing-still sign: hold this spot (unless something lands on it). Keep-moving sign:
   // never be still for long, so a bot that would stay put takes a short step in the safest direction, again and again. `r` is what the ordinary read chose.
@@ -1901,7 +1949,7 @@ const BotAI = {
         if (!mitigated && left < 3 && TANK_CDS.includes(a.id) && !BotAI.braceHolds(bot, k, view, myBuster) && !BotAI.reaverHolds(bot, k, view, myBuster, a)) { bot.mitUntil = view.t + 4; return i; }
       }
     }
-    // a Pyromancer near overheating while badly hurt (the burn costs 15% of its HP): Vent, or let the Heat cool
+    // a Pyromancer near overheating while badly hurt (the burn costs 8% of its HP): Vent, or let the Heat cool
     const meP = party.find(p => p.id === bot.id);
     const hotAndHurt = bot.cls.id === 'pyromancer' && k.g.heat >= 80 && meP && meP.hp / meP.maxHp < 0.35;
     // oGCDs: burst and damage when ready; mitigation when the tank is getting hit or a raidwide is coming

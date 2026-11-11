@@ -7,6 +7,7 @@ const BossIcons = (() => {
   const ACCENT = { archmage: '#3fb8b0', grubnak: '#ff9a3a', skitterra: '#b8ef5a', volkar: '#7fe8ff', hollowking: '#6dff9a', wyrm: '#ff8a2a', titan: '#8ad0ee' };
   ACCENT.hydra = '#7fe0a8';
   Object.assign(ACCENT, { corvane: '#9fc8ec', brannoc: '#e0a84a', morrowoak: '#a77cf0', caelum: '#e9dcae' });   // (set 3)
+  ACCENT.garrow = '#bcd6ea';   // (set 6, Season 2: no painted icons yet, so he is left out of PAINTED below and the drawn badges are used)
   const L = '#f2e6c8', INK = '#14111a';
   const cache = new Map();
   const PAINTED = new Set(['grubnak', 'skitterra', 'volkar', 'hollowking', 'wyrm', 'titan', 'archmage', 'hydra', 'corvane', 'brannoc', 'morrowoak', 'caelum']);

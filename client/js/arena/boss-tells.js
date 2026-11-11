@@ -2120,6 +2120,7 @@ const BossTells = (() => {
       if (env.bossId === 'brannoc' && typeof BR_FX !== 'undefined') { BR_FX.buster(ctx, tg, s, p, k, t, env); return; }   // Brannoc's Hammer Heel and Fist Slam (brannoc-fx.js)
       if (env.bossId === 'morrowoak' && typeof MG_FX !== 'undefined') { MG_FX.buster(ctx, tg, s, p, k, t, env); return; }   // Morrow-Oak's Root Lash (morrowoak-fx.js)
       if (env.bossId === 'caelum' && typeof CL_FX !== 'undefined') { CL_FX.buster(ctx, tg, s, p, k, t, env); return; }   // Caelum's Cinder Crown and Pinning Thrust (caelum-fx.js)
+      if (env.bossId === 'garrow' && typeof GW_FX !== 'undefined') { GW_FX.buster(ctx, tg, s, p, k, t, env); return; }   // Garrow's Throat Snap (garrow-fx.js)
       if (env.bossId === 'volkar') {
         // Titan Fist: lightning gathers along the cone and runs to the tank
         for (let i = 0; i < 5; i++) {
@@ -2549,6 +2550,7 @@ const BossTells = (() => {
       if (env.bossId === 'brannoc' && typeof BR_FX !== 'undefined' && Math.abs(tg.gone - (tg.start + tg.dur)) <= 0.5) { try { BR_FX.aftermath(tg, env, { mark, AFTER }); } catch (e) { /* a broken decal never stops the fight drawing */ } continue; }   // Brannoc: brannoc-fx.js
       if (env.bossId === 'morrowoak' && typeof MG_FX !== 'undefined' && Math.abs(tg.gone - (tg.start + tg.dur)) <= 0.5) { try { MG_FX.aftermath(tg, env, { mark, AFTER }); } catch (e) { /* a broken decal never stops the fight drawing */ } continue; }   // Morrow-Oak: morrowoak-fx.js
       if (env.bossId === 'caelum' && typeof CL_FX !== 'undefined' && Math.abs(tg.gone - (tg.start + tg.dur)) <= 0.5) { try { CL_FX.aftermath(tg, env, { mark, AFTER }); } catch (e) { /* a broken decal never stops the fight drawing */ } continue; }   // Caelum: caelum-fx.js
+      if (env.bossId === 'garrow' && typeof GW_FX !== 'undefined' && Math.abs(tg.gone - (tg.start + tg.dur)) <= 0.5) { try { GW_FX.aftermath(tg, env, { mark, AFTER }); } catch (e) { /* a broken decal never stops the fight drawing */ } continue; }   // Garrow: garrow-fx.js
       if (!set || !set[tg.tag] || Math.abs(tg.gone - (tg.start + tg.dur)) > 0.5) continue;
       try { set[tg.tag](tg, env); } catch (e) { /* a broken decal never stops the fight drawing */ }
     }
@@ -2594,6 +2596,7 @@ const BossTells = (() => {
     if (env.bossId === 'brannoc') return (typeof BR_FX !== 'undefined' && BR_FX.tell(tg.tag)) || null;   // (brannoc-fx.js)
     if (env.bossId === 'morrowoak') return (typeof MG_FX !== 'undefined' && MG_FX.tell(tg.tag)) || null;   // (morrowoak-fx.js)
     if (env.bossId === 'caelum') return (typeof CL_FX !== 'undefined' && CL_FX.tell(tg.tag)) || null;   // (caelum-fx.js)
+    if (env.bossId === 'garrow') return (typeof GW_FX !== 'undefined' && GW_FX.tell(tg.tag)) || null;   // (garrow-fx.js)
     if (env.bossId === 'hood' || env.bossId === 'seraph') return (typeof HD_FX !== 'undefined' && HD_FX.tell(tg.tag)) || null;   // (the Hollow Hood and the Six-Winged Seraph: hood-fx.js)
     if (env.bossId === 'sovereign') return SV[tg.tag] || null;   // (the Ultimate: SV above)
     return G[tg.tag] || null;
@@ -2640,7 +2643,7 @@ const BossTells = (() => {
   // A chain of the same move (Eightfold Lunge's legs, Whisk's crosses, Simmer's waves): the one landing next is drawn
   // full strength, the one after it as a ghost, anything later fainter still.
   function ghost(tg, env) {
-    if (!env.tgs || env.bossId === 'brannoc' || env.bossId === 'morrowoak' || env.bossId === 'caelum' || env.bossId === 'hood' || env.bossId === 'seraph' || (env.bossId === 'sovereign' && (tg.tag === 'svWheel' || tg.tag === 'svWedge'))) return 1;   // (the hooded fights' paired lines and procession are all live threats: never ghosted)   // (the Sovereign's Sunwheel of Embers path is read whole, as Brannoc's) (Brannoc's path pieces, waves and heel blows, Morrow-Oak's petals, strands and rods, Caelum's Wake cuts are read together, never ghosted)
+    if (!env.tgs || env.bossId === 'brannoc' || env.bossId === 'morrowoak' || env.bossId === 'caelum' || env.bossId === 'garrow' || env.bossId === 'hood' || env.bossId === 'seraph' || (env.bossId === 'sovereign' && (tg.tag === 'svWheel' || tg.tag === 'svWedge'))) return 1;   // (the hooded fights' paired lines and procession are all live threats: never ghosted)   // (the Sovereign's Sunwheel of Embers path is read whole, as Brannoc's) (Brannoc's path pieces, waves and heel blows, Morrow-Oak's petals, strands and rods, Caelum's Wake cuts are read together, never ghosted)
     if (tg.tag === 'lunge' && env.bossId === 'skitterra') return lungeOrder(tg, env) === 0 ? 1 : 0;   // (ground() draws the one after next as an outline)
     const at = tg.start + tg.dur;
     // (steps, not telegraphs: a layer of many circles landing together counts once)
