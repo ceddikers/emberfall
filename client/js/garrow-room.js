@@ -265,11 +265,25 @@ const GW_ROOM = (() => {
   // ------------------------------------------------------------------------------------------------------------ the life
   // snow falling slowly, mist drifting low now and then, the reeds stirring, the far windows flickering. gwdrift: a flurry over the whole
   // lake. gwlast: still, clear air, the windows a little brighter.
+  // the reeds shaken by a heavy landing on the ice (garrow-fx.js weightLand): a shiver that dies away in a few seconds. jolt(t0, amp): the ground was struck at t0.
+  const JOLTS = [];
+  function jolt(t0, amp) { JOLTS.push({ t0, a: amp }); if (JOLTS.length > 6) JOLTS.shift(); }
   function mereLife(ctx, a, t) {
     const hh = ARENA.hh, bx = a.bx, by = a.by, W = bx * 2, H = by * 2;
     const room = ArenaView.liveRoom, ev = (room && room.ev) || {};
     const env = (e, rise, fall) => (e ? Math.max(0, Math.min((t - e.start) / rise, (e.end - t) / fall, 1)) : 0);
-    const drift = env(ev.gwdrift, 1.2, 2.4), still = env(ev.gwlast, 3, 1), calm = 1 - still;
+    // (the Whiteout's flurry, gwdrift { wo: 1 }, climbs over the whole cast and is cut dead by the wipe a second before the event ends; the others fade as they did)
+    const WO = ev.gwdrift && ev.gwdrift.wo ? ev.gwdrift : null, sm01 = q => { q = Math.max(0, Math.min(1, q)); return q * q * (3 - 2 * q); };
+    const drift = WO ? sm01((t - WO.start) / Math.max(0.5, WO.end - 1 - WO.start)) * Math.max(0, Math.min(1, (WO.end - 1 + 0.12 - t) / 0.12)) : env(ev.gwdrift, 1.2, 2.4), still = env(ev.gwlast, 3, 1), calm = 1 - still;
+    // (and its windows: the far town goes out one light at a time while the sight closes in, and comes back one at a time when he is back: gwchaseend)
+    const WE = WO && ev.gwchaseend ? ev.gwchaseend : null;
+    const winK = w => {
+      if (!WO || t < WO.start) return 1;
+      const r = (w.ph % 9) / 9, off = WO.start + 0.3 + r * Math.max(0.5, WO.end - 1 - WO.start) * 0.85;
+      let k = 1 - sm01((t - off) / 0.35);
+      if (WE) k = Math.max(k, sm01((t - (WE.start + 0.2 + (1 - r) * 1.3)) / 0.5));
+      return k;
+    };
     const dt = a.t0 == null ? 0 : clamp(t - a.t0, 0, 0.1); a.t0 = t;
     a.ox += dt * (9 + 170 * drift) * calm; a.oy += dt * (20 + 70 * drift) * calm; a.sx += dt * 640; a.sy += dt * 230;
     const lift = 1 + 0.3 * still;   // the last act: the far lights burn a little brighter
@@ -279,7 +293,8 @@ const GW_ROOM = (() => {
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (const w of a.windows) {
       const dip = (t + w.ph * 7) % 17 < 0.35 ? 0.72 : 1;   // now and then one gutters
-      const inten = (0.8 + 0.1 * Math.sin(t * (0.8 + (w.ph % 1)) + w.ph) + 0.05 * Math.sin(t * 2.7 + w.ph * 3)) * dip * lift;
+      const inten = (0.8 + 0.1 * Math.sin(t * (0.8 + (w.ph % 1)) + w.ph) + 0.05 * Math.sin(t * 2.7 + w.ph * 3)) * dip * lift * winK(w);
+      if (inten < 0.01) continue;
       const top = w.y + w.h / 2 + 2, len = wallY - top;
       if (len > 8) { ctx.globalAlpha = Math.min(1, 0.34 * inten); ctx.drawImage(a.refl[w.v], w.x - w.rw / 2, top, w.rw, len); }
       ctx.globalAlpha = 1;
@@ -307,11 +322,13 @@ const GW_ROOM = (() => {
 
     // ---- the reeds, stirring (bent over in the flurry, hanging still in the last act)
     const wind = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(t * 0.31 + Math.sin(t * 0.13) * 2)) + 2.4 * drift;
+    let kk = 0;
+    for (let i = JOLTS.length - 1; i >= 0; i--) { const age = t - JOLTS[i].t0; if (age > 4) { JOLTS.splice(i, 1); continue; } if (age > 0) kk += JOLTS[i].a * Math.min(1, age / 0.06) * Math.exp(-age / 0.9); }
     ctx.save(); ctx.lineCap = 'round';
     for (const cl of a.reeds) {   // (one small path per clump: a path spread over the whole room is slow to stroke)
       const stem = new Path2D(), heads = new Path2D(), caps = new Path2D();
       for (const s of cl.stems) {
-        const bend = s.lean + calm * (wind * 0.07 * (0.6 + s.h / 60) + 0.035 * Math.sin(t * (0.9 + s.h / 80) + s.ph) + 0.02 * Math.sin(t * 2.3 + s.ph * 2));
+        const bend = s.lean + calm * (wind * 0.07 * (0.6 + s.h / 60) + 0.035 * Math.sin(t * (0.9 + s.h / 80) + s.ph) + 0.02 * Math.sin(t * 2.3 + s.ph * 2)) + kk * 0.05 * Math.sin(t * 11 + s.ph * 2);
         const bxs = cl.x + s.dx, bys = cl.y, tx = bxs + Math.sin(bend) * s.h, ty = bys - Math.cos(bend) * s.h;
         stem.moveTo(bxs, bys); stem.quadraticCurveTo(bxs + Math.sin(bend * 0.4) * s.h * 0.5, bys - s.h * 0.55, tx, ty);
         if (s.head) { heads.moveTo(tx, ty); heads.lineTo(tx + Math.sin(bend + 0.1) * 9, ty - Math.cos(bend + 0.1) * 9); }
@@ -347,7 +364,7 @@ const GW_ROOM = (() => {
     }
   }
 
-  return { buildMere, mereLife };
+  return { buildMere, mereLife, jolt };
 })();
 
 ArenaView.buildMere = GW_ROOM.buildMere;

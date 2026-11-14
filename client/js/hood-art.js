@@ -27,13 +27,13 @@ const HD_ART = (() => {
   const sm = (st, key, target, rate = 0.1) => { const v = st[key]; return (st[key] = v == null ? target : v + (target - v) * rate); };
   const add = (ctx, f) => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; f(); ctx.restore(); };
   // where a swing is: strike 0 (gathering) .. 1 (the blow has landed), then rest
+  // (strikeBeats, draw-util.js: the hands are drawn back as it gathers, the blow is fast and lands the moment the cast ends, it carries a little past the mark;
+  // it stays calm: the finished pose is held a beat before it lets go of it. cloth: how far the coat's tails are behind the lunge, then through it.)
   function atk(st) {
-    const a = st.action;
-    if (!a || a.type !== 'attack') return { strike: 0, rest: 0, p: -1 };
-    const p = (actT(st) - a.t0) / a.dur;
-    if (p < 0.3) return { strike: 0, rest: 0, p };
-    if (p < 0.55) return { strike: easeOut((p - 0.3) / 0.25), rest: 0, p };
-    return { strike: 1, rest: p >= 1 ? 1 : easeOut((p - 0.55) / 0.45), p };
+    const B = strikeBeats(st), a = st.action;
+    if (!B.on) return { strike: 0, rest: 0, p: -1, load: 0, ovr: 0, land: 0, cloth: B.cloth, on: false };
+    const e = Math.min(a.dur, 1.12), r = clamp((B.u - 0.72) / Math.max(0.1, e - 0.72), 0, 1);
+    return { strike: B.hit, rest: r * r * (3 - 2 * r), p: B.p, load: B.load, ovr: B.ovr, land: B.land, cloth: B.cloth, on: true, u: B.u };
   }
 
   // ---------------------------------------------------------------------------------------------------------- the floor under it
@@ -117,7 +117,7 @@ const HD_ART = (() => {
     const n = 7, HEM = 32;
     for (let layer = 0; layer < 2; layer++) {
       for (let i = 0; i < n; i++) {
-        const u = i / (n - 1), x0 = -36 + u * 72, L = (30 + hash(i, 4) * 26 + o.moving * 22) * (layer ? 0.7 : 1.1), sw = Math.sin(t * 1.4 + i * 1.2) * (4 + o.moving * 5);
+        const u = i / (n - 1), x0 = -44 + u * 88, L = (30 + hash(i, 4) * 26 + o.moving * 22) * (layer ? 0.7 : 1.1), sw = Math.sin(t * 1.4 + i * 1.2) * (4 + o.moving * 5);
         const dx = o.tx * (0.5 + 0.5 * hash(i, 6)) * (0.8 + o.moving * 1.2), tipx = x0 + dx + sw, tipy = HEM + L;
         ctx.beginPath(); ctx.moveTo(x0 - 7, HEM - 4);
         ctx.quadraticCurveTo(x0 + dx * 0.3 + sw * 0.4 - 4, HEM + L * 0.5, tipx, tipy);
@@ -127,30 +127,44 @@ const HD_ART = (() => {
       }
     }
   }
+  // o.part: 0 both, 1 the cape only, 2 the front panels only
   function coat(ctx, t, o) {
-    const sway = o.sway, HEM = 32;
+    const sway = o.sway, HEM = 32, part = o.part || 0;
     // the cape behind: wider and darker, its hem torn
-    const back = [-12, -92, -26, -86, -33, -40, -42, 10];
+    const back = [-14, -92, -36, -86, -44, -40, -52, 10];
     const N = 8;
-    for (let i = 0; i <= N; i++) { const u = i / N; back.push(-44 + u * 88 + Math.sin(t * 1.2 + i) * sway * 0.5, HEM + 6 + (i % 2 ? 6 + hash(i, 11) * 8 : -3) + Math.sin(t * 1.5 + i * 0.9) * sway); }
-    back.push(42, 10, 33, -40, 26, -86, 12, -92);
-    poly(ctx, back, '#07060c', K.ink, 2.4);
+    for (let i = 0; i <= N; i++) { const u = i / N; back.push(-52 + u * 104 + Math.sin(t * 1.2 + i) * sway * 0.5, HEM + 6 + (i % 2 ? 6 + hash(i, 11) * 8 : -3) + Math.sin(t * 1.5 + i * 0.9) * sway); }
+    back.push(52, 10, 44, -40, 36, -86, 14, -92);
+    if (part !== 2) poly(ctx, back, '#07060c', K.ink, 2.4);
+    if (part === 1) return;
     // the front: two panels with a slit between them
     for (const sx of [-1, 1]) {
-      const pts = [sx * 3, -90, sx * 15, -92, sx * 24, -84, sx * 27, -50, sx * 31, -8];
-      for (let i = 0; i <= 4; i++) { const u = i / 4; pts.push(sx * (37 - u * 33) + Math.sin(t * 1.7 + i * 1.3 + sx) * sway * 0.5, HEM + (i % 2 ? -2 + hash(i + sx, 12) * 4 : 6 + hash(i, 13) * 6) + Math.sin(t * 2 + i + sx * 2) * sway * 0.5); }
+      const pts = [sx * 3, -90, sx * 17, -92, sx * 33, -86, sx * 35, -58, sx * 30, -44, sx * 35, -26, sx * 40, -8];
+      for (let i = 0; i <= 4; i++) { const u = i / 4; pts.push(sx * (46 - u * 42) + Math.sin(t * 1.7 + i * 1.3 + sx) * sway * 0.5, HEM + (i % 2 ? -2 + hash(i + sx, 12) * 4 : 6 + hash(i, 13) * 6) + Math.sin(t * 2 + i + sx * 2) * sway * 0.5); }
       pts.push(sx * 2, -10);
       const g = ctx.createLinearGradient(sx * 28, -80, sx * 3, 30); g.addColorStop(0, K.coatH); g.addColorStop(0.45, K.coatM); g.addColorStop(1, K.coat);
       poly(ctx, pts, g, K.ink, 2.4);
       ctx.save(); ctx.lineCap = 'round';
       line(ctx, sx * 4, -82, sx * 5, HEM - 10, rgba(K.rim, 0.28), 1.3);   // the lit edge of the slit
-      line(ctx, sx * 20, -80, sx * 28, -20, rgba(K.rim, sx < 0 ? 0.5 : 0.22), 1.5);   // the rim light on its outer edge
-      for (let k = 0; k < 3; k++) line(ctx, sx * (10 + k * 7), -60 + k * 4, sx * (13 + k * 8), HEM - 6 - k * 3, rgba('#000000', 0.35), 2.2);   // folds
+      line(ctx, sx * 30, -82, sx * 37, -24, rgba(K.rim, sx < 0 ? 0.55 : 0.22), 1.7);   // the rim light on its outer edge
+      for (let k = 0; k < 3; k++) line(ctx, sx * (11 + k * 9), -60 + k * 4, sx * (14 + k * 10), HEM - 6 - k * 3, rgba('#000000', 0.35), 2.4);   // folds
       ctx.restore();
     }
     if (o.gold) { ctx.save(); ctx.lineCap = 'round'; for (const sx of [-1, 1]) line(ctx, sx * 4, -82, sx * 5, HEM - 10, rgba(K.gold, 0.3), 1.1); ctx.restore(); }
     // frost on the hem
-    add(ctx, () => { for (let i = 0; i <= N; i += 1) circle(ctx, -42 + (i / N) * 84, HEM + 2 - (i % 2 ? 3 : 0), 1.1, rgba(K.frostH, 0.4 + 0.2 * Math.sin(t * 2 + i))); });
+    add(ctx, () => { for (let i = 0; i <= N; i += 1) circle(ctx, -50 + (i / N) * 100, HEM + 2 - (i % 2 ? 3 : 0), 1.1, rgba(K.frostH, 0.4 + 0.2 * Math.sin(t * 2 + i))); });
+  }
+  // the mantle: the coat's high collar falling over the shoulders in two layered folds, the light running along the left edge
+  function mantle(ctx, t, o) {
+    const sw = Math.sin(t * 1.5) * 0.8 + o.moving * Math.sin(t * 5) * 1;
+    ctx.save(); ctx.scale(o.tw == null ? 1 : o.tw, 1);
+    const g = ctx.createLinearGradient(-44, -90, 40, -60); g.addColorStop(0, K.coatH); g.addColorStop(0.5, K.coatM); g.addColorStop(1, K.coat);
+    poly(ctx, [-18, -91, -34, -90, -44, -80, -46, -66 + sw, -36, -60, -20, -66, 0, -72, 20, -66, 36, -60, 46, -66 - sw, 44, -80, 34, -90, 18, -91, 0, -86], g, K.ink, 2.4);
+    poly(ctx, [-14, -88, -32, -86, -40, -76, -26, -70, -8, -76], rgba(K.coatH, 0.3));   // the upper fold
+    line(ctx, -36, -88, -45, -78, rgba(K.rim, 0.55), 1.6); line(ctx, -45, -76, -45, -67, rgba(K.rim, 0.35), 1.3); line(ctx, 36, -88, 45, -78, rgba(K.rim, 0.2), 1.4);
+    for (const sx of [-1, 1]) for (let k = 0; k < 2; k++) line(ctx, sx * (24 + k * 9), -84 + k * 2, sx * (26 + k * 10), -64 - k, rgba('#000000', 0.34), 2.2);   // its folds
+    if (o.gold) { ctx.save(); ctx.lineCap = 'round'; line(ctx, -46, -66 + sw, -36, -60, rgba(K.gold, 0.45), 1.2); line(ctx, 46, -66 - sw, 36, -60, rgba(K.gold, 0.45), 1.2); ctx.restore(); }
+    ctx.restore();
   }
   // the silver chains at the collar: two short strands with a ring at the end
   function chains(ctx, t, o) {
@@ -169,35 +183,44 @@ const HD_ART = (() => {
   }
   // the hood: a dark oval with two frost-blue slits and nothing under it
   function head(ctx, t, o) {
+    const v = o.v || { fx: 0, fy: 1, aw: 1 }, fxs = v.fx >= 0 ? 1 : -1, hw = 0.8 + 0.2 * v.aw, mAl = clamp((v.fy + 0.14) / 0.14, 0, 1), mw = Math.max(v.fy, 0.36);
     ctx.save(); ctx.translate(o.look * 1.6, o.bow); ctx.rotate(o.tilt);
-    // the cowl: a peak, the cloth falling to the shoulders
+    // the cowl: a peak, the cloth falling to the shoulders (side on, the peak is swept back off the face and a tail of cloth trails behind the head)
+    if (v.aw < 0.8) { ctx.save(); ctx.globalAlpha *= clamp((0.8 - v.aw) * 2.2, 0, 1); poly(ctx, [-fxs * 6, -126, -fxs * 17, -120, -fxs * 27, -104, -fxs * 28, -90, -fxs * 17, -88, -fxs * 8, -96], K.coatM, K.ink, 2.2); line(ctx, -fxs * 9, -122, -fxs * 24, -102, rgba(K.rim, 0.3), 1.2); ctx.restore(); }
+    ctx.save(); ctx.scale(hw, 1);
     poly(ctx, [-17, -86, -15, -108, -9, -122, 1, -128, 10, -121, 16, -108, 18, -86, 8, -90, -8, -90], K.coatM, K.ink, 2.4);
     poly(ctx, [-6, -118, 1, -126, 8, -118, 2, -112], rgba(K.coatH, 0.55));
     line(ctx, -15, -106, -17, -86, rgba(K.rim, 0.45), 1.4);
     if (o.gold) line(ctx, -9, -121, 1, -128, rgba(K.gold, 0.6), 1.4);
-    // the opening: nothing in it
-    ellipse(ctx, o.look * 0.8, -103, 10.5, 14.5, 0, '#010103', K.ink, 2);
-    const g = ctx.createRadialGradient(o.look * 0.8, -103, 2, o.look * 0.8, -103, 15); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(10,18,32,0.7)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(o.look * 0.8, -103, 10.5, 14.5, 0, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(o.look * 0.8, -103, 10.5, 14.5, 0, Math.PI * 0.68, Math.PI * 1.45); ctx.strokeStyle = rgba(K.frostH, 0.42); ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.restore();
+    if (v.fy < 0.1) { ctx.save(); ctx.globalAlpha *= clamp(0.1 - v.fy, 0, 0.5) * 2; line(ctx, -v.fx * 5, -124, -v.fx * 5, -88, rgba('#000000', 0.7), 2); line(ctx, -v.fx * 5 + 1.6, -122, -v.fx * 5 + 1.6, -90, rgba(K.rim, 0.35), 1); ctx.restore(); }   // (the seam down the back of the hood)
+    // the opening: nothing in it; it slides to the side it faces and narrows to a sliver side on, and from behind it is not there
+    ctx.save(); ctx.globalAlpha *= mAl; ctx.translate(v.fx * 10.5, 0); ctx.scale(mw, 1);
+    if (mAl > 0) {
+    ellipse(ctx, 0, -103, 10.5, 14.5, 0, '#010103', K.ink, 2);
+    const g = ctx.createRadialGradient(0, -103, 2, 0, -103, 15); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(10,18,32,0.7)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, -103, 10.5, 14.5, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, -103, 10.5, 14.5, 0, Math.PI * 0.68, Math.PI * 1.45); ctx.strokeStyle = rgba(K.frostH, 0.42); ctx.lineWidth = 1.2; ctx.stroke();
     // the slits
     const lit = o.eyes * (o.shut ? 0 : 1);
     for (const sx of [-1, 1]) {
-      const ex = o.look * 1.2 + sx * 4.3, ey = -104.5;
+      const ex = sx * 4.3, ey = -104.5;
       if (o.shut) { line(ctx, ex - sx * 2.4, ey + 0.6, ex + sx * 2.4, ey + 0.6, rgba(K.frostD, 0.5 * o.eyes), 1); continue; }
       if (lit < 0.03) { line(ctx, ex - sx * 2.6, ey - 0.4, ex + sx * 2.6, ey + 0.6, rgba(K.frostD, 0.22), 1); continue; }
       ctx.beginPath(); ctx.moveTo(ex - sx * 3, ey + 0.8); ctx.lineTo(ex + sx * 3, ey - 1.1); ctx.lineTo(ex + sx * 2.4, ey + 0.9); ctx.closePath(); ctx.fillStyle = rgba(K.frostH, 0.5 + 0.5 * lit); ctx.fill();
       add(ctx, () => { glow(ctx, ex, ey, 5.5 + 3 * lit, K.frost, (0.25 + 0.35 * lit) * (0.88 + 0.12 * Math.sin(t * 2.4 + sx))); circle(ctx, ex, ey, 0.9, rgba('#ffffff', 0.9 * lit)); });
     }
+    }
+    ctx.restore();
     ctx.restore();
   }
   // a sleeve to the hand; the cuff a dark opening with a rim of frost
   function sleeve(ctx, sx, hx, hy, bend, o) {
-    const shx = sx * 20, shy = -82, mx = (shx + hx) / 2 + sx * bend, my = (shy + hy) / 2 + 2;
-    limb(ctx, [shx, shy, mx, my, hx, hy], K.coatM, 11);
-    line(ctx, shx, shy, mx, my, rgba(K.rim, sx < 0 ? 0.4 : 0.2), 1.2);
-    ellipse(ctx, hx, hy, 5.4, 4.2, 0, '#020208', K.ink, 1.6);
-    ctx.beginPath(); ctx.ellipse(hx, hy, 5.4, 4.2, 0, Math.PI, TAU); ctx.strokeStyle = rgba(K.frostH, 0.4); ctx.lineWidth = 1; ctx.stroke();
+    const shx = sx * 31 * (o.k == null ? 1 : o.k), shy = -72, mx = (shx + hx) / 2 + sx * bend, my = (shy + hy) / 2 + 2;
+    limb(ctx, [shx, shy, mx, my, hx, hy], K.coatM, 15);
+    line(ctx, shx - 2.4, shy, mx - 2.4, my, rgba(K.rim, sx < 0 ? 0.45 : 0.2), 1.4);
+    ellipse(ctx, hx, hy, 7.2, 5.6, 0, '#020208', K.ink, 1.8);
+    ctx.beginPath(); ctx.ellipse(hx, hy, 7.2, 5.6, 0, Math.PI, TAU); ctx.strokeStyle = rgba(K.frostH, 0.4); ctx.lineWidth = 1; ctx.stroke();
   }
   // the thin pale blade, sliding out of the left sleeve: from (hx, hy) along ang, k out (0..1)
   function blade(ctx, t, hx, hy, ang, k) {
@@ -236,7 +259,15 @@ const HD_ART = (() => {
     const pr = st.props || {}, t = st.t || 0, A = atk(st);
     if (pr.hdHidden) return;
     const fx = Math.cos(angle), fy = Math.sin(angle), moving = st.moving ? 1 : 0;
-    const kS = A.strike * (1 - A.rest), swingK = pr.hdStrike ? Math.max(kS, 0.5) : kS;
+    // the view: aw how square-on it stands (1 front or back, 0 side on), tw its chest's width, k the shoulders', kh how far apart the hands hang
+    const V = { fx, fy, aw: Math.abs(fy) }; V.tw = 0.46 + 0.54 * V.aw; V.k = 0.2 + 0.8 * V.aw; V.kh = 0.14 + 0.86 * V.aw;
+    const hOff = fx * 8 * (1 - V.aw);   // (side on, both hands hang forward of the body)
+    const farSl = sx => V.aw < 0.55 && (sx > 0) === (fx > 0);   // the sleeve on the far side of the body, drawn behind the coat
+    // the swing: the hands drawn back along the way it faces (further as the cast gathers, so the lean and the sleeves point the way the blow will go), then
+    // driven through it as the cast ends, a little past, then let go
+    const GA = A.load * (1 - A.strike), cock = pr.hdStrike ? 0.35 : 0;
+    const swingK = A.on ? (lerp(-cock - 0.3 * GA, 1, A.strike) + 0.25 * A.ovr) * (1 - A.rest) : -cock;
+    const kS = Math.max(0, swingK);
     const open = pr.hdOpen == null ? -1 : pr.hdOpen;
     const kneel = pr.hdKneel || 0, lie = pr.hdLie || 0;
     const hover = sm(st, 'hdHv', pr.hdHover || 0, 0.12);
@@ -251,7 +282,7 @@ const HD_ART = (() => {
     // the face turns a little toward the way it goes
     if (st.hdLs == null) st.hdLs = 0;
     const look = sm(st, 'hdLs', clamp(fx, -1, 1), 0.1);
-    const lean = fx * 9 * swingK + (moving ? fx * 3 : 0) + kneel * 4;
+    const lean = fx * (swingK < 0 ? 17 : 9) * swingK + (moving ? fx * 3 : 0) + kneel * 4;
     const lift = -hover * 16 + kneel * 20 + Math.sin(t * 0.9) * (1.2 + hover * 2.4) * (1 - kneel);
     const tx = sm(st, 'hdTx', -fx * (7 + moving * 8), 0.06);
     const sway = 1.3 + moving * 2.2 + hover * 1.2;
@@ -267,31 +298,46 @@ const HD_ART = (() => {
     // ---- the figure: leaning from the ground (a shear: the feet stay), lifted, kneeling, lying
     ctx.save();
     if (lie > 0) { ctx.translate(0, 34); ctx.rotate((fx >= 0 ? 1 : -1) * 1.38 * ease(lie)); ctx.translate(0, -34 + 4 * lie); }
-    ctx.translate(0, lift);
-    ctx.transform(1, 0, -lean / 130, 1 - kneel * 0.12, 0, 0);
-    // the wings, behind everything
-    if (seraph) {
-      const wl = st.hdWl || (st.hdWl = [0, 0, 0, 0, 0, 0]), n = pr.hdWing | 0;
+    ctx.translate(fx * 6 * swingK, lift);
+    ctx.transform(1, 0, -lean / 130, 1 - kneel * 0.12 - 0.02 * A.land, 0, 0);
+    // the wings, behind everything (from behind they stand out in front of the back; side on they are edge-on and trail away from the face)
+    const wl = st.hdWl || (st.hdWl = [0, 0, 0, 0, 0, 0]);
+    const drawWings = () => {
+      const n = pr.hdWing | 0;
       for (let i = 0; i < 6; i++) { const target = n === i + 1 ? 1 : 0; wl[i] += (target - wl[i]) * (target > wl[i] ? 0.22 : 0.07); }
       const order = [2, 3, 4, 5, 0, 1];
+      ctx.save(); ctx.translate(-fx * 12 * (1 - V.aw), 0); ctx.scale(0.4 + 0.6 * V.aw, 1);
       for (const i of order) wing(ctx, t, i, wl[i], spread, goldK);
-    }
+      ctx.restore();
+    };
+    const wingsFront = seraph && fy < -0.25;
+    if (seraph && !wingsFront) drawWings();
     add(ctx, () => glow(ctx, 0, -60, 80, seraph ? K.gold : K.frost, seraph ? 0.07 : 0.05));
-    tails(ctx, t, { tx, moving });
+    ctx.save(); ctx.translate(-fx * (1 - V.aw) * 15, 0); ctx.scale(0.55 + 0.45 * V.aw, 1);
+    tails(ctx, t, { tx: tx - fx * 10 * A.cloth, moving });
+    ctx.restore();
     // the strike: a short swing of both sleeves forward and a pale arc through the air
-    const hxL = -25 + fx * 15 * swingK, hyL = -37 + fy * 5 * swingK - 4 * swingK, hxR = 25 + fx * 15 * swingK, hyR = -37 + fy * 5 * swingK - 4 * swingK;
-    coat(ctx, t, { sway, gold: seraph });
-    // the off hand (the light), under the head
-    const rx = 25 + fx * 15 * swingK + (lg > 0 ? 3 * lg : 0), ry = hyR - 9 * lg - 3 * kneel * 0;
-    sleeve(ctx, 1, rx, ry, 5, {});
-    palm(ctx, t, rx, ry, lg);
-    chains(ctx, t, { moving });
-    head(ctx, t, { look, bow: bow + kneel * 16, tilt: kneel * 0.14 * (fx >= 0 ? 1 : -1) + open * 0, eyes: eye, shut: !!pr.hdShut, gold: seraph });
-    // the blade hand
+    const hxL = -25 * V.kh + hOff + fx * 15 * swingK, hyL = -37 + fy * 5 * swingK - 4 * swingK, hxR = 25 * V.kh + hOff + fx * 15 * swingK, hyR = -37 + fy * 5 * swingK - 4 * swingK;
+    // (the coat as seen from the facing: side on the cape hangs behind it, away from the face, and the front is one narrow panel; from behind the cape is over the panels)
+    const rx = 25 * V.kh + hOff + fx * 15 * swingK + (lg > 0 ? 3 * lg : 0), ry = hyR - 9 * lg - 3 * kneel * 0;
     const bAng = Math.atan2(fy * 0.7 + 0.1, fx), bhx = hxL - 2 + bl * 4, bhy = hyL - 8 * bl;
-    sleeve(ctx, -1, bhx, bhy, -5, {});
+    if (farSl(1)) sleeve(ctx, 1, rx, ry, 5, { k: V.k });
+    if (farSl(-1)) sleeve(ctx, -1, bhx, bhy, -5, { k: V.k });
+    { const cape = () => { ctx.save(); ctx.translate(-fx * (1 - V.aw) * 17, 0); ctx.scale(0.62 + 0.38 * V.aw, 1); coat(ctx, t, { sway, gold: seraph, part: 1 }); ctx.restore(); };
+      const panels = () => { ctx.save(); ctx.translate(fx * (1 - V.aw) * 3, 0); ctx.scale(0.42 + 0.58 * V.aw, 1); coat(ctx, t, { sway, gold: seraph, part: 2 }); ctx.restore(); };
+      if (fy < -0.2) { panels(); cape(); ctx.save(); ctx.globalAlpha *= clamp(-fy * 1.7, 0, 1); ctx.translate(-fx * (1 - V.aw) * 17, 0); ctx.scale(0.62 + 0.38 * V.aw, 1); line(ctx, 0, -84, 0, 30, K.ink, 2.6); line(ctx, 1.6, -84, 1.6, 28, rgba(K.rim, 0.25), 1.1); for (let k = 0; k < 4; k++) line(ctx, (k - 1.5) * 15, -70 + k % 2 * 6, (k - 1.5) * 19, 22, rgba('#000000', 0.4), 2.4); ctx.restore(); }
+      else { cape(); panels(); } }
+    mantle(ctx, t, { moving, gold: seraph, tw: V.tw });
+    if (wingsFront) drawWings();
+    // the off hand (the light), under the head
+    if (!farSl(1)) sleeve(ctx, 1, rx, ry, 5, { k: V.k });
+    palm(ctx, t, rx, ry, lg);
+    if (fy > 0.05) { ctx.save(); ctx.globalAlpha *= clamp(fy * 1.7, 0, 1); ctx.translate(fx * 12, 0); ctx.scale(Math.max(fy, 0.4), 1); chains(ctx, t, { moving }); ctx.restore(); }
+    head(ctx, t, { look, bow: bow + kneel * 16, tilt: kneel * 0.14 * (fx >= 0 ? 1 : -1) + open * 0, eyes: eye, shut: !!pr.hdShut, gold: seraph, v: V });
+    // the blade hand
+    if (!farSl(-1)) sleeve(ctx, -1, bhx, bhy, -5, { k: V.k });
     blade(ctx, t, bhx + Math.cos(bAng) * 3, bhy + Math.sin(bAng) * 3, bAng, bl);
-    if (swingK > 0.05) add(ctx, () => { ctx.beginPath(); ctx.arc(fx * 22, -44 + fy * 8, 44, angle - 0.9, angle + 0.9); ctx.strokeStyle = rgba(K.frostH, 0.6 * swingK); ctx.lineWidth = 3.4; ctx.lineCap = 'round'; ctx.stroke(); });
+    if (swingK > 0.05) add(ctx, () => { ctx.beginPath(); ctx.arc(fx * 22, -44 + fy * 8, 44, angle - 0.9, angle - 0.9 + 1.8 * clamp(A.on ? A.strike + 0.1 * A.ovr : 1, 0.05, 1)); ctx.strokeStyle = rgba(K.frostH, 0.6 * Math.min(1, swingK)); ctx.lineWidth = 3.4; ctx.lineCap = 'round'; ctx.stroke(); });   // (the arc is drawn along the way the blow travels)
     // the cold it breathes: motes falling off it
     add(ctx, () => { for (let i = 0; i < 8; i++) { const q = (t * 0.2 + hash(i, 20)) % 1, x = (hash(i, 21) - 0.5) * 72 + Math.sin(t + i * 2) * 3, y = -100 + q * 140; circle(ctx, x, y, 0.8 + hash(i, 22) * 0.7, rgba(K.frostH, 0.55 * Math.min(1, q * 4) * (1 - q))); } });
     ctx.restore();

@@ -3,7 +3,7 @@
 //   e.g. node tools/comp-sweep.js hard skitterra gear=mid comps=6 runs=5
 //        node tools/comp-sweep.js hard skitterra only=pyromancer:sigilmancer,driftblade:orbit mix=dps1:post1,dps2:fresh comps=8 runs=5
 // Arguments (any order):
-//   normal|hard, boss id  (grubnak skitterra volkar hollowking wyrm titan hydra archmage corvane brannoc morrowoak caelum garrow)
+//   normal|hard, boss id  (grubnak skitterra volkar hollowking wyrm titan hydra archmage corvane brannoc morrowoak caelum garrow vesper ormun maelis)
 //   comps=N   parties to draw (default 20); runs=N  pulls per party (default 10); seed=N  base seed (default 1000)
 //   gear=L    gear level for every member: fresh|mid|full|post1|post2|post3|post4|post5|post6|post7 (same as bot-raid.js; default mid, 'base' = no gear)
 //   mix=SPEC  members with different gear. Either explicit, "slot:level" pairs, slots tank healer dps1 dps2 (others keep gear=):

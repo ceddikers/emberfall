@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Ormun: the Scales</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body { margin: 0; background: #0b0b0d; color: #cfc8bc; font: 13px/1.4 system-ui, sans-serif; }
+  header { padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; border-bottom: 1px solid #222; }
+  select, button, input { background: #17171b; color: #cfc8bc; border: 1px solid #333; border-radius: 5px; padding: 4px 8px; font: inherit; }
+  canvas { width: auto; max-width: 100%; max-height: calc(100vh - 48px); display: block; margin: 0 auto; background: #000; }
+  #err { color: #ff9a8a; padding: 4px; white-space: pre-wrap; }
+</style></head>
+<body>
+<header>
+  <b>Ormun: the Scales</b>
+  <label>view <select id="view"><option value="full">whole room box</option><option value="mid">game view, centre</option><option value="north">game view, north</option><option value="south">game view, south</option></select></label>
+  <label>tilt <input type="range" id="tilt" min="-1" max="1" step="0.05" value="0"></label>
+  <label>glow <select id="gl"><option value="">none</option><option value="l">left pan</option><option value="r">right pan</option><option value="b">both</option></select></label>
+  <label><input type="checkbox" id="bridge" checked> bridge stands</label>
+  <label>Ormun <select id="pose"><option value="">(none)</option></select></label>
+  <label><input type="checkbox" id="tells" checked> sample telegraphs</label>
+  <label><input type="checkbox" id="pause"> pause</label>
+  <span id="fps"></span>
+</header>
+<div id="err"></div>
+<canvas id="cv" width="1600" height="900"></canvas>
+<script>window.__errs = []; window.onerror = (m, s, l) => { window.__errs.push(m + ' (' + String(s).split('/').pop() + ':' + l + ')'); document.getElementById('err').textContent = window.__errs.join(' | '); };</script>
+<script src="../../client/js/draw-util.js"></script>
+<script src="../../client/js/data.js"></script>
+<script src="../../client/js/bosses.js"></script>
+<script src="../../client/js/arena/shapes.js"></script>
+<script src="../../client/js/arena/boss-tells.js"></script>
+<script src="../../client/js/arena/arena-view.js"></script>
+<script src="../../client/js/ormun-room.js"></script>
+<script src="../../client/js/ormun-art.js"></script>
+<script>
+  // ?view=full|mid|north|south  ?tilt=-1..1  ?gl=l|r|b  ?bridge=0|1  ?brk=seconds since the bridge broke (with bridge=0)  ?t=seconds
+  // ?pose=judge&tp=2.5 (Ormun in a pose, tp seconds into it)  ?side=-1|1|0  ?tells=0  ?z= ?cx= ?cy= (a free camera)  ?scale=1.5 (the floor's pixel scale)
+  const q = new URLSearchParams(location.search), $ = id => document.getElementById(id);
+  // the script agent adds ARENA_DEFS.ormun in shapes.js; until it is there, a rect that holds both pans
+  if (!ARENA_DEFS.ormun) ARENA_DEFS.ormun = { kind: 'rect', hw: 700, hh: 400, corner: 40 };
+  if (typeof OR_ART !== 'undefined') for (const n of OR_ART.POSES) $('pose').append(new Option(n, n));
+  for (const k of ['view', 'gl', 'pose']) if (q.has(k)) $(k).value = q.get(k);
+  if (q.has('tilt')) $('tilt').value = q.get('tilt');
+  if (q.get('bridge') === '0') $('bridge').checked = false;
+  if (q.get('tells') === '0') $('tells').checked = false;
+  ARENA.use('ormun');
+  ArenaView.buildFloor('ormun', Number(q.get('scale')) || 1);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  const T0 = 1;   // (with ?pose= the pose turns on at 1 s and ?tp= is the seconds into it)
+  let t = 0, last = performance.now(), frames = 0, acc = 0;
+  const st = { t: 0, moving: false, action: null, phase: 0, props: {} };
+  let poseSide = q.has('side') ? Number(q.get('side')) : 0, poseGate = q.has('pose') ? T0 : 0;
+  $('pose').addEventListener('change', () => { poseGate = 0; });
+  function ormunState() {   // the body's clock runs from 0 so its smoothing and sequences are as in play
+    const p = $('pose').value;
+    for (const k of OR_ART.KEYS) delete st.props[k];
+    delete st.props.orSide;
+    if (p && t >= poseGate) { st.props[OR_ART.KEYS[OR_ART.POSES.indexOf(p)]] = true; st.props.orSide = poseSide; }
+    st.t = t;
+  }
+  let brkT = null;   // when the bridge broke (the room reads the change itself; this only keeps the state)
+  function draw() {
+    const W = cv.width, H = cv.height, { bx, by } = ArenaView.floorBox, hh = ARENA.hh;
+    const tl = Number($('tilt').value), g = $('gl').value, br = brkT != null ? t < brkT : $('bridge').checked;
+    ArenaView.liveRoom = { ev: { orscales: { k: 'orscales', tilt: tl, glowL: g === 'l' || g === 'b' ? 1 : 0, glowR: g === 'r' || g === 'b' ? 1 : 0, bridge: br } } };
+    const view = $('view').value;
+    const z = q.has('z') ? Number(q.get('z')) : view === 'full' ? Math.min(W / (bx * 2), H / (by * 2)) : 0.94 * 1.0;
+    const cy = view === 'north' ? -(hh + 60) + H / z / 2 : view === 'south' ? (hh + 40) - H / z / 2 : 60;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(z, z); ctx.translate(-(Number(q.get('cx')) || 0), q.has('cy') ? -Number(q.get('cy')) : -cy);
+    ArenaView.drawFloor(ctx, 'ormun', 1);
+    ArenaView.drawAmbient(ctx, t);
+    if ($('tells').checked) {   // (the tells' red and blue, roughly: a wash and a solid rim)
+      const tel = (fill, rim) => { ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = rim; ctx.lineWidth = 2.5; ctx.stroke(); };
+      ctx.beginPath(); ctx.arc(-300, 150, 110, 0, TAU); tel('rgba(255,59,47,0.28)', '#ff3b2f');
+      ctx.beginPath(); ctx.arc(-470, -20, 80, 0, TAU); tel('rgba(80,150,255,0.26)', '#5aa0ff');
+      ctx.beginPath(); ctx.rect(330, 0, 300, 120); tel('rgba(255,59,47,0.28)', '#ff3b2f');
+      ctx.beginPath(); ctx.arc(250, 220, 90, 0, TAU); ctx.arc(250, 220, 40, 0, TAU, true); tel('rgba(255,59,47,0.28)', '#ff3b2f');
+      ctx.beginPath(); ctx.arc(480, 40, 60, 0, TAU); tel('rgba(80,150,255,0.26)', '#5aa0ff');
+      [['#7aa0ff', -250, 40], ['#ffd27a', -160, 60], ['#7aff9a', 150, 70], ['#ff9ad0', 60, 60], ['#7aa0ff', 380, 190]].forEach(([col, x, y]) => circle(ctx, x, y, 14, col, OUT, 2.5));
+    }
+    if (typeof BOSS_ART !== 'undefined' && BOSS_ART.ormun) { ormunState(); drawBoss(ctx, { id: 'ormun' }, 0, -170, q.has('face') ? Number(q.get('face')) : Math.PI / 2, st, 1.3); }
+    ctx.restore();
+  }
+  // run the room and the body forward from rest to the moment asked for (30 steps a second), so a screenshot shows it as it is in play
+  (function preroll() {
+    const end = q.has('tp') ? T0 + Number(q.get('tp')) : Number(q.get('t')) || 12, start = q.has('pose') || q.has('tp') ? 0 : Math.max(0, end - 5);
+    if (q.has('brk')) brkT = end - Number(q.get('brk'));
+    for (let tt = start; tt < end; tt += 1 / 30) { t = tt; draw(); }
+    t = end;
+    if (q.has('tp') || q.has('t')) $('pause').checked = true;
+  })();
+  window.__scales = { draw, setT: v => { t = v; draw(); } };
+  if (q.get('perf')) {   // ?perf=1: what each part of a frame costs (a software-rendered headless browser is several times slower than a real one)
+    const time = (n, fn) => { const t0 = performance.now(); for (let i = 0; i < n; i++) fn(i); return ((performance.now() - t0) / n).toFixed(2); };
+    const c = document.createElement('canvas'); c.width = 1600; c.height = 900; const x = c.getContext('2d');
+    const room = time(100, i => { x.save(); x.translate(800, 450); x.scale(0.94, 0.94); ArenaView.drawAmbient(x, 20 + i / 60); x.restore(); });
+    const body = time(100, i => { st.t = 20 + i / 60; x.save(); x.translate(800, 450); drawBoss(x, { id: 'ormun' }, 0, 0, Math.PI / 2, st, 1.3); x.restore(); });
+    $('err').textContent = 'ms per frame: room life ' + room + ', body ' + body;
+  }
+  function frame(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (!$('pause').checked) t += dt;
+    draw(); frames++; acc += dt;
+    if (acc > 1) { $('fps').textContent = Math.round(frames / acc) + ' fps'; frames = 0; acc = 0; }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+</script>
+</body></html>

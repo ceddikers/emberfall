@@ -110,8 +110,10 @@ const HERO_ART = {
     line(ctx, -3.6, 11.2, -3.6, 14.8, '#2a3140', 1.4);
     ellipse(ctx, -9, 13, 4.2, 1.8, 0, '#c43b3b', OUT, 1.2); ellipse(ctx, -10.5, 10.8, 3.4, 1.4, -0.5, '#d9514a', OUT, 1);
     // sword (with a bright arc while it cuts)
-    const dir = swingDir(st), rot = 0.35 + dir * s * 1.1 - big * 1.3, pa = actP(st, 'attack');
-    smear(ctx, 7, 12, 24, 0.35 + dir * 1.1, rot, '#cfe0ff', strikeAmt(pa), 7);
+    const dir = swingDir(st), pa = actP(st, 'attack'), over = pa >= 0 && st.action.step === 2;
+    let rot = 0.35 + dir * s * 1.1 - big * 1.3;
+    if (over) rot = pa < 0.3 ? 0.35 - 2.4 * easeOut(pa / 0.3) : pa < 0.5 ? -2.05 + 3.2 * easeOut((pa - 0.3) / 0.2) : 1.15 - 0.8 * easeOut((pa - 0.5) / 0.5);
+    smear(ctx, 7, 12, 24, over ? -0.9 : 0.35 + dir * 1.1, rot, over ? '#ffe9a0' : '#cfe0ff', over ? (pa > 0.3 && pa < 0.62 ? Math.sin((pa - 0.3) / 0.32 * Math.PI) : 0) : strikeAmt(pa), 7);
     ctx.save(); ctx.translate(7, 12); ctx.rotate(rot);
     poly(ctx, [2, -2, 22, -2, 27, 0, 22, 2, 2, 2], '#e3e9f0', OUT, 1.5);
     line(ctx, 4, 0, 21, 0, '#b8c2cf', 1);
@@ -121,7 +123,9 @@ const HERO_ART = {
     ctx.restore();
     hand(ctx, 7, 12, steel);
     // tower shield: at the side normally, in front when bashing / bracing
-    ctx.save(); ctx.translate(7 + 9 * front, -12 + 11 * front); ctx.rotate(-0.45 * (1 - front));
+    // (signature pass) a Perfect Block jolts the shield: it is shoved out a few pixels and shivers as it rings (KIT_VFX.perfect stamps st.perfectT)
+    const pj = st.perfectT != null ? st.t - st.perfectT : 9, jolt = pj >= 0 && pj < 0.3 ? Math.exp(-pj * 12) : 0;
+    ctx.save(); ctx.translate(7 + 9 * front + 3.5 * jolt, -12 + 11 * front + Math.sin(pj * 95) * 0.9 * jolt); ctx.rotate(-0.45 * (1 - front));
     rrect(ctx, -3.5, -13, 7, 26, 3, blue, OUT, 2);
     rrect(ctx, -1.8, -10.5, 3.6, 21, 1.5, null, gold, 1.4);
     // a gold fleur-de-lis, as on the painted shield
@@ -231,7 +235,8 @@ const HERO_ART = {
     // (Venomstrike: the cloak's deep hood is up over the head, drawn by its spec look)
     const venom = HERO_SPEC === 'venomstrike';
     const cloak = venom ? '#25452b' : '#2f5f38', leather = '#6a4528', hood = venom ? '#1f3a26' : '#2f5f38', skin = '#b97a4c', hair = '#b0401c', gold = '#d8b04a', shirt = '#eadfc4';
-    const pa = actP(st, 'attack');
+    // (class VFX pass) the Hunter's Mark, Barrage and Starfall Volley draw the bow too (the cast pose has no bow in it): the action carries the move's id
+    const pa = Math.max(actP(st, 'attack'), st.action && (st.action.id === 'mark' || st.action.id === 'barrage' || st.action.id === 'starfall') ? actP(st) : -1);
     const nocked = pa >= 0 && pa < 0.6;
     const pull = nocked ? easeOut(pa / 0.6) : 0;
     // quiver on the back, a gold band on it, white-fletched arrows
@@ -411,8 +416,8 @@ const HERO_ART = {
       for (let i = 0; i < 4; i++) ellipse(ctx, -5 + i * 3.4, sy * (11.6 + (i % 2) * 1.1), 4.2, 2.2, sy * (0.55 - i * 0.2), i % 2 ? leaf : leafD, OUT, 0.9);
     }
     // gnarled staff, ivy wound round it
-    const tx = 23 + cast * 3;
-    limb(ctx, [-5, 13, 4, 14.5, 12, 11.5, tx - 2, 13], bark, 2.6);
+    const tx = 23 + cast * 7;   // (healer pass: the staff thrusts out as a seed is planted or a thorn is thrown)
+    limb(ctx, [-5, 13, 4, 14.5, 12, 11.5, tx - 2, 13 + cast * 1.5], bark, 2.6);
     for (const [x, y, a] of [[1, 12.2, -0.5], [7, 13.6, 0.5], [13, 11.4, -0.4], [17, 12.6, 0.5]]) ellipse(ctx, x, y, 2.3, 1.1, a, leaf, OUT, 0.7);
     circle(ctx, 9.5, 12.6, 1.3, '#fff4f6', OUT, 0.6); circle(ctx, 9.5, 12.6, 0.5, '#f0b8c8');
     ellipse(ctx, tx - 3, 9, 4, 2, -0.6, leaf, OUT, 1);
@@ -1654,7 +1659,7 @@ Object.assign(HERO_ART, {
   // looped back to her left. The needle thrusts on her casts.
   threadweaver(ctx, st) {
     const dress = '#2a1e36', shawl = '#a68ccf', hat = '#4a2a58', skin = '#e4bd94', hair = '#26222e', thread = '#cbb8ff';
-    const cast = castAmt(st), pa = actP(st, 'attack'), thrust = Math.max(cast, pa >= 0 ? strikeAmt(pa) : 0);
+    const cast = castAmt(st), pa = actP(st, 'attack'), thrust = Math.max(cast, pa >= 0 ? strikeAmt(pa) : 0), pullBig = pulse(actP(st, 'big'));   // (healers pass: pullBig, the off hand hauling the thread on a big move)
     feet(ctx, st, '#1e1626');
     // three spools on the belt at her back, each a different thread
     [['#b79ae0', -9, -7], ['#9a7acd', -11, 0], ['#c8b0ee', -9, 7]].forEach(([c, x, y]) => {
@@ -1677,7 +1682,7 @@ Object.assign(HERO_ART, {
     circle(ctx, -6.2, 0, 2.5, null, '#c8a24a', 1.4);   // the gold ring grip
     ctx.restore();
     // the thread: from the needle's eye back to her left hand, glowing, swaying
-    const ex = nx - 2.5 * Math.cos(ang), ey = ny - 2.5 * Math.sin(ang), lx = 6 + cast * 3, ly = -11;
+    const ex = nx - 2.5 * Math.cos(ang), ey = ny - 2.5 * Math.sin(ang), lx = 6 + cast * 3 + pullBig * 5, ly = -11 - pullBig * 6;
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     ctx.beginPath(); ctx.moveTo(ex, ey); ctx.bezierCurveTo(ex - 10, ey - 4 + Math.sin(st.t * 3) * 3, lx + 6, ly + 10 + Math.cos(st.t * 2.4) * 3, lx, ly);
     ctx.strokeStyle = rgba(thread, 0.35); ctx.lineWidth = 3; ctx.stroke(); ctx.strokeStyle = rgba('#efe6ff', 0.9); ctx.lineWidth = 0.9; ctx.stroke();
@@ -2256,7 +2261,7 @@ HERO_ART.tidecaller = function (ctx, st) {
   circle(ctx, 1, -12.6, 2.8, shell, OUT, 1); ctx.save(); ctx.strokeStyle = shellD; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.arc(1, -12.6, 1.8, 0.4, 5.2); ctx.arc(1, -12.6, 0.9, 1, 5.5); ctx.stroke(); ctx.restore();
   for (const [bx, by] of [[-1.5, -14.6], [-4, -13.6], [2.4, -15.4]]) circle(ctx, bx, by, 0.9, pearl, OUT, 0.5);
   // the open left hand: a small sphere of sea water, a ripple round it
-  const sx = 11 + cast * 3, sy = -11 - cast * 1.5, pr = 3.6 + cast * 1.4 + Math.sin(now * 3.4) * 0.35;
+  const sx = 11 + cast * 3 + big * 3, sy = -11 - cast * 1.5 - big * 7, pr = 3.6 + cast * 1.4 + Math.sin(now * 3.4) * 0.35;
   hand(ctx, 6.5, -10.5, skin);
   glow(ctx, sx, sy, pr * 3.2, teal, 0.35 + cast * 0.3);
   circle(ctx, sx, sy, pr, '#58cfc0', OUT, 1.1);
@@ -2386,7 +2391,7 @@ HERO_ART.lanternkeeper = function (ctx, st) {
   hand(ctx, 7, -9.2, '#6b4a2e');
   glow(ctx, 8.6, -9.4, 5 + cast * 4, '#ff9a3a', 0.45 + cast * 0.4); circle(ctx, 8.6, -9.4, 1.1 + cast * 0.8, '#ffd27a');
   // the staff with its crook, and the lantern hanging from it
-  const tx = 22 + cast * 3 + big * 2, ty = 11.5 - cast * 1.2;
+  const tx = 22 + cast * 3 + big * 3, ty = 11.5 - cast * 1.2 - big * 7;   // (healers pass: the staff lifts on a big move)
   limb(ctx, [-6, 13.5, 6, 12.5, tx - 1, ty], '#5a4630', 2.4);
   ctx.save(); ctx.strokeStyle = OUT; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(tx - 1, ty - 0.5, 2.9, -2.4, 1.2); ctx.stroke();
   ctx.strokeStyle = brassL; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(tx - 1, ty - 0.5, 2.9, -2.4, 1.2); ctx.stroke(); ctx.restore();
@@ -2461,7 +2466,8 @@ Object.assign(SPEC_ART, {
 // (The Perfect spark, rings and trails are ABILITY_VFX.kenseier; the closing ring on the feet is main.js drawKenRing.)
 function kenseierBlade(st) {
   const s = swing(actP(st, 'attack')), g = pulse(actP(st, 'guard')), big = pulse(actP(st, 'big')), dir = swingDir(st);
-  const rot = 0.5 + dir * s * 1.0 - g * 2.05 - big * 1.5;
+  const kf = st.kenFlickT != null ? st.t - st.kenFlickT : 9, flick = kf >= 0 && kf < 0.22 ? Math.sin(kf / 0.22 * Math.PI) : 0;   // (signature pass) a Perfect Deflect snaps the blade over in a flick
+  const rot = 0.5 + dir * s * 1.0 - g * 2.05 - big * 1.5 - flick * 0.9;
   const px = 8 + 5 * g - 2 * big, py = 9 + 1.5 * g - 3 * big, c = Math.cos(rot), sn = Math.sin(rot);
   return { rot, px, py, g, big, s, c, sn, tx: px + c * 38, ty: py + sn * 38, mx: px + c * 24, my: py + sn * 24 };
 }

@@ -1,12 +1,16 @@
 // Telegraph shapes for boss mechanics. The host uses contains() to decide who got hit;
 // every client uses the same data to draw the warning on the floor.
 //
-// shape: { kind: 'circle'|'donut'|'cone'|'rect'|'cross', x, y, r, r2, angle, arc, len, w }
+// shape: { kind: 'circle'|'donut'|'cone'|'rect'|'cross'|'lune', x, y, r, r2, angle, arc, len, w, ph }
 //  circle: radius r around (x, y)
 //  donut:  between r2 (inner, safe) and r (outer)
 //  cone:   radius r, centered on angle, total width arc (radians)
 //  rect:   starts at (x, y), goes len along angle, w wide (a line AoE / half-room cleave)
 //  cross:  two rects through (x, y), len each way, w wide, rotated by angle
+//  lune:   a phase of the moon cut out of the disc of radius r round (x, y) (Maelis Orne): ph 'crescent' | 'half' | 'gibbous' | 'full', angle = the way the LIT side faces.
+//          crescent: the disc outside a circle of radius r centred 0.55 r toward the dark side; half: the half-disc on the lit side; gibbous: the disc inside a
+//          circle of radius r centred 0.55 r toward the lit side; full: the whole disc. (The dark of the crown striking is the phase turned over: an umbral crescent
+//          is a gibbous turned by PI, an umbral half a half turned by PI.)
 
 // Math.hypot(a, b) for two numbers, without the generic builtin's call cost (the bots and the host call it thousands of times a tick).
 // It takes the steps V8's own Math.hypot takes: scale both by the larger magnitude, add the squares, root, scale back (V8 also keeps
@@ -62,6 +66,14 @@ const SHAPES = {
         return (Math.abs(a1) <= s.len + pad && Math.abs(b1) <= s.w / 2 + pad) ||
                (Math.abs(b1) <= s.len + pad && Math.abs(a1) <= s.w / 2 + pad);
       }
+      case 'lune': {
+        if (dx * dx + dy * dy > (s.r + pad) * (s.r + pad)) return false;
+        if (s.ph === 'full') return true;
+        const c = Math.cos(s.angle), sn = Math.sin(s.angle), u = dx * c + dy * sn, v = -dx * sn + dy * c;
+        if (s.ph === 'half') return u >= -pad;
+        const k = 0.55 * s.r;
+        return s.ph === 'crescent' ? hypot2(u + k, v) >= s.r - pad : hypot2(u - k, v) <= s.r + pad;
+      }
       // everywhere a blast from (x, y) reaches: all but the shadows behind the round props in s.covers ([[x, y, r], ...])
       case 'lit':
         return !(s.covers || []).some(([cx, cy, r]) => PROPS.blocks({ shape: 'circle', x: cx, y: cy, r }, s.x, s.y, px, py, PROPS.COVER_SHRINK - pad));
@@ -74,6 +86,16 @@ const SHAPES = {
     ctx.beginPath();
     switch (s.kind) {
       case 'lit': ctx.rect(-3000, -3000, 6000, 6000); break;
+      case 'lune': {
+        const r = s.r, a0 = s.angle, k = 0.55 * r, AL = Math.acos(0.275), AR = Math.PI - AL;   // (the two circles meet at 0.275 r toward the lit side of the gibbous's, and the dark side of the crescent's)
+        if (s.ph === 'full') { ctx.arc(s.x, s.y, r, 0, Math.PI * 2); break; }
+        if (s.ph === 'half') { ctx.arc(s.x, s.y, r, a0 - Math.PI / 2, a0 + Math.PI / 2); ctx.closePath(); break; }
+        const sg = s.ph === 'crescent' ? -1 : 1, bx = s.x + Math.cos(a0) * k * sg, by = s.y + Math.sin(a0) * k * sg;
+        if (s.ph === 'crescent') { ctx.arc(s.x, s.y, r, a0 - AR, a0 + AR); ctx.arc(bx, by, r, a0 + AL, a0 - AL, true); }
+        else { ctx.arc(s.x, s.y, r, a0 - AL, a0 + AL); ctx.arc(bx, by, r, a0 + AR, a0 + Math.PI * 2 - AR); }
+        ctx.closePath();
+        break;
+      }
       case 'circle': ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); break;
       case 'donut':
         ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
@@ -115,6 +137,8 @@ const SHAPES = {
 //   kind 'circle': r
 //   kind 'rect':   hw, hh (half width / height), corner (rounding)
 //   kind 'poly':   n sides, r (centre to corner); one flat side always faces down
+//   kind 'union':  parts, floor made of separate round and rectangular pieces ({ kind: 'circle', x, y, r } or { kind: 'rect', x0, y0, x1, y1 }) with open
+//                  nothing between them (the Scales); hw, hh are the half sizes of the box that holds them, inner what the spawn ring keys on
 const ARENA_DEFS = {
   grubnak: { kind: 'rect', hw: 520, hh: 360, corner: 40 },   // a cramped kitchen: the stove line along the top wall
   skitterra: { kind: 'poly', n: 8, r: 560 },
@@ -141,6 +165,9 @@ const ARENA_DEFS = {
   hood: { kind: 'circle', r: 520 },   // a long frozen court (hood.js); the same court with its roof gone is seraph.js's
   seraph: { kind: 'circle', r: 520 },
   garrow: { kind: 'rect', hw: 560, hh: 400, corner: 40 },   // Season 2, XIII: the Long Mere, a frozen lake under fresh snow that keeps every step (garrow.js)
+  vesper: { kind: 'rect', hw: 480, hh: 260, corner: 30 },   // Season 2, XIV: the Argent Hall, 960 x 520; the glass hall is drawn over the north wall (y -780 to -260), later across the east wall (vesper.js)
+  ormun: { kind: 'union', hw: 680, hh: 360, inner: 150, parts: [{ kind: 'circle', x: -380, y: 60, r: 300 }, { kind: 'circle', x: 380, y: 60, r: 300 }, { kind: 'rect', x0: -110, y0: 10, x1: 110, y1: 110 }] },   // Season 2, XV: the Scales, two round pans over a night sea joined by a short bridge; nowhere else is floor (ormun.js)
+  maelis: { kind: 'circle', r: 560 },   // Season 2, XVI: the face of the moon, a round floor of pale dust (maelis.js; arena theme 'moon')
 };
 let POLY_NORMALS = null;   // ARENA.sd's cos/sin of a 'poly' room's side normals, for the current side count
 const ARENA = {
@@ -149,11 +176,13 @@ const ARENA = {
   inner: 520,   // nearest wall to the centre (for "always inside" sizes)
   full: 520,    // a round room's radius before any closing in
   cuts: [],     // a round room's broken-off wedges: [{ a0, a1, r }] (Volkar's crumbling summit, Hard): inside a0..a1 the floor ends at r
+  parts: null,  // a 'union' room's pieces (see ARENA_DEFS)
   use(id) {
     const d = ARENA_DEFS[id] || { kind: 'circle', r: 520 };
-    Object.assign(this, { kind: d.kind, r: d.r || 0, hw: d.hw || 0, hh: d.hh || 0, corner: d.corner || 0, n: d.n || 0, cuts: [] });
+    Object.assign(this, { kind: d.kind, r: d.r || 0, hw: d.hw || 0, hh: d.hh || 0, corner: d.corner || 0, n: d.n || 0, cuts: [], parts: d.parts || null });
     if (d.kind === 'circle') { this.hw = this.hh = this.R = this.inner = this.full = d.r; }
     else if (d.kind === 'rect') { this.R = hypot2(d.hw, d.hh); this.inner = Math.min(d.hw, d.hh); }
+    else if (d.kind === 'union') { this.R = hypot2(d.hw, d.hh); this.inner = d.inner || Math.min(d.hw, d.hh); this.full = Math.max(d.hw, d.hh); }
     else { this.inner = d.r * Math.cos(Math.PI / d.n); this.R = d.r; this.hw = this.hh = this.inner; }
     return this;
   },
@@ -164,6 +193,14 @@ const ARENA = {
   },
   // signed distance to the wall: negative inside, positive outside
   sd(x, y) {
+    if (this.kind === 'union') {
+      let m = Infinity;
+      for (const q of this.parts) {
+        const d = q.kind === 'circle' ? hypot2(x - q.x, y - q.y) - q.r : hypot2(Math.max(Math.max(q.x0 - x, x - q.x1), 0), Math.max(Math.max(q.y0 - y, y - q.y1), 0)) + Math.min(Math.max(Math.max(q.x0 - x, x - q.x1), Math.max(q.y0 - y, y - q.y1)), 0);
+        if (d < m) m = d;
+      }
+      return m;
+    }
     if (this.kind === 'rect') {
       const c = this.corner, qx = Math.abs(x) - (this.hw - c), qy = Math.abs(y) - (this.hh - c);
       return hypot2(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - c;
@@ -192,9 +229,39 @@ const ARENA = {
     return r;
   },
   contains(x, y, pad = 0) { return this.sd(x, y) <= -pad; },
+  // a straight move from p to dest (dest changed in place) that may not cross open sea: in a 'union' room it stops at the last point of the line still on a piece
+  // (a dash over the gap between the pans, once the bridge is down); any other room is left as it is
+  reach(p, dest) {
+    if (this.kind !== 'union') return dest;
+    const dx = dest.x - p.x, dy = dest.y - p.y, L = hypot2(dx, dy);
+    if (L < 1) return dest;
+    const n = Math.ceil(L / 6);
+    let lx = p.x, ly = p.y;
+    for (let i = 1; i <= n; i++) { const x = p.x + dx * i / n, y = p.y + dy * i / n; if (this.sd(x, y) > 1) { dest.x = lx; dest.y = ly; return dest; } lx = x; ly = y; }
+    return dest;
+  },
   // pull p ({x, y}, changed in place) back inside, at least pad from the wall
   clamp(p, pad = 0) {
     if (this.sd(p.x, p.y) <= -pad) return p;
+    if (this.kind === 'union') {
+      // the nearest point of any piece, kept pad inside it (a piece too small for the pad is skipped)
+      let bx = null, by = 0, bd = Infinity;
+      for (const q of this.parts) {
+        let cx, cy;
+        if (q.kind === 'circle') {
+          const dx = p.x - q.x, dy = p.y - q.y, d = hypot2(dx, dy), lim = q.r - pad;
+          if (lim <= 0) continue;
+          if (d <= lim) { cx = p.x; cy = p.y; } else { cx = q.x + dx / d * lim; cy = q.y + dy / d * lim; }
+        } else {
+          if (q.x1 - q.x0 <= pad * 2 || q.y1 - q.y0 <= pad * 2) continue;
+          cx = Math.max(q.x0 + pad, Math.min(q.x1 - pad, p.x)); cy = Math.max(q.y0 + pad, Math.min(q.y1 - pad, p.y));
+        }
+        const dd = hypot2(cx - p.x, cy - p.y);
+        if (dd < bd) { bd = dd; bx = cx; by = cy; }
+      }
+      if (bx !== null) { p.x = bx; p.y = by; }
+      return p;
+    }
     if (this.kind === 'rect') {
       const lx = Math.max(0, this.hw - pad), ly = Math.max(0, this.hh - pad), c = Math.max(0, this.corner - pad);
       p.x = Math.max(-lx, Math.min(lx, p.x)); p.y = Math.max(-ly, Math.min(ly, p.y));
@@ -218,6 +285,15 @@ const ARENA = {
   // distance from the centre to the wall going out along angle a
   edge(a) {
     const c = Math.cos(a), s = Math.sin(a);
+    // a 'union' room (the Scales) need not hold the centre, so its edge along a ray is where the ray last leaves a piece of floor; a ray that never meets floor has none (-1)
+    if (this.kind === 'union') {
+      let last = -1;
+      for (let d = 0; d <= this.R + 2; d += 3) if (this.sd(c * d, s * d) <= 0) last = d;
+      if (last < 0) return -1;
+      let lo = last, hi = last + 3;
+      for (let i = 0; i < 22; i++) { const m = (lo + hi) / 2; if (this.sd(c * m, s * m) > 0) hi = m; else lo = m; }
+      return lo;
+    }
     let lo = 0, hi = this.R + 2;
     for (let i = 0; i < 22; i++) { const m = (lo + hi) / 2; if (this.sd(c * m, s * m) > 0) hi = m; else lo = m; }
     return lo;
@@ -225,7 +301,12 @@ const ARENA = {
   // the room's outline, pushed out by grow (for clipping and drawing the rim)
   trace(ctx, grow = 0) {
     ctx.beginPath();
-    if (this.kind === 'rect') {
+    if (this.kind === 'union') {
+      for (const q of this.parts) {
+        if (q.kind === 'circle') { ctx.moveTo(q.x + q.r + grow, q.y); ctx.arc(q.x, q.y, q.r + grow, 0, Math.PI * 2); }
+        else ctx.rect(q.x0 - grow, q.y0 - grow, q.x1 - q.x0 + grow * 2, q.y1 - q.y0 + grow * 2);
+      }
+    } else if (this.kind === 'rect') {
       const w = this.hw + grow, h = this.hh + grow, c = Math.max(0, this.corner + grow);
       ctx.moveTo(-w + c, -h); ctx.arcTo(w, -h, w, h, c); ctx.arcTo(w, h, -w, h, c); ctx.arcTo(-w, h, -w, -h, c); ctx.arcTo(-w, -h, w, -h, c);
       ctx.closePath();

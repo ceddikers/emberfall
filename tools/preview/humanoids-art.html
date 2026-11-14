@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Humanoid boss art: pose sheets</title>
+<style>
+  body { margin: 0; background: #151b26; color: #b8cce0; font: 12px Georgia, serif; }
+  #grid { display: grid; grid-template-columns: repeat(4, 380px); gap: 4px; padding: 4px; }
+  canvas { display: block; }
+  #err { color: #ff9a8a; padding: 4px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="err"></div>
+<div id="grid"></div>
+<script>window.__errs = []; window.onerror = (m, s, l) => { window.__errs.push(m + ' (' + String(s).split('/').pop() + ':' + l + ')'); document.getElementById('err').textContent = window.__errs.join(' | '); };</script>
+<script src="../../client/js/draw-util.js"></script>
+<script src="../../client/js/data.js"></script>
+<script src="../../client/js/arena/bosses/archmage.js"></script>
+<script src="../../client/js/bosses.js"></script>
+<script src="../../client/js/arena/shapes.js"></script>
+<script src="../../client/js/arena/boss-tells.js"></script>
+<script src="../../client/js/arena/arena-view.js"></script>
+<script src="../../client/js/set3-sky.js"></script>
+<script>
+  // ?orig_<name>=<url> loads an earlier copy of that art file instead (for the before/after sheets)
+  (function () { const q = new URLSearchParams(location.search); for (const n of ["archmage","corvane","brannoc","caelum","hood","sovereign"]) document.write('<script src="' + (q.get('orig_' + n) || '../../client/js/' + n + '-art.js') + '"><' + '/script>'); })();
+</script>
+<script>
+  // ?boss=corvane|brannoc|caelum|archmage|hollowking|hood|seraph|sovereign   the pose sheet (all cells)
+  // &one=N&zoom=3   one cell large;  &from=0&n=12  a slice;  &perf=1  ms per frame of the rest/pose draws;  &bg=dark
+  // A cell is [label, opts]. opts: props (st.props), angle (radians, 0 east, PI/2 south), tp (seconds into the pose), act (a swing's progress 0..1, runs st.action),
+  // moving, extra (merged into st, e.g. raid:true), scale.
+  const Q = new URLSearchParams(location.search);
+  const W = 380, H = 330, BOSS = Q.get('boss') || 'corvane', DARK = Q.get('bg') === 'dark';
+  const UPRIGHT = new Set(['caelum', 'hood', 'seraph']);
+  const E = 0, S = Math.PI / 2, N = -Math.PI / 2, Wd = Math.PI;
+  const cs = (label, props, o) => [label, Object.assign({ props }, o || {})];
+  const rest4 = (extraProps, o) => [
+    cs('rest, facing east', extraProps, Object.assign({ angle: E, tp: 0.6 }, o)),
+    cs('rest, facing south', extraProps, Object.assign({ angle: S, tp: 0.6 }, o)),
+    cs('rest, facing north', extraProps, Object.assign({ angle: N, tp: 0.6 }, o)),
+    cs('rest, facing west', extraProps, Object.assign({ angle: Wd, tp: 0.6 }, o)),
+  ];
+  const SETS = {
+    corvane: [
+      ...rest4({}),
+      cs('walking, east', {}, { moving: true, tp: 2, angle: E }),
+      cs('crane (stance)', { stance: 'crane' }, { tp: 1.2, angle: E }),
+      cs('comet (stance)', { stance: 'comet' }, { tp: 1.2, angle: E }),
+      cs('parting (stance)', { stance: 'parting' }, { tp: 1.2, angle: E }),
+      cs('notch 2', { notch: 2 }, { tp: 0.8, angle: S }),
+      cs('notch 4 (full)', { notch: 4 }, { tp: 0.8, angle: S }),
+      cs('kneel', { kneel: true }, { tp: 1.2, angle: E }),
+      cs('raise, up', { raise: true }, { act: 0.1, angle: E }),
+      cs('raise, down', { raise: true }, { act: 0.55, angle: E }),
+      cs('draw, mid', { draw: true }, { act: 0.45, angle: E }),
+      cs('sweep left', { sweepL: true }, { act: 0.5, angle: E }),
+      cs('sweep right', { sweepR: true }, { act: 0.5, angle: S }),
+      cs('still (guard)', { still: true }, { tp: 1.2, angle: S }),
+      cs('gale', { gale: true }, { tp: 1.2, angle: E }),
+      cs('breath', { breath: true }, { tp: 1.2, angle: E }),
+      cs('sheathe', { sheathe: true }, { tp: 1.2, angle: E }),
+      cs('burn (enrage)', { burn: true }, { tp: 1.2, angle: E }),
+      cs('comet, facing north', { stance: 'comet' }, { tp: 1.2, angle: N }),
+      cs('raise, facing west', { raise: true }, { act: 0.1, angle: Wd }),
+    ],
+    brannoc: [
+      ...rest4({}),
+      cs('walking, east', {}, { moving: true, tp: 2, angle: E }),
+      cs('throw, drawn back', { throw: true }, { act: 0.12, angle: E }),
+      cs('throw, through', { throw: true }, { act: 0.5, angle: E }),
+      cs('kick (Riposte)', { kick: true }, { tp: 1.2, angle: E }),
+      cs('leap (airborne)', { leap: true }, { tp: 1.2, angle: E }),
+      cs('pose (crowd)', { pose: true }, { tp: 1.2, angle: E }),
+      cs('heel', { heel: true }, { tp: 1.2, angle: E }),
+      cs('roar', { roar: true }, { tp: 1.2, angle: E }),
+      cs('furrow', { furrow: true }, { tp: 1.2, angle: E }),
+      cs('rise', { rise: true }, { tp: 1.2, angle: E }),
+      cs('wheel out', { wheelOut: true }, { tp: 1.2, angle: S }),
+      cs('throw, facing south', { throw: true }, { act: 0.5, angle: S }),
+      cs('kick, facing north', { kick: true }, { tp: 1.2, angle: N }),
+      cs('heel, facing west', { heel: true }, { tp: 1.2, angle: Wd }),
+    ],
+    caelum: [
+      ...rest4({}),
+      cs('walking, east', {}, { moving: true, tp: 2, angle: E }),
+      cs('glint, gathering', { clGlint: true }, { act: 0.1, angle: E }),
+      cs('glint, thrown', { clGlint: true }, { act: 0.5, angle: E }),
+      cs('wake, raised', { clWake: true }, { act: 0.1, angle: E }),
+      cs('wake, cut', { clWake: true }, { act: 0.5, angle: E }),
+      cs('crown, raised', { clCrown: true }, { act: 0.1, angle: E }),
+      cs('crown, down', { clCrown: true }, { act: 0.5, angle: E }),
+      cs('thrust, back', { clThrust: true }, { act: 0.1, angle: E }),
+      cs('thrust, out', { clThrust: true }, { act: 0.5, angle: E }),
+      cs('grace', { clGrace: true }, { tp: 1.5, angle: S }),
+      cs('night', { clNight: true }, { tp: 1.5, angle: S }),
+      cs('summon', { clSummon: true }, { tp: 1.5, angle: S }),
+      cs('ember', { clEmber: true }, { tp: 1.5, angle: E }),
+      cs('ascend', { clAscend: true }, { tp: 1.5, angle: S }),
+      cs('horizon, drawn', { clHorizon: true }, { act: 0.5, angle: E }),
+      cs('rage', { clRage: true }, { tp: 1.5, angle: S }),
+      cs('SKY rest', { sky: true }, { tp: 1.2, angle: S }),
+      cs('SKY ascendant', { sky: true, clAscendant: true }, { tp: 1.5, angle: S }),
+      cs('SKY thrust out', { sky: true, clThrust: true }, { act: 0.5, angle: E }),
+      cs('SKY rage', { sky: true, clRage: true }, { tp: 1.5, angle: S }),
+      cs('blade shadow 390 (late act)', { clBlade: 390 }, { tp: 1, angle: S }),
+      cs('wake, facing west', { clWake: true }, { act: 0.5, angle: Wd }),
+    ],
+    archmage: [
+      ...rest4({}),
+      cs('walking, east', {}, { moving: true, tp: 2, angle: E }),
+      cs('fire', { fire: true }, { tp: 1.2, angle: E }),
+      cs('frost', { frost: true }, { tp: 1.2, angle: E }),
+      cs('bolt', { bolt: true }, { tp: 1.2, angle: E }),
+      cs('void', { void: true }, { tp: 1.2, angle: E }),
+      cs('arc', { arc: true }, { tp: 1.2, angle: E }),
+      cs('burst', { burst: true, arc: true }, { tp: 1.2, angle: E }),
+      cs('lance', { lance: true, arc: true }, { tp: 1.2, angle: E }),
+      cs('bind', { bind: true }, { tp: 1.2, angle: E }),
+      cs('conv', { conv: true }, { tp: 1.2, angle: E }),
+      cs('rune', { rune: true }, { tp: 1.2, angle: S }),
+      cs('fire, facing north', { fire: true }, { tp: 1.2, angle: N }),
+      cs('frost, facing west', { frost: true }, { tp: 1.2, angle: Wd }),
+    ],
+    hollowking: [
+      ...rest4({}),
+      ...rest4({}, { extra: { raid: true } }).slice(0, 2).map(c => [c[0] + ' (raid scale)', c[1]]),
+      cs('walking, east', {}, { moving: true, tp: 2, angle: E }),
+      cs('swing, hauled back', { windup: true }, { tp: 1.2, angle: E }),
+      cs('swing, through', {}, { act: 0.5, angle: E }),
+      cs('rise (sword high)', { rise: true }, { tp: 1.2, angle: E }),
+      cs('knell', { knell: true }, { tp: 1.2, angle: E }),
+      cs('graves', { graves: true }, { tp: 1.2, angle: E }),
+      cs('doom', { doom: true }, { tp: 1.2, angle: E }),
+      cs('marks', { marks: true }, { tp: 1.2, angle: E }),
+      cs('gavel', { gavel: true }, { tp: 1.2, angle: E }),
+      cs('scroll', { scroll: true }, { tp: 1.2, angle: E }),
+      cs('gaze', { gaze: true }, { tp: 1.2, angle: E }),
+      cs('audience (hard)', { audience: true }, { tp: 1.2, angle: E }),
+      cs('crownless', { crownless: true }, { tp: 1.2, angle: E }),
+      cs('swing, facing south', {}, { act: 0.5, angle: S }),
+      cs('rise, facing west', { rise: true }, { tp: 1.2, angle: Wd }),
+    ],
+    hood: [
+      ...rest4({}),
+      cs('walking', {}, { moving: true, tp: 2, angle: E }),
+      cs('blade out', { hdBlade: 1 }, { tp: 1.2, angle: E }),
+      cs('palm open', { hdLight: 1 }, { tp: 1.2, angle: E }),
+      cs('blade and palm', { hdBlade: 1, hdLight: 1 }, { tp: 1.2, angle: S }),
+      cs('strike, gathering', { hdBlade: 1 }, { act: 0.1, angle: E }),
+      cs('strike, through', { hdBlade: 1, hdStrike: true }, { act: 0.5, angle: E }),
+      cs('eyes shut', { hdShut: 1 }, { tp: 1.2, angle: S }),
+      cs('kneel (the kill)', { hdKneel: 1 }, { tp: 1.2, angle: S }),
+      cs('lie (the kill)', { hdLie: 1 }, { tp: 1.2, angle: S }),
+      cs('open, 1 s after the pull', { hdOpen: 1 }, { tp: 1.2, angle: S }),
+    ],
+    seraph: [
+      ...rest4({}),
+      cs('hover', { hdHover: 1 }, { tp: 1.2, angle: S }),
+      cs('wing 1 lifted', { hdWing: 1 }, { tp: 1.2, angle: S }),
+      cs('wing 4 lifted', { hdWing: 4 }, { tp: 1.2, angle: S }),
+      cs('gaps filled 3', { hdGaps: 3 }, { tp: 1.2, angle: S }),
+      cs('blade out', { hdBlade: 1 }, { tp: 1.2, angle: E }),
+      cs('palm open', { hdLight: 1 }, { tp: 1.2, angle: E }),
+      cs('strike', { hdBlade: 1, hdStrike: true }, { act: 0.5, angle: E }),
+      cs('kneel (the kill)', { hdKneel: 1 }, { tp: 1.2, angle: S }),
+      cs('lie (the kill)', { hdLie: 1 }, { tp: 1.2, angle: S }),
+    ],
+    sovereign: [
+      ...rest4({ svForm: 'forge' }),
+      cs('hall, rest', { svForm: 'hall' }, { tp: 2, angle: S }),
+      cs('crater, rest', { svForm: 'crater' }, { tp: 2.5, angle: S }),
+      cs('square, rest', { svForm: 'square' }, { tp: 2.5, angle: S }),
+      cs('sweep', { svForm: 'forge', svSweep: true }, { act: 0.5, angle: E }),
+      cs('brand', { svForm: 'forge', svBrand: true }, { act: 0.5, angle: E }),
+      cs('kindling', { svForm: 'forge', svKindling: true }, { act: 0.5, angle: E }),
+      cs('enrage', { svForm: 'square', svEnrage: true, svWheel: 1 }, { tp: 3, angle: S }),
+      cs('gutter (kill)', { svForm: 'forge', svGutter: 0.7 }, { tp: 2, angle: S }),
+    ],
+  };
+  const CELLS = SETS[BOSS] || [];
+  function backdrop(c, w, h) {
+    const g = c.createLinearGradient(0, 0, 0, h);
+    if (DARK) { g.addColorStop(0, '#05070e'); g.addColorStop(1, '#0b1220'); } else { g.addColorStop(0, '#59647a'); g.addColorStop(1, '#6d7a92'); }
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+    c.strokeStyle = 'rgba(20,30,50,0.18)'; c.lineWidth = 1;
+    for (let x = 0; x < w; x += 60) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke(); }
+    for (let y = 0; y < h; y += 60) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+  }
+  const scratch = document.createElement('canvas'); scratch.width = scratch.height = 8; const sx = scratch.getContext('2d');
+  // runs the boss from rest, turns the props on at 0.5 s, and returns a state tp seconds on (so the smoothing is as in play)
+  function stateFor(o) {
+    const st = { t: 0, moving: false, action: null, phase: 0, props: {} }, ang = o.angle || 0;
+    if (o.extra) Object.assign(st, o.extra);
+    const tp = o.act != null ? 0.6 + o.act * 1.4 : (o.tp || 0), T = 0.5 + tp;
+    for (let tt = 0; tt <= T + 1e-6; tt += 1 / 60) {
+      st.t = tt; st.moving = !!(o.moving && tt > 0.4);
+      st.props = tt >= 0.5 ? Object.assign({}, o.props) : {};
+      st.action = o.act != null ? { type: 'attack', t0: 1.1, dur: 1.4 } : null;
+      if (tt < T - 1e-6) { sx.save(); sx.clearRect(0, 0, 8, 8); try { BOSS_ART[BOSS](sx, st, ang); } finally { sx.restore(); } }
+    }
+    return st;
+  }
+  function bossCell(c, o) {
+    const st = stateFor(o);
+    const up = UPRIGHT.has(BOSS);   // the upright figures (feet on the origin, about 170 px tall) sit lower and smaller in the cell
+    c.save(); c.translate(W / 2 + (o.dx || 0), H / 2 + (up ? 100 : 0) + (o.dy || 0)); c.scale(o.zoom || 1, o.zoom || 1);
+    drawBoss(c, { id: BOSS }, 0, 0, o.angle || 0, st, o.scale || (up ? 1.3 : 1.7));
+    c.restore();
+  }
+  const grid = document.getElementById('grid');
+  if (Q.get('bare')) {   // the figure alone, at rest, facing south, on a plain ground (for the before/after pictures)
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; grid.style.display = 'block'; grid.style.padding = '0'; document.body.style.overflow = 'hidden'; grid.append(cv);
+    const c = cv.getContext('2d'); c.fillStyle = '#566178'; c.fillRect(0, 0, W, H);
+    document.getElementById('err').style.display = 'none';
+    bossCell(c, { props: {}, angle: S, tp: 0.6, zoom: +Q.get('zoom') || (UPRIGHT.has(BOSS) ? 1 : 1.25), dy: UPRIGHT.has(BOSS) ? -38 : -22 });
+  } else if (Q.get('perf')) {
+    const cv = document.createElement('canvas'); cv.width = 600; cv.height = 400; const c = cv.getContext('2d');
+    const out = [];
+    for (const cell of CELLS) {
+      const st = stateFor(cell[1]);
+      const t0 = performance.now(), n = 300;
+      for (let i = 0; i < n; i++) { st.t += 1 / 60; c.save(); c.clearRect(0, 0, 600, 400); c.translate(300, 200); c.scale(1.7, 1.7); BOSS_ART[BOSS](c, st, cell[1].angle || 0); c.restore(); }
+      out.push(cell[0] + ' ' + ((performance.now() - t0) / n).toFixed(3));
+    }
+    const rest = out.slice(0, 4).map(s => +s.split(' ').pop()), avg = out.map(s => +s.split(' ').pop()).reduce((a, b) => a + b, 0) / out.length;
+    document.getElementById('err').textContent = 'ms/frame ' + BOSS + ': mean over all cells ' + avg.toFixed(3) + '; rest east/south/north/west ' + rest.join(', ') + '\n' + out.join('\n');
+  } else if (Q.get('one') != null) {
+    const cv = document.createElement('canvas'); cv.width = 960; cv.height = 760; grid.style.display = 'block'; grid.append(cv);
+    const c = cv.getContext('2d'); backdrop(c, 960, 760);
+    const cell = CELLS[+Q.get('one')];
+    c.save(); c.translate(480 - W / 2, 380 - H / 2);
+    bossCell(c, Object.assign({}, cell[1], { zoom: +Q.get('zoom') || 3 })); c.restore();
+  } else {
+    const from = +Q.get('from') || 0, n = +Q.get('n') || 16;
+    const slice = CELLS.slice(from, from + n);
+    for (const [label, o] of slice) {
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = H; grid.append(cv);
+      const c = cv.getContext('2d'); backdrop(c, W, H);
+      try { bossCell(c, o); } catch (e) { window.__errs.push(label + ': ' + (e && e.stack || e)); document.getElementById('err').textContent = window.__errs.join(' | '); }
+      c.fillStyle = '#e8eef8'; c.font = '13px Georgia'; c.fillText(label, 8, 18);
+    }
+  }
+  document.title = 'cells=' + CELLS.length; window.__ready = true;
+</script>
+</body>
+</html>

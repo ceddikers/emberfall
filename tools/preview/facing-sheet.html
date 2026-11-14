@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Boss facing sheet: eight facings at rest</title>
+<style>
+  body { margin: 0; background: #151b26; color: #b8cce0; font: 12px Georgia, serif; }
+  #wrap { padding: 4px; }
+  .row { display: flex; gap: 2px; margin-bottom: 2px; }
+  canvas { display: block; }
+  #err { color: #ff9a8a; padding: 4px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="err"></div>
+<div id="wrap"></div>
+<script>window.__errs = []; window.onerror = (m, s, l) => { window.__errs.push(m + ' (' + String(s).split('/').pop() + ':' + l + ')'); document.getElementById('err').textContent = window.__errs.join(' | '); };</script>
+<script src="../../client/js/draw-util.js"></script>
+<script src="../../client/js/data.js"></script>
+<script src="../../client/js/arena/bosses/archmage.js"></script>
+<script src="../../client/js/bosses.js"></script>
+<script src="../../client/js/arena/shapes.js"></script>
+<script src="../../client/js/arena/boss-tells.js"></script>
+<script src="../../client/js/arena/arena-view.js"></script>
+<script src="../../client/js/set3-sky.js"></script>
+<script>
+  // ?o_<name>=<url> loads an earlier copy of that art file instead (for the before sheets), e.g. ?o_caelum=file:///.../caelum-art.js
+  (function () {
+    const q = new URLSearchParams(location.search);
+    for (const n of ['archmage', 'caelum', 'corvane', 'brannoc', 'hood', 'sovereign', 'vesper', 'ormun', 'garrow', 'morrowoak', 'titan', 'wyrm', 'hydra'])
+      document.write('<script src="' + (q.get('o_' + n) || '../../client/js/' + n + '-art.js') + '"><' + '/script>');
+  })();
+</script>
+<script>
+  // Draws each boss figure at rest in eight facings (east, south-east, south, ... north-east): a game-scale row (RAID_BOSS_SCALE 1.3)
+  // and a 2x row, on the same plain ground, the way ArenaView draws them (drawBoss turns the canvas by the angle; the art counter-turns).
+  // ?ids=caelum,corvane,...   which figures (default: the humanoids)   &rows=game|2x|both   &labels=0 hides the labels (to judge blind)
+  // &bg=dark   &flip=1 draws every facing mirrored about nothing (unused)   &t=seconds of idle before the frame (default 0.6)
+  const Q = new URLSearchParams(location.search);
+  const IDS = (Q.get('ids') || 'caelum,corvane,brannoc,hood,seraph,vesper,sovereign,archmage,hollowking,grubnak').split(',');
+  const ROWS = Q.get('rows') || 'both', LABELS = Q.get('labels') !== '0', DARK = Q.get('bg') === 'dark';
+  const TP = +(Q.get('t') || 0.6);
+  const UPRIGHT = new Set(['caelum', 'hood', 'seraph', 'vesper', 'vesperglass']);
+  const FACINGS = [['E', 0], ['SE', Math.PI / 4], ['S', Math.PI / 2], ['SW', 3 * Math.PI / 4], ['W', Math.PI], ['NW', -3 * Math.PI / 4], ['N', -Math.PI / 2], ['NE', -Math.PI / 4]];
+  const GS = 1.3;
+  function backdrop(c, w, h) {
+    const g = c.createLinearGradient(0, 0, 0, h);
+    if (DARK) { g.addColorStop(0, '#05070e'); g.addColorStop(1, '#0b1220'); } else { g.addColorStop(0, '#59647a'); g.addColorStop(1, '#6d7a92'); }
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+    c.strokeStyle = 'rgba(20,30,50,0.18)'; c.lineWidth = 1;
+    for (let x = 0; x < w; x += 60) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke(); }
+    for (let y = 0; y < h; y += 60) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+  }
+  const scratch = document.createElement('canvas'); scratch.width = scratch.height = 8; const sx = scratch.getContext('2d');
+  function stateFor(id, ang) {
+    const st = { t: 0, moving: false, action: null, phase: 0, props: {} };
+    for (let tt = 0; tt <= 0.5 + TP + 1e-6; tt += 1 / 60) {
+      st.t = tt; st.props = {}; st.action = null;
+      if (tt < 0.5 + TP - 1e-6) { sx.save(); sx.clearRect(0, 0, 8, 8); try { BOSS_ART[id](sx, st, ang); } finally { sx.restore(); } }
+    }
+    return st;
+  }
+  function cell(id, ang, label, k) {
+    const up = UPRIGHT.has(id), W = Math.round(190 * k / 1), H = Math.round((up ? 262 : 230) * k);
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const c = cv.getContext('2d'); backdrop(c, W, H);
+    try {
+      const st = stateFor(id, ang);
+      c.save(); c.translate(W / 2, up ? H - 38 * k : H / 2);
+      drawBoss(c, { id }, 0, 0, ang, st, GS * k); c.restore();
+    } catch (e) { window.__errs.push(id + ' ' + label + ': ' + (e && e.stack || e)); document.getElementById('err').textContent = window.__errs.join(' | '); }
+    if (LABELS) { c.fillStyle = '#e8eef8'; c.font = '13px Georgia'; c.fillText(id + ' ' + label, 6, 16); }
+    return cv;
+  }
+  const wrap = document.getElementById('wrap');
+  for (const id of IDS) {
+    if (typeof BOSS_ART === 'undefined' || !BOSS_ART[id]) { window.__errs.push('no art for ' + id); document.getElementById('err').textContent = window.__errs.join(' | '); continue; }
+    for (const k of (ROWS === 'game' ? [1] : ROWS === '2x' ? [2] : [1, 2])) {
+      const row = document.createElement('div'); row.className = 'row';
+      for (const [lab, ang] of FACINGS) row.append(cell(id, ang, lab, k));
+      wrap.append(row);
+    }
+  }
+  document.title = 'ids=' + IDS.length; window.__ready = true;
+</script>
+</body>
+</html>

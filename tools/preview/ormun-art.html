@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ormun art: poses</title>
+<style>
+  body { margin: 0; background: #0a1018; color: #b8cce0; font: 12px Georgia, serif; }
+  #grid { display: grid; grid-template-columns: repeat(3, 520px); gap: 4px; padding: 4px; }
+  canvas { display: block; }
+  #err { color: #ff9a8a; padding: 4px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="err"></div>
+<div id="grid"></div>
+<script>window.__errs = []; window.onerror = (m, s, l) => { window.__errs.push(m + ' (' + String(s).split('/').pop() + ':' + l + ')'); document.getElementById('err').textContent = window.__errs.join(' | '); };</script>
+<script src="../../client/js/draw-util.js"></script>
+<script src="../../client/js/data.js"></script>
+<script src="../../client/js/bosses.js"></script>
+<script src="../../client/js/arena/shapes.js"></script>
+<script src="../../client/js/arena/boss-tells.js"></script>
+<script src="../../client/js/arena/arena-view.js"></script>
+<script src="../../client/js/ormun-art.js"></script>
+<script>
+  // ?pose=judge&tp=2.5&side=-1&zoom=2  draws one cell large; ?page=0..4 draws six cells of the sheet; no query draws every cell. tp is seconds since the pose turned on.
+  // ?face=0.5 turns the boss's heading (his head follows a little). ?beam=0 hides the room's beam and the pier.
+  const Q = new URLSearchParams(location.search);
+  const W = 520, H = 430;
+  // the room's own colours behind him: night sea, the dark pier, the beam where the room draws it (art y -92 at the beam's rest line), a hero for scale
+  function backdrop(c, seed) {
+    c.fillStyle = '#07111d'; c.fillRect(0, 0, W, H);
+    const r = rng(seed || 7);
+    for (let i = 0; i < 40; i++) { c.fillStyle = 'rgba(120,170,210,' + (0.02 + r() * 0.04) + ')'; c.fillRect(r() * W, r() * H, 40 + r() * 120, 1 + r() * 2); }
+    if (Q.get('beam') === '0') return;
+    const cx = W / 2, cy = H / 2 + 10;
+    circle(c, cx, cy, 178 * 1.3 * 0.9, '#1b2533', '#02040a', 3);
+    // pans' rims at the sides, so that the reach over them can be judged (their centres are 380 px out and 230 below him)
+    for (const s of [-1, 1]) { c.beginPath(); c.arc(cx + s * 380, cy + 230, 300, 0, TAU); c.fillStyle = 'rgba(95,108,126,0.9)'; c.fill(); c.strokeStyle = '#d5dfea'; c.lineWidth = 10; c.stroke(); }
+    c.fillStyle = '#8a98ab'; c.fillRect(0, cy - 120 - 12, W, 24); c.fillStyle = 'rgba(255,255,255,0.4)'; c.fillRect(0, cy - 120 - 10, W, 3);
+    circle(c, cx - 150, cy + 150, 14, '#7aa0ff', OUT, 2.5); circle(c, cx + 150, cy + 150, 14, '#ffd27a', OUT, 2.5);   // two heroes on the pans, 150 px either side of him
+  }
+  // Runs him from rest, turns the pose on at 1 s and draws the frame tp seconds into it (so the smoothing and the sequences are as they are in play).
+  function bossCell(c, o) {
+    const st = { t: 0, moving: false, action: null, phase: 0, props: {} };
+    const scratch = document.createElement('canvas'); scratch.width = scratch.height = 8; const sx = scratch.getContext('2d');
+    const T = 1 + (o.tp || 0), ang = o.angle != null ? o.angle : Math.PI / 2;
+    for (let tt = 0; tt <= T + 1e-6; tt += 1 / 30) {
+      st.t = tt; st.props = {}; st.action = null;
+      if (o.pose && tt >= 1) { st.props[OR_ART.KEYS[OR_ART.POSES.indexOf(o.pose)]] = true; if (o.side != null) st.props.orSide = o.side; if (o.fall != null && tt >= 1 + o.fall) st.props.orFall = true; if (o.dur) st.props.orDur = o.dur; }
+      if (tt < T - 1e-6) { sx.save(); sx.clearRect(0, 0, 8, 8); BOSS_ART.ormun(sx, st, ang); sx.restore(); }
+    }
+    c.save(); c.translate(W / 2, H / 2 + 10); c.scale(o.zoom || 1, o.zoom || 1);
+    drawBoss(c, { id: 'ormun' }, 0, 0, ang, st, 1.3);
+    c.restore();
+  }
+  const CELLS = [
+    ['rest', c => bossCell(c, { tp: 0 })],
+    ['rest, heading turned', c => bossCell(c, { tp: 2, angle: 0.4 })],
+    ['judge: raising 1.2 s', c => bossCell(c, { pose: 'judge', tp: 1.2 })],
+    ['judge: held 4.4 s', c => bossCell(c, { pose: 'judge', tp: 4.4 })],
+    ['judge falls left 6.4 s', c => bossCell(c, { pose: 'judge', side: -1, tp: 6.4 })],
+    ['judge falls right 6.4 s', c => bossCell(c, { pose: 'judge', side: 1, tp: 6.4 })],
+    ['judge falls on both 6.4 s', c => bossCell(c, { pose: 'judge', side: 0, tp: 6.4 })],
+    ['blow: wound up 1.6 s', c => bossCell(c, { pose: 'blow', side: 1, tp: 1.6 })],
+    ['blow: landed 2.2 s', c => bossCell(c, { pose: 'blow', side: 1, tp: 2.2 })],
+    ['tide: gathering 0.5 s', c => bossCell(c, { pose: 'tide', tp: 0.5 })],
+    ['tide: spate 2 s', c => bossCell(c, { pose: 'tide', tp: 2 })],
+    ['drop: held out 0.9 s', c => bossCell(c, { pose: 'drop', side: 1, tp: 0.9 })],
+    ['drop: let go 1.8 s', c => bossCell(c, { pose: 'drop', side: -1, tp: 1.8 })],
+    ['cradle: raised 1.3 s', c => bossCell(c, { pose: 'cradle', side: -1, tp: 1.3 })],
+    ['cradle: struck 2.2 s', c => bossCell(c, { pose: 'cradle', side: -1, tp: 2.2 })],
+    ['bridge: both up 2.2 s', c => bossCell(c, { pose: 'bridge', tp: 2.2 })],
+    ['bridge: both down 3.3 s', c => bossCell(c, { pose: 'bridge', tp: 3.3 })],
+    ['tip: lifted (left) 1.0 s', c => bossCell(c, { pose: 'tip', side: -1, tp: 1.0 })],
+    ['tip: bearing down (right) 2.0 s', c => bossCell(c, { pose: 'tip', side: 1, tp: 2.0 })],
+    ['intro 0.7 s', c => bossCell(c, { pose: 'intro', tp: 0.7 })],
+    ['intro 1.8 s', c => bossCell(c, { pose: 'intro', tp: 1.8 })],
+    ['death 1.2 s', c => bossCell(c, { pose: 'death', tp: 1.2 })],
+    ['death 2.4 s', c => bossCell(c, { pose: 'death', tp: 2.4 })],
+    ['death 3.6 s', c => bossCell(c, { pose: 'death', tp: 3.6 })],
+    ['enrage 1.6 s', c => bossCell(c, { pose: 'enrage', tp: 1.6 })],
+  ];
+  const grid = document.getElementById('grid');
+  if (Q.get('strip')) {   // ?strip=blow&side=1&dur=3&us=-2.6,... : one move across its cast and landing, a cell per moment (us: seconds from the landing; dur: the cast's length)
+    const pose = Q.get('strip'), dur = +Q.get('dur') || 3, side = Q.has('side') ? +Q.get('side') : null;
+    const us = (Q.get('us') || '-2.8,-2.0,-1.2,-0.6,-0.25,-0.1,0.0,0.1,0.25,0.5,1.0').split(',').map(Number);
+    grid.style.cssText = 'display:flex;flex-wrap:nowrap;gap:2px;padding:2px';
+    for (const u of us) {
+      const big = document.createElement('canvas'); big.width = W; big.height = H;
+      const bc = big.getContext('2d'); backdrop(bc, 5); bossCell(bc, { pose, side, dur, tp: dur + u, zoom: 1 });
+      const cv = document.createElement('canvas'); cv.width = 300; cv.height = 250; grid.append(cv);
+      const c = cv.getContext('2d'); c.drawImage(big, 0, 0, W, H, 0, 0, 300, 248);
+      c.font = '12px Georgia'; c.fillStyle = Math.abs(u) < 0.01 ? '#ffb0a0' : 'rgba(190,210,235,0.9)'; c.fillText((u >= 0 ? '+' : '') + u.toFixed(2) + ' s' + (u === 0 ? ' (lands)' : ''), 8, 16);
+    }
+  } else if (Q.get('pose') || Q.get('one')) {
+    const cv = document.createElement('canvas'); cv.width = 1040; cv.height = 860; grid.style.display = 'block'; grid.append(cv);
+    const c = cv.getContext('2d'); c.save(); c.scale(2, 2); backdrop(c, 3); c.restore();
+    c.save(); c.translate(520 - W / 2 * (+Q.get('zoom') || 1), 430 - H / 2 * (+Q.get('zoom') || 1)); c.restore();
+    c.save(); c.scale(2, 2);
+    bossCell(c, { pose: Q.get('pose') === 'rest' ? null : Q.get('pose'), tp: +Q.get('tp') || 0, side: Q.has('side') ? +Q.get('side') : null, angle: Q.has('face') ? +Q.get('face') : null, zoom: +Q.get('zoom') || 1 });
+    c.restore();
+  } else {
+    const page = Q.has('page') ? +Q.get('page') : -1, list = page >= 0 ? CELLS.slice(page * 6, page * 6 + 6) : CELLS;
+    for (const [label, fn] of list) {
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = H; grid.append(cv);
+      const c = cv.getContext('2d'); backdrop(c, label.length * 13);
+      try { fn(c); } catch (e) { window.__errs.push(label + ': ' + e.message + ' ' + (e.stack || '').split('\n')[1]); document.getElementById('err').textContent = window.__errs.join(' | '); }
+      c.font = '12px Georgia'; c.fillStyle = 'rgba(190,210,235,0.9)'; c.fillText(label, 8, 16);
+    }
+  }
+</script>
+</body>
+</html>

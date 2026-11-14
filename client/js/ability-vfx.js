@@ -163,6 +163,876 @@ const OLD_PAINT = (() => {
   return { markK, linger, smear, thrust, rim, chain, later };
 })();
 
+// ======================================================================= HERO PILOT · shared materials (Bastion, Shadowblade, Pyromancer, Cleric)
+// Each class draws its abilities from its own material so they look like what they are: living fire (tongues of flame
+// that lick up and curl, embers that drift and gutter out, heat, scorch, smoke that thins), clean steel (a cut that opens
+// and closes on the target, sparks that bite), ink and venom, and falling light (a curtain of rays, a bloom, motes that
+// rise and go). All of it is cosmetic, built from VFX's own sprites and effects, and runs under the caller's VFX scale
+// (a teammate's cast is dimmed), so it draws the same from the events every client gets. The pieces here are small and
+// capped: a recipe spends a handful of particles, never a hundred.
+// class-shaped crit marks drawn by the hands-on passes (HFX.crit calls CRIT_IKG[class id](x, y, tier) when there is one)
+const CRIT_IKG = {};
+const HFX = (() => {
+  const V = VFX, TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a);
+  const clamp01 = v => Math.max(0, Math.min(1, v));
+  const FIRE = { deep: '#ff4a14', mid: '#ff7a1a', warm: '#ffb040', hot: '#fff2c0', ink: '#3a0e04' };
+
+  // ---- fire
+  // tongues of flame standing up from a patch of floor: they rise, narrow and burn out (o.up: how fast they climb, o.out: how far they lean outward)
+  function flames(x, y, o = {}) {
+    const n = o.n ?? 6, r = o.r ?? 16, s = o.s ?? 1, up = o.up ?? 1, out = o.out ?? 14;
+    for (let i = 0; i < n; i++) {
+      const a = rnd(0, TAU), d = Math.sqrt(Math.random()) * r;
+      V.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.6, z: o.z ?? 4, vx: Math.cos(a) * out, vy: Math.sin(a) * out * 0.6, vz: rnd(40, 100) * up, drag: 0.04,
+        life: rnd(0.35, 0.65) * (o.life ?? 1), size: rnd(28, 42) * s, size1: rnd(8, 14) * s, color: o.color || (Math.random() < 0.4 ? FIRE.deep : '#ff8a22'), kind: 'flame', add: false, rot: 0, fadePow: 1.3 });
+    }
+  }
+  // sparks of heat that rise on a wobble, drift on the air and gutter out
+  function embers(x, y, o = {}) {
+    const n = o.n ?? 6, r = o.r ?? 14, s = o.s ?? 1;
+    for (let i = 0; i < n; i++) V.spawn({ x: x + rnd(-r, r), y: y + rnd(-r, r) * 0.6, z: o.z ?? rnd(6, 24), vx: rnd(-18, 18), vy: rnd(-8, 8), vz: rnd(50, 120) * (o.rise ?? 1), drag: 0.025,
+      life: rnd(0.9, 1.7) * (o.life ?? 1), size: rnd(2.5, 4.5) * s, size1: 0, color: Math.random() < 0.55 ? '#ffc060' : '#ff7a2a', sway: rnd(18, 36), swayW: rnd(4, 8), flick: rnd(22, 34), fadePow: 1.1 });
+  }
+  // smoke that climbs and thins (never the cartoon puff's outward burst): a few soft dark blots, wider as they go
+  function smokeUp(x, y, o = {}) {
+    const n = o.n ?? 3, r = o.r ?? 12, s = o.s ?? 1;
+    for (let i = 0; i < n; i++) V.spawn({ x: x + rnd(-r, r), y: y + rnd(-r, r) * 0.6, z: rnd(4, 14), vx: rnd(-10, 10), vy: rnd(-5, 5), vz: rnd(22, 44), drag: 0.03, life: rnd(1, 1.8) * (o.life ?? 1),
+      size: rnd(16, 24) * s, size1: rnd(34, 52) * s, color: o.color || '#4a403c', kind: 'smoke', add: false, a: o.a ?? 0.4, fadeIn: 0.15, fadePow: 2 });
+  }
+  // heat shimmer: a few faint pale bands wobbling up off a hot spot (o.follow keeps it over an entity). Very low alpha: it is felt, not seen
+  function haze(x, y, o = {}) {
+    const w = o.w ?? 40, h = o.h ?? 64, dur = o.dur ?? 0.9, n = o.n ?? 3, a0 = o.a ?? 0.09, f = o.follow;
+    return V.fx({ dur, layer: 'air', add: true, draw: (c, p, t, e) => {
+      const k = e.a * Math.min(1, p / 0.2, (1 - p) / 0.4) * a0, cx = f ? f.x : x, cy = f ? f.y : y;
+      if (k < 0.004) return;
+      c.lineCap = 'round'; c.strokeStyle = '#fff1e0'; c.lineWidth = o.lw ?? 8;
+      for (let i = 0; i < n; i++) { const bx = cx + (i - (n - 1) / 2) * w / n; c.globalAlpha = k; c.beginPath();
+        for (let j = 0; j <= 8; j++) { const q = j / 8; c.lineTo(bx + Math.sin(t * 5 + q * 6 + i * 2) * 5 * q, cy - (o.z0 ?? 6) - q * h); } c.stroke(); }
+    } });
+  }
+  // a charred blot on the floor that fades slowly (a hit's scorch)
+  const scorch = (x, y, r, dur = 1.6, a = 0.4) => V.decal(x, y, { r, dur, a });
+  // the bloom of a fire hit: a white-hot heart, tongues thrown out and curling up, one low ring of heat, embers and a little smoke, a scorch.
+  // s sizes it (a filler 0.8, a big button 1.4+); o.n tongues; o.hs a hotter heart (Hot Streak: gold)
+  function fireBloom(x, y, o = {}) {
+    const s = o.s ?? 1, n = o.n ?? Math.round(7 + 4 * s);
+    V.flash(x, y - 14 * s, 38 * s, o.hs ? '#ffe08a' : '#ffb050', 0.14);
+    V.spawn({ x, y, z: 16 * s, life: 0.17, size: 40 * s, size1: 12 * s, color: o.hs ? '#fffbe8' : '#fff2c0' });
+    for (let i = 0; i < n; i++) { const a = i / n * TAU + rnd(-0.35, 0.35), sp = rnd(50, 105) * s;
+      V.spawn({ x, y, z: 8 * s, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rnd(30, 85), drag: 0.1, life: rnd(0.4, 0.68), size: rnd(32, 46) * s, size1: rnd(10, 16) * s, color: i % 3 ? '#ff7a1a' : '#ff4a14', kind: 'flame', add: false, rot: 0, fadePow: 1.3 }); }
+    V.shock(x, y, { r: 48 * s, color: '#ff9a3a', dur: 0.28, w: 3 });
+    embers(x, y, { n: o.embers ?? Math.round(4 + 2 * s), s: 0.9 * s, r: 10 * s });
+    if (o.smoke !== false) smokeUp(x, y, { n: 2, s: 0.7 * s, a: 0.3 });
+    if (o.scorch !== false) scorch(x, y, 20 * s, 1.4 + 0.5 * s, 0.35);
+  }
+
+  // (landing pass) the weight of a fire landing, for the Fireball, Pyroblast and Phoenix Dive: a HARD core, not a glow: a lumpy disc of fire with an ink rim
+  // (ink, orange, gold, white-hot heart: opaque, so it reads on the pale floor) that pops in 0.06s and holds a beat, a thick ink-rimmed ring of heat that runs
+  // out along the floor, and an aftermath of rising embers. It sits ON TOP of fireBloom / blast (the tongues, scorch and smoke stay). o.s sizes it, o.hs a gold heart
+  function fireHit(x, y, o = {}) {
+    const s = o.s ?? 1, hs = !!o.hs, ph = Math.random() * TAU, z = 16 * s;
+    V.fx({ dur: 0.5, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - clamp01((p - 0.55) / 0.45)); if (k < 0.02) return;
+      const pop = t < 0.06 ? 0.45 + 0.8 * easeOut(t / 0.06) : 1.25 - 0.45 * clamp01((t - 0.06) / 0.4), R = 20 * s * pop;
+      const blob = r => { c.beginPath(); for (let i = 0; i <= 26; i++) { const a = i / 26 * TAU, rr = r * (1 + 0.16 * Math.sin(a * 5 + ph + t * 14) + 0.08 * Math.sin(a * 3 - ph)), px = Math.cos(a) * rr, py = Math.sin(a) * rr * 0.92; i ? c.lineTo(px, py) : c.moveTo(px, py); } c.closePath(); };
+      c.save(); c.translate(x, y - z); c.globalAlpha = k;
+      blob(R + 4.5); c.fillStyle = FIRE.ink; c.fill(); blob(R); c.fillStyle = hs ? '#ffb040' : FIRE.mid; c.fill(); blob(R * 0.72); c.fillStyle = hs ? '#ffe08a' : '#ffc060'; c.fill(); blob(R * 0.4); c.fillStyle = hs ? '#fffbe8' : FIRE.hot; c.fill();
+      c.restore();
+      const rq = clamp01(t / 0.36); if (rq < 1) { const Rr = 12 + 62 * s * easeOut(rq), kk = e.a * (1 - rq * rq);
+        c.save(); c.beginPath(); c.ellipse(x, y, Rr, Rr * 0.62, 0, 0, TAU); c.globalAlpha = 0.8 * kk; c.strokeStyle = FIRE.ink; c.lineWidth = 8 - 4 * rq; c.stroke(); c.globalAlpha = kk; c.strokeStyle = hs ? FIRE.warm : '#ff8a22'; c.lineWidth = 4.4 - 2.6 * rq; c.stroke(); c.restore(); }
+    } });
+    embers(x, y, { n: Math.round(3 + 3 * s), s: 1.05, r: 12 * s, rise: 1.2, life: 1.35 });
+  }
+
+  // ---- steel and ink
+  // a lens of light (a wound): from p1 to p2, bowed by `bend` of its length, w wide at the middle
+  function lens(c, x1, y1, x2, y2, w, bend) {
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, nx = -(y2 - y1), ny = x2 - x1, L = Math.hypot(nx, ny) || 1, bx = mx + nx / L * bend, by = my + ny / L * bend;
+    c.beginPath(); c.moveTo(x1, y1); c.quadraticCurveTo(bx + nx / L * w, by + ny / L * w, x2, y2); c.quadraticCurveTo(bx - nx / L * w, by - ny / L * w, x1, y1); c.closePath(); c.fill();
+  }
+  // a cut opening on the target: a lens with a dark lip, a coloured body and a white core. It opens in a few frames, holds a beat and closes
+  // (o.len length, o.w half-width at its widest, o.bend bow, o.color, o.inner the colour showing in the wound, o.delay, o.z height)
+  function cut(x, y, ang, o = {}) {
+    const L = (o.len ?? 40) * 1.2, W = (o.w ?? 3.2) * 1.15, col = o.color || '#e4eeff', inner = o.inner || col, dur = o.dur ?? 0.4, z = o.z ?? 16, bend = (o.bend ?? 0.16) * L, ink = o.ink || '#10182c';
+    const ca = Math.cos(ang), sa = Math.sin(ang) * 0.8;
+    V.fx({ dur, layer: 'air', delay: o.delay, draw: (c, p, t, e) => {
+      const open = easeOut(Math.min(1, p / 0.2)), close = clamp01((p - 0.32) / 0.68), k = e.a * (1 - close * close);
+      if (k < 0.02) return;
+      const l = L * open, w = W * (1 - 0.8 * close), cy = y - z;
+      c.save();
+      c.globalAlpha = 0.9 * k; c.fillStyle = ink; lens(c, x - ca * l / 2, cy - sa * l / 2, x + ca * l / 2, cy + sa * l / 2, w * 2 + 1.6, bend);
+      c.globalAlpha = 0.95 * k; c.fillStyle = inner; lens(c, x - ca * l / 2, cy - sa * l / 2, x + ca * l / 2, cy + sa * l / 2, w * 1.25, bend);
+      c.globalAlpha = k; c.fillStyle = col === inner ? '#ffffff' : col; lens(c, x - ca * l * 0.46, cy - sa * l * 0.46, x + ca * l * 0.46, cy + sa * l * 0.46, w * 0.5, bend);
+      c.restore();
+    } });
+  }
+  // a little ink: dark wisps curling off a point and thinning (shadow stuff leaves smoke, never sparkle)
+  function inkWisps(x, y, o = {}) {
+    const n = o.n ?? 4, s = o.s ?? 1;
+    for (let i = 0; i < n; i++) V.spawn({ x: x + rnd(-8, 8), y: y + rnd(-4, 4), z: rnd(4, 20), vx: rnd(-26, 26), vy: rnd(-10, 10), vz: rnd(14, 40), drag: 0.05, life: rnd(0.9, 1.5) * (o.life ?? 1),
+      size: rnd(14, 22) * s, size1: rnd(30, 46) * s, color: o.color || '#1c1030', kind: 'smoke', add: false, a: o.a ?? 0.5, fadeIn: 0.1, fadePow: 2 });
+  }
+
+  // ---- light
+  // a curtain of thin rays falling onto a spot, each starting a beat after its neighbour and thinning out; o.w the width of the curtain, o.h how high it starts
+  function curtain(x, y, o = {}) {
+    const n = o.n ?? 7, w = o.w ?? 70, h = o.h ?? 150, dur = o.dur ?? 0.7, col = o.color || '#fff0b0', rw = o.rw ?? 7, shaft = V.sprite('shaft', col);
+    const rays = Array.from({ length: n }, (_, i) => ({ dx: (i - (n - 1) / 2) / (Math.max(1, (n - 1) / 2)) * w / 2 + rnd(-3, 3), d: rnd(0, 0.16), ww: rw * rnd(0.6, 1.3), hh: h * rnd(0.75, 1.1) }));
+    const gold = V.sprite('shaft', o.deep || '#ffc22e');
+    V.fx({ dur, layer: 'air', delay: o.delay, draw: (c, p, t, e) => {
+      const pk = e.a * Math.sin(Math.PI * clamp01(p * 1.15));
+      c.globalAlpha = 0.2 * pk; c.fillStyle = '#ffd24a'; c.beginPath(); c.ellipse(x, y, w * 0.55, w * 0.25, 0, 0, TAU); c.fill();
+      for (const r of rays) { const q = clamp01((p - r.d) / 0.16), out = clamp01((p - 0.5 - r.d * 0.5) / 0.5), k = e.a * q * (1 - out);
+        if (k < 0.02) continue;
+        const hh = r.hh * easeOut(q); c.globalAlpha = Math.min(1, k * 0.4); c.drawImage(gold, x + r.dx - r.ww * 0.8, y - hh, r.ww * 1.6, hh);
+        c.globalCompositeOperation = 'lighter'; c.globalAlpha = Math.min(1, k * 0.1); c.drawImage(shaft, x + r.dx - r.ww / 2, y - hh, r.ww, hh); c.globalCompositeOperation = 'source-over'; }
+      V.glowAt(c, x, y - 4, w * 0.62, col, 0.2 * pk);   // (heal pass: the rays' light was adding up to a white-out over the boss for about 0.3s)
+    } });
+  }
+  // motes of light climbing off a spot, slowing and going out (the aftermath of anything holy)
+  function lightMotes(x, y, o = {}) {
+    const n = o.n ?? 6, r = o.r ?? 16, col = o.color || '#fff0b0';
+    for (let i = 0; i < n; i++) V.spawn({ x: x + rnd(-r, r), y: y + rnd(-r, r) * 0.5, z: rnd(2, 16), vx: rnd(-6, 6), vz: rnd(34, 78), drag: 0.02, life: rnd(1, 1.7) * (o.life ?? 1), size: rnd(4, 7) * (o.s ?? 1), size1: 0, color: Math.random() < 0.3 ? '#fff6c8' : (o.deep || '#ffcf3a'), add: false,
+      kind: Math.random() < 0.35 ? 'star' : 'glow', sway: rnd(8, 18), swayW: rnd(3, 6), vr: rnd(-2, 2) });
+  }
+
+  // an ink-dark smear following a swing: a tapered band, thick toward the blade's leading edge, that closes up behind it (dark, not light: shadow leaves a stain, steel a glint)
+  function inkSmear(x, y, ang, o = {}) {
+    const r = o.r ?? 56, span = o.span ?? 2, W = o.w ?? 12, fl = o.flip ? -1 : 1, dur = o.dur ?? 0.3, z = o.z ?? 12;
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const sw = easeOut(Math.min(1, p / 0.35)), k = e.a * (1 - clamp01((p - 0.3) / 0.7)), a0 = ang - fl * span / 2, a1 = a0 + fl * span * sw, aT = a0 + (a1 - a0) * clamp01((p - 0.15) / 0.7);
+      if (k < 0.02 || Math.abs(a1 - aT) < 0.04) return;
+      c.save(); c.translate(x, y - z); c.scale(1, 0.82); c.fillStyle = o.color || '#0c0614'; c.globalAlpha = 0.5 * k; c.beginPath(); const N = 14;
+      for (let i = 0; i <= N; i++) { const a = aT + (a1 - aT) * i / N; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+      for (let i = N; i >= 0; i--) { const q = i / N, a = aT + (a1 - aT) * q, th = W * Math.pow(q, 0.8); c.lineTo(Math.cos(a) * (r - th), Math.sin(a) * (r - th)); }
+      c.closePath(); c.fill(); c.restore();
+    } });
+  }
+  // the shadow step: a dark silhouette of a body streaking from one point to another, a tapered ink ribbon with a violet edge that closes up behind it
+  function shadowSmear(x1, y1, x2, y2, o = {}) {
+    const dur = o.dur ?? 0.5, W = o.w ?? 15, L = Math.hypot(x2 - x1, y2 - y1), ang = Math.atan2(y2 - y1, x2 - x1), nx = -Math.sin(ang) * 0.8, ny = Math.cos(ang) * 0.8, ca = Math.cos(ang), sa = Math.sin(ang) * 0.8;
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const head = easeOut(clamp01(p / 0.3)), tail = clamp01((p - 0.2) / 0.6), k = e.a * (1 - clamp01((p - 0.55) / 0.45)), a = tail * L, b = head * L;
+      if (b - a < 2 || k < 0.02) return;
+      c.save(); c.translate(x1, y1 - 20); c.lineJoin = 'round'; c.beginPath(); const N = 12;
+      for (let i = 0; i <= N; i++) { const q = i / N, l = a + (b - a) * q, w = W * Math.pow(q, 0.7); c.lineTo(ca * l + nx * w, sa * l + ny * w); }
+      for (let i = N; i >= 0; i--) { const q = i / N, l = a + (b - a) * q, w = W * Math.pow(q, 0.7); c.lineTo(ca * l - nx * w, sa * l - ny * w); }
+      c.closePath(); c.globalAlpha = 0.78 * k; c.fillStyle = '#0a0412'; c.fill();
+      c.beginPath(); c.ellipse(ca * b, sa * b, W * 0.9, W * 0.7, ang, 0, TAU); c.fill();
+      c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.55 * k; c.strokeStyle = '#9a4dff'; c.lineWidth = 1.6; c.stroke();
+      c.restore();
+    } });
+  }
+
+  // ---- projectiles and bigger fire
+  // a fireball in flight: a teardrop of flame (hot white heart, orange body, red rim) with tongues left behind that drift back and up while they
+  // burn out, sparks, and a thin smoke. o.rock: a dark molten rock inside it (Pyroblast); o.gold: a hotter, yellower heart (Hot Streak). Returns its flight time
+  function fireball(sx, sy, tx, ty, o = {}) {
+    const speed = o.speed ?? 650, d = Math.hypot(tx - sx, ty - sy), dur = Math.max(0.1, d / speed), arc = o.arc ?? 0, s = o.size ?? 1, ang = Math.atan2(ty - sy, tx - sx), ca = Math.cos(ang), sa = Math.sin(ang);
+    const pos = p => ({ x: sx + (tx - sx) * p, y: sy + (ty - sy) * p, z: 18 + Math.sin(p * Math.PI) * arc });
+    V.fx({ dur, layer: 'air', tick: p => {
+      const q = pos(p);
+      V.spawn({ x: q.x - ca * 6 * s, y: q.y - sa * 6 * s, z: q.z, vx: -ca * rnd(20, 60) + rnd(-12, 12), vy: -sa * rnd(20, 60) + rnd(-8, 8), vz: rnd(10, 40), drag: 0.07, life: rnd(0.22, 0.4), size: rnd(16, 24) * s, size1: 3, color: Math.random() < 0.5 ? '#ff6a1a' : '#ff9a2a', kind: 'flame', add: false, rot: 0, fadePow: 1.2 });
+      if (Math.random() < 0.7) V.spawn({ x: q.x, y: q.y, z: q.z, vx: -ca * rnd(40, 130) + rnd(-35, 35), vy: -sa * rnd(40, 130) + rnd(-35, 35), vz: rnd(10, 70), drag: 0.06, g: 140, life: rnd(0.3, 0.6), size: rnd(3, 5) * s, size1: 0, color: Math.random() < 0.5 ? '#ffd070' : '#ff8a2a', stretch: 2 });
+      if (Math.random() < 0.22) V.spawn({ x: q.x, y: q.y, z: q.z, vx: rnd(-20, 20), vy: rnd(-20, 20), vz: rnd(15, 40), life: 0.7, size: rnd(10, 16) * s, size1: 26 * s, color: '#3a2a2a', kind: 'smoke', add: false, a: 0.28 });
+    }, draw: (c, p, t, e) => {
+      const q = pos(p), y = q.y - q.z, fl = 1 + Math.sin(t * 40) * 0.12;
+      V.glowAt(c, q.x, y, 30 * s, '#ff7a1a', 0.8 * e.a);
+      c.save(); c.translate(q.x, y); c.rotate(ang);
+      for (const [col, L, W, al] of [['#8a1a06', 38, 14, 0.85], ['#ff4a14', 34, 11.5, 0.95], ['#ff9a2a', 25, 8, 1], [o.gold ? '#fffbe8' : '#fff2c0', 14, 4.6, 1]]) {
+        c.globalAlpha = al * e.a; c.fillStyle = col; c.beginPath();
+        c.moveTo(W * s, 0); c.quadraticCurveTo(W * s * 0.9, W * s, -L * s * 0.45 * fl, W * 0.35 * s); c.lineTo(-L * s * fl, 0); c.lineTo(-L * s * 0.45 * fl, -W * 0.35 * s); c.quadraticCurveTo(W * s * 0.9, -W * s, W * s, 0); c.fill(); }
+      c.restore();
+      if (o.rock) { c.save(); c.translate(q.x, y); c.rotate(t * 5); c.globalAlpha = e.a; c.fillStyle = '#3a2218'; c.beginPath(); for (let i = 0; i < 7; i++) { const a = i * TAU / 7, rr = 8.5 * s * (i % 2 ? 0.8 : 1); c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); c.fill();
+        c.strokeStyle = '#ff9a2a'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(-5 * s, -2 * s); c.lineTo(0, 1 * s); c.lineTo(4 * s, -3 * s); c.stroke(); c.restore(); }
+      V.glowAt(c, q.x, y, 12 * s, o.gold ? '#fffbe8' : '#ffe08a', 0.9 * e.a);
+    }, done: () => { if (o.onHit) o.onHit(tx, ty); } });
+    return dur;
+  }
+  // a big fire hit (Pyroblast, the Phoenix): the bloom, a head of flame climbing the middle, tongues licking round the rim, a deep scorch and a smoke that climbs
+  function blast(x, y, o = {}) {
+    const s = o.s ?? 1.6;
+    fireBloom(x, y, { s, n: 13, hs: o.hs, embers: 9, scorch: false, smoke: false });
+    for (let i = 0; i < 5; i++) V.spawn({ x: x + rnd(-10, 10) * s, y: y + rnd(-5, 5), z: 10, vx: rnd(-10, 10), vz: rnd(90, 150), drag: 0.05, life: rnd(0.5, 0.8), size: rnd(34, 50) * s, size1: 10, color: '#ff8a22', kind: 'flame', add: false, rot: 0, fadePow: 1.2 });
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + rnd(-0.2, 0.2); V.spawn({ x: x + Math.cos(a) * 34 * s, y: y + Math.sin(a) * 20 * s, z: 2, vx: Math.cos(a) * 20, vy: Math.sin(a) * 12, vz: rnd(30, 60), life: rnd(0.5, 0.9), size: rnd(18, 26) * s, size1: 6, color: '#ff5a14', kind: 'flame', add: false, rot: 0, fadePow: 1.1 }); }
+    scorch(x, y, 38 * s, 2.8, 0.5); smokeUp(x, y, { n: 4, s: 1.1 * s, life: 1.3, a: 0.42 });
+    V.debris(x, y, { n: 3, hot: true, color: '#4a3226' });
+  }
+  // fire coming up out of the floor: a column of stacked flame that swells and thins, a ring of tongues round its foot, embers, smoke, scorch
+  function geyser(x, y, o = {}) {
+    const s = o.s ?? 1, H = 120 * s, fl = [V.sprite('flame', '#ff8a22'), V.sprite('flame', '#ff5a14')];
+    V.fx({ dur: 0.75, layer: 'air', draw: (c, p, t, e) => {
+      const up = easeOut(clamp01(p / 0.22)), out = clamp01((p - 0.38) / 0.62), k = e.a * (1 - out);
+      if (k < 0.02) return;
+      V.glowAt(c, x, y - 6, 60 * s, '#ff7a1a', 0.5 * k);
+      for (let i = 0; i < 9; i++) { const q = i / 8, hh = H * up * q, w = (40 - 24 * q) * s * (1 - 0.5 * out), sw = Math.sin(t * 14 + i * 1.3) * 5 * q;
+        c.globalAlpha = k * (0.95 - 0.5 * q); c.drawImage(fl[i % 2], x + sw - w / 2, y - hh - w * 1.2, w, w * 1.5); }
+      V.glowAt(c, x, y - H * 0.5 * up, 22 * s, '#fff2c0', 0.5 * k);
+    } });
+    for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; V.spawn({ x: x + Math.cos(a) * 46 * s, y: y + Math.sin(a) * 28 * s, z: 2, vx: Math.cos(a) * 16, vy: Math.sin(a) * 10, vz: rnd(70, 120), drag: 0.03, life: rnd(0.45, 0.8), size: rnd(18, 28) * s, size1: 5, color: '#ff6a1a', kind: 'flame', add: false, rot: 0, fadePow: 1.2 }); }
+    embers(x, y, { n: 12, s: 1.2, r: 26, rise: 1.5, life: 1.3 }); smokeUp(x, y, { n: 4, s: 1.2, life: 1.4, a: 0.4 }); scorch(x, y, 52 * s, 3, 0.5);
+    haze(x, y, { w: 70, h: 110, dur: 1.6, n: 4, a: 0.1 });
+  }
+  // a thrown blade of light: a sword spinning end over end with three fading after-images and a gold wake. Returns its flight time
+  function spinBlade(sx, sy, tx, ty, o = {}) {
+    const speed = o.speed ?? 900, d = Math.hypot(tx - sx, ty - sy), dur = Math.max(0.1, d / speed), col = o.color || '#ffe08a', s = o.size ?? 1, ang = Math.atan2(ty - sy, tx - sx);
+    const pos = p => ({ x: sx + (tx - sx) * p, y: sy + (ty - sy) * p, z: 20 + Math.sin(p * Math.PI) * (o.arc ?? 14) });
+    const sword = (c, a, k) => { c.save(); c.rotate(a); c.globalAlpha = k; c.beginPath(); c.moveTo(26 * s, 0); c.lineTo(-8 * s, -5.5 * s); c.lineTo(-13 * s, 0); c.lineTo(-8 * s, 5.5 * s); c.closePath(); c.lineJoin = 'round'; c.lineWidth = 3.4; c.strokeStyle = '#3a2a08'; c.stroke(); c.fillStyle = '#fffbe8'; c.fill();
+      c.fillStyle = '#3a2a08'; c.fillRect(-13.5 * s, -10 * s, 5 * s, 20 * s); c.fillStyle = col; c.fillRect(-12.5 * s, -9 * s, 3 * s, 18 * s); c.restore(); };
+    V.fx({ dur, layer: 'air', tick: p => { const q = pos(p); if (Math.random() < 0.6) V.spawn({ x: q.x + rnd(-5, 5), y: q.y + rnd(-3, 3), z: q.z + rnd(-4, 4), vz: rnd(10, 40), vx: rnd(-10, 10), life: rnd(0.3, 0.55), size: rnd(3, 6) * s, size1: 0, color: col, kind: Math.random() < 0.4 ? 'star' : 'glow' }); },
+      draw: (c, p, t, e) => {
+        const q = pos(p), y = q.y - q.z, b = pos(Math.max(0, p - 0.14));
+        V.streakTo(c, b.x, b.y - b.z, q.x, y, 6 * s, col, 0.8 * e.a);
+        V.glowAt(c, q.x, y, 28 * s, col, 0.7 * e.a);
+        c.save(); c.translate(q.x, y);
+        for (let i = 3; i >= 0; i--) sword(c, ang + t * 16 - i * 0.55, e.a * (i ? 0.22 - i * 0.05 : 1));
+        c.restore(); V.glowAt(c, q.x, y, 9 * s, '#ffffff', 0.9 * e.a);
+      }, done: () => { if (o.onHit) o.onHit(tx, ty); } });
+    return dur;
+  }
+  // light travelling back from a point to a hero (a heal returning): a bright mote on an arc with a short tail
+  function lightThread(x1, y1, x2, y2, o = {}) {
+    const col = o.color || '#ffe9a0', dur = o.dur ?? 0.45, bow = o.bow ?? 26;
+    const at = p => ({ x: x1 + (x2 - x1) * p, y: y1 + (y2 - y1) * p - Math.sin(p * Math.PI) * bow - 16 });
+    V.fx({ dur, layer: 'air', delay: o.delay, add: true, draw: (c, p, t, e) => {
+      for (let i = 0; i < 6; i++) { const q = at(clamp01(easeOut(p) - i * 0.045)), k = e.a * (1 - i / 6) * Math.min(1, (1 - p) / 0.2 + 0.2); V.glowAt(c, q.x, q.y, (9 - i) * 1.3, col, 0.8 * k); }
+      const h = at(easeOut(p)); V.glowAt(c, h.x, h.y, 4, '#ffffff', e.a);
+    }, done: () => { V.glint(x2, y2, { color: col, size: 20, z: 24 }); } });
+  }
+
+  // ---- how big a hit was (main.js onMyDamage calls this for your own crits and unusually large hits): a mark over the boss
+  // in the class's own material, drawn small and gone in half a second so the boss stays readable. tier 1 a crit, 2 a big
+  // one (a well-above-usual hit or 400+), 3 a very large crit (800+): wider, with a ring on the floor and a shower
+  function crit(x, y, cls, o = {}) {
+    const id = cls && cls.id, tier = o.tier ?? 1, s = [0, 1, 1.45, 2][tier], zc = 34;
+    if (typeof FX !== 'undefined' && FX.muted) return;
+    if (CRIT_IKG[id]) { CRIT_IKG[id](x, y, tier); return; }
+    if (id === 'threadweaver' || id === 'tidecaller' || id === 'lanternkeeper') return HEALFX.crit(x, y, id, o);   // (healers pass: their own class-shaped marks)
+    const cc = globalThis.MHT_CRIT && globalThis.MHT_CRIT[id]; if (cc) return cc(x, y, tier);   // (class pass: the Marionettist, Houndmaster and Reaper draw their own)
+    const tcm = globalThis.TANK_CRIT && globalThis.TANK_CRIT[id]; if (tcm) return tcm(x, y, tier);   // (tanks pass: the Bloodreaver, Runeguard, Gorgemaw and Oathbroker draw their own)
+    const fire = id === 'pyromancer' || id === 'thermist' || id === 'alembist', steel = id === 'bastion' || id === 'runeguard' || id === 'bloodreaver' || id === 'gorgemaw' || id === 'oathbroker' || id === 'ironpalm' || id === 'gloomsworn' || id === 'kenseier',
+      dark = id === 'shadowblade' || id === 'thresher' || id === 'houndmaster' || id === 'driftblade', holy = id === 'cleric' || id === 'lanternkeeper' || id === 'tidecaller' || id === 'grovekeeper' || id === 'chronomancer';
+    const col = fire ? '#ffb040' : holy ? '#ffe9a0' : dark ? '#ff5a8a' : steel ? '#ffe08a' : (cls && cls.accent) || '#ffe08a', hot = fire ? '#fff2c0' : '#ffffff';
+    V.fx({ dur: 0.5, layer: 'air', draw: (c, p, t, e) => {
+      const open = easeOut(Math.min(1, p / 0.22)), k = e.a * (1 - clamp01((p - 0.35) / 0.65)), R = 30 * s * open;
+      if (k < 0.02) return;
+      c.save(); c.translate(x, y - zc); c.lineCap = 'round';
+      if (dark) { // two crossing cuts
+        for (const sd of [-1, 1]) { const a = sd * 0.75; c.strokeStyle = '#1a0610'; c.globalAlpha = 0.9 * k; c.lineWidth = 5; c.beginPath(); c.moveTo(-Math.cos(a) * R, -Math.sin(a) * R * 0.8); c.lineTo(Math.cos(a) * R, Math.sin(a) * R * 0.8); c.stroke(); c.strokeStyle = col; c.lineWidth = 2.8; c.beginPath(); c.moveTo(-Math.cos(a) * R, -Math.sin(a) * R * 0.8); c.lineTo(Math.cos(a) * R, Math.sin(a) * R * 0.8); c.stroke();
+          c.strokeStyle = hot; c.globalAlpha = k; c.lineWidth = 1.1; c.stroke(); }
+      } else if (fire) { // a hot flare: a vertical lick and a flat bar
+        c.fillStyle = '#3a0e04'; c.globalAlpha = 0.9 * k; lens(c, 0, R * 0.3, 0, -R * 1.6, 7 * s, 0); lens(c, -R * 1.2, 0, R * 1.2, 0, 4.4, 0); c.fillStyle = col; c.globalAlpha = k; lens(c, 0, R * 0.2, 0, -R * 1.5, 5 * s, 0); lens(c, -R * 1.1, 0, R * 1.1, 0, 3, 0); c.fillStyle = hot; lens(c, 0, R * 0.1, 0, -R * 1.1, 2.2 * s, 0);
+      } else { // a four-point glint (steel's cross, light's star)
+        c.fillStyle = holy ? '#5a3a08' : '#10182c'; c.globalAlpha = 0.9 * k; lens(c, 0, -R * 1.45, 0, R * 1.45, 5.4 * s, 0); lens(c, -R * 1.45, 0, R * 1.45, 0, 5.4 * s, 0); c.fillStyle = col; c.globalAlpha = k; lens(c, 0, -R * 1.3, 0, R * 1.3, 3.6 * s, 0); lens(c, -R * 1.3, 0, R * 1.3, 0, 3.6 * s, 0); c.fillStyle = hot; lens(c, 0, -R * 0.8, 0, R * 0.8, 1.6 * s, 0); lens(c, -R * 0.8, 0, R * 0.8, 0, 1.6 * s, 0);
+      }
+      c.restore();
+      V.glowAt(c, x, y - zc, 20 * s * open, col, 0.5 * k);
+    } });
+    if (tier >= 2) V.shock(x, y, { r: 52 * s, color: col, dur: 0.36, w: 3 + tier });
+    if (tier >= 3) { if (fire) embers(x, y, { n: 10, s: 1.2, r: 22 }); else lightMotes(x, y, { n: 10, r: 24, color: col }); V.shock(x, y, { r: 90, color: col, dur: 0.5, w: 4, delay: 0.06 }); }
+  }
+
+  return { flames, embers, smokeUp, haze, scorch, fireBloom, fireHit, blast, geyser, fireball, spinBlade, lightThread, lens, cut, inkWisps, inkSmear, shadowSmear, curtain, lightMotes, crit, FIRE };
+})();
+
+// ======================================================================= HEALERS PASS · Threadweaver, Tidecaller, Lanternkeeper
+// Opaque, inked pieces (the floors are pale, so additive light washes out): a silk thread is a crimson or gold line with a dark wine rim
+// and a bright core; water is a body with a foam lip, beads with a highlight and a wet sheen that dries; lamplight is a flame behind
+// glass, moths, sparks and a pool of warmth. Everything here is cosmetic, capped and ends on its own. Names are prefixed by class
+// (tw = Threadweaver, tc = Tidecaller, lk = Lanternkeeper); the recipes that use them sit with their class blocks below.
+const HEALFX = (() => {
+  const V = VFX, TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a), c01 = v => Math.max(0, Math.min(1, v));
+  const G = () => (typeof window !== 'undefined' && window.__game) || null;
+  // is this ally down? A raise rides on the heal button, so its recipe asks (the party state is by player id, yours is Net.id)
+  function fallen(w) {
+    try { const g = G(), r = g && g.raid; if (!r || !r.party || !w) return false; const id = w === g.player ? (typeof Net !== 'undefined' ? Net.id : null) : w.id; const s = id != null ? r.party.get(id) : null; return !!s && s.alive === false; } catch (err) { return false; }
+  }
+  // an inked line: a dark rim, the body and a bright core, all source-over so it reads on a pale floor. trace() only moves and lines
+  function ink(c, trace, w, body, core, edge, a) {
+    c.save(); c.lineCap = 'round'; c.lineJoin = 'round'; c.globalCompositeOperation = 'source-over';
+    c.globalAlpha = 0.78 * a; c.strokeStyle = edge; c.lineWidth = w + 3; c.beginPath(); trace(); c.stroke();
+    c.globalAlpha = 0.97 * a; c.strokeStyle = body; c.lineWidth = w; c.beginPath(); trace(); c.stroke();
+    if (core) { c.globalAlpha = a; c.strokeStyle = core; c.lineWidth = Math.max(0.8, w * 0.34); c.beginPath(); trace(); c.stroke(); }
+    c.restore();
+  }
+  const lensPath = (c, x1, y1, x2, y2, w) => { const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, L = Math.hypot(x2 - x1, y2 - y1) || 1, nx = -(y2 - y1) / L * w, ny = (x2 - x1) / L * w;
+    c.beginPath(); c.moveTo(x1, y1); c.quadraticCurveTo(mx + nx, my + ny, x2, y2); c.quadraticCurveTo(mx - nx, my - ny, x1, y1); c.closePath(); };
+  // a four-point star of light: a dark rim, the colour, a white heart (the class crit marks reuse it)
+  function star4(c, x, y, R, a, col, core, edge, sq) {
+    const r2 = R * (sq ?? 0.16);
+    c.save(); c.translate(x, y); c.lineJoin = 'round';
+    for (const [rr, fill, st] of [[R * 1.12, edge, 0.85], [R, col, 1], [R * 0.6, core, 1]]) {
+      c.globalAlpha = a * st; c.fillStyle = fill; c.beginPath();
+      for (let i = 0; i < 8; i++) { const an = i * Math.PI / 4 - Math.PI / 2, r = i % 2 ? r2 * (rr / R) : rr; c.lineTo(Math.cos(an) * r, Math.sin(an) * r); }
+      c.closePath(); c.fill();
+    }
+    c.restore();
+  }
+
+  // ------------------------------------------------------------------ Threadweaver: silk, needle, scissors, cloth that frays
+  const TW = { crim: '#d4162c', rose: '#ff5a6a', gold: '#ffcf7a', hot: '#fff4ea', ink: '#2a0a14', silk: '#fff0d8', steel: '#e8eef8', steelInk: '#1a1e2c' };
+  // a cross-stitch: two short threads crossing, each pulled tight
+  function twX(c, x, y, s, a, col, core) {
+    ink(c, () => { c.moveTo(x - s, y - s * 0.8); c.lineTo(x + s, y + s * 0.8); c.moveTo(x + s, y - s * 0.8); c.lineTo(x - s, y + s * 0.8); }, 2.4, col || TW.crim, core || TW.hot, TW.ink, a);
+  }
+  // a row of cross-stitches sewn across a point one after another (what a Needle leaves in the boss); the thread runs through them
+  function twStitches(x, y, ang, o = {}) {
+    const n = o.n ?? 3, gap = o.gap ?? 11, s = o.s ?? 5, dur = o.dur ?? 0.7, z = o.z ?? 24, col = o.color || TW.crim, core = o.core || TW.hot, step = o.step ?? 0.06, ca = Math.cos(ang), sa = Math.sin(ang) * 0.8;
+    V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - c01((p - 0.55) / 0.45)); if (k < 0.02) return;
+      const m = Math.min(n, Math.floor(t / step) + 1), px = i => x + ca * (i - (n - 1) / 2) * gap, py = i => y - z + sa * (i - (n - 1) / 2) * gap;
+      if (m > 1) ink(c, () => { c.moveTo(px(0), py(0)); for (let i = 1; i < m; i++) c.lineTo(px(i), py(i)); }, 1.4, col, core, TW.ink, k * 0.8);
+      for (let i = 0; i < m; i++) { const q = c01((t - i * step) / 0.08); twX(c, px(i), py(i), s * (0.5 + 0.5 * easeOut(q)) * (1 + 0.25 * (1 - q)), k * Math.min(1, q * 2), col, core); }
+    } });
+  }
+  // a needle drawn from its tail (x, y) out to its tip along ang: a tapered steel body with a dark rim and a gold eye at the tail
+  function twNeedleShape(c, x, y, ang, len, a) {
+    c.save(); c.translate(x, y); c.rotate(ang); c.lineJoin = 'round';
+    c.beginPath(); c.moveTo(len, 0); c.lineTo(len * 0.18, -2.2); c.lineTo(0, -2.2); c.lineTo(0, 2.2); c.lineTo(len * 0.18, 2.2); c.closePath();
+    c.globalAlpha = a; c.strokeStyle = TW.steelInk; c.lineWidth = 3.2; c.stroke(); c.fillStyle = TW.steel; c.fill();
+    c.globalAlpha = a * 0.9; c.fillStyle = '#ffffff'; c.beginPath(); c.moveTo(len * 0.9, 0); c.lineTo(len * 0.2, -1.2); c.lineTo(len * 0.2, -0.3); c.closePath(); c.fill();
+    c.globalAlpha = a; c.strokeStyle = TW.gold; c.lineWidth = 1.5; c.beginPath(); c.ellipse(len * 0.07, 0, 2.1, 1.1, 0, 0, TAU); c.stroke();
+    c.restore();
+  }
+  // the needle left standing in what it struck: slanted, tail up in the air, its thread hanging off the eye and swaying, then drawn out
+  function twPin(x, y, o = {}) {
+    const dur = o.dur ?? 0.8, len = o.len ?? 36, z = o.z ?? 20, a0 = o.ang ?? -1.15, col = o.color || TW.crim;
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const drive = easeOut(c01(t / 0.08)), pull = c01((p - 0.62) / 0.38), k = e.a * (1 - pull * pull), wob = Math.sin(t * 38) * 0.08 * Math.exp(-t * 7);
+      if (k < 0.02) return;
+      const ang = a0 + Math.PI + wob, back = len * (1 - 0.55 * drive) + pull * 24, tx = x, ty = y - z, ex = tx - Math.cos(ang) * back, ey = ty - Math.sin(ang) * back * 0.85 - pull * 18;
+      twNeedleShape(c, ex, ey, ang, back * 1.0, k);
+      const sx = ex, sy = ey, sway = Math.sin(t * 7) * 4;
+      ink(c, () => { c.moveTo(sx, sy); c.quadraticCurveTo(sx - 8 + sway, sy + 14, sx - 3 + sway * 1.4, sy + 30 + 6 * Math.sin(t * 5)); }, 1.6, col, TW.hot, TW.ink, k);
+    } });
+  }
+  // a bow of thread: two loops and a knot, tails hanging (the Tie's knot on the ally's shoulder)
+  function twBow(c, x, y, s, a, col) {
+    c.save(); c.translate(x, y); c.lineJoin = 'round'; c.globalAlpha = a;
+    for (const sd of [-1, 1]) { c.save(); c.rotate(sd * 0.45); c.beginPath(); c.ellipse(sd * 4.5 * s, 0, 4.6 * s, 2.7 * s, 0, 0, TAU); c.fillStyle = col || TW.gold; c.fill(); c.strokeStyle = TW.ink; c.lineWidth = 1.5; c.stroke(); c.restore(); }
+    ink(c, () => { c.moveTo(0, 1); c.lineTo(-3 * s, 8 * s); c.moveTo(0, 1); c.lineTo(3.5 * s, 7 * s); }, 1.4, col || TW.gold, null, TW.ink, a);
+    c.beginPath(); c.arc(0, 0, 2.4 * s, 0, TAU); c.fillStyle = TW.hot; c.fill(); c.strokeStyle = TW.ink; c.lineWidth = 1.4; c.stroke();
+    c.restore();
+  }
+  // Mend Seam: a wound opens down the ally's body as a dark lens, a needle runs across it stitch by stitch (each stitch a thread pulled
+  // through), and the stitches draw tight so the seam closes; a gold knot, a faint glow and motes at the end. Small and in the air
+  function twSeam(w, o = {}) {
+    const n = o.n ?? 6, dur = o.dur ?? 0.85, H = o.h ?? 46, col = o.color || TW.gold, per = 0.07, t0 = 0.12;
+    V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const open = easeOut(c01(t / 0.12)), tight = c01((t - t0 - n * per) / 0.16), k = e.a * (1 - c01((p - 0.78) / 0.22)); if (k < 0.02) return;
+      const x = w.x, top = w.y - (w.lift || 0) - 6 - H, bot = top + H, gapW = 5.5 * open * (1 - tight);
+      if (gapW > 0.4) { c.save(); c.globalAlpha = 0.9 * k; c.fillStyle = '#3a0a1c'; lensPath(c, x, top, x, bot, gapW); c.fill(); c.globalAlpha = 0.9 * k; c.strokeStyle = TW.rose; c.lineWidth = 1.2; c.stroke(); c.restore(); }
+      const hw = 11.5 * (1 - 0.45 * tight);
+      for (let i = 0; i < n; i++) {
+        const q = c01((t - t0 - i * per) / per); if (q <= 0) continue;
+        const yy = top + (i + 0.5) * H / n, x0 = x - hw, x1 = x - hw + 2 * hw * q;
+        ink(c, () => { c.moveTo(x0, yy - 3); c.lineTo(x1, yy + (q * 2 - 1) * 3); }, 2.5, col, TW.hot, TW.ink, k);
+        if (q < 1) twNeedleShape(c, x1 - 17, yy + (q * 2 - 1) * 3, 0.16, 19, k);
+      }
+      if (tight > 0.3) { const q = c01((tight - 0.3) / 0.7); V.glowAt(c, x, top + H * 0.5, 26, '#fff0c8', 0.34 * q * k); c.save(); c.globalAlpha = k * q; twBow(c, x, bot + 3, 0.75 * q, k * q, col); c.restore(); }
+    } });
+  }
+  // a fallen ally raised on silk: four gold strings come down from above, draw taut and lift them a few pixels, a gold cross-stitch at the heart
+  function twHoist(w, o = {}) {
+    const dur = o.dur ?? 1.1;
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const go = easeOut(c01(t / 0.3)), lift = easeOut(c01((t - 0.25) / 0.4)), k = e.a * (1 - c01((p - 0.72) / 0.28)); if (k < 0.02) return;
+      const x = w.x, y = w.y - (w.lift || 0);
+      for (let i = 0; i < 4; i++) { const ox = (i - 1.5) * 9, hx = x + ox * 1.6, hy = y - 118, bx = x + ox, by = y - 10 - lift * 12, ey = hy + (by - hy) * go;
+        ink(c, () => { c.moveTo(hx, hy); c.lineTo(hx + (bx - hx) * go, ey); }, 1.6, TW.gold, TW.hot, TW.ink, k * (0.55 + 0.45 * go)); }
+      const q = c01((t - 0.35) / 0.2); if (q > 0) twX(c, x, y - 20, 7 * (0.6 + 0.4 * q), k * q, TW.gold, TW.hot);
+      V.glowAt(c, x, y - 18, 30 + 12 * lift, '#fff0c8', 0.3 * lift * k);
+    } });
+  }
+  // Snap: a pair of shears closing over the threads, a flash where the blades meet, the cut ends whipping loose and fraying
+  function twShears(x, y, o = {}) {
+    const dur = o.dur ?? 0.5, z = o.z ?? 30, s = o.s ?? 1, rot = o.ang ?? -0.5;
+    V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const close = easeOut(c01(t / 0.13)), open = 0.62 * (1 - close), k = e.a * (1 - c01((p - 0.6) / 0.4)); if (k < 0.02) return;
+      c.save(); c.translate(x, y - z); c.rotate(rot); c.scale(s, s); c.lineJoin = 'round';
+      for (const sd of [-1, 1]) { c.save(); c.rotate(sd * open);
+        c.beginPath(); c.moveTo(-2, 0); c.lineTo(10, -2.4 * sd); c.lineTo(31, -0.4 * sd); c.lineTo(10, 1.6 * sd); c.closePath();
+        c.globalAlpha = k; c.strokeStyle = TW.steelInk; c.lineWidth = 3.4; c.stroke(); c.fillStyle = TW.steel; c.fill(); c.strokeStyle = '#ffffff'; c.lineWidth = 0.9; c.beginPath(); c.moveTo(8, -1.6 * sd); c.lineTo(28, -0.6 * sd); c.stroke();
+        c.beginPath(); c.ellipse(-10, 0.4 * sd, 6.5, 4.2, -0.2 * sd, 0, TAU); c.strokeStyle = TW.ink; c.lineWidth = 4; c.stroke(); c.strokeStyle = TW.gold; c.lineWidth = 2; c.stroke();
+        c.restore(); }
+      c.beginPath(); c.arc(0, 0, 2.6, 0, TAU); c.fillStyle = TW.gold; c.fill(); c.strokeStyle = TW.ink; c.lineWidth = 1.2; c.stroke();
+      c.restore();
+      if (t > 0.1 && t < 0.3) V.glowAt(c, x + Math.cos(rot) * 24 * s, y - z + Math.sin(rot) * 24 * s, 16 + 14 * (1 - (t - 0.1) / 0.2), '#ffffff', 0.7 * k);
+    } });
+  }
+  // two cut thread-ends whipping out of a point and curling, with a few fibres at their tips
+  function twFray(x, y, o = {}) {
+    const dur = o.dur ?? 0.55, L = o.len ?? 30, col = o.color || TW.rose, a0 = o.ang ?? 0;
+    V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const g = easeOut(c01(t / 0.16)), k = e.a * (1 - c01((p - 0.4) / 0.6)); if (k < 0.02) return;
+      for (const sd of [-1, 1]) { const ang = a0 + (sd > 0 ? 0 : Math.PI), cx = Math.cos(ang), cy = Math.sin(ang) * 0.7, curl = sd * (1 - g) * 0 + Math.sin(t * 22 + sd) * 4 * (1 - p);
+        const ex = x + cx * L * g, ey = y + cy * L * g - 6 * g;
+        ink(c, () => { c.moveTo(x, y); c.quadraticCurveTo(x + cx * L * 0.5, y + cy * L * 0.5 - 12 * g + curl, ex, ey); }, 1.8, col, TW.hot, TW.ink, k);
+        c.save(); c.strokeStyle = col; c.lineWidth = 1; c.globalAlpha = k * 0.9; c.beginPath(); for (let f = -1; f <= 1; f++) { c.moveTo(ex, ey); c.lineTo(ex + cx * 6 + f * 3.4 * cy, ey - 3 + f * 3.4 * cx); } c.stroke(); c.restore(); }
+    } });
+  }
+  // ------------------------------------------------------------------ Tidecaller: water with weight
+  const TC = { body: '#4cc3b6', deep: '#17606c', edge: '#0f3f4c', pale: '#a8ece0', foam: '#f2fbf8', wet: '#6f93a3' };
+  // a bead of water: an ink rim, the body, a highlight (alpha a)
+  function tcBead(c, x, y, r, a, col) {
+    c.globalAlpha = a; c.fillStyle = col || TC.body; c.beginPath(); c.ellipse(x, y, r, r * 1.12, 0, 0, TAU); c.fill();
+    c.globalAlpha = 0.8 * a; c.strokeStyle = TC.edge; c.lineWidth = 1.2; c.stroke();
+    c.globalAlpha = 0.95 * a; c.fillStyle = TC.foam; c.beginPath(); c.ellipse(x - r * 0.32, y - r * 0.38, r * 0.34, r * 0.2, -0.6, 0, TAU); c.fill();
+  }
+  // droplets thrown and falling back, one effect for all of them: each a bead on a ballistic arc, a tiny ripple where it lands
+  function tcSpatter(x, y, o = {}) {
+    const n = o.n ?? 8, sp = o.speed ?? 110, up = o.up ?? 170, s = o.s ?? 1, z0 = o.z ?? 8, g = 620, col = o.color || TC.body, ang = o.angle, spread = o.spread ?? 0.6;
+    const ds = Array.from({ length: n }, () => { const a = ang != null ? ang + rnd(-spread, spread) : rnd(0, TAU), v = rnd(0.35, 1) * sp, vz = rnd(0.5, 1) * up; return { vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz, r: rnd(2.2, 3.8) * s, d: rnd(0, 0.06), tl: (vz + Math.sqrt(vz * vz + 2 * g * z0)) / g }; });
+    V.fx({ dur: 0.95, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      for (const d of ds) { const q = t - d.d; if (q < 0) continue;
+        if (q < d.tl) tcBead(c, x + d.vx * q, y + d.vy * q - (z0 + d.vz * q - 0.5 * g * q * q), d.r, e.a, col);
+        else if (q < d.tl + 0.22) { const u = (q - d.tl) / 0.22, lx = x + d.vx * d.tl, ly = y + d.vy * d.tl; c.globalAlpha = e.a * 0.7 * (1 - u); c.strokeStyle = TC.foam; c.lineWidth = 1.1; c.beginPath(); c.ellipse(lx, ly, 2 + 6 * u, (2 + 6 * u) * 0.55, 0, 0, TAU); c.stroke(); } }
+      c.globalAlpha = 1;
+    } });
+  }
+  // a splash crown: a ring of water thorns standing up out of a point, each tipped with a bead, that flares and falls back
+  function tcCrown(x, y, o = {}) {
+    const R = o.r ?? 16, H = o.h ?? 20, n = o.n ?? 9, dur = o.dur ?? 0.5, z = o.z ?? 4, rot = rnd(0, TAU), col = o.color || TC.body, sizes = Array.from({ length: n }, () => rnd(0.75, 1.2));
+    V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const up = easeOut(c01(p / 0.35)), down = c01((p - 0.42) / 0.58), k = e.a * (1 - down * down); if (k < 0.02) return;
+      c.save(); c.translate(x, y - z); c.lineJoin = 'round';
+      c.globalAlpha = 0.85 * k; c.strokeStyle = TC.foam; c.lineWidth = 2; c.beginPath(); c.ellipse(0, 0, R * (0.5 + 0.6 * up), R * (0.5 + 0.6 * up) * 0.5, 0, 0, TAU); c.stroke();
+      // (water jets thrown up and out, each ending in a bead: a splash, never crystals)
+      for (let i = 0; i < n; i++) { const a = rot + i * TAU / n, r0 = R * (0.5 + 0.5 * up), bx = Math.cos(a) * r0, by = Math.sin(a) * r0 * 0.5, h = H * 0.7 * up * (1 - 0.85 * down) * sizes[i], tx = bx + Math.cos(a) * R * 0.3 * up, ty = by - h;
+        c.lineCap = 'round'; c.beginPath(); c.moveTo(bx, by); c.quadraticCurveTo(bx + Math.cos(a) * R * 0.12, by - h * 0.9, tx, ty);
+        c.globalAlpha = 0.75 * k; c.strokeStyle = TC.edge; c.lineWidth = 5.4; c.stroke(); c.globalAlpha = k; c.strokeStyle = col; c.lineWidth = 3.2; c.stroke();
+        tcBead(c, tx, ty, 3.8 * (1 - 0.3 * down), k, col); }
+      c.restore();
+    } });
+  }
+  // a wet sheen on the floor: a small pale damp patch with a bright rim that shrinks and dries away (never a puddle: small, faint, brief)
+  function tcSheen(x, y, r, dur = 1.2, a0 = 0.2) {
+    V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
+      const k = e.a * a0 * (1 - p) * Math.min(1, t / 0.08); if (k < 0.01) return; const R = r * (1 - 0.4 * p);
+      c.save(); c.fillStyle = TC.wet; c.globalAlpha = k; c.beginPath(); c.ellipse(x, y + 2, R, R * 0.55, 0, 0, TAU); c.fill();
+      c.globalAlpha = Math.min(1, k * 3); c.strokeStyle = '#ffffff'; c.lineWidth = 1.2; c.beginPath(); c.ellipse(x, y + 2, R, R * 0.55, 0, Math.PI * 1.05, Math.PI * 1.7); c.stroke(); c.restore();
+    } });
+  }
+  // ------------------------------------------------------------------ Lanternkeeper: a flame behind glass, moths, a pool of warmth
+  const LK = { amber: '#ffb040', gold: '#ffd27a', pale: '#fff0c8', ink: '#3a1e0a', iron: '#2b2620', moth: '#f4e7c6', mothInk: '#4a3820' };
+  // moths circling a point (a lantern's company): n of them on loose loops, wings beating
+  function lkMoths(x, y, o = {}) {
+    const n = o.n ?? 2, dur = o.dur ?? 1.5, z = o.z ?? 26, R = o.r ?? 16, follow = o.follow || null, ph = Array.from({ length: n }, (_, i) => ({ a: i * TAU / n + rnd(0, 1), w: rnd(2.6, 3.8) * (i % 2 ? -1 : 1), r: R * rnd(0.7, 1.2), f: rnd(26, 34) }));
+    V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * Math.min(1, t / 0.2, (dur - t) / 0.4); if (k < 0.02) return; const cx = follow ? follow.x + (o.dx || 0) : x, cy = (follow ? follow.y + (o.dy || 0) : y) - z;
+      for (const m of ph) { const a = m.a + t * m.w, mx = cx + Math.cos(a) * m.r, my = cy + Math.sin(a * 1.3) * m.r * 0.55 - Math.abs(Math.sin(a)) * 3, fl = Math.abs(Math.sin(t * m.f + m.a)), wing = 6.6;
+        c.save(); c.translate(mx, my); c.rotate(Math.cos(a) * 0.4); c.lineJoin = 'round';
+        for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(0, 0); c.lineTo(sd * wing * (0.35 + 0.65 * fl), -wing * 0.8); c.lineTo(sd * wing * (0.5 + 0.5 * fl), wing * 0.6); c.closePath(); c.globalAlpha = k; c.fillStyle = LK.moth; c.fill(); c.strokeStyle = LK.mothInk; c.lineWidth = 1; c.globalAlpha = 0.85 * k; c.stroke(); }
+        c.globalAlpha = k; c.fillStyle = LK.mothInk; c.beginPath(); c.ellipse(0, 0.4, 1.1, 2.4, 0, 0, TAU); c.fill(); c.restore(); }
+    } });
+  }
+  // a pool of warm light on the floor: soft amber that spreads over the first stretch, holds, then draws in and goes (a lamp set down)
+  function lkPool(x, y, r, o = {}) {
+    const dur = o.dur ?? 1.3, a0 = (o.a ?? 0.3) * 1.4, col = o.color || '#ffa640', img = V.sprite('soft', col);
+    V.fx({ dur, delay: o.delay, layer: 'ground', draw: (c, p, t, e) => {
+      const g = easeOut(c01(t / 0.35)), k = e.a * a0 * Math.min(1, t / 0.1) * (1 - c01((p - 0.35) / 0.65)), R = r * (0.4 + 0.6 * g) * (1 - 0.15 * p); if (k < 0.01) return;
+      c.save(); c.globalAlpha = k; c.drawImage(img, x - R, y - R * 0.6, R * 2, R * 1.2);
+      c.globalAlpha = Math.min(1, k * 2.2); c.strokeStyle = '#ffe9b0'; c.lineWidth = 1.4; c.beginPath(); c.ellipse(x, y, R * 0.78, R * 0.78 * 0.55, 0, 0, TAU); c.stroke(); c.restore();
+    } });
+  }
+  // a small lantern: a ring handle, an iron cap and base, glass with a flame behind it (s scales it, t flickers the flame)
+  function lkLamp(c, x, y, s, a, t = 0) {
+    c.save(); c.translate(x, y); c.scale(s, s); c.lineJoin = 'round'; c.lineCap = 'round'; c.globalAlpha = a;
+    c.strokeStyle = LK.ink; c.lineWidth = 3; c.beginPath(); c.arc(0, -9.5, 4.2, Math.PI, 0); c.stroke(); c.strokeStyle = '#b98f45'; c.lineWidth = 1.3; c.stroke();
+    c.beginPath(); c.moveTo(-5, -6); c.lineTo(5, -6); c.lineTo(4.4, 4); c.lineTo(-4.4, 4); c.closePath(); c.fillStyle = 'rgba(255,196,110,0.7)'; c.fill();
+    const fl = 1 + Math.sin(t * 30) * 0.12; c.fillStyle = LK.amber; c.beginPath(); c.moveTo(0, -5.4 * fl); c.quadraticCurveTo(3.4, -0.6, 0, 3); c.quadraticCurveTo(-3.4, -0.6, 0, -5.4 * fl); c.fill();
+    c.fillStyle = '#fff6d8'; c.beginPath(); c.moveTo(0, -2.4); c.quadraticCurveTo(1.6, 0.4, 0, 2.2); c.quadraticCurveTo(-1.6, 0.4, 0, -2.4); c.fill();
+    c.strokeStyle = LK.iron; c.lineWidth = 1.5; c.beginPath(); c.moveTo(-5, -6); c.lineTo(-4.4, 4); c.moveTo(5, -6); c.lineTo(4.4, 4); c.stroke();
+    c.beginPath(); c.moveTo(-5.4, -6); c.lineTo(-3, -9.8); c.lineTo(3, -9.8); c.lineTo(5.4, -6); c.closePath(); c.fillStyle = LK.iron; c.fill(); c.strokeStyle = LK.ink; c.lineWidth = 1; c.stroke();
+    c.fillStyle = LK.iron; c.fillRect(-5.4, 4, 10.8, 2.8); c.strokeRect(-5.4, 4, 10.8, 2.8);
+    c.restore();
+  }
+  // a lantern bursting: a flower of flame tongues (opaque, inked) thrown out from the lamp and drawn back, a white heart and a four-point glint
+  function lkBloom(x, y, o = {}) {
+    const R = o.r ?? 70, n = o.n ?? 8, dur = o.dur ?? 0.5, rot = rnd(0, TAU), big = V.sprite('flame', '#ff9a2a'), mid = V.sprite('flame', '#ffc46b'), core = V.sprite('flame', '#fff0c8');
+    V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const out = easeOut(c01(p / 0.3)), k = e.a * (1 - c01((p - 0.5) / 0.5)), L = R * out * (1 - 0.25 * c01((p - 0.4) / 0.6)); if (k < 0.02) return;
+      for (let pass = 0; pass < 2; pass++) for (let i = 0; i < n; i++) { const a = rot + (i + pass * 0.5) * TAU / n, l = L * (pass ? 0.62 : 1), w = l * 0.46;
+        c.save(); c.translate(x, y); c.scale(1, 0.82); c.rotate(a + Math.PI / 2); c.globalAlpha = k; c.drawImage(pass ? mid : big, -w / 2, -l, w, l * 1.1); c.restore(); }
+      c.save(); c.translate(x, y); c.globalAlpha = k; c.drawImage(core, -R * 0.2, -R * 0.27, R * 0.4, R * 0.4); c.restore();
+      V.glowAt(c, x, y, R * 0.35, '#fff6d8', 0.6 * k); star4(c, x, y, R * 0.5 * out, k * 0.9, LK.gold, '#ffffff', LK.ink, 0.1);
+    } });
+  }
+  // a small flame bolt: a teardrop of lamp-flame (ink rim, amber body, a white heart) flying a to b, shedding embers, a moth riding it; onHit where it lands. Returns its time
+  function lkFlameShot(sx, sy, tx, ty, o = {}) {
+    const speed = o.speed ?? 900, d = Math.hypot(tx - sx, ty - sy), dur = Math.max(0.1, d / speed), arc = o.arc ?? 8, s = o.size ?? 1, ang = Math.atan2(ty - sy, tx - sx), ca = Math.cos(ang), sa = Math.sin(ang);
+    const pos = p => ({ x: sx + (tx - sx) * p, y: sy + (ty - sy) * p, z: 16 + Math.sin(p * Math.PI) * arc });
+    V.fx({ dur, layer: 'air', tick: p => { const q = pos(p); if (Math.random() < 0.6) V.spawn({ x: q.x - ca * 5 * s, y: q.y - sa * 5 * s, z: q.z, vx: -ca * rnd(20, 60) + rnd(-14, 14), vy: -sa * rnd(20, 60) + rnd(-8, 8), vz: rnd(10, 40), g: 60, life: rnd(0.3, 0.6), size: rnd(3, 4.6) * s, size1: 0, color: Math.random() < 0.5 ? LK.gold : LK.amber, sway: 14, swayW: 6, flick: 26 }); },
+      draw: (c, p, t, e) => { const q = pos(p), y = q.y - q.z, fl = 1 + Math.sin(t * 38) * 0.12;
+        c.save(); c.translate(q.x, y); c.rotate(ang); c.lineJoin = 'round';
+        for (const [col, L, W, al] of [[LK.ink, 21, 8.2, 0.9], ['#e8781a', 18, 6.6, 1], [LK.amber, 14, 4.6, 1], ['#fff6d8', 8, 2.6, 1]]) { c.globalAlpha = al * e.a; c.fillStyle = col; c.beginPath(); c.moveTo(W * s, 0); c.quadraticCurveTo(W * s * 0.9, W * s, -L * s * 0.45 * fl, W * 0.35 * s); c.lineTo(-L * s * fl, 0); c.lineTo(-L * s * 0.45 * fl, -W * 0.35 * s); c.quadraticCurveTo(W * s * 0.9, -W * s, W * s, 0); c.fill(); }
+        c.restore(); },
+      done: () => { if (o.onHit) o.onHit(tx, ty); } });
+    return dur;
+  }
+
+  // ------------------------------------------------------------------ crit marks (HFX.crit hands these three classes here): small, over the target, gone in half a second
+  function crit(x, y, id, o = {}) {
+    const tier = o.tier ?? 1, s = [0, 1, 1.45, 2][tier], zc = 34;
+    if (typeof FX !== 'undefined' && FX.muted) return;
+    V.fx({ dur: 0.5, layer: 'air', draw: (c, p, t, e) => {
+      const open = easeOut(Math.min(1, p / 0.22)), k = e.a * (1 - c01((p - 0.35) / 0.65)), R = 22 * s * open; if (k < 0.02) return;
+      c.save(); c.translate(x, y - zc);
+      if (id === 'threadweaver') { // a cross-stitch pulled tight, thread tails flicking off it
+        const q = R * 0.8; twX(c, 0, 0, q, k, TW.crim, TW.hot); twX(c, 0, 0, q * 0.55, k, TW.gold, TW.hot);
+        ink(c, () => { c.moveTo(q, q * 0.8); c.quadraticCurveTo(q + 8 * s, q * 0.8 + 6, q + 14 * s, q * 0.8 + 2); c.moveTo(-q, -q * 0.8); c.quadraticCurveTo(-q - 8 * s, -q * 0.8 - 6, -q - 14 * s, -q * 0.8 - 2); }, 1.4, TW.rose, null, TW.ink, k * 0.9);
+      } else if (id === 'tidecaller') { // a crown of water thorns round a bead
+        for (let i = 0; i < 7; i++) { const a = -Math.PI / 2 + (i - 3) * 0.42, r0 = R * 0.35, r1 = R * (i === 3 ? 1.5 : 1.15); c.beginPath(); c.moveTo(Math.cos(a - 0.14) * r0, Math.sin(a - 0.14) * r0 * 0.8); c.lineTo(Math.cos(a) * r1, Math.sin(a) * r1 * 0.85); c.lineTo(Math.cos(a + 0.14) * r0, Math.sin(a + 0.14) * r0 * 0.8); c.closePath();
+          c.globalAlpha = k; c.fillStyle = i % 2 ? TC.body : TC.pale; c.fill(); c.globalAlpha = 0.85 * k; c.strokeStyle = TC.edge; c.lineWidth = 1.3; c.stroke(); }
+        tcBead(c, 0, R * 0.05, 4.2 * (0.7 + 0.3 * s), k, TC.body);
+      } else { // a spark of lamplight: a flame tongue between two crossing embers
+        c.lineJoin = 'round';
+        for (const [L, W, col, al] of [[R * 1.6, 7.5 * s, LK.ink, 0.95], [R * 1.5, 5.4 * s, '#e8781a', 1], [R * 1.2, 3.6 * s, LK.amber, 1], [R * 0.8, 1.9 * s, '#fff6d8', 1]]) { c.globalAlpha = k * al; c.fillStyle = col; c.beginPath(); c.moveTo(0, -L); c.quadraticCurveTo(W, -L * 0.35, 0, R * 0.3); c.quadraticCurveTo(-W, -L * 0.35, 0, -L); c.fill(); }
+        star4(c, 0, R * 0.12, R * 0.9, k * 0.9, LK.gold, '#ffffff', LK.ink, 0.12);
+      }
+      c.restore();
+    } });
+    if (tier >= 2) V.shock(x, y, { r: 46 * s, color: id === 'tidecaller' ? TC.pale : id === 'threadweaver' ? TW.rose : LK.gold, dur: 0.34, w: 2 + tier });
+    if (tier >= 3) { if (id === 'tidecaller') tcSpatter(x, y, { n: 8, z: 20, up: 190 }); else if (id === 'lanternkeeper') HFX.embers(x, y, { n: 8, s: 1.1, r: 20 }); else twStitches(x, y, 0.3, { n: 5, z: 6, gap: 12, dur: 0.6 }); }
+  }
+
+  return { fallen, ink, lensPath, star4, lkLamp, lkBloom, TW, twX, twStitches, twNeedleShape, twPin, twBow, twSeam, twHoist, twShears, twFray, TC, tcBead, tcSpatter, tcCrown, tcSheen, LK, lkMoths, lkPool, lkFlameShot, crit };
+})();
+
+// >>> rtd ranger-toolkit
+// ======================================================================= HERO VFX · Ranger toolkit (HFX.ranger)
+// The Ranger's material is the arrow itself: real shafts with steel heads and fletching, a bowstring's snap at the
+// bow, shafts that bite and quiver in what they hit, chips and dust, and volleys that fall as rain. Bodies are opaque
+// with an ink rim (they read on the pale floors); only the thin wind lines behind a shot are drawn light over ink.
+HFX.ranger = (() => {
+  const V = VFX, TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a), clamp01 = v => Math.max(0, Math.min(1, v));
+  const INK = '#1a120a', WOOD = '#c09a5c', STEEL = '#f0f3f7', LEAF = '#58c03a', GOLD = '#ffd24a';
+  const hs = () => (typeof FX !== 'undefined' && FX.heroScale) || 1.5;
+  // an arrow lying along +x, its tip at 0 and its nock at -len: ink-edged shaft, steel head (unless buried), two swept vanes
+  function arrow(c, len, o = {}) {
+    const col = o.col || LEAF, w = o.w ?? 1, k = o.k ?? 1, hd = o.head ?? 1;
+    c.save(); c.globalAlpha = k; c.lineCap = 'round'; c.lineJoin = 'round';
+    c.strokeStyle = INK; c.lineWidth = 3.8 * w; c.beginPath(); c.moveTo(-len, 0); c.lineTo(o.stuck ? 0 : -1, 0); c.stroke();
+    c.strokeStyle = o.shaft || WOOD; c.lineWidth = 2 * w; c.stroke();
+    const fl = len * 0.34;
+    for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(-len + fl, sd * 0.7); c.lineTo(-len + fl * 0.15, sd * 5.4 * w); c.lineTo(-len - 3.2 * w, sd * 5.4 * w); c.lineTo(-len + 1, sd * 0.7); c.closePath();
+      c.fillStyle = col; c.fill(); c.lineWidth = 1.1; c.strokeStyle = INK; c.stroke(); }
+    if (!o.stuck) { c.beginPath(); c.moveTo(8.5 * hd, 0); c.lineTo(-1.5, -3.6 * hd); c.lineTo(0.6, 0); c.lineTo(-1.5, 3.6 * hd); c.closePath(); c.fillStyle = o.headCol || STEEL; c.fill(); c.lineWidth = 1.3; c.strokeStyle = INK; c.stroke();
+      c.strokeStyle = '#ffffff'; c.lineWidth = 0.9; c.beginPath(); c.moveTo(6, 0); c.lineTo(0, -1.8 * hd); c.stroke(); }
+    c.restore();
+  }
+  // wind lines laid behind a shaft in flight: ink underneath, white over it, so they read on light and dark floors
+  function lines(c, len, k, o = {}) {
+    c.save(); c.lineCap = 'round';
+    const L = o.long ?? 1;
+    for (const [off, a, b] of [[-3.5, len + 6, len + 58 * L], [3.5, len + 4, len + 44 * L], [0, len + 22, len + 80 * L]]) {
+      c.strokeStyle = INK; c.globalAlpha = 0.22 * k; c.lineWidth = 3; c.beginPath(); c.moveTo(-a, off); c.lineTo(-b, off); c.stroke();
+      c.strokeStyle = o.col || '#ffffff'; c.globalAlpha = 0.9 * k; c.lineWidth = 1.2; c.stroke(); }
+    c.restore();
+  }
+  // an arrow in flight from (sx, sy) to (tx, ty). o: speed, size, col (fletching), len, arc, helix (a colour: a spiral wrapped round the shaft),
+  // glow (a colour: the head burns), onHit, wind (false: no lines). Returns its flight time
+  function shot(sx, sy, tx, ty, o = {}) {
+    const speed = o.speed ?? 1400, d = Math.hypot(tx - sx, ty - sy), dur = Math.max(0.08, d / speed), ang = Math.atan2(ty - sy, tx - sx), s = o.size ?? 1, arc = o.arc ?? 0, len = (o.len ?? 34) * s;
+    const pos = p => ({ x: sx + (tx - sx) * p, y: sy + (ty - sy) * p, z: (o.z ?? 18) + Math.sin(p * Math.PI) * arc });
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const q = pos(p), q2 = pos(Math.min(1, p + 0.03)), a2 = arc ? Math.atan2((q2.y - q2.z) - (q.y - q.z), q2.x - q.x) : ang;
+      if (o.glow) V.glowAt(c, q.x, q.y - q.z, 20 * s, o.glow, 0.45 * e.a);
+      c.save(); c.translate(q.x, q.y - q.z); c.rotate(a2);
+      if (o.wind !== false) lines(c, len, e.a * Math.min(1, p / 0.12 + 0.3), { long: o.long, col: o.windCol });
+      if (o.helix) for (const ph of [0, Math.PI]) { c.beginPath(); for (let i = 0; i <= 14; i++) { const x = -len * 1.1 + i / 14 * len * 1.4, y = Math.sin(i * 0.95 + t * 30 + ph) * 6 * s; i ? c.lineTo(x, y) : c.moveTo(x, y); }
+        c.strokeStyle = INK; c.globalAlpha = 0.5 * e.a; c.lineWidth = 3.4; c.stroke(); c.strokeStyle = o.helix; c.globalAlpha = 0.95 * e.a; c.lineWidth = 1.6; c.stroke(); }
+      arrow(c, len, { col: o.col, w: Math.max(1, s * 1.1), head: Math.max(1.05, s * 1.05), k: e.a, headCol: o.headCol });
+      c.restore();
+      if (o.glow) V.glowAt(c, q.x + Math.cos(a2) * 6, q.y - q.z + Math.sin(a2) * 6, 7 * s, '#ffffff', 0.9 * e.a);
+    }, done: () => { if (o.onHit) o.onHit(tx, ty); } });
+    return dur;
+  }
+  // a shaft that bit into something and quivers: its head buried at (x, y), the nock leaning back toward the archer. Gone in o.life
+  function stick(x, y, ang, o = {}) {
+    const len = (o.len ?? 28) * (o.size ?? 1), life = o.life ?? 0.9, z = o.z ?? 22, sw = o.sway ?? 0.3;
+    V.fx({ dur: life, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - clamp01((p - 0.7) / 0.3)), wob = Math.sin(t * 48) * sw * Math.exp(-t * 5.5);
+      if (k < 0.02) return;
+      c.save(); c.translate(x, y - z); c.rotate(ang + wob); arrow(c, len, { col: o.col, stuck: true, k, w: o.w ?? 1.1 }); c.restore();
+    } });
+  }
+  // an arrow standing in the floor (a shot that went through, a volley's arrow): a little dirt mound, the shaft leaning and quivering
+  function plant(x, y, ang, o = {}) {
+    const len = (o.len ?? 24) * (o.size ?? 1), life = o.life ?? 1.6, lean = o.lean ?? (Math.PI / 2 + rnd(-0.35, 0.2));
+    V.smoke(x, y, { n: 3, r: 5, color: '#b8a888', size: 14, a: 0.5, speed: 40, life: 0.7 });
+    V.fx({ dur: life, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - clamp01((p - 0.75) / 0.25)), wob = Math.sin(t * 40) * 0.22 * Math.exp(-t * 4);
+      c.save(); c.globalAlpha = 0.5 * k; c.fillStyle = '#3a2c1c'; c.beginPath(); c.ellipse(x, y, 6, 2.4, 0, 0, TAU); c.fill(); c.restore();
+      c.save(); c.translate(x, y); c.rotate(lean + wob); arrow(c, len, { col: o.col, stuck: true, k, w: 0.85 }); c.restore();
+    } });
+  }
+  // the bowstring's snap: the string goes taut and thrums across the bow limbs for a moment (drawn at the hero's own bow)
+  function string(ent, o = {}) {
+    const col = o.col || '#fff6d8';
+    V.fx({ dur: 0.2, layer: 'air', draw: (c, p, t, e) => {
+      const a = ent.angle || 0, ca = Math.cos(a), sa = Math.sin(a), h = hs(), k = e.a * (1 - p * p), vib = Math.sin(t * 90) * 4 * (1 - p) * h;
+      const P = (lx, ly) => [ent.x + (ca * lx - sa * ly) * h, ent.y - (ent.lift || 0) + (sa * lx + ca * ly) * h];
+      const A = P(11, -15), B = P(11, 15), M = P(11, 0);
+      c.save(); c.lineCap = 'round';
+      for (const [col2, lw, al] of [[INK, 3, 0.55], [col, 1.3, 1]]) { c.strokeStyle = col2; c.lineWidth = lw; c.globalAlpha = k * al; c.beginPath(); c.moveTo(A[0], A[1]); c.lineTo(M[0] - sa * vib, M[1] + ca * vib); c.lineTo(B[0], B[1]); c.stroke(); }
+      c.restore();
+      if (o.ring !== false) { const R = 6 + 12 * easeOut(p); c.save(); c.translate(M[0] + ca * 8, M[1] + sa * 8); c.rotate(a); V.neonPath(c, o.ringCol || '#ffffff', 1.1, k * 0.7, () => c.ellipse(0, 0, R * 0.3, R, 0, 0, TAU)); c.restore(); }
+    } });
+  }
+  // where a shaft bites: ink-edged splinter ticks, wood chips and dust thrown back along its flight, and the shaft left quivering
+  // o: s (size), col (fletching), stick (false: no shaft left), gold (the burning kind)
+  function hit(x, y, ang, o = {}) {
+    const s = o.s ?? 1, gold = !!o.gold, nT = 5 + Math.round(2 * s);
+    V.flash(x, y - 14 * s, 26 * s, gold ? '#ffe08a' : '#ffffff', 0.1); V.shock(x, y, { r: 30 * s + 12, r0: 6, color: gold ? '#ffe08a' : '#d8ffb0', dur: 0.2, w: 2 });
+    // (landing pass) the weight of the bite: a hard ink-rimmed core where the head lands (a pale disc with a short cross of light, a gold heart on the burning kind) and a
+    // thick ink-rimmed ring along the floor, so the hit reads on the pale floor and beside the number
+    V.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - clamp01((p - 0.45) / 0.55)); if (k < 0.02) return;
+      const pop = t < 0.05 ? 0.5 + 0.8 * easeOut(t / 0.05) : 1.3 - 0.5 * clamp01((t - 0.05) / 0.3), R = 18 * s * pop, cy = y - 18;
+      c.save(); c.translate(x, cy); c.lineCap = 'round'; c.globalAlpha = k;
+      for (const [ang, L] of [[0, 46 * s], [Math.PI / 2, 30 * s]]) { const ux = Math.cos(ang), uy = Math.sin(ang) * 0.8; for (const [col, w] of [[INK, 9], [gold ? '#ffd24a' : '#ffc83a', 5.5], ['#ffffff', 2]]) { c.strokeStyle = col; c.lineWidth = w * Math.min(1.4, s); c.beginPath(); c.moveTo(-ux * L * pop, -uy * L * pop); c.lineTo(ux * L * pop, uy * L * pop); c.stroke(); } }
+      c.fillStyle = INK; c.beginPath(); c.arc(0, 0, R + 3, 0, TAU); c.fill(); c.fillStyle = gold ? '#ffb020' : '#f0a824'; c.beginPath(); c.arc(0, 0, R, 0, TAU); c.fill(); c.fillStyle = gold ? '#ffe9a0' : '#ffe9a0'; c.beginPath(); c.arc(0, 0, R * 0.72, 0, TAU); c.fill(); c.fillStyle = '#ffffff'; c.beginPath(); c.arc(0, 0, R * 0.55, 0, TAU); c.fill();
+      c.restore();
+      const rq = clamp01(t / 0.3); if (rq < 1) { const Rr = 12 + (60 * s + 12) * easeOut(rq), kk = e.a * (1 - rq * rq);
+        c.save(); c.beginPath(); c.ellipse(x, y, Rr, Rr * 0.62, 0, 0, TAU); c.globalAlpha = 0.8 * kk; c.strokeStyle = INK; c.lineWidth = 7 - 3.5 * rq; c.stroke(); c.globalAlpha = kk; c.strokeStyle = gold ? '#ffd24a' : '#ffc83a'; c.lineWidth = 4.2 - 2.4 * rq; c.stroke(); c.restore(); }
+    } });
+    V.fx({ dur: 0.2, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - p * p), cy = y - 18; c.save(); c.translate(x, cy); c.lineCap = 'round';
+      for (let i = 0; i < nT; i++) { const a = ang + Math.PI + (i - (nT - 1) / 2) * (2.4 / nT) + (i % 2 ? 0.1 : -0.1), r0 = 6 * s + 8 * p * s, r1 = r0 + (14 + 18 * (1 - p)) * s;
+        c.strokeStyle = INK; c.globalAlpha = 0.55 * k; c.lineWidth = 4.4; c.beginPath(); c.moveTo(Math.cos(a) * r0, Math.sin(a) * r0 * 0.8); c.lineTo(Math.cos(a) * r1, Math.sin(a) * r1 * 0.8); c.stroke();
+        c.strokeStyle = gold ? '#fff0b0' : '#ffffff'; c.globalAlpha = k; c.lineWidth = 2.1; c.stroke(); }
+      c.restore(); } });
+    for (let i = 0; i < 3 + Math.round(2 * s); i++) { const a = ang + rnd(-1.1, 1.1) + (Math.random() < 0.5 ? 0 : Math.PI), sp = rnd(70, 190) * s;
+      V.spawn({ x, y, z: 16, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rnd(40, 130), g: 560, bounce: true, life: rnd(0.4, 0.7), size: rnd(4, 6.5) * Math.sqrt(s), color: i % 3 ? '#e0c48a' : '#f4ead0', kind: 'shard', add: false, vr: rnd(-14, 14) }); }
+    V.smoke(x, y, { n: 2 + Math.round(s), r: 7, color: '#cdbf9e', size: 16 * s, a: 0.5, speed: 55, life: 0.8 });
+    if (o.stick !== false) stick(x - Math.cos(ang) * 4, y - Math.sin(ang) * 3, ang, { col: o.col || (gold ? GOLD : LEAF), size: 1.15 * Math.max(0.8, s), life: o.life ?? 1.0 });
+  }
+  // a crit mark over the boss: two arrows cross over it, slammed in from either side (tier 2+: a ring, tier 3: a shower of chips)
+  function crit(x, y, tier = 1, o = {}) {
+    const s = [0, 1, 1.3, 1.7][tier], col = o.col || GOLD, L = 50 * s;
+    V.fx({ dur: 0.5, layer: 'air', draw: (c, p, t, e) => {
+      const q = easeOut(Math.min(1, p / 0.2)), k = e.a * (1 - clamp01((p - 0.4) / 0.6)), cy = y - 34;
+      if (k < 0.02) return;
+      for (const sd of [-1, 1]) { c.save(); c.translate(x, cy); c.rotate(sd > 0 ? 0.62 : Math.PI - 0.62); c.translate(L * 0.45 - (1 - q) * 24, 0); arrow(c, L, { col, w: 1.35, k, head: 1.4 }); c.restore(); }
+      V.glowAt(c, x, cy, 12 * s * q, col, 0.45 * k); } });
+    if (tier >= 2) V.shock(x, y, { r: 50 * s, color: col, dur: 0.34, w: 2 + tier });
+    if (tier >= 3) for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; V.spawn({ x, y, z: 20, vx: Math.cos(a) * 140, vy: Math.sin(a) * 80, vz: rnd(60, 150), g: 500, life: 0.6, size: 6, color: i % 2 ? '#e0c48a' : '#fff0b0', kind: 'shard', add: false, vr: rnd(-12, 12) }); }
+  }
+  // a cloth pennant streaming from the nock of a shaft stuck at (x, y) (Hunter's Mark): a ribbon that ripples, ink-edged
+  function pennant(x, y, ang, o = {}) {
+    const life = o.life ?? 2, col = o.col || GOLD, L = (o.len ?? 34), z = o.z ?? 30;
+    V.fx({ dur: life, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - clamp01((p - 0.8) / 0.2)); if (k < 0.02) return;
+      const ca = Math.cos(ang + Math.PI), sa = Math.sin(ang + Math.PI), n = 9, up = [], dn = [];
+      for (let i = 0; i <= n; i++) { const q = i / n, w = 5.5 * (1 - q * 0.75), off = Math.sin(t * 9 - q * 5) * 6 * q, bx = x + ca * (22 + L * q), by = y - z + sa * (22 + L * q) * 0.8 - 6 * q;
+        up.push([bx - sa * (off + w), by + ca * (off + w) * 0.8]); dn.push([bx - sa * (off - w), by + ca * (off - w) * 0.8]); }
+      c.save(); c.beginPath(); up.forEach(([a, b], i) => i ? c.lineTo(a, b) : c.moveTo(a, b)); for (let i = n; i >= 0; i--) c.lineTo(dn[i][0], dn[i][1]); c.closePath();
+      c.globalAlpha = k; c.fillStyle = col; c.fill(); c.lineWidth = 1.6; c.strokeStyle = INK; c.lineJoin = 'round'; c.stroke(); c.restore();
+    } });
+  }
+  // Hunter's Cloak: the cloak swings round the hunter, three crescents of leaf-green cloth turning and opening out, leaves torn off its hem
+  function cloak(ent, o = {}) {
+    const dark = '#2f7a2a', mid = '#58c03a', lite = '#b4f088';
+    V.fx({ dur: 1.1, layer: 'air', draw: (c, p, t, e) => {
+      const q = easeOut(Math.min(1, p / 0.5)), k = e.a * (1 - clamp01((p - 0.6) / 0.4)), R = (24 + 50 * q) * (o.s ?? 1), x = ent.x, y = ent.y - 10;
+      if (k < 0.02) return;
+      c.save(); c.translate(x, y); c.scale(1, 0.72); c.lineJoin = 'round';
+      for (let i = 0; i < 3; i++) { const a0 = t * 7 + i * TAU / 3, span = 1.5 + 0.5 * q;
+        c.beginPath(); for (let j = 0; j <= 10; j++) { const a = a0 + span * j / 10; c.lineTo(Math.cos(a) * R, Math.sin(a) * R); }
+        for (let j = 10; j >= 0; j--) { const a = a0 + span * j / 10, w = R * (0.5 + 0.28 * Math.sin(Math.PI * j / 10)); c.lineTo(Math.cos(a) * (R - w * 0.62), Math.sin(a) * (R - w * 0.62)); }
+        c.closePath(); c.globalAlpha = k; c.fillStyle = i % 2 ? mid : dark; c.fill(); c.lineWidth = 2; c.strokeStyle = INK; c.stroke();
+        c.beginPath(); for (let j = 1; j <= 9; j++) { const a = a0 + span * j / 10; c.lineTo(Math.cos(a) * (R - 1.5), Math.sin(a) * (R - 1.5)); } c.strokeStyle = lite; c.lineWidth = 1.3; c.stroke(); }
+      c.restore(); } });
+    for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, d = 20; V.spawn({ x: ent.x + Math.cos(a) * d, y: ent.y + Math.sin(a) * d * 0.7, z: 14 + rnd(0, 12), vx: Math.cos(a) * rnd(60, 130), vy: Math.sin(a) * rnd(40, 90), vz: rnd(10, 60), g: 40, drag: 0.04, life: rnd(1, 1.6), size: rnd(9, 13), color: i % 3 ? '#58c03a' : '#9ee66a', kind: 'leaf', add: false, vr: rnd(-6, 6), flutter: 5 }); }
+  }
+  return { arrow, lines, shot, stick, plant, string, hit, crit, pennant, cloak, INK, LEAF, GOLD };
+})();
+
+// (the class's crit mark: HFX.crit hands it over, yours alone like the number)
+CRIT_IKG.ranger = (x, y, tier) => HFX.ranger.crit(x, y, tier);
+// <<< rtd ranger-toolkit
+// >>> rtd thermist-toolkit
+// ======================================================================= HERO VFX · Thermist toolkit (HFX.thermist)
+// Two materials that never blur: FROST is hard and straight, glassy faceted shards (a lit face, a deep face, a white edge,
+// an ink-blue rim) in tight clusters that leave rime dust; FIRE is a narrow white-hot lance with a flickering tail and a hit that is
+// a sharp star of rays and glowing cracks, never a round fireball and never smoke (that is the Pyromancer's). Where they meet
+// they make steam. Bodies are opaque and ink-edged, so they read on the pale floors.
+HFX.thermist = (() => {
+  const V = VFX, TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a), clamp01 = v => Math.max(0, Math.min(1, v));
+  const IC = { rim: '#0b2a4a', body: '#5db4f2', lite: '#e8f8ff', deep: '#2a70c0', dust: '#d8f2ff' };
+  const FC = { rim: '#3a0a04', body: '#ff5a14', mid: '#ffae2e', core: '#fff6c8' };
+  const hs = () => (typeof FX !== 'undefined' && FX.heroScale) || 1.5;
+  // the mage's frost hand (el < 0, left) or fire hand (el > 0, right), as a point on the ground and a height
+  function hand(e, el) { const a = e.angle || 0, h = hs(), lx = 14, ly = el > 0 ? 10 : -11; return { x: e.x + (Math.cos(a) * lx - Math.sin(a) * ly) * h, y: e.y + (Math.sin(a) * lx + Math.cos(a) * ly) * h, z: 20 }; }
+  // a faceted crystal along +x (tip at +0.6 len): lit face, deep face, white edge, ink rim
+  function ice(c, len, w, o = {}) {
+    const k = o.k ?? 1, P = [[len * 0.6, 0], [len * 0.16, -w], [-len * 0.12, -w * 0.78], [-len * 0.4, 0], [-len * 0.12, w * 0.78], [len * 0.16, w]];
+    c.save(); c.globalAlpha = k; c.lineJoin = 'round';
+    c.beginPath(); P.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath(); c.fillStyle = o.body || IC.body; c.fill();
+    c.beginPath(); c.moveTo(P[0][0], 0); c.lineTo(P[1][0], P[1][1]); c.lineTo(P[2][0], P[2][1]); c.lineTo(P[3][0], 0); c.closePath(); c.fillStyle = IC.lite; c.globalAlpha = k * 0.88; c.fill();
+    c.beginPath(); c.moveTo(P[0][0], 0); c.lineTo(P[5][0], P[5][1]); c.lineTo(P[4][0], P[4][1]); c.lineTo(P[3][0], 0); c.closePath(); c.fillStyle = IC.deep; c.globalAlpha = k * 0.7; c.fill();
+    c.globalAlpha = k; c.strokeStyle = '#ffffff'; c.lineWidth = Math.max(0.8, w * 0.1); c.beginPath(); c.moveTo(P[0][0] - 1, 0); c.lineTo(P[3][0] + 2, 0); c.stroke();
+    c.beginPath(); P.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath(); c.strokeStyle = IC.rim; c.lineWidth = 1.9; c.stroke();
+    c.restore();
+  }
+  // a lance of flame along +x: a needle with a white-hot core, a flickering tail, an ink-dark rim
+  function lance(c, len, w, t, o = {}) {
+    const k = o.k ?? 1, f = Math.sin(t * 38) * 0.07, g = Math.sin(t * 27 + 1) * 0.06;
+    const shape = (L, W) => { c.beginPath(); c.moveTo(L * 0.62, 0); c.quadraticCurveTo(L * 0.14, -W * 1.15, -L * 0.42, -W * (0.22 + f * 2)); c.lineTo(-L * 0.52, W * g * 3); c.lineTo(-L * 0.42, W * (0.22 + g * 2)); c.quadraticCurveTo(L * 0.14, W * 1.15, L * 0.62, 0); c.closePath(); };
+    c.save(); c.globalAlpha = k; c.lineJoin = 'round';
+    shape(len * 1.06, w * 1.28); c.fillStyle = FC.rim; c.fill();
+    shape(len, w); c.fillStyle = FC.body; c.fill();
+    shape(len * 0.86, w * 0.66); c.fillStyle = FC.mid; c.fill();
+    shape(len * 0.6, w * 0.34); c.fillStyle = FC.core; c.fill();
+    c.restore();
+  }
+  // a generic flight: o.draw(c, t, k) draws at the head along +x; o.trail(x, y, z, ang) spawns the wake. Returns its flight time
+  function fly(sx, sy, tx, ty, o = {}) {
+    const speed = o.speed ?? 1000, d = Math.hypot(tx - sx, ty - sy), dur = Math.max(0.08, d / speed), ang = Math.atan2(ty - sy, tx - sx), arc = o.arc ?? 0;
+    const pos = p => ({ x: sx + (tx - sx) * p, y: sy + (ty - sy) * p, z: (o.z ?? 20) + Math.sin(p * Math.PI) * arc });
+    V.fx({ dur, layer: 'air', tick: o.trail ? p => { const q = pos(p); o.trail(q.x, q.y, q.z, ang); } : undefined, draw: (c, p, t, e) => {
+      const q = pos(p), q2 = pos(Math.min(1, p + 0.03)), a2 = arc ? Math.atan2((q2.y - q2.z) - (q.y - q.z), q2.x - q.x) : ang;
+      c.save(); c.translate(q.x, q.y - q.z); c.rotate(a2); o.draw(c, t, e.a, p); c.restore(); }, done: () => { if (o.onHit) o.onHit(tx, ty); } });
+    return dur;
+  }
+  // a shard of ice in flight: the shard, two smaller ones lagging beside it, a frost-white wake and a little rime dust falling away
+  function iceShot(sx, sy, tx, ty, o = {}) {
+    const s = o.size ?? 1, len = 34 * s, w = 8 * s;
+    return fly(sx, sy, tx, ty, { speed: o.speed ?? 1000, arc: o.arc, z: o.z, onHit: o.onHit,
+      draw: (c, t, k) => { c.save(); c.lineCap = 'round';
+        for (const off of [-w * 0.5, w * 0.5]) { c.strokeStyle = IC.rim; c.globalAlpha = 0.25 * k; c.lineWidth = 3; c.beginPath(); c.moveTo(-len * 0.4, off); c.lineTo(-len * 0.4 - 34 * s, off); c.stroke(); c.strokeStyle = IC.dust; c.globalAlpha = 0.9 * k; c.lineWidth = 1.2; c.stroke(); }
+        c.restore();
+        for (const [dx, dy, sc] of [[-len * 0.72, -w * 1.7, 0.42], [-len * 0.95, w * 1.6, 0.34]]) { c.save(); c.translate(dx, dy + Math.sin(t * 16 + dx) * 1.6); ice(c, len * sc, w * sc * 1.1, { k }); c.restore(); }
+        ice(c, len, w, { k }); },
+      trail: (x, y, z, a) => { if (Math.random() < 0.4) V.spawn({ x: x + rnd(-5, 5), y: y + rnd(-4, 4), z: z + rnd(-5, 5), vx: -Math.cos(a) * rnd(10, 50), vy: -Math.sin(a) * rnd(10, 40), vz: rnd(-10, 20), g: 220, life: rnd(0.3, 0.5), size: rnd(3.5, 5.5) * Math.sqrt(s), color: IC.dust, kind: 'shard', add: false, vr: rnd(-10, 10) }); } });
+  }
+  // a lance of fire in flight: the needle, thin white heat-lines and sparks streaming off its tail
+  function fireShot(sx, sy, tx, ty, o = {}) {
+    const s = o.size ?? 1, len = 40 * s, w = 7 * s;
+    return fly(sx, sy, tx, ty, { speed: o.speed ?? 900, arc: o.arc, z: o.z, onHit: o.onHit,
+      draw: (c, t, k) => { c.save(); c.lineCap = 'round';
+        for (const [off, L] of [[-w * 0.3, 54], [w * 0.4, 40], [0, 70]]) { c.strokeStyle = FC.rim; c.globalAlpha = 0.22 * k; c.lineWidth = 3; c.beginPath(); c.moveTo(-len * 0.5, off); c.lineTo(-len * 0.5 - L * s, off + Math.sin(t * 30) * 1.2); c.stroke();
+          c.strokeStyle = '#ffe9a8'; c.globalAlpha = 0.9 * k; c.lineWidth = 1.1; c.stroke(); }
+        c.restore(); lance(c, len, w, t, { k }); V.glowAt(c, len * 0.2, 0, 14 * s, '#ff9a3a', 0.4 * k); },
+      trail: (x, y, z, a) => { if (Math.random() < 0.55) V.spawn({ x, y, z: z + rnd(-2, 2), vx: -Math.cos(a) * rnd(40, 120) + rnd(-30, 30), vy: -Math.sin(a) * rnd(40, 120) + rnd(-20, 20), vz: rnd(0, 40), g: 160, life: rnd(0.2, 0.4), size: rnd(2.5, 4) * Math.sqrt(s), size1: 0, color: Math.random() < 0.5 ? '#ffd070' : '#ff7a2a', stretch: 3 }); } });
+  }
+  // a star of rays: long ones and short ones thrown out of a point, ink under, colour, a hot core (fire's hit: sharp, never round)
+  function rays(x, y, o = {}) {
+    const n = o.n ?? 10, R = o.r ?? 50, col = o.col || FC.mid, core = o.core || FC.core, ink = o.ink || FC.rim, z = o.z ?? 24, ph = rnd(0, TAU);
+    V.fx({ dur: o.dur ?? 0.3, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const g = easeOut(Math.min(1, p / 0.3)), k = e.a * (1 - clamp01((p - 0.35) / 0.65)); if (k < 0.02) return;
+      c.save(); c.translate(x, y - z); c.scale(1, 0.86); c.lineJoin = 'round';
+      const ray = (a, L, bw, r0) => { const ca = Math.cos(a), sa = Math.sin(a); c.beginPath(); c.moveTo(ca * L, sa * L); c.lineTo(ca * r0 - sa * bw, sa * r0 + ca * bw); c.lineTo(ca * r0 + sa * bw, sa * r0 - ca * bw); c.closePath(); };
+      for (const [colr, sc, bwm, al] of [[ink, 1.1, 1.6, 0.85], [col, 1, 1, 1], [core, 0.62, 0.5, 1]]) { c.fillStyle = colr; c.globalAlpha = k * al;
+        for (let i = 0; i < n; i++) { const a = ph + i / n * TAU, long = i % 2 === 0; ray(a, R * (long ? 1 : 0.6) * g * sc, R * (long ? 0.085 : 0.06) * bwm * Math.min(1, 10 / n) * (n > 10 ? 1.25 : 1), R * 0.1); c.fill(); } }
+      c.restore(); V.glowAt(c, x, y - z, R * 0.45 * g, core, 0.35 * k); } });
+  }
+  // small lances of fire thrown out of a point in a ring (a hit's second ring: Flare, the Shock)
+  function lanceBurst(x, y, o = {}) {
+    const n = o.n ?? 7, R = o.r ?? 66, z = o.z ?? 26, ph = rnd(0, TAU);
+    V.fx({ dur: 0.34, layer: 'air', draw: (c, p, t, e) => { const q = easeOut(p), k = e.a * (1 - clamp01((p - 0.4) / 0.6));
+      for (let i = 0; i < n; i++) { const a = ph + i / n * TAU; c.save(); c.translate(x + Math.cos(a) * (14 + R * q), y - z + Math.sin(a) * (10 + R * 0.7 * q)); c.rotate(a); lance(c, o.len ?? 26, o.w ?? 5, t, { k }); c.restore(); } } });
+  }
+  // ice erupting out of the floor: n crystals standing up round a point (leaning out), then breaking into shards
+  function spikes(x, y, o = {}) {
+    const n = Math.min(12, o.n ?? 7), r = o.r ?? 30, h = o.h ?? 46, dur = o.dur ?? 0.8, w = o.w ?? 8;
+    const sp = Array.from({ length: n }, (_, i) => { const a = i / n * TAU + rnd(-0.3, 0.3), d = rnd(0.35, 1) * r; return { x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.6, h: h * rnd(0.65, 1.15), a, lean: rnd(-0.25, 0.25) + Math.cos(a) * 0.3, dl: rnd(0, 0.06) }; }).sort((a, b) => a.y - b.y);
+    V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - clamp01((p - 0.7) / 0.3));
+      for (const s of sp) { const g = easeOut(clamp01((t - s.dl) / 0.14)); if (g <= 0) continue; const L = s.h * g;
+        c.save(); c.translate(s.x, s.y); c.rotate(-Math.PI / 2 + s.lean); c.translate(L * 0.4, 0); ice(c, L, w * (0.7 + 0.3 * g), { k }); c.restore(); } },
+      done: () => { for (const s of sp) if (Math.random() < 0.6) V.spawn({ x: s.x, y: s.y, z: s.h * 0.5, vx: rnd(-70, 70), vy: rnd(-40, 40), vz: rnd(30, 110), g: 450, life: 0.5, size: 8, color: IC.dust, kind: 'shard', add: false, vr: rnd(-12, 12) }); } });
+  }
+  // a thin ring of rime on the floor round a point: a pale band and ticks of frost, gone in o.dur
+  function rime(x, y, o = {}) {
+    const R = o.r ?? 40, dur = o.dur ?? 1.4, n = o.n ?? 14;
+    V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => { const k = e.a * Math.min(1, t / 0.08) * (1 - clamp01((p - 0.4) / 0.6)) * (o.a ?? 0.8); if (k < 0.02) return;
+      c.save(); c.translate(x, y); c.scale(1, 0.62); c.lineCap = 'round';
+      for (const [col, lw, al] of [[IC.rim, 4, 0.3], [IC.lite, 1.8, 1]]) { c.strokeStyle = col; c.globalAlpha = k * al; c.lineWidth = lw; c.beginPath(); c.arc(0, 0, R, 0, TAU); c.stroke(); }
+      c.strokeStyle = IC.lite; c.lineWidth = 1.4; c.globalAlpha = k; c.beginPath(); for (let i = 0; i < n; i++) { const a = i / n * TAU + (i % 2 ? 0.07 : 0); c.moveTo(Math.cos(a) * R * 0.94, Math.sin(a) * R * 0.94); c.lineTo(Math.cos(a) * R * (i % 2 ? 1.12 : 1.22), Math.sin(a) * R * (i % 2 ? 1.12 : 1.22)); } c.stroke();
+      c.restore(); } });
+  }
+  // steam: the bridge where fire met frost (pale, grey-white, rising and thinning)
+  const steam = (x, y, o = {}) => V.smoke(x, y, { n: Math.min(8, o.n ?? 4), r: o.r ?? 26, color: '#eef2f6', size: o.size ?? 26, a: o.a ?? 0.45, speed: o.speed ?? 30, life: o.life ?? 1.5 });
+  // tokens circling a hero, one frost shard alternating with one fire lance, converging (in) or swapping sides (swap): Equilibrium / Inversion
+  function ring(ent, o = {}) {
+    const n = o.n ?? 4, R0 = o.r0 ?? 64, R1 = o.r1 ?? 24, dur = o.dur ?? 0.7;
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const q = easeOut(Math.min(1, p / 0.8)), k = e.a * (1 - clamp01((p - 0.8) / 0.2)), R = o.swap ? R0 : R0 + (R1 - R0) * q, x = ent.x, y = ent.y - 12; if (k < 0.02) return;
+      for (let i = 0; i < n * 2; i++) { const a = i / (n * 2) * TAU + (o.swap ? Math.PI * q : t * 7), fire = i % 2, X = x + Math.cos(a) * R, Y = y + Math.sin(a) * R * 0.6;
+        c.save(); c.translate(X, Y); c.rotate(a + Math.PI / 2 + (o.swap ? 0 : 0.3)); if (fire) lance(c, 24, 4.6, t, { k }); else ice(c, 22, 5.4, { k }); c.restore(); } } });
+  }
+  // a crit mark over the boss: a white-hot star of rays with a snowflake of six frost shards round it (tier 2+: a ring, tier 3: shards thrown)
+  function crit(x, y, tier = 1) {
+    const s = [0, 1, 1.4, 1.9][tier];
+    rays(x, y, { n: 8, r: 34 * s, z: 34, dur: 0.42, col: '#ffcc50' });
+    V.fx({ dur: 0.45, layer: 'air', draw: (c, p, t, e) => { const q = easeOut(Math.min(1, p / 0.22)), k = e.a * (1 - clamp01((p - 0.4) / 0.6)); if (k < 0.02) return;
+      for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + 0.26; c.save(); c.translate(x + Math.cos(a) * 26 * s * q, y - 34 + Math.sin(a) * 20 * s * q); c.rotate(a); ice(c, 15 * s, 3.8 * s, { k }); c.restore(); } } });
+    if (tier >= 2) V.shock(x, y, { r: 52 * s, color: '#bfe6ff', dur: 0.34, w: 2 + tier });
+    if (tier >= 3) for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; V.spawn({ x, y, z: 20, vx: Math.cos(a) * 150, vy: Math.sin(a) * 85, vz: rnd(60, 150), g: 500, life: 0.6, size: 8, color: i % 2 ? IC.dust : '#ffd070', kind: i % 2 ? 'shard' : 'glow', add: i % 2 === 0, vr: rnd(-12, 12) }); }
+  }
+  return { ice, lance, fly, iceShot, fireShot, rays, lanceBurst, spikes, rime, steam, ring, hand, crit, IC, FC };
+})();
+
+CRIT_IKG.thermist = (x, y, tier) => HFX.thermist.crit(x, y, tier);
+// <<< rtd thermist-toolkit
+// >>> rtd drift-toolkit
+// ======================================================================= HERO VFX · Driftblade toolkit (HFX.drift)
+// Wind made visible: ribbons. A ribbon is a tapered band, thick in the middle, that streams along a path, jade-bodied with a pale core
+// and a dark teal rim (so it reads on the pale floors), its head racing ahead while its tail lets go. A cut is a gust (three
+// ribbons of different length laid on one arc), the dash leaves a lane of drifting ribbons, and everything the wind touches is
+// carried off: leaves, grit, a puff of dust. No sparks, no stars: wind has none.
+HFX.drift = (() => {
+  const V = VFX, TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a), clamp01 = v => Math.max(0, Math.min(1, v));
+  const JC = { ink: '#0a2e28', body: '#3fcfa8', mid: '#8ff0d0', pale: '#f0fffa', gold: '#ffd08a', mint: '#a8f0c8' };
+  const tone = ent => (ent && ent.spec === 'comet' ? { body: '#f0b050', mid: '#ffd890', ink: '#3a2404' } : ent && ent.spec === 'orbit' ? { body: '#58d890', mid: '#a8f0c8', ink: '#0a2e28' } : { body: JC.body, mid: JC.mid, ink: JC.ink });
+  // a ribbon along pts (world [x, y] pairs). o: w (half-width at its fattest), dur, color/mid/ink, z (height), wob (sway), delay,
+  // lag (how long the tail holds on: 0 = a streak that is all head, 1 = a band that stays), hold (stays faint to the end of dur)
+  function ribbon(pts, o = {}) {
+    const n = pts.length - 1, W = o.w ?? 5, z = o.z ?? 16, wob = o.wob ?? 2, ink = o.ink || JC.ink, col = o.color || JC.body, mid = o.mid || JC.mid, lag = o.lag ?? 0.55;
+    V.fx({ dur: o.dur ?? 0.4, delay: o.delay, layer: o.layer || 'air', draw: (c, p, t, e) => {
+      const head = easeOut(clamp01(p / 0.34)) * n, tail = clamp01((p - 0.1) / 0.8) * n * (1 - lag * 0.4) * (o.hold ? 0.4 : 1), k = e.a * (o.hold ? 1 - clamp01((p - 0.5) / 0.5) * 0.7 : 1 - clamp01((p - 0.55) / 0.45));
+      if (head - tail < 0.5 || k < 0.02) return;
+      const i0 = Math.floor(tail), i1 = Math.min(n, Math.ceil(head)), L = [], R = [];
+      for (let i = i0; i <= i1; i++) { const q = clamp01((i - tail) / Math.max(0.01, head - tail)), w = W * Math.pow(Math.sin(Math.PI * Math.min(1, q * 0.92 + 0.04)), 0.7),
+          a = Math.atan2(pts[Math.min(n, i + 1)][1] - pts[Math.max(0, i - 1)][1], pts[Math.min(n, i + 1)][0] - pts[Math.max(0, i - 1)][0]), s = Math.sin(i * 0.8 + t * 13) * wob * q,
+          x = pts[i][0] - Math.sin(a) * s, y = pts[i][1] + Math.cos(a) * s - z;
+        L.push([x - Math.sin(a) * w, y + Math.cos(a) * w * 0.85]); R.push([x + Math.sin(a) * w, y - Math.cos(a) * w * 0.85]); }
+      const shape = sc => { c.beginPath(); L.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); for (let i = R.length - 1; i >= 0; i--) c.lineTo(R[i][0], R[i][1]); c.closePath(); };
+      c.save(); c.lineJoin = 'round';
+      shape(); c.globalAlpha = 0.6 * k; c.strokeStyle = ink; c.lineWidth = 3.2; c.stroke();
+      shape(); c.globalAlpha = 0.96 * k; c.fillStyle = col; c.fill();
+      c.globalAlpha = 0.95 * k; c.strokeStyle = mid; c.lineWidth = Math.max(1, W * 0.5); c.beginPath(); for (let i = 0; i < L.length; i++) { const x = (L[i][0] + R[i][0]) / 2, y = (L[i][1] + R[i][1]) / 2; i ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke();
+      c.strokeStyle = '#ffffff'; c.lineWidth = Math.max(0.8, W * 0.16); c.globalAlpha = k; c.stroke();
+      c.restore(); } });
+  }
+  // points along an arc round (x, y): radius r, from angle a0 across span (flat: the floor's squash)
+  const arcPts = (x, y, r, a0, span, n = 14, flat = 0.8) => Array.from({ length: n + 1 }, (_, i) => { const a = a0 + span * i / n; return [x + Math.cos(a) * r, y + Math.sin(a) * r * flat]; });
+  const linePts = (ax, ay, bx, by, n = 12, bow = 0) => Array.from({ length: n + 1 }, (_, i) => { const q = i / n, nx = -(by - ay), ny = bx - ax, L = Math.hypot(nx, ny) || 1, b = Math.sin(q * Math.PI) * bow; return [ax + (bx - ax) * q + nx / L * b, ay + (by - ay) * q + ny / L * b]; });
+  // leaves and grit carried off by a gust from (x, y) along ang (n leaves, g grit): they tumble and drift on the air
+  function litter(x, y, o = {}) {
+    const n = Math.min(10, o.n ?? 3), g = Math.min(8, o.g ?? 2), a0 = o.angle ?? 0, sp = o.speed ?? 160, tc = o.tone || tone(o.ent);
+    for (let i = 0; i < n; i++) { const a = a0 + rnd(-0.7, 0.7), v = rnd(0.5, 1) * sp; V.spawn({ x: x + rnd(-6, 6), y: y + rnd(-4, 4), z: o.z ?? 18, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz: rnd(10, 60), g: 40, drag: 0.06, life: rnd(0.7, 1.3), size: rnd(9, 13), color: i % 3 ? tc.mid : '#b8f0d0', kind: 'leaf', add: false, vr: rnd(-9, 9), flutter: 6 }); }
+    for (let i = 0; i < g; i++) { const a = a0 + rnd(-0.9, 0.9), v = rnd(0.4, 1) * sp * 1.1; V.spawn({ x, y, z: 8, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz: rnd(30, 90), g: 360, drag: 0.05, bounce: true, life: rnd(0.4, 0.7), size: rnd(3.5, 5.5), color: i % 2 ? '#8a8672' : '#cfc9b4', kind: 'shard', add: false, vr: rnd(-14, 14) }); }
+  }
+  // a cut that is a gust: three ribbons of different length and radius laid on one arc round (x, y), swept across span from a0 (flip reverses)
+  function gust(x, y, ang, o = {}) {
+    const r = o.r ?? 62, span = o.span ?? 2.1, fl = o.flip ? -1 : 1, tc = o.tone || tone(o.ent), a0 = ang - fl * span / 2, W = o.w ?? 7;
+    [[1, 1, 0], [0.93, 0.78, 0.03], [0.86, 0.6, 0.06]].slice(0, o.layers ?? 3).forEach(([rr, sp, dl], i) => ribbon(arcPts(x, y, r * rr, a0 + fl * span * (1 - sp) * 0.5, fl * span * sp, 14, 0.82), { w: W * (1 - i * 0.22), dur: o.dur ?? 0.3, delay: dl, color: i === 1 ? tc.mid : tc.body, mid: i === 1 ? JC.pale : tc.mid, ink: tc.ink, z: o.z ?? 12, wob: 1.2 }));
+  }
+  // a crit mark over the boss: two crossed gust-cuts, ink-edged, slashed in a beat apart (tier 2+: a ring, tier 3: leaves thrown)
+  function crit(x, y, tier = 1) {
+    const s = [0, 1, 1.4, 1.9][tier], cy = y - 32;
+    for (const [i, sd] of [[0, -1], [1, 1]]) ribbon(linePts(x - sd * 30 * s, cy - 22 * s, x + sd * 30 * s, cy + 22 * s, 8, 4 * sd), { w: 4.2 * s, dur: 0.4, delay: i * 0.05, color: JC.mid, mid: JC.pale, z: 0, wob: 0.5, lag: 0.7 });
+    if (tier >= 2) V.shock(x, y, { r: 50 * s, color: JC.mid, dur: 0.34, w: 2 + tier });
+    if (tier >= 3) litter(x, y, { n: 8, g: 4, angle: -Math.PI / 2, speed: 200 });
+  }
+  return { ribbon, arcPts, linePts, litter, gust, crit, tone, JC };
+})();
+
+CRIT_IKG.driftblade = (x, y, tier) => HFX.drift.crit(x, y, tier);
+// <<< rtd drift-toolkit
 const ABILITY_VFX = (() => {
   const V = VFX;
   // a point d px from the caster toward where the ability lands (a hand, a bow, a blade)
@@ -185,14 +1055,14 @@ const ABILITY_VFX = (() => {
       if (e.pb) { e.pbT = t; e.pb = false; }
       const pb = e.pbT != null ? Math.max(0, 1 - (t - e.pbT) / 0.45) : 0, kk = Math.min(1, k + pb), a = ent.angle || 0, cx = ent.x, cy = ent.y - 14 - (ent.lift || 0);
       // (online-refs pass) the plate snaps out past its rest in 0.06s and settles back by 0.18s: a shield set, not a fade-in
-      const R = 40 * (t < 0.06 ? 0.8 + 0.35 * t / 0.06 : 1.15 - 0.15 * easeOut(Math.min(1, (t - 0.06) / 0.12))), half = 0.7, P = (an, r) => [cx + Math.cos(an) * r, cy + Math.sin(an) * r * 0.8];
+      const pt = e.pbT != null ? t - e.pbT : 9, R = 40 * (t < 0.06 ? 0.8 + 0.35 * t / 0.06 : 1.15 - 0.15 * easeOut(Math.min(1, (t - 0.06) / 0.12))) + (pt < 0.4 ? Math.sin(pt * 80) * Math.exp(-pt * 11) * 5 : 0), half = 0.7, P = (an, r) => [cx + Math.cos(an) * r, cy + Math.sin(an) * r * 0.8];
       const arc = (r, a0, a1) => { for (let i = 0; i <= 10; i++) { const [x, y] = P(a0 + (a1 - a0) * i / 10, r); i ? c.lineTo(x, y) : c.moveTo(x, y); } };
       c.beginPath(); arc(R + 8, a - half, a + half); arc(R - 7, a + half, a - half); c.closePath();
       c.globalAlpha = 0.72 * kk; c.fillStyle = '#3a5288'; c.fill(); c.globalAlpha = kk; c.lineWidth = 2.4; c.strokeStyle = BAST_INK; c.stroke(); c.globalAlpha = 1;
       V.neonPath(c, BAST_GOLD, 2.4, kk, () => arc(R + 8, a - half, a + half));
       V.neonPath(c, BAST_STEEL, 1.4, kk * 0.8, () => arc(R - 6, a - half, a + half));
       const [mx, my] = P(a, R + 0.5);
-      V.glowAt(c, mx, my, 14 + 34 * pb, BAST_GOLD, 0.55 * kk + 0.6 * pb);
+      V.glowAt(c, mx, my, 14 + 34 * pb, BAST_GOLD, 0.55 * kk + 0.6 * pb); if (pb > 0.7) V.neonPath(c, '#ffffff', 2.2, (pb - 0.7) / 0.3, () => arc(R + 8, a - half, a + half));   // (signature pass: the rim goes white-hot for a blink, and the plate shivers as it rings)
       V.neonPath(c, BAST_DAWN, 1.6, kk, () => { for (let i = 0; i < 4; i++) { const q = i * Math.PI / 2; c.moveTo(mx, my); c.lineTo(mx + Math.cos(q) * 8, my + Math.sin(q) * 8); } });
       for (const s of [-0.5, 0.5]) { const [rx, ry] = P(a + s, R + 0.5); V.glowAt(c, rx, ry, 5, '#ffffff', 0.7 * kk); }
       const [gx, gy] = P(a - half + ((t * 0.7) % 1) * half * 2, R + 6); V.glowAt(c, gx, gy, 9, '#ffffff', 0.55 * kk);
@@ -202,12 +1072,12 @@ const ABILITY_VFX = (() => {
   // star, the cloth waving); it rises out of the floor in 0.25s
   function bastionBanner(bx, by, dur) {
     OP.linger(dur, 'air', (c, k, t) => {
-      const H = 76 * easeOut(Math.min(1, t / 0.25)), top = by - H, wave = q => Math.sin(t * 3 - q * 3) * 3.5 * q;
+      const H = 76, drop = Math.min(1, t / 0.12), unf = easeOut(Math.max(0, Math.min(1, (t - 0.1) / 0.3))), top = by - H - (1 - drop * drop) * 110, wave = q => Math.sin(t * 3 - q * 3) * 3.5 * q;
       c.globalAlpha = 0.35 * k; c.fillStyle = '#000'; c.beginPath(); c.ellipse(bx, by, 10, 4, 0, 0, TAU); c.fill();
       c.lineCap = 'round'; c.globalAlpha = k;
       const pole = (w, col) => { c.lineWidth = w; c.strokeStyle = col; c.beginPath(); c.moveTo(bx, by); c.lineTo(bx, top - 4); c.moveTo(bx - 17, top + 3); c.lineTo(bx + 17, top + 3); c.stroke(); };
       pole(5, BAST_INK); pole(2.6, '#a07a40');
-      const L = bx - 15, Rr = bx + 15, T = top + 4, B = top + 46;
+      const L = bx - 15 * unf, Rr = bx + 15 * unf, T = top + 4, B = top + 46 * (0.4 + 0.6 * unf);
       c.beginPath(); c.moveTo(L, T);
       for (let i = 1; i <= 6; i++) { const q = i / 6; c.lineTo(L + wave(q), T + (B - T) * q); }
       c.lineTo(bx + wave(0.8), B - 9); c.lineTo(Rr + wave(1), B);
@@ -236,6 +1106,17 @@ const ABILITY_VFX = (() => {
       }
       V.glowAt(c, x + Math.cos(t * 1.7) * r * 0.55, y - H * 0.62, 10, '#ffffff', 0.5 * k);
     }, { peak: 0.95, settle: 0.4, hold: 0.7 });
+  }
+  // (hero pilot) Bulwark: eight hex plates of steel fly in from round the bastion and lock into the dome, each with a spark where it snaps home
+  function bastionPlates(ent) {
+    const cl = v => Math.max(0, Math.min(1, v)), plates = Array.from({ length: 8 }, (_, i) => ({ a: i * TAU / 8 + rnd(-0.2, 0.2), h: rnd(0.15, 0.85), d: i * 0.025, snap: false }));
+    V.fx({ dur: 0.65, layer: 'air', draw: (c, p, t, e) => {
+      for (const pl of plates) { const q = cl((t - pl.d) / 0.22); if (q <= 0) continue;
+        const w = Math.sqrt(1 - pl.h * pl.h), r = 48 * (1 + 1.2 * (1 - easeOut(q))), x = ent.x + Math.cos(pl.a) * r * w, y = ent.y + 4 + Math.sin(pl.a) * r * 0.5 * w - 56 * pl.h * easeOut(q), k = e.a * (1 - cl((p - 0.55) / 0.45));
+        if (q >= 1 && !pl.snap) { pl.snap = true; V.sparks(x, y, { color: '#e8f2ff', n: 3, speed: 120, z: 0 }); }
+        c.save(); c.translate(x, y); c.rotate(pl.a + t * 6 * (1 - q));
+        V.neonPath(c, '#bcd8ff', 1.4, k * (0.5 + 0.5 * q), () => { for (let j = 0; j <= 6; j++) { const a = j * Math.PI / 3; c.lineTo(Math.cos(a) * 8, Math.sin(a) * 6.5); } }); c.restore(); }
+    } });
   }
   // (online-refs pass: WoW Judgment / FF14 Royal Authority) Judgment's verdict: a sword of light drops point first onto
   // (x, y) in about 0.12s, holds a beat with a flare at its tip, then thins out and is gone by 0.42s
@@ -356,6 +1237,7 @@ const ABILITY_VFX = (() => {
       const pts = [[cx, cy - H], [cx + nx * W, cy + ny * W - H * 0.45], [cx + nx * W, cy + ny * W + H * 0.45], [cx, cy + H], [cx - nx * W, cy - ny * W + H * 0.45], [cx - nx * W, cy - ny * W - H * 0.45]];
       const tr = () => { pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); };
       c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.2 * k; c.fillStyle = RUNE_PALE; c.beginPath(); tr(); c.fill(); c.restore();
+      c.save(); c.globalAlpha = 0.34 * k; c.fillStyle = '#b8c4ff'; c.beginPath(); tr(); c.fill(); c.globalAlpha = 0.85 * k; c.lineJoin = 'round'; c.lineWidth = 4; c.strokeStyle = RUNE_INK; c.beginPath(); tr(); c.stroke(); c.restore();
       V.neonPath(c, RUNE_PALE, 2, k, tr);
       V.neonPath(c, RUNE_VIO, 1.1, k * 0.7, () => { c.moveTo(cx, cy - H * 0.6); c.lineTo(cx, cy + H * 0.6); c.moveTo(cx - nx * W * 0.5, cy - ny * W * 0.5); c.lineTo(cx + nx * W * 0.5, cy + ny * W * 0.5); });
       const s = (t * 0.9) % 1, sx = cx + nx * W * (s * 2 - 1), sy = cy + ny * W * (s * 2 - 1);
@@ -649,59 +1531,54 @@ const ABILITY_VFX = (() => {
 
   return {
     bastion: {
-      // Blade Chain, three different swings: Strike a quick steel cut, Riposte a flipped backhand that bites with a blue
-      // starburst, Judgment a glint on the blade, a great gold overhead arc and a sword of light dropped onto the boss
-      blade: c => { const st = bastionStep(c), f = st === 1 ? true : st === 2 ? false : Math.random() < 0.5, judg = st === 2, d = judg ? 0.07 : 0;
-        if (judg) { const h = ahead(c, 18); V.glint(h.x, h.y, { color: BAST_DAWN, size: 32, z: 34 }); }
-        c.later(d, () => { V.slash(c.x, c.y, c.ang, { r: [56, 62, 76][st], span: [1.9, 2.2, 2.7][st], color: judg ? '#ffe08a' : '#9fc4ff', flip: f, sparks: [3, 4, 6][st] });
-          OP.smear(c.x, c.y, c.ang, { r: [62, 70, 88][st], span: [1.9, 2.3, 2.9][st], w: [13, 16, 25][st], color: judg ? '#ffc840' : BAST_STEEL, core: judg ? '#fffbe0' : '#e8f2ff', ink: BAST_INK, dur: [0.24, 0.26, 0.34][st], flip: f, lines: judg ? 4 : 2 }); });
-        // (online-refs pass: WoW Judgment / FF14 Royal Authority) Judgment's gold comes DOWN on the target: a sword of light
-        // drops point first as the arc lands and breaks into the starburst (it replaces the old floor star before the boss)
+      // (hero pilot) steel and gold light. Blade Chain's three swings are three different cuts: Strike a quick level cut that nicks the target and
+      // throws a few sparks; Riposte the backhand coming back, wider, a crossed pair of nicks and a ring of sparks off the steel; Judgment the
+      // overhead finisher (the hero lifts the sword in both hands: heroes.js), a gold arc, the sword of light dropped on the boss and a tall gold
+      // cut standing open in it with light spilling up out of the wound
+      blade: c => { const st = bastionStep(c), f = st === 1 ? true : st === 2 ? false : Math.random() < 0.5, judg = st === 2, d = judg ? 0.07 : 0, ang = c.ang;
+        if (judg) { const h = ahead(c, 18); V.glint(h.x, h.y, { color: BAST_DAWN, size: 32, z: 38 }); }
+        c.later(d, () => { V.slash(c.x, c.y, ang, { r: [58, 64, 80][st], span: [1.9, 2.2, 2.8][st], color: judg ? '#ffd86a' : '#bcd4ff', flip: f, w: [0.3, 0.34, 0.42][st], sparks: [2, 3, 5][st] });
+          OP.smear(c.x, c.y, ang, { r: [64, 72, 90][st], span: [1.9, 2.3, 2.9][st], w: [10, 13, 22][st], color: judg ? '#ffc840' : BAST_STEEL, core: judg ? '#fffbe0' : '#f2f8ff', ink: BAST_INK, dur: [0.22, 0.25, 0.34][st], flip: f, lines: judg ? 4 : 1 }); });
         if (judg) c.later(d + 0.02, () => bastionVerdict(c.tx, c.ty, 1));
-        c.later(d + 0.08, () => {
-          if (st === 0) { V.hit(c.tx, c.ty, '#cfe0ff', 0.7); V.sparks(c.tx, c.ty, { color: '#e8f2ff', n: 6, angle: c.ang, spread: 0.8, speed: 320 }); return; }
-          if (st === 1) { V.hit(c.tx, c.ty, '#cfe0ff', 0.85); V.spikeburst(c.tx, c.ty, { r: 36, n: 10, color: BAST_STEEL, core: '#ffffff', ink: BAST_INK, dur: 0.26 }); V.sparks(c.tx, c.ty, { color: BAST_DAWN, n: 7, angle: c.ang, spread: 0.7, speed: 360 }); return; }
-          V.hit(c.tx, c.ty, '#ffe9a0', 0.7); });
-        if (judg) c.later(d + 0.14, () => {
-          V.flash(c.tx, c.ty - 16, 56, BAST_GOLD, 0.2); // (life pass) the verdict's climax: a gold starburst two heroes wide that holds a beat, embers left after
-          V.climax(c.tx, c.ty, { shape: 'burst', r: 84, n: 14, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', dur: 0.5, hold: 0.1, z: 18, after: { embers: 0.5, smoke: 0.3, mark: 0.5 } });
-          V.shock(c.tx, c.ty, { r: 100, color: '#ffe08a', dur: 0.38, w: 5, delay: 0.04 });
-          V.burst(c.tx, c.ty - 10, { color: BAST_DAWN, color2: '#ffffff', n: 9, speed: 220, kind: 'star', flash: false }); shake(3);
+        c.later(d + 0.08, () => { const x = c.tx, y = c.ty;
+          if (st === 0) { HFX.cut(x, y, ang + 1.15, { len: 36, color: '#e8f2ff', inner: '#9fc4ff' }); V.sparks(x, y, { color: '#eaf2ff', n: 5, angle: ang, spread: 0.8, speed: 320 }); return; }
+          if (st === 1) { HFX.cut(x, y, ang - 1.0, { len: 44, color: '#e8f2ff', inner: '#9fc4ff' }); HFX.cut(x, y, ang + 1.1, { len: 34, color: '#e8f2ff', inner: '#9fc4ff', delay: 0.04 });
+            V.spikeburst(x, y, { r: 36, n: 10, color: BAST_STEEL, core: '#ffffff', ink: BAST_INK, dur: 0.26 }); V.shock(x, y, { r: 50, color: '#bcd4ff', dur: 0.28, w: 3 }); V.sparks(x, y, { color: BAST_DAWN, n: 8, angle: ang, spread: 1.1, speed: 360 }); return; }
+          HFX.cut(x, y, -Math.PI / 2 + 0.12, { len: 100, w: 8, color: '#fffbe0', inner: '#ffb820', z: 26, dur: 0.6, bend: 0.06 });
+          V.sparks(x, y, { color: '#fff2b0', n: 8, angle: -Math.PI / 2, spread: 1.2, speed: 340 }); });
+        if (judg) c.later(d + 0.14, () => { const x = c.tx, y = c.ty;
+          V.flash(x, y - 16, 50, BAST_GOLD, 0.18); bastionCross(x, y, 1.5); V.climax(x, y, { shape: 'burst', r: 84, n: 14, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', dur: 0.5, hold: 0.1, z: 18, after: { embers: 0.5, smoke: 0.3, mark: 0.5 } }); V.spikeburst(x, y, { r: 90, n: 14, hole: 0.55, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', dur: 0.4, layer: 'ground', z: 0, flat: 0.6 });
+          V.shock(x, y, { r: 96, color: '#ffe08a', dur: 0.38, w: 4, delay: 0.04 }); HFX.lightMotes(x, y, { n: 9, r: 22, color: '#ffe08a' }); HFX.scorch(x, y, 22, 1.1, 0.25); shake(3);
           if (c.ent.st && typeof hitStop === 'function') hitStop(c.ent.st, 0.05, FX.now); }); },
-      // a glint on the sword, a big radiant blade thrown end over end with a gold wake, a golden starburst and a seal where it lands
-      edge: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#ffe08a', size: 34, z: 26 }); V.flash(h.x, h.y - 20, 36, BAST_GOLD, 0.18);
-        // (online-refs pass: FF14 Holy Spirit / WoW Avenger's Shield) it lands as a standing cross of light on the target, the
-        // starburst and one ring after it; the old floor seal before the boss is gone
-        V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#ffe08a', speed: TRV('bastion', 'edge'), size: 1.9, onHit: (x, y) => { bastionCross(x, y, 1); V.hit(x, y, '#ffe9a0', 0.9);
-          V.spikeburst(x, y, { r: 50, n: 12, color: '#ffc840', core: '#fffbe0', ink: '#3a2a08', dur: 0.32 });
-          V.shock(x, y, { r: 76, color: '#ffe08a', dur: 0.36, w: 4, delay: 0.05 }); V.burst(x, y - 20, { color: '#ffe9a0', color2: '#ffffff', n: 8, speed: 200, kind: 'star', flash: false }); shake(2); } }); },
-      // Brace: a glint on the shield face, the tower shield set in front for the whole guard: 3s, or what Hold Fast
-      // stretched it to (KIT_VFX.braceHold); a Perfect Block flares it and, the guard spent, lowers it (KIT_VFX.perfect).
-      // Sparks and a scuff of dust at the feet
+      // Holy Edge: a glint on the sword, a blade of light thrown end over end in a gold wake; it lands as a standing cross of light with a few gold sparks and
+      // motes climbing out of it, and the heal it brings runs back to the bastion as a thread of light
+      edge: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#ffe08a', size: 34, z: 26 }); V.flash(h.x, h.y - 20, 34, BAST_GOLD, 0.16);
+        const dur = HFX.spinBlade(c.x, c.y, c.tx, c.ty, { speed: TRV('bastion', 'edge'), color: '#ffd86a', size: 1.25, onHit: (x, y) => { bastionCross(x, y, 1); V.hit(x, y, '#ffe9a0', 0.7);
+          V.sparks(x, y, { color: '#fff2b0', n: 8, speed: 320, angle: Math.atan2(c.ty - c.y, c.tx - c.x), spread: 1.4 }); HFX.lightMotes(x, y, { n: 6, r: 16, color: '#ffe08a' }); V.shock(x, y, { r: 66, color: '#ffe08a', dur: 0.34, w: 3, delay: 0.05 }); shake(2); } });
+        c.later(dur + 0.04, () => HFX.lightThread(c.tx, c.ty, c.ent.x, c.ent.y, { color: '#ffe08a', dur: 0.45 })); },
+      // Brace: a glint on the shield face, the tower shield set and planted in front for the whole guard: 3s, or what Hold Fast stretched it to
+      // (KIT_VFX.braceHold); a Perfect Block flares it and, the guard spent, lowers it (KIT_VFX.perfect). Dust kicks up where it is planted
       brace: c => { const fx = c.x + Math.cos(c.ang) * 34, fy = c.y + Math.sin(c.ang) * 34; V.glint(fx, fy, { color: '#dbe9ff', size: 26 }); V.shield(c.ent, { shape: 'front', color: BAST_STEEL, dur: 0.4, r: 40 });
         if (c.ent.bastionPlate) c.ent.bastionPlate.cut = true;
         c.ent.bastionPlate = bastionPlate(c.ent, 3);
-        // (online-refs pass: Sheltron) the plate snaps out (bastionPlate) and a crescent of gold is shoved off its face
         c.later(0.04, () => bastionShove(c.ent, c.ang));
-        V.sparks(fx, fy, { color: '#cfe0ff', n: 6, angle: c.ang, spread: 0.7, speed: 220 }); V.smoke(c.x, c.y, { n: 3, color: '#c8c0b0', size: 18, a: 0.45, speed: 40 }); },
-      // a shaft of light slams down (Divine Leap): a golden starburst, a seal on the floor, stones kicked up, then the aura
+        V.sparks(fx, fy, { color: '#cfe0ff', n: 6, angle: c.ang, spread: 0.7, speed: 220 }); V.smoke(c.x + Math.cos(c.ang) * 22, c.y + Math.sin(c.ang) * 18, { n: 4, color: '#c8c0b0', size: 18, a: 0.45, speed: 40 }); },
+      // Oath of Valor: dawn light falls on the bastion in a shaft, a thin ring of light and a sun seal settle at its feet, gold motes climb off it, and
+      // for the 15s a gold aura holds with a mote now and then drifting up off the shoulders
       oath: c => { V.lightfall(c.x, c.y, { color: '#ffe08a', r: 30, h: 240, dur: 0.8, feathers: 0 }); V.aura(c.ent, { color: '#ffd65a', dur: 15, r: 30, rate: 0.12 });
-        c.later(0.2, () => { V.ink(c.x, c.y, { r: 60, dur: 1.4 }); V.sigil(c.x, c.y, { r: 60, style: 'star4', color: '#ffd65a', dur: 1.4, spin: 1.5 }); V.climax(c.x, c.y, { shape: 'burst', r: 96, n: 14, color: '#ffd65a', core: '#fffbe0', ink: '#4a3408', dur: 0.55, hold: 0.1, layer: 'ground', flat: 0.65, after: { embers: 0.6, smoke: 0.5, mark: 0.6 } }); V.debris(c.x, c.y, { n: 6, color: '#8a7a68' }); shake(3); }); },
-      // Rally Banner: a glint and a shaft of light where it goes in, then the banner itself stands behind the bastion for
-      // its 12s, a small seal at its foot and a faint gold ring round it (the old full-strength floor star is gone)
+        c.later(0.2, () => { V.ink(c.x, c.y, { r: 60, dur: 1.4 }); V.sigil(c.x, c.y, { r: 60, style: 'star4', color: '#ffd65a', dur: 1.4, spin: 1.5 }); V.shock(c.x, c.y, { r: 100, color: '#ffe08a', dur: 0.5, w: 4 });
+          V.flash(c.x, c.y - 24, 60, '#ffe9a0', 0.2); HFX.lightMotes(c.x, c.y, { n: 12, r: 30, color: '#ffe08a' }); V.debris(c.x, c.y, { n: 4, color: '#8a7a68' }); shake(3); }); },
+      // Rally Banner: a glint and a shaft of light where it goes in, then the banner is driven into the floor behind the bastion (it falls in a blink, a ring
+      // of dust and a few stones kicked up) and its cloth unfurls; it stands for its 12s with a faint gold ring round it
       banner: c => { const a = c.ang || 0, bx = c.x - Math.cos(a) * 24, by = c.y - Math.sin(a) * 14 - 4;
         V.glint(bx, by, { color: '#ffe08a', size: 30, z: 80 }); V.lightfall(bx, by, { color: '#ffe08a', r: 22, h: 260, dur: 0.8, feathers: 3 });
         c.later(0.12, () => { bastionBanner(bx, by, 12); OP.rim(bx, by, 150, BAST_GOLD, 12, { settle: 0.16, ticks: 20, spin: 0.08 });
-          V.sigil(bx, by, { r: 56, style: 'star5', color: '#f2c84b', dur: 1.1, spin: 1 }); V.shock(bx, by, { r: 160, color: '#ffe08a', dur: 0.6, w: 6 });
-          // (life pass) the banner goes in with a starburst of dawn round its foot
-          V.climax(bx, by, { shape: 'burst', r: 88, n: 16, color: '#ffd65a', core: '#fffbe0', ink: '#4a3408', dur: 0.55, hold: 0.1, layer: 'ground', flat: 0.65, after: { embers: 0.5, mark: 0.5 } });
-          V.debris(bx, by, { n: 6, color: '#8a7a68', speed: 0.7 }); V.smoke(bx, by, { n: 4, color: '#c8c0b0', size: 22, a: 0.45, speed: 45 }); shake(3); }); },
-      // Bulwark: a glint, a blue dome flaring up, then a faint dome of hex plates that holds over the bastion for the 10s
+          V.sigil(bx, by, { r: 56, style: 'star5', color: '#f2c84b', dur: 1.1, spin: 1 }); V.shock(bx, by, { r: 160, color: '#ffe08a', dur: 0.6, w: 4 });
+          V.shock(bx, by, { r: 40, color: '#c8c0b0', dur: 0.3, w: 4 }); V.debris(bx, by, { n: 6, color: '#8a7a68', speed: 0.7 }); V.smoke(bx, by, { n: 5, color: '#c8c0b0', size: 22, a: 0.45, speed: 45 }); HFX.lightMotes(bx, by, { n: 8, r: 26, color: '#ffe08a' }); shake(3); }); },
+      // Bulwark: a glint, steel plates fly in and lock into a dome round the bastion (a spark where each one snaps home), then a faint dome of hex plates holds
       bulwark: c => { V.glint(c.x, c.y, { color: '#cfe0ff', size: 30, z: 40 }); V.ink(c.x, c.y, { r: 62, dur: 1.2, flat: 0.5, follow: c.ent }); V.dome(c.ent, { color: '#8fc0ff', r: 48, dur: 1.1 });
-        bastionDome(c.ent, 10, '#8fc0ff');
-        // (life pass) the dome's footprint: a steel-blue ring of light two heroes wide, held a beat, then settling
-        V.climax(c.x, c.y, { shape: 'ring', r: 86, color: '#7fb2ff', core: '#e8f2ff', ink: BAST_INK, dur: 0.6, hold: 0.1, layer: 'ground', flat: 0.65, after: { smoke: 0.3, embers: 0.4, mark: 0.4 } });
-        V.shock(c.x, c.y, { r: 110, color: '#9fc4ff', dur: 0.5, w: 7 }); V.burst(c.x, c.y - 20, { color: '#cfe0ff', n: 12, speed: 220, kind: 'star' }); shake(2); },
+        bastionDome(c.ent, 10, '#8fc0ff'); bastionPlates(c.ent);
+        V.shock(c.x, c.y, { r: 110, color: '#9fc4ff', dur: 0.5, w: 4 }); V.burst(c.x, c.y - 20, { color: '#cfe0ff', n: 8, speed: 200, kind: 'star', flash: false }); shake(2); },
       // Sentinel: the tower shield slams forward, a blue shockwave off its face, dust kicked up
       bash: c => {
         const fx = c.x + Math.cos(c.ang) * 34, fy = c.y + Math.sin(c.ang) * 34;
@@ -789,9 +1666,9 @@ const ABILITY_VFX = (() => {
         const e = c.ent, sw = (e.rgSwing = ((e.rgSwing | 0) + 1) % 3), held = runeguardRunes(c), full = held >= 3, h = ahead(c, 14), drive = sw === 2;
         V.glint(h.x, h.y, { color: full ? '#ffffff' : RUNE_PALE, size: 20 + 4 * held, z: 18 });
         if (drive) { const L = ahead(c, 96); c.later(0.03, () => OP.thrust(c.x, c.y, L.x, L.y, { w: 12, color: RUNE_DEEP, core: '#f0e8ff', ink: RUNE_INK, head: true, dur: 0.22, z: 18 })); }
-        else V.slash(c.x, c.y, c.ang, { r: 48, span: 1.6, color: '#a8b0ff', w: 0.42, dur: 0.2, flip: sw === 1, sparks: 2 });
+        else TANKS_VFX.reaverCleave(c.x, c.y, c.ang, { r: 50, span: 1.7, w: 12, dur: 0.22, flip: sw === 1, heat: 0.4, body: '#2e3478', edge: '#8e98ff', ink: '#0c1236', mid: '#5a62c0', sheen: '#dde3ff', tip: '#dde3ff' });   // (tanks pass) a stone-gauntlet hook
         c.later(drive ? 0.1 : 0.08, () => {
-          V.hit(c.tx, c.ty, RUNE_VIO, drive ? 1 : 0.75); V.spikeburst(c.tx, c.ty, { r: drive ? 44 : 32, n: drive ? 10 : 8, color: RUNE_DEEP, core: '#f0e8ff', ink: RUNE_INK, dur: 0.24 });
+          V.hit(c.tx, c.ty, RUNE_VIO, drive ? 1 : 0.75); TANKS_VFX.rgStamp(c.tx, c.ty, { s: drive ? 1.1 : 0.72, z: 8, dur: drive ? 0.5 : 0.4 });   // (tanks pass) the carved rune stamped on the target
           runeguardPips(c.tx, c.ty - 30, held);
           if (drive) { V.shock(c.tx, c.ty, { r: 54, color: RUNE_VIO, dur: 0.35, w: 4 }); V.sparks(c.tx, c.ty, { color: RUNE_PALE, n: 5, angle: c.ang, spread: 0.8, speed: 260 }); shake(2); if (e.st && typeof hitStop === 'function') hitStop(e.st, 0.04, FX.now); }
           // the third Rune: the guard's fist flares white and a ring runs out of it, Glyph Burst is ready
@@ -820,7 +1697,7 @@ const ABILITY_VFX = (() => {
       overload: c => { V.charge(c.x, c.y, { color: '#b8c0ff', r: 50, n: 8, dur: 0.3, follow: c.ent }); runeguardLoad(c.ent);
         V.ink(c.x, c.y, { r: 66, dur: 0.9, a: 0.3 }); V.sigil(c.x, c.y, { r: 66, style: 'runes', color: '#7c84ff', dur: 0.9, spin: 3, follow: c.ent });
         c.later(0.42, () => { const x = c.ent.x, y = c.ent.y; V.aura(c.ent, { color: '#7c84ff', style: 'runes', dur: 15, r: 32, rate: 0.2 });
-          V.climax(x, y, { shape: 'ring', r: 84, color: '#7c84ff', core: '#e4e8ff', ink: RUNE_INK, dur: 0.5, hold: 0.1, z: 22, after: { embers: 0.5 } });   // (life pass) the snap: a ring two heroes wide round the guard, held a beat
+          TANKS_VFX.rgRuneRing(x, y, 90, { n: 10, gs: 10, dur: 0.6 });   // (life pass) the snap: a ring two heroes wide round the guard, held a beat
           V.glint(x, y - 24, { color: '#ffffff', size: 34, z: 20 });
           V.shock(x, y, { r: 96, color: '#e4e8ff', dur: 0.36, w: 5 }); V.flash(x, y - 20, 40, '#c8ceff', 0.16); shake(3); });
         c.later(1, () => V.motes(c.ent.x, c.ent.y, { color: '#b8c0ff', n: 6, r: 34 })); },
@@ -830,8 +1707,8 @@ const ABILITY_VFX = (() => {
       sanctum: c => { V.glint(c.x, c.y, { color: RUNE_PALE, size: 30, z: 40 }); V.ink(c.x, c.y, { r: 150, dur: 0.7, a: 0.25 }); V.sigil(c.x, c.y, { r: 150, style: 'runes', color: '#7c84ff', dur: 0.7, spin: 0.5 }); V.pillar(c.x, c.y, { r: 36, h: 160, color: '#7c84ff', dur: 1.1 });
         OP.rim(c.x, c.y, 150, '#7c84ff', 10, { style: 'runes', settle: 0.22, ticks: 24, spin: 0.12 }); V.shock(c.x, c.y, { r: 170, color: RUNE_PALE, dur: 0.55, w: 5 });
         // (life pass) the circle is struck on a held ring of indigo light
-        V.climax(c.x, c.y, { shape: 'ring', r: 124, color: '#7c84ff', core: '#e4e8ff', ink: RUNE_INK, dur: 0.7, hold: 0.1, layer: 'ground', flat: 0.65, after: { embers: 0.6, smoke: 0.3, mark: 0.4 } });
-        c.later(0.15, () => { for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; V.crystals(c.x + Math.cos(a) * 140, c.y + Math.sin(a) * 109, { color: '#9aa4ff', n: 3, r: 14, h: 40, dur: 1.6 }); } }); },
+        TANKS_VFX.rgRuneRing(c.x, c.y, 140, { n: 14, gs: 12, dur: 0.9 });
+        c.later(0.15, () => { for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; TANKS_VFX.rgSlab(c.x + Math.cos(a) * 140, c.y + Math.sin(a) * 100, { delay: i * 0.04, glyph: i, s: 0.9, stand: 0.7 }); } }); },
       // a glint on the mirror, a pane of rune-glass standing in front for the 3s hold, light sliding across it, shards
       // falling away when it goes
       mirror: c => { const fx = c.x + Math.cos(c.ang) * 30, fy = c.y + Math.sin(c.ang) * 30; V.glint(fx, fy, { color: '#ffffff', size: 34 }); V.shield(c.ent, { shape: 'front', color: RUNE_PALE, dur: 0.5, r: 44 });
@@ -858,131 +1735,129 @@ const ABILITY_VFX = (() => {
       },
     },
     ranger: {
-      // a glint on the bow, the arrow, a puff of dust where it bites
-      // (archer sheet, Quick Shot) a glint on the bow, rings of air bursting off it, a big arrow with speed lines, and a
-      // puff of dust and chips where it bites. Under Barrage (its marker on the hero) three arrows go, fanned
-      quick: c => { const b = ahead(c, 16), ang = Math.atan2(c.ty - c.y, c.tx - c.x), nx = -Math.sin(ang), ny = Math.cos(ang); V.glint(b.x, b.y, { color: '#e8ffb0', size: 24 }); rangerRelease(b.x, b.y, ang, RANG_GREEN);
-        const fire = (dl, off) => c.later(dl, () => { const tx = c.tx + nx * off, ty = c.ty + ny * off * 0.7, dur = Math.hypot(tx - c.x, ty - c.y) / 1300;
-          rangerStreaks(c.x, c.y, tx, ty, dur, RANG_GREEN, 3);
-          V.missile(c.x, c.y, tx, ty, { style: 'arrow', color: RANG_GREEN, speed: 1300, size: 1.6, onHit: (x, y) => { V.hit(x, y, '#d8ffc0', 0.6); rangerDust(x, y); } }); });
+// >>> rtd ranger-recipes
+      // (class VFX pass) the Ranger's look is the arrow itself (HFX.ranger, above the recipes): a real shaft with a steel head and
+      // fletching, a bowstring's snap at the bow, shafts that bite and quiver in the boss, wood chips and dust, volleys as rain.
+      // Quick Shot is the small quick one; Piercing Arrow the drawn shot that carries through and plants in the floor behind
+      // (gold with a Keen Eye); Rapid Fire a stream that leaves the boss stuck full of shafts; the Mark a flagged arrow; Barrage three nocked at once.
+      // Under Barrage three arrows go, fanned
+      quick: c => { const R = HFX.ranger, ang = Math.atan2(c.ty - c.y, c.tx - c.x), nx = -Math.sin(ang), ny = Math.cos(ang), b = ahead(c, 14);
+        R.string(c.ent); rangerRelease(b.x, b.y, ang, RANG_GREEN, 0.7);
+        const fire = (dl, off, gold) => c.later(dl, () => { const tx = c.tx + nx * off, ty = c.ty + ny * off * 0.7, a2 = Math.atan2(ty - c.y, tx - c.x), col = gold ? RANG_GOLD : '#58c03a';
+          R.shot(b.x, b.y, tx, ty, { speed: 1300, size: 1.1, col, onHit: (x, y) => R.hit(x, y, a2, { s: gold ? 0.9 : 0.85, col, gold }) }); });
         const bar = c.ent.rangerBarrage;
-        if (bar && !bar.cut && FX.now - bar.at > 0.3) { bar.cut = true; c.ent.rangerBarrage = null; [-12, 0, 12].forEach((o, i) => fire(i * 0.07, o)); c.later(0.07, () => rangerRelease(b.x, b.y, ang, RANG_GOLD, 1.3)); }
-        else fire(0, 0);
+        if (bar && !bar.cut && FX.now - bar.at > 0.3) { bar.cut = true; c.ent.rangerBarrage = null; [-14, 0, 14].forEach((o, i) => fire(i * 0.07, o, true)); c.later(0.07, () => rangerRelease(b.x, b.y, ang, RANG_GOLD, 1.2)); }
+        else fire(0, 0, false);
         // (online-refs pass) Keen Eye lit by this shot (your own hero: the kit's stacks went up): the proc flashes on you
         const kn = rangerKeens(c), e = c.ent;
         if (kn != null) { if (kn > (e._rgKeen || 0)) c.later(0.06, () => rangerKeenProc(e, kn)); e._rgKeen = kn; } },
-      // a golden glint on the drawn bow, the arrow wrapped in big spirals that carries on through the boss, a whirlwind
-      // where it passes, and dust where it finally drops
-      // (online-refs pass: WoW Aimed Shot / FF14 Apex Arrow) a plain Pierce is the green helix arrow with a modest burst;
-      // a Keen Eye one (your own hero: the kit's stacks went down) is the drawn shot: a gold flare on the bow, a gold lance
-      // of light through the boss, the whirlwind where it passes and a small shake
-      pierce: c => { const b = ahead(c, 18), ang = Math.atan2(c.ty - c.y, c.tx - c.x), d = Math.hypot(c.tx - c.x, c.ty - c.y), ex = c.tx + Math.cos(ang) * 170, ey = c.ty + Math.sin(ang) * 170;
+      // Piercing Arrow: the drawn shot. A big arrow wrapped in a white wind-spiral that goes clean through the boss (a slit of wind and
+      // a whirl of dust where it passes) and plants in the floor behind it; a Keen Eye one (your own hero: the kit's stacks went down)
+      // is the same shot lit gold: a gold-fletched shaft with a burning head and a gold lance of light along it, a bolt through the boss
+      pierce: c => { const R = HFX.ranger, b = ahead(c, 16), ang = Math.atan2(c.ty - c.y, c.tx - c.x), d = Math.hypot(c.tx - c.x, c.ty - c.y), ex = c.tx + Math.cos(ang) * 170, ey = c.ty + Math.sin(ang) * 170;
         const e = c.ent, kn = rangerKeens(c), keen = kn != null && kn < (e._rgKeen || 0); if (kn != null) e._rgKeen = kn;
-        V.glint(b.x, b.y, { color: keen ? '#fff6d0' : '#ffe27a', size: keen ? 42 : 30 }); rangerRelease(b.x, b.y, ang, RANG_GOLD, keen ? 1.5 : 1.1);
-        rangerStreaks(c.x, c.y, ex, ey, (d + 170) / 1500, keen ? RANG_GOLD : '#7dffb0', keen ? 4 : 3);
-        V.missile(c.x, c.y, ex, ey, { style: 'helix', color: keen ? RANG_GOLD : '#7dffb0', speed: 1500, size: keen ? 1.9 : 1.5, onHit: (x, y) => { V.smoke(x, y, { n: 2, color: '#d8d0c0', size: 16, a: 0.4, speed: 40 }); V.hit(x, y, '#b0ffd0', 0.35); } });
+        const col = keen ? RANG_GOLD : '#58c03a';
+        R.string(e, keen ? { col: '#fff0b0', ringCol: RANG_GOLD } : {}); rangerRelease(b.x, b.y, ang, keen ? RANG_GOLD : RANG_GREEN, keen ? 1.5 : 1.1);
+        if (keen) V.glint(b.x, b.y, { color: '#fff6d0', size: 36, z: 22 });
+        R.shot(b.x, b.y, ex, ey, { speed: 1500, size: keen ? 1.75 : 1.45, col, helix: keen ? '#fff6d0' : '#ffffff', glow: keen ? RANG_GOLD : null, headCol: keen ? '#fff6d0' : undefined, long: 1.6,
+          onHit: (x, y) => R.plant(x, y, ang, { size: keen ? 1.5 : 1.25, col, life: 2.2, lean: Math.PI / 2 + (Math.cos(ang) > 0 ? 0.25 : -0.25) }) });
         if (keen) c.later(0.03, () => rangerLance(b.x, b.y, ex, ey, { w: 10, dur: 0.34 }));
-        c.later(d / 1500, () => { V.hit(c.tx, c.ty, keen ? '#fff2c0' : '#b0ffd0', keen ? 1.1 : 0.8);
-          V.spikeburst(c.tx, c.ty, { r: keen ? 50 : 34, n: keen ? 12 : 9, color: keen ? RANG_GOLD : '#7dffb0', core: '#ffffff', ink: keen ? '#2a1c04' : '#0a2a14', dur: 0.28, z: 20 });
-          V.sparks(c.tx, c.ty, { color: '#e8ffd0', n: keen ? 8 : 5, angle: ang, spread: 0.5, speed: 420 });
-          if (keen) { V.tornado(c.tx, c.ty, { color: '#fff6d8', h: 92, r: 28, dur: 0.6 }); rangerDust(c.tx, c.ty, 0.8); shake(2);
+        c.later(d / 1500, () => { R.hit(c.tx, c.ty, ang, { s: keen ? 1.45 : 1.1, gold: keen, col, stick: false });
+          HFX.cut(c.tx, c.ty, ang, { len: keen ? 96 : 70, w: keen ? 4 : 3, color: '#ffffff', inner: keen ? RANG_GOLD : '#6fd84a', ink: keen ? '#2a1c04' : '#10240a', bend: 0.04, dur: 0.38, z: 20 });
+          V.tornado(c.tx, c.ty, { color: '#f4f4ee', h: keen ? 92 : 54, r: keen ? 28 : 17, dur: keen ? 0.6 : 0.42 });
+          V.sparks(c.tx, c.ty, { color: keen ? '#fff0b0' : '#e8ffd0', n: keen ? 8 : 5, angle: ang, spread: 0.5, speed: 420 });
+          if (keen) { rangerDust(c.tx, c.ty, 0.8); shake(2);
             // (VFX pass) the Keen Eye shot is the sheet's one bold climax: a gold bolt of light 180 long driven through the target, ink-edged, held a beat
             V.climax(c.tx - Math.cos(ang) * 70, c.ty - Math.sin(ang) * 70, { shape: 'bolt', angle: ang, r: 90, color: RANG_GOLD, core: '#fffbe8', ink: '#2a1c04', z: 20, flat: 0.75, dur: 0.5, after: { embers: 0.5 } }); } else rangerDust(c.tx, c.ty, 0.5); }); },
-      // (online-refs pass: WoW Rapid Fire) a stream of arrows off the bow, a small tick on the boss for each and a pop on
-      // the last; inside Hunter's Mark (its recipe stamps the hero) the stream runs longer and turns gold
-      rapid: c => { const e = c.ent, marked = (e._rgMarkUntil || 0) > FX.now, n = marked ? 7 : 5, col = marked ? RANG_GOLD : RANG_GREEN, ang = Math.atan2(c.ty - c.y, c.tx - c.x), nx = -Math.sin(ang), ny = Math.cos(ang), b = ahead(c, 16);
-        V.glint(b.x, b.y, { color: col, size: 26 });
-        for (let i = 0; i < n; i++) c.later(i * 0.065, () => { const j = rnd(-10, 10), tx = c.tx + nx * j, ty = c.ty + ny * j * 0.7, last = i === n - 1;
-          if (i % 2 === 0) rangerRelease(b.x, b.y, ang, col, 0.8);
-          // (each arrow a streak with an arrowhead: no trail particles, so a stream of seven stays cheap)
-          OP.thrust(b.x + nx * j * 0.3, b.y + ny * j * 0.2, tx, ty, { w: last ? 6 : 4, color: col, core: '#ffffff', ink: '#1a2a0a', head: true, dur: 0.2, z: 18 });
-          c.later(0.07, () => { V.hit(tx, ty, '#f0ffd8', last ? 0.7 : 0.3);
-            if (last) { V.spikeburst(tx, ty, { r: marked ? 40 : 32, n: 10, color: col, core: '#ffffff', ink: '#1a2a0a', dur: 0.26, z: 20 }); V.sparks(tx, ty, { color: '#e8ffd0', n: 5, angle: ang, spread: 0.6, speed: 360 }); } }); }); },
-      // (online-refs pass: WoW Trueshot + Hunter's Mark) a gold eye flares over the ranger, four gold brackets snap shut on
-      // the boss (lines only, no floor disc, so a telegraph under it still reads), then the reticle stays for the 15s
-      mark: c => { const e = c.ent; e._rgMarkUntil = FX.now + 15; rangerKeenProc(e, 2); V.shock(e.x, e.y, { r: 70, color: RANG_GOLD, dur: 0.4, w: 3 });
-        const bx = c.tx, by = c.ty - 40;
-        V.fx({ dur: 0.42, layer: 'air', draw: (cc, p, t, fx) => { const q = easeOut(Math.min(1, p / 0.5)), R = 90 - 52 * q, k = fx.a * (1 - Math.max(0, (p - 0.6) / 0.4)), L = 12;
-          for (let i = 0; i < 4; i++) { const sx = i % 2 ? 1 : -1, sy = i < 2 ? -1 : 1, x = bx + sx * R, y = by + sy * R * 0.8;
+      // Rapid Fire: a stream of arrows off the bow, 65 ms apart, each sticking in the boss where it lands (they pile up there, quivering,
+      // and the last one lands with a bigger bite); inside Hunter's Mark the stream runs longer and the fletching turns gold
+      rapid: c => { const R = HFX.ranger, e = c.ent, marked = (e._rgMarkUntil || 0) > FX.now, n = marked ? 7 : 5, col = marked ? RANG_GOLD : '#58c03a', ang = Math.atan2(c.ty - c.y, c.tx - c.x), nx = -Math.sin(ang), ny = Math.cos(ang), b = ahead(c, 14);
+        R.string(e, marked ? { col: '#fff0b0' } : {});
+        for (let i = 0; i < n; i++) c.later(i * 0.065, () => { const j = rnd(-13, 13), tx = c.tx + nx * j, ty = c.ty + ny * j * 0.7, a2 = Math.atan2(ty - c.y, tx - c.x), last = i === n - 1;
+          if (i % 2 === 0) rangerRelease(b.x, b.y, ang, col, 0.7);
+          R.shot(b.x, b.y, tx, ty, { speed: 1800, size: last ? 1.05 : 0.9, col, long: 0.7, onHit: (x, y) => { R.hit(x, y, a2, { s: last ? 1.2 : 0.55, col, gold: marked, life: 1.1 }); if (last) V.shock(x, y, { r: marked ? 56 : 46, color: col, dur: 0.3, w: 2.5 }); } }); }); },
+      // Hunter's Mark: the hunter looses a marking arrow trailing a gold pennant; it lands in the boss and stays, the pennant fluttering, while four gold
+      // brackets (lines only, no floor disc, so a telegraph under the boss still reads) snap shut on it and the reticle stays for the 15s
+      mark: c => { const R = HFX.ranger, e = c.ent; e._rgMarkUntil = FX.now + 15; rangerKeenProc(e, 2); V.shock(e.x, e.y, { r: 56, color: RANG_GOLD, dur: 0.4, w: 2.5 });
+        const bx = c.tx, by = c.ty - 40, ang = Math.atan2(c.ty - c.y, c.tx - c.x), b = ahead(c, 14);
+        R.string(e, { col: '#fff0b0', ringCol: RANG_GOLD });
+        R.shot(b.x, b.y, c.tx, c.ty - 6, { speed: 1100, size: 1.3, col: RANG_GOLD, arc: 36, glow: RANG_GOLD, headCol: '#fff6d0', onHit: (x, y) => { R.hit(x, y, ang, { s: 1.3, gold: true, stick: false });
+          R.stick(x, y, ang, { size: 1.5, col: RANG_GOLD, life: 2.6, sway: 0.4, z: 26 }); R.pennant(x, y, ang, { life: 2.6, z: 26 }); } });
+        V.fx({ dur: 0.42, delay: 0.18, layer: 'air', draw: (cc, p, t, fx) => { const q = easeOut(Math.min(1, p / 0.5)), RR = 90 - 52 * q, k = fx.a * (1 - Math.max(0, (p - 0.6) / 0.4)), L = 12;
+          for (let i = 0; i < 4; i++) { const sx = i % 2 ? 1 : -1, sy = i < 2 ? -1 : 1, x = bx + sx * RR, y = by + sy * RR * 0.8;
             V.neonPath(cc, RANG_GOLD, 2.6, k, () => { cc.moveTo(x - sx * L, y); cc.lineTo(x, y); cc.lineTo(x, y - sy * L); }); } } });
-        c.later(0.22, () => { V.spikeburst(bx, c.ty, { r: 34, n: 10, color: '#ffc850', core: '#fffbe0', ink: '#4a2a08', dur: 0.28, z: 40 }); V.burst(bx, by, { color: '#ffd27a', n: 8, speed: 120, flash: false });
-          // (VFX pass) the mark is a 60s cooldown: a gold ring of light snaps shut round the boss, ink-edged, held a beat
-          V.climax(bx, c.ty, { shape: 'ring', r: 84, color: '#ffc850', core: '#fff2c0', ink: '#4a2a08', z: 24, flat: 0.8, dur: 0.55 }); });
+        // the mark is a 60s cooldown: a thin gold ring snaps in round the boss
+        c.later(0.3, () => V.shock(bx, c.ty, { r: 86, color: '#ffc850', dur: 0.42, w: 4 }));
         // (polish) the reticle stays on the boss for the debuff's 15s, turning slowly, its four ticks closing in
         const rx = c.tx, ry = c.ty - 40;
-        OP.linger(15, 'air', (cc, k, t) => { const R = 30 + 14 * Math.max(0, 1 - t / 0.35);
-          V.neonRing(cc, rx, ry, R, RANG_AMBER, 1.6, k, 1); V.neonRing(cc, rx, ry, R * 0.55, RANG_AMBER, 1, k * 0.5, 1);
-          cc.save(); cc.translate(rx, ry); cc.rotate(t * 0.6); for (let i = 0; i < 4; i++) { cc.rotate(Math.PI / 2); V.neonPath(cc, '#ffb040', 2, k, () => { cc.moveTo(R + 9, 0); cc.lineTo(R - 7, 0); }); } cc.restore();
+        OP.linger(15, 'air', (cc, k, t) => { const RR = 30 + 14 * Math.max(0, 1 - t / 0.35);
+          V.neonRing(cc, rx, ry, RR, RANG_AMBER, 1.6, k, 1); V.neonRing(cc, rx, ry, RR * 0.55, RANG_AMBER, 1, k * 0.5, 1);
+          cc.save(); cc.translate(rx, ry); cc.rotate(t * 0.6); for (let i = 0; i < 4; i++) { cc.rotate(Math.PI / 2); V.neonPath(cc, '#ffb040', 2, k, () => { cc.moveTo(RR + 9, 0); cc.lineTo(RR - 7, 0); }); } cc.restore();
           V.glowAt(cc, rx, ry, 5, '#fff2c0', k); }, { peak: 1, settle: 0.42, hold: 0.8 }); },
-      // a leafy dome over the ranger, leaves whirling out; then a faint green shimmer stays on the ranger for the 10s, a
-      // leaf slipping off now and then
-      cloak: c => { V.dome(c.ent, { color: '#8fdf7a', r: 50, dur: 1.4 }); for (let i = 0; i < 12; i++) V.spawn({ x: c.x, y: c.y, z: 10 + Math.random() * 20, life: 1.2, size: 12, color: '#5fbf4a', kind: 'leaf', add: false, vr: 6, orbit: { x: c.x, y: c.y, a: i * 0.52, r: 20, w: 5, dr: 90, flat: 0.6 } });
-        V.shock(c.x, c.y, { r: 150, color: '#8fdf7a', dur: 0.6, w: 5 }); const e = c.ent;
-        // (VFX pass) a 90s cooldown: a leaf-green ring springs up round the hero, ink-edged, held a beat, a few embers and leaf smoke after
-        V.climax(c.x, c.y, { shape: 'ring', r: 86, color: '#7fdc6a', core: '#e8ffc8', ink: '#0e2a0a', layer: 'ground', flat: 0.7, dur: 0.6, after: { smoke: 0.4, embers: 0.4 }, smokeColor: '#4a6a3a' });
-        OP.linger(10, 'ground', (cc, k, t) => { V.neonRing(cc, e.x, e.y + 2, 30 + Math.sin(t * 2.4) * 2, '#8fdf7a', 1.6, k, 0.55); V.glowAt(cc, e.x, e.y - 10, 34, '#8fdf7a', 0.22 * k);
+      // Hunter's Cloak: the cloak swings round the hunter in three crescents of leaf-green cloth, leaves torn off its hem and thrown out wide
+      // as it spreads over the party (a thin ring marks the reach); then a faint ring of green stays on the hunter for the 10s, a leaf slipping off now and then
+      cloak: c => { HFX.ranger.cloak(c.ent); V.shock(c.x, c.y, { r: 140, color: '#8fdf7a', dur: 0.6, w: 3 }); const e = c.ent;
+        OP.linger(10, 'ground', (cc, k, t) => { V.neonRing(cc, e.x, e.y + 2, 30 + Math.sin(t * 2.4) * 2, '#8fdf7a', 1.6, k, 0.55);
           for (let i = 0; i < 3; i++) { const a = t * 1.3 + i * TAU / 3; V.glowAt(cc, e.x + Math.cos(a) * 30, e.y + 2 + Math.sin(a) * 16, 5, '#d8ffb0', 0.8 * k); } },
           { peak: 0.9, settle: 0.4, hold: 1.4, tick: () => { if (Math.random() < 0.04) V.spawn({ x: e.x + rnd(-18, 18), y: e.y, z: rnd(30, 50), vz: rnd(-25, -10), vx: rnd(-15, 15), life: 1.3, size: 10, color: '#6fbf5a', kind: 'leaf', add: false, vr: rnd(-3, 3), flutter: 5 }); } }); },
-      // a glint, power spiralling into the bow over a small circle; then the bow keeps a gold glow and three gold arrow
-      // ticks over the hero until the next Quick Shot spends it (up to the buff's 15s; quick cuts this marker)
-      barrage: c => { V.glint(c.x, c.y, { color: '#ffe27a', size: 30, z: 30 }); V.charge(c.ent.x, c.ent.y, { color: '#d8ff9a', r: 50, follow: c.ent }); V.sigil(c.x, c.y, { r: 40, style: 'star4', color: '#c8ff7a', dur: 0.8, spin: 4, follow: c.ent }); V.aura(c.ent, { color: '#c8ff7a', dur: 1.2, r: 28, rate: 0.4 });
-        const e = c.ent; if (e.rangerBarrage) e.rangerBarrage.cut = true;
-        e.rangerBarrage = OP.linger(15, 'air', (cc, k, t) => { const a = e.angle || 0, bx = e.x + Math.cos(a) * 16, by = e.y + Math.sin(a) * 12 - 20, pu = 0.75 + 0.25 * Math.sin(t * 5);
-          V.glowAt(cc, bx, by, 16, RANG_GOLD, 0.6 * k * pu); V.glowAt(cc, bx, by, 5, '#ffffff', k);
-          // (QA: bare chevrons read as a zigzag) three little gold arrows, shaft and head, standing over the hero
-          for (let i = -1; i <= 1; i++) { const x = e.x + i * 9, y = e.y - 58 - Math.abs(i) * 3 + Math.sin(t * 3 + i) * 1.5; V.neonPath(cc, RANG_GOLD, 1.4, k, () => { cc.moveTo(x, y + 9); cc.lineTo(x, y - 3); cc.moveTo(x - 3.5, y + 1); cc.lineTo(x, y - 4); cc.lineTo(x + 3.5, y + 1); cc.moveTo(x - 2.5, y + 10); cc.lineTo(x, y + 7); cc.lineTo(x + 2.5, y + 10); }); } },
-          { peak: 1, settle: 0.6, hold: 0.6 });
+      // Barrage: the string snaps and three arrows are nocked at once, fanning out from the bow; they stay held there, gold-fletched
+      // and breathing faintly, until the next Quick Shot looses them (up to the buff's 15s; quick cuts this marker)
+      barrage: c => { const R = HFX.ranger, e = c.ent; R.string(e, { col: '#fff0b0', ringCol: RANG_GOLD }); V.charge(c.ent.x, c.ent.y, { color: '#d8ff9a', r: 44, follow: c.ent }); V.aura(c.ent, { color: '#c8ff7a', dur: 1, r: 26, rate: 0.35 });
+        if (e.rangerBarrage) e.rangerBarrage.cut = true;
+        e.rangerBarrage = OP.linger(15, 'air', (cc, k, t) => { const a = e.angle || 0, h = FX.heroScale || 1.5, bx = e.x + Math.cos(a) * 8 * h - Math.sin(a) * 15 * h, by = e.y + Math.sin(a) * 8 * h + Math.cos(a) * 15 * h - 6, sp = 0.4 * easeOut(Math.min(1, t / 0.25)), pu = 0.92 + 0.08 * Math.sin(t * 5);
+          for (const o of [-1, 0, 1]) { cc.save(); cc.translate(bx, by); cc.rotate(a + o * sp); cc.translate(14 * pu, 0); R.arrow(cc, 30, { col: RANG_GOLD, w: 1.1, k, head: 1.1 }); cc.restore(); }
+          V.glowAt(cc, bx + Math.cos(a) * 10, by + Math.sin(a) * 10, 12, RANG_GOLD, 0.35 * k * pu); },
+          { peak: 1, settle: 0.7, hold: 0.6 });
         e.rangerBarrage.at = FX.now; },
+// <<< rtd ranger-recipes
     },
     shadowblade: {
-      // two daggers cross in an X (violet and steel), a few red sparks and drops
-      // (rogue sheet, Swift Strike) a violet smear off the blades, then two big steel cuts crossing in an X before the
-      // target, a white glint where they cross, red sparks and a few drops
-      // (melee pass) pressed over and over, so two looks that alternate: the crossing X, then a driving thrust with an arrowhead and
-      // a steel cut over it; the press that fills the gauge rings it once, and a hit from the back is stamped over the boss
+      // (hero pilot) cut lines, ink-black smear, poison green. Strike is pressed over and over, so two looks that alternate: two daggers crossing
+      // (each leaves an ink-dark smear with a steel edge, and two cuts crossing open on the target), then a driving thrust with one long cut
+      // along it. The press that fills the gauge rings it once, and a hit from the back is stamped over the boss
       strike: c => { const e = c.ent, n = (e._sbN = ((e._sbN | 0) + 1) % 2), f = n === 0, ang = Math.atan2(c.ty - c.y, c.tx - c.x), p = between(c, 0.75), was = e._sbCp || 0, cp = sbPoints(c, 1), ca = Math.cos(ang), sa = Math.sin(ang);
         if (f) {
-          V.slash(c.x, c.y, c.ang + 0.25, { r: 48, span: 1.3, color: '#c58aff', dur: 0.2, flip: f, sparks: 3 }); c.later(0.04, () => V.slash(c.x, c.y, c.ang - 0.25, { r: 48, span: 1.3, color: '#e8e0ff', dur: 0.2, w: 0.35, flip: !f, sparks: 2 }));
-          OP.smear(c.x, c.y, c.ang, { r: 58, span: 1.8, w: 12, color: SHAD_VIO, core: SHAD_STEEL, ink: SHAD_INK, dur: 0.24, flip: f, lines: 2 });
-          shadowX(p.x, p.y, ang, 1.35);
+          V.slash(c.x, c.y, c.ang + 0.25, { r: 50, span: 1.4, color: '#e8e0ff', dur: 0.2, flip: f, w: 0.3, sparks: 2 }); c.later(0.04, () => V.slash(c.x, c.y, c.ang - 0.25, { r: 50, span: 1.4, color: '#c58aff', dur: 0.2, w: 0.3, flip: !f, sparks: 1 }));
+          HFX.inkSmear(c.x, c.y, c.ang, { r: 58, span: 2, w: 14, flip: f, dur: 0.3 });
         } else {
-          V.slash(c.x, c.y, c.ang - 0.3, { r: 50, span: 1.2, color: '#e8e0ff', dur: 0.18, flip: true, w: 0.4, sparks: 2 });
-          OP.thrust(c.x + ca * 8, c.y + sa * 8, c.tx + ca * 16, c.ty + sa * 16, { w: 12, color: SHAD_VIO, core: '#ffffff', ink: SHAD_INK, head: true, dur: 0.22, z: 22 });
-          c.later(0.03, () => { for (const s of [-1, 1]) OP.thrust(c.x - sa * s * 10, c.y + ca * s * 7, c.tx - ca * 22 - sa * s * 10, c.ty - sa * 22 + ca * s * 7, { w: 4, color: '#c58aff', core: '#ffffff', ink: SHAD_INK, dur: 0.18, z: 22 }); });
-          c.later(0.07, () => V.slash(p.x, p.y, ang + 2.2, { r: 44, span: 1.1, color: '#ffffff', w: 0.3, dur: 0.16, sparks: 2 }));
+          V.slash(c.x, c.y, c.ang - 0.3, { r: 50, span: 1.2, color: '#e8e0ff', dur: 0.18, flip: true, w: 0.3, sparks: 2 });
+          OP.thrust(c.x + ca * 8, c.y + sa * 8, c.tx + ca * 16, c.ty + sa * 16, { w: 9, color: SHAD_VIO, core: '#ffffff', ink: SHAD_INK, head: true, dur: 0.22, z: 22 });
         }
-        c.later(0.1, () => { V.glint(p.x, p.y, { color: '#ffffff', size: 30, z: 22 }); V.hit(c.tx, c.ty, '#e0c0ff', 0.55); V.splash(c.tx, c.ty, { n: 4, size: 0.7 }); V.sparks(p.x, p.y, { color: '#ff7a6a', n: 6, speed: 300, z: 22 });
+        c.later(0.1, () => {
+          if (f) { HFX.cut(p.x, p.y, ang + 0.8, { len: 46, color: '#f2ecff', inner: '#c58aff' }); HFX.cut(p.x, p.y, ang - 0.8, { len: 40, color: '#f2ecff', inner: '#ff5a7a', delay: 0.04 }); }
+          else HFX.cut(p.x, p.y, ang + 0.12, { len: 58, w: 3.6, color: '#ffffff', inner: '#ff5a7a' });
+          V.sparks(p.x, p.y, { color: '#ff9a8a', n: 5, speed: 300, z: 22 }); V.splash(c.tx, c.ty, { n: 3, size: 0.6 });
           if (sbLanded(c, 'rear')) sbFlourish(c.tx, c.ty, 'rear', 0.8);
           if (cp >= 5 && was < 5) { V.shock(c.ent.x, c.ent.y, { r: 44, r0: 10, color: SHAD_STEEL, dur: 0.3, w: 3 }); V.glint(c.ent.x + Math.cos(c.ang) * 12, c.ent.y, { color: '#ff9ac0', size: 24, z: 34 }); } }); },
-      // a double cut, then a crimson starburst, a spray of blood and a splatter left on the floor
-      // (melee pass) it shows what it spent: one crimson cut per combo point fanned across the target, a burst, a splash and a puddle
-      // that grow with them, a pip flung out for each point, a crimson arrowhead from three up; five points add a steel X, a white
-      // flash and a hit-stop, so four and five are not the same hit. A hit from the side is stamped over the boss
+      // Eviscerate: it shows what it spent. One crimson cut per combo point opens on the target, fanned across it and each a beat after the last, with
+      // a spray, a stain and a pip flung out for each point; from three up a crimson arrowhead drives through; five points add a great steel X, a
+      // white flash and a hit-stop, so four and five are not the same hit. A hit from the side is stamped over the boss
       evis: c => { const e = c.ent, kit = sbKit(c), cp = Math.max(1, Math.min(5, e._sbCp || 4)), ang = Math.atan2(c.ty - c.y, c.tx - c.x), ca = Math.cos(ang), sa = Math.sin(ang), full = cp >= 5, T = 0.035 * cp + 0.06;
         e._sbCp = kit ? kit.g.combo : 0;
-        for (let i = 0; i < cp; i++) c.later(i * 0.035, () => V.slash(c.x, c.y, c.ang + (i - (cp - 1) / 2) * 0.34, { r: 50 + 3 * cp, span: 1.5 + 0.05 * cp, color: i % 2 ? '#ff4d9a' : '#ffd0e4', dur: 0.24, flip: i % 2 === 1, w: 0.4 + 0.04 * cp, sparks: i === cp - 1 ? 4 : 1 }));
+        for (let i = 0; i < cp; i++) c.later(i * 0.035, () => V.slash(c.x, c.y, c.ang + (i - (cp - 1) / 2) * 0.34, { r: 50 + 3 * cp, span: 1.5 + 0.05 * cp, color: i % 2 ? '#ff4d9a' : '#ffd0e4', dur: 0.24, flip: i % 2 === 1, w: 0.34, sparks: i === cp - 1 ? 3 : 0 }));
+        HFX.inkSmear(c.x, c.y, c.ang, { r: 62, span: 2.4, w: 16, dur: 0.34 });
         c.later(T, () => { const m = between(c, 0.6);
-          if (cp >= 3) OP.thrust(c.x - ca * 12, c.y - sa * 12, c.tx + ca * (14 + 6 * cp), c.ty + sa * (14 + 6 * cp), { w: 6 + 2.4 * cp, color: '#d01a3a', core: '#ffe0e8', ink: '#2a0410', head: true, dur: 0.26, z: 20 });
-          V.spikeburst(c.tx, c.ty, { r: 30 + 12 * cp, n: 8 + 2 * cp, color: '#d0204a', core: full ? '#ffffff' : '#ffe0ec', ink: '#2a0410', dur: 0.3 + 0.015 * cp });
-          V.splash(c.tx, c.ty, { n: 4 + 2 * cp, speed: 0.9 + 0.1 * cp }); V.hit(c.tx, c.ty, full ? '#ffe0f0' : '#ff9ad0', 0.5 + 0.15 * cp);
-          V.puddle(m.x, m.y, { r: 8 + 2 * cp, color: '#4a1430', dark: '#1a0612', dur: 1.2, bubbles: false, fumes: false });   // (online refs: a dark wine stain, never a red pool that reads as a telegraph)
+          for (let i = 0; i < cp; i++) HFX.cut(c.tx, c.ty, ang + Math.PI / 2 + (i - (cp - 1) / 2) * 0.5, { len: 38 + 6 * cp, w: 3.4, color: i % 2 ? '#ffd0e4' : '#fff0f4', inner: '#d01a3a', delay: i * 0.035, bend: 0.1 });
+          if (cp >= 3) OP.thrust(c.x - ca * 12, c.y - sa * 12, c.tx + ca * (14 + 6 * cp), c.ty + sa * (14 + 6 * cp), { w: 5 + 2 * cp, color: '#d01a3a', core: '#ffe0e8', ink: '#2a0410', head: true, dur: 0.26, z: 20 });
+          V.spikeburst(c.tx, c.ty, { r: 20 + 8 * cp, n: 8 + 2 * cp, color: '#d0204a', core: full ? '#ffffff' : '#ffe0ec', ink: '#2a0410', dur: 0.26 });
+          V.splash(c.tx, c.ty, { n: 4 + 2 * cp, speed: 0.9 + 0.1 * cp }); V.sparks(c.tx, c.ty, { color: '#ff9a8a', n: 3 + cp, speed: 340 });
+          V.puddle(m.x, m.y, { r: 8 + 2 * cp, color: '#4a1430', dark: '#1a0612', dur: 1.2, bubbles: false, fumes: false });
           sbPips(c.tx, c.ty, cp, full ? '#fff0c8' : '#ff7aa8');
           if (cp >= 4) V.shock(c.tx, c.ty, { r: 54 + 14 * cp, color: '#ff4d9a', dur: 0.36, w: 2 + cp });
-          // (VFX pass) the finisher's climax: a crimson cross of cuts, ink-edged, held a beat on the target; it grows with the points spent (three and up)
-          if (cp >= 3) V.climax(c.tx, c.ty, { shape: 'cross', r: 64 + 7 * cp, tilt: ang + Math.PI / 4, color: full ? '#ff4d7a' : '#d01a3a', core: full ? '#ffffff' : '#ffe0e8', ink: '#2a0410', z: 20, dur: 0.5, after: { embers: full ? 0.5 : 0 } });
-          if (full) { V.flash(c.tx, c.ty - 20, 96, '#ffe8f0', 0.2); shadowX(c.tx, c.ty, ang, 1.8); V.glint(c.tx, c.ty, { color: '#ffffff', size: 46, z: 24 }); V.shock(c.tx, c.ty, { r: 150, color: '#ffe8f0', dur: 0.3, w: 2, delay: 0.05 }); }
+          if (full) { V.flash(c.tx, c.ty - 20, 96, '#ffe8f0', 0.2); HFX.cut(c.tx, c.ty, ang + 0.8, { len: 120, w: 6, color: '#ffffff', inner: '#ff4d7a', z: 22, dur: 0.5 }); HFX.cut(c.tx, c.ty, ang - 0.8, { len: 112, w: 5.5, color: '#ffffff', inner: '#ff4d7a', z: 22, dur: 0.5, delay: 0.05 });
+            V.glint(c.tx, c.ty, { color: '#ffffff', size: 46, z: 24 }); V.shock(c.tx, c.ty, { r: 150, color: '#ffe8f0', dur: 0.3, w: 2, delay: 0.05 }); }
           if (cp >= 3) shake(cp - 2);
           if (full && c.mine && e.st && typeof hitStop === 'function') hitStop(e.st, 0.06, FX.now);
           if (sbLanded(c, 'flank')) sbFlourish(c.tx, c.ty, 'flank', 0.7 + 0.06 * cp); }); },
-      // a dark smear slipping round the target, purple smoke hanging where you land
-      step: c => { const d = Math.hypot(c.x - c.tx, c.y - c.ty) || 1; V.shadowdash(c.tx - (c.x - c.tx) / d * 60, c.ty - (c.y - c.ty) / d * 60, c.x, c.y); V.swirl(c.x, c.y, { r: 36, color: '#b070ff', dur: 0.4, inward: true });
-        // (polish) smoke left hanging where the rogue vanished and where it lands, thinning over ~2s
-        const d0 = { x: c.tx - (c.x - c.tx) / d * 60, y: c.ty - (c.y - c.ty) / d * 60 };
-        V.smoke(d0.x, d0.y, { n: 6, r: 12, color: '#4a3a5a', size: 26, a: 0.55, speed: 30, life: 2.2 });
-        // (melee pass) the landing says where you are now: a crimson arrowhead from the new spot into the target's back, a pale ring
-        c.later(0.2, () => { V.smoke(c.x, c.y, { n: 7, r: 14, color: '#5a3a7a', size: 26, a: 0.6, speed: 35, life: 2.2 }); V.shock(c.x, c.y, { r: 50, color: '#b070ff', dur: 0.35, w: 3 });
+      // Shadowstep: the rogue goes through the target. An ink-black smear streaks from the boss's front to where the body lands (the hero's own position
+      // when the cast is drawn: the move has already happened), cutting it as it passes; smoke is left where it went through and the body arrives out of the
+      // dark with a pale ring and a crimson arrowhead into the target's back
+      step: c => { const d = Math.hypot(c.x - c.tx, c.y - c.ty) || 1, ux = (c.x - c.tx) / d, uy = (c.y - c.ty) / d, sx = c.tx - ux * 70, sy = c.ty - uy * 70;
+        HFX.shadowSmear(sx, sy, c.x, c.y, { w: 15 }); HFX.inkWisps(sx, sy, { n: 4 }); V.swirl(c.x, c.y, { r: 36, color: '#b070ff', dur: 0.4, inward: true });
+        c.later(0.05, () => HFX.cut(c.tx, c.ty, Math.atan2(uy, ux) + 1.35, { len: 62, w: 3.6, color: '#ffffff', inner: '#d01a3a', z: 18 }));
+        c.later(0.2, () => { HFX.inkWisps(c.x, c.y, { n: 5, s: 1.1 }); V.shock(c.x, c.y, { r: 50, color: '#b070ff', dur: 0.35, w: 3 });
           const a = Math.atan2(c.ty - c.y, c.tx - c.x), L = Math.min(70, Math.hypot(c.tx - c.x, c.ty - c.y) * 0.8);
-          OP.thrust(c.x + Math.cos(a) * 10, c.y + Math.sin(a) * 10, c.x + Math.cos(a) * (10 + L), c.y + Math.sin(a) * (10 + L), { w: 9, color: '#d01a3a', core: '#ffe0e8', ink: '#2a0410', head: true, dur: 0.24, z: 22 });
+          OP.thrust(c.x + Math.cos(a) * 10, c.y + Math.sin(a) * 10, c.x + Math.cos(a) * (10 + L), c.y + Math.sin(a) * (10 + L), { w: 8, color: '#d01a3a', core: '#ffe0e8', ink: '#2a0410', head: true, dur: 0.24, z: 22 });
           V.glint(c.x, c.y - 4, { color: '#ffd0e0', size: 24, z: 30 }); }); },
       // two dagger glints, a whirl of blades round the rogue, scratch marks left glinting, then the shadow aura
       // (online refs, WoW Shadow Dance / Kassatsu) an impulse: ink pulled in for a beat, then a snap ring, a pale flicker and
@@ -991,7 +1866,7 @@ const ABILITY_VFX = (() => {
         V.glint(c.x - 14, c.y, { color: '#e8e0ff', size: 20, z: 34 }); V.glint(c.x + 14, c.y, { color: '#e8e0ff', size: 20, z: 34 });
         c.later(0.12, () => { V.flash(e.x, e.y - 24, 40, '#e8e0ff', 0.12); V.shock(e.x, e.y, { r: 86, r0: 14, color: '#b070ff', dur: 0.3, w: 3.5 }); V.vortex(e.x, e.y, { r: 72, color: '#9a4dff', dur: 0.9, follow: e });
           // (VFX pass) a 60s cooldown: a violet ring of shadow snaps out round the rogue, ink-edged, held a beat; smoke curls off it
-          V.climax(e.x, e.y, { shape: 'ring', r: 84, color: '#8a3dff', core: '#e0d0ff', ink: SHAD_INK, layer: 'ground', flat: 0.7, dur: 0.6, after: { smoke: 0.5 }, smokeColor: '#3a2858' });
+          HFX.inkWisps(e.x, e.y, { n: 6, s: 1.1 }); HFX.inkWisps(e.x, e.y, { n: 3, s: 1.4, a: 0.35, life: 1.8 });
           V.smoke(e.x, e.y, { n: 5, r: 10, color: '#2a1838', size: 24, a: 0.5, speed: 90, life: 0.8 }); shake(2); });
         V.aura(e, { color: '#b04dff', style: 'shadow', dur: 10, r: 30, rate: 0.25 });
         if (e.sbDouble) e.sbDouble.cut = true;
@@ -1009,7 +1884,7 @@ const ABILITY_VFX = (() => {
       venom: c => { const h = ahead(c, 16); V.glint(h.x, h.y, { color: '#b8ff8a', size: 24, z: 22 });
         for (let i = 0; i < 4; i++) V.spawn({ x: h.x + rnd(-6, 6), y: h.y, z: 22, vz: -20, g: 500, life: 0.4, size: 7, color: '#8aff4a', kind: 'drop', add: false, rot: Math.PI / 2 });
         c.later(0.07, () => { V.slash(c.x, c.y, c.ang, { r: 52, span: 1.6, color: '#8aff4a', dur: 0.24 }); OP.smear(c.x, c.y, c.ang, { r: 64, span: 1.9, w: 15, color: '#5adf2a', core: '#e8ffd0', ink: '#0a1a04', dur: 0.26, lines: 2 }); });
-        c.later(0.15, () => { const m = between(c, 0.6); V.splash(c.tx, c.ty, { color: '#7adf3a', n: 10 }); V.hit(c.tx, c.ty, '#b8ff8a', 0.6); V.puddle(m.x, m.y, { r: 28, color: '#7adf3a', dark: '#1e3a0a', dur: 2.6 });
+        c.later(0.15, () => { const m = between(c, 0.6); V.splash(c.tx, c.ty, { color: '#7adf3a', n: 10 }); HFX.cut(c.tx, c.ty, c.ang + 1.1, { len: 46, color: '#e8ffd0', inner: '#5adf2a' }); V.hit(c.tx, c.ty, '#b8ff8a', 0.4); V.puddle(m.x, m.y, { r: 28, color: '#7adf3a', dark: '#1e3a0a', dur: 2.6 });
           const bub = Array.from({ length: 3 }, (_, i) => ({ x: rnd(-14, 14), y: rnd(-5, 5), ph: i / 3 }));
           OP.linger(24, 'ground', (cc, k, t) => { if (t < 2) return; const kk = k * Math.min(1, (t - 2) / 0.6);
             cc.globalAlpha = 0.3 * kk; cc.fillStyle = '#2a5a10'; cc.beginPath(); cc.ellipse(m.x, m.y, 26, 12, 0, 0, TAU); cc.ellipse(m.x + 12, m.y + 4, 12, 6, 0, 0, TAU); cc.fill(); cc.globalAlpha = 1;
@@ -1021,75 +1896,72 @@ const ABILITY_VFX = (() => {
       // (QA: the pop whited out the middle of the cloud) a small pop flash
       smoke: c => { V.smokebomb(c.x, c.y, { r: 140, color: '#8a7a9a', dur: 2.2, a: 0.5, n: 18, sx: c.x + Math.cos(c.ang) * 10, sy: c.y - 6, flashR: 36 });
         // (VFX pass) a 90s cooldown: the pop is a bold dusk-violet burst, ink-edged and held a beat (a muted core, so it never whites out the cloud)
-        c.later(0.18, () => V.climax(c.x, c.y, { shape: 'burst', r: 84, n: 10, color: '#6a4a9a', core: '#b8a0e0', ink: SHAD_INK, z: 16, flat: 0.8, dur: 0.5 }));
+        c.later(0.1, () => { HFX.inkWisps(c.x, c.y, { n: 5, s: 1.3 }); V.shock(c.x, c.y, { r: 120, color: '#8a7a9a', dur: 0.4, w: 5 }); });
         const x = c.x, y = c.y, r = 140;
         OP.linger(10, 'ground', (cc, k) => { cc.globalAlpha = 0.12 * k; cc.fillStyle = '#2a1838'; cc.beginPath(); cc.ellipse(x, y, r, r * 0.78, 0, 0, TAU); cc.fill(); cc.globalAlpha = 1; V.neonRing(cc, x, y, r, '#8a5ac0', 1.4, k * 0.55, 0.78); },
           { peak: 0.7, settle: 0.45, hold: 2, tick: (p, dt, e) => { if (!e.cut && Math.random() < 0.3) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * r * 0.85;
             V.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.78, z: rnd(0, 12), vz: rnd(5, 15), vx: rnd(-8, 8), drag: 0.05, life: rnd(1.6, 2.4), size: rnd(26, 40), size1: 54, color: '#6a5a7a', kind: 'smoke', add: false, a: 0.14, fadeIn: 0.3, fadePow: 2 }); } } }); },
     },
     pyromancer: {
-      // (online-refs pass: WoW Fireball, the filler) a flame in the hand, the fireball with its comet tail, a cushion of
-      // flame puffs round a white-hot heart, a modest starburst and two puffs of smoke; no scorch and no shake, so the
-      // Pyroblast's hit is the one that feels big. A crit that lights Heating Up / Hot Streak flashes on your hands
-      fireball: c => { const h = ahead(c, 16), pr = pyroProcs(c); V.glint(h.x, h.y, { color: '#ffb040', size: 24, z: 24 }); V.spawn({ x: h.x, y: h.y, z: 22, life: 0.22, size: 22, size1: 6, color: '#ff8a2a' });
-        V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ff8c2a', speed: TRV('pyromancer', 'fireball'), arc: 16, size: 1.4, onHit: (x, y) => { V.flash(x, y - 16, 56, '#ffb050', 0.18); pyroPillow(x, y, 30);
-          V.spikeburst(x, y, { r: 50, n: 12, color: '#ff8a2a', core: '#fff0b0', dur: 0.3 }); V.shock(x, y, { r: 66, color: '#ffa040', dur: 0.32, w: 4 });
-          V.smoke(x, y, { n: 2, r: 14, color: '#5a4a48', size: 22, a: 0.4, speed: 35, life: 1 }); } });
+      // (hero pilot) living fire: it licks, rises, leaves embers and smoke and a scorch, and the big spells are the ones that burn longest.
+      // Fireball, the filler: a flame cupped in the hand, a teardrop of fire with a living tail, and a small bloom of tongues where it lands
+      // (HFX.fireBloom, kept small so the Pyroblast's hit is the one that feels big). No star, no ring on top. A crit that lights
+      // Heating Up / Hot Streak flashes on your hands
+      fireball: c => { const h = ahead(c, 16), pr = pyroProcs(c); V.glint(h.x, h.y, { color: '#ffb040', size: 22, z: 24 }); HFX.flames(h.x, h.y, { n: 3, r: 3, s: 0.45, z: 18, out: 4, up: 0.6 });
+        HFX.fireball(c.x, c.y, c.tx, c.ty, { speed: TRV('pyromancer', 'fireball'), arc: 16, size: 1.15, onHit: (x, y) => { HFX.fireBloom(x, y, { s: 1.25 }); HFX.fireHit(x, y, { s: 1.05 }); } });   // (landing pass: a hard core and a ring under the bloom)
         pyroProcBeat(c, pr); },
-      // (online-refs pass: WoW Pyroblast / FF14 Fire IV) the hard cast: a burning rock lobbed high, a big starburst, rocks,
-      // a short scorch and a shake. Spent from Hot Streak (your own hero) it bursts straight off the hand instead: a ring of
-      // flame kicks out round the mage, a fast fat fireball with a gold heart, and the same big hit
+      // Pyroblast, the hard cast: a molten rock lobbed high in a long flaming wake, landing as a head of fire climbing out of a scorched hole with
+      // tongues licking round it and a smoke that climbs. Spent from Hot Streak (your own hero) it bursts straight off the hand instead: a ring of
+      // flame kicks out round the mage and a fast gold-hearted fireball goes, the same big hit
       pyro: c => { const h = ahead(c, 16), pr = pyroProcs(c), hs = !!pr && pr.prev === 2 && pr.now < 2;
-        // (VFX pass) a Hot Streak Pyroblast is the fire sheet's one bold climax: an ink-edged flame burst 96 across with a white-hot core,
-        // held a beat, smoke and embers after (it replaces the starburst; the hard-cast one keeps its own)
-        const hit = (x, y) => { if (hs) V.climax(x, y, { shape: 'burst', r: 96, n: 14, color: '#ff6a1a', core: '#fff6d0', ink: '#3a0e04', z: 26, dur: 0.6, after: { smoke: 0.4, embers: 0.6 }, smokeColor: '#5a4a48' });
-          else V.spikeburst(x, y, { r: 72, n: 16, color: '#ff6a1a', core: '#fff0b0', dur: 0.42 }); pyroPillow(x, y, 40); V.flare(x, y, { n: 6, r: 22, size: 1.2, h: 1.2 }); V.shock(x, y, { r: 110, color: '#ff8a3a', dur: 0.5, w: 7 });
-          V.flash(x, y - 18, 80, hs ? '#ffe08a' : '#ffb050', 0.22); V.debris(x, y, { n: 3, hot: true, color: '#4a3226' }); V.decal(x, y, { r: 40, embers: true, dur: 1.4 }); V.smoke(x, y, { n: 3, r: 26, color: '#5a4a48', size: 30, a: 0.42, speed: 50, life: 1.4 }); shake(hs ? 5 : 6); };
-        if (hs) { V.glint(h.x, h.y, { color: '#fff2c0', size: 40, z: 26 }); V.shock(c.x, c.y, { r: 58, r0: 12, color: '#ffb040', dur: 0.3, w: 4 }); V.blaze(c.ent, { r: 34, dur: 0.45 });
-          V.missile(h.x, h.y, c.tx, c.ty, { style: 'fire', color: '#ff7a1a', speed: TRV('pyromancer', 'pyro', 'instant'), arc: 12, size: 2.2, onHit: hit }); }
+        const hit = (x, y) => { HFX.blast(x, y, { s: hs ? 1.8 : 2.1, hs }); HFX.fireHit(x, y, { s: hs ? 1.7 : 2, hs }); shake(hs ? 5 : 6); };   // (landing pass: the hard core and ring)
+        if (hs) { V.glint(h.x, h.y, { color: '#fff2c0', size: 40, z: 26 }); HFX.flames(c.x, c.y, { n: 6, r: 18, s: 0.8, out: 40, up: 0.8 }); V.shock(c.x, c.y, { r: 58, r0: 12, color: '#ffb040', dur: 0.3, w: 4 }); V.blaze(c.ent, { r: 34, dur: 0.45 });
+          HFX.fireball(h.x, h.y, c.tx, c.ty, { speed: TRV('pyromancer', 'pyro', 'instant'), arc: 12, size: 2, gold: true, onHit: hit }); }
         else { V.glint(h.x, h.y, { color: '#ffd070', size: 30, z: 26 }); V.charge(c.x, c.y, { color: '#ff8a3a', r: 40, n: 8, dur: 0.25 });
-          V.missile(c.x, c.y, c.tx, c.ty, { style: 'meteor', color: '#ff5a1a', speed: TRV('pyromancer', 'pyro', 'cast'), arc: 50, onHit: hit }); }
+          HFX.fireball(c.x, c.y, c.tx, c.ty, { speed: TRV('pyromancer', 'pyro', 'cast'), arc: 50, size: 2.1, rock: true, onHit: hit }); }
         if (pr && pr.now > (hs ? 0 : pr.prev)) { const e = c.ent; c.later(0.1, () => pyroHandProc(e, pr.now)); } },
-      // (online-refs pass: WoW Fire Blast, instant and always a crit) a snap of flame off the fingertips, a white crit star
-      // inside a fat starburst on the boss, a few sparks and grey smoke; the proc it lights flashes on your hands
-      fireblast: c => { const h = ahead(c, 18), pr = pyroProcs(c); V.glint(h.x, h.y, { color: '#ffb040', size: 26 }); V.spawn({ x: h.x, y: h.y, z: 22, life: 0.16, size: 26, size1: 4, color: '#ff8a2a' });
-        c.later(0.06, () => { V.spikeburst(c.tx, c.ty, { r: 56, n: 14, color: '#ff8a1a', core: '#fff6d0', dur: 0.32 }); V.spawn({ x: c.tx, y: c.ty, z: 22, life: 0.22, size: 46, size1: 14, color: '#fff2c0', kind: 'star', vr: 5 });
-          V.flash(c.tx, c.ty - 14, 54, '#ffb050', 0.18); V.sparks(c.tx, c.ty, { color: '#ffd070', n: 6, speed: 380 }); });
-        c.later(0.2, () => V.smoke(c.tx, c.ty, { n: 4, r: 24, color: '#5a5050', size: 26, a: 0.45, speed: 50, life: 1.3 }));
+      // Fire Blast, instant and always a crit: a snap of flame off the fingertips, the sheet's spiked burst with a white crit star on the boss,
+      // then embers and a thin smoke climbing off it. The proc it lights flashes on your hands
+      fireblast: c => { const h = ahead(c, 18), pr = pyroProcs(c); V.glint(h.x, h.y, { color: '#ffb040', size: 26 }); HFX.flames(h.x, h.y, { n: 3, r: 3, s: 0.5, z: 18, out: 6, up: 0.7 });
+        c.later(0.06, () => { V.spikeburst(c.tx, c.ty, { r: 54, n: 14, color: '#ff8a1a', core: '#fff6d0', dur: 0.3 }); V.spawn({ x: c.tx, y: c.ty, z: 22, life: 0.2, size: 44, size1: 12, color: '#fff2c0', kind: 'star', vr: 5 });
+          V.flash(c.tx, c.ty - 14, 46, '#ffb050', 0.16); V.sparks(c.tx, c.ty, { color: '#ffd070', n: 6, speed: 380 }); HFX.embers(c.tx, c.ty, { n: 6, s: 1, r: 12 }); HFX.smokeUp(c.tx, c.ty, { n: 3, s: 0.8, a: 0.34 }); HFX.scorch(c.tx, c.ty, 22, 1.2, 0.3); });
         pyroProcBeat(c, pr); },
-      // heat spirals in, then a fire spiral wraps the mage and flies apart into embers; the flame aura stays on
-      combust: c => { V.charge(c.x, c.y, { color: '#ffb040', r: 50, n: 10, dur: 0.3, follow: c.ent }); V.sigil(c.x, c.y, { r: 66, style: 'star5', color: '#ff7a1a', dur: 1.2, spin: 2.5 }); V.blaze(c.ent, { r: 50, dur: 1.6 }); V.aura(c.ent, { color: '#ff6a1a', style: 'flame', dur: 10, r: 30, rate: 0.3 });
-        // (polish, fire sheet) a ring of flame stands round the mage for the burst's 10s
-        c.later(0.25, () => { pyroFireRing(c.ent, 9.75); V.shock(c.ent.x, c.ent.y, { r: 90, color: '#ffb040', dur: 0.45, w: 5 });
-          // (VFX pass) a 60s cooldown: a bold ring of flame, ink-edged with a hot core, kicks out round the mage and holds a beat, embers after
-          V.climax(c.ent.x, c.ent.y, { shape: 'ring', r: 88, color: '#ff6a1a', core: '#ffe9a0', ink: '#3a0e04', layer: 'ground', flat: 0.7, dur: 0.6, after: { smoke: 0.3, embers: 0.6 }, smokeColor: '#5a4a48' }); }); },
-      // a meteor called down on a rune circle: a cracked, burning crater is left behind
-      vent: c => V.meteor(c.tx, c.ty, { r: 80, color: '#ffa040', wind: 0.32, fall: 0.28, onHit: () => shake(7) }),   // (r: the kit's 80; online-refs pass: an amber rune ring, never telegraph red)
-      // a cone of fire breathed at the boss, then embers, scorch and a smoky haze over the party
-      smolder: c => { const L = Math.min(240, Math.max(120, Math.hypot(c.tx - c.x, c.ty - c.y))); V.breath(c.x, c.y, Math.atan2(c.ty - c.y, c.tx - c.x), { len: L, span: 0.75 }); V.shock(c.x, c.y, { r: 130, color: '#ff8a5a', dur: 0.6 });
-        // (VFX pass) a 90s cooldown: the breath's climax is a bold ink-edged cone of flame, 120 long, with a hot core, held a beat
-        c.later(0.3, () => V.climax(c.x, c.y, { shape: 'cone', angle: Math.atan2(c.ty - c.y, c.tx - c.x), span: 0.8, r: 120, flat: 0.8, color: '#ff6a1a', core: '#ffe9a0', ink: '#3a0e04', z: 18, dur: 0.5, after: { embers: 0.5 } }));
-        c.later(0.7, () => V.smoke(c.x, c.y, { n: 6, r: 60, color: '#5a3a4a', size: 34, speed: 40, a: 0.35, life: 1.8 }));
-        // (polish) the boss smoulders for the debuff's 10s: embers circling its middle, a dark wisp rising off it
+      // Combustion: heat spirals in, a vortex of flame climbs the mage and opens into a ring of tongues thrown out round it; then the mage burns for the 10s
+      // (flame aura, a ring of tongues at the feet, shimmer and embers rising)
+      combust: c => { const e = c.ent; V.charge(c.x, c.y, { color: '#ffb040', r: 50, n: 10, dur: 0.3, follow: e }); V.blaze(e, { r: 50, dur: 1.6 }); V.aura(e, { color: '#ff6a1a', style: 'flame', dur: 10, r: 30, rate: 0.3 });
+        for (let i = 0; i < 10; i++) V.spawn({ x: c.x, y: c.y, z: 4, vz: 85, life: 0.85, size: 24, size1: 8, color: i % 2 ? '#ff7a1a' : '#ff4a14', kind: 'flame', add: false, rot: 0, fadePow: 1.2, orbit: { x: c.x, y: c.y, a: i * TAU / 10, r: 34, w: 7, dr: -14, flat: 0.55, follow: e } });
+        HFX.haze(c.x, c.y, { w: 50, h: 80, dur: 1.4, n: 4, a: 0.1, follow: e });
+        c.later(0.25, () => { pyroFireRing(e, 9.75); V.shock(e.x, e.y, { r: 90, color: '#ffb040', dur: 0.4, w: 3 });
+          for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; V.spawn({ x: e.x + Math.cos(a) * 30, y: e.y + Math.sin(a) * 18, z: 2, vx: Math.cos(a) * 90, vy: Math.sin(a) * 55, vz: rnd(30, 70), drag: 0.06, life: rnd(0.45, 0.7), size: rnd(22, 30), size1: 6, color: '#ff6a1a', kind: 'flame', add: false, rot: 0, fadePow: 1.2 }); }
+          HFX.embers(e.x, e.y, { n: 10, s: 1.1, r: 26, rise: 1.3 }); HFX.smokeUp(e.x, e.y, { n: 3, s: 0.8, a: 0.28 }); });
+        OP.linger(10, 'air', () => {}, { tick: () => { if (Math.random() < 0.18) HFX.embers(e.x, e.y, { n: 1, s: 0.9, r: 18, life: 1.1 }); } }); },
+      // Vent, the Heat let go: flame breathes off the mage and the air shimmers, then fire erupts out of the floor under the target (HFX.geyser) straight away,
+      // as the instant release it is, and leaves a scorch with embers drifting up
+      vent: c => { const e = c.ent; HFX.flames(e.x, e.y, { n: 8, r: 24, s: 0.8, out: 50, up: 0.7 }); HFX.haze(e.x, e.y, { w: 44, h: 70, dur: 1, a: 0.1, follow: e }); V.shock(e.x, e.y, { r: 80, color: '#ff9a3a', dur: 0.4, w: 4 });
+        c.later(0.1, () => { HFX.geyser(c.tx, c.ty, { s: 1.4 }); V.shock(c.tx, c.ty, { r: 100, color: '#ffa040', dur: 0.45, w: 5 }); shake(7); }); },
+      // Smolder: a cone of fire breathed at the boss, tongues along it, a dark smoke and cinders drifting off, and the boss left smouldering for the debuff
+      smolder: c => { const a = Math.atan2(c.ty - c.y, c.tx - c.x), L = Math.min(240, Math.max(120, Math.hypot(c.tx - c.x, c.ty - c.y))); V.breath(c.x, c.y, a, { len: L, span: 0.75 }); V.shock(c.x, c.y, { r: 130, color: '#ff8a5a', dur: 0.6 });
+        c.later(0.25, () => { for (let i = 0; i < 6; i++) { const d = rnd(40, L * 0.85), sp = rnd(-0.3, 0.3); HFX.flames(c.x + Math.cos(a + sp) * d, c.y + Math.sin(a + sp) * d, { n: 1, r: 4, s: 0.9, up: 0.6 }); }
+          HFX.embers(c.x + Math.cos(a) * L * 0.6, c.y + Math.sin(a) * L * 0.6, { n: 10, s: 1, r: 40, rise: 0.8 }); });
+        c.later(0.6, () => HFX.smokeUp(c.x + Math.cos(a) * 60, c.y + Math.sin(a) * 40, { n: 6, r: 50, s: 1.2, a: 0.36, life: 1.4, color: '#3a2e34' }));
         const bx = c.tx, by = c.ty;
         if (Math.hypot(bx - c.x, by - c.y) > 10) c.later(0.35, () => OP.linger(9.6, 'air', (cc, k, t) => { const cy = by - 34;
           V.neonPath(cc, '#ff8a3a', 1.2, k * 0.55, () => cc.ellipse(bx, cy, 32, 10, 0, 0, TAU));
-          for (let i = 0; i < 6; i++) { const a = t * 1.2 + i * TAU / 6; V.glowAt(cc, bx + Math.cos(a) * 32, cy + Math.sin(a) * 10, 7, '#ff6a1a', k * (0.6 + 0.4 * Math.sin(t * 7 + i))); } },
-          { peak: 1, settle: 0.5, hold: 0.8, tick: () => { if (Math.random() < 0.06) V.spawn({ x: bx + rnd(-14, 14), y: by, z: 50, vz: rnd(20, 40), life: 1.4, size: 14, size1: 28, color: '#4a3a3a', kind: 'smoke', add: false, a: 0.3, fadeIn: 0.2 }); } })); },
+          for (let i = 0; i < 6; i++) { const aa = t * 1.2 + i * TAU / 6; V.glowAt(cc, bx + Math.cos(aa) * 32, cy + Math.sin(aa) * 10, 7, '#ff6a1a', k * (0.6 + 0.4 * Math.sin(t * 7 + i))); } },
+          { peak: 1, settle: 0.5, hold: 0.8, tick: () => { if (Math.random() < 0.06) HFX.smokeUp(bx, by, { n: 1, r: 14, s: 0.7, a: 0.3, life: 1.2 }); if (Math.random() < 0.05) HFX.embers(bx, by, { n: 1, r: 18, s: 0.8, z: 30 }); } })); },
     },
     cleric: {
-      // Smite: a gold glint gathers high over the boss, a shaft of light drops, a gold starburst and ring where it lands
-      smite: c => { const n = clericSmiteN++ % 3, side = Math.random() < 0.5 ? -1 : 1, hand = ahead(c, 16);
-        V.glint(hand.x, hand.y, { color: CLER_GOLD, size: 22, z: 34 });
-        V.glint(c.tx, c.ty - 90, { color: CLER_GOLD, size: 34, z: 0 }); V.spawn({ x: c.tx, y: c.ty - 90, z: 0, life: 0.14, size: 30, size1: 8, color: CLER_PALE });
-        const drop = (dx, h, w, d) => c.later(d, () => V.beam(c.tx + dx, c.ty - h, c.tx, c.ty, { color: '#fff0a8', w, dur: 0.34 }));
-        if (n === 0) drop(0, 280, 16, 0.08); else if (n === 1) drop(side * 90, 230, 12, 0.07); else { drop(-34, 270, 8, 0.05); drop(34, 270, 8, 0.08); drop(0, 300, 11, 0.11); }
-        c.later(n === 2 ? 0.17 : 0.13, () => { V.flash(c.tx, c.ty - 20, 70, CLER_GOLD, 0.2);
-          if (n === 0) V.spikeburst(c.tx, c.ty, { r: 50, n: 12, color: '#ffd65a', core: '#fffbe0', ink: '#3a2a08', dur: 0.32, z: 18 });
-          else if (n === 1) { V.spikeburst(c.tx, c.ty, { r: 44, n: 10, color: '#ffd65a', core: '#fffbe0', ink: '#3a2a08', dur: 0.3, z: 16 }); V.sigil(c.tx, c.ty, { r: 34, style: 'star4', color: '#ffd65a', dur: 0.4, spin: 6 }); }
-          else { V.spikeburst(c.tx, c.ty, { r: 62, n: 14, hole: 0.5, color: '#ffd65a', core: '#fffbe0', ink: '#3a2a08', dur: 0.36, layer: 'ground', z: 0, flat: 0.6 }); V.spikeburst(c.tx, c.ty, { r: 34, n: 8, color: '#fff0a8', core: '#ffffff', ink: '#3a2a08', dur: 0.26, z: 22 }); }
-          V.glint(c.tx, c.ty - 14, { color: '#fffbe0', size: n === 2 ? 54 : 44, z: 20, life: 0.34 });
-          V.burst(c.tx, c.ty, { color: '#fff4c0', color2: '#ffffff', n: 10, speed: 230, kind: 'star', flash: false }); V.shock(c.tx, c.ty, { r: 72, color: CLER_GOLD, dur: 0.36, w: 5 }); V.sparks(c.tx, c.ty, { color: CLER_PALE, n: 6, speed: 300 }); shake(n === 2 ? 2.5 : 2); });
+      // (hero pilot) warm light that falls, blooms and goes out in motes. Smite is pressed all fight, so it takes three turns (a narrow curtain, a wider
+      // one, the widest with a ring of rays on the floor): a glint gathers high over the boss, a curtain of thin rays falls onto it with one bright core
+      // ray, and it lands as a soft bloom and a ring, with motes of light climbing off it and going out. No starburst: that is a hit's language, this is light
+      smite: c => { const n = clericSmiteN++ % 3, hand = ahead(c, 16), x = c.tx, y = c.ty, d0 = n === 2 ? 0.05 : 0.07;
+        V.glint(hand.x, hand.y, { color: CLER_GOLD, size: 22, z: 34 }); V.glint(x, y - 100, { color: CLER_GOLD, size: 34, z: 0 });
+        c.later(d0, () => HFX.curtain(x, y, { n: [5, 7, 9][n], w: [40, 56, 84][n], h: 260, rw: [6, 5, 4.5][n], dur: 0.55, color: '#fff0a8' }));
+        c.later(d0 + 0.02, () => V.beam(x, y - 280, x, y, { color: '#fff0a8', w: n === 2 ? 8 : 12, dur: 0.3 }));
+        c.later(d0 + 0.12, () => { V.flash(x, y - 20, 64, CLER_GOLD, 0.2); V.glint(x, y - 14, { color: '#fffbe0', size: n === 2 ? 54 : 44, z: 20, life: 0.34 });
+          V.shock(x, y, { r: [60, 66, 84][n], color: CLER_GOLD, dur: 0.36, w: 3 }); HFX.lightMotes(x, y, { n: [5, 6, 9][n], r: 18, color: '#fff0b0' });
+          if (n === 2) V.spikeburst(x, y, { r: 62, n: 14, hole: 0.5, color: '#ffd65a', core: '#fffbe0', ink: '#3a2a08', dur: 0.36, layer: 'ground', z: 0, flat: 0.6 });
+          shake(n === 2 ? 2.5 : 2); });
         // Inquisitor: the strike leaves a burning brand on the boss
         if (c.ent.spec === 'inquisitor') c.later(0.1, () => { V.sigil(c.tx, c.ty, { r: 36, style: 'star4', color: '#ff9a3c', dur: 1.2, spin: 2 }); V.flare(c.tx, c.ty, { n: 6, r: 10, color: '#ff8a2a', size: 0.7 }); });
       },
@@ -1099,12 +1971,12 @@ const ABILITY_VFX = (() => {
       condemn: c => V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ffb04a', speed: TRV('cleric', 'condemn'), size: 1.2, onHit: (x, y) => {
         V.flare(x, y, { n: 18, r: 16, color: '#ff9a3c' }); V.sigil(x, y, { r: 54, style: 'star4', color: '#ff9a3c', dur: 1.6, spin: 1.5 }); V.shock(x, y, { r: 90, color: '#ffc070', dur: 0.4, w: 5 });
         V.burst(x, y, { color: '#ffe0a0', color2: '#ffffff', n: 14, speed: 260, flashR: 60 }); V.decal(x, y, { r: 40, embers: true, dur: 3 }); vfxShake(4); } }),
-      // holy light falls on the ally in shafts, a few feathers drift down, a golden ring lingers
-      // (online-refs pass: Mend is the slow, deliberate heal, so it lands like Holy Word: Serenity) a gold halo forms over
-      // the ally's head and sinks down through them as the light falls, then light lifts off them with a rising cross
+      // Mend, the slow deliberate heal: a gold halo forms over the ally's head and sinks down through them while a curtain of light falls and a few
+      // feathers come down with it; then the light lifts off them as motes with a rising cross, and a soft ring runs out
       mend: c => { const w = c.tent || { x: c.tx, y: c.ty };
-        clericHalo(w, { dur: 0.42 }); V.lightfall(w.x, w.y, { color: '#ffe680', r: 34, h: 230, dur: 0.85, feathers: 3 });
-        c.later(0.24, () => { V.flash(w.x, w.y - 24, 46, CLER_GOLD, 0.22); V.shock(w.x, w.y, { r: 58, color: CLER_GOLD, dur: 0.42, w: 3 }); clericRise(w, { n: 7 }); V.plus(w.x, w.y, { color: '#ffe680', n: 4 }); }); },
+        clericHalo(w, { dur: 0.42 }); HFX.curtain(w.x, w.y, { n: 9, w: 62, h: 230, dur: 0.85, rw: 6, color: '#ffe680' });
+        for (let i = 0; i < 4; i++) V.spawn({ x: w.x + rnd(-24, 24), y: w.y + rnd(-6, 6), z: 150 + rnd(0, 60), vz: -rnd(60, 100), vx: rnd(-14, 14), life: 1.1, size: rnd(11, 15), color: '#fff0a8', kind: 'feather', vr: rnd(-3, 3), flutter: 4 });
+        c.later(0.24, () => { V.flash(w.x, w.y - 24, 46, CLER_GOLD, 0.22); V.shock(w.x, w.y, { r: 58, color: CLER_GOLD, dur: 0.42, w: 3 }); clericRise(w, { n: 7 }); V.plus(w.x, w.y, { color: '#ffe680', n: 4 }); HFX.lightMotes(w.x, w.y, { n: 8, r: 18 }); }); },
       // a glint, a flash and a ring on the ally, petals whirling round them and drifting down after; then the 15s mend
       // over time shows as a faint gold ring under them, motes and petals slipping off, a small plus at each tick
       petal: c => { const w = c.tent || { x: c.tx, y: c.ty }, far = Math.hypot(c.tx - c.x, c.ty - c.y) > 40;
@@ -1124,14 +1996,14 @@ const ABILITY_VFX = (() => {
         // (VFX pass) a 60s cooldown: on the first toll a bold gold ring of light rolls out round the cleric, ink-edged, held a beat
         c.later(0.2, () => V.climax(x, y, { shape: 'ring', r: 100, color: '#ffd65a', core: '#fff8dc', ink: '#3a2a08', layer: 'ground', flat: 0.7, dur: 0.6, after: { embers: 0.3 } })); V.sigil(x, y, { r: 160, style: 'hex', color: '#ffe680', dur: 0.7, spin: 0.4 }); V.lightfall(x, y, { color: '#fff0b0', r: 40, h: 90, dur: 0.9, feathers: 5 });
         OP.rim(x, y, 160, CLER_GOLD, 15, { style: 'hex', settle: 0.2, ticks: 24, spin: 0.1, tick: () => { if (Math.random() < 0.12) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 150; V.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.78, z: 0, vz: rnd(25, 50), life: 1.2, size: rnd(4, 7), size1: 0, color: CLER_PALE, kind: Math.random() < 0.3 ? 'star' : 'glow' }); } } }); },
-      // a towering column of light and feathers, a holy seal under the ally, a white burst as they rise
-      // (QA: lightfall + a white pillar stacked into a solid white column that hid the ally for 1.6s) one gold column,
-      // slimmer and shorter, a small flash
-      intervene: c => { V.lightfall(c.tx, c.ty, { color: '#ffe9a0', r: 36, h: 340, dur: 1.4, feathers: 10 }); V.pillar(c.tx, c.ty, { r: 22, h: 320, color: '#ffe680', dur: 0.9 });
-        c.later(0.2, () => { V.ink(c.tx, c.ty, { r: 70, dur: 1.6 }); V.sigil(c.tx, c.ty, { r: 70, style: 'star4', color: '#ffe680', dur: 1.6, spin: 1 }); V.burst(c.tx, c.ty - 40, { color: '#ffffff', color2: '#ffe680', n: 14, speed: 200, flashR: 40 }); }); },
-      // light falls on the ally, then a golden bubble, a burst of stars and rising crosses
-      bene: c => { V.lightfall(c.tx, c.ty, { color: '#ffe680', r: 30, h: 240, dur: 0.8, feathers: 4 }); clericHalo(c.tent || { x: c.tx, y: c.ty }, { dur: 1.3, to: 62, r: 16 });   // (online-refs pass: a crown halo settles on them)
-        c.later(0.15, () => { if (c.tent) V.shield(c.tent, { color: '#ffe680', dur: 1.6, r: 40 }); V.burst(c.tx, c.ty - 10, { color: '#fff0a8', color2: '#ffffff', n: 12, speed: 220, kind: 'star' }); V.shock(c.tx, c.ty, { r: 70, color: '#ffe680', dur: 0.4 }); V.plus(c.tx, c.ty, { color: '#ffe680', n: 5 }); }); },
+      // Intervention: a heal or a raise. A tall curtain of rays comes down on the ally with feathers falling in it, a holy seal is struck under them and a
+      // white burst opens as they rise; a slim gold column holds the middle
+      intervene: c => { HFX.curtain(c.tx, c.ty, { n: 11, w: 86, h: 330, dur: 1.2, rw: 6, color: '#ffe9a0' }); V.pillar(c.tx, c.ty, { r: 20, h: 320, color: '#ffe680', dur: 0.9 });
+        for (let i = 0; i < 8; i++) V.spawn({ x: c.tx + rnd(-30, 30), y: c.ty + rnd(-6, 6), z: 200 + rnd(0, 120), vz: -rnd(70, 120), vx: rnd(-14, 14), life: 1.6, size: rnd(11, 15), color: '#fff0a8', kind: 'feather', vr: rnd(-3, 3), flutter: 4 });
+        c.later(0.2, () => { V.ink(c.tx, c.ty, { r: 70, dur: 1.6 }); V.sigil(c.tx, c.ty, { r: 70, style: 'star4', color: '#ffe680', dur: 1.6, spin: 1 }); V.burst(c.tx, c.ty - 40, { color: '#ffffff', color2: '#ffe680', n: 12, speed: 200, flashR: 40 }); HFX.lightMotes(c.tx, c.ty, { n: 12, r: 28 }); }); },
+      // Benediction: light falls on the ally in a narrow curtain, a crown halo settles on them, then a golden bubble, a few stars and rising crosses
+      bene: c => { HFX.curtain(c.tx, c.ty, { n: 7, w: 50, h: 240, dur: 0.8, rw: 6, color: '#ffe680' }); clericHalo(c.tent || { x: c.tx, y: c.ty }, { dur: 1.3, to: 62, r: 16 });
+        c.later(0.15, () => { if (c.tent) V.shield(c.tent, { color: '#ffe680', dur: 1.6, r: 40 }); V.burst(c.tx, c.ty - 10, { color: '#fff0a8', color2: '#ffffff', n: 10, speed: 220, kind: 'star' }); V.shock(c.tx, c.ty, { r: 70, color: '#ffe680', dur: 0.4 }); V.plus(c.tx, c.ty, { color: '#ffe680', n: 5 }); HFX.lightMotes(c.tx, c.ty, { n: 8, r: 20 }); }); },
     },
     grovekeeper: {
       // (Wrath, Rejuvenate, Wild Growth, Bloom and Moonwell are in the Grovekeeper block of 'ULTIMATES · healers', with
@@ -1176,10 +2048,8 @@ const KIT_VFX = {
   // a Perfect Block: the Brace plate flares (bastionPlate), a gold flash on its face, a gold ring and a steel one
   // (the block spends the guard (fight.js takes its Brace off), so once the flare has shown the plate comes down too)
   perfect: e => { const pl = e.bastionPlate; if (pl && !pl.cut) { pl.pb = true; OLD_PAINT.later(0.4, () => { pl.cut = true; if (e.bastionPlate === pl) e.bastionPlate = null; }); }
-    VFX.flash(e.x + Math.cos(e.angle) * 36, e.y + Math.sin(e.angle) * 30 - 16, 64, '#ffe27a', 0.22); VFX.shock(e.x, e.y, { r: 130, color: '#9fc4ff', dur: 0.5, w: 4, delay: 0.06 });
-    // (life pass) the parry's climax: a great gold crescent shoved off the plate, two heroes out, held a beat
-    VFX.climax(e.x, e.y, { shape: 'crescent', r: 84, angle: e.angle, span: 1.9, color: '#ffd65a', core: '#fffbe0', ink: '#0e1a30', dur: 0.5, hold: 0.1, z: 20, after: { embers: 0.4 } });
-    VFX.shock(e.x, e.y, { r: 90, color: '#ffe27a', dur: 0.4, w: 7 }); VFX.spawn({ x: e.x + Math.cos(e.angle) * 30, y: e.y + Math.sin(e.angle) * 30, z: 18, life: 0.3, size: 80, size1: 30, color: '#ffe27a', kind: 'star', vr: 5 }); VFX.sparks(e.x + Math.cos(e.angle) * 30, e.y + Math.sin(e.angle) * 30, { color: '#fff2b0', n: 12, angle: e.angle, spread: 1, speed: 420 }); vfxShake(4); },
+    // (signature pass) one clean beat on the plate: the blow arrives, the clang, the blow turned, the plate rings (TANKS_VFX.bastionPerfect); the older wash, crescent and wide rings are gone
+    TANKS_VFX.bastionPerfect(e); if (e.st) e.st.perfectT = e.st.t; vfxShake(4); },
   // Hold Fast held a Brace past its 3s (kits.js, data.d: the guard's real length): the plate just raised stays that long
   braceHold: (e, target, d) => { const pl = e.bastionPlate, dur = d && Number.isFinite(d.d) ? Math.max(0.5, Math.min(8, d.d)) : 0;
     if (pl && !pl.cut && dur) pl.dur = dur; },
@@ -1195,9 +2065,7 @@ const KIT_VFX = {
     // three rings, a pillar of light, a cracked floor and a kick of the screen)
     VFX.flash(w.x, w.y - 20, 30 + 60 * f, f > 0.8 ? '#ffffff' : '#c8ceff', 0.22);
     // (life pass) a well-soaked Ward (half or more) goes off as the climax, a starburst of rune light 80+ wide, held a beat; a small one stays the small crack
-    if (f >= 0.5) VFX.climax(w.x, w.y, { shape: 'burst', r: Math.max(80, R * 0.9), n: 8 + Math.round(12 * f), color: '#6c74f2', core: '#eef1ff', ink: '#0c1236', dur: 0.55 + 0.1 * f, hold: 0.1, layer: 'ground', flat: 0.6, after: { embers: 0.5, mark: 0.5 * f } });
-    else VFX.spikeburst(w.x, w.y, { r: R * 0.9, n: 8 + Math.round(12 * f), hole: 0.5, color: '#6c74f2', core: '#eef1ff', ink: '#0c1236', fill: '#2a3070', dur: 0.4 + 0.1 * f, layer: 'ground', z: 0, flat: 0.6 });
-    VFX.crystals(w.x, w.y, { color: '#9aa4ff', n: 3 + Math.round(7 * f), r: 26 + 40 * f, h: 26 + 44 * f, dur: 0.8 });
+    TANKS_VFX.rgGlassBurst(w.x, w.y, f);   // (tanks pass) the glass dome cracks and bursts into shards and a ring of runes
     VFX.shock(w.x, w.y, { r: R + 30, color: '#8e98ff', dur: 0.45, w: 3 + 5 * f });
     if (f > 0.4) VFX.shock(w.x, w.y, { r: (R + 30) * 0.7, color: '#e4e8ff', dur: 0.4, w: 3 + 3 * f, delay: 0.06 });
     if (f > 0.75) VFX.shock(w.x, w.y, { r: (R + 30) * 1.35, color: '#6c74f2', dur: 0.55, w: 8, delay: 0.1 });
@@ -1214,12 +2082,26 @@ const KIT_VFX = {
   paidFull: e => { VFX.sigil(e.x, e.y, { r: 34, style: 'hex', color: '#f0d890', dur: 0.5, spin: 2 }); VFX.burst(e.x, e.y - 24, { color: '#f0d890', color2: '#ffffff', n: 10, speed: 160, kind: 'star' }); if (globalThis.FX && FX.text) FX.text(e.x, e.y - 58, 'Paid', '#f0d890', 13); },
   reflect: (e, target) => { if (target) VFX.beam(e.x, e.y, target.x, target.y, { color: '#e4e8ff', w: 12, dur: 0.4 }); VFX.burst(e.x, e.y, { color: '#ffffff', color2: '#dde3ff', n: 16, speed: 260, kind: 'star' }); },
   overheat: e => { VFX.flare(e.x, e.y, { n: 24, color: '#ff2a1a', r: 18 }); VFX.shock(e.x, e.y, { r: 90, color: '#ff3a1a', dur: 0.4 }); },
-  dawnstar: (e, target) => { const t = target || e; /* (QA: whited out the boss) */ VFX.beam(t.x, t.y - 300, t.x, t.y, { color: '#ffe680', w: 11, dur: 0.45 }); VFX.burst(t.x, t.y, { color: '#ffe680', color2: '#ffffff', n: 20, speed: 320, kind: 'star', flashR: 44 }); VFX.sigil(t.x, t.y, { r: 90, style: 'star4', color: '#ffe680', dur: 0.9, spin: 4 });
-    // (VFX pass) the Dawnstar is the Smite chain's finisher: a standing cross of dawn light, ink-edged, held a beat on the boss
-    VFX.climax(t.x, t.y, { shape: 'cross', r: 88, color: '#ffd65a', core: '#fffbe8', ink: '#3a2a08', tilt: 0, z: 20, dur: 0.55, after: { embers: 0.5 } });
-    // (online-refs pass: the one big hit of the filler loop, like Afflatus Misery after the Glares) a wide ring of gold
-    // rays stamped round the boss's feet and a second, later ring, so it outlasts and outsizes a Smite
-    VFX.spikeburst(t.x, t.y, { r: 120, n: 16, hole: 0.55, color: '#ffd65a', core: '#fffbe0', ink: '#3a2a08', dur: 0.5, layer: 'ground', z: 0, flat: 0.6 }); VFX.shock(t.x, t.y, { r: 170, color: '#fff0b0', dur: 0.6, w: 6, delay: 0.12 }); vfxShake(5); },
+  // (hero pilot) the Dawnstar, the one big hit of the Smite loop: a star kindles high over the boss, a wide curtain of rays and one bright pillar fall from it,
+  // and it lands as a great soft bloom with two rings, a ring of rays on the floor and a long slow rise of light motes and feathers (the Smite's own recipe plays under it)
+  dawnstar: (e, target) => { const t = target || e;
+    VFX.glint(t.x, t.y - 170, { color: '#fff0b0', size: 56, z: 0, life: 0.3 }); HFX.curtain(t.x, t.y, { n: 8, w: 96, h: 320, dur: 0.8, rw: 5, color: '#ffe680' });
+    VFX.beam(t.x, t.y - 320, t.x, t.y, { color: '#fff0b0', w: 8, dur: 0.4 });
+    FX.later(0.1, () => { VFX.flash(t.x, t.y - 24, 60, '#ffe680', 0.2); VFX.glint(t.x, t.y - 16, { color: '#ffffff', size: 48, z: 22, life: 0.35 });
+      VFX.shock(t.x, t.y, { r: 150, color: '#fff0b0', dur: 0.55, w: 5 }); VFX.shock(t.x, t.y, { r: 100, color: '#ffffff', dur: 0.4, w: 3, delay: 0.06 });
+      VFX.spikeburst(t.x, t.y, { r: 120, n: 16, hole: 0.55, color: '#ffd65a', core: '#fffbe0', ink: '#3a2a08', dur: 0.5, layer: 'ground', z: 0, flat: 0.6 });
+      HFX.lightMotes(t.x, t.y, { n: 14, r: 40, life: 1.4 });
+      for (let i = 0; i < 6; i++) VFX.spawn({ x: t.x + (Math.random() - 0.5) * 70, y: t.y, z: 40, vz: 50 + Math.random() * 60, vx: (Math.random() - 0.5) * 60, drag: 0.02, life: 1.6, size: 13, color: '#fff0a8', kind: 'feather', vr: 3, flutter: 4 });
+      // (landing pass) the star LANDS and stays a moment: a hard ink-rimmed gold disc with a white heart, a thick ink-rimmed ring of light running out along the
+      // floor and a ring of eight short rays standing on it for most of a second, so the Dawnstar's weight outlasts the flash
+      VFX.fx({ dur: 0.8, layer: 'air', draw: (c, p, tt, ee) => { const k = ee.a * (1 - Math.min(1, Math.max(0, (p - 0.5) / 0.5))); if (k < 0.02) return;
+        const pop = tt < 0.06 ? 0.5 + 0.8 * easeOut(tt / 0.06) : 1.3 - 0.45 * Math.min(1, (tt - 0.06) / 0.5), R = 26 * pop;
+        c.save(); c.translate(t.x, t.y - 22); c.globalAlpha = k; c.lineCap = 'round';
+        for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + 0.2, r0 = R + 6, r1 = R + 26 + 22 * easeOut(Math.min(1, tt / 0.2)); for (const [col, w] of [['#3a2a08', 8], ['#ffd65a', 4.5], ['#ffffff', 1.6]]) { c.strokeStyle = col; c.lineWidth = w; c.beginPath(); c.moveTo(Math.cos(a) * r0, Math.sin(a) * r0 * 0.8); c.lineTo(Math.cos(a) * r1, Math.sin(a) * r1 * 0.8); c.stroke(); } }
+        c.fillStyle = '#3a2a08'; c.beginPath(); c.arc(0, 0, R + 3.5, 0, Math.PI * 2); c.fill(); c.fillStyle = '#ffc83a'; c.beginPath(); c.arc(0, 0, R, 0, Math.PI * 2); c.fill(); c.fillStyle = '#fff0b0'; c.beginPath(); c.arc(0, 0, R * 0.66, 0, Math.PI * 2); c.fill(); c.fillStyle = '#ffffff'; c.beginPath(); c.arc(0, 0, R * 0.34, 0, Math.PI * 2); c.fill();
+        c.restore();
+        const rq = Math.min(1, tt / 0.55); if (rq < 1) { const Rr = 14 + 96 * easeOut(rq), kk = ee.a * (1 - rq * rq); c.save(); c.beginPath(); c.ellipse(t.x, t.y, Rr, Rr * 0.62, 0, 0, Math.PI * 2); c.globalAlpha = 0.8 * kk; c.strokeStyle = '#3a2a08'; c.lineWidth = 9 - 5 * rq; c.stroke(); c.globalAlpha = kk; c.strokeStyle = '#ffd65a'; c.lineWidth = 5 - 3 * rq; c.stroke(); c.restore(); } } });
+      vfxShake(5); }); },
   lag: e => { VFX.smoke(e.x, e.y, { n: 6, color: '#8aa0a8', size: 22, a: 0.5 }); },
   // Aegis: a Petal shield that held comes back as a petal drifting home
   'petal-back': e => { for (let i = 0; i < 6; i++) VFX.spawn({ x: e.x, y: e.y, z: 30 + i * 4, life: 0.9, size: 12, color: i % 2 ? '#ffd0e0' : '#fff0a8', kind: 'petal', add: false, vr: 5, flutter: 6, orbit: { x: e.x, y: e.y, a: i, r: 40, w: 5, dr: -40, flat: 0.55 } }); VFX.flash(e.x, e.y - 20, 30, '#ffe9a8', 0.25); },
@@ -1802,11 +2684,13 @@ const AUTO_VFX = (() => {
   // where a melee swing connects: toward the target, but no further than the weapon reaches
   const reach = (c, d) => { const dist = Math.hypot(c.tx - c.ent.x, c.ty - c.ent.y), r = Math.min(dist, d); return { x: c.ent.x + Math.cos(c.ang) * r, y: c.ent.y + Math.sin(c.ang) * r }; };
   return {
-    slash: c => { V.slash(c.ent.x, c.ent.y, c.ang, { r: 52, span: 1.4, color: '#dfe8ff', dur: 0.22, w: 0.32, flip: c.alt, sparks: 3 }); c.later(0.08, () => { const p = reach(c, 70); V.hit(p.x, p.y, '#e8f0ff', 0.45); }); },
+    slash: c => { V.slash(c.ent.x, c.ent.y, c.ang, { r: 52, span: 1.4, color: '#dfe8ff', dur: 0.22, w: 0.32, flip: c.alt, sparks: 3 }); c.later(0.08, () => { const p = reach(c, 70); HFX.cut(p.x, p.y, c.ang + (c.alt ? -1.1 : 1.1), { len: 24, w: 2.4, color: '#e8f0ff', inner: '#9fc4ff', dur: 0.3 }); V.sparks(p.x, p.y, { color: '#eaf2ff', n: 3, angle: c.ang, spread: 0.9, speed: 240 }); }); },
     chop: c => { V.slash(c.ent.x, c.ent.y, c.ang, { r: 60, span: 1.7, color: '#ff8a7a', dur: 0.26, w: 0.42, flip: c.alt, sparks: 4 }); c.later(0.1, () => { const p = reach(c, 76); V.hit(p.x, p.y, '#ffb0a0', 0.55); V.splash(p.x, p.y, { n: 3, size: 0.6 }); }); },
-    stab: c => { const p = reach(c, 62); V.slash(c.ent.x, c.ent.y, c.ang + (c.alt ? 0.35 : -0.35), { r: 40, span: 0.8, color: '#e0b0ff', dur: 0.18, w: 0.3, flip: c.alt, sparks: 2 }); c.later(0.06, () => V.sparks(p.x, p.y, { color: '#f0d8ff', n: 4, angle: c.ang, spread: 0.6, speed: 260 })); },
+    stab: c => { const p = reach(c, 62); V.slash(c.ent.x, c.ent.y, c.ang + (c.alt ? 0.35 : -0.35), { r: 40, span: 0.8, color: '#e0b0ff', dur: 0.18, w: 0.3, flip: c.alt, sparks: 2 }); c.later(0.06, () => { HFX.cut(p.x, p.y, c.ang + (c.alt ? 0.3 : -0.3), { len: 30, w: 2.4, color: '#ffffff', inner: '#c58aff', dur: 0.3 }); V.sparks(p.x, p.y, { color: '#f0d8ff', n: 3, angle: c.ang, spread: 0.6, speed: 260 }); }); },
     rune: c => V.missile(c.ent.x, c.ent.y, c.tx, c.ty, { style: 'orb', color: '#8a90ff', speed: 900, size: 0.55, onHit: (x, y) => V.hit(x, y, '#b4bcff', 0.45) }),
-    shot: c => V.missile(c.ent.x, c.ent.y, c.tx, c.ty, { style: 'arrow', color: '#e8e0c0', speed: 1500, size: 0.8, onHit: (x, y) => V.hit(x, y, '#fff2c0', 0.4) }),
+    // (class VFX pass) the Ranger's auto: a small arrow, the string's snap at the bow, a bite of chips and a shaft that quivers a moment where it lands
+    shot: c => { const e = c.ent, a = Math.atan2(c.ty - e.y, c.tx - e.x); HFX.ranger.string(e, { ring: false });
+      HFX.ranger.shot(e.x + Math.cos(a) * 12, e.y + Math.sin(a) * 12, c.tx, c.ty, { speed: 1500, size: 0.8, len: 24, long: 0.6, onHit: (x, y) => HFX.ranger.hit(x, y, a, { s: 0.55, life: 0.55 }) }); },
     // ---- (shared-fx polish) the casters' autos each look like their class (dispatched by class, so the kits keep
     // the 'spark' kind and its cast pose); anyone else's spark is the plain orb
     spark: c => { const f = SPARK[c.ent && c.ent.cls && c.ent.cls.id]; if (f) return f(c);
@@ -1847,7 +2731,7 @@ const SPARK = (() => {
           x.moveTo(W, 0); x.quadraticCurveTo(W * 0.9, W, -L * 0.45 * fl, W * 0.35); x.lineTo(-L * fl, 0); x.lineTo(-L * 0.45 * fl, -W * 0.35); x.quadraticCurveTo(W * 0.9, -W, W, 0); x.fill(); }
         x.restore(); },
       trail: (x, y, z, a) => { if (Math.random() < 0.5) V.spawn({ x, y, z, vx: -Math.cos(a) * rand(40, 110) + rand(-30, 30), vy: -Math.sin(a) * rand(40, 110) + rand(-30, 30), vz: rand(10, 60), drag: 0.06, g: 140, life: rand(0.25, 0.45), size: rand(2.5, 4), size1: 0, color: Math.random() < 0.5 ? '#ffd070' : '#ff8a2a', stretch: 2 }); },
-      hit: (x, y, a) => { V.hit(x, y, '#ffb060', 0.35); V.sparks(x, y, { color: '#ffc060', n: 3, angle: a + Math.PI, spread: 1, speed: 200 }); } }),
+      hit: (x, y, a) => { HFX.fireBloom(x, y, { s: 0.4, n: 4, smoke: false, scorch: false, embers: 2 }); V.sparks(x, y, { color: '#ffc060', n: 3, angle: a + Math.PI, spread: 1, speed: 200 }); } }),
     cleric: c => bolt(c, { speed: 820, tail: ['#ffe9a0', 3],
       head: (x, px, py, a, t, k) => { V.glowAt(x, px, py, 15, '#fff0b8', 0.8 * k); V.glowAt(x, px, py, 5, '#ffffff', k);
         V.neonRing(x, px, py, 8 + Math.sin(t * 18) * 0.8, '#ffe9a0', 1.1, 0.8 * k, 0.45); },
@@ -2460,9 +3344,8 @@ const MARI_PAINT = (() => {
       c.save(); c.translate(x, y - z);
       for (const an of angs) {
         c.save(); c.rotate(an);
-        c.globalAlpha = 0.3 * k; c.fillStyle = C.INK; lens(c, L * 1.04, w * 1.5);
-        c.globalCompositeOperation = 'lighter';
-        for (const [cl, ww, al] of [[col, w * 2.2, 0.35], [col, w, 0.9], ['#ffffff', w * 0.35, 0.95]]) { c.globalAlpha = al * k; c.fillStyle = cl; lens(c, L, ww); }
+        // (class pass) opaque: an ink rim, a solid body, a white heart
+        for (const [cl, ww, al, LL] of [[C.INK, w * 2.1, 0.88, 1.06], [col, w * 1.35, 0.97, 1], ['#ffffff', w * 0.5, 1, 0.92]]) { c.globalAlpha = al * k; c.fillStyle = cl; lens(c, L * LL, ww); }
         c.restore();
       }
       c.restore();
@@ -2626,11 +3509,10 @@ const MARI_PAINT = (() => {
       const q = easeOut(Math.min(1, t / go)), k = e.a * (1 - Math.min(1, Math.max(0, (t - go - 0.04) / fade))), ww = w * (1 - 0.45 * Math.max(0, p - 0.3)), L1 = -r + 2 * r * q;
       if (k < 0.02) return;
       c.save(); c.translate(x, y - z); c.rotate(ang);
-      c.globalAlpha = 0.3 * k; c.fillStyle = C.INK; lens(c, -r * 1.04, L1 * 1.04, ww * 1.5);
-      c.globalCompositeOperation = 'lighter';
-      c.globalAlpha = 0.35 * k; c.fillStyle = col; lens(c, -r, L1, ww * 2.2);
-      c.globalAlpha = 0.9 * k; lens(c, -r, L1, ww);
-      if (t < go + 0.08) { c.globalAlpha = 0.95 * k; c.fillStyle = '#ffffff'; lens(c, -r * 0.9, L1 * 0.9, ww * 0.35); }
+      // (class pass) opaque: an ink rim, a solid body and a white heart, so the cut reads on a pale floor
+      c.globalAlpha = 0.88 * k; c.fillStyle = C.INK; lens(c, -r * 1.06, L1 * 1.06, ww * 1.9);
+      c.globalAlpha = 0.97 * k; c.fillStyle = col; lens(c, -r, L1, ww * 1.3);
+      c.globalAlpha = k; c.fillStyle = '#ffffff'; lens(c, -r * 0.9, L1 * 0.9, ww * (t < go + 0.12 ? 0.5 : 0.26));
       c.restore();
       if (q < 1) V.glowAt(c, x + Math.cos(ang) * L1, y - z + Math.sin(ang) * L1, 10 + w, '#ffffff', 0.7 * k);
     } });
@@ -2968,6 +3850,7 @@ function windLaneBoost(x, y, vx, vy, now) {
 (() => {
   const V = VFX;
   const FIRE = { color: '#ff7a2a', core: '#fff0b0', ink: '#3a1004' }, ICE = { color: '#5fb4f0', core: '#f0faff', ink: '#08203a' };
+  const TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a);
   const shake = s => vfxShake(s);
   const ahead = (c, d) => { const a = Math.atan2(c.ty - c.y, c.tx - c.x); return { x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d }; };
   const windCol = ent => (ent && ent.spec === 'comet' ? '#ffd08a' : ent && ent.spec === 'orbit' ? '#a8f0c8' : '#8ff0d8');
@@ -2996,37 +3879,40 @@ function windLaneBoost(x, y, vx, vy, now) {
   }
 
   ABILITY_VFX.thermist = {
-    // a spark in the right hand, a small fire bolt, a little burst
-    // (online-refs pass: FF14 Fire / WoW Fire Blast as the mover) a quick flame crescent flicks round the hand first
-    cinder: c => { const h = ahead(c, 16); THERM_PAINT.handArcs(c.ent, { r: 22, dur: 0.16 }); V.glint(h.x, h.y, { color: '#ffb050', size: 16 }); V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: '#ff8a3a', speed: TRV('thermist', 'cinder'), size: 0.8, onHit: (x, y) => { V.spikeburst(x, y, { r: 26, n: 9, ...FIRE, dur: 0.24 }); V.hit(x, y, '#ffc080', 0.35); } }); },
-    // frost on the left hand, a shard of ice, a few chips where it breaks
-    // (online-refs pass: WoW Ice Lance as the mover) a quick frost crescent flicks round the hand first
-    rime: c => { const h = ahead(c, 16); THERM_PAINT.handArcs(c.ent, { r: 22, dur: 0.16, color: '#6fb2f0', color2: '#cfeeff' }); V.glint(h.x, h.y, { color: '#cfeeff', size: 16 }); V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: '#8fd0ff', speed: TRV('thermist', 'rime'), size: 0.75, onHit: (x, y) => { V.spikeburst(x, y, { r: 24, n: 8, ...ICE, dur: 0.24 }); V.crystals(x, y, { color: '#bfe6ff', n: 3, r: 14, h: 20, dur: 0.5 }); } }); },
-    // (painted pass, thermist.png) Flare: flame crescents whirl round the hand and a fire glyph opens on the boss; a bold
-    // orange starburst with flame tongues leaping out of it; then cracks glowing in the floor that cool, and a little smoke
-    // (online-refs pass: FF14 Fire IV) at the edge (instant, a sure crit) a white-hot crit star flashes over the burst
-    flare: c => { const TP = THERM_PAINT, edge = thermEdgeHit(c); TP.handArcs(c.ent, { r: 36, dur: 0.3 }); if (edge) c.later(0.14, () => thermCritStar(c.tx, c.ty, '#ffb050')); V.sigil(c.tx, c.ty, { r: 52, style: 'star5', color: '#ff9a3a', dur: 0.35, spin: 5 });
-      c.later(0.12, () => { V.spikeburst(c.tx, c.ty, { r: 82, n: 18, ...FIRE, dur: 0.38 }); V.spikeburst(c.tx, c.ty, { r: 44, n: 10, color: '#ffb050', core: '#fff6d0', ink: '#3a1004', dur: 0.28, z: 26 }); V.flare(c.tx, c.ty, { n: 16, r: 28, color: '#ff6a1a', h: 1.4, size: 1.2 }); V.burst(c.tx, c.ty, { color: '#ffd070', n: 10, speed: 280, flashR: 70 }); V.shock(c.tx, c.ty, { r: 96, color: '#ff9a5a', dur: 0.35, w: 4 }); shake(2); });
-      c.later(0.4, () => { TP.lavaCracks(c.tx, c.ty, { r: 62, dur: 2.4, n: 9, a: 0.7 }); V.smoke(c.tx, c.ty, { n: 4, r: 30, color: '#5a4a48', size: 28, a: 0.35, speed: 30, life: 1.7 }); }); },
-    // Glacier Lance: frost crescents at the hand, then a long faceted spear of ice with a frost trail; ice bursts
-    // out ahead of it where it lands, shards flung on, and a faint frost streak and mist stay along its path
-    // (online-refs pass: FF14 Blizzard IV / WoW Glacial Spike) at the edge a pale-blue crit star flashes where it lands
-    lance: c => { const TP = THERM_PAINT, a = Math.atan2(c.ty - c.y, c.tx - c.x), edge = thermEdgeHit(c), dl = Math.hypot(c.tx - c.x, c.ty - c.y) / 1300; TP.handArcs(c.ent, { r: 34, dur: 0.27, color: '#6fb2f0', color2: '#cfeeff' }); if (edge) c.later(dl, () => thermCritStar(c.tx, c.ty, '#9fd8ff'));
-      TP.iceSpear(c.x + Math.cos(a) * 16, c.y + Math.sin(a) * 16, c.tx, c.ty, { speed: 1300, len: 84, w: 10, onHit: (x, y) => { V.spikeburst(x, y, { r: 68, n: 14, ...ICE, dur: 0.36 }); V.crystals(x, y, { color: '#9fd8ff', n: 6, r: 38, h: 58, dur: 0.9 });
-        TP.shards(x, y, { n: 11, angle: a, spread: 0.7, speed: 360, size: 1.15 }); V.shock(x, y, { r: 100, color: '#bfe6ff', dur: 0.42, w: 4.5 }); shake(2); FX.later(0.4, () => TP.steam(x, y, { n: 4, r: 32, size: 26, life: 1.7 })); } }); },
-    // Equilibrium: a frost half and a fire half swing together into one ring at the feet, star crosses where they meet,
-    // the shield closing over; the ring settles faint and steam rises off it
-    equil: c => { const TP = THERM_PAINT; TP.dualRing(c.ent, { r: 70, dur: 1.4 });
-      c.later(0.15, () => { V.shield(c.ent, { color: '#e8d8ff', dur: 1.4, r: 40 }); V.shock(c.ent.x, c.ent.y, { r: 110, color: '#f2e6c8', dur: 0.42, w: 3.5 }); });
-      c.later(0.55, () => TP.steam(c.ent.x, c.ent.y, { n: 4, r: 30, size: 22, life: 1.5, a: 0.25 })); },
-    // the dial turns over: two coloured arcs wheel round the mage and swap sides, then a ring in both colours
-    invert: c => { V.charge(c.x, c.y, { color: '#e8d8ff', r: 56, n: 10, dur: 0.25, follow: c.ent });
-      V.fx({ dur: 0.7, layer: 'ground', follow: c.ent, draw: (ctx, p, t, e) => { const x = e.follow.x, y = e.follow.y, k = Math.min(1, (1 - p) / 0.4) * e.a, a = easeOut(Math.min(1, p / 0.6)) * Math.PI;
-        ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.62);
-        V.neonPath(ctx, '#ff8a3a', 5, k, () => ctx.arc(0, 0, 52, a - 1.2, a + 1.2));
-        V.neonPath(ctx, '#6fb2f0', 5, k, () => ctx.arc(0, 0, 52, a + Math.PI - 1.2, a + Math.PI + 1.2));
-        ctx.restore(); } });
-      c.later(0.35, () => { V.shock(c.ent.x, c.ent.y, { r: 110, color: '#ff9a5a', dur: 0.5, w: 5 }); V.shock(c.ent.x, c.ent.y, { r: 90, color: '#7ac0f0', dur: 0.5, w: 5, delay: 0.06 }); V.aura(c.ent, { color: '#e8d8ff', dur: 10, r: 28, rate: 0.15 }); }); },
+// >>> rtd thermist-recipes
+    // (class VFX pass) the Thermist keeps its two materials apart (HFX.thermist, above): frost is faceted glass, shards and
+    // rime; fire is a narrow white-hot lance and a hit that is a star of rays and glowing cracks (no round flame, no smoke:
+    // those are the Pyromancer's). Each spell leaves the hand it belongs to (frost the left, fire the right). The Shock is
+    // where the two collide, and steam is what they leave.
+    // Cinder Bolt: a small, quick lance of fire thrown from the right hand, a little star of rays where it lands
+    cinder: c => { const T = HFX.thermist, h = T.hand(c.ent, 1); THERM_PAINT.handArcs(c.ent, { r: 20, dur: 0.15 });
+      T.fireShot(h.x, h.y, c.tx, c.ty, { speed: TRV('thermist', 'cinder'), size: 0.8, onHit: (x, y) => { T.rays(x, y, { n: 8, r: 34, dur: 0.26 }); V.sparks(x, y, { color: '#ffd070', n: 4, speed: 300 }); V.hit(x, y, '#ffc080', 0.3); HFX.fireHit(x, y, { s: 0.8 }); } }); },   // (landing pass: a hard ink-rimmed core and a ring under the rays)
+    // Rime Shard: a small glassy shard from the left hand with two chips flying beside it, and a few chips and a low frost where it breaks
+    rime: c => { const T = HFX.thermist, h = T.hand(c.ent, -1); THERM_PAINT.handArcs(c.ent, { r: 20, dur: 0.15, color: '#6fb2f0', color2: '#cfeeff' });
+      T.iceShot(h.x, h.y, c.tx, c.ty, { speed: TRV('thermist', 'rime'), size: 0.8, onHit: (x, y) => { T.spikes(x, y, { n: 5, r: 15, h: 28, w: 6, dur: 0.55 }); V.shock(x, y, { r: 36, color: '#cfeeff', dur: 0.24, w: 2.5 });
+        for (let i = 0; i < 4; i++) V.spawn({ x, y, z: 14, vx: rnd(-110, 110), vy: rnd(-60, 60), vz: rnd(50, 120), g: 450, life: 0.5, size: 8, color: '#d8f2ff', kind: 'shard', add: false, vr: rnd(-12, 12) }); } }); },
+    // Flare: flame crescents whirl round the right hand, a fat lance of fire goes out, and where it lands a great star of rays opens with a ring of
+    // small lances thrown out of it; glowing cracks and a shimmer of heat stay on the floor. At the edge (instant, a sure crit) a white-hot crit star flashes over it
+    flare: c => { const T = HFX.thermist, TP = THERM_PAINT, edge = thermEdgeHit(c), h = T.hand(c.ent, 1); TP.handArcs(c.ent, { r: 36, dur: 0.3 });
+      const dl = T.fireShot(h.x, h.y, c.tx, c.ty, { speed: 2200, size: 1.7, onHit: (x, y) => {
+        T.rays(x, y, { n: 14, r: 100, dur: 0.38 }); T.rays(x, y, { n: 8, r: 54, dur: 0.3, col: '#fff0a0', core: '#ffffff', z: 30 }); V.flash(x, y - 20, 50, '#ffd890', 0.14);
+        T.lanceBurst(x, y, { n: 7, r: 66 });
+        V.shock(x, y, { r: 100, color: '#ff9a5a', dur: 0.36, w: 3.5 }); V.sparks(x, y, { color: '#ffd070', n: 8, speed: 380 }); shake(2);
+        FX.later(0.3, () => { TP.lavaCracks(x, y, { r: 62, dur: 2.2, n: 9, a: 0.7 }); HFX.haze(x, y, { w: 54, h: 70, dur: 1.4, n: 4, a: 0.1 }); }); } });
+      if (edge) c.later(dl + 0.02, () => thermCritStar(c.tx, c.ty, '#ffb050')); },
+    // Glacier Lance: frost crescents at the left hand, then a long spear of faceted ice with a cluster of shards beside it; where it lands a crown of ice
+    // stands up out of the floor, shards fly on past, rime rings the spot and a little mist hangs. At the edge a pale-blue crit star flashes where it lands
+    lance: c => { const T = HFX.thermist, TP = THERM_PAINT, a = Math.atan2(c.ty - c.y, c.tx - c.x), edge = thermEdgeHit(c), h = T.hand(c.ent, -1); TP.handArcs(c.ent, { r: 34, dur: 0.27, color: '#6fb2f0', color2: '#cfeeff' });
+      const dl = T.iceShot(h.x, h.y, c.tx, c.ty, { speed: 2400, size: 2, onHit: (x, y) => { T.spikes(x, y, { n: 10, r: 46, h: 78, w: 10, dur: 0.95 }); TP.shards(x, y, { n: 10, angle: a, spread: 0.7, speed: 360, size: 1.15 });
+        V.flash(x, y - 20, 40, '#cfeeff', 0.12); V.shock(x, y, { r: 100, color: '#bfe6ff', dur: 0.42, w: 4 }); T.rime(x, y, { r: 58, dur: 1.5 }); shake(2); FX.later(0.4, () => T.steam(x, y, { n: 3, r: 28, size: 26, a: 0.3, life: 1.5 })); } });
+      if (edge) c.later(dl, () => thermCritStar(c.tx, c.ty, '#9fd8ff')); },
+    // Equilibrium: frost shards and fire lances take turns round the mage and draw in together as the shield closes over; a faint dual ring stays, and steam rises
+    equil: c => { const T = HFX.thermist, TP = THERM_PAINT; T.ring(c.ent, { r0: 70, r1: 22, dur: 0.7 }); TP.dualRing(c.ent, { r: 70, dur: 1.4 });
+      c.later(0.5, () => { V.shield(c.ent, { color: '#e8d8ff', dur: 1.4, r: 40 }); V.shock(c.ent.x, c.ent.y, { r: 110, color: '#f2e6c8', dur: 0.42, w: 3 }); T.steam(c.ent.x, c.ent.y, { n: 4, r: 20, size: 22, a: 0.4, life: 1.2 }); }); },
+    // Inversion: a shard and a lance chase each other round the mage and swap sides as the dial turns over, then a ring in both colours
+    invert: c => { const T = HFX.thermist; V.charge(c.x, c.y, { color: '#e8d8ff', r: 56, n: 10, dur: 0.25, follow: c.ent }); T.ring(c.ent, { swap: true, r0: 46, dur: 0.7, n: 3 });
+      c.later(0.35, () => { V.shock(c.ent.x, c.ent.y, { r: 110, color: '#ff9a5a', dur: 0.5, w: 4 }); V.shock(c.ent.x, c.ent.y, { r: 90, color: '#7ac0f0', dur: 0.5, w: 4, delay: 0.06 }); T.steam(c.ent.x, c.ent.y, { n: 3, r: 18, size: 20, a: 0.35 }); V.aura(c.ent, { color: '#e8d8ff', dur: 10, r: 28, rate: 0.15 }); }); },
+// <<< rtd thermist-recipes
     // Thermocline (talent): a bolt that changes colour in flight, from the side it left to the side it swings toward
     thermocline: c => { V.missile(c.x, c.y, c.tx, c.ty, { style: 'orb', color: '#ffb08a', speed: TRV('thermist', 'thermocline'), size: 0.9, onHit: (x, y) => { V.spikeburst(x, y, { r: 30, n: 10, ...ICE, dur: 0.26 }); V.flare(x, y, { n: 4, r: 8, color: '#ff8a3a', size: 0.6 }); } });
       V.missile(c.x, c.y, c.tx, c.ty, { style: 'orb', color: '#7ac0f0', speed: TRV('thermist', 'thermocline'), size: 0.6, arc: 10 }); },
@@ -3062,31 +3948,32 @@ function windLaneBoost(x, y, vx, vy, now) {
     return Math.max(0, Math.min(100, e._dbDrift ?? 50)); };
 
   ABILITY_VFX.driftblade = {
-    // a crescent sabre cut in jade, a sharp white edge, a few sparks
-    // (polish) Carve: a glint on the sabre, a crescent of jade wind with a white edge, leaves torn off its tip, a cut star
-    // (online refs: Viper's twin fangs, Samurai's Hakaze) pressed over and over, so forehand and backhand alternate; the
-    // cut flashes as a slit across the target; the wind grows with your Drift (more leaves, a wider smear) and from 50 a
-    // pale ghost arc follows through at the moment the kit's second cut lands
-    carve: c => { const e = c.ent, col = windCol(e), f = (e._dbN = ((e._dbN | 0) + 1) % 2) === 1, h = ahead(c, 16), dr = dbDrift(c), w = dr / 100, sd = f ? -1 : 1;
-      V.glint(h.x, h.y, { color: '#ffffff', size: 22, z: 24 });
-      OLD_PAINT.smear(c.x, c.y, c.ang, { r: 68, span: 2.1, w: 12 + 6 * w, color: col, core: '#ffffff', ink: DRIFT_PAINT.INK, dur: 0.24, flip: f, lines: w >= 0.5 ? 3 : 2 });
-      c.later(0.08, () => { V.hit(c.tx, c.ty, '#e8fff8', 0.5); dbSlit(c.tx, c.ty, c.ang + Math.PI / 2 + sd * 0.55, 34 + 10 * w, col, { w: 3.5 + 1.5 * w });
-        V.spikeburst(c.tx, c.ty, { r: 22, n: 6, color: col, core: '#ffffff', ink: DRIFT_PAINT.INK, dur: 0.2, z: 18 }); V.sparks(c.tx, c.ty, { color: '#e8fff8', n: 3, angle: c.ang + sd * Math.PI / 2, spread: 0.5, speed: 240 });
-        DRIFT_PAINT.leaves(c.tx, c.ty, { n: 1 + Math.round(3 * w), angle: c.ang + sd * Math.PI / 2, speed: 160 }); });
-      if (dr >= 50) c.later(0.15, () => { OLD_PAINT.smear(c.x, c.y, c.ang + sd * 0.25, { r: 84, span: 1.8, w: 6, color: '#e8fff8', core: '#ffffff', ink: DRIFT_PAINT.INK, dur: 0.2, flip: !f, lines: 1 });
-        dbSlit(c.tx, c.ty, c.ang + Math.PI / 2 - sd * 0.55, 30, '#e8fff8', { w: 2.5, dur: 0.2, delay: 0.05 }); }); },
-    // a burst of wind at the start, a ribbon along the dash, and the lane left glowing on the floor for 6s
-    // (polish) the push-off: a kick of wind streaks and leaves thrown back the way you left, a scuff of dust, a ring
-    slip: c => { const col = windCol(c.ent), sx = c.x, sy = c.y; V.smoke(sx, sy, { n: 4, color: '#d8e8e0', size: 18, a: 0.5, speed: 60 }); V.shock(sx, sy, { r: 44, color: col, dur: 0.3, w: 3.5 });
-      DRIFT_PAINT.streaks(sx, sy, c.ang, { n: 3, back: 70, on: 20, w: 6, gap: 10, color: col, dur: 0.3, stay: 0.4, leaves: 2 }); DRIFT_PAINT.leaves(sx, sy, { n: 4, angle: c.ang + Math.PI, speed: 140 });
+// >>> rtd drift-recipes
+    // (class VFX pass) the Driftblade is wind made visible (HFX.drift, above): ribbons with a dark rim, a cut that is a gust of three of them
+    // on one arc, a thin slit where it lands, and leaves and grit carried off by it. Carve is the small quick one and alternates forehand and
+    // backhand; the Drift you carry shows in the swing (more leaves, a wider gust, and from 50 a second gust following through)
+    carve: c => { const D = HFX.drift, e = c.ent, tc = D.tone(e), f = (e._dbN = ((e._dbN | 0) + 1) % 2) === 1, dr = dbDrift(c), w = dr / 100, sd = f ? -1 : 1;
+      D.gust(c.x, c.y, c.ang, { r: 70, span: 2.1, flip: f, w: 9 + 4 * w, ent: e, dur: 0.3 });
+      c.later(0.08, () => { HFX.cut(c.tx, c.ty, c.ang + Math.PI / 2 + sd * 0.55, { len: 40 + 12 * w, w: 3.4 + 1.4 * w, color: '#ffffff', inner: tc.mid, ink: tc.ink, dur: 0.34, z: 24 });
+        V.shock(c.tx, c.ty, { r: 40, color: tc.mid, dur: 0.22, w: 2.5 }); V.hit(c.tx, c.ty, '#e8fff8', 0.4);
+        D.litter(c.tx, c.ty, { n: 1 + Math.round(3 * w), g: 2, angle: c.ang + sd * Math.PI / 2, ent: e }); });
+      if (dr >= 50) c.later(0.15, () => { D.gust(c.x, c.y, c.ang + sd * 0.25, { r: 84, span: 1.8, w: 4, flip: !f, ent: e, dur: 0.22, layers: 1 });
+        HFX.cut(c.tx, c.ty, c.ang + Math.PI / 2 - sd * 0.55, { len: 34, w: 2.6, color: '#ffffff', inner: '#e8fff8', ink: tc.ink, delay: 0.05, dur: 0.3, z: 24 }); }); },
+    // Slipstream: the push-off kicks leaves and grit back the way you came; as you go a few ribbons stream along the dash and the lane is left
+    // on the floor for 6s, faint, with leaves now and then blowing down it (the lane's gameplay, WIND_LANES, is unchanged)
+    slip: c => { const D = HFX.drift, col = windCol(c.ent), sx = c.x, sy = c.y, tc = D.tone(c.ent);
+      V.smoke(sx, sy, { n: 4, color: '#d8e8e0', size: 18, a: 0.5, speed: 60 }); V.shock(sx, sy, { r: 44, color: col, dur: 0.3, w: 3 });
+      D.litter(sx, sy, { n: 5, g: 3, angle: c.ang + Math.PI, speed: 190, ent: c.ent });
       c.later(0.22, () => {
         const ex = c.ent.x, ey = c.ent.y;
         if (Math.hypot(ex - sx, ey - sy) < 20) return;
         const lane = { ax: sx, ay: sy, bx: ex, by: ey, end: FX.now + 6 };
         WIND_LANES.push(lane);
-        ribbon(line2(sx, sy, ex, ey, 12, 10), { color: col, w: 3, dur: 0.6 }); ribbon(line2(sx, sy, ex, ey, 12, -10), { color: '#ffffff', w: 1.5, dur: 0.5 });
-        const dx = ex - sx, dy = ey - sy, L = Math.hypot(dx, dy);
-        V.fx({ dur: 6, layer: 'ground', draw: (ctx, p, t, e) => {
+        D.ribbon(D.linePts(sx, sy, ex, ey, 12, 12), { w: 6, dur: 0.55, color: tc.body, mid: tc.mid, ink: tc.ink, z: 16 });
+        D.ribbon(D.linePts(sx, sy, ex, ey, 12, -12), { w: 4, dur: 0.45, color: tc.mid, mid: '#ffffff', ink: tc.ink, z: 16, delay: 0.03 });
+        D.ribbon(D.linePts(sx, sy, ex, ey, 12, 0), { w: 3, dur: 0.4, color: '#ffffff', mid: '#ffffff', ink: tc.ink, z: 18, delay: 0.05 });
+        const dx = ex - sx, dy = ey - sy, L = Math.hypot(dx, dy), ca = dx / L, sa = dy / L;
+        V.fx({ dur: 6, layer: 'ground', tick: () => { if (Math.random() < 0.07) { const q = Math.random(); V.spawn({ x: sx + dx * q, y: sy + dy * q + rnd(-8, 8), z: rnd(8, 22), vx: ca * 70, vy: sa * 70, drag: 0.02, life: rnd(1, 1.6), size: 11, color: tc.mid, kind: 'leaf', add: false, vr: rnd(-6, 6), flutter: 6 }); } }, draw: (ctx, p, t, e) => {
           const k = Math.min(1, p / 0.04, (1 - p) / 0.15) * e.a;
           ctx.save(); ctx.translate(sx, sy); ctx.rotate(Math.atan2(dy, dx));
           ctx.globalAlpha = 0.12 * k; ctx.fillStyle = col; ctx.fillRect(0, -16, L, 32); ctx.globalAlpha = 1;
@@ -3095,36 +3982,42 @@ function windLaneBoost(x, y, vx, vy, now) {
           ctx.restore();
         } });
       }); },
-    // a swing round the target: a curved ribbon from where you were to its far side, a cut as you pass
-    // (painted pass, driftblade.png) Hook Turn: a curl of wind gathers on the blade, then a great sickle of wind swings
-    // round the target from where you were to its far side (thick at its leading edge), a cut as you pass, a faint arc stays
-    hook: c => { const DP = DRIFT_PAINT, col = windCol(c.ent), a0 = Math.atan2(c.y - c.ty, c.x - c.tx), r = Math.max(40, Math.hypot(c.x - c.tx, c.y - c.ty));
-      DP.windStrip(DP.arcPts(c.x, c.y, 34, c.ang + 2.2, -2.6, 10, 0.7), { w: 6.5, color: col, dur: 0.26, z: 20 });
-      DP.windStrip(DP.arcPts(c.x, c.y, 26, c.ang + 1.6, -2.2, 10, 0.7), { w: 3.5, color: DP.WHITE, dur: 0.22, z: 24 });
-      DP.hookArc(c.tx, c.ty, r, a0, Math.PI, { color: col, w: 13, dur: 0.52, stay: 1.3 });
-      c.later(0.1, () => { V.slash(c.tx, c.ty + 10, a0 + Math.PI / 2, { r: 68, span: 2, color: '#e8fff8', w: 0.45, dur: 0.26 }); V.hit(c.tx, c.ty, col, 0.95); }); },
-    // Crosswind: two loops of wind cross round the blade, the crescent flies, and on the target it opens into an X of
-    // long wind blades through it, leaves and grit flung off; the X stays a moment, faint, on the floor
-    // (online refs: Midare Setsugekka, Wind Cut) the spender grows with what it spent: the X's reach, its streaks, the
-    // burst and the shake scale with the Drift (yours as last read; another hero's a middling 50), and two slits cross on the body
-    cross: c => { const DP = DRIFT_PAINT, col = windCol(c.ent), aim = Math.atan2(c.ty - c.y, c.tx - c.x), sp = dbDrift(c, true), q = 0.55 + 0.45 * sp / 100;
-      for (const s of [-1, 1]) DP.windStrip(Array.from({ length: 17 }, (_, i) => { const a = c.ang + i / 16 * 5.4; return [c.x + Math.cos(a) * 44 * Math.cos(s * 0.7) - Math.sin(a) * 18 * Math.sin(s * 0.7), c.y + Math.cos(a) * 44 * Math.sin(s * 0.7) * 0.62 + Math.sin(a) * 18 * Math.cos(s * 0.7)]; }), { w: 5, color: s > 0 ? col : '#e8fff8', dur: 0.34, z: 20 });
-      c.later(0.08, () => V.missile(c.x, c.y, c.tx, c.ty, { style: 'blade', color: col, speed: TRV('driftblade', 'cross'), size: 1.6, onHit: (x, y) => {
-        for (const s of [-1, 1]) { DP.streaks(x, y, aim + s * 0.7, { n: sp >= 70 ? 3 : 2, back: 130 * q, on: 130 * q, w: 9.5 * q, gap: 9, color: col, dur: 0.44, stay: 1.4, leaves: sp >= 50 ? 2 : 1 }); dbSlit(x, y, aim + s * 0.7, 46 * q, col, { w: 5 * q, dur: 0.3 }); }
-        // (VFX pass) at full Drift the cut closes into a held cross of wind-blades, twice a hero across, with a dim scuff after
-        if (sp >= 70) V.climax(x, y, { shape: 'cross', r: 88, tilt: aim + Math.PI / 4, color: col, core: '#ffffff', ink: '#0a2a24', dur: 0.6, hold: 0.1, after: { smoke: 0.4, mark: 0.6 }, smokeColor: '#b8c8c0' });
-        else V.spikeburst(x, y, { r: 64 * q, n: Math.round(14 * q), color: col, core: '#ffffff', ink: '#0a2a24', dur: 0.32 }); shake(1 + 3 * q * q);
-        FX.later(0.3, () => V.smoke(x, y, { n: 3, r: 30, color: '#c8d0c0', size: 22, a: 0.3, speed: 40, life: 1.3 })); } })); },
-    // Stillpoint: the blade held flat across (a glint and the parry face), four little whirls round you bound by a ring seal,
-    // a shaft of pale light down the middle; the seal goes faint and holds while it lasts
-    still: c => { const DP = DRIFT_PAINT, col = windCol(c.ent), fx = c.x + Math.cos(c.ang) * 26, fy = c.y + Math.sin(c.ang) * 26; V.glint(fx, fy, { color: '#ffffff', size: 26 }); V.shield(c.ent, { shape: 'front', color: '#e8fff8', dur: 2, r: 38 });
+    // Hook Turn: a gust gathers on the blade, then one great sickle of wind swings round the target from where you were to its far side (a second,
+    // paler one inside it), a slit and a burst of leaves as you pass; a faint arc of it stays a moment
+    hook: c => { const D = HFX.drift, e = c.ent, tc = D.tone(e), a0 = Math.atan2(c.y - c.ty, c.x - c.tx), r = Math.max(40, Math.hypot(c.x - c.tx, c.y - c.ty));
+      D.gust(c.x, c.y, c.ang, { r: 34, span: 2.6, w: 5, ent: e, dur: 0.24, layers: 2 });
+      D.ribbon(D.arcPts(c.tx, c.ty, r, a0, Math.PI, 22, 0.8), { w: 13, dur: 0.52, color: tc.body, mid: tc.mid, ink: tc.ink, z: 14, wob: 2 });
+      D.ribbon(D.arcPts(c.tx, c.ty, r * 0.86, a0 + 0.12, Math.PI * 0.86, 20, 0.8), { w: 7, dur: 0.44, delay: 0.03, color: tc.mid, mid: '#ffffff', ink: tc.ink, z: 18 });
+      D.ribbon(D.arcPts(c.tx, c.ty, r * 1.1, a0 + 0.1, Math.PI * 0.9, 22, 0.8), { w: 5, dur: 1.4, hold: true, layer: 'ground', color: tc.mid, mid: '#ffffff', ink: tc.ink, z: 4, lag: 0.9 });
+      c.later(0.12, () => { HFX.cut(c.tx, c.ty, a0 + Math.PI / 2, { len: 70, w: 4.6, color: '#ffffff', inner: tc.mid, ink: tc.ink, dur: 0.38, z: 24 }); V.hit(c.tx, c.ty, tc.mid, 0.7); V.shock(c.tx, c.ty, { r: 70, color: tc.mid, dur: 0.3, w: 3 });
+        D.litter(c.tx, c.ty, { n: 6, g: 3, angle: a0 + Math.PI / 2 + 0.6, speed: 200, ent: e }); V.smoke(c.tx, c.ty, { n: 2, color: '#c8d8d0', size: 18, a: 0.4, speed: 40 }); }); },
+    // Crosswind: two loops of wind wind round the blade, a ribbon is flung at the target, and where it lands it opens into an X of long ribbons through the body,
+    // leaves and grit thrown off in every direction; the X stays a moment, faint. The reach of the X, the number of leaves and the shake scale with the Drift spent
+    // (yours as last read; another hero's a middling 50); at 70 and over two slits cross on the body and the X is held
+    cross: c => { const D = HFX.drift, e = c.ent, tc = D.tone(e), aim = Math.atan2(c.ty - c.y, c.tx - c.x), sp = dbDrift(c, true), q = 0.55 + 0.45 * sp / 100, dist = Math.hypot(c.tx - c.x, c.ty - c.y), fl = dist / TRV('driftblade', 'cross');
+      for (const s of [-1, 1]) D.ribbon(Array.from({ length: 17 }, (_, i) => { const a = c.ang + i / 16 * 5.4; return [c.x + Math.cos(a) * 44 * Math.cos(s * 0.7) - Math.sin(a) * 18 * Math.sin(s * 0.7), c.y + Math.cos(a) * 44 * Math.sin(s * 0.7) * 0.62 + Math.sin(a) * 18 * Math.cos(s * 0.7)]; }), { w: 5, dur: 0.34, z: 20, color: s > 0 ? tc.body : tc.mid, mid: s > 0 ? tc.mid : '#ffffff', ink: tc.ink });
+      c.later(0.08, () => { D.ribbon(D.linePts(c.x, c.y, c.tx, c.ty, 14, 0), { w: 9, dur: Math.max(0.3, fl / 0.3), color: tc.body, mid: '#ffffff', ink: tc.ink, z: 20, lag: 0.3, wob: 1 });
+        c.later(fl, () => { const x = c.tx, y = c.ty;
+          for (const s of [-1, 1]) { const a = aim + s * 0.7, L = 135 * q, cx = Math.cos(a) * L, cy = Math.sin(a) * L * 0.85;
+            D.ribbon(D.linePts(x - cx, y - cy, x + cx, y + cy, 14, 9 * s), { w: 12 * q, dur: 0.75, lag: 0.92, color: s > 0 ? tc.body : tc.mid, mid: '#ffffff', ink: tc.ink, z: 22, wob: 1.5 });
+            if (sp >= 70) D.ribbon(D.linePts(x - cx, y - cy, x + cx, y + cy, 14, 0), { w: 4, dur: 1.4, hold: true, layer: 'ground', color: tc.mid, mid: '#ffffff', ink: tc.ink, z: 2, lag: 0.9 });
+            HFX.cut(x, y, a, { len: 44 * q, w: 3.4 * q, color: '#ffffff', inner: tc.mid, ink: tc.ink, dur: 0.34, z: 24 }); }
+          V.hit(x, y, '#e8fff8', 0.7 * q); V.shock(x, y, { r: 80 * q, color: tc.mid, dur: 0.36, w: 3 + q * 2 });
+          D.litter(x, y, { n: sp >= 50 ? 9 : 5, g: 4, angle: aim, speed: 240 * q, ent: e }); D.litter(x, y, { n: 3, g: 2, angle: aim + Math.PI, speed: 160 * q, ent: e });
+          shake(1 + 3 * q * q); FX.later(0.3, () => V.smoke(x, y, { n: 3, r: 30, color: '#c8d0c0', size: 22, a: 0.3, speed: 40, life: 1.3 })); }); }); },
+    // Stillpoint: the blade held flat across (the parry face), four gusts wheel in to ring the duellist and close, leaves caught in them; a ring seal holds faint
+    // while the parry lasts
+    still: c => { const D = HFX.drift, DP = DRIFT_PAINT, e = c.ent, tc = D.tone(e), col = windCol(e), x = e.x, y = e.y; V.shield(c.ent, { shape: 'front', color: '#e8fff8', dur: 2, r: 38 });
+      for (let i = 0; i < 4; i++) D.ribbon(D.arcPts(x, y, 62, i * TAU / 4 + 0.2, 1.25, 10, 0.62), { w: 6.5, dur: 0.5, delay: i * 0.03, color: i % 2 ? tc.mid : tc.body, mid: '#ffffff', ink: tc.ink, z: 14 });
       DP.stillSeal(c.ent, { r: 70, dur: 2, color: col });
-      c.later(0.12, () => { V.pillar(c.ent.x, c.ent.y, { r: 16, h: 185, color: '#d8fff0', dur: 0.5 }); V.shock(c.ent.x, c.ent.y, { r: 96, color: col, dur: 0.38, w: 3.5 }); DP.leaves(c.ent.x, c.ent.y, { n: 6, orbit: 64, dr: 10, follow: c.ent }); }); },
-    // a gust spirals up round the duellist, streaks shoot out, and the wind aura stays on
-    gale: c => { const col = windCol(c.ent); V.charge(c.x, c.y, { color: col, r: 60, n: 10, dur: 0.25, follow: c.ent }); V.tornado(c.x, c.y, { color: '#e8fff8', h: 120, r: 36, dur: 0.9 });
-      c.later(0.1, () => V.climax(c.ent.x, c.ent.y, { shape: 'ring', r: 90, color: col, core: '#f4fffa', ink: '#0a2a24', dur: 0.6, hold: 0.1, z: 14, after: { smoke: 0.3 }, smokeColor: '#c8d8d0' }));   // (VFX pass) the Gale opens as a held ring
-      c.later(0.2, () => { V.shock(c.x, c.y, { r: 140, color: col, dur: 0.5, w: 6 }); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5; ribbon(line2(c.x + Math.cos(a) * 20, c.y + Math.sin(a) * 12, c.x + Math.cos(a) * 120, c.y + Math.sin(a) * 74, 6, 12), { color: col, w: 2, dur: 0.6 }); } });
+      c.later(0.12, () => { V.shock(x, y, { r: 96, color: col, dur: 0.38, w: 3 }); DP.leaves(x, y, { n: 6, orbit: 64, dr: 10, follow: c.ent }); }); },
+    // Gale Run: three ribbons spiral up round the duellist and the gust throws leaves and grit out wide; a light wind stays on while the run lasts
+    gale: c => { const D = HFX.drift, e = c.ent, tc = D.tone(e), col = windCol(e), x = c.x, y = c.y; V.charge(c.x, c.y, { color: col, r: 60, n: 10, dur: 0.25, follow: c.ent });
+      for (let i = 0; i < 3; i++) D.ribbon(Array.from({ length: 22 }, (_, j) => { const q = j / 21, a = i * TAU / 3 + q * TAU * 1.5, r = 46 - 22 * q; return [x + Math.cos(a) * r, y + Math.sin(a) * r * 0.6 - q * 80]; }), { w: 8, dur: 0.9, delay: i * 0.05, color: i === 1 ? tc.mid : tc.body, mid: '#ffffff', ink: tc.ink, z: 8, wob: 1.5, lag: 0.7 });
+      D.litter(x, y, { n: 8, g: 4, angle: 0, speed: 200, ent: e }); D.litter(x, y, { n: 6, g: 2, angle: Math.PI, speed: 200, ent: e });
+      c.later(0.2, () => V.shock(c.x, c.y, { r: 140, color: col, dur: 0.5, w: 4 }));
       V.aura(c.ent, { color: col, dur: 12, r: 28, rate: 0.25 }); },
+// <<< rtd drift-recipes
     // Comet's Impact: a gold glyph, a straight streak through the target, a burst, sparks thrown forward
     impact: c => { const a = Math.atan2(c.ty - c.y, c.tx - c.x), ex = c.tx + Math.cos(a) * 120, ey = c.ty + Math.sin(a) * 120; V.sigil(c.x, c.y, { r: 30, style: 'star4', color: '#ffd08a', dur: 0.3, spin: 6 });
       V.beam(c.x, c.y, ex, ey, { color: '#ffd08a', w: 12, dur: 0.4 }); c.later(0.06, () => { V.spikeburst(c.tx, c.ty, { r: 64, n: 14, color: '#ffb84a', core: '#fff6d0', ink: '#3a2404', dur: 0.36 }); V.sparks(c.tx, c.ty, { color: '#ffe0a0', n: 14, angle: a, spread: 0.6, speed: 520 }); shake(4); });
@@ -3140,45 +4033,37 @@ function windLaneBoost(x, y, vx, vy, now) {
 
   // class moments sent from the kits (k.fx): Thermal Shock and its cousins, Passing Strikes and the wind's tricks
   Object.assign(KIT_VFX, {
-    // the payoff: both colours collapse onto the target, then a burst in the colour it swung to, sized by the swing,
-    // with a ring of the other colour shattering round it, and steam and a crack left behind
+// >>> rtd thermist-shock
+    // (class VFX pass) Thermal Shock, the payoff: a shard of ice and a lance of fire race into one point over the target from either side (the side it
+    // swung to arrives on top) and collide. The burst is both materials at once: a star of fire rays threaded through a crown of ice, steam boiling
+    // off the meeting, the size following the swing; glowing cracks and a rime ring stay on the floor, steam drifts after
     shock: Object.assign((e, target, d) => {
       const t = target || { x: e.x + Math.cos(e.angle || 0) * 120, y: e.y + Math.sin(e.angle || 0) * 120 };
-      const s = Math.max(3, Math.min(12, (d && d.s) || 5)), to = d && d.c < 0 ? ICE : FIRE, other = to === ICE ? FIRE : ICE, echo = d && d.echo;
-      const R = ((echo ? 24 : 34) + s * (echo ? 3 : 8)) * (echo ? 1.1 : 1.2), TP = THERM_PAINT;   // (scale-up pass) x1.2
-      // (painted pass) wind-up: fire and frost spiral in together with a breath of steam
-      TP.swirl2(t.x, t.y, { r: R * 1.4, dur: 0.17 });
-      // (online-refs pass: the crossing is the signature beat, FF14 Paradox) a fire crescent and a frost crescent slam
-      // together over the target, the side it swung to arriving on top, the instant before the burst
-      V.fx({ dur: 0.2, layer: 'air', draw: (c, p, tt, fx) => { const q = Math.min(1, p / 0.75), sl = 1 - q * q, k = fx.a * Math.min(1, p / 0.15) * (1 - Math.max(0, (p - 0.8) / 0.2)), cy = t.y - 34, rr = 18 + R * 0.35, off = rr * 0.3 + R * 1.3 * sl;
-        const arcs = [[FIRE, -1], [ICE, 1]].sort(a => (a[0] === to ? 1 : -1));
-        for (const [el, sd] of arcs) { const cx = t.x + sd * off, a0 = sd < 0 ? Math.PI : 0;
-          V.neonPath(c, el.color, 5 + s * 0.3, k, () => c.arc(cx, cy, rr, a0 - 1.15, a0 + 1.15));
-          V.neonPath(c, el.core, 1.6, k, () => c.arc(cx, cy, rr * 0.86, a0 - 0.9, a0 + 0.9)); }
-        if (q >= 1) V.glowAt(c, t.x, cy, rr, '#ffffff', 0.7 * k); } });
-      V.fx({ dur: 0.16, layer: 'ground', draw: (c, p, tt, fx) => { V.neonRing(c, t.x, t.y, R * 1.3 * (1 - p), to.color, 3, fx.a * p, 0.7); V.neonRing(c, t.x, t.y, R * 1.1 * (1 - p), other.color, 3, fx.a * p, 0.7); } });
-      if (!echo) TP.steam(t.x, t.y, { n: 3, r: R * 0.8, size: 20, life: 0.8, a: 0.3 });
-      FX.later(0.15, () => {
-        // (VFX pass) the Shock itself is a climax: a bold burst at least twice the mage with a held beat, then embers or frost-dust
-        if (echo) V.spikeburst(t.x, t.y, { r: R, n: 12 + Math.round(s), ...to, core: to === ICE ? '#bfe8ff' : '#ffd890', dur: 0.34 + s * 0.02 });
-        else V.climax(t.x, t.y, { shape: 'burst', r: Math.max(84, R * 1.05), n: 12 + Math.round(s), color: to.color, core: to === ICE ? '#e8f8ff' : '#fff0b8', ink: to.ink, dur: 0.6, hold: 0.1, after: { embers: to === FIRE ? 0.5 : 0.3, mark: 0.6 }, smokeColor: '#6a6a70' });
-        V.spikeburst(t.x, t.y, { r: R * 1.35, n: 16, hole: 0.7, ...other, dur: 0.4, layer: 'ground', z: 0, flat: 0.7 });
-        // (QA) the flash kept small and in the element's colour: with the starburst's white core a big white flash
-        // whited out the boss on a large Shock
-        V.burst(t.x, t.y, { color: to.core, color2: other.color, n: 6 + s, speed: 160 + s * 25, flash: false });
-        V.flash(t.x, t.y - 10, R * 0.55, to.color, 0.18);
-        V.shock(t.x, t.y, { r: R * 2, color: to.color, dur: 0.5, w: 4 + s * 0.5 });
-        if (to === ICE) V.crystals(t.x, t.y, { color: '#bfe6ff', n: 4 + Math.round(s / 2), r: R * 0.7, h: 30 + s * 4, dur: 1 }); else V.flare(t.x, t.y, { n: 6 + s, r: 14 + s, color: '#ff6a1a' });
-        // both elements break out of it whichever way it swung: shards of ice and embers, rocks for a big one
-        TP.shards(t.x, t.y, { n: Math.min(8, 3 + Math.round(s / 3)), speed: 180 + s * 15 });
-        if (to === ICE) V.flare(t.x, t.y, { n: 3 + Math.round(s / 3), r: 10 + s, color: '#ff8a3a', size: 0.7 });
-        if (!echo && s >= 6) V.debris(t.x, t.y, { n: Math.min(8, s - 2), hot: to === FIRE, color: '#4a3a32', speed: 0.8 });
-        if (!echo) { shake(2 + s * 0.5); FX.text(t.x, t.y - 70, s >= 8 ? 'Thermal Shock!' : 'Shock', to.core, 11 + Math.min(8, s), 0.9); }
+      const s = Math.max(3, Math.min(12, (d && d.s) || 5)), toIce = !!(d && d.c < 0), echo = d && d.echo, T = HFX.thermist, TP = THERM_PAINT;
+      const R = ((echo ? 24 : 34) + s * (echo ? 3 : 8)) * (echo ? 1.1 : 1.2), cy = t.y - 34;
+      // the collision (0.2s): both come in along the floor line, growing with the swing
+      V.fx({ dur: 0.2, layer: 'air', draw: (c, p, tt, fx) => { const q = Math.min(1, p / 0.8), off = (R * 1.5 + 30) * (1 - q * q), k = fx.a * (1 - Math.max(0, (p - 0.85) / 0.15));
+        const iceSide = () => { c.save(); c.translate(t.x - off, cy); T.ice(c, 30 + 2 * s, 7 + 0.4 * s, { k }); c.restore(); }, fireSide = () => { c.save(); c.translate(t.x + off, cy); c.rotate(Math.PI); T.lance(c, 36 + 2 * s, 6.4 + 0.4 * s, tt, { k }); c.restore(); };
+        if (toIce) { fireSide(); iceSide(); } else { iceSide(); fireSide(); }
+        if (q >= 1) V.glowAt(c, t.x, cy, 16 + R * 0.3, '#ffffff', 0.8 * k); } });
+      FX.later(0.17, () => {
+        V.flash(t.x, t.y - 20, R * 0.6, '#ffffff', 0.14);
+        const big = toIce ? 0.75 : 1, bigI = toIce ? 1 : 0.75;
+        T.spikes(t.x, t.y, { n: echo ? 4 : 7, r: R * 0.62 * bigI, h: R * 0.8 * bigI, w: 7 + s * 0.35, dur: 0.9 });
+        T.rays(t.x, t.y, { n: echo ? 8 : 14, r: R * 1.5 * big, dur: 0.45, z: 30 }); if (!echo) T.lanceBurst(t.x, t.y, { n: 6, r: R * 1.0 * big, len: 30 });
+        V.shock(t.x, t.y, { r: R * 2, color: toIce ? '#bfe6ff' : '#ff9a5a', dur: 0.5, w: 3 + s * 0.4 });
+        V.shock(t.x, t.y, { r: R * 1.45, color: toIce ? '#ff9a5a' : '#bfe6ff', dur: 0.45, w: 2.5, delay: 0.05 });
+        V.sparks(t.x, t.y, { color: '#ffd890', n: 6 + s, speed: 300 + s * 25 });
+        TP.shards(t.x, t.y, { n: Math.min(8, 3 + Math.round(s / 3)), speed: 200 + s * 15 });
+        T.steam(t.x, t.y, { n: echo ? 2 : 3 + Math.round(s / 2), r: R * 0.8, size: 24 + s * 2.2, a: 0.5, life: 1.2 });
+        if (!echo && s >= 6) V.debris(t.x, t.y, { n: Math.min(8, s - 2), hot: !toIce, color: '#4a3a32', speed: 0.8 });
+        if (!echo) { shake(2 + s * 0.5); FX.text(t.x, t.y - 70, s >= 8 ? 'Thermal Shock!' : 'Shock', toIce ? '#e8f8ff' : '#fff0b8', 11 + Math.min(8, s), 0.9); }
       });
-      // aftermath: steam rolling off, frost at the rim and the heat cooling in cracks
-      if (!echo) FX.later(0.5, () => { V.smoke(t.x, t.y, { n: 3 + Math.round(s / 2), r: R * 0.6, color: '#e0e4e8', size: 22 + s * 2, a: 0.3, speed: 25, life: 2 });
-        if (s >= 6) { TP.lavaCracks(t.x, t.y, { r: R * 0.8, dur: 2.2, a: 0.5, color: to === FIRE ? '#ff6a1a' : '#ff8a4a' }); TP.frostRim(t.x, t.y, { r: R * 0.9, dur: 2.2, a: 0.3, n: 12 }); } });
+      // aftermath: steam rolling off, a rim of frost, the heat cooling in cracks
+      if (!echo) FX.later(0.5, () => { T.steam(t.x, t.y, { n: 3 + Math.round(s / 2), r: R * 0.6, size: 22 + s * 2, a: 0.32, speed: 25, life: 2 });
+        if (s >= 6) { TP.lavaCracks(t.x, t.y, { r: R * 0.8, dur: 2.2, a: 0.5 }); T.rime(t.x, t.y, { r: R * 0.9, dur: 2 }); } });
     }, { atTarget: true }),
+// <<< rtd thermist-shock
     // Ember Store (talent): banked embers fly from the mage into the target after a Shock
     embers: Object.assign((e, target, d) => { if (!target) return; for (let i = 0; i < ((d && d.n) || 1); i++) FX.later(i * 0.08, () => V.missile(e.x, e.y, target.x, target.y, { style: 'fire', color: '#ff8a3a', speed: 800, size: 0.6, arc: 30 + i * 12, onHit: (x, y) => V.hit(x, y, '#ffb050', 0.5) })); }, { atTarget: true }),
     // Zenith's Corona: a spark lights over the mage's brow in the element's colour, one more for each held (a full three ring out)
@@ -3200,15 +4085,20 @@ function windLaneBoost(x, y, vx, vy, now) {
     // Twin Spell (talent): a smaller copy of the edge spell follows the first
     twin: Object.assign((e, target, d) => { if (!target) return; const ice = d && d.el < 0; V.missile(e.x, e.y, target.x, target.y, { style: ice ? 'helix' : 'fire', color: ice ? '#9fd8ff' : '#ff9a3a', speed: 1000, size: 0.7, onHit: (x, y) => V.spikeburst(x, y, { r: 30, n: 9, ...(ice ? ICE : FIRE), dur: 0.26 }) }); }, { atTarget: true }),
     invert: e => { V.shock(e.x, e.y, { r: 80, color: '#ff9a5a', dur: 0.4, w: 4 }); V.shock(e.x, e.y, { r: 64, color: '#7ac0f0', dur: 0.4, w: 4, delay: 0.05 }); },
-    // a Passing Strike: a straight white cut through the body of the enemy, along the way you were running
+// >>> rtd drift-pass
+    // (class VFX pass) a Passing Strike: a long gust through the body of the enemy along the way you were running, ribbons laid side by side
+    // with a slit across it and leaves flung ahead (Gale Run: four white ribbons, one long bold bolt of wind through the body, held a beat)
     pass: Object.assign((e, target, d) => {
-      // (painted pass) long streaks of wind through the body along the way you ran, leaves flung ahead, faint scuffs left
-      const col = windCol(e), a = e.angle || 0, t = target || e, gale = d && d.g;
-      DRIFT_PAINT.streaks(t.x, t.y, a, { n: gale ? 4 : 3, back: 105, on: 130, w: gale ? 8.5 : 6.5, gap: 11, color: gale ? '#ffffff' : col, dur: 0.36, stay: 0.9, leaves: gale ? 3 : 2 });
-      V.hit(t.x, t.y, col, gale ? 1 : 0.6); if (gale) shake(2);
+      const D = HFX.drift, tc = D.tone(e), a = e.angle || 0, t = target || e, gale = d && d.g, n = gale ? 4 : 3, ca = Math.cos(a), sa = Math.sin(a);
+      for (let i = 0; i < n; i++) { const off = (i - (n - 1) / 2) * 11, ox = -sa * off, oy = ca * off * 0.8;
+        D.ribbon(D.linePts(t.x - ca * 130 + ox, t.y - sa * 130 + oy, t.x + ca * 150 + ox, t.y + sa * 150 + oy, 12, i % 2 ? 6 : -6), { w: gale ? 8 : 6, dur: 0.4, delay: i * 0.02, color: gale ? '#f0fffa' : (i === 1 ? tc.mid : tc.body), mid: '#ffffff', ink: tc.ink, z: 22, wob: 1.5 }); }
+      HFX.cut(t.x, t.y, a, { len: gale ? 90 : 64, w: gale ? 4.4 : 3.2, color: '#ffffff', inner: tc.mid, ink: tc.ink, dur: 0.36, z: 24 });
+      D.litter(t.x, t.y, { n: gale ? 6 : 3, g: 2, angle: a, speed: 220, ent: e });
+      V.hit(t.x, t.y, tc.mid, gale ? 1 : 0.6); if (gale) shake(2);
       // (VFX pass) the Gale Run strike: one long white-hot bolt of wind through the body, held a beat
       if (gale) V.climax(t.x - Math.cos(a) * 62, t.y - Math.sin(a) * 62, { shape: 'bolt', angle: a, r: 82, flat: 1, color: '#c8fff0', core: '#ffffff', ink: '#0a2a24', dur: 0.5, hold: 0.1, z: 20 });
     }, { atTarget: true }),
+// <<< rtd drift-pass
     lane: e => { V.shock(e.x, e.y, { r: 30, color: windCol(e), dur: 0.25, w: 2 }); },
     // Gyre (kits.js k.fx('gyre', { n })): one cut round the target for every 25 Drift, 0.12s apart as the kit deals
     // them, each from a quarter further round the loop; the more cuts, the bigger the last one and the burst after it
@@ -3234,11 +4124,17 @@ function windLaneBoost(x, y, vx, vy, now) {
 
   // autos: the Thermist's alternate fire and frost sparks; the Driftblade's quick sabre flick
   Object.assign(AUTO_VFX, {
-    thermo: c => { const ice = c.alt; V.missile(c.ent.x, c.ent.y, c.tx, c.ty, { style: 'orb', color: ice ? '#8fd0ff' : '#ff9a4a', speed: 950, size: 0.5, onHit: (x, y) => V.hit(x, y, ice ? '#cfeeff' : '#ffc080', 0.35) }); },
+    // (class VFX pass) frost and fire take turns: a small shard of ice from the left hand, a small lance of fire from the right
+    thermo: c => { const ice = c.alt, T = HFX.thermist, h = T.hand(c.ent, ice ? -1 : 1);
+      (ice ? T.iceShot : T.fireShot)(h.x, h.y, c.tx, c.ty, { speed: 950, size: 0.5, onHit: (x, y) => { if (ice) { for (let i = 0; i < 3; i++) V.spawn({ x, y, z: 14, vx: rnd(-90, 90), vy: rnd(-50, 50), vz: rnd(40, 100), g: 450, life: 0.45, size: 7, color: '#d8f2ff', kind: 'shard', add: false, vr: rnd(-12, 12) }); V.shock(x, y, { r: 22, color: '#cfeeff', dur: 0.2, w: 2 }); } else { T.rays(x, y, { n: 6, r: 22, dur: 0.2 }); V.sparks(x, y, { color: '#ffd070', n: 2, speed: 220 }); } } }); },
     // (shared-fx polish: an impact where the flick connects, a small glint and a breath of wind)
-    sabre: c => { const col = windCol(c.ent); V.slash(c.ent.x, c.ent.y, c.ang, { r: 50, span: 1.5, color: col, dur: 0.2, w: 0.3, flip: c.alt, sparks: 2 });
-      c.later(0.07, () => { const d = Math.min(62, Math.hypot(c.tx - c.ent.x, c.ty - c.ent.y)), x = c.ent.x + Math.cos(c.ang) * d, y = c.ent.y + Math.sin(c.ang) * d;
-        V.hit(x, y, '#e8fff8', 0.38); V.spawn({ x, y, z: 16, vx: Math.cos(c.ang) * 220, vy: Math.sin(c.ang) * 150, drag: 0.12, life: 0.2, size: 9, size1: 2, color: col, kind: 'soft', stretch: 6, a: 0.8 }); }); },
+// >>> rtd drift-auto
+    // (class VFX pass) the quick sabre flick: one small gust across, a slit where it connects and a leaf carried off (forehand, then backhand)
+    sabre: c => { const D = HFX.drift, e = c.ent, tc = D.tone(e), sd = c.alt ? -1 : 1; D.gust(e.x, e.y, c.ang, { r: 50, span: 1.5, flip: c.alt, w: 4, dur: 0.2, layers: 1, ent: e });
+      c.later(0.07, () => { const d = Math.min(62, Math.hypot(c.tx - e.x, c.ty - e.y)), x = e.x + Math.cos(c.ang) * d, y = e.y + Math.sin(c.ang) * d;
+        HFX.cut(x, y, c.ang + Math.PI / 2 + sd * 0.5, { len: 26, w: 2.3, color: '#ffffff', inner: tc.mid, ink: tc.ink, dur: 0.26, z: 20 }); V.hit(x, y, '#e8fff8', 0.3);
+        D.litter(x, y, { n: 1, g: 1, angle: c.ang + sd * Math.PI / 2, speed: 130, ent: e }); }); },
+// <<< rtd drift-auto
   });
 })();
 // ======================================================================= Gorgemaw, Oathbroker (tanks-2)
@@ -3326,7 +4222,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     // Bottomless: the room is pulled toward the jaw: a great inward vortex, the floor's dust streaming in
     // (climax pass) and at the pull's start one bold ring of the jaw gapes round the Gorgemaw, held a beat, then dust
     bottomless: c => { const e = c.ent; if (e.st) { e.st.jawUntil = FX.now + 4; e.st.jawAll = FX.now + 4; }
-      V.climax(e.x, e.y, { shape: 'ring', r: 110, color: '#ff8a3a', core: '#ffe8c8', ink: '#1e0618', hold: 0.12, dur: 0.6, flat: 0.65, z: 18, after: { smoke: 0.4 } });
+      TANKS_VFX.gorgeTeethRing(e.x, e.y, 130, { n: 22, dur: 0.7 });
       V.ink(c.x, c.y, { r: 170, dur: 4, follow: e, a: 0.25 }); V.vortex(c.x, c.y, { r: 170, color: '#ff8a3a', dur: 4, follow: e });
       V.fx({ dur: 4, layer: 'ground', tick: () => { for (let i = 0; i < 1 + (Math.random() < 0.5 ? 1 : 0); i++) { const a = Math.random() * Math.PI * 2, d = rand(150, 320), x = e.x + Math.cos(a) * d, y = e.y + Math.sin(a) * d * 0.7;
         V.spawn({ x, y, z: 2, vx: (e.x - x) * 2.2, vy: (e.y - y) * 2.2, vz: 30, life: 0.45, size: rand(8, 12), size1: 2, color: i ? '#ffd0a0' : '#c87a4a', stretch: 3 }); } }, draw: () => {} });
@@ -3403,7 +4299,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     // the knight's chest), torn pages flung high, then the ring and the smoke
     // (vfx2) and over it the contract itself: VOID stamped across it, torn in two
     // (climax pass) the cracked seal is one bold wax-and-lilac bloom, held a beat, then dust
-    default: c => { voidSheet(c.ent); V.climax(c.x, c.y, { shape: 'burst', r: 88, n: 14, color: '#c0485a', core: '#f0d8ff', ink: INK, hold: 0.12, dur: 0.6, flat: 0.75, z: 22, after: { smoke: 0.4, smokeColor: '#6a6070' } }); V.flash(c.x, c.y - 22, 46, LIL, 0.2);
+    default: c => { voidSheet(c.ent); TANKS_VFX.oathInk(c.x, c.y, { r: 40, z: 40, n: 11, drops: 8 }); TANKS_VFX.oathStrips(c.x, c.y, 130, 9, { z: 30 }); V.flash(c.x, c.y - 22, 46, LIL, 0.2);
       pages(c.x, c.y, 12); V.shock(c.x, c.y, { r: 120, color: LIL, dur: 0.5, w: 6 }); shake(4); },
     // Foreclose: a great seal slams down onto the boss
     foreclose: c => { V.lightfall(c.tx, c.ty, { color: WAX, r: 34, h: 220, dur: 0.5, feathers: 0 }); c.later(0.2, () => { stamp(c.tx, c.ty, WAX, true); seal(c.tx, c.ty, 60, WAX, 1.8); pages(c.tx, c.ty, 10); shake(5); }); },
@@ -3777,8 +4673,8 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.fx({ dur: 0.4, layer: 'air', draw: (c, p, t, e) => {
       const q = easeOut(Math.min(1, p / 0.35)), k = e.a * (1 - Math.max(0, (p - 0.3) / 0.7));
       for (const r of rays) { const ca = Math.cos(r.a), sa = Math.sin(r.a) * 0.8, L = R * r.l * q;
-        V.neonPath(c, r.l > 0.8 ? TW_ROSE : TW_CRIM, r.l > 0.8 ? 2.8 : 2.2, k, () => { c.moveTo(x + ca * L * 0.3, y + sa * L * 0.3); c.lineTo(x + ca * L, y + sa * L); }); }
-      V.glowAt(c, x, y, R * 0.6, TW_CRIM, 0.6 * k); V.glowAt(c, x, y, R * 0.35, TW_ROSE, 0.8 * k); V.glowAt(c, x, y, R * 0.2, '#ffffff', k);
+        HEALFX.ink(c, () => { c.moveTo(x + ca * L * 0.3, y + sa * L * 0.3); c.lineTo(x + ca * L, y + sa * L); }, r.l > 0.8 ? 2.4 : 1.8, r.l > 0.8 ? TW_ROSE : TW_CRIM, TW_HOT, '#2a0410', k); }
+      V.glowAt(c, x, y, R * 0.45, TW_ROSE, 0.5 * k); V.glowAt(c, x, y, R * 0.2, '#ffffff', k);
     } });
   }
   // two bright lances crossing through a point (Grand Loom on the boss): each shoots through end to end, then fades
@@ -3804,10 +4700,10 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const q = easeOut(Math.min(1, t / fly)), k = e.a * Math.min(1, (dur - t) / 0.3);
       const ax = a.x, ay = a.y - 18, bx = b.x, by = b.y - 18, hx = ax + (bx - ax) * q, hy = ay + (by - ay) * q - Math.sin(q * Math.PI) * 30;
-      V.neonPath(c, TW_CRIM, 2.2, k, () => { c.moveTo(ax, ay); c.quadraticCurveTo((ax + hx) / 2, Math.min(ay, hy) - 24 * (1 - q * 0.5), hx, hy); });
-      V.neonPath(c, TW_ROSE, 1, k * 0.7, () => { c.moveTo(ax, ay - 3); c.quadraticCurveTo((ax + hx) / 2, Math.min(ay, hy) - 34 * (1 - q * 0.5), hx, hy); });
-      if (q < 1) { V.neonPath(c, TW_ROSE, 2.6, k, () => c.ellipse(hx, hy, 13, 7, t * 10, 0, TAU)); V.neonPath(c, TW_CRIM, 1.4, k, () => c.ellipse(hx, hy, 8, 12, -t * 8, 0, TAU)); }
-      V.glowAt(c, hx, hy, 16, TW_GOLD, 0.7 * k);
+      // (healers pass) an inked silk line with a loop spinning at its head, so it reads on a pale floor
+      HEALFX.ink(c, () => { c.moveTo(ax, ay); c.quadraticCurveTo((ax + hx) / 2, Math.min(ay, hy) - 24 * (1 - q * 0.5), hx, hy); }, 2.4, TW_CRIM, TW_HOT, '#2a0a14', k);
+      if (q < 1) { HEALFX.ink(c, () => { for (let s2 = 0; s2 <= 20; s2++) { const a2 = s2 / 20 * TAU; const px = hx + Math.cos(a2) * 13 * Math.cos(t * 10) - Math.sin(a2) * 7 * Math.sin(t * 10), py = hy + Math.cos(a2) * 13 * Math.sin(t * 10) + Math.sin(a2) * 7 * Math.cos(t * 10); s2 ? c.lineTo(px, py) : c.moveTo(px, py); } }, 2.2, TW_ROSE, TW_HOT, '#2a0a14', k); }
+      V.glowAt(c, hx, hy, 12, TW_GOLD, 0.35 * k);
     } });
   }
   // a thread coiled round an ally: a helix from their feet to their shoulders that pulls tight, then fades slowly
@@ -3816,10 +4712,8 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       // (online-refs pass) wraps the body (feet to shoulders) and cinches tighter, like a tether locking on
       const tight = easeOut(Math.min(1, t / 0.2)), rx = 28 - 13 * tight, k = e.a * Math.min(1, t / 0.06) * Math.min(1, (1 - p) / 0.5), x = w.x, y = w.y - (w.lift || 0);
-      const helix = (ph, col, wd, kk) => V.neonPath(c, col, wd, kk, () => { for (let s = 0; s <= 32; s++) { const q = s / 32, a = q * TAU * 3 + t * 6 + ph, px = x + Math.cos(a) * rx, py = y - 2 - q * 40 + Math.sin(a) * rx * 0.3; s ? c.lineTo(px, py) : c.moveTo(px, py); } });
-      V.glowAt(c, x, y - 28, 30, TW_CRIM, 0.35 * k);
-      helix(0, TW_CRIM, 2.2, k); helix(Math.PI, TW_ROSE, 1.2, k * 0.7);
-      V.glowAt(c, x + rx, y - 28, 12, TW_GOLD, 0.8 * k);
+      const helix = (ph, col, wd, kk, core) => HEALFX.ink(c, () => { for (let s = 0; s <= 32; s++) { const q = s / 32, a = q * TAU * 3 + t * 6 + ph, px = x + Math.cos(a) * rx, py = y - 2 - q * 40 + Math.sin(a) * rx * 0.3; s ? c.lineTo(px, py) : c.moveTo(px, py); } }, wd, col, core, '#2a0a14', kk);
+      helix(0, TW_CRIM, 2.2, k, TW_HOT); helix(Math.PI, TW_ROSE, 1.4, k * 0.8, null);
     } });
   }
   // (online-refs pass) a thread going taut between two people: a straight line that twangs (a wobble damping out over
@@ -3828,8 +4722,8 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.fx({ dur: 0.4, layer: 'air', draw: (c, p, t, e) => {
       const ax = a.x, ay = a.y - 16, bx = b.x, by = b.y - 16, L = Math.hypot(bx - ax, by - ay) || 1, nx = -(by - ay) / L, ny = (bx - ax) / L;
       const k = e.a * Math.min(1, (1 - p) / 0.5), amp = 9 * Math.exp(-t * 14) * Math.sin(t * 70);
-      for (const [col, w, kk] of [[TW_CRIM, 2.6, k], [TW_HOT, 1, k * 0.9]]) V.neonPath(c, col, w, kk, () => { for (let s = 0; s <= 12; s++) { const f = s / 12, o = amp * Math.sin(f * Math.PI); const px = ax + (bx - ax) * f + nx * o, py = ay + (by - ay) * f + ny * o; s ? c.lineTo(px, py) : c.moveTo(px, py); } });
-      for (const [x, y] of [[ax, ay], [bx, by]]) { V.glowAt(c, x, y, 12, TW_GOLD, 0.8 * k); V.glowAt(c, x, y, 4, '#ffffff', k); }
+      HEALFX.ink(c, () => { for (let s = 0; s <= 12; s++) { const f = s / 12, o = amp * Math.sin(f * Math.PI); const px = ax + (bx - ax) * f + nx * o, py = ay + (by - ay) * f + ny * o; s ? c.lineTo(px, py) : c.moveTo(px, py); } }, 2.4, TW_CRIM, TW_HOT, '#2a0a14', k);
+      for (const [x, y] of [[ax, ay], [bx, by]]) { c.save(); c.translate(0, 0); HEALFX.twBow(c, x, y - 2, 0.7, k, TW_GOLD); c.restore(); }
     } });
   }
   // Needle: a sharp lance of thread shoots at the target, a crimson spiral thread trailing behind it; onHit where it bites
@@ -3837,20 +4731,21 @@ function windLaneBoost(x, y, vx, vy, now) {
     const d = Math.hypot(tx - sx, ty - sy), fly = Math.max(0.08, d / 1500), dur = fly + 0.25, ang = Math.atan2(ty - sy, tx - sx), ca = Math.cos(ang), sa = Math.sin(ang);
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const q = Math.min(1, t / fly), k = e.a * (t < fly ? 1 : Math.max(0, 1 - (t - fly) / 0.25)), hx = sx + (tx - sx) * q, hy = sy - 16 + (ty - sy) * q;
-      V.neonPath(c, TW_CRIM, 2.3, k * 0.9, () => { for (let s = 0; s <= 20; s++) { const f = s / 20, L = d * q * f, w = 7 * Math.sin(f * Math.PI) * Math.sin(f * 18 - t * 30); const px = sx + ca * L - sa * w, py = sy - 16 + sa * L + ca * w; s ? c.lineTo(px, py) : c.moveTo(px, py); } });
+      HEALFX.ink(c, () => { for (let s = 0; s <= 20; s++) { const f = s / 20, L = d * q * f, w = 7 * Math.sin(f * Math.PI) * Math.sin(f * 18 - t * 30); const px = sx + ca * L - sa * w, py = sy - 16 + sa * L + ca * w; s ? c.lineTo(px, py) : c.moveTo(px, py); } }, 2, TW_CRIM, TW_ROSE, '#2a0a14', k * 0.9);
       if (t >= fly) return;
-      c.save(); c.globalCompositeOperation = 'lighter';
-      for (const [col, len, w, al] of [[TW_CRIM, 56, 6, 0.45], [TW_ROSE, 44, 3.4, 0.9], ['#ffffff', 28, 1.3, 1]]) { c.globalAlpha = al * k; c.fillStyle = col; c.beginPath(); c.moveTo(hx + ca * 13, hy + sa * 13); c.lineTo(hx - sa * w, hy + ca * w); c.lineTo(hx - ca * len, hy - sa * len); c.lineTo(hx + sa * w, hy - ca * w); c.closePath(); c.fill(); }
-      c.restore();
-      V.glowAt(c, hx, hy, 18, TW_ROSE, 0.85 * k);
+      // (healers pass) the needle itself, steel with an inked rim, riding the head of its thread
+      HEALFX.twNeedleShape(c, hx - ca * 16, hy - sa * 16, ang, 34, k);
+      V.glowAt(c, hx + ca * 14, hy + sa * 14, 9, TW_HOT, 0.5 * k);
     } });
     V.fx({ dur: fly, layer: 'air', draw: () => {}, done: () => onHit(tx, ty) });
   }
   // where a Needle bites: a small crimson star, and a faint eight-point star etched on the floor for a moment
-  function weaveStar(x, y) {
-    V.spikeburst(x, y, { r: 40, n: 10, color: TW_CRIM, core: TW_HOT, ink: '#2a0410', dur: 0.3 });
-    V.sparks(x, y, { color: TW_ROSE, n: 5, speed: 260 });
-    V.fx({ dur: 0.6, layer: 'ground', draw: (c, p, t, e) => { const k = e.a * 0.6 * (1 - p); V.neonPath(c, TW_CRIM, 1.7, k, () => { for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, L = i % 2 ? 18 : 36; c.moveTo(x, y); c.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L * 0.78); } }); } });
+  // (healers pass) a Needle bites: a small inked burst, then the needle left standing in it, its thread swaying, and a row of cross-stitches sewn across the wound
+  function weaveStar(x, y, ang) {
+    V.spikeburst(x, y, { r: 32, n: 9, color: TW_CRIM, core: TW_HOT, ink: '#2a0410', dur: 0.26 });
+    V.sparks(x, y, { color: TW_ROSE, n: 4, speed: 230 });
+    HEALFX.twPin(x, y, { ang: -1.15 + (ang != null ? Math.cos(ang) * 0.35 : 0), len: 48, z: 16 });
+    HEALFX.twStitches(x, y, (ang || 0) + Math.PI / 2, { n: 3, z: 8, gap: 14, s: 6.5, dur: 0.8, delay: 0.05 });
   }
   // Shuttle: two threads loop over each other in a chain of figure-eights from her to the target, the gold shuttle at
   // their head; onHit where it strikes
@@ -3859,8 +4754,11 @@ function windLaneBoost(x, y, vx, vy, now) {
     const pt = (f, s) => { const al = d * (f - 0.1 * Math.sin(f * TAU * 2)), lat = s * A * Math.sin(f * TAU * 1.5); return [sx + ca * al - sa * lat, sy - 16 + sa * al + ca * lat]; };
     V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
       const q = easeOut(Math.min(1, t / fly)), k = e.a * Math.min(1, (dur - t) / 0.3);
-      for (const s of [1, -1]) V.neonPath(c, s > 0 ? TW_CRIM : TW_ROSE, 2.8, k, () => { for (let i = 0; i <= 30; i++) { const [px, py] = pt(q * i / 30, s); i ? c.lineTo(px, py) : c.moveTo(px, py); } });
-      if (t < fly) { const [hx, hy] = pt(q, 0); V.glowAt(c, hx, hy, 26, TW_CRIM, 0.6 * k); V.glowAt(c, hx, hy, 16, TW_GOLD, k); V.glowAt(c, hx, hy, 6, '#ffffff', k); }
+      for (const s of [1, -1]) HEALFX.ink(c, () => { for (let i = 0; i <= 30; i++) { const [px, py] = pt(q * i / 30, s); i ? c.lineTo(px, py) : c.moveTo(px, py); } }, 2.6, s > 0 ? TW_CRIM : TW_ROSE, TW_HOT, '#2a0a14', k);
+      if (t < fly) { const [hx, hy] = pt(q, 0), [bx2, by2] = pt(Math.max(0, q - 0.02), 0), an = Math.atan2(hy - by2, hx - bx2);
+        // the shuttle: a gold boat with a dark rim, a slot for the thread and a bright nose
+        c.save(); c.translate(hx, hy); c.rotate(an); c.lineJoin = 'round'; c.globalAlpha = k; c.beginPath(); c.moveTo(15, 0); c.quadraticCurveTo(4, -7.5, -13, -4); c.lineTo(-13, 4); c.quadraticCurveTo(4, 7.5, 15, 0); c.closePath();
+        c.strokeStyle = '#2a0a14'; c.lineWidth = 3.6; c.stroke(); c.fillStyle = TW_GOLD; c.fill(); c.fillStyle = '#7a3a18'; c.beginPath(); c.ellipse(-1, 0, 6.5, 2, 0, 0, TAU); c.fill(); c.fillStyle = TW_HOT; c.beginPath(); c.arc(12, 0, 1.6, 0, TAU); c.fill(); c.restore(); }
     } });
     V.fx({ dur: fly, layer: 'air', draw: () => {}, done: () => onHit(tx, ty) });
   }
@@ -3869,7 +4767,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     const ls = Array.from({ length: n }, () => ({ a: rand(0, Math.PI), L: rand(75, 125), o: rand(-18, 18) }));
     V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, t / 0.1) * (1 - p) * 0.62; if (k < 0.02) return;
-      for (const l of ls) { const ca = Math.cos(l.a), sa = Math.sin(l.a) * 0.78, ox = -sa * l.o, oy = ca * l.o; V.neonPath(c, TW_CRIM, 2.2, k, () => { c.moveTo(x + ox - ca * l.L, y + oy - sa * l.L); c.lineTo(x + ox + ca * l.L, y + oy + sa * l.L); }); }
+      for (const l of ls) { const ca = Math.cos(l.a), sa = Math.sin(l.a) * 0.78, ox = -sa * l.o, oy = ca * l.o; HEALFX.ink(c, () => { c.moveTo(x + ox - ca * l.L, y + oy - sa * l.L); c.lineTo(x + ox + ca * l.L, y + oy + sa * l.L); }, 2, TW_CRIM, null, '#2a0410', k); }
     } });
   }
   globalThis.THREADWEAVER_VFX = { diamond: weaveDiamond, snapBurst: weaveSnapBurst, cross: weaveCross, CRIM: TW_CRIM, ROSE: TW_ROSE, GOLD: TW_GOLD, HOT: TW_HOT };
@@ -3880,21 +4778,28 @@ function windLaneBoost(x, y, vx, vy, now) {
     // runs down each of her threads to whoever is on the far end, a small heal pop there
     needle: c => { const hx = c.x + Math.cos(c.ang || 0) * 12, hy = c.y + Math.sin(c.ang || 0) * 12, e = c.ent;
       V.glint(hx, hy, { color: TW_HOT, size: 18, z: 16, life: 0.16 });
-      weaveLance(hx, hy, c.tx, c.ty, (x, y) => { weaveStar(x, y); runDown(e, TW_ROSE); }); },
+      weaveLance(hx, hy, c.tx, c.ty, (x, y) => { weaveStar(x, y, c.ang); runDown(e, TW_ROSE); }); },
     // Tie (painted sheet): a loop of thread flies to the ally and coils round them, pulling tight, then fades
     // (online-refs pass: Fey Union locking on) as it lands the thread snaps taut with a damped twang, a gold knot
     // flashing at both ends; the coil cinches round the body
     tie: c => { const w = c.tent || c.ent, e = c.ent; weaveLoopFly(e, w);
+      // (healers pass) the thread ends in a gold bow on their shoulder that pops, hangs a moment and loosens away
+      c.later(0.26, () => V.fx({ dur: 1.0, layer: 'air', draw: (cc, p, t, fx) => { const q = easeOut(Math.min(1, t / 0.12)), k = fx.a * (1 - Math.max(0, (p - 0.6) / 0.4)); if (k > 0.02) HEALFX.twBow(cc, w.x + 11, w.y - (w.lift || 0) - 34 + 3 * Math.sin(t * 5), 0.55 + 0.45 * q + 0.25 * (1 - q), k, TW_GOLD); } }));
       c.later(0.24, () => { weaveCoil(w, { dur: 0.9 }); if (w !== e) weaveTaut(e, w); V.glint(w.x, w.y, { color: TW_GOLD, size: 28, z: 24 }); V.sparks(w.x, w.y, { color: TW_ROSE, n: 5, speed: 190, z: 22 }); }); },
     // a running stitch of light closes over the ally, then beads run down each of their threads
-    mend: c => { const w = c.tent || c.ent;
-      V.sigil(w.x, w.y, { r: 42, style: 'runes', color: '#e4d8ff', dur: 0.7, spin: 2, follow: w }); V.plus(w.x, w.y, { color: '#e4d8ff', n: 5 });
-      V.fx({ dur: 0.6, layer: 'air', draw: (cc, p, t, e) => { const k = (1 - p) * e.a; cc.save(); cc.setLineDash([5, 4]); cc.lineDashOffset = -t * 40; V.neonPath(cc, '#f2e6ff', 1.6, k, () => cc.ellipse(w.x, w.y - 20, 22, 26, 0, 0, TAU)); cc.restore(); } });
-      c.later(0.15, () => runDown(w, '#e4d8ff')); },
+    // (healers pass) Mend Seam: a wound opens down the ally as a dark seam, the needle runs across it stitch by stitch and the thread draws it shut with
+    // a gold knot; a few motes rise. Aimed at a fallen ally the same button hoists them on four gold strings and stitches a cross over their heart
+    mend: c => { const w = c.tent || c.ent, hand = { x: c.x + Math.cos(c.ang || 0) * 14, y: c.y + Math.sin(c.ang || 0) * 14 }, down = HEALFX.fallen(w);
+      V.glint(hand.x, hand.y, { color: TW_HOT, size: 18, z: 18, life: 0.16 });
+      if (down) { HEALFX.twHoist(w, { dur: 1.2 });
+        c.later(0.5, () => { V.flash(w.x, w.y - 24, 46, TW_GOLD, 0.22); V.shock(w.x, w.y, { r: 54, color: TW_GOLD, dur: 0.4, w: 2.5 }); HEALFX.twStitches(w.x, w.y, 0.5, { n: 4, z: 30, gap: 12, s: 5, dur: 0.8, color: TW_GOLD }); HFX.lightMotes(w.x, w.y, { n: 8, r: 20, color: '#ffcf7a' }); }); }
+      else { HEALFX.twSeam(w, { n: 6 }); V.plus(w.x, w.y, { color: '#ffe0a0', n: 3 }); c.later(0.5, () => HFX.lightMotes(w.x, w.y, { n: 4, r: 14, color: '#ffcf7a' })); }
+      c.later(0.15, () => runDown(w, '#ffe0a0')); },
     // the shears close over the threads: a flash of silver, and the cut threads let go their heal (thrs plays the snaps)
     snip: c => { const w = c.tent || c.ent;
-      V.fx({ dur: 0.4, layer: 'air', draw: (cc, p, t, e) => { const k = (1 - p) * e.a, o = 0.7 * (1 - Math.min(1, p * 2.5)); for (const s of [-1, 1]) V.neonPath(cc, s > 0 ? TW_HOT : TW_ROSE, 3.2, k, () => { const a = -Math.PI / 4 + s * o; cc.moveTo(w.x - Math.cos(a) * 28, w.y - 30 - Math.sin(a) * 28); cc.lineTo(w.x + Math.cos(a) * 28, w.y - 30 + Math.sin(a) * 28); }); } });
-      V.glint(w.x, w.y, { color: '#ffffff', size: 38, z: 30 });
+      // (healers pass) a pair of shears closes over the ally's threads (silver, gold handles), the cut ends whip loose and fray
+      HEALFX.twShears(w.x + 6, w.y, { z: 32, s: 1.15, ang: -0.6 });
+      c.later(0.1, () => { HEALFX.twFray(w.x - 6, w.y - 30, { len: 26, ang: Math.PI + 0.3 }); });
       // (painted sheet) the threads snap in a crimson starburst, then a small woven diamond under the ally
       c.later(0.12, () => { weaveSnapBurst(w.x, w.y - 24, { r: 84, n: 16 }); V.sparks(w.x, w.y, { color: TW_ROSE, n: 7, speed: 280, z: 24 }); weaveDiamond(w.x, w.y, 72, 1.4, { peak: 0.8, settle: 0.32, w: 1.3 }); }); },
     // Shuttle (painted sheet): two threads loop over each other in figure-eights out to the boss with the gold shuttle
@@ -3902,7 +4807,11 @@ function windLaneBoost(x, y, vx, vy, now) {
     shuttle: c => { runDown(c.ent, TW_ROSE); weaveShuttleLoops(c.x, c.y, c.tx, c.ty, (x, y) => { V.hit(x, y, TW_ROSE, 0.85); V.climax(x, y, { shape: 'burst', n: 9, r: 82, color: TW_CRIM, core: TW_HOT, ink: '#2a0410', dur: 0.55, hold: 0.1, z: 20, after: { embers: 0.3 } }); V.glint(x, y, { color: TW_GOLD, size: 30, z: 20 }); weaveFloorThreads(x, y, 4, 1.2); }); },
     // Tapestry (painted sheet): a snapping starburst of thread, then a great woven diamond seal under her, ribbons of
     // crimson and gold wheeling out to the party (stagecraft.js draws the web itself while it lasts)
-    tapestry: c => { weaveSnapBurst(c.x, c.y - 24, { r: 118, n: 18 }); weaveDiamond(c.x, c.y, 175, 2.4, { peak: 0.9, settle: 0.36, w: 1.4 });
+    tapestry: c => { const us = (typeof FX.party === 'function' ? FX.party() : []).filter(u => u && u !== c.ent && u.x != null).slice(0, 5), e0 = c.ent;
+      us.forEach((u, i) => V.fx({ dur: 0.75, delay: i * 0.04, layer: 'air', draw: (cc, p, t, fx) => { const q = easeOut(Math.min(1, t / 0.24)), k = fx.a * (1 - Math.max(0, (p - 0.55) / 0.45)); if (k < 0.02) return;
+        const ax = e0.x, ay = e0.y - 18, bx = u.x, by = u.y - 18, hx = ax + (bx - ax) * q, hy = ay + (by - ay) * q - Math.sin(q * Math.PI) * 22;
+        HEALFX.ink(cc, () => { cc.moveTo(ax, ay); cc.quadraticCurveTo((ax + hx) / 2, Math.min(ay, hy) - 12, hx, hy); }, 2, TW_GOLD, TW_HOT, '#2a0a14', k); if (q > 0.85) HEALFX.twBow(cc, bx, by - 8, 0.8, k, TW_GOLD); } }));
+      weaveSnapBurst(c.x, c.y - 24, { r: 118, n: 18 }); weaveDiamond(c.x, c.y, 175, 2.4, { peak: 0.9, settle: 0.36, w: 1.4 });
       V.ribbons(c.x, c.y, { r: 112, dur: 1.3, follow: c.ent, colors: [TW_GOLD, TW_CRIM, '#ffffff'] }); V.shock(c.x, c.y, { r: 240, color: TW_GOLD, dur: 0.6, w: 6 }); shake(3); },
     // Embroider: a flower of stitches blooms over the ally and every thread on them lights up
     embroider: c => { const w = c.tent || c.ent; V.sigil(w.x, w.y, { r: 56, style: 'petals', color: '#f0d8ff', dur: 0.9, spin: 3, follow: w }); V.burst(w.x, w.y - 20, { color: '#f0d8ff', color2: '#ffffff', n: 12, speed: 180, kind: 'star', flash: false }); V.plus(w.x, w.y, { color: '#f0d8ff', n: 6 }); c.later(0.1, () => runDown(w, '#f0d8ff')); },
@@ -3928,6 +4837,10 @@ function windLaneBoost(x, y, vx, vy, now) {
   // the strings twitch taut: drawn straight and bright, ringing like plucked wire, the ring dying away over dur
   const mariTwang = (ent, d, o = {}) => { const dur = o.dur ?? 0.36, amp = o.amp ?? 7;
     V.fx({ dur, layer: 'air', draw: (cc, p, t, e) => { const k = e.a * (1 - p * p), A = amp * (1 - p) * (1 - p);
+      const strand = () => mariStrings(ent, d, (s, ax, ay, bx, by) => {
+        const L = Math.hypot(bx - ax, by - ay) || 1, px = -(by - ay) / L, py = (bx - ax) / L, ph = Math.sin(t * 72 + s * 2.1);
+        cc.moveTo(ax, ay); for (let j = 1; j <= 8; j++) { const q = j / 8, w = Math.sin(q * Math.PI) * A * ph; cc.lineTo(ax + (bx - ax) * q + px * w, ay + (by - ay) * q + py * w); } });
+      cc.globalAlpha = 0.7 * k; cc.strokeStyle = M_INK; cc.lineWidth = (o.w ?? 1.5) + 2.2; cc.lineCap = 'round'; cc.beginPath(); strand(); cc.stroke(); cc.globalAlpha = 1;
       V.neonPath(cc, o.color || '#ffd27a', o.w ?? 1.5, k, () => mariStrings(ent, d, (s, ax, ay, bx, by) => {
         const L = Math.hypot(bx - ax, by - ay) || 1, px = -(by - ay) / L, py = (bx - ax) / L, ph = Math.sin(t * 72 + s * 2.1);
         cc.moveTo(ax, ay); for (let j = 1; j <= 8; j++) { const q = j / 8, w = Math.sin(q * Math.PI) * A * ph; cc.lineTo(ax + (bx - ax) * q + px * w, ay + (by - ay) * q + py * w); } }));
@@ -3937,6 +4850,52 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.glowAt(cc, x, y, 16 * (1 - p) + 4, '#fff4dc', k);
     V.neonPath(cc, '#ffe6a8', 1.6, k, () => { for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + (i - 2.5) * 0.5 + (i > 2 ? Math.PI : 0); cc.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0); cc.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1); } });
   } });
+  // ---- (class pass) strings and lacquered wood: opaque cords (ink under gold, a white glint), an opaque lance for the Doll's stab,
+  // spinning ribbon-blades, a footlight that lights and flares; bodies on an ink rim so they read on a pale floor
+  const M_INK = '#2a0410';
+  // the three strings from the control bar to a Doll: slack at first (they sag), drawn taut in o.pull seconds, then humming as they settle
+  const mariCord = (ent, d, o = {}) => { const dur = o.dur ?? 0.6, pull = o.pull ?? 0.14, sag0 = o.sag ?? 26, amp = o.amp ?? 4.5;
+    V.fx({ dur, layer: 'air', draw: (cc, p, t, e) => { const k = e.a * Math.min(1, (dur - t) / 0.2), q = easeOut(Math.min(1, t / pull)), sag = sag0 * (1 - q), hum = t > pull ? Math.exp(-(t - pull) * 7) * amp * Math.sin((t - pull) * 70) : 0;
+      mariStrings(ent, d, (s, ax, ay, bx, by) => { const L = Math.hypot(bx - ax, by - ay) || 1, nx = -(by - ay) / L, ny = (bx - ax) / L, pts = [];
+        for (let j = 0; j <= 10; j++) { const u = j / 10, w = Math.sin(u * Math.PI) * hum * (s === 1 ? -1 : 1); pts.push([ax + (bx - ax) * u + nx * w, ay + (by - ay) * u + ny * w + Math.sin(u * Math.PI) * sag]); }
+        cc.lineCap = 'round'; cc.lineJoin = 'round';
+        for (const [col, w, al] of [[M_INK, 3.4, 0.75], [o.color || '#ffd27a', 1.9, 1], ['#fff6dc', 0.7, 0.9]]) { cc.globalAlpha = al * k; cc.strokeStyle = col; cc.lineWidth = w; cc.beginPath(); pts.forEach(([x, y], i) => (i ? cc.lineTo(x, y) : cc.moveTo(x, y))); cc.stroke(); } });
+      cc.globalAlpha = 1; } }); };
+  // the Doll's stab: a tapered lacquered blade from (x1, y1) to (x2, y2), ink rim, solid body, a pale heart, a gold tip (o.head)
+  const mariLance = (x1, y1, x2, y2, o = {}) => { const W = o.w ?? 7, dur = o.dur ?? 0.24, col = o.color || '#e0203c', L = Math.hypot(x2 - x1, y2 - y1), a = Math.atan2(y2 - y1, x2 - x1), z = o.z ?? 16;
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => { const go = easeOut(Math.min(1, p / 0.3)), k = e.a * (1 - Math.max(0, (p - 0.4) / 0.6)), l1 = L * go, l0 = L * Math.max(0, (p - 0.2) / 0.8) * 0.85, w = W * (1 - p * 0.4);
+      if (l1 - l0 < 2 || k < 0.02) return;
+      c.save(); c.translate(x1, y1 - z); c.rotate(a);
+      const lens = (a0, b0, ww) => { c.beginPath(); c.moveTo(a0, 0); c.quadraticCurveTo((a0 + b0) / 2, -ww, b0, 0); c.quadraticCurveTo((a0 + b0) / 2, ww, a0, 0); c.fill(); };
+      c.globalAlpha = 0.92 * k; c.fillStyle = M_INK; lens(l0 - 3, l1 + 4, w * 1.8);
+      c.globalAlpha = k; c.fillStyle = col; lens(l0, l1, w * 1.2); c.fillStyle = o.core || '#fff0f4'; lens(l0 + (l1 - l0) * 0.35, l1, w * 0.42);
+      if (o.head) { const hs = w * 1.5; c.fillStyle = M_INK; c.beginPath(); c.moveTo(l1 + hs * 1.7, 0); c.lineTo(l1 - hs * 0.2, -hs * 1.05); c.lineTo(l1 + hs * 0.2, 0); c.lineTo(l1 - hs * 0.2, hs * 1.05); c.closePath(); c.fill();
+        c.fillStyle = '#ffd27a'; c.beginPath(); c.moveTo(l1 + hs * 1.45, 0); c.lineTo(l1 + hs * 0.05, -hs * 0.75); c.lineTo(l1 + hs * 0.3, 0); c.lineTo(l1 + hs * 0.05, hs * 0.75); c.closePath(); c.fill(); }
+      c.restore(); } }); };
+  globalThis.MARI_LANCE = mariLance;
+  // three ribbon-blades wheeling round a Doll as it spins: ink under crimson and rose, a pale edge, widening and thinning out
+  const mariSpin = (d, o = {}) => { const R = o.r ?? 38, dur = o.dur ?? 0.42;
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => { const k = e.a * (1 - Math.max(0, (p - 0.55) / 0.45)), rot = easeOut(Math.min(1, p / 0.9)) * TAU * 1.25, g = R * (0.7 + 0.5 * easeOut(Math.min(1, p / 0.5)));
+      if (k < 0.02) return;
+      c.save(); c.translate(d.x, d.y - 22); c.scale(1, 0.5); c.lineCap = 'round';
+      for (let i = 0; i < 3; i++) { const a0 = rot + i * TAU / 3, a1 = a0 + 1.5;
+        c.globalAlpha = 0.88 * k; c.strokeStyle = M_INK; c.lineWidth = 10 * (1 - p * 0.5); c.beginPath(); c.arc(0, 0, g, a0, a1); c.stroke();
+        c.globalAlpha = k; c.strokeStyle = i % 2 ? '#ff5a7a' : '#e0203c'; c.lineWidth = 6 * (1 - p * 0.5); c.beginPath(); c.arc(0, 0, g, a0 + 0.08, a1); c.stroke();
+        c.strokeStyle = '#fff0e6'; c.lineWidth = 1.8; c.beginPath(); c.arc(0, 0, g, a0 + 0.7, a1); c.stroke(); }
+      c.restore(); } }); };
+  // a footlight at (x, y): a dark lamp housing with a warm flame; o.flare throws up a tall teardrop of light for the first moments
+  const mariLamp = (x, y, o = {}) => { const s = o.s ?? 1, dur = o.dur ?? 0.7;
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => { const fl = Math.max(0, 1 - t / (o.flare ? 0.34 : 0.16)), k = e.a * Math.min(1, (dur - t) / 0.25);
+      if (k < 0.02) return;
+      c.globalAlpha = 0.92 * k; c.fillStyle = M_INK; c.fillRect(x - 6 * s, y - 3 * s, 12 * s, 7 * s); c.fillStyle = '#7a4a22'; c.fillRect(x - 5 * s, y - 2 * s, 10 * s, 2.4 * s);
+      V.glowAt(c, x, y - 4 * s, (12 + 20 * fl) * s, '#ffcf6a', k * (0.55 + 0.45 * fl)); V.glowAt(c, x, y - 4 * s, 4.5 * s, '#ffffff', k);
+      if (fl > 0.05) { const h = (14 + 22 * fl) * s; c.beginPath(); c.moveTo(x - 4.5 * s, y - 3 * s); c.quadraticCurveTo(x - 7 * s, y - h * 0.55, x, y - h - 4 * s); c.quadraticCurveTo(x + 7 * s, y - h * 0.55, x + 4.5 * s, y - 3 * s); c.closePath();
+        c.globalAlpha = 0.9 * k * Math.min(1, fl * 1.6); c.fillStyle = '#ffd27a'; c.fill(); c.strokeStyle = M_INK; c.lineWidth = 1.6; c.stroke(); } c.globalAlpha = 1; } }); };
+  // the class's crit mark: a small crimson X (two strings cut across each other), rose petals, and on a big hit a footlight flaring at its feet
+  (globalThis.MHT_CRIT || (globalThis.MHT_CRIT = {})).marionettist = (x, y, tier) => { const s = [0, 1, 1.4, 1.9][tier] || 1;
+    MARI_PAINT.xcut(x, y, { r: 30 * s, a: 0.62, w: 3.6 * s, dur: 0.42, z: 34 }); MARI_PAINT.petals(x, y - 20, { n: 3 + tier * 3, speed: 150, life: 1.1, z: 30 });
+    if (tier >= 2) for (let i = -1; i <= 1; i++) mariLamp(x + i * 30 * s, y + 20, { flare: true, s: 0.9, dur: 0.6 }); };
+
   // the passive Jab's sound (k.fx('mari-jab') has no button press to carry one): your own a little under a pressed
   // move, anyone else's soft and placed where they stand; a Cue'd jab a step higher
   const mariJabSnd = (e, fast) => { try {
@@ -3981,6 +4940,9 @@ function windLaneBoost(x, y, vx, vy, now) {
     st.last = now; st.done = Math.max(st.done, i + 1);
     const A = st.pts[i], B = st.pts[i + 1], last = i === st.n - 1, ang = Math.atan2(B.y - A.y, B.x - A.x), L = Math.hypot(B.x - A.x, B.y - A.y), g = 1 + 0.12 * i;
     const col = last ? C.GOLD : i % 2 ? '#ff3a5c' : C.CRIM, hold = last ? 0.3 : st.gap + 0.06, lean = (B.x >= A.x ? 1 : -1) * 0.5;
+    // (class pass) a footlight lights where the Doll lands and stays lit to the end of the show; on the fifth every lamp flares
+    mariLamp(B.x, B.y + 5, { s: last ? 2.2 : 1.6, flare: last, dur: 0.4 + (st.n - i) * (st.gap || 0.3) + 0.5 });
+    if (last) for (let j = 0; j < st.n - 1; j++) mariLamp(st.pts[j].x, st.pts[j].y + 5, { s: 2, flare: true, dur: 0.9 });
     // the streak, chord by chord a little wider and brighter
     MP.stroke((A.x + B.x) / 2, (A.y + B.y) / 2, ang, { r: L / 2 + 6, w: (5 + i) * (last ? 1.2 : 1), dur: 0.3, go: 0.06, z: 16, color: col });
     // the Doll: three fading afterimages strung along the chord, then itself, held where it lands until the next blink
@@ -4013,7 +4975,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     // point and never the X (the X is Cross-Cut's), and it is over in about 0.3s
     jab: c => { act(c.ent, 'jab'); const ox = c.ent.x, oy = c.ent.y - 12; for (const d of dollsOf(c.ent)) { const a = Math.atan2(c.ty - d.y, c.tx - d.x), L = Math.min(110, Math.max(40, Math.hypot(c.tx - d.x, c.ty - d.y))), dx = d.x, dy = d.y, px = dx + Math.cos(a) * L, py = dy + Math.sin(a) * L;
       V.fx({ dur: 0.1, layer: 'air', draw: (cc, p, t, e) => { const q = easeOut(p); V.glowAt(cc, ox + (dx - ox) * q, oy + (dy - 12 - oy) * q, 8, '#ffd27a', 0.9 * e.a); } });
-      c.later(0.05, () => OLD_PAINT.thrust(dx, dy, px, py, { w: 6, color: '#e0203c', core: '#ffe6ec', ink: '#2a0410', head: true, dur: 0.2, z: 16 }));
+      c.later(0.05, () => mariLance(dx, dy, px, py, { w: 5.5, head: true, dur: 0.22 }));
       c.later(0.11, () => { V.hit(px, py, '#ffb0c4', 0.55); V.glint(px, py, { color: '#ffffff', size: 22, z: 18 }); MARI_PAINT.petals(px, py, { n: 2, speed: 140, life: 0.9 }); }); } },
     // (rework) Cue: she snaps her fingers (a white pop and snap ticks at the control bar), the strings twitch taut and
     // ring, and the Doll lunges: a longer, heavier crimson stab than a Jab with a gold rim, a bigger four-point star and
@@ -4025,14 +4987,14 @@ function windLaneBoost(x, y, vx, vy, now) {
       c.later(0.04, () => { for (const d of ds) mariTwang(ent, d, { dur: 0.34, amp: 8, w: 1.7 }); });
       c.later(0.09, () => act(ent, 'jab'));
       for (const d of ds) { const a = Math.atan2(c.ty - d.y, c.tx - d.x), L = Math.min(130, Math.max(48, Math.hypot(c.tx - d.x, c.ty - d.y))), dx = d.x, dy = d.y, px = dx + Math.cos(a) * L, py = dy + Math.sin(a) * L;
-        c.later(0.1, () => { OLD_PAINT.thrust(dx - Math.cos(a) * 16, dy - Math.sin(a) * 16, px, py, { w: 11, color: '#ffd27a', core: '#ffffff', ink: '#2a0410', head: true, dur: 0.22, z: 16 });
-          OLD_PAINT.thrust(dx - Math.cos(a) * 12, dy - Math.sin(a) * 12, px, py, { w: 8, color: '#e0203c', core: '#ffe6ec', ink: '#2a0410', head: true, dur: 0.24, z: 16 }); });
+        c.later(0.1, () => { mariLance(dx - Math.cos(a) * 16, dy - Math.sin(a) * 16, px, py, { w: 10, color: '#f0a828', core: '#fff6dc', head: true, dur: 0.24 });
+          mariLance(dx - Math.cos(a) * 12, dy - Math.sin(a) * 12, px, py, { w: 6.5, color: '#e0203c', head: true, dur: 0.26, z: 18 }); });
         c.later(0.16, () => { V.hit(px, py, '#ff9ab0', 0.85); V.spikeburst(px, py, { r: 26, n: 4, color: '#e0203c', core: '#ffe6ec', ink: '#2a0410', dur: 0.2, z: 18 }); V.glint(px, py, { color: '#ffffff', size: 30, z: 18 }); MP.petals(px, py, { n: 4, speed: 180, life: 1 }); });
         V.fx({ dur: 0.9, delay: 0.2, layer: 'air', draw: (cc, p, t, e) => { const k = e.a * Math.min(1, t / 0.08, (1 - p) / 0.4);
           for (let i = 0; i < 3; i++) { const an = t * 7 + i * TAU / 3; V.glowAt(cc, dx + Math.cos(an) * 12, dy - 40 + Math.sin(an) * 4, 5, '#ffd27a', k); } } }); } },
     // Pull Strings (the Doll Summon panel): the string from the bar draws taut in gold, then the Doll is let down on three
     // gold strings with a crimson ribbon spiralling round it, rings where it lands and a few petals settling
-    pull: c => { act(c.ent, 'pull'); const MP = MARI_PAINT; c.later(0.03, () => { for (const d of dollsOf(c.ent)) { threadOut(c.ent, d, { color: '#ffd27a', w: 1.4, grow: 0.12, dur: 0.4 }); MP.dollDrop(d.x, d.y, { dur: 0.5 });
+    pull: c => { act(c.ent, 'pull'); const MP = MARI_PAINT; c.later(0.03, () => { for (const d of dollsOf(c.ent)) { mariCord(c.ent, d, { sag: 34, pull: 0.14, dur: 0.8 }); MP.dollDrop(d.x, d.y, { dur: 0.5 });
       V.smoke(d.x, d.y, { n: 3, color: '#f0d8e8', size: 20, a: 0.3, speed: 50 }); MP.petals(d.x, d.y, { n: 9, speed: 150, life: 1.3 }); V.glint(d.x, d.y, { color: '#ffffff', size: 26, z: 34 }); } }); },
     // Cross-Cut: every string goes rigid and bright crimson for a moment, a blade from the bar to the Doll; where the line
     // crosses the enemy a bright crimson X flashes, rose petals burst off it and a faint X stays scored on the floor
@@ -4045,7 +5007,7 @@ function windLaneBoost(x, y, vx, vy, now) {
         if (t < T) { const q = easeOut(t / T), mx = (sx + dx) / 2, my = (sy + dy) / 2 + 18 * (1 - q), u = q;
           V.neonPath(cc, '#ffd27a', 1 + 0.8 * q, e.a * (0.4 + 0.6 * q), () => { cc.moveTo(sx, sy); cc.quadraticCurveTo(mx, my, dx, dy); });
           V.glowAt(cc, (1 - u) * (1 - u) * sx + 2 * (1 - u) * u * mx + u * u * dx, (1 - u) * (1 - u) * sy + 2 * (1 - u) * u * my + u * u * dy, 9, '#ffffff', 0.9 * e.a);
-        } else { const u = (t - T) / 0.36, k = (1 - u) * e.a, w = 5.5 * (1 - u) + 1.2; V.neonPath(cc, '#e0203c', w, k, () => { cc.moveTo(sx, sy); cc.lineTo(dx, dy); }); V.neonPath(cc, '#ffd27a', 1.3, k, () => { cc.moveTo(sx, sy); cc.lineTo(dx, dy); }); } } } });
+        } else { const u = (t - T) / 0.36, k = (1 - u) * e.a, w = 5.5 * (1 - u) + 1.2; cc.globalAlpha = 0.85 * k; cc.strokeStyle = M_INK; cc.lineWidth = w * 1.9 + 2; cc.lineCap = 'round'; cc.beginPath(); cc.moveTo(sx, sy); cc.lineTo(dx, dy); cc.stroke(); cc.globalAlpha = k; cc.strokeStyle = '#e0203c'; cc.lineWidth = w; cc.beginPath(); cc.moveTo(sx, sy); cc.lineTo(dx, dy); cc.stroke(); cc.globalAlpha = 1; V.neonPath(cc, '#e0203c', w, k, () => { cc.moveTo(sx, sy); cc.lineTo(dx, dy); }); V.neonPath(cc, '#ffd27a', 1.3, k, () => { cc.moveTo(sx, sy); cc.lineTo(dx, dy); }); } } } });
       c.later(T, () => { for (const d of ds) V.sparks((ox + d.x) / 2, (oy + d.y) / 2, { color: '#ff9ab0', n: 4, angle: Math.atan2(d.y - oy, d.x - ox) + Math.PI / 2, spread: 0.6, speed: 240 }); });
       // the X goes on the enemy when it stands on a string's line, otherwise halfway along the longest string; its first
       // stroke follows that string
@@ -4062,13 +5024,13 @@ function windLaneBoost(x, y, vx, vy, now) {
     // let go as one ring flung outward with the petals; the rose sigil after it is small and faint. Lighter than the old
     // four rings and two slashes, since it is a GCD
     pirouette: c => { act(c.ent, 'spin'); const MP = MARI_PAINT; for (const d of dollsOf(c.ent)) { const x = d.x, y = d.y;
-      MP.ribbons(x, y, { r: 36, dur: 0.45 });
+      MP.ribbons(x, y, { r: 36, dur: 0.45 }); mariSpin({ x, y }, { r: 38 });
       c.later(0.22, () => { V.shock(x, y, { r: 82, color: '#ff5a7a', dur: 0.32, w: 3 }); V.shock(x, y, { r: 60, color: '#ffd27a', dur: 0.3, w: 2, delay: 0.04 }); MP.petals(x, y, { n: 8, speed: 230, life: 1.2 }); });
       c.later(0.32, () => MP.roseSigil(x, y, { r: 48, dur: 1.0, a: 0.35 })); } },
     // Swap: pale afterimages strung along both ways, a pillar of rose light where each of them reappears, and a gold
     // string left between them a moment
     swap: c => { act(c.ent, 'swap'); const MP = MARI_PAINT; c.later(0.03, () => { const ex = c.ent.x, ey = c.ent.y;
-      for (const d of dollsOf(c.ent)) { MP.ghostTrail(ex, ey, d.x, d.y, { s: 1.4 }); MP.ghostTrail(d.x, d.y, ex, ey, { s: 1.9 }); V.pillar(d.x, d.y, { r: 18, h: 140, color: '#ff7a94', dur: 0.5 }); V.shock(d.x, d.y, { r: 54, color: '#ffd27a', dur: 0.35, w: 3 }); threadOut(c.ent, d, { color: '#ffd27a', w: 1.4, grow: 0.15, dur: 0.8 }); MP.petals(d.x, d.y, { n: 6, speed: 140, life: 1.2 }); }
+      for (const d of dollsOf(c.ent)) { MP.ghostTrail(ex, ey, d.x, d.y, { s: 1.4 }); MP.ghostTrail(d.x, d.y, ex, ey, { s: 1.9 }); V.pillar(d.x, d.y, { r: 18, h: 140, color: '#ff7a94', dur: 0.5 }); V.shock(d.x, d.y, { r: 54, color: '#ffd27a', dur: 0.35, w: 3 }); mariCord(c.ent, d, { sag: 22, pull: 0.2, dur: 0.9 }); MP.petals(d.x, d.y, { n: 6, speed: 140, life: 1.2 }); }
       V.pillar(ex, ey, { r: 20, h: 160, color: '#ff7a94', dur: 0.5, follow: c.ent }); V.shock(ex, ey, { r: 60, color: '#e0203c', dur: 0.38, w: 3.5 }); MP.petals(ex, ey, { n: 7, speed: 160, life: 1.2 }); }); },
     // Grand Finale (rework: a small omnislash, finSetup / finBeat above): the strings twitch gold, the Doll vanishes off
     // its mark in a puff of petals and blinks round the target, one streak per hit, the fifth gold and home again with a
@@ -4082,7 +5044,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     cutcord: c => { const ent = c.ent, tx = c.tx, ty = c.ty, MP = MARI_PAINT; act(ent, 'jab');
       for (const d of dollsOf(ent)) mariTwang(ent, d, { dur: 0.28, amp: 9, color: '#ff5a7a' });
       const b = mariBar(ent); V.sparks(b.x, b.y, { color: '#ff8a9a', n: 9, speed: 260 }); V.glint(b.x, b.y, { color: '#ffffff', size: 22, z: 18 });
-      c.later(0.12, () => { for (const d of dollsOf(ent)) { OLD_PAINT.thrust(d.x, d.y, tx, ty, { w: 9, color: '#e0203c', core: '#ffffff', ink: '#2a0410', head: true, dur: 0.2, z: 18 }); V.glint(d.x, d.y, { color: '#ffe6a8', size: 20, z: 24 }); } });
+      c.later(0.12, () => { for (const d of dollsOf(ent)) { mariLance(d.x, d.y, tx, ty, { w: 9, head: true, dur: 0.22, z: 18 }); V.glint(d.x, d.y, { color: '#ffe6a8', size: 20, z: 24 }); } });
       c.later(0.22, () => { V.spikeburst(tx, ty, { r: 52, n: 12, color: '#e0203c', core: '#fff0f4', ink: '#2a0410', dur: 0.32, z: 24 }); V.shock(tx, ty, { r: 76, color: '#ffd27a', dur: 0.32, w: 3 }); MP.petals(tx, ty, { n: 9, speed: 210, life: 1.3 }); }); },
     // Tangle: the Doll lunges and its strings wind round the enemy in rose and gold loops that tighten
     tangle: c => { act(c.ent, 'jab'); const tx = c.tx, ty = c.ty;
@@ -4217,7 +5179,18 @@ function windLaneBoost(x, y, vx, vy, now) {
 
   // autos: a needle-glint flicked at the enemy; the Doll's idle slap
   Object.assign(AUTO_VFX, {
-    needle: c => V.missile(c.ent.x, c.ent.y, c.tx, c.ty, { style: 'blade', color: '#d8c8ff', speed: 1300, size: 0.4, onHit: (x, y) => V.hit(x, y, '#e8ddff', 0.3) }),
+    // (healers pass) the auto is a thrown needle on a thin thread, and one small cross-stitch where it bites
+    needle: c => { const sx = c.ent.x + Math.cos(c.ang || 0) * 10, sy = c.ent.y + Math.sin(c.ang || 0) * 10, tx = c.tx, ty = c.ty, d = Math.hypot(tx - sx, ty - sy), dur = Math.max(0.08, d / 1300), an = Math.atan2(ty - sy, tx - sx);
+      V.fx({ dur, layer: 'air', draw: (cc, p, t, e) => { const hx = sx + (tx - sx) * p, hy = sy - 16 + (ty - sy) * p - Math.sin(p * Math.PI) * 4;
+        HEALFX.ink(cc, () => { cc.moveTo(sx, sy - 16); cc.lineTo(hx - Math.cos(an) * 12, hy - Math.sin(an) * 12); }, 1.2, '#d4162c', null, '#2a0a14', e.a * 0.85); HEALFX.twNeedleShape(cc, hx - Math.cos(an) * 16, hy - Math.sin(an) * 16, an, 20, e.a); },
+        done: () => { V.hit(tx, ty, '#ff9ab0', 0.3); HEALFX.twStitches(tx, ty, an + Math.PI / 2, { n: 2, z: 14, s: 5, gap: 9, dur: 0.5 });
+          // (landing pass) the needle goes IN with weight: a hard crimson bead with an ink rim and a pale heart (it pops in 0.05s and holds a beat), two thread
+          // flicks crossing at it, and a thin ink-rimmed ring that runs out along the floor
+          V.fx({ dur: 0.4, layer: 'air', draw: (cc, p, t, e) => { const k = e.a * (1 - Math.min(1, Math.max(0, (p - 0.5) / 0.5))); if (k < 0.02) return; const pop = t < 0.05 ? 0.5 + 0.8 * easeOut(t / 0.05) : 1.3 - 0.4 * Math.min(1, Math.max(0, (t - 0.05) / 0.3)), R = 15 * pop;
+            cc.save(); cc.translate(tx, ty - 16); cc.lineCap = 'round'; cc.globalAlpha = k;
+            for (const sd of [-1, 1]) for (const [col, w] of [['#2a0a14', 6.5], ['#ff7a94', 3], ['#ffe8ee', 1.2]]) { cc.strokeStyle = col; cc.lineWidth = w; cc.beginPath(); cc.moveTo(Math.cos(an + sd * 0.75) * -40 * pop, Math.sin(an + sd * 0.75) * -32 * pop); cc.lineTo(Math.cos(an + sd * 0.75) * 40 * pop, Math.sin(an + sd * 0.75) * 32 * pop); cc.stroke(); }
+            cc.fillStyle = '#2a0a14'; cc.beginPath(); cc.arc(0, 0, R + 3, 0, Math.PI * 2); cc.fill(); cc.fillStyle = '#d4162c'; cc.beginPath(); cc.arc(0, 0, R, 0, Math.PI * 2); cc.fill(); cc.fillStyle = '#ff7a94'; cc.beginPath(); cc.arc(0, 0, R * 0.68, 0, Math.PI * 2); cc.fill(); cc.fillStyle = '#ffe8ee'; cc.beginPath(); cc.arc(0, 0, R * 0.34, 0, Math.PI * 2); cc.fill(); cc.restore();
+            const rq = Math.min(1, t / 0.3); if (rq < 1) { const Rr = 12 + 56 * easeOut(rq), kk = e.a * (1 - rq * rq); cc.save(); cc.beginPath(); cc.ellipse(tx, ty, Rr, Rr * 0.62, 0, 0, Math.PI * 2); cc.globalAlpha = 0.8 * kk; cc.strokeStyle = '#2a0a14'; cc.lineWidth = 6 - 3 * rq; cc.stroke(); cc.globalAlpha = kk; cc.strokeStyle = '#ff7a94'; cc.lineWidth = 3.2 - 2 * rq; cc.stroke(); cc.restore(); } } }); } }); },
     // (shared-fx polish: each slap lands with a small pink hit where the Doll's reach meets the target)
     doll: c => { for (const d of dollsOf(c.ent)) { const a = Math.atan2(c.ty - d.y, c.tx - d.x); V.slash(d.x, d.y, a, { r: 40, span: 1.1, color: '#ff7a94', dur: 0.18, w: 0.28, flip: c.alt, sparks: 0 });
       c.later(0.06, () => { const r = Math.min(46, Math.hypot(c.tx - d.x, c.ty - d.y)); V.hit(d.x + Math.cos(a) * r, d.y + Math.sin(a) * r, '#ffb0c4', 0.28); }); } },
@@ -4294,8 +5267,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       // impact: the blade hits the floor in a white-gold blast, the stone splits, a column of dawn goes up
       V.flash(at.x, at.y - 24, 110, '#fff2c8', 0.3);
       // (life pass) the blade's climax: a great starburst on the floor and a second, brighter one at the hilt, each held a beat
-      V.climax(at.x, at.y, { shape: 'burst', r: 140, n: 22, color: GOLD, core: '#fffbe0', ink: '#4a3408', dur: 0.65, hold: 0.12, layer: 'ground', flat: 0.6, after: { smoke: 0.6, embers: 0.6, mark: 0.6 } });
-      V.climax(at.x, at.y, { shape: 'burst', r: 92, n: 14, color: '#ffe680', core: '#ffffff', ink: '#4a3408', dur: 0.45, hold: 0.1, z: 34 });
+      TANKS_VFX.bastionSword(at.x, at.y, 1.25); TANKS_VFX.bastionWall(at.x, at.y, DR, 12, 1.5);   // (tanks pass) a great sword driven into the floor and a wall of plates standing up for the dome
       V.pillar(at.x, at.y, { r: 30, h: 280, color: DAWN, dur: 0.7 });
       for (let i = 0; i < 3; i++) V.shock(at.x, at.y, { r: 170 + i * 70, color: i ? DAWN : '#ffffff', dur: 0.6 + i * 0.12, w: 9 - i * 2, delay: i * 0.08 });
       V.debris(at.x, at.y, { n: 14, color: '#8a7a68', speed: 1.3 });
@@ -4318,8 +5290,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     V.flash(t.x, t.y - 30, 90, '#fff2c8', 0.24);
     // (QA) the starburst sits at the boss's feet and the seal settles low, so the boss and its next telegraph still read
     // (life pass) the slam's climax, held a beat: the starburst at the boss's feet and a bright one over it
-    V.climax(t.x, t.y, { shape: 'burst', r: 150, n: 22, color: GOLD, core: '#fffbe0', ink: '#4a3408', dur: 0.6, hold: 0.12, layer: 'ground', flat: 0.6, after: { smoke: 0.5, embers: 0.5, mark: 0.5 } });
-    V.climax(t.x, t.y, { shape: 'burst', r: 88, n: 12, color: '#ffe680', core: '#ffffff', ink: '#4a3408', dur: 0.4, hold: 0.1, z: 20 });
+    TANKS_VFX.bastionSword(t.x, t.y, 1.1);   // (tanks pass) the sword driven into the boss's feet
     V.shock(t.x, t.y, { r: 200, color: DAWN, dur: 0.6, w: 9 });
     V.shock(t.x, t.y, { r: 120, color: '#ffffff', dur: 0.45, w: 5, delay: 0.06 });
     vfxLingerSettle(V.sigil(t.x, t.y, { r: 100, style: 'star4', color: GOLD, dur: 2.6, spin: 1.2 }), 0.3, 0.7);
@@ -4352,79 +5323,77 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.glowAt(cc, x, y - H * 0.3, R * 0.9, '#ff7a1a', 0.3 * k);
     } });
   };
+// >>> rtd pyro-ult
+  // (class VFX pass) Phoenix Dive in the Pyromancer's own fire (HFX: tongues of flame, embers that drift and gutter out, heat, a scorch, smoke that climbs):
+  // the mage burns, heat shimmers up, the phoenix streaks in shedding flame and embers behind it, and where it lands the ground erupts in a great bloom of
+  // tongues with a column of fire standing in it and a second bloom a beat later; smoke climbs off a burning crater after
   ABILITY_VFX.pyromancer.phoenixdive = c => {
-    // WINDUP: heat spirals in, a small fire seal at the feet, the wings open
+    // WINDUP: heat spirals in, flames lick up round the mage, the air shimmers, the wings open
     V.charge(c.x, c.y, { color: EMBER, r: 60, n: 12, dur: 0.4, follow: c.ent });
     V.blaze(c.ent, { r: 56, dur: 0.9 });
-    V.sigil(c.x, c.y, { r: 70, style: 'star5', color: FIRE, dur: 1, spin: 3 });
+    HFX.flames(c.x, c.y, { n: 9, r: 26, s: 1, out: 30, up: 1 }); HFX.haze(c.x, c.y, { w: 50, h: 90, dur: 1.2, n: 4, a: 0.1, follow: c.ent });
+    c.later(0.14, () => HFX.flames(c.x, c.y, { n: 8, r: 34, s: 1.2, up: 1.2, out: 40 }));
     V.emberWings(c.ent, { dur: 8 });
     V.aura(c.ent, { color: '#ff8a2a', style: 'flame', dur: 8, r: 30, rate: 0.35 });
-    c.later(0.4, () => V.phoenix(c.x, c.y, c.tx, c.ty, { s: 1.75, dur: 0.6, onHit: (x, y) => {
-      // IMPACT: the fire blast (air), a flame ring, a pillar of fire, feathers and burning rocks flung out
-      if (c.cam) { c.cam.stop(0.1); c.cam.punch(0.1, 0.6); c.cam.flash('#ff9a40', 0.1, 0.28); }
-      shake(10);
-      V.flash(x, y - 30, 110, '#ffc060', 0.26);
-      V.spikeburst(x, y, { r: 100, n: 20, color: FIRE, core: '#fff6d0', ink: '#3a0e04', dur: 0.5, z: 34 });
-      V.spikeburst(x, y, { r: 160, n: 22, color: '#ff8a2a', core: ASH, ink: '#3a0e04', dur: 0.55, layer: 'ground', z: 0, flat: 0.6 });
-      V.pillar(x, y, { r: 42, h: 280, color: '#ff8a2a', dur: 0.5 });
-      pyroRing(x, y, { r: 92, n: 14, h: 50, dur: 1.2 });
-      V.shock(x, y, { r: 250, color: '#ffa040', dur: 0.65, w: 10 });
-      V.shock(x, y, { r: 165, color: ASH, dur: 0.5, w: 5, delay: 0.06 });
-      V.flare(x, y, { n: 22, r: 36, size: 1.5, h: 1.5 });
-      V.debris(x, y, { n: 14, hot: true, color: '#4a3226', speed: 1.3, size: 1.3 });
-      feathers(x, y, 16, ASH);
-      // AFTERMATH: dark smoke rolls off, a big burning crater stays, embers keep rising from it
-      c.later(0.25, () => V.smoke(x, y, { n: 8, r: 70, color: '#3a302c', size: 42, a: 0.45, speed: 60, life: 2.1 }));
-      c.later(0.15, () => V.crater(x, y, { r: 96, color: '#ff4a1a', dur: 6, flames: 9, a: 0.6, cracks: 11 }));
-      c.later(0.7, () => V.decal(x, y, { r: 70, embers: true, dur: 5, a: 0.35 }));
-    } }));
+    c.later(0.4, () => {
+      // the bird's wake: tongues of flame and embers left along its whole path
+      V.fx({ dur: 0.6, layer: 'air', draw: () => {}, tick: p => { const x = c.x + (c.tx - c.x) * p, y = c.y + (c.ty - c.y) * p; HFX.flames(x, y, { n: 1, r: 14, s: 1.3, z: 22, out: 6, up: 0.4 }); if (Math.random() < 0.5) HFX.embers(x, y, { n: 1, r: 10, z: 22, s: 1.1 }); } });
+      V.phoenix(c.x, c.y, c.tx, c.ty, { s: 1.75, dur: 0.6, onHit: (x, y) => {
+        // IMPACT: a great bloom of flame, a column of fire standing in it, a second bloom a beat later, a ring of flame tongues, feathers and burning rocks flung out
+        if (c.cam) { c.cam.stop(0.1); c.cam.punch(0.1, 0.6); c.cam.flash('#ff9a40', 0.1, 0.28); }
+        shake(10);
+        HFX.blast(x, y, { s: 3.2 }); HFX.geyser(x, y, { s: 2.1 }); HFX.fireHit(x, y, { s: 3, hs: true });   // (landing pass: a hard gold-hearted core under the great bloom)
+        c.later(0.09, () => { HFX.blast(x + rand(-30, 30), y + rand(-12, 12), { s: 1.9, hs: true }); shake(3); });
+        HFX.flames(x, y, { n: 14, r: 86, s: 1.4, out: 70, up: 0.9 });
+        pyroRing(x, y, { r: 92, n: 14, h: 50, dur: 1.2 });
+        V.shock(x, y, { r: 250, color: '#ffa040', dur: 0.65, w: 8 });
+        V.shock(x, y, { r: 165, color: ASH, dur: 0.5, w: 4, delay: 0.06 });
+        V.debris(x, y, { n: 14, hot: true, color: '#4a3226', speed: 1.3, size: 1.3 });
+        feathers(x, y, 16, ASH);
+        // AFTERMATH: dark smoke climbs off a big burning crater, embers keep rising from it, the air shimmers over it
+        c.later(0.25, () => HFX.smokeUp(x, y, { n: 8, r: 64, s: 1.7, a: 0.46, life: 1.7 }));
+        c.later(0.15, () => V.crater(x, y, { r: 96, color: '#ff4a1a', dur: 6, flames: 9, a: 0.6, cracks: 11 }));
+        c.later(0.7, () => { V.decal(x, y, { r: 70, embers: true, dur: 5, a: 0.35 }); HFX.haze(x, y, { w: 90, h: 120, dur: 3, n: 5, a: 0.09 }); });
+      } });
+    });
   };
-  // the window's moves: Phoenix Flame (a lance of gold fire shedding feathers), Phoenix Blast (a smaller phoenix).
-  // (impact pass) both run hotter than Fireball and Pyroblast: a bigger lance with a starburst in the air, the Blast a
-  // phoenix half the size of the dive's with its own little ring of flame tongues and smoke
+  // the window's moves: Phoenix Flame (a lance of gold fire shedding feathers), Phoenix Blast (a smaller phoenix): both run hotter than Fireball and Pyroblast
   ABILITY_VFX.pyromancer.phoenixflame = c => {
     const h = ahead(c, 16);
     V.glint(h.x, h.y, { color: ASH, size: 30, z: 24 });
-    V.flash(h.x, h.y - 20, 30, EMBER, 0.16);
-    V.missile(c.x, c.y, c.tx, c.ty, { style: 'fire', color: EMBER, speed: 1150, size: 1.7, arc: 10, onHit: (x, y) => {
-      V.climax(x, y, { shape: 'burst', r: 80, n: 14, color: '#ffa030', core: '#fff6d0', ink: '#3a0e04', z: 22, dur: 0.5, after: { embers: 0.4 } });   // (VFX pass) the window's lance lands as the Ultimate's burst, 80 wide
-      V.shock(x, y, { r: 76, color: ASH, dur: 0.32, w: 4 });
-      V.flare(x, y, { n: 6, r: 14, size: 0.9 });
-      V.decal(x, y, { r: 24, embers: true, dur: 1.4, a: 0.35 });
-      feathers(x, y, 4, ASH);
-      shake(2);
+    HFX.flames(h.x, h.y, { n: 4, r: 4, s: 0.6, z: 18, out: 6, up: 0.7 });
+    HFX.fireball(c.x, c.y, c.tx, c.ty, { speed: 1150, arc: 10, size: 1.9, gold: true, onHit: (x, y) => {
+      HFX.blast(x, y, { s: 2, hs: true }); V.shock(x, y, { r: 76, color: ASH, dur: 0.32, w: 3 });
+      HFX.embers(x, y, { n: 6, s: 1, r: 14 }); feathers(x, y, 4, ASH); shake(2);
     } });
   };
   ABILITY_VFX.pyromancer.phoenixblast = c => V.phoenix(c.x, c.y, c.tx, c.ty, { s: 0.85, dur: 0.42, onHit: (x, y) => {
-    V.climax(x, y, { shape: 'burst', r: 88, n: 16, color: FIRE, core: '#fff6d0', ink: '#3a0e04', z: 26, dur: 0.55, after: { embers: 0.4 } });   // (VFX pass) the window's phoenix lands as a bold burst, 88 wide
-    V.spikeburst(x, y, { r: 100, n: 16, color: FIRE, core: ASH, dur: 0.4, layer: 'ground', z: 0, flat: 0.6 });   // (QA) at its feet
+    HFX.blast(x, y, { s: 2.4 }); HFX.flames(x, y, { n: 8, r: 46, s: 1.1, out: 50 });
     pyroRing(x, y, { r: 50, n: 9, h: 28, dur: 0.75 });
-    V.shock(x, y, { r: 130, color: '#ffa040', dur: 0.45, w: 6 });
-    V.flare(x, y, { n: 12, r: 18, size: 1.1 });
-    V.decal(x, y, { r: 44, embers: true, dur: 2.5 });
-    V.smoke(x, y, { n: 3, r: 30, color: '#3a302c', size: 28, a: 0.35, speed: 40, life: 1.4 });
+    V.shock(x, y, { r: 130, color: '#ffa040', dur: 0.45, w: 5 });
     feathers(x, y, 4, ASH);
     shake(5);
   } });
-  // the window ends: the mage bursts from the ashes (a pillar of flame, a ring of flame tongues, feathers), and the fire runs to the enemy
+  // the window ends: the mage bursts from the ashes (a column of fire, a ring of flame tongues, feathers), and the fire runs to the enemy as a great fireball
   KIT_VFX['phoenix-rebirth'] = Object.assign((e, target) => {
     const cam = FX.camFor(e);
     if (cam) { cam.punch(0.05, 0.4); cam.flash('#ffb060', 0.15, 0.3); }
     shake(5);
-    V.pillar(e.x, e.y, { r: 50, h: 240, color: '#ff8a2a', dur: 0.9 });
+    HFX.geyser(e.x, e.y, { s: 1.7 });
     V.blaze(e, { r: 60, dur: 1 });
     pyroRing(e.x, e.y, { r: 58, n: 11, h: 36, dur: 0.9 });
+    HFX.flames(e.x, e.y, { n: 12, r: 50, s: 1.3, out: 50 });
     V.burst(e.x, e.y - 30, { color: ASH, color2: FIRE, n: 22, speed: 280 });
     feathers(e.x, e.y, 12, ASH);
-    if (target) V.missile(e.x, e.y, target.x, target.y, { style: 'fire', color: '#ff9a3a', speed: 900, size: 1.6, arc: 40, onHit: (x, y) => {
+    if (target) HFX.fireball(e.x, e.y, target.x, target.y, { speed: 900, arc: 40, size: 1.7, onHit: (x, y) => {
       if (cam) cam.stop(0.06);
-      V.spikeburst(x, y, { r: 70, n: 16, color: FIRE, core: '#fff6d0', ink: '#3a0e04', dur: 0.36, z: 26 });
-      V.shock(x, y, { r: 120, color: EMBER, dur: 0.42, w: 6 });
+      HFX.blast(x, y, { s: 2.1 });
+      V.shock(x, y, { r: 120, color: EMBER, dur: 0.42, w: 5 });
       V.crater(x, y, { r: 54, color: '#ff4a1a', dur: 3, flames: 5, a: 0.5 });
-      V.smoke(x, y, { n: 4, r: 36, color: '#3a302c', size: 32, a: 0.38, speed: 45, life: 1.6 });
       shake(4);
     } });
   }, { atTarget: true });
+// <<< rtd pyro-ult
 })();
 
 // ======================================================================= ULTIMATES · damage classes (Driftblade, Shadowblade, Ranger, Marionettist, Thermist)
@@ -4443,10 +5412,8 @@ function windLaneBoost(x, y, vx, vy, now) {
   // jade line and a twister there), and for the 8s a ring of gusts wheels round the duellist: the eye. Gale lines
   // during the window are long double ribbons through the body; it ends in a tempest on the target sized by Drift.
   const driftUltCol = ent => (ent && ent.spec === 'comet' ? '#ffd08a' : ent && ent.spec === 'orbit' ? '#a8f0c8' : '#8ff0d8');
-  const driftUltRibbon = (pts, o = {}) => V.fx({ dur: o.dur ?? 0.7, layer: 'air', draw: (c, p, t, e) => {
-    const k = (1 - p) * e.a;
-    V.neonPath(c, o.color || '#8ff0d8', (o.w ?? 3) * (1 - p * 0.5), k, () => { pts.forEach(([x, y], i) => { const wob = Math.sin(i * 0.9 + t * 14) * (o.wob ?? 3); i ? c.lineTo(x, y - (o.z ?? 14) + wob) : c.moveTo(x, y - (o.z ?? 14) + wob); }); });
-  } });
+  // (class VFX pass) the Ultimate's ribbons are the Driftblade's own (HFX.drift.ribbon): a tapered band of wind with a dark rim
+  const driftUltRibbon = (pts, o = {}) => HFX.drift.ribbon(pts, { w: (o.w ?? 3) * 1.7, dur: o.dur ?? 0.7, color: o.color === '#ffffff' ? '#f0fffa' : (o.color || '#8ff0d8'), mid: '#ffffff', ink: '#0a2e28', z: o.z ?? 14, wob: o.wob ?? 3 });
   // a gale line: from 140 px before the body to 160 px past it along a, with a pale streak left on the floor
   const driftUltGaleLine = (x, y, a, col, o = {}) => {
     const L0 = o.back ?? 140, L1 = o.on ?? 160, ax = x - Math.cos(a) * L0, ay = y - Math.sin(a) * L0, bx = x + Math.cos(a) * L1, by = y + Math.sin(a) * L1;
@@ -4470,13 +5437,13 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.charge(sx, sy, { color: col, r: 90, n: 10, dur: 0.35, follow: c.ent });
       DP.cyclone(c.ent, { r: 50 * 1.35, h: 130, dur: HIT + 0.2, color: col, leaves: 8 });
       V.swirl(tx, ty, { r: 75 * SC, color: col, dur: HIT, arms: 3, inward: true });
-      c.later(HIT - 0.16, () => DP.windStrip(dmgUltLine(sx, sy, tx + Math.cos(a) * 60, ty + Math.sin(a) * 60, 14, 16), { w: 10, color: col, dur: 0.4, z: 18 }));
+      c.later(HIT - 0.16, () => HFX.drift.ribbon(dmgUltLine(sx, sy, tx + Math.cos(a) * 60, ty + Math.sin(a) * 60, 14, 16), { w: 13, color: col, mid: '#ffffff', ink: '#0a2e28', dur: 0.5, z: 18, lag: 0.4 }));
       // IMPACT: a great twister on the target, a bright eye at its foot, slashing streaks through it, rocks and leaves flung
       c.later(HIT, () => {
         if (c.cam) { c.cam.stop(0.09); c.cam.punch(0.07, 0.5); c.cam.flash('#e8fff8', 0.16, 0.28); }
         shake(6);
         DP.twister(tx, ty, { r: 78 * SC, h: 190 * (1 + (SC - 1) * 0.6), dur: 1.25, color: col, rocks: 12, leaves: 10 });
-        for (let i = 0; i < 4; i++) c.later(0.04 + i * 0.07, () => DP.streaks(tx, ty, a + i * 0.8 + rand(-0.2, 0.2), { n: 2, back: 120 * SC * 0.85, on: 120 * SC * 0.85, w: 9, gap: 16, color: i % 2 ? '#e8fff8' : col, dur: 0.4, scuff: false, leaves: 1 }));
+        for (let i = 0; i < 4; i++) c.later(0.04 + i * 0.07, () => { const aa = a + i * 0.8 + rand(-0.2, 0.2), L = 120 * SC * 0.85; HFX.drift.ribbon(dmgUltLine(tx - Math.cos(aa) * L, ty - Math.sin(aa) * L * 0.85, tx + Math.cos(aa) * L, ty + Math.sin(aa) * L * 0.85, 14, i % 2 ? 10 : -10), { w: 11, dur: 0.55, color: i % 2 ? '#f0fffa' : col, mid: '#ffffff', ink: '#0a2e28', z: 22, wob: 2 }); HFX.drift.litter(tx, ty, { n: 3, g: 2, angle: aa, speed: 260, tone: { mid: col } }); });
         V.flash(tx, ty - 24, 44 * SC, '#ffffff', 0.18);
         V.spikeburst(tx, ty, { r: 70 * SC * 0.85, n: 16, color: col, core: '#ffffff', ink: '#0a2a24', dur: 0.38 });
         V.shock(tx, ty, { r: 180 * SC * 0.85, color: col, dur: 0.6, w: 9 });
@@ -4520,7 +5487,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       DRIFT_PAINT.twister(t.x, t.y, { r: 80 * q, h: 210 * q0 * 1.35, dur: 1.3, color: col, rocks: 12, leaves: 10 });
       V.flash(t.x, t.y - 24, 40 * q, '#ffffff', 0.16);
       V.shock(t.x, t.y, { r: 210 * q * 0.66, color: col, dur: 0.6, w: 9 });
-      for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + rand(-0.2, 0.2); DRIFT_PAINT.windStrip(dmgUltLine(t.x + Math.cos(a) * 30, t.y + Math.sin(a) * 18, t.x + Math.cos(a) * 160 * q, t.y + Math.sin(a) * 100 * q, 8, 18), { color: i % 2 ? '#ffffff' : col, w: 7, dur: 0.6, z: 16 }); }
+      for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + rand(-0.2, 0.2); HFX.drift.ribbon(dmgUltLine(t.x + Math.cos(a) * 30, t.y + Math.sin(a) * 18, t.x + Math.cos(a) * 160 * q, t.y + Math.sin(a) * 100 * q, 8, 18), { color: i % 2 ? '#f0fffa' : col, mid: '#ffffff', ink: '#0a2e28', w: 10, dur: 0.65, z: 16 }); }
       V.debris(t.x, t.y, { n: 8, color: '#4a524c', speed: 1.3, size: 1.2 });
       dmgUltLater(e, 0.4, () => { V.smoke(t.x, t.y, { n: 6, r: 60 * q, color: '#c8d0c0', size: 32, a: 0.3, speed: 50, life: 1.8 }); DRIFT_PAINT.spiralScar(t.x, t.y, { r: 85 * q, dur: 3, color: col, a: 0.54, arms: 4 }); });
     }, { atTarget: true }),
@@ -4531,59 +5498,64 @@ function windLaneBoost(x, y, vx, vy, now) {
   // trail; the finisher leaves an echo; at the end every cut comes due at once in a storm of rose and steel.
   const BL = { VIO: '#b04dff', ROSE: '#ff4d8a', STEEL: '#e8e0ff', INK: '#1e0e3a' };
   Object.assign(ABILITY_VFX.shadowblade, {
+// >>> rtd shadow-ult
+    // (class VFX pass) Thousand Cuts in the Shadowblade's own material (HFX: steel cuts that open and close on the target with a dark lip, ink smears,
+    // wisps of ink, the shadow step): a bomb of ink wisps bursts at the rogue's feet, a smear of shadow carries the rogue to the target's back, and three
+    // long cuts cross on it; a rune of shadow stays under it for the window. Each Shadow Cut is a step and a cut that curls round the target; the finisher
+    // two crossing rose cuts and a pale echo; at the end every cut comes due at once
     thousandcuts: c => {
       const sx = c.x, sy = c.y, tx = c.tx, ty = c.ty;   // (ult impact pass: no screen dim at the press, the world stays readable)
-      // (QA: the full-strength cloud hid the boss and the party for 2s, and its pop whited out) thinner, a small pop
-      V.smokebomb(sx, sy, { r: 130, dur: 2.2, toss: 0.2, color: '#6a5a7a', ring: BL.VIO, a: 0.6, flashR: 40 });
+      // the bomb is kept thin (a full cloud hid the boss and the party): ink wisps and a little smoke, a small pop
+      HFX.inkWisps(sx, sy, { n: 10, s: 1.5, a: 0.55 }); HFX.inkWisps(sx, sy, { n: 5, s: 2, a: 0.35, life: 1.8 });
+      V.smoke(sx, sy, { n: 4, r: 40, color: '#3a2a4a', size: 36, a: 0.35, speed: 40, life: 1.6 });
       V.charge(sx, sy, { color: BL.VIO, r: 56, n: 10, dur: 0.3 });
       c.later(0.35, () => {
-        V.shadowdash(sx, sy, c.ent.x, c.ent.y, { color: '#8a4dff', dur: 0.4 });
+        HFX.shadowSmear(sx, sy, c.ent.x, c.ent.y, { w: 20, dur: 0.5 }); HFX.inkWisps(c.ent.x, c.ent.y, { n: 6, s: 1.2 });
         if (c.cam) { c.cam.stop(0.1); c.cam.punch(0.07, 0.5); c.cam.flash('#d8b8ff', 0.22, 0.3); }
         shake(6);
-        for (let i = 0; i < 3; i++) c.later(i * 0.05, () => V.slash(tx, ty + 6, rand(0, TAU), { r: 70, span: 2.2, color: i % 2 ? BL.STEEL : BL.ROSE, w: 0.5, dur: 0.26, flip: i % 2 === 1, sparks: 4 }));
-        V.spikeburst(tx, ty, { r: 100, n: 16, color: BL.VIO, core: '#f0e8ff', ink: BL.INK, dur: 0.42, layer: 'ground', z: 0, flat: 0.6 });   // (QA) round its feet, not over it
-        V.shock(tx, ty, { r: 170, color: BL.VIO, dur: 0.55, w: 7 });
+        [-0.9, 0.75, 0.05].forEach((aa, i) => c.later(i * 0.05, () => { HFX.inkSmear(tx, ty, aa + i * 2, { r: 70, span: 2.2, w: 16, flip: i % 2 === 1, dur: 0.3 });
+          HFX.cut(tx, ty, aa, { len: 124, w: 5, color: i % 2 ? BL.STEEL : '#ffffff', inner: i % 2 ? BL.VIO : BL.ROSE, ink: BL.INK, dur: 0.5, z: 22, bend: 0.08 }); }));
+        V.shock(tx, ty, { r: 150, color: BL.VIO, dur: 0.5, w: 5 }); V.sparks(tx, ty, { color: BL.STEEL, n: 8, speed: 360 });
         vfxLingerSettle(V.ink(tx, ty, { r: 100, dur: 7, a: 0.3 }), 0.5, 1);
         vfxLingerSettle(V.sigil(tx, ty, { r: 100, style: 'runes', color: BL.VIO, dur: 7, spin: -0.7 }), 0.26, 1.2);   // (QA) settles faint for the window
         V.aura(c.ent, { color: '#8a00c0', style: 'shadow', dur: 7, r: 28, rate: 0.3 });
       });
     },
-    // Shadow Cut: a violet smear to the target's back and a cut that curls round it
+    // Shadow Cut: a smear of shadow to the target's back and a cut that curls round it, a second thin one across it
     shadowcut: c => { const sx = c.x, sy = c.y, tx = c.tx, ty = c.ty;
-      c.later(0.05, () => { const ex = c.ent.x, ey = c.ent.y; if (Math.hypot(ex - sx, ey - sy) > 20) V.shadowdash(sx, sy, ex, ey, { color: '#8a4dff', dur: 0.32 });
+      c.later(0.05, () => { const ex = c.ent.x, ey = c.ent.y; if (Math.hypot(ex - sx, ey - sy) > 20) HFX.shadowSmear(sx, sy, ex, ey, { w: 15, dur: 0.4 });
         const a = Math.atan2(ty - ey, tx - ex);
-        V.slash(tx, ty + 6, a + Math.PI / 2, { r: 58, span: 3, color: BL.STEEL, w: 0.45, dur: 0.26, sparks: 4 });
-        // (ult impact pass) the empowered cut: a puff of violet smoke where you vanished, a rose starburst with ink edges on the hit
-        V.smoke(sx, sy, { n: 2, color: '#4a3060', size: 20, a: 0.4, speed: 30 });
-        c.later(0.06, () => { V.hit(tx, ty, BL.ROSE, 0.7); V.spikeburst(tx, ty, { r: 46, n: 12, color: BL.VIO, core: '#f0e8ff', ink: BL.INK, dur: 0.26 }); V.shock(tx, ty, { r: 70, color: BL.ROSE, dur: 0.3, w: 3 }); }); }); },
-    // the finisher inside the window: two crossing rose cuts and a pale echo of them a moment later
+        HFX.cut(tx, ty, a + Math.PI / 2 + 0.3, { len: 82, w: 4.2, color: '#ffffff', inner: BL.ROSE, ink: BL.INK, dur: 0.42, z: 20, bend: 0.12 });
+        HFX.inkWisps(sx, sy, { n: 3, s: 1.1 });
+        c.later(0.06, () => { HFX.cut(tx, ty, a - Math.PI / 2 + 0.6, { len: 54, w: 3, color: BL.STEEL, inner: BL.VIO, ink: BL.INK, dur: 0.34, z: 22 }); V.shock(tx, ty, { r: 70, color: BL.ROSE, dur: 0.3, w: 3 }); V.sparks(tx, ty, { color: BL.STEEL, n: 5, speed: 300 }); }); }); },
+    // the finisher inside the window: two long rose cuts crossing on the target behind an ink smear, and a pale echo of them a moment later
     shadowedge: c => { const tx = c.tx, ty = c.ty, a = c.ang || 0;
-      V.slash(c.x, c.y, a + 0.4, { r: 62, span: 1.6, color: BL.ROSE, w: 0.6, dur: 0.24, sparks: 4 });
-      c.later(0.06, () => V.slash(c.x, c.y, a - 0.4, { r: 62, span: 1.6, color: BL.ROSE, w: 0.6, dur: 0.24, flip: true }));
-      c.later(0.1, () => { V.spikeburst(tx, ty, { r: 62, n: 14, color: BL.ROSE, core: '#ffe0ec', ink: '#2a0410', dur: 0.32 }); V.shock(tx, ty, { r: 96, color: BL.VIO, dur: 0.4, w: 5 }); shake(3); });
-      c.later(0.28, () => { V.slash(tx, ty + 6, a + Math.PI / 2, { r: 54, span: 2, color: '#d8c8ff', w: 0.35, dur: 0.3 }); V.smoke(tx, ty, { n: 2, color: '#4a3060', size: 18, a: 0.4, speed: 30 }); }); },
+      HFX.inkSmear(c.x, c.y, a + 0.4, { r: 62, span: 1.8, w: 14, dur: 0.26 });
+      HFX.cut(tx, ty, a + 0.9, { len: 112, w: 5.5, color: '#ffffff', inner: BL.ROSE, ink: BL.INK, dur: 0.5, z: 22, bend: 0.1 });
+      c.later(0.06, () => HFX.cut(tx, ty, a - 0.9, { len: 102, w: 5, color: '#ffffff', inner: BL.ROSE, ink: BL.INK, dur: 0.5, z: 22, bend: -0.1 }));
+      c.later(0.1, () => { V.shock(tx, ty, { r: 96, color: BL.VIO, dur: 0.4, w: 4 }); HFX.inkWisps(tx, ty, { n: 4, s: 1 }); V.sparks(tx, ty, { color: BL.STEEL, n: 6, speed: 340 }); shake(3); });
+      c.later(0.28, () => { HFX.cut(tx, ty, a + Math.PI / 2, { len: 74, w: 3, color: '#d8c8ff', inner: BL.VIO, ink: BL.INK, dur: 0.4, z: 20 }); HFX.inkWisps(tx, ty, { n: 2, s: 1 }); }); },
   });
-  // Thousand Cuts comes due: a flurry of cuts from every side (one per cut you made), then one great X and a burst
+  // Thousand Cuts comes due: a flurry of cuts from every side (one per cut you made) opening on the target, then one great X of two huge cuts behind ink smears, and a
+  // burst; the X stays scored in the floor a while, ink curling off it
   KIT_VFX['blade-thousand'] = Object.assign((e, target, d) => {
     const t = target || e, n = Math.max(4, Math.min(12, (d && d.n) || 6)), cam = FX.camFor(e);
-    V.vortex(t.x, t.y, { r: 110, color: '#c01a5a', steel: BL.STEEL, dur: 0.9, n: 8 });
-    for (let i = 0; i < n; i++) dmgUltLater(e, i * 0.035, () => { const a = rand(0, TAU); V.slash(t.x - Math.cos(a) * 26, t.y - Math.sin(a) * 26, a, { r: 64, span: 1.3, color: i % 3 ? BL.STEEL : BL.ROSE, w: 0.45, dur: 0.2, flip: i % 2 === 1, sparks: 2 }); });
+    HFX.inkWisps(t.x, t.y, { n: 8, s: 1.6, a: 0.5 });
+    for (let i = 0; i < n; i++) dmgUltLater(e, i * 0.035, () => { const a = rand(0, TAU); HFX.cut(t.x + rand(-14, 14), t.y + rand(-8, 8), a, { len: 54 + rand(0, 30), w: 3, color: i % 3 ? BL.STEEL : '#ffffff', inner: i % 3 ? BL.VIO : BL.ROSE, ink: BL.INK, dur: 0.32, z: 20, bend: 0.15 }); });
     // (ult impact pass) the blades gather: a white glint over the target just before the great X
     dmgUltLater(e, n * 0.035, () => V.glint(t.x, t.y - 10, { color: '#ffffff', size: 44, z: 40 }));
     dmgUltLater(e, n * 0.035 + 0.08, () => {
       if (cam) { cam.stop(0.1); cam.punch(0.08, 0.5); cam.flash('#ffd0e8', 0.15, 0.3); }
       shake(8);
-      for (const s of [-1, 1]) V.slash(t.x, t.y + 6, Math.PI / 4 * s, { r: 132, span: 1.3, color: BL.ROSE, w: 0.9, dur: 0.38, flip: s > 0, sparks: 6 });
-      V.slash(t.x, t.y + 6, 0, { r: 120, span: 1.1, color: BL.STEEL, w: 0.5, dur: 0.3, sparks: 3 });
-      V.flash(t.x, t.y - 20, 70, '#ffe0ec', 0.18);
-      V.spikeburst(t.x, t.y, { r: 150, n: 20, color: BL.ROSE, core: '#ffe0ec', ink: '#2a0410', dur: 0.5, layer: 'ground', z: 0, flat: 0.6 });   // (QA) round its feet, the X cuts carry the hit
-      V.shock(t.x, t.y, { r: 240, color: BL.INK, dur: 0.6, w: 14 });
-      V.shock(t.x, t.y, { r: 220, color: BL.VIO, dur: 0.55, w: 7, delay: 0.03 });
+      for (const s of [-1, 1]) { HFX.inkSmear(t.x, t.y, Math.PI / 4 * s, { r: 100, span: 2.4, w: 26, flip: s > 0, dur: 0.4 }); HFX.cut(t.x, t.y, Math.PI / 4 * s, { len: 210, w: 8, color: '#ffffff', inner: BL.ROSE, ink: BL.INK, dur: 0.6, z: 24, bend: 0.05 }); }
+      HFX.cut(t.x, t.y, 0, { len: 170, w: 5, color: BL.STEEL, inner: BL.VIO, ink: BL.INK, dur: 0.5, z: 22 });
+      V.flash(t.x, t.y - 20, 60, '#ffe0ec', 0.16);
+      V.shock(t.x, t.y, { r: 240, color: BL.INK, dur: 0.6, w: 12 });
+      V.shock(t.x, t.y, { r: 220, color: BL.VIO, dur: 0.55, w: 6, delay: 0.03 });
       V.shock(t.x, t.y, { r: 140, color: BL.STEEL, dur: 0.4, w: 3, delay: 0.08 });
-      V.splash(t.x, t.y, { n: 14, speed: 1.4 });
       V.sparks(t.x, t.y, { color: BL.STEEL, n: 10, speed: 380 });
       V.decal(t.x, t.y, { style: 'crack', r: 80, dur: 4, a: 0.5, seed: Math.random() * 6 });
-      // the aftermath: the great X left scored in the floor (ink with a rose edge), fading slowly, violet smoke curling off
+      // the aftermath: the great X left scored in the floor (ink with a rose edge), fading slowly, ink curling off it
       const tx = t.x, ty = t.y;
       V.fx({ dur: 3.2, layer: 'ground', draw: (cc, p, tt, fx) => {
         const k = fx.a * Math.min(1, p / 0.04) * Math.min(1, (1 - p) / 0.6);
@@ -4591,9 +5563,10 @@ function windLaneBoost(x, y, vx, vy, now) {
           cc.save(); cc.lineCap = 'round'; cc.globalAlpha = 0.7 * k; cc.strokeStyle = BL.INK; cc.lineWidth = 8; cc.beginPath(); cc.moveTo(tx - ca, ty - sa); cc.lineTo(tx + ca, ty + sa); cc.stroke(); cc.restore();
           V.neonPath(cc, BL.ROSE, 2, k * 0.8, () => { cc.moveTo(tx - ca * 0.9, ty - sa * 0.9); cc.lineTo(tx + ca * 0.9, ty + sa * 0.9); }); }
       } });
-      V.smoke(t.x, t.y, { n: 6, r: 60, color: '#4a3060', size: 30, a: 0.35, speed: 50, life: 1.6 });
+      HFX.inkWisps(t.x, t.y, { n: 8, s: 1.5, a: 0.5 }); V.smoke(t.x, t.y, { n: 4, r: 60, color: '#4a3060', size: 30, a: 0.3, speed: 50, life: 1.6 });
     });
   }, { atTarget: true });
+// <<< rtd shadow-ult
 
   // ---- Ranger · Starfall Volley: the ranger draws and looses straight up (a shaft of light), a first star drops onto
   // the target, then a ring of gold opens on the floor there, as wide as the Focus spent, and six volleys of
@@ -4605,11 +5578,14 @@ function windLaneBoost(x, y, vx, vy, now) {
   const RG = { GOLD: '#ffe27a', STAR: '#fff6d0', DEEP: '#ffb84a', INK: '#3a2404' };
   ABILITY_VFX.ranger.starfall = c => {
     const tx = c.tx, ty = c.ty;
-    V.glint(c.x, c.y, { color: RG.STAR, size: 34, z: 50 });
+    // (class VFX pass) the ranger draws and looses straight up: the string snaps, one great gold-fletched arrow climbs out of sight on a shaft of light, and comes down as a star
+    HFX.ranger.string(c.ent, { col: '#fff0b0', ringCol: RG.GOLD });
     V.charge(c.x, c.y, { color: RG.GOLD, r: 56, n: 10, dur: 0.3, follow: c.ent });
     V.sigil(c.x, c.y, { r: 46, style: 'star4', color: RG.GOLD, dur: 0.7, spin: 4 });
+    V.fx({ dur: 0.45, layer: 'air', draw: (cc, p, t, e) => { const z = 34 + 600 * p * p, k = e.a * (1 - Math.max(0, (p - 0.8) / 0.2)); cc.save(); cc.translate(c.x, c.y - z); cc.rotate(-Math.PI / 2);
+      HFX.ranger.arrow(cc, 52, { col: RG.GOLD, w: 1.5, head: 1.6, k, headCol: '#fff6d0' }); cc.restore(); V.glowAt(cc, c.x, c.y - z, 26, RG.STAR, 0.7 * k); } });
     c.later(0.12, () => V.pillar(c.x, c.y, { r: 18, h: 320, color: RG.STAR, dur: 0.45 }));
-    c.later(0.2, () => V.missile(tx + 140, ty - 430, tx, ty, { style: 'comet', color: RG.STAR, speed: 2300, size: 2, onHit: () => {} }));
+    c.later(0.2, () => HFX.ranger.shot(tx + 140, ty - 430, tx, ty, { speed: 2300, size: 2.2, col: RG.GOLD, glow: RG.STAR, helix: '#fff6d0', headCol: '#fff6d0', long: 2.2 }));
     c.later(0.4, () => {
       if (c.cam) { c.cam.stop(0.09); c.cam.punch(0.08, 0.55); c.cam.flash('#fff6d0', 0.12, 0.3); }
       shake(8);
@@ -4623,6 +5599,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.debris(tx, ty, { n: 9, color: '#7a6a58', speed: 1.1 });
       V.decal(tx, ty, { style: 'crack', r: 70, dur: 4, a: 0.55, seed: Math.random() * 6 });
       c.later(0.3, () => V.smoke(tx, ty, { n: 5, r: 50, color: '#d8ccb0', size: 34, a: 0.3, speed: 50, life: 1.6 }));
+      HFX.ranger.plant(tx, ty + 6, 0, { size: 3.2, col: RG.GOLD, life: 3.4, lean: Math.PI / 2 + 0.28 });   // the star's arrow stands in the ground where it fell, quivering
     });
   };
   KIT_VFX['ranger-stars'] = Object.assign((e, target, d) => {
@@ -4679,18 +5656,21 @@ function windLaneBoost(x, y, vx, vy, now) {
     c.later(HIT, () => {
       if (c.cam) { c.cam.stop(0.1); c.cam.punch(0.09, 0.55); c.cam.flash('#ffd8c8', 0.12, 0.28); }
       shake(8);
-      V.spikeburst(tx, ty, { r: 64 * SC, n: 8, color: MU.GOLD, core: '#fff8e0', ink: '#3a2004', dur: 0.48, z: 30 });
-      V.spikeburst(tx, ty, { r: R * 1.1, n: 22, hole: 0.62, color: MU.GOLD, core: '#fff8e0', ink: '#3a2004', dur: 0.5, layer: 'ground', z: 0, flat: 0.6 });
+      // (ult pass) the release is the stage's own light, not a starburst: every footlight on the ring flares at once (twenty ink-rimmed gold bulbs popping to twice their
+      // size and back) and a thick ink-rimmed gold ring runs out from the stage's edge, so the whole stage seems to take the blow
+      V.fx({ dur: 0.7, layer: 'air', draw: (cc, p, tt, fx) => { const k = fx.a * (1 - Math.min(1, Math.max(0, (tt - 0.25) / 0.45))); if (k < 0.02) return; const pop = tt < 0.07 ? 0.5 + 1.2 * easeOut(tt / 0.07) : 1.7 - 0.7 * Math.min(1, (tt - 0.07) / 0.3);
+        cc.save(); cc.globalAlpha = k;
+        for (let i = 0; i < 20; i++) { const a = i / 20 * Math.PI * 2, bx = tx + Math.cos(a) * R * 0.98, by = ty + Math.sin(a) * R * 0.98 * 0.62 - 6, r = 6 * pop; cc.fillStyle = '#3a2004'; cc.beginPath(); cc.arc(bx, by, r + 2.4, 0, Math.PI * 2); cc.fill(); cc.fillStyle = MU.GOLD; cc.beginPath(); cc.arc(bx, by, r, 0, Math.PI * 2); cc.fill(); cc.fillStyle = '#fff8e0'; cc.beginPath(); cc.arc(bx, by, r * 0.5, 0, Math.PI * 2); cc.fill(); }
+        cc.restore();
+        const rq = Math.min(1, tt / 0.5); if (rq < 1) { const Rr = R * (0.6 + 0.7 * easeOut(rq)), kk = fx.a * (1 - rq * rq); cc.save(); cc.beginPath(); cc.ellipse(tx, ty, Rr, Rr * 0.62, 0, 0, Math.PI * 2); cc.globalAlpha = 0.8 * kk; cc.strokeStyle = '#3a2004'; cc.lineWidth = 12 - 7 * rq; cc.stroke(); cc.globalAlpha = kk; cc.strokeStyle = MU.GOLD; cc.lineWidth = 6 - 3.6 * rq; cc.stroke(); cc.restore(); } } });
       V.decal(tx, ty, { style: 'crack', r: 60 * SC, dur: 3.4, a: 0.45, seed: Math.random() * 6 });
       c.later(0.2, () => V.smoke(tx, ty, { n: 6, r: 60 * SC, color: '#f0d8e0', size: 36, a: 0.28, speed: 60, life: 1.8 }));
-      for (const d of mariUltDolls(c.ent)) { const a = Math.atan2(ty - d.y, tx - d.x); V.slash(d.x, d.y, a, { r: 74 * 1.3, span: 1.8, color: MU.CRIM, w: 0.6, dur: 0.3, sparks: 5 }); }
+      for (const d of mariUltDolls(c.ent)) { const a = Math.atan2(ty - d.y, tx - d.x); globalThis.MARI_LANCE(d.x, d.y, tx, ty, { w: 12, head: true, dur: 0.3, z: 24 }); V.sparks(tx, ty - 20, { color: MU.GOLD, n: 5, speed: 300, angle: a }); }
       MP.xcut(tx, ty, { r: R * 1.05, a: 0.62, w: 10 * SC, dur: 0.44, z: 14 });
       c.later(0.06, () => MP.xcut(tx, ty, { r: R * 0.85, a: 0.62 + Math.PI / 4, w: 7 * SC, dur: 0.38, z: 14, color: MU.ROSE2 }));
       V.flash(tx, ty - 20, 46 * SC, '#fff0e6', 0.18);
-      V.climax(tx, ty, { shape: 'burst', n: 18, r: 72 * SC, color: MU.CRIM, core: '#fff0e6', ink: '#2a0410', dur: 0.6, hold: 0.12, z: 12 });   // (VFX pass) the heart holds a beat before it dissolves
       V.shock(tx, ty, { r: 175 * SC, color: MU.ROSE2, dur: 0.55, w: 7 });
       V.shock(tx, ty, { r: 130 * SC, color: MU.GOLD, dur: 0.5, w: 4, delay: 0.06 });
-      V.burst(tx, ty, { color: MU.GOLD, color2: '#ffffff', n: 12, speed: 320, kind: 'star', flash: false });
       MP.petals(tx, ty, { n: 24, speed: 300 * SC, life: 1.8, size: 1.3 });
       MP.petals(tx, ty, { n: 14, speed: 170 * SC, life: 2, size: 1.1 });
     });
@@ -4752,7 +5732,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     dmgUltLater(e, 0.35, () => {
       V.shock(x, y, { r: 120 * q, color: '#bfe6ff', dur: 0.35, w: 5 });
       V.flash(x, y - 26, 50 * q, '#cfeeff', 0.16);
-      V.spikeburst(x, y, { r: 56 * q, n: 12, ...TH.ICE, dur: 0.3, z: 28 });
+      HFX.thermist.spikes(x, y, { n: 9, r: 64 * q, h: 80 * q, w: 9, dur: 1 });   // (class VFX pass) the seal cracks and a crown of faceted ice stands up out of it
       TP.shards(x, y, { n: 10, speed: 240, size: 1.1, z: 30, color: '#cfeeff' });
       shake(3);
     });
@@ -4762,11 +5742,11 @@ function windLaneBoost(x, y, vx, vy, now) {
     dmgUltLater(e, HIT, () => {
       V.flash(x, y - 30, 70 * q, '#ffffff', 0.16);
       V.flash(x, y - 20, 110 * q, '#ffc060', 0.24);
-      V.climax(x, y, { shape: 'burst', r: 115 * q, n: 22, color: TH.FIRE.color, core: '#fff6d0', ink: TH.FIRE.ink, dur: 0.7, hold: 0.12, after: { embers: 0.6, mark: 0.5 } });   // (VFX pass) held a beat, embers and a dim mark after
+      HFX.thermist.rays(x, y, { n: 18, r: 150 * q, dur: 0.6, z: 30 }); HFX.thermist.rays(x, y, { n: 10, r: 80 * q, dur: 0.45, col: '#fff0a0', core: '#ffffff', z: 36 });   // (class VFX pass) fire is a star of rays and thrown lances, never a round burst
       V.spikeburst(x, y, { r: 140 * q, n: 20, hole: 0.68, ...TH.ICE, color: '#bfe6ff', dur: 0.48, layer: 'ground', z: 0, flat: 0.7 });   // (pale frost, not a blue floor shape)
       V.spikeburst(x, y, { r: 70 * q, n: 12, ...TH.ICE, dur: 0.32, z: 30 });
       V.pillar(x, y, { r: 34 * q, h: 300, color: '#ffb060', dur: 0.45 });
-      V.flare(x, y, { n: 10 + s, r: 40 * q, color: '#ff6a1a', size: 1.5, h: 1.6 });
+      HFX.thermist.lanceBurst(x, y, { n: 10, r: 110 * q, len: 34, w: 6 });
       TP.shards(x, y, { n: 12, speed: 360 * SC * 0.8, size: 1.5, z: 24 });
       TP.shards(x, y, { n: 6, speed: 200 * SC * 0.8, size: 1.1, z: 40, color: '#cfeeff' });
       V.shock(x, y, { r: 210 * qr, color: '#ff9a5a', dur: 0.6, w: 10 });
@@ -4835,12 +5815,12 @@ function windLaneBoost(x, y, vx, vy, now) {
       if (c.cam) { c.cam.stop(0.1); c.cam.punch(0.08, 0.55); c.cam.flash('#ffc8c0', 0.24, 0.36); }   // (online-refs pass: a pale flash, not a screen washed red: red reads as danger)
       shake(9);
       // the roar: a hot burst at the chest, a ring of dark-red spikes thrown out over the party, the moon flares
-      V.climax(e.x, e.y, { shape: 'burst', r: 96, n: 14, color: '#ff3a2a', core: '#ffe6dc', ink: CLOT, dur: 0.45, hold: 0.1, z: 30 });   // (life pass) held a beat, two heroes wide
+      TANKS_VFX.reaverRoar(e.x, e.y, 120, { n: 8, w: 12, dur: 0.5 }); TANKS_VFX.reaverSplat(e.x, e.y - 8, { r: 40, z: 34 }); HFX.embers(e.x, e.y, { n: 8, s: 1.1, r: 26, rise: 1.3 });   // (hero pass) the roar leaves the chest as crescents of sound
       V.flash(e.x, e.y - 112, 80, '#ffd0c0', 0.3);
       // (QA: a full-strength red circle for 10s read as a boss danger zone) the rune circle flares, then holds faint
       vfxLingerSettle(V.ink(e.x, e.y, { r: 130, dur: 10, follow: e, a: 0.3 }), 0.5, 1.2);
       vfxLingerSettle(V.sigil(e.x, e.y, { r: 130, style: 'runes', color: BLOOD, dur: 10, spin: -0.5, follow: e }), 0.22, 1.3);
-      V.climax(e.x, e.y, { shape: 'burst', r: 185, n: 26, color: '#ff3a2a', core: '#ffc0b0', ink: CLOT, dur: 0.75, hold: 0.12, layer: 'ground', flat: 0.6, after: { smoke: 0.6, embers: 0.6, mark: 0.5 } });
+      TANKS_VFX.reaverRoar(e.x, e.y, 200, { n: 12, w: 13, dur: 0.7 }); TANKS_VFX.reaverRoar(e.x, e.y, 290, { n: 12, w: 8, dur: 0.8, delay: 0.1 }); TANKS_VFX.reaverFissure(e.x, e.y, 140, { n: 12, dur: 4 });   // (hero pass) crescents of sound and the floor split, not a starburst
       for (let i = 0; i < 3; i++) V.shock(e.x, e.y, { r: 190 + i * 60, color: i ? '#ff8a7a' : '#ffffff', dur: 0.6 + i * 0.12, w: 9 - i * 2, delay: i * 0.08 });
       V.splash(e.x, e.y, { n: 16, speed: 1.5 });
       V.decal(e.x, e.y, { style: 'crack', r: 70, dur: 4, a: 0.55, seed: Math.random() * 6 });
@@ -4865,8 +5845,8 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.ink(t.x, t.y, { r: 100 * s, dur: 4, a: 0.35 });
       V.flash(t.x, t.y - 26, 70 * s, '#ffd0c8', 0.24);
       V.pillar(t.x, t.y, { r: 32, h: 280, color: BLOOD, dur: 0.6 });   // (QA) slimmer, so the boss isn't whited out
-      V.climax(t.x, t.y, { shape: 'burst', r: 150 * s, n: 22, color: '#d0203a', core: '#ffb0b8', ink: CLOT, dur: 0.65, hold: 0.12, layer: 'ground', flat: 0.6, after: { smoke: 0.5, embers: 0.5, mark: 0.5 } });   // (QA) on the floor round the boss, not a solid star over it; (life pass) held a beat
-      V.climax(t.x, t.y, { shape: 'burst', r: 88, n: 12, color: '#ff3a4a', core: '#ffe6ea', ink: CLOT, dur: 0.4, hold: 0.1, z: 22 });
+      TANKS_VFX.reaverGeyser(t.x, t.y, 1.15 * s); TANKS_VFX.reaverRoar(t.x, t.y, 150 * s, { n: 10, w: 12, dur: 0.6 }); TANKS_VFX.reaverSpatter(t.x, t.y, { r: 90 * s, n: 16, dur: 4 });   // (hero pass) the bank comes up as a column of blood
+      TANKS_VFX.reaverSplat(t.x, t.y, { r: 70 * s, z: 26, n: 11 });
       V.shock(t.x, t.y, { r: 190 * s, color: '#ff5a6a', dur: 0.6, w: 9 });
       V.shock(t.x, t.y, { r: 110 * s, color: '#ffffff', dur: 0.4, w: 4, delay: 0.06 });
       V.splash(t.x, t.y, { n: 18, speed: 1.6, size: 1.3 });
@@ -4911,9 +5891,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       for (let i = 0; i < 3; i++) { const a = i * Math.PI * 2 / 3 + rand(-0.3, 0.3), d = rand(20, 60); V.lightning(c.tx + Math.cos(a) * d, c.ty - 260, c.tx + Math.cos(a) * d * 0.4, c.ty + Math.sin(a) * d * 0.3, { color: i % 2 ? RUNE2 : '#ffffff', jag: 16, dur: 0.3 }); }
       // (QA: the starburst sits on the floor round the enemy, not over it; the circles flare then settle faint; all indigo)
       // (life pass) the stone's climax, held a beat: a great starburst on the floor and a bright cross of crystal over the enemy
-      V.climax(c.tx, c.ty, { shape: 'burst', r: 155, n: 22, color: RUNE, core: RCORE, ink: RINK, dur: 0.65, hold: 0.12, layer: 'ground', flat: 0.6, after: { smoke: 0.5, embers: 0.5, mark: 0.5 } });
-      V.climax(c.tx, c.ty, { shape: 'cross', r: 92, color: RUNE2, core: '#ffffff', ink: RINK, dur: 0.4, hold: 0.1, z: 28 });
-      V.crystals(c.tx, c.ty, { color: '#9aa4ff', n: 10, r: 80, h: 110, dur: 1.6 });
+      TANKS_VFX.rgWedges(c.tx, c.ty, 150, 9, { z: 34, dur: 0.9 }); TANKS_VFX.rgRuneRing(c.tx, c.ty, 165, { n: 16, gs: 13, dur: 1 }); TANKS_VFX.rgRuneRing(c.tx, c.ty, 95, { n: 10, gs: 10, dur: 0.8, delay: 0.1 }); TANKS_VFX.rgStamp(c.tx, c.ty, { s: 2.6, z: 30, dur: 0.7, glyph: 2 }); TANKS_VFX.rgChips(c.tx, c.ty, 30, 12, '#8e98ff', 1.6);   // (tanks pass) the great stone bursts into wedges and a ring of runes
       for (let i = 0; i < 2; i++) V.shock(c.tx, c.ty, { r: 190 + i * 60, color: i ? RUNE2 : '#ffffff', dur: 0.6, w: 9 - i * 3, delay: i * 0.08 });
       V.crater(c.tx, c.ty, { r: 76, color: RUNE2, core: RCORE, dur: 4, flames: 0, a: 0.55, cracks: 10 });
       vfxLingerSettle(V.sigil(c.tx, c.ty, { r: 84, style: 'runes', color: RUNE, dur: 4, spin: 0.4 }), 0.3, 0.8);
@@ -4926,7 +5904,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       vfxLingerSettle(V.sigil(at.x, at.y, { r: 150, style: 'runes', color: '#7c84ff', dur: 8, spin: 0.35 }), 0.24, 1.2);
       for (const d of V.dome(at, { color: '#a69cff', r: 112, dur: 8 }) || []) vfxLingerSettle(d, 0.28, 1.2);
       V.pillar(at.x, at.y, { r: 30, h: 170, color: '#8e98ff', dur: 0.9 });
-      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; V.crystals(at.x + Math.cos(a) * 140, at.y + Math.sin(a) * 109, { color: '#9aa4ff', n: 2, r: 12, h: 40, dur: 2.4 }); }
+      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; TANKS_VFX.rgSlab(at.x + Math.cos(a) * 140, at.y + Math.sin(a) * 100, { delay: i * 0.05, glyph: i, s: 0.9, stand: 0.9 }); }   // (tanks pass) six carved stones stand at the Sanctum's edge
     });
   };
   // the stones themselves: one rune per Rune held (d.n) flies off the guard to the enemy; a Ward lending its blast (d.w)
@@ -4970,10 +5948,11 @@ function windLaneBoost(x, y, vx, vy, now) {
   // a glowing hand of light: a soft halo, the saffron body, a white-hot core
   function ironpalmHand(c, x, y, a, s, col, k) {
     if (k <= 0.01 || s <= 0) return;
-    c.save(); c.translate(x, y); c.rotate(a); c.globalCompositeOperation = 'lighter';
-    c.globalAlpha = Math.min(1, 0.28 * k); c.fillStyle = c.strokeStyle = col; ironpalmHandShape(c, s, 2.2 * s);
-    c.globalAlpha = Math.min(1, 0.8 * k); ironpalmHandShape(c, s);
-    c.scale(0.55, 0.55); c.globalAlpha = Math.min(1, 0.55 * k); c.fillStyle = c.strokeStyle = '#ffffff'; ironpalmHandShape(c, s);
+    // (hero pass) opaque, so a hand reads on the pale floor: an ink rim, the saffron body, a white core (no additive wash)
+    c.save(); c.translate(x, y); c.rotate(a);
+    c.globalAlpha = Math.min(1, 0.55 * k); c.fillStyle = c.strokeStyle = IP_INK; ironpalmHandShape(c, s, 1.6 * s);
+    c.globalAlpha = Math.min(1, 0.95 * k); c.fillStyle = c.strokeStyle = col; ironpalmHandShape(c, s);
+    c.scale(0.55, 0.55); c.globalAlpha = Math.min(1, 0.8 * k); c.fillStyle = c.strokeStyle = '#fff8e6'; ironpalmHandShape(c, s);
     c.restore();
   }
   // a hand thrown from (x0, y0) to (x1, y1) at height z, growing as it goes, three speed lines streaming behind it
@@ -5146,14 +6125,20 @@ function windLaneBoost(x, y, vx, vy, now) {
       ironpalmHand(c, t.x, t.y - 10 - 44 * S * q, -Math.PI / 2, 2.6 * S * (0.6 + 0.4 * q), k, kk * 0.75);
     } });
     // (QA: a solid star plus a white flash read as a white-out over the boss) the burst goes on the floor round it
-    V.spikeburst(t.x, t.y, { r: 80 * S, n: 18, color: k, core: h, ink: '#2a1408', dur: 0.36, layer: 'ground', z: 0, flat: 0.6 });
+    // (ult pass) the blow's burst is the monk's own shape, not a starburst: three ink-rimmed rings of pressure run out along the floor one inside the next (saffron body,
+    // white core), the last the widest, with eight short breath-lines standing on the first (a palm's spokes), so the release is a set of pressure waves round the print
+    V.fx({ dur: 0.9, layer: 'ground', draw: (cx, p, tt, fx) => { cx.save(); cx.lineCap = 'round';
+      for (let i = 0; i < 3; i++) { const q = Math.min(1, Math.max(0, (tt - i * 0.09) / 0.5)); if (q <= 0 || q >= 1) continue; const R = (34 + i * 30) * S * (0.35 + 0.65 * (1 - (1 - q) * (1 - q))), kk = fx.a * (1 - q * q) * 0.95;
+        cx.beginPath(); cx.ellipse(t.x, t.y, R, R * 0.6, 0, 0, Math.PI * 2); cx.globalAlpha = 0.7 * kk; cx.strokeStyle = '#2a1408'; cx.lineWidth = 11 - 6 * q; cx.stroke(); cx.globalAlpha = kk; cx.strokeStyle = i === 1 ? h : k; cx.lineWidth = 6 - 3.4 * q; cx.stroke(); cx.globalAlpha = kk * 0.9; cx.strokeStyle = '#ffffff'; cx.lineWidth = 1.8; cx.stroke(); }
+      const q0 = Math.min(1, tt / 0.3), k0 = fx.a * (1 - Math.min(1, Math.max(0, (tt - 0.2) / 0.5)));
+      if (k0 > 0.02) for (let i = 0; i < 8; i++) { const an = i / 8 * Math.PI * 2 + 0.2, r0 = 40 * S * q0, r1 = 62 * S * q0; for (const [col, w] of [['#2a1408', 8], [k, 4.5], ['#ffffff', 1.6]]) { cx.globalAlpha = k0; cx.strokeStyle = col; cx.lineWidth = w; cx.beginPath(); cx.moveTo(t.x + Math.cos(an) * r0, t.y + Math.sin(an) * r0 * 0.6); cx.lineTo(t.x + Math.cos(an) * r1, t.y + Math.sin(an) * r1 * 0.6); cx.stroke(); } }
+      cx.restore(); } });
     V.shock(t.x, t.y, { r: 120 * S, color: '#ffffff', dur: 0.4, w: 8 });
     V.shock(t.x, t.y, { r: 90 * S, color: k, dur: 0.55, w: 5, delay: 0.06 });
     for (let i = 0; i < 12; i++) { const ra = i / 12 * Math.PI * 2 + rand(-0.15, 0.15), d = rand(110, 150) * S;
       ironpalmHandFly(t.x + Math.cos(ra) * 18 * S, t.y + Math.sin(ra) * 12 * S, t.x + Math.cos(ra) * d, t.y + Math.sin(ra) * d * 0.62, rand(1.5, 1.9) * Math.sqrt(S), i % 2 ? h : k, 0.45, 0.03 + i * 0.01, 28); }
     // (climax pass) the blow's one bold shape in the air: a saffron bloom round the boss, white-hot core, ink edge, held a beat, then embers
-    V.climax(t.x, t.y, { shape: 'burst', r: 72 * S, n: 16, color: k, core: h, ink: '#2a1408', hold: 0.12, dur: 0.65, flat: 0.72, z: 12, after: { embers: 0.6 } });
-    V.burst(t.x, t.y, { color: k, color2: '#ffffff', n: 10, speed: 280 * S, kind: 'star', flash: false });
+    V.motes(t.x, t.y, { color: k, n: 6, r: 36 * S, rise: 0.8 }); HFX.embers(t.x, t.y, { n: 8, s: 1, r: 40 * S, rise: 1.1 });   // (ult pass: the older bold burst is gone; the pressure rings above are the release)
     V.debris(t.x, t.y, { n: 12, color: IP_ROCK, speed: 1.4, size: 1.3 });
     V.smoke(t.x, t.y, { n: 6, r: 40 * S, color: '#a89880', size: 30 * S, a: 0.35, speed: 70 * S, life: 1.2 });
     // (ult impact pass) a dark wave under the bright rings for weight, a dust ring rolling out low and slow, and gold embers rising off the print
@@ -5243,6 +6228,329 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.shock(c.x, c.y, { r: 90 * M, color: k, dur: 0.5, w: 2, delay: 0.1 });
     },
   });
+})();
+
+// ======================================================================= HERO PASS · IRONPALM (breath and bare force)
+// The hands-on pass over the painted one above: bare force is air and dust, so a blow is a pressure ring standing across its
+// line (ink under, saffron body, white core: opaque, so it reads on the pale floor), dust kicked low along the ground, and
+// an open hand pressed into the air. Every named string has its own shape: Crane Step white wings, Flowing Palms ribbons of
+// breath, Rising Gate an inked torii, Heaven's Drop a falling heel, Tiger Wall a striped plate, Stone Breaker a fracture,
+// Iron Ox a pair of horns through the boss. A Crisp press is a ring of sound snapping shut on the hand. Small things stay
+// small and short (the three inputs come several a second): one fx and two or three particles each.
+(() => {
+  const V = VFX, TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a), shake = s => vfxShake(s), OP = OLD_PAINT;
+  const INK = '#2a1408', DUST = '#9c8668', DUSTD = '#6e5c48', IRON = '#9aa8b8', BRONZE = '#c8883a';
+  const I = () => globalThis.IRONPALM_VFX;
+  const clamp01 = v => Math.max(0, Math.min(1, v));
+  const stopE = (e, s) => { if (e && e.st && typeof hitStop === 'function') hitStop(e.st, s, FX.now); };
+  const aim = c => Math.atan2(c.ty - c.y, c.tx - c.x);
+  // where a blow lands: toward the target, no further than an arm (or a leg) reaches
+  const reach = (c, d = 52) => { const a = aim(c), r = Math.min(d, Math.hypot(c.tx - c.x, c.ty - c.y)); return { x: c.x + Math.cos(a) * r, y: c.y + Math.sin(a) * r, a }; };
+  // a pressure ring standing across the line of a blow (an ellipse narrow along it): ink under, body, white core, with a faint
+  // fill so it is a thing, not a glow. o: dur, w, z, thin, delay, fill
+  function ring(x, y, a, r, col, o = {}) {
+    const dur = o.dur ?? 0.22, z = o.z ?? 18, W = o.w ?? 3.2, thin = o.thin ?? 0.4;
+    V.fx({ dur, delay: o.delay, layer: o.layer || 'air', draw: (c, p, t, e) => {
+      const q = easeOut(p), R = r * (0.3 + 0.7 * q), k = e.a * (1 - p * p), w = W * (1 - p * 0.55);
+      c.save(); c.translate(x, y - z); c.rotate(a); c.lineCap = 'round';
+      if (o.fill) { c.globalAlpha = o.fill * k; c.fillStyle = col; c.beginPath(); c.ellipse(0, 0, R * thin, R, 0, 0, TAU); c.fill(); }
+      c.globalAlpha = 0.55 * k; c.strokeStyle = INK; c.lineWidth = w + 3.2; c.beginPath(); c.ellipse(0, 0, R * thin, R, 0, 0, TAU); c.stroke();
+      c.globalAlpha = k; c.strokeStyle = col; c.lineWidth = w; c.stroke();
+      c.globalAlpha = 0.9 * k; c.strokeStyle = '#ffffff'; c.lineWidth = Math.max(1, w * 0.35); c.stroke();
+      c.restore();
+    } });
+  }
+  // a flat ring on the floor (the sound or the quake running out): the same layers, a thin ellipse the way the floor is seen
+  function floorRing(x, y, r, col, o = {}) {
+    const dur = o.dur ?? 0.5, W = o.w ?? 3.4;
+    V.fx({ dur, delay: o.delay, layer: 'ground', draw: (c, p, t, e) => {
+      const q = easeOut(p), R = (o.r0 ?? 0) + (r - (o.r0 ?? 0)) * q, k = e.a * (1 - p * p) * (o.a ?? 0.8), w = W * (1 - p * 0.45);
+      c.save(); c.lineCap = 'round';
+      c.globalAlpha = 0.45 * k; c.strokeStyle = INK; c.lineWidth = w + 3; c.beginPath(); c.ellipse(x, y, R, R * 0.6, 0, 0, TAU); c.stroke();
+      c.globalAlpha = k; c.strokeStyle = col; c.lineWidth = w; c.stroke();
+      c.globalAlpha = 0.8 * k; c.strokeStyle = '#fff6dc'; c.lineWidth = Math.max(1, w * 0.3); c.stroke();
+      c.restore();
+    } });
+  }
+  // dust kicked along a direction: opaque tan puffs that start small and low, widen as they travel and thin out. o.spread, o.speed, o.z
+  function dust(x, y, a, o = {}) {
+    const n = o.n ?? 3, s = o.s ?? 1;
+    for (let i = 0; i < n; i++) { const d = a + rnd(-1, 1) * (o.spread ?? 0.5), sp = rnd(40, 95) * (o.speed ?? 1);
+      V.spawn({ x: x + rnd(-5, 5), y: y + rnd(-3, 3), z: o.z ?? rnd(2, 10), vx: Math.cos(d) * sp, vy: Math.sin(d) * sp * 0.6, vz: rnd(4, 24), drag: 0.06, life: rnd(0.45, 0.8) * (o.life ?? 1), size: rnd(9, 14) * s, size1: rnd(24, 38) * s, color: Math.random() < 0.5 ? DUST : DUSTD, kind: 'smoke', add: false, a: o.a ?? 0.5, fadeIn: 0.12, fadePow: 2 }); }
+  }
+  // an open hand along +x, filled: palm and four fingers and a thumb, the shape of a pressed palm
+  function handFill(c, s) {
+    c.beginPath(); c.ellipse(0, 0, 6.5 * s, 7 * s, 0, 0, TAU); c.fill();
+    c.lineCap = 'round'; c.beginPath();
+    for (const [fy, L] of [[-4.8, 8.5], [-1.6, 10.5], [1.6, 10], [4.8, 8]]) { c.moveTo(4 * s, fy * s); c.lineTo((4 + L) * s, fy * s * 1.12); }
+    c.moveTo(-1 * s, -6 * s); c.lineTo(5 * s, -11.5 * s); c.stroke();
+  }
+  // the open palm pressed into the air where a light blow lands: an inked hand in saffron that pushes forward a little and thins out
+  function palmPress(x, y, a, col, s = 1, dur = 0.22, o = {}) {
+    V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const k = e.a * (1 - p * p), S = s * (1 + p * 0.35), push = 8 * easeOut(p);
+      c.save(); c.translate(x + Math.cos(a) * push, y - 18 + Math.sin(a) * push); c.rotate(a);
+      c.fillStyle = c.strokeStyle = INK; c.globalAlpha = 0.6 * k; c.lineWidth = 2.8 * S + 3.4; handFill(c, S * 1.12);
+      c.fillStyle = c.strokeStyle = col; c.globalAlpha = k; c.lineWidth = 2.8 * S; handFill(c, S);
+      c.scale(0.55, 0.55); c.fillStyle = c.strokeStyle = '#fff8e6'; c.globalAlpha = 0.85 * k; handFill(c, S);
+      c.restore();
+    } });
+  }
+  // a tapered ribbon of breath from (x0, y0) to (x1, y1), bowed: the head runs ahead, the tail follows and lets go. Ink under, body, white core
+  function ribbon(x0, y0, x1, y1, col, o = {}) {
+    const dur = o.dur ?? 0.3, W = o.w ?? 6, bow = o.bow ?? 14, dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, z = o.z ?? 18, N = 12;
+    const at = q => [x0 + dx * q + nx * Math.sin(q * Math.PI) * bow, y0 + dy * q + ny * Math.sin(q * Math.PI) * bow * 0.7 - z];
+    return V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const head = easeOut(clamp01(p / 0.55)), tail = clamp01((p - 0.2) / 0.8), k = e.a * (1 - clamp01((p - 0.6) / 0.4)), a = tail * head, b = head;
+      if (b - a < 0.02 || k < 0.02) return;
+      c.save(); c.lineCap = 'round';
+      for (const [cl, wm, al] of [[INK, 1.5, 0.5], [col, 1, 0.95], ['#ffffff', 0.35, 0.9]]) {
+        for (let i = 0; i < N; i++) { const q0 = a + (b - a) * i / N, q1 = a + (b - a) * (i + 1) / N, qm = (q0 + q1) / 2 - a, f = Math.pow(Math.sin(Math.PI * clamp01(qm / Math.max(0.01, b - a))), 0.6);
+          c.globalAlpha = al * k; c.strokeStyle = cl; c.lineWidth = W * wm * f + 0.5; const [px, py] = at(q0), [qx, qy] = at(q1); c.beginPath(); c.moveTo(px, py); c.lineTo(qx, qy); c.stroke(); }
+      }
+      c.restore();
+    } });
+  }
+  // a crescent sweep of breath (a wing, a kick's arc): ink band under, a cream body thickening to its leading edge. a: direction it opens toward
+  const sweep = (x, y, a, o = {}) => OP.smear(x, y, a, Object.assign({ ink: INK, lines: 1, z: 14, flat: 0.8 }, o));
+
+  // ---- the open palm: the Light input and the string's palms
+  // ---- Iron: a rising band of steel light up the body (Iron Skin), cheap
+  function rise(ent, dur = 0.55) {
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const q = easeOut(p), k = e.a * (1 - clamp01((p - 0.5) / 0.5)), y = ent.y + 4 - (ent.lift || 0) - 46 * q, R = 22 + 4 * Math.sin(q * Math.PI);
+      c.save(); c.lineCap = 'round';
+      c.globalAlpha = 0.55 * k; c.strokeStyle = '#1c2230'; c.lineWidth = 6; c.beginPath(); c.ellipse(ent.x, y, R, R * 0.45, 0, 0, TAU); c.stroke();
+      c.globalAlpha = k; c.strokeStyle = IRON; c.lineWidth = 3; c.stroke();
+      c.globalAlpha = 0.9 * k; c.strokeStyle = '#ffffff'; c.lineWidth = 1.1; c.beginPath(); c.ellipse(ent.x, y, R, R * 0.45, 0, -2.6, -1.2); c.stroke();
+      c.restore();
+    } });
+  }
+  // ---- Temple Bell: a bronze bell hung over the monk, struck, swinging once
+  function bellShape(c, ent, p, k) {
+    const sw = Math.sin(p * 18) * 0.28 * (1 - p), x = ent.x, y = ent.y - (ent.lift || 0) - 78 - 8 * (1 - easeOut(Math.min(1, p / 0.12)));
+    c.save(); c.translate(x, y); c.rotate(sw); c.scale(1.8, 1.8);
+    const body = () => { c.beginPath(); c.moveTo(-5, -10); c.quadraticCurveTo(-6, -2, -13, 10); c.lineTo(13, 10); c.quadraticCurveTo(6, -2, 5, -10); c.closePath(); };
+    c.globalAlpha = 0.7 * k; c.fillStyle = INK; c.lineWidth = 4; c.strokeStyle = INK; body(); c.fill(); c.stroke();
+    c.globalAlpha = k; c.fillStyle = BRONZE; body(); c.fill();
+    c.fillStyle = '#ffd88a'; c.beginPath(); c.moveTo(-3, -8); c.quadraticCurveTo(-3, 0, -9, 8); c.lineTo(-5, 8); c.quadraticCurveTo(-1, 0, -1.5, -8); c.closePath(); c.fill();
+    c.fillStyle = INK; c.fillRect(-13, 8, 26, 3.4); c.fillStyle = '#e0a050'; c.fillRect(-12, 8.4, 24, 1.6);
+    c.strokeStyle = INK; c.lineWidth = 2.4; c.beginPath(); c.moveTo(0, -10); c.lineTo(0, -17); c.stroke();
+    c.fillStyle = INK; c.beginPath(); c.arc(0, 14 + sw * 6, 2.8, 0, TAU); c.fill();
+    c.restore();
+  }
+
+  Object.assign(ABILITY_VFX.ironpalm, {
+    // Light: the open palm pressed in, a ring across the line, one speck of dust. Quick and small (several a second)
+    palm: c => { const p0 = reach(c), k = I().col(c.ent);
+      c.later(0.07, () => { const p = reach(c);
+        V.spawn({ x: p.x, y: p.y, z: 16, life: 0.12, size: 26, size1: 8, color: '#fff8e6', kind: 'star', vr: 5 });
+        palmPress(p.x, p.y, p.a, k, 1.25, 0.22); ring(p.x, p.y, p.a, 32, k, { dur: 0.2, w: 2.8 });
+        dust(p.x, p.y, p.a + Math.PI, { n: 1, s: 0.5, spread: 1, a: 0.4, life: 0.7 });
+        V.sparks(p.x, p.y, { color: k, n: 3, angle: p.a, spread: 0.7, speed: 230 });
+        if (c.ent && c.ent.st) hitStop(c.ent.st, 0.05, FX.now); }); },
+    // Heavy: the fist driven straight: a fat inked streak, a knuckle star, two rings, the force going out the far side, dust jetted behind the boss
+    fist: c => { const p0 = reach(c), k = I().col(c.ent), h = I().hot(c.ent), ca = Math.cos(p0.a), sa = Math.sin(p0.a);
+      OP.thrust(c.x + ca * 4, c.y + sa * 4, p0.x + ca * 8, p0.y + sa * 8, { w: 10, color: k, core: h, ink: INK, dur: 0.2, z: 20 });
+      c.later(0.12, () => { const p = reach(c);
+        V.climax(p.x, p.y, { shape: 'burst', r: 48, n: 9, color: k, core: '#fff8e6', ink: INK, z: 20, flat: 1, hold: 0.05, dur: 0.3 });
+        ring(p.x, p.y, p.a, 38, '#fff3d4', { dur: 0.18, w: 3 }); ring(p.x, p.y, p.a, 62, k, { dur: 0.3, w: 3.8, delay: 0.03, fill: 0.16 });
+        OP.thrust(p.x + ca * 6, p.y + sa * 6, p.x + ca * 56, p.y + sa * 56, { w: 5, color: k, core: h, ink: INK, dur: 0.2, z: 20 });
+        dust(p.x + ca * 18, p.y + sa * 18, p.a, { n: 3, s: 0.8, spread: 0.45 });
+        V.sparks(p.x, p.y, { color: k, n: 6, angle: p.a, spread: 0.7, speed: 330 });
+        stopE(c.ent, 0.07); shake(1); }); },
+    // Kick: a low crescent swept near the floor, a scuff arc left on the stone, the grit thrown sideways
+    kick: c => { const k = I().col(c.ent), a = aim(c);
+      sweep(c.x, c.y, a, { r: 56, span: 1.9, w: 15, color: '#fff2d8', core: '#ffffff', dur: 0.24, flip: true, z: 6, flat: 0.62 });
+      c.later(0.1, () => { const p = reach(c, 58);
+        V.spawn({ x: p.x, y: p.y, z: 8, life: 0.14, size: 40, size1: 10, color: '#fff8e6', kind: 'star', vr: 4 });
+        ring(p.x, p.y + 8, p.a, 46, k, { dur: 0.22, w: 3.2, z: 8, thin: 0.5, fill: 0.12 });
+        dust(p.x, p.y, p.a + Math.PI / 2, { n: 2, s: 0.8, spread: 0.3, z: 3 }); dust(p.x, p.y, p.a - Math.PI / 2, { n: 2, s: 0.8, spread: 0.3, z: 3 });
+        V.sparks(p.x, p.y, { color: k, n: 4, angle: p.a, spread: 0.8, speed: 250 }); stopE(c.ent, 0.05); }); },
+    // Crane Step (K L): a hop and a flicked palm. Two cream wings sweep out from the monk and meet on the target; feathers come down; the breath it gives back runs in
+    crane: c => { const k = I().col(c.ent), e = c.ent, a = aim(c);
+      dust(c.x, c.y, a + Math.PI, { n: 3, s: 0.8, spread: 1.1, z: 2 });
+      sweep(c.x, c.y, a + 0.5, { r: 46, span: 2.1, w: 14, color: '#fff6e2', core: '#ffffff', dur: 0.3 }); sweep(c.x, c.y, a - 0.5, { r: 46, span: 2.1, w: 14, color: '#fff6e2', core: '#ffffff', dur: 0.3, flip: true });
+      c.later(0.1, () => { const p = reach(c); palmPress(p.x, p.y, p.a, k, 1.2, 0.3); ring(p.x, p.y, p.a, 36, '#fff3d4', { dur: 0.24, w: 3 }); V.spawn({ x: p.x, y: p.y, z: 18, life: 0.16, size: 44, size1: 10, color: '#fff8e6', kind: 'star', vr: 5 }); stopE(e, 0.05); });
+      c.later(0.14, () => { for (let i = 0; i < 6; i++) V.spawn({ x: e.x + rnd(-34, 34), y: e.y + rnd(-18, 18), z: rnd(28, 52), vx: rnd(-34, 34), vy: rnd(-12, 12), vz: rnd(-8, 18), g: 30, drag: 0.05, life: rnd(1.1, 1.6), size: rnd(18, 24), color: i % 2 ? '#fff0d0' : k, kind: 'feather', add: false, vr: rnd(-2, 2), flutter: 4 }); });
+      c.later(0.2, () => V.stream(c.tx, c.ty, e, { color: '#fff0c8', n: 3 })); },
+    // Flowing Palms (L L L): three ribbons of breath, one after another, the last driven through
+    flow: c => { const k = I().col(c.ent), e = c.ent, a = aim(c);
+      for (let i = 0; i < 3; i++) c.later(0.03 + i * 0.06, () => { const p = reach(c), o = (i - 1) * 8, nx = -Math.sin(p.a), ny = Math.cos(p.a);
+        ribbon(c.x + nx * o, c.y + ny * o * 0.7, p.x + nx * o * 0.4, p.y + ny * o * 0.3, i === 2 ? '#fff0c8' : k, { dur: 0.26, w: 7 + i * 1.5, bow: (i % 2 ? -1 : 1) * 15 });
+        c.later(0.09, () => { palmPress(p.x, p.y, p.a, k, 0.8 + i * 0.2, 0.2); ring(p.x, p.y, p.a, 24 + i * 6, k, { dur: 0.18, w: 2.4 }); }); });
+      c.later(0.27, () => { const p = reach(c), ca = Math.cos(p.a), sa = Math.sin(p.a);
+        V.climax(p.x, p.y, { shape: 'cone', angle: p.a, span: 0.9, r: 62, color: k, core: '#fff3d4', ink: INK, z: 18, flat: 1, hold: 0.06, dur: 0.34 });
+        ring(p.x, p.y, p.a, 40, '#fff3d4', { dur: 0.22, w: 3 }); dust(p.x + ca * 20, p.y + sa * 20, p.a, { n: 4, s: 0.9, spread: 0.4 }); stopE(e, 0.07); }); },
+    // Rising Gate (L L H): the uppercut, and a torii of light stands up through the boss, ink-posted, with a column of dust and stone, then lets go
+    gate: c => c.later(0.14, () => {
+      const k = I().col(c.ent), h = I().hot(c.ent), M = 1.3, x = c.tx, y = c.ty + 6, w = 76 * M, H = 104 * M;
+      V.spawn({ x: c.tx, y: c.ty, z: 18, life: 0.18, size: 56, size1: 12, color: '#fff8e6', kind: 'star', vr: 5 });
+      V.fx({ dur: 0.7, layer: 'air', draw: (cx, p, t, e) => {
+        const q = easeOut(clamp01(p / 0.3)), hh = H * q, kk = e.a * Math.min(1, p / 0.08) * clamp01((1 - p) / 0.4), L = x - w / 2, R = x + w / 2, post = L + w * 0.14, post2 = R - w * 0.14;
+        cx.save(); cx.lineCap = 'round'; cx.lineJoin = 'round';
+        const g = cx.createLinearGradient(0, y - hh, 0, y); g.addColorStop(0, rgba(k, 0)); g.addColorStop(1, rgba(k, 0.42 * kk));
+        cx.fillStyle = g; cx.fillRect(post, y - hh, post2 - post, hh);
+        const parts = () => { cx.beginPath(); cx.moveTo(post, y); cx.lineTo(post + 2, y - hh); cx.moveTo(post2, y); cx.lineTo(post2 - 2, y - hh); cx.moveTo(L - w * 0.06, y - hh - 7); cx.quadraticCurveTo(x, y - hh + 5, R + w * 0.06, y - hh - 7); cx.moveTo(post + 3, y - hh * 0.78); cx.lineTo(post2 - 3, y - hh * 0.78); };
+        cx.globalAlpha = 0.7 * kk; cx.strokeStyle = INK; cx.lineWidth = 9; parts(); cx.stroke();
+        cx.globalAlpha = kk; cx.strokeStyle = k; cx.lineWidth = 5; parts(); cx.stroke();
+        cx.globalAlpha = 0.9 * kk; cx.strokeStyle = '#fff6dc'; cx.lineWidth = 1.6; parts(); cx.stroke();
+        cx.restore();
+      } });
+      for (let i = 0; i < 6; i++) V.spawn({ x: x + rnd(-30, 30), y: y + rnd(-8, 8), z: rnd(2, 14), vx: rnd(-14, 14), vz: rnd(70, 140), drag: 0.05, life: rnd(0.6, 1), size: rnd(12, 18), size1: rnd(30, 44), color: i % 2 ? DUST : DUSTD, kind: 'smoke', add: false, a: 0.5, fadeIn: 0.1, fadePow: 2 });
+      V.debris(c.tx, c.ty, { n: 8, color: '#5a4a3a', speed: 0.75, up: 1.4 });
+      V.sparks(c.tx, c.ty, { color: h, n: 7, speed: 300, up: 380, spread: 0.6, angle: -Math.PI / 2 });
+      ring(c.tx, c.ty, -Math.PI / 2, 52, k, { dur: 0.3, w: 3.4, z: 6, thin: 0.5, fill: 0.14 }); floorRing(c.tx, c.ty, 70 * M, k, { dur: 0.4 });
+      stopE(c.ent, 0.09); shake(2.5);
+      const m = { x: c.x + (c.tx - c.x) * 0.72, y: c.y + (c.ty - c.y) * 0.72 + 8 };   // the gate's footprint, short of the boss's feet, faint
+      c.later(0.3, () => V.fx({ dur: 2.2, layer: 'ground', draw: (cx, p, t, e) => { const kk = e.a * Math.min(1, p / 0.08) * clamp01((1 - p) / 0.5) * 0.4; if (kk < 0.02) return;
+        cx.save(); cx.fillStyle = INK; cx.globalAlpha = kk; for (const s of [-1, 1]) { cx.beginPath(); cx.ellipse(m.x + s * w * 0.36, m.y, 7, 3.6, 0, 0, TAU); cx.fill(); }
+        cx.strokeStyle = k; cx.globalAlpha = kk * 1.4; cx.lineWidth = 1.6; cx.beginPath(); cx.moveTo(m.x - w * 0.36, m.y - 8); cx.quadraticCurveTo(m.x, m.y - 14, m.x + w * 0.36, m.y - 8); cx.stroke(); cx.restore(); } }));
+    }),
+    // Heaven's Drop (L L H K K): an axe kick, the whole heel brought down from above; the floor takes it
+    drop: c => { const k = I().col(c.ent), h = I().hot(c.ent), a = aim(c);
+      sweep(c.x, c.y, a, { r: 66, span: 2.4, w: 18, color: '#fff2d8', core: '#ffffff', dur: 0.26, z: 22, flat: 0.8 });
+      c.later(0.08, () => V.fx({ dur: 0.2, layer: 'air', draw: (cx, p, t, e) => {
+        const q = p * p, y = c.ty - 150 + 138 * q, kk = e.a * Math.min(1, p / 0.15), W = 40;
+        cx.save(); cx.translate(c.tx, y); cx.lineCap = 'round';
+        cx.globalAlpha = 0.6 * kk; cx.strokeStyle = INK; cx.lineWidth = 17; cx.beginPath(); cx.arc(0, -10, W, 0.2, Math.PI - 0.2); cx.stroke();
+        cx.globalAlpha = kk; cx.strokeStyle = k; cx.lineWidth = 11; cx.stroke(); cx.strokeStyle = '#fff6dc'; cx.lineWidth = 3.4; cx.stroke();
+        cx.globalAlpha = 0.5 * kk; cx.strokeStyle = k; cx.lineWidth = 2; cx.beginPath(); for (const o of [-24, 0, 24]) { cx.moveTo(o, -62); cx.lineTo(o * 0.9, -24 - 70 * (1 - q)); } cx.stroke();
+        cx.restore(); } }));
+      c.later(0.24, () => {
+        V.climax(c.tx, c.ty, { shape: 'burst', r: 88, n: 14, color: k, core: '#fff3d4', ink: INK, z: 8, flat: 0.72, hold: 0.12, dur: 0.58, after: { smoke: 0.3, smokeColor: '#a89880' } });
+        ring(c.tx, c.ty, -Math.PI / 2, 84, '#fff3d4', { dur: 0.26, w: 3.4, z: 12, thin: 0.45 });
+        floorRing(c.tx, c.ty, 130, k, { dur: 0.5, w: 4.6 }); floorRing(c.tx, c.ty, 90, '#fff3d4', { dur: 0.38, delay: 0.05, w: 2.6 });
+        for (let i = 0; i < 9; i++) { const q = i / 9 * TAU + rnd(-0.2, 0.2); V.spawn({ x: c.tx + Math.cos(q) * 18, y: c.ty + Math.sin(q) * 10, z: rnd(2, 8), vx: Math.cos(q) * rnd(70, 120), vy: Math.sin(q) * rnd(40, 75), vz: rnd(8, 30), drag: 0.05, life: rnd(0.7, 1.1), size: rnd(14, 20), size1: rnd(34, 50), color: i % 2 ? DUST : DUSTD, kind: 'smoke', add: false, a: 0.55, fadeIn: 0.1, fadePow: 2 }); }
+        V.decal(c.tx, c.ty, { style: 'crack', r: 60, dur: 2.4, a: 0.55, seed: Math.random() * 6 }); V.debris(c.tx, c.ty, { n: 8, color: '#7a6a58' });
+        stopE(c.ent, 0.14); shake(6); }); },
+    // Tiger Wall (H K K): a low kick and a stance: a plate of striped light held before the monk for its 5s, dust swept out either side
+    wall: c => { const k = I().col(c.ent), e = c.ent, a = aim(c);
+      c.later(0.1, () => { const p = reach(c, 50); V.spawn({ x: p.x, y: p.y, z: 12, life: 0.14, size: 30, size1: 8, color: '#fff8e6', kind: 'star', vr: 4 }); ring(p.x, p.y + 6, p.a, 30, k, { dur: 0.2, w: 2.8, z: 10, thin: 0.5 }); });
+      dust(c.x, c.y, a + Math.PI / 2, { n: 2, s: 0.9, spread: 0.3, z: 3 }); dust(c.x, c.y, a - Math.PI / 2, { n: 2, s: 0.9, spread: 0.3, z: 3 });
+      OP.linger(5, 'air', (cx, kk, t) => {
+        const ang = e.angle || 0, x = e.x, y = e.y - 12 - (e.lift || 0), half = 0.8, R = 42 * (t < 0.08 ? 0.75 + 3 * t : 1), P = (an, r) => [x + Math.cos(an) * r, y + Math.sin(an) * r * 0.8];
+        const arc = (r, a0, a1) => { for (let i = 0; i <= 10; i++) { const [px, py] = P(a0 + (a1 - a0) * i / 10, r); i ? cx.lineTo(px, py) : cx.moveTo(px, py); } };
+        cx.save(); cx.lineJoin = 'round';
+        cx.beginPath(); arc(R + 7, ang - half, ang + half); arc(R - 7, ang + half, ang - half); cx.closePath();
+        cx.globalAlpha = 0.5 * kk; cx.fillStyle = k; cx.fill(); cx.globalAlpha = 0.8 * kk; cx.lineWidth = 2.4; cx.strokeStyle = INK; cx.stroke();
+        cx.globalAlpha = 0.85 * kk; cx.strokeStyle = INK; cx.lineWidth = 3; cx.beginPath(); for (let i = -2; i <= 2; i++) { const an = ang + i * 0.28, [x0, y0] = P(an, R - 6), [x1, y1] = P(an + 0.07, R + 6); cx.moveTo(x0, y0); cx.lineTo(x1, y1); } cx.stroke();
+        cx.globalAlpha = kk; cx.strokeStyle = '#fff1d0'; cx.lineWidth = 1.6; cx.beginPath(); arc(R + 7, ang - half, ang + half); cx.stroke();
+        cx.restore(); }, { peak: 1, settle: 0.55, hold: 0.4 }); },
+    // Stone Breaker (H H K): a crushing kick to the knee: the stone fractures in an inked star of cracks with amber in them, stone teeth stand up, a bruise ring
+    breaker: c => { const k = I().col(c.ent), a = aim(c);
+      sweep(c.x, c.y, a, { r: 56, span: 1.9, w: 13, color: '#fff2d8', core: '#ffffff', dur: 0.22, flip: true, z: 6, flat: 0.62 });
+      c.later(0.12, () => { const p = reach(c, 58), cr = Array.from({ length: 7 }, (_, i) => { const an = i / 7 * TAU + rnd(-0.3, 0.3); let px = 0, py = 0; const pts = [[0, 0]]; for (let j = 0; j < 3; j++) { const aa = an + rnd(-0.4, 0.4), L = rnd(9, 16); px += Math.cos(aa) * L; py += Math.sin(aa) * L * 0.6; pts.push([px, py]); } return pts; });
+        V.spawn({ x: p.x, y: p.y, z: 8, life: 0.14, size: 40, size1: 10, color: '#fff8e6', kind: 'star', vr: 4 });
+        ring(p.x, p.y + 8, p.a, 46, k, { dur: 0.26, w: 3.4, z: 10, thin: 0.5, fill: 0.12 });
+        V.fx({ dur: 1.5, layer: 'ground', draw: (cx, pr, t, e) => { const kk = e.a * Math.min(1, pr / 0.05) * clamp01((1 - pr) / 0.6), g = easeOut(clamp01(t / 0.12)); if (kk < 0.02) return;
+          cx.save(); cx.translate(c.tx, c.ty + 4); cx.lineCap = 'round'; cx.lineJoin = 'round';
+          const tr = () => { cx.beginPath(); for (const pts of cr) { cx.moveTo(0, 0); for (let i = 1; i < pts.length; i++) cx.lineTo(pts[i][0] * g, pts[i][1] * g); } };
+          cx.globalAlpha = 0.6 * kk; cx.strokeStyle = INK; cx.lineWidth = 4.2; tr(); cx.stroke(); cx.globalAlpha = 0.8 * kk * Math.max(0.3, 1 - t); cx.strokeStyle = '#d08a3a'; cx.lineWidth = 1.5; tr(); cx.stroke(); cx.restore(); } });
+        V.crystals(c.tx, c.ty, { color: '#a89480', n: 5, r: 26, h: 28, dur: 0.6 });
+        dust(c.tx, c.ty, p.a, { n: 3, s: 0.8, spread: 0.9 }); V.debris(p.x, p.y, { n: 5, color: '#6a5a48', speed: 0.7 });
+        floorRing(c.tx, c.ty, 50, '#d08a3a', { dur: 0.7, w: 2.6, a: 0.7, r0: 28 }); stopE(c.ent, 0.09); shake(2); }); },
+    // Iron Ox (H H H): the whole body behind it: a pair of ivory horns carries through the boss, the ring and dust follow, the force goes out the far side
+    ox: c => { const k = I().col(c.ent), h = I().hot(c.ent), p0 = reach(c), a = p0.a, ca = Math.cos(a), sa = Math.sin(a);
+      OP.thrust(c.x - ca * 10, c.y - sa * 10, p0.x + ca * 14, p0.y + sa * 14, { w: 15, color: k, core: h, ink: INK, dur: 0.26, z: 20 });
+      c.later(0.14, () => V.fx({ dur: 0.34, layer: 'air', draw: (cx, p, t, e) => {
+        const go = easeOut(clamp01(p / 0.5)), kk = e.a * (1 - clamp01((p - 0.5) / 0.5)), ox = c.tx - ca * 60 + ca * 100 * go, oy = c.ty - sa * 60 + sa * 100 * go - 22;
+        cx.save(); cx.translate(ox, oy); cx.rotate(a); cx.lineCap = 'round';
+        for (const s of [-1, 1]) { const horn = () => { cx.beginPath(); cx.moveTo(-8, s * 30); cx.quadraticCurveTo(14, s * 34, 36, s * 10); cx.quadraticCurveTo(22, s * 22, -8, s * 22); cx.closePath(); };
+          cx.globalAlpha = 0.65 * kk; cx.fillStyle = INK; cx.lineWidth = 5; cx.strokeStyle = INK; horn(); cx.fill(); cx.stroke();
+          cx.globalAlpha = kk; cx.fillStyle = '#f4ead4'; horn(); cx.fill(); cx.fillStyle = k; cx.globalAlpha = 0.7 * kk; cx.beginPath(); cx.moveTo(-8, s * 26); cx.quadraticCurveTo(12, s * 28, 30, s * 12); cx.lineTo(24, s * 14); cx.quadraticCurveTo(8, s * 24, -8, s * 24); cx.fill(); }
+        cx.restore(); } }));
+      c.later(0.2, () => {
+        V.climax(c.tx, c.ty, { shape: 'cone', angle: a, span: 0.9, r: 105, color: k, core: '#fff3d4', ink: INK, z: 18, flat: 1, hold: 0.1, dur: 0.5, after: { smoke: 0.3, smokeColor: '#a89880' } });
+        ring(c.tx, c.ty, a, 44, '#fff3d4', { dur: 0.2, w: 3.4 }); ring(c.tx, c.ty, a, 76, k, { dur: 0.34, w: 4, delay: 0.04, fill: 0.14 }); floorRing(c.tx, c.ty, 92, k, { dur: 0.45, w: 4.4 });
+        for (let i = 0; i < 5; i++) OP.thrust(c.tx + ca * 18, c.ty + sa * 18 + (i - 2) * 8, c.tx + ca * (80 + i % 2 * 24), c.ty + sa * 80 + (i - 2) * 12, { w: 4, color: k, core: h, ink: INK, dur: 0.24, z: 20 });
+        dust(c.tx, c.ty, a, { n: 7, s: 1.2, spread: 0.55, speed: 1.4, a: 0.55 }); stopE(c.ent, 0.12); shake(3); }); },
+    // Iron Skin (D): the skin goes to iron: a band of steel runs up the body, rivets spark, a grey sheen holds the 10s
+    skin: c => { rise(c.ent, 0.55); c.later(0.3, () => rise(c.ent, 0.5));
+      V.aura(c.ent, { color: '#9aa8b8', dur: 10, r: 28, rate: 0.12 }); V.sparks(c.x, c.y - 16, { color: '#ffffff', n: 8, speed: 220 });
+      V.spawn({ x: c.x, y: c.y, z: 28, life: 0.2, size: 40, size1: 10, color: '#e8eef6', kind: 'star', vr: 4 }); floorRing(c.x, c.y, 54, IRON, { dur: 0.45, w: 3 }); shake(1.5); },
+    // Temple Bell (F): a bronze bell hung over the monk and struck: it swings once, and three rings of sound roll out over the party, the last the widest
+    bell: c => { const e = c.ent;
+      V.fx({ dur: 1.1, layer: 'air', draw: (cx, p, t, ee) => { const k = ee.a * Math.min(1, p / 0.08) * clamp01((1 - p) / 0.3); if (k > 0.02) bellShape(cx, e, p, k); } });
+      V.spawn({ x: c.x, y: c.y, z: 70, life: 0.22, size: 70, size1: 12, color: '#fff2c0', kind: 'star', vr: 3 });
+      for (let i = 0; i < 3; i++) floorRing(c.x, c.y, 150 + i * 46, i === 1 ? '#ffe0a0' : BRONZE, { dur: 0.8, delay: 0.1 + i * 0.2, w: 8 - i * 1.8, a: 1 });
+      V.aura(e, { color: '#ffd27a', dur: 15, r: 28, rate: 0.1 }); shake(1.5); },
+    // Beckoning Palm is the taunt (below)
+  });
+
+  // a Crisp press (only you see it): a ring of sound snapping shut on the hand, a clang of two thin arcs
+  // (signature pass) a Crisp press (only you see it): ONE small instant beat out past the name tag, where the hand lands: a ring of sound snaps shut on the fist
+  // (ink under, saffron, white core: 0.1s) and a hard four-ray flare stands where it closed (the rays across and along the hand, ink-rimmed), gone by 0.2s
+  KIT_VFX.crisp = e => { const a = e.angle || 0, ca = Math.cos(a), sa = Math.sin(a), x = e.x + ca * 48, y = e.y + sa * 40 - 20;
+    V.fx({ dur: 0.24, layer: 'air', draw: (c, p, t, ee) => { const q = clamp01(t / 0.1), R = 56 - 42 * easeOut(q), k = ee.a * (1 - clamp01((t - 0.12) / 0.12));
+      if (k < 0.02) return; c.save(); c.translate(x, y); c.lineCap = 'round';
+      if (q < 1 || t < 0.14) { c.beginPath(); c.ellipse(0, 0, R, R * 0.8, 0, 0, TAU); c.globalAlpha = 0.75 * k; c.strokeStyle = INK; c.lineWidth = 8; c.stroke(); c.globalAlpha = k; c.strokeStyle = '#ffc24a'; c.lineWidth = 4.2; c.stroke(); c.globalAlpha = k; c.strokeStyle = '#ffffff'; c.lineWidth = 1.6; c.stroke();
+        for (let i = 0; i < 4; i++) { const an = i * Math.PI / 2 + Math.PI / 4, r0 = R + 2, r1 = R + 12 * (1 - q); c.beginPath(); c.moveTo(Math.cos(an) * r0, Math.sin(an) * r0 * 0.8); c.lineTo(Math.cos(an) * r1, Math.sin(an) * r1 * 0.8); c.globalAlpha = k * (1 - q); c.strokeStyle = '#ffffff'; c.lineWidth = 2; c.stroke(); } }
+      const f = clamp01((t - 0.08) / 0.04), fk = k * (1 - clamp01((t - 0.12) / 0.1));
+      if (f > 0 && fk > 0.02) { const L = 30 * (0.6 + 0.4 * f), W = 7 * (0.6 + 0.4 * f);
+        for (const [col, mul, al] of [[INK, 1.5, 0.9], ['#ffc24a', 1, 1], ['#ffffff', 0.45, 1]]) for (const [ang, len] of [[0, L], [Math.PI / 2, L * 0.7]]) { const ux = Math.cos(ang), uy = Math.sin(ang) * 0.8, vx = -uy, vy = ux * 0.8, l2 = len * (mul === 1.5 ? 1.12 : 1), w2 = W * mul; c.globalAlpha = al * fk; c.fillStyle = col; c.beginPath(); c.moveTo(ux * l2, uy * l2); c.lineTo(vx * w2 * 0.5, vy * w2 * 0.5); c.lineTo(-ux * l2, -uy * l2); c.lineTo(-vx * w2 * 0.5, -vy * w2 * 0.5); c.closePath(); c.fill(); } }
+      c.restore(); } });
+    V.sparks(x, y + 20, { color: '#fff2c8', n: 5, angle: a, spread: 1.2, speed: 220, z: 20, size: 4 }); };
+
+  // Read: the blow is caught. A raised palm stops it dead, a ring of stillness snaps out, and on a tankbuster the counter: a gold cross-star, a long stop
+  // (signature pass) the caught blow: the focus moves out past the name tag, where the palm is raised. Four thin lines run in from the boss's side and are STOPPED
+  // dead against the palm (cut short the moment they meet it), the palm is pressed big in the air, a still ring stands across the line of the blow, a ring of
+  // sound runs out along the floor, and on a tankbuster the gold cross-star counter. Opaque, ink-rimmed: it reads over the banner.
+  KIT_VFX.read = (e, target, d) => { const b = d && d.b, a = e.angle || 0, ca = Math.cos(a), sa = Math.sin(a), x = e.x + ca * 54, y = e.y + sa * 44, k = b ? '#ffd27a' : '#e8f4ff', cs = b ? '#ffd27a' : '#ffc24a';
+    V.fx({ dur: 0.3, layer: 'air', draw: (c, p, t, ee) => { const run = easeOut(clamp01(t / 0.06)), kk = ee.a * (1 - clamp01((t - 0.08) / 0.2)); if (kk < 0.02) return;
+      c.save(); c.translate(x, y - 22); c.lineCap = 'round';
+      for (let i = -2; i <= 2; i++) { const off = i * 14, from = 160 + Math.abs(i) * 14, to = 26 + Math.abs(i) * 6, hq = from + (to - from) * run, tq = hq + 80 - 52 * clamp01((t - 0.04) / 0.06);   // (the head runs in and stops at the palm; the tail catches up, so each line is left a short stub)
+        const x0 = ca * hq - sa * off, y0 = (sa * hq + ca * off) * 0.8, x1 = ca * tq - sa * off, y1 = (sa * tq + ca * off) * 0.8;
+        for (const [col, w, al] of [[INK, 6.5, 0.85], [cs, 3.6, 1], ['#ffffff', 1.4, 1]]) { c.globalAlpha = al * kk; c.strokeStyle = col; c.lineWidth = w * (1 - Math.abs(i) * 0.12); c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); } }
+      c.restore(); } });
+    palmPress(x, y, a, cs, b ? 2.7 : 2.1, 0.36, { delay: 0.03 });
+    V.spawn({ x, y, z: 22, life: 0.22, size: b ? 100 : 74, size1: 18, color: '#ffffff', kind: 'star', vr: 5 });
+    ring(x, y, a, b ? 84 : 62, k, { dur: 0.3, w: 5, fill: 0.14, z: 22, delay: 0.03 });
+    floorRing(e.x, e.y, b ? 120 : 86, b ? '#ffd27a' : '#cfe6f4', { dur: 0.45, w: b ? 6 : 4.4 });
+    V.sparks(x, y, { color: '#fff2c8', n: b ? 14 : 9, angle: a + Math.PI, spread: 1.4, speed: 340, z: 22 });
+    if (e.st) hitStop(e.st, b ? 0.18 : 0.08, FX.now);
+    if (b) { V.climax(e.x, e.y, { shape: 'cross', r: 90, color: '#ffd27a', core: '#fff6d8', ink: INK, hold: 0.12, dur: 0.6, flat: 0.8, z: 22, after: { embers: 0.4 } }); vfxShake(4); } };
+
+  // Read Stance (R): still rings close in on the monk one inside the other, an open palm held up in front, an eye at each point
+  ABILITY_VFX.ironpalm.read = c => { const k = I().col(c.ent), e = c.ent, a = e.angle || 0;
+    V.fx({ dur: 1.0, layer: 'ground', draw: (cx, p, t, ee) => {
+      const kk = ee.a * clamp01((1 - p) / 0.5);
+      cx.save(); cx.lineCap = 'round';
+      for (let i = 0; i < 3; i++) { const q = clamp01((t - i * 0.07) / 0.2); if (q <= 0) continue; const R = (90 - i * 24) * (0.55 + 0.45 * (1 - (1 - q) * (1 - q))) + 0;
+        cx.globalAlpha = 0.4 * kk * q; cx.strokeStyle = INK; cx.lineWidth = 5; cx.beginPath(); cx.ellipse(e.x, e.y + 2, R, R * 0.6, 0, 0, TAU); cx.stroke();
+        cx.globalAlpha = kk * q * (0.85 - i * 0.15); cx.strokeStyle = k; cx.lineWidth = 2.2 - i * 0.4; cx.stroke(); }
+      cx.restore(); } });
+    c.later(0.06, () => palmPress(e.x + Math.cos(a) * 26, e.y + Math.sin(a) * 26, a, '#fff0c8', 1.2, 0.5));
+    V.sparks(e.x, e.y, { color: '#fff0c8', n: 4, speed: 120 }); };
+
+  // the taunt: Beckoning Palm. A length of hand-wrap cloth flicks out to the target and curls back into a hook, a ring pulses on it
+  const ipTaunt0 = KIT_VFX.taunt;
+  KIT_VFX.taunt = (e, target) => {
+    if (!(e.cls && e.cls.id === 'ironpalm')) return ipTaunt0(e, target);
+    const a = target ? Math.atan2(target.y - e.y, target.x - e.x) : (e.angle || 0), k = '#ffb84a';
+    palmPress(e.x + Math.cos(a) * 24, e.y + Math.sin(a) * 24, a, '#ffd9a0', 1.3, 0.5);
+    if (!target) return;
+    ribbon(e.x + Math.cos(a) * 20, e.y + Math.sin(a) * 20, target.x, target.y, '#ffd9a0', { dur: 0.42, w: 8, bow: 22, z: 20 });
+    FX.later(0.16, () => { ring(target.x, target.y, a, 54, k, { dur: 0.36, w: 3.6, z: 20, fill: 0.12 }); palmPress(target.x, target.y, a, k, 1.8, 0.5); floorRing(target.x, target.y, 60, k, { dur: 0.45, w: 3.2 }); });
+  };
+
+  // the auto: a quick inked knuckle star and a speck of dust where the jab lands
+  AUTO_VFX.fist = c => { const d = Math.min(Math.hypot(c.tx - c.ent.x, c.ty - c.ent.y), 50), x = c.ent.x + Math.cos(c.ang) * d, y = c.ent.y + Math.sin(c.ang) * d;
+    V.spawn({ x, y, z: 16, life: 0.1, size: 20, size1: 6, color: '#fff2d0', kind: 'star', vr: 4 }); ring(x, y, c.ang, 16, '#ffd27a', { dur: 0.14, w: 2 });
+    dust(x, y, c.ang + Math.PI, { n: 1, s: 0.4, spread: 1, a: 0.35, life: 0.6 }); if (c.ent.st) hitStop(c.ent.st, 0.03, FX.now); };
+
+  // the crit mark: an iron ring of sound with four spokes (a palm star) standing over the target; bigger ones add the ring on the floor and kicked-up grit
+  CRIT_IKG.ironpalm = (x, y, tier) => { const s = [0, 1, 1.4, 1.9][tier], zc = 34;
+    V.fx({ dur: 0.45, layer: 'air', draw: (c, p, t, e) => { const open = easeOut(Math.min(1, p / 0.2)), k = e.a * (1 - clamp01((p - 0.35) / 0.65)), R = 26 * s * open;
+      if (k < 0.02) return;
+      c.save(); c.translate(x, y - zc); c.lineCap = 'round';
+      c.globalAlpha = 0.6 * k; c.strokeStyle = INK; c.lineWidth = 7; c.beginPath(); c.ellipse(0, 0, R, R * 0.8, 0, 0, TAU); c.stroke();
+      c.globalAlpha = k; c.strokeStyle = '#ffd27a'; c.lineWidth = 3.4; c.stroke(); c.strokeStyle = '#ffffff'; c.lineWidth = 1.2; c.stroke();
+      c.beginPath(); for (let i = 0; i < 4; i++) { const an = i * Math.PI / 2 + Math.PI / 4; c.moveTo(Math.cos(an) * R * 1.1, Math.sin(an) * R * 0.9); c.lineTo(Math.cos(an) * R * 1.6, Math.sin(an) * R * 1.3); }
+      c.strokeStyle = INK; c.lineWidth = 5; c.globalAlpha = 0.6 * k; c.stroke(); c.strokeStyle = '#ffd27a'; c.lineWidth = 2.4; c.globalAlpha = k; c.stroke();
+      c.restore(); } });
+    if (tier >= 2) floorRing(x, y, 60 * s, '#ffd27a', { dur: 0.4, w: 3 + tier });
+    if (tier >= 3) dust(x, y, 0, { n: 5, s: 1, spread: 3.14, speed: 1.2 }); };
 })();
 
 // ======================================================================= VFX PASS · GORGEMAW (docs/art/vfx-reference/gorgemaw.png)
@@ -5413,7 +6721,9 @@ function windLaneBoost(x, y, vx, vy, now) {
       if (g) g.crumbs(c.tx, c.ty, 20 * S, '#c8a070', 10);
       // (climax pass) the bite's one bold shape: a great spiked bloom of teeth, white-hot at the core, an ink edge, held a beat,
       // then dust and embers (it replaces the smaller magenta star that was here)
-      V.climax(c.tx, c.ty, { shape: 'burst', r: 78 * S, n: 14, color: '#d0306a', core: '#ffe0b0', ink: GINK, hold: 0.12, dur: 0.65, flat: 0.72, z: 10, after: { smoke: 0.5, embers: 0.6, smokeColor: '#4a3038' } });
+      TANKS_VFX.gorgeTeethRing(c.tx, c.ty, 118 * S / 1.8 * 1.5, { n: 24, dur: 0.7 }); TANKS_VFX.gorgeTeethRing(c.tx, c.ty, 70 * S / 1.8 * 1.5, { n: 14, dur: 0.6, delay: 0.06 }); // (ult pass) the magenta blob in the middle is gone: the jaws' own bite marks close on the enemy from both sides, two great crescents of teeth (ink-rimmed, bone-white) meeting in the middle, with dark spit and a hot ember core
+      for (const sd of [0, Math.PI]) TANKS_VFX.gorgeBite(c.tx, c.ty, a + sd, { r: 64 * S / 1.8 * 1.3, n: 9, z: 22, dur: 0.7 });
+      V.splash(c.tx, c.ty - 16, { n: 8, color: '#c0306a', size: 1, speed: 1.1 });
       for (let i = 0; i < 2; i++) V.shock(c.tx, c.ty, { r: (110 + i * 40) * S, color: i ? TGLOW : '#ffffff', dur: 0.55, w: 8 - i * 3, delay: 0.08 + i * 0.08 });
       V.debris(c.tx, c.ty, { n: 14, color: '#3a2a30', hot: true, speed: 1.7, size: 1.5 });
       gorgemawScorch(c.tx, c.ty, R * 0.9, 4.5, { teeth: 24, delay: 0.3, cracks: 14, ink: 0.42, glow: 0.2, lw: 2 });
@@ -5453,7 +6763,7 @@ function windLaneBoost(x, y, vx, vy, now) {
           ctx.stroke(); ctx.restore();
           gorgemawMaw(ctx, x, y, 30 * M * (1.2 - 0.2 * q), a + fl * 0.5 * (1 - q), 3.2 - 0.9 * q, k, { teeth: 11, thick: 0.4, z: 14, flat: 0.75 });
         } });
-        c.later(0.08, () => { V.hit(c.tx, c.ty, '#ffe0b0', 0.55 + 0.15 * n); if (g) g.crumbs(c.tx, c.ty, 16 * M, '#c8a070', 3 + n);
+        c.later(0.08, () => { TANKS_VFX.gorgeBite(c.tx, c.ty, a + (n ? -0.5 : 0.5), { r: 17 + 3 * n, n: 5, z: 18 }); V.hit(c.tx, c.ty, '#ffe0b0', 0.35); if (g) g.crumbs(c.tx, c.ty, 16 * M, '#c8a070', 3 + n);
           if (n) V.splash(c.tx, c.ty, { n: 3, color: SLIME, size: 0.6, speed: 0.6 }); shake(0.5 + 0.5 * n); });
         return;
       }
@@ -5465,7 +6775,7 @@ function windLaneBoost(x, y, vx, vy, now) {
         gorgemawMaw(ctx, c.tx, c.ty, R * (1.1 + 0.25 * open), a + Math.PI, 0.25 + 2.6 * open, k, { teeth: 14, thick: 0.38, z: 16, flat: 0.75, bite: 0.8 + 0.4 * (1 - open) });
       } });
       c.later(SHUT, () => {
-        V.hit(c.tx, c.ty, '#ffe0b0', 1); if (g) g.crumbs(c.tx, c.ty, 18 * M, '#c8a070', 7);
+        TANKS_VFX.gorgeBite(c.tx, c.ty, a + Math.PI, { r: 34, n: 7, z: 16, dur: 0.42 }); V.hit(c.tx, c.ty, '#ffe0b0', 0.6); if (g) g.crumbs(c.tx, c.ty, 18 * M, '#c8a070', 7);
         V.shock(c.tx, c.ty, { r: 56 * M, color: TGLOW, dur: 0.3, w: 4 }); V.debris(c.tx, c.ty, { n: 3, color: '#3a2a30', speed: 0.6 });
         gorgemawScorch(c.tx, c.ty, R * 0.85, 0.9, { teeth: 12, glow: 0.14, ink: 0.26, lw: 1.5 });
         // the mouthful flies home to the Gorgemaw's own jaw
@@ -5510,12 +6820,12 @@ function windLaneBoost(x, y, vx, vy, now) {
       for (let i = 0; i < 3; i++) V.spawn({ x: q.x + rand(-6, 6), y: q.y, z: q.z, vx: rand(-20, 20), vz: rand(-20, 30), g: 400, life: 0.45, size: rand(4, 6), color: SLIME, kind: 'drop', add: false });   // drool
       if (m === 'ring') gorgemawGlob(q, t, col, 1.2 * s, (x, y) => { for (let i = 0; i < (f ? 3 : 2); i++) V.shock(x, y, { r: (60 + i * 30) * s, color: col, dur: 0.45, w: 6, delay: i * 0.08 });
         // (climax pass) the glob bursts as one bold slime bloom, held a beat, with the Morsel's colour in its core
-        V.climax(x, y, { shape: 'burst', r: 62 * s, n: 13, color: SLIME, core: '#f0ffb0', ink: '#14300a', hold: 0.1, dur: 0.5, flat: 0.75, z: 8, after: { smoke: 0.3, smokeColor: '#3e5a28' } }); V.splash(x, y, { n: 8, color: SLIME }); V.flash(x, y - 12, 26 * s, '#f0ffb0', 0.14); gorgemawPuddles(x, y, col, s * 1.35, 2.4); shake(2 * s); });
-      else if (m === 'lance') V.missile(q.x, q.y, t.x, t.y, { style: 'blade', color: col, speed: 1500, size: 1.4 * s, onHit: (x, y) => { V.climax(x - Math.cos(sa) * 62 * s, y - Math.sin(sa) * 62 * s, { shape: 'bolt', r: 62 * s, angle: sa, color: col, core: '#ffffff', ink: '#0a2030', hold: 0.1, dur: 0.45, flat: 1, z: 16 }); V.beam(q.x, q.y, x, y, { color: col, w: 6 * s, dur: 0.25 }); shake(2 * s); } });
+        TANKS_VFX.reaverSplat(x, y, { r: 44 * s, z: 10, n: 10, color: '#7cc82e', ink: '#14300a', mid: '#b6ee5a', hl: '#f0ffb0' }); V.spawn({ x, y, z: 14, life: 0.34, size: 34 * s, size1: 12, color: col }); V.splash(x, y, { n: 8, color: SLIME }); V.flash(x, y - 12, 26 * s, '#f0ffb0', 0.14); gorgemawPuddles(x, y, col, s * 1.35, 2.4); shake(2 * s); });
+      else if (m === 'lance') V.missile(q.x, q.y, t.x, t.y, { style: 'blade', color: col, speed: 1500, size: 1.4 * s, onHit: (x, y) => { TANKS_VFX.gorgeFang(x, y, sa, { s: 1.15 * s / 1.3, col }); V.beam(q.x, q.y, x, y, { color: col, w: 6 * s, dur: 0.25 }); shake(2 * s); } });
       else if (m === 'fang') { V.breath(q.x, q.y, Math.atan2(t.y - q.y, t.x - q.x), { len: Math.min(220, Math.hypot(t.x - q.x, t.y - q.y) + 20) * s, span: 0.6 * s, color: col });
-        V.climax(q.x, q.y, { shape: 'cone', r: 70 * s, angle: sa, span: 0.9, color: col, core: '#fff0d0', ink: '#2a1408', hold: 0.1, dur: 0.45, flat: 1, z: q.z });   // (climax pass) the cone of teeth, one bold shape
+        TANKS_VFX.gorgeTeethCone(q.x, q.y, sa, Math.min(150, Math.hypot(t.x - q.x, t.y - q.y)) * 0.9, 0.95, { col, z: q.z, s: s / 1.3 });   // (climax pass) the cone of teeth, one bold shape
         FX.later(0.15, () => { g.chomp(t.x, t.y, 20, 1.2 * s, col, 0.3); V.splash(t.x, t.y, { n: 6, color: SLIME }); gorgemawPuddles((q.x + t.x) / 2, (q.y + t.y) / 2, col, 0.7 * s, 1.6); }); }
-      else V.missile(q.x, q.y, t.x, t.y, { style: 'meteor', color: col, speed: 900, arc: 30, size: 1.2 * s, onHit: (x, y) => { V.climax(x, y, { shape: 'burst', r: 74 * s, n: 14, color: '#ffd23a', core: '#fffbe0', ink: '#3a2a08', hold: 0.12, dur: 0.55, flat: 0.75, z: 10, after: { embers: 0.4 } }); V.crystals(x, y, { color: col, n: 6, r: 40 * s, h: 60 * s, dur: 0.9 }); V.shock(x, y, { r: 120 * s, color: col, dur: 0.5, w: 7 }); shake(5 * s); } });
+      else V.missile(q.x, q.y, t.x, t.y, { style: 'meteor', color: col, speed: 900, arc: 30, size: 1.2 * s, onHit: (x, y) => { TANKS_VFX.gorgeSpike(x, y, s * 1.1); V.shock(x, y, { r: 120 * s, color: col, dur: 0.5, w: 7 }); shake(5 * s); } });
       if (f) FX.later(0.3, () => FX.text(t.x, t.y - 80, MAW.FUSION[m], '#fff0c8', 15, 0.9));
     };
     const n = (d && d.n) || 0; if (n) FX.later(n * 0.14, go); else go();
@@ -5534,7 +6844,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       gorgemawSpirit(p => { const a = a0 + p * 4.5, r = 80 * M * (1 - p) + 4; return { x: e.x + Math.cos(a) * r, y: e.y + Math.sin(a) * r * 0.6, z: 22 + 10 * (1 - p) }; }, col, 0.6, i * 0.06, 1.15); }
     gorgemawSpiral(e.x, e.y, 40 * M, 1.7, { follow: e, veins: true, ink: '#3a0a34', delay: 0.45, spin: 2.5, glow: 0.62 });
     // (climax pass) the belly's moment of settling: one bold ring of the spiral flares round the Gorgemaw, held a beat
-    FX.later(0.5, () => { V.climax(e.x, e.y, { shape: 'ring', r: 70 * M, color: '#a04a9a', core: '#ffd8a0', ink: GINK, hold: 0.1, dur: 0.55, flat: 0.65, z: 12, after: { mark: 0.6 } });
+    FX.later(0.5, () => { TANKS_VFX.gorgeTeethRing(e.x, e.y, 80 * M, { n: 16, dur: 0.6 });
       V.plus(e.x, e.y, { color: '#ffd8a0', n: 3 + n }); if (e.spec === 'gizzard' && n) V.shock(e.x, e.y, { r: 160, color: '#ffc070', dur: 0.6, w: 5 });
       // (vfx2, after Purifying Brew) the purge: sour dark puffs blown off the body, then warm gold motes rising off it
       V.smoke(e.x, e.y, { n: 3 + Math.min(3, n), r: 12, color: '#4a4a24', size: 18, a: 0.45, speed: 90, life: 0.6 });
@@ -5695,9 +7005,9 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.flash(c.tx, c.ty - 20, 80 * S, '#fff6e0', 0.22);   // the white-hot core of the stamp's blow, brief
       // (climax pass) the stamp's one bold shape: a gold-and-wax bloom with a white-hot core and a dark wine edge, held a beat (gold, not red:
       // a big red star in the air read as danger), then dust and embers
-      V.climax(c.tx, c.ty, { shape: 'burst', r: 74 * S, n: 16, color: '#e0a838', core: '#fff6e0', ink: '#3a0a14', hold: 0.12, dur: 0.7, flat: 0.72, z: 14, after: { smoke: 0.4, embers: 0.6, smokeColor: '#4a4050' } });
+      TANKS_VFX.oathInk(c.tx, c.ty, { r: 84, z: 20, n: 13, drops: 12 }); TANKS_VFX.oathStrips(c.tx, c.ty, 190, 14, { z: 20, dur: 1.4, s: 1.5 });
       // (ult impact pass) the blow throws a ring of gold and paper out over the floor, and the stone under the seal splits
-      V.spikeburst(c.tx, c.ty, { r: 150 * S * 0.8, n: 26, hole: 0.55, color: GOLD, core: '#fff6d8', ink: INK, dur: 0.6, layer: 'ground', z: 0, flat: 0.6 });
+      V.ink(c.tx, c.ty, { r: 120 * S * 0.8, dur: 2.4, a: 0.3 });
       for (let i = 0; i < 3; i++) V.shock(c.tx, c.ty, { r: (120 + i * 45) * S, color: i ? GOLD : '#ffffff', dur: 0.6 + i * 0.1, w: 9 - i * 3, delay: i * 0.08 });
       V.decal(c.tx, c.ty, { style: 'crack', r: 100 * S * 0.8, dur: 4.5, a: 0.55, seed: Math.random() * 6 });
       oathCoins(c.tx, c.ty, 14, { speed: 1.2 * S, size: 1.3 });
@@ -5734,11 +7044,11 @@ function windLaneBoost(x, y, vx, vy, now) {
     // c.step if it comes, else counted per hero as the kit counts it)
     collect: c => { const g = O(), e = c.ent, M = OATHBROKER_MOVE_SCALE;
       const st = e.oathBlow || (e.oathBlow = { n: -1, at: -99 }); st.n = c.step != null ? c.step % 3 : FX.now - st.at > 15 ? 0 : (st.n + 1) % 3; st.at = FX.now; const n = st.n, third = n === 2;
-      V.slash(c.x, c.y, c.ang, { r: (50 + 6 * n) * M, span: 1.4 + 0.2 * n, color: '#e8d8b0', w: 0.4 + 0.05 * n, dur: 0.22, flip: n === 1 });
+      TANKS_VFX.reaverCleave(c.x, c.y, c.ang, { r: (52 + 6 * n) * M * 0.9, span: 1.5 + 0.2 * n, w: 11 + 3 * n, dur: 0.22 + 0.03 * n, flip: n === 1, heat: 0.3 + 0.2 * n, body: '#463e56', edge: '#d8a038', ink: '#1c1428', mid: '#6a6080', sheen: '#efe4cc', tip: '#fff2c0' });   // (tanks pass) the stamp-mace's swing
       if (third) oathStamp(c.tx, c.ty - 28, 14 * M, { fall: 0.12, hold: 0.14, h: 90 * M });
       c.later(third ? 0.12 : 0.08, () => {
         if (g && g.sealUp) g.sealUp(c.tx, c.ty, 28, third ? 15 : 9, third ? g.WAX : LIL, third ? 0.55 : 0.32);
-        V.hit(c.tx, c.ty, third ? GOLD : '#e8dcff', third ? 0.8 : 0.5);
+        TANKS_VFX.oathInk(c.tx, c.ty, { r: 20 + 10 * n, z: 22, n: 8 + n, drops: 3 + n }); TANKS_VFX.oathTally(c.tx, c.ty, third ? 5 : n + 1, { z: 56 }); V.hit(c.tx, c.ty, third ? GOLD : '#e8dcff', third ? 0.5 : 0.3);   // (tanks pass) a blot of ink and a tally entered
         if (third) { V.glint(c.tx, c.ty, { color: GOLD, size: 26 * M }); V.shock(c.tx, c.ty, { r: 60 * M, color: GOLD, dur: 0.3, w: 4 }); shake(2); if (e.st && typeof hitStop === 'function') hitStop(e.st, 0.05, FX.now); }
         if (!n) return;
         oathCoins(c.tx, c.ty, third ? 5 : 2, { vx: (c.x - c.tx) * 1.4, vy: (c.y - c.ty) * 1.4, life: 0.6, size: 1.1 });
@@ -5753,7 +7063,7 @@ function windLaneBoost(x, y, vx, vy, now) {
       for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; V.spawn({ x, y, z: 26, life: 0.32, size: 9, color: GOLD, kind: 'petal', add: false, flutter: 11, orbit: { x, y, a, r: 44 * M, w: 9, dr: -100 * M, flat: 0.6 } }); }
       oathStamp(x, y, 24 * M, { fall: 0.28, hold: 0.2, h: 140 * M });
       c.later(0.28, () => {
-        V.climax(x, y, { shape: 'burst', r: 64 * M, n: 14, color: '#d8a038', core: '#fff6d8', ink: '#3a0a14', hold: 0.1, dur: 0.55, flat: 0.72, z: 12, after: { embers: 0.5 } });   // (climax pass) the stamp lands as one bold gold bloom
+        TANKS_VFX.oathInk(x, y, { r: 36, z: 22, n: 10, drops: 7 }); TANKS_VFX.oathStrips(x, y, 80 * M, 6, { z: 14 });   // (climax pass) the stamp lands as one bold gold bloom
         V.shock(x, y, { r: 90 * M, color: GOLD, dur: 0.4, w: 5 });
         oathCoins(x, y, 10, { size: 1.15 }); if (g) g.pages(x, y, 6);
         oathWaxSeal(x, y, 30 * M, { dur: 2.6, a: 0.5, fill: 0.7, gold: 0.6, coins: 5, pages: 3 });
@@ -5770,7 +7080,7 @@ function windLaneBoost(x, y, vx, vy, now) {
           ctx.save(); ctx.translate(tx, ty - 36 * M); ctx.globalAlpha = Math.min(1, k * 0.9); ctx.fillStyle = WAXL; ctx.beginPath(); ctx.arc(0, 0, 10 * M, 0, Math.PI * 2); ctx.fill();
           ctx.strokeStyle = GOLD; ctx.lineWidth = 1.2; ctx.beginPath(); oathScales(ctx, 0.5 * M); ctx.stroke(); ctx.restore();
         } });
-        V.spikeburst(tx, ty - 30, { r: 34 * M, n: 12, color: GOLD, core: '#fff6d0', ink: INK, dur: 0.26 });
+        TANKS_VFX.oathInk(tx, ty - 24, { r: 30 * M / 1.3 * 1.1, z: 30, n: 9, drops: 4 });
         oathCoins(tx, ty, 3);
         V.fx({ dur: 1.8, layer: 'ground', draw: (ctx, p, t, fx) => {   // a faint ring of runes under it, the seal's mark
           const k = fx.a * Math.min(1, p / 0.1) * Math.min(1, (1 - p) / 0.4) * 0.65, R = 50 * M;
@@ -5803,7 +7113,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     foreclose: c => { const g = O(), M = OATHBROKER_MOVE_SCALE, tx = c.tx, ty = c.ty;
       oathStamp(tx, ty, 30 * M, { fall: 0.24, hold: 0.24, h: 170 * M, from: c.ent, link: 11 });
       c.later(0.24, () => {
-        V.climax(tx, ty, { shape: 'burst', r: 70 * M, n: 16, color: WAXL, core: '#fff0d0', ink: INK, hold: 0.12, dur: 0.6, flat: 0.72, z: 14, after: { smoke: 0.3, embers: 0.4, smokeColor: '#4a4050' } });   // (climax pass) the great stamp's one bold bloom
+        TANKS_VFX.oathInk(tx, ty, { r: 52 * M / 1.3 * 1.2, z: 18, n: 11, drops: 7 }); TANKS_VFX.oathStrips(tx, ty, 100 * M, 6, { z: 18 });   // (climax pass) the great stamp's one bold bloom
         V.shock(tx, ty, { r: 120 * M, color: GOLD, dur: 0.45, w: 5 });
         oathCoins(tx, ty, 8, { size: 1.1 }); if (g) g.pages(tx, ty, 8);
         oathWaxSeal(tx, ty, 40 * M, { dur: 2.2, a: 0.45, fill: 0.5, gold: 0.6, coins: 4, pages: 2 });
@@ -6109,7 +7419,8 @@ function windLaneBoost(x, y, vx, vy, now) {
       V.shock(at.x, at.y, { r: 120 * S, color: '#fff2b0', dur: 0.55, w: 7 });
       V.shock(at.x, at.y, { r: 150 * S, color: LEAF, dur: 0.75, w: 5, delay: 0.08 });
       V.debris(at.x, at.y, { n: 10, color: '#5a4a32' });
-      V.burst(at.x, at.y - 90 * S, { color: GROVE_GOLD, color2: GROVE_CREAM, n: 16, speed: 260, kind: 'star', flashR: 70 * S });
+      // (ult pass) the starburst in the crown is gone (it clashed with the painted sheet's soft canopy): gold light drifts out of the leaves as motes and the canopy's rays
+      V.motes(at.x, at.y - 80 * S, { color: GROVE_GOLD, n: 14, r: 70 * S, rise: 0.4 }); groveRays(at.x, at.y - 30 * S, { n: 8, r: 40 * S, h: 110 * S, color: GROVE_GOLD, dur: 0.8 });
       for (let i = 0; i < 14; i++) { const a = i * TAU / 14, s = rand(160, 300); V.spawn({ x: at.x, y: at.y, z: 60 * S, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, vz: rand(40, 140), g: 140, drag: 0.04, life: rand(1.1, 1.6), size: rand(11, 15), color: i % 3 ? (i % 2 ? LEAF : '#5fb03a') : GROVE_GOLD, kind: 'leaf', add: false, vr: rand(-6, 6), flutter: 5 }); }
       // the tree feeds every ally: a stream of leaves blown from its crown to each, and where it lands rays of light and
       // a ring of small flowers opening round their feet (the canopy's healing taking hold)
@@ -6132,7 +7443,7 @@ function windLaneBoost(x, y, vx, vy, now) {
     groveThorns(t.x, t.y, { n: thorn ? 10 : 7, r: 66, h: thorn ? 76 : 58, dur: 1.1 });
     groveRoots(t.x, t.y, { r: 90, n: 6, dur: 2.6, grow: 0.18, glow: 0.6, a: 0.25 });
     // (QA) a ring of thorn-spikes on the floor (hole), not a solid green-white blob that buried the boss sprite
-    if (thorn) V.spikeburst(t.x, t.y, { r: 84, n: 16, hole: 0.55, color: '#8adf4a', core: '#d8f0a0', ink: '#0e2208', dur: 0.36, z: 0, layer: 'ground', flat: 0.62 });
+    if (thorn) groveThorns(t.x, t.y, { n: 6, r: 96, h: 64, dur: 1.2 });   // (ult pass: a wider ring of thorns instead of the spiked burst)
     V.debris(t.x, t.y, { n: 6, color: '#5a4a32' });
     V.shock(t.x, t.y, { r: 140, color: GROVE_GOLD, dur: 0.5, w: 5 });
     V.motes(t.x, t.y, { kind: 'leaf', color: '#6fbf4a', n: 6, r: 50, rise: 0.6 });
@@ -7029,9 +8340,14 @@ function windLaneBoost(x, y, vx, vy, now) {
     const AS = ALEM_ULT_SCALE;
     V.missile(at.x, at.y - OPUS_TIP, t.x, t.y, { style: 'orb', color: TEAL, speed: 1500, size: 1.6 * AS, arc: 30, onHit: (x, y) => {
       V.flash(x, y - 20, 90 * AS, '#ffffff', 0.16);
-      V.spikeburst(x, y, { r: 92 * AS, n: 18, color: OPUS3[1], core: '#fff6d8', ink: '#3a0a08', dur: 0.5 });
-      V.spikeburst(x, y, { r: 62 * AS, n: 14, color: OPUS3[0], core: '#ffffff', ink: '#0a2a10', dur: 0.45, z: 20 });
-      V.spikeburst(x, y, { r: 38 * AS, n: 12, color: OPUS3[2], core: '#ffffff', ink: '#0a1a3a', dur: 0.4, z: 26 });
+      // (ult pass) no starbursts: the flask's three liquids SPLASH the boss as three overlapping lumpy blobs (green, red, blue: ink-rimmed, a paler heart and a glint, like wet
+      // glass), each a little off the others, pressed in for a beat and then running down; drops spatter off every colour
+      V.fx({ dur: 0.7, layer: 'air', draw: (c, p, tt, ee) => { const k = ee.a * (1 - Math.min(1, Math.max(0, (p - 0.55) / 0.45))); if (k < 0.02) return; const pop = tt < 0.07 ? 0.4 + 0.9 * easeOut(tt / 0.07) : 1.3 - 0.3 * Math.min(1, (tt - 0.07) / 0.4), drip = Math.min(1, Math.max(0, (tt - 0.35) / 0.35));
+        OPUS3.forEach((col, i) => { const a0 = i * 2.1 + 0.4, ox = Math.cos(a0) * 26 * AS, oy = Math.sin(a0) * 15 * AS - 34, R = 36 * AS * pop, ph = i * 1.7;
+          const blob = r => { c.beginPath(); for (let j = 0; j <= 24; j++) { const a = j / 24 * TAU, rr = r * (1 + 0.15 * Math.sin(a * 4 + ph + tt * 8) + 0.07 * Math.sin(a * 7 - ph)), px = x + ox + Math.cos(a) * rr, py = y + oy + Math.sin(a) * rr * 0.9 + drip * 14 * (Math.sin(a) > 0 ? 1 : 0); j ? c.lineTo(px, py) : c.moveTo(px, py); } c.closePath(); };
+          c.save(); c.globalAlpha = k * 0.95; blob(R + 4.5); c.fillStyle = '#10181c'; c.fill(); blob(R); c.fillStyle = col; c.fill(); blob(R * 0.6); c.fillStyle = '#ffffff'; c.globalAlpha = k * 0.42; c.fill();
+          c.globalAlpha = k * 0.9; c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(x + ox - R * 0.3, y + oy - R * 0.32, R * 0.16, R * 0.09, -0.5, 0, TAU); c.fill(); c.restore(); }); } });
+      OPUS3.forEach(col => V.splash(x, y - 20, { n: 6, color: col }));
       V.fx({ dur: 0.45, layer: 'air', draw: (c, p, tt, ee) => { const k = ee.a * (1 - p); OPUS3.forEach((col, i) => V.glowAt(c, x + Math.cos(i * 2.1 + p * 3) * 18 * AS, y - 30 + Math.sin(i * 2.1 + p * 3) * 10 * AS, 46 * AS, col, 0.7 * k)); } });
       cols.forEach(col => V.burst(x, y, { color: col, n: 5, speed: 340, flash: false }));
       OPUS3.forEach((col, i) => V.shock(x, y, { r: (120 + i * 30) * AS, color: col, dur: 0.55, w: 7 - i, delay: i * 0.06 }));
@@ -7209,7 +8525,13 @@ function windLaneBoost(x, y, vx, vy, now) {
     weaveLater(e, 0.3, () => {
       const WS = WEAVE_ULT_SCALE;
       if (W) W.cross(t.x, t.y, { L: (150 + n * 20) * WS, w: 1.4 * WS, dur: 0.6 });
-      V.climax(t.x, t.y, { shape: 'burst', n: 14, r: (60 + n * 6) * WS, color: CRIM, core: HOT, ink: '#2a0410', dur: 0.6, hold: 0.1, z: 16, after: { embers: 0.4, mark: 0.5 } });   // (VFX pass) the lances' crossing holds a beat
+      // (ult pass) where the lances cross the weave is TIED OFF, not burst: a gold bow pulled tight on the crossing (it pops in 0.06s, shivers and holds) and a run of stitches
+      // closing each lance's wound, six along each, ink-rimmed crimson with gold; a tight crimson bead under the bow
+      V.fx({ dur: 0.95, layer: 'air', draw: (c, p, tt, fx) => { const k = fx.a * (1 - Math.min(1, Math.max(0, (p - 0.6) / 0.4))); if (k < 0.02) return; const pop = tt < 0.06 ? 0.4 + 1.1 * easeOut(tt / 0.06) : 1.5 - 0.5 * Math.min(1, (tt - 0.06) / 0.25), R = 10 * pop * WS;
+        c.save(); c.translate(t.x, t.y - 28); c.globalAlpha = k; c.fillStyle = '#2a0410'; c.beginPath(); c.arc(0, 0, R + 3, 0, Math.PI * 2); c.fill(); c.fillStyle = CRIM; c.beginPath(); c.arc(0, 0, R, 0, Math.PI * 2); c.fill(); c.fillStyle = HOT; c.beginPath(); c.arc(0, 0, R * 0.4, 0, Math.PI * 2); c.fill(); c.restore();
+        HEALFX.twBow(c, t.x, t.y - 28, (0.9 + 0.5 * pop) * WS, k, SEAM); } });
+      HEALFX.twStitches(t.x, t.y, 0.6, { n: 6, z: 28, gap: 15 * WS, s: 8, dur: 1.0 }); HEALFX.twStitches(t.x, t.y, -0.6, { n: 6, z: 28, gap: 15 * WS, s: 8, dur: 1.0, delay: 0.05 });
+      V.motes(t.x, t.y, { color: SEAM, n: 6, r: 40 * WS, rise: 0.6 });
       V.shock(t.x, t.y, { r: 140 * WS, color: SEAM, dur: 0.5, w: 6 });
       shake(4);
     });
@@ -7334,8 +8656,9 @@ Object.assign(KIT_VFX, {
   function shell(w, dur, r = 26) {
     OP.linger(dur, 'air', (c, k, t) => {
       const x = w.x, y = bodyY(w), pop = easeOut(Math.min(1, t / 0.2)), R = r * (0.7 + 0.3 * pop), sh = 0.55 + 0.45 * Math.sin(t * 2.4);
-      c.save(); c.globalCompositeOperation = 'lighter';
-      const g = c.createRadialGradient(x, y, R * 0.3, x, y, R); g.addColorStop(0, 'rgba(95,216,200,0)'); g.addColorStop(1, `rgba(191,248,238,${0.2 * k})`);
+      // (hero pass) smoked glass: a dark violet pane, clear in the middle and smoked toward its edge (ordinary compositing, so it reads on a pale floor), then the pale rim and glint
+      c.save();
+      const g = c.createRadialGradient(x, y, R * 0.3, x, y, R); g.addColorStop(0, 'rgba(46,28,84,0)'); g.addColorStop(1, `rgba(46,28,84,${0.34 * k})`);
       c.fillStyle = g; c.beginPath(); c.ellipse(x, y, R, R * 1.15, 0, 0, TAU); c.fill(); c.restore();
       V.neonPath(c, GHO, 1.4, k * 0.8, () => c.ellipse(x, y, R, R * 1.15, 0, 0, TAU));
       const a = t * 1.4; V.glowAt(c, x + Math.cos(a) * R, y + Math.sin(a) * R * 1.15, 6, '#ffffff', 0.7 * k * sh);
@@ -7610,7 +8933,7 @@ Object.assign(KIT_VFX, {
       V.shock(e.x, e.y, { r: 260 * s, color: GHO, dur: 0.7, w: 9 }); V.shock(e.x, e.y, { r: 190 * s, color: BRU, dur: 0.6, w: 6, delay: 0.07 });
       V.beam(e.x, e.y - 100, t.x, t.y, { color: VIO, w: 18 * s, dur: 0.4 });
       V.pillar(t.x, t.y, { r: 36 * s, h: 320, color: BRU, dur: 0.6 });
-      V.climax(t.x, t.y, { shape: 'burst', r: 112 * s, n: 18, color: VIO, core: GHO, ink: INK, z: 16, hold: 0.12, dur: 0.7, after: { smoke: 0.8, embers: 0.6 }, smokeColor: '#1c1230' });
+      // (ult pass) the burst at the target is the black sun itself, landed (see the hero pass wrapper below), not a starburst
       V.shock(t.x, t.y, { r: 150 * s, color: GHO, dur: 0.6, w: 7, delay: 0.05 });
       V.decal(t.x, t.y, { style: 'crack', r: 80 * s, dur: 5, a: 0.5, seed: Math.random() * 6 });
       darkSmoke(t.x, t.y, 7, 46);
@@ -7618,14 +8941,13 @@ Object.assign(KIT_VFX, {
       // splitting the floor round the blow, rock thrown up, and shards of the broken sun raining down round the knight
       V.beam(e.x, e.y - 100, t.x, t.y, { color: '#ffffff', w: 6 * s, dur: 0.3 });
       V.shock(e.x, e.y, { r: 280 * s, color: INK, dur: 0.6, w: 14, delay: 0.03 });
-      V.spikeburst(t.x, t.y, { r: 130 * s, n: 18, hole: 0.5, color: VIO, core: GHO, ink: INK, fill: '#1c1230', dur: 0.55, layer: 'ground', z: 0, flat: 0.6 });
       V.debris(t.x, t.y, { n: 10, color: '#3a3048', speed: 1.3, size: 1.2 });
       V.decal(t.x, t.y, { r: 90 * s, dur: 5, a: 0.4 });
       for (let i = 0; i < 10; i++) { const a = rnd(0, TAU), sp = rnd(60, 180); V.spawn({ x: e.x + Math.cos(a) * 14, y: e.y + Math.sin(a) * 8, z: 100, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.5, vz: rnd(40, 160), g: 420, drag: 0.03, life: rnd(0.7, 1.1), size: rnd(6, 10), color: i % 2 ? '#1c1230' : GHO, kind: 'shard', add: false, vr: rnd(-8, 8) }); }
       V.motes(t.x, t.y, { color: GHO, n: 8, r: 60 * s, rise: 0.6 });
       for (const w of party()) {
         V.flash(w.x, bodyY(w), 34, '#ffffff', 0.15); V.shock(w.x, w.y, { r: 54, color: GHO, dur: 0.45, w: 4 });
-        V.spikeburst(w.x, w.y, { r: 36, n: 9, color: GHD, core: '#ffffff', ink: INK, dur: 0.3, z: 12 });
+        V.shock(w.x, w.y, { r: 40, color: GHO, dur: 0.35, w: 7 });   // (ult pass: a ring where the spiked burst was)
         shell(w, 8, 26);
       }
     });
@@ -8099,8 +9421,10 @@ Object.assign(KIT_VFX, {
         if (c.cam) { c.cam.stop(0.08); c.cam.punch(0.07, 0.5); c.cam.flash('#dff0ff', 0.12, 0.4); }
         shake(7);
         V.flash(x, y - 30, 80, ELEC, 0.24);
-        V.spikeburst(x, y, { r: 70, n: 16, color: BLU, core: WHT, ink: INK, dur: 0.42, z: 30 });
-        V.spikeburst(x, y, { r: 130, n: 20, hole: 0.55, color: GATE, core: WHT, ink: INK, dur: 0.48, layer: 'ground', z: 0, flat: 0.62 });
+        // (ult pass, a light hand) no starburst: the Gate slams open as two ink-rimmed rings of blue-white light, one inside the other, running out along the floor from where she
+        // steps through, with the lightning thrown out along the floor below as before
+        V.fx({ dur: 0.7, layer: 'ground', draw: (cx, p, t, fx) => { cx.save(); for (let i = 0; i < 2; i++) { const q = Math.min(1, Math.max(0, (t - i * 0.08) / 0.5)); if (q <= 0 || q >= 1) continue; const R = (i ? 84 : 126) * easeOut(q) + 14, kk = fx.a * (1 - q * q);
+          cx.beginPath(); cx.ellipse(x, y, R, R * 0.62, 0, 0, TAU); cx.globalAlpha = 0.85 * kk; cx.strokeStyle = INK; cx.lineWidth = 12 - 7 * q; cx.stroke(); cx.globalAlpha = kk; cx.strokeStyle = i ? WHT : GATE; cx.lineWidth = 6 - 3.4 * q; cx.stroke(); cx.globalAlpha = kk * 0.9; cx.strokeStyle = ELEC; cx.lineWidth = 1.6; cx.stroke(); } cx.restore(); } });
         V.shock(x, y, { r: 200, color: ELEC, dur: 0.6, w: 8 }); V.shock(x, y, { r: 140, color: INK, dur: 0.5, w: 10, delay: 0.05 });
         for (let i = 0; i < 6; i++) { const an = i * TAU / 6 + rnd(-0.3, 0.3), L = rnd(110, 160); V.lightning(x + Math.cos(an) * 24, y + Math.sin(an) * 16, x + Math.cos(an) * L, y + Math.sin(an) * L * 0.62, { color: i % 2 ? WHT : ELEC, dur: 0.3, jag: 8 }); }
         V.sparks(x, y - 20, { color: ELEC, n: 12, spread: Math.PI, speed: 320 });
@@ -8109,6 +9433,42 @@ Object.assign(KIT_VFX, {
       });
     },
   };
+
+  // ---- (class pass, a light hand) the auto-attack, the crit mark and each mark's own sigil bursting when Snap pops it
+  // the auto: a small crescent of ink flicked off the scythe, a short cut and two blue sparks on the target (everyone else's slash is unchanged)
+  const thAutoPrev = AUTO_VFX.slash;
+  AUTO_VFX.slash = c => {
+    if (!(c.ent && c.ent.cls && c.ent.cls.id === 'thresher')) return thAutoPrev(c);
+    crescent(c.ent.x, c.ent.y, c.ang, { r: 54, span: 1.9, w: 13, dur: 0.24, flip: c.alt, tail: 0.3 });
+    c.later(0.07, () => { const d = Math.min(64, Math.hypot(c.tx - c.ent.x, c.ty - c.ent.y)), x = c.ent.x + Math.cos(c.ang) * d, y = c.ent.y + Math.sin(c.ang) * d;
+      cutMark(x, y, c.ang + (c.alt ? -0.9 : 0.9), 32, { w: 3.4 }); V.sparks(x, y, { color: ELEC, n: 2, angle: c.ang, spread: 0.8, speed: 200 }); });
+  };
+  // the crit mark: a scythe's crescent swept across the target with a cut through it and blue sparks; a big hit sweeps it wider
+  (globalThis.MHT_CRIT || (globalThis.MHT_CRIT = {})).thresher = (x, y, tier) => { const s = [0, 1, 1.4, 1.9][tier] || 1;
+    crescent(x, y, -0.5, { r: 36 * s, span: 2.7, w: 15 * s, dur: 0.44, z: 34, tail: 0.2, flat: 0.9 });
+    cutMark(x, y, 0.75, 54 * s, { w: 3.6 + s, dur: 0.4 }); V.sparks(x, y - 30, { color: ELEC, n: 3 + tier * 2, spread: Math.PI, speed: 190 });
+    if (tier >= 2) V.shock(x, y, { r: 54 * s, color: ELEC, dur: 0.34, w: 3 }); };
+  // a mark's own sigil on the enemy as Snap pops it: a solid glyph on an ink rim (Drain a drop, Bind a knot ring, Death a spear-diamond,
+  // Thread a star of filaments, Phantom a crescent) swelling, then splitting into six shards
+  function sigilPop(x, y, kind, col, m = 1) {
+    V.fx({ dur: 0.44, layer: 'air', draw: (c, p, t, e) => {
+      const g = easeOut(Math.min(1, p / 0.32)), k = e.a * (1 - Math.max(0, (p - 0.5) / 0.5)), r = 14 * m * (0.6 + 0.7 * g), sp = Math.max(0, (p - 0.38) / 0.62);
+      if (k < 0.02) return;
+      c.save(); c.translate(x, y); c.lineJoin = 'round'; c.lineCap = 'round';
+      if (sp < 0.6) {
+        const shape = () => { c.beginPath();
+          if (kind === 'drain') { c.moveTo(0, -r * 1.3); c.quadraticCurveTo(r * 1.1, -r * 0.1, 0, r); c.quadraticCurveTo(-r * 1.1, -r * 0.1, 0, -r * 1.3); }
+          else if (kind === 'bind') { c.arc(0, 0, r, 0, TAU); c.moveTo(r * 0.5, 0); c.arc(0, 0, r * 0.5, 0, TAU, true); }
+          else if (kind === 'death') { c.moveTo(0, -r * 1.5); c.lineTo(r * 0.7, 0); c.lineTo(0, r * 1.5); c.lineTo(-r * 0.7, 0); c.closePath(); }
+          else if (kind === 'thread') { for (let i = 0; i < 8; i++) { const a = i * TAU / 8 - Math.PI / 2, rr = i % 2 ? r * 0.4 : r * 1.35; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); }
+          else moonPath(c, r * 1.15, -0.6); };
+        const q = 1 - sp / 0.6; c.globalAlpha = 0.92 * k * q; shape(); c.strokeStyle = INK; c.lineWidth = 5; c.stroke(); c.globalAlpha = k * q; c.fillStyle = col; c.fill('evenodd'); c.strokeStyle = WHT; c.lineWidth = 1.3; c.stroke();
+      }
+      if (sp > 0) for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + 0.4, d = r * (0.5 + 2.6 * easeOut(sp)), l = 6 * m * (1 - sp * 0.6), x0 = Math.cos(a) * d, y0 = Math.sin(a) * d * 0.7;
+        c.globalAlpha = k; c.strokeStyle = INK; c.lineWidth = 4.5; c.beginPath(); c.moveTo(x0, y0); c.lineTo(x0 + Math.cos(a) * l, y0 + Math.sin(a) * l * 0.7); c.stroke(); c.strokeStyle = col; c.lineWidth = 2.4; c.stroke(); }
+      c.restore();
+    } });
+  }
 
   // a cloak of ink smoke round the Reaper for `dur` s with blue lightning flickering in it (Dusk Veil); a vanish: she is a mist and gone
   function cloak(e, dur, vanish) {
@@ -8213,6 +9573,7 @@ Object.assign(KIT_VFX, {
     V.burst(sl.x, sl.y + 14, { color: ELEC, color2: WHT, n: 6, z: 14, speed: 120, kind: 'star', flash: false, size: 8 });
     fly(sl.x, sl.y, f.x, f.y - 20, col, 0.12, 6, 6 + 2 * m);
     const hit = (big, delay) => later(e, delay, () => {
+      sigilPop(f.x, f.y - 24, kind, col, m * (big ? 1.25 : 1));
       V.sparks(f.x, f.y - 8, { color: ELEC, n: Math.round((7 + 3 * big) * m), spread: Math.PI, speed: 280 });
       V.hit(f.x, f.y, col, (0.45 + 0.2 * big) * m);
       puff(f.x, f.y - 10, 2, 8, 16);
@@ -8501,8 +9862,12 @@ Object.assign(KIT_VFX, {
         for (let i = 0; i < n; i++) { if (hs(i, seed, 3) < 0.25) continue; const an = i * TAU / n + hs(i, 4) * 0.3, r0 = 14 + 10 * q, r1 = (60 + 70 * hs(i, 5)) * q + 20; bolt(c, jag(f.x + Math.cos(an) * r0, f.y - 22 + Math.sin(an) * r0 * 0.7, f.x + Math.cos(an) * r1, f.y - 22 + Math.sin(an) * r1 * 0.7, 6, 7, seed + i), i % 2 ? ELEC : WHT, 1.6, k * 0.9); }
         V.glowAt(c, f.x, f.y - 22, 60 + 40 * q, ELEC, 0.4 * k);
       } });
-      V.climax(f.x, f.y, { shape: 'burst', r: 126, n: 20, color: GATE, core: WHT, ink: INK, z: 18, flat: 0.8, hold: 0.12, dur: 0.7, after: { smoke: 0.7, embers: 0.6 } });
-      V.burst(f.x, f.y - 20, { color: ELEC, color2: WHT, n: 16, speed: 300, kind: 'star', flash: false, size: 12 });
+      // (ult pass, a light hand) the release is the Gate itself torn open on the target instead of a starburst: a tall rift (a lens of white-blue light with an ink edge, ink-black
+      // inside its rim) cut open in 0.05s, held a beat with the lightning pouring out of it, then shut; the bolts and rings round it are hers already
+      V.fx({ dur: 0.75, layer: 'air', draw: (c, p, t, fx) => { const open = easeOut(Math.min(1, t / 0.05)), shut = Math.min(1, Math.max(0, (t - 0.38) / 0.37)), k = fx.a * (1 - shut * shut); if (k < 0.02) return;
+        const H = 92 * open * (1 - 0.5 * shut), W = 17 * open * (1 - shut), x = f.x, y = f.y - 26; const lens = (h, w) => { c.beginPath(); c.moveTo(x, y - h); c.quadraticCurveTo(x + w * 2, y, x, y + h * 0.8); c.quadraticCurveTo(x - w * 2, y, x, y - h); c.closePath(); };
+        c.save(); c.globalAlpha = k; lens(H + 6, W + 5); c.fillStyle = INK; c.fill(); lens(H, W); c.fillStyle = GATE; c.fill(); lens(H * 0.96, W * 0.62); c.fillStyle = '#0c0a14'; c.fill();
+        c.strokeStyle = WHT; c.lineWidth = 2.4; lens(H, W); c.stroke(); c.strokeStyle = ELEC; c.lineWidth = 1; lens(H * 0.92, W * 0.5); c.stroke(); c.restore(); } });
       puff(f.x, f.y, 8, 50, 34);
       shake(8); stop(e, 0.07);
     });
@@ -8549,12 +9914,9 @@ Object.assign(KIT_VFX, {
 
   // ---- pieces
   // droplets thrown up and falling back (they stay as water: no additive glow)
+  // (healers pass) beads of water with a highlight and an ink rim, each on its own arc, a tiny ripple where it lands: one effect for all of them
   function drops(x, y, o = {}) {
-    const n = o.n ?? 8, sp = o.speed ?? 110, up = o.up ?? 200;
-    for (let i = 0; i < n; i++) {
-      const a = o.angle != null ? o.angle + rnd(-(o.spread ?? 0.6), o.spread ?? 0.6) : Math.random() * TAU, s = rnd(0.4, 1) * sp;
-      V.spawn({ x, y, z: o.z ?? 10, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.7, vz: rnd(0.4, 1) * up, g: 520, drag: 0.03, life: rnd(0.55, 0.9), size: rnd(8, 13) * (o.size ?? 1), color: i % 3 ? (o.color || TEAL2) : FOAM, kind: 'drop', add: false, rot: 0 });
-    }
+    HEALFX.tcSpatter(x, y, { n: Math.min(16, o.n ?? 8), speed: o.speed ?? 110, up: o.up ?? 200, s: (o.size ?? 1) * 1.25, z: o.z ?? 10, angle: o.angle, spread: o.spread });
   }
   // a wavy ring path on the floor
   function wavyRing(c, x, y, r, amp, n, ph, flat) {
@@ -8617,20 +9979,25 @@ Object.assign(KIT_VFX, {
       const up = easeOut(Math.min(1, p / 0.32)), k = e.a * Math.min(1, p / 0.06) * (1 - Math.max(0, (p - 0.5) / 0.5)), hh = h * up;
       if (k < 0.02) return;
       c.save(); c.lineCap = 'round';
-      V.glowAt(c, cx, cy - hh * 0.4, r * 1.8 + hh * 0.2, col, 0.22 * k);
-      for (let i = 0; i < n; i++) {
-        const xo = (i - (n - 1) / 2) / ((n - 1) / 2 || 1) * r * 0.85, hi = hh * (0.7 + 0.3 * Math.sin(i * 2.3));
-        const path = () => { c.beginPath(); for (let s = 0; s <= 12; s++) { const q = s / 12, yy = cy - hi * q, sw = Math.sin(t * 6 + i * 1.4 - q * 5) * 3.4 * (0.4 + q) + xo * (1 + q * 0.12); s ? c.lineTo(cx + sw, yy) : c.moveTo(cx + sw, yy); } };
-        c.globalAlpha = 0.5 * k; c.strokeStyle = INK; c.lineWidth = 5.2; path(); c.stroke();
-        c.globalAlpha = 0.8 * k; c.strokeStyle = col; c.lineWidth = 3.2; path(); c.stroke();
-        c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.7 * k; c.strokeStyle = FOAM; c.lineWidth = 1; path(); c.stroke(); c.globalCompositeOperation = 'source-over';
+      // (healers pass) a spout of water standing round the ally: a thin pale body (the hero stays visible through it), the two edges inked and
+      // wavering, streaks of foam winding up it
+      const half = (q, ph) => r * (1.05 - 0.4 * q) + Math.sin(t * 6 + q * 6 + ph) * 2.6 * (0.3 + q);
+      const edge = sd => { c.beginPath(); for (let s = 0; s <= 14; s++) { const q = s / 14, yy = cy - hh * q, xx = cx + sd * half(q, sd); s ? c.lineTo(xx, yy) : c.moveTo(xx, yy); } };
+      c.beginPath(); for (let s = 0; s <= 14; s++) { const q = s / 14; const xx = cx - half(q, -1), yy = cy - hh * q; s ? c.lineTo(xx, yy) : c.moveTo(xx, yy); }
+      for (let s = 14; s >= 0; s--) { const q = s / 14; c.lineTo(cx + half(q, 1), cy - hh * q); }
+      c.closePath(); c.globalAlpha = 0.45 * k; c.fillStyle = col === TEAL2 ? '#6fd6c8' : col; c.fill();
+      for (const sd of [-1, 1]) { edge(sd); c.globalAlpha = 0.6 * k; c.strokeStyle = INK; c.lineWidth = 4; c.stroke(); edge(sd); c.globalAlpha = 0.95 * k; c.strokeStyle = col === TEAL2 ? PEARL : col; c.lineWidth = 2.2; c.stroke(); }
+      for (let i = 0; i < Math.min(n, 3); i++) {
+        const hi = hh * (0.8 + 0.2 * Math.sin(i * 2.3)), ph = i * 2.1;
+        c.globalAlpha = 0.9 * k; c.strokeStyle = FOAM; c.lineWidth = 1.5; c.beginPath();
+        for (let s = 0; s <= 12; s++) { const q = s / 12, yy = cy - hi * q, sw = Math.sin(t * 5 + ph - q * 7) * r * 0.7 * (1 - 0.4 * q); s ? c.lineTo(cx + sw, yy) : c.moveTo(cx + sw, yy); } c.stroke();
       }
       // the crown: foam leaves opening off the top of the column
       if (up > 0.6) { const o2 = (up - 0.6) / 0.4, ty = cy - hh; c.globalAlpha = 0.85 * k; c.fillStyle = FOAM; c.strokeStyle = INK; c.lineWidth = 1.2;
         for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + (i - 2) * 0.5; c.save(); c.translate(cx, ty + 4); c.rotate(a + Math.PI / 2); c.beginPath(); c.ellipse(0, -7 * o2, 2.6 * o2, 8 * o2, 0, 0, TAU); c.fill(); c.stroke(); c.restore(); }
       }
       c.restore();
-    }, tick: (p, dt, e) => { if (p < 0.6 && Math.random() < 0.45) V.spawn({ x: (follow ? follow.x : x) + rnd(-r, r), y: (follow ? follow.y : y) + rnd(-6, 6), z: rnd(2, 14), vz: rnd(60, 130), vx: rnd(-8, 8), life: rnd(0.5, 0.9), size: rnd(4, 8), size1: 0, color: Math.random() < 0.5 ? FOAM : col, kind: Math.random() < 0.5 ? 'glow' : 'star' }); } });
+    }, tick: (p, dt, e) => { if (p < 0.6 && Math.random() < 0.45) V.spawn({ x: (follow ? follow.x : x) + rnd(-r, r), y: (follow ? follow.y : y) + rnd(-6, 6), z: rnd(2, 14), vz: rnd(60, 130), vx: rnd(-8, 8), life: rnd(0.5, 0.9), size: rnd(5, 8), size1: 0, color: Math.random() < 0.5 ? FOAM : col, kind: 'drop', add: false, rot: 0 }); } });
   }
   // a whirl of water: spiral arms and a foam eye. On the floor (flat) or standing in the air; follow keeps it on a moving entity
   function whirl(x, y, o = {}) {
@@ -8658,14 +10025,15 @@ Object.assign(KIT_VFX, {
     V.fx({ dur: dur + 0.14, layer: 'air', draw: (c, p, t, e) => {
       const head = Math.min(1, t / dur), tail = Math.max(0, (t - 0.06) / dur - 0.2), k = e.a * (1 - Math.max(0, (t - dur) / 0.14));
       if (head <= tail || k < 0.02) return;
-      c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
-      for (const [s, w, cl, a] of [[1, 8, INK, 0.5], [1, 5.5, TEAL, 0.9], [0.55, 3, col, 0.95], [1.4, 1.6, FOAM, 0.9]]) {
-        c.globalAlpha = a * k; c.strokeStyle = cl; c.lineWidth = w; c.beginPath();
-        for (let i = 0; i <= 14; i++) { const q = tail + (head - tail) * i / 14, [px, py] = at(q, s); i ? c.lineTo(px, py) : c.moveTo(px, py); }
-        c.stroke();
+      // (healers pass) a body of water, not a thread: a fat rim of ink, the teal body, a pale stream down its back and a foam streak, each stroked
+      // in short pieces so it swells from a thin tail to a full head; a bead of water leads it
+      c.save(); c.lineCap = 'round'; c.lineJoin = 'round'; const big = o.big ?? 1;
+      for (const [s, w, cl, a] of [[1, 13, INK, 0.7], [1, 10, TEAL, 1], [0.55, 5.4, col, 1], [1.4, 2, FOAM, 1]]) {
+        c.strokeStyle = cl; let pr = at(tail, s);
+        for (let i = 1; i <= 14; i++) { const q = tail + (head - tail) * i / 14, pt = at(q, s); c.globalAlpha = a * k; c.lineWidth = Math.max(1.2, w * big * (0.25 + 0.75 * i / 14)); c.beginPath(); c.moveTo(pr[0], pr[1]); c.lineTo(pt[0], pt[1]); c.stroke(); pr = pt; }
       }
       c.restore();
-      const [hx, hy] = at(head, 1); V.glowAt(c, hx, hy, 12, FOAM, 0.6 * k);
+      const [hx, hy] = at(head, 1); if (head < 1) HEALFX.tcBead(c, hx, hy, 6.4 * big, k, TEAL);
     }, tick: () => { const q = Math.random(), [px, py] = at(q, 1); V.spawn({ x: px, y: py + z0 * 0.3, z: z0 * 0.4, vx: rnd(-30, 30), vy: rnd(-10, 20), vz: rnd(10, 60), g: 400, life: 0.4, size: rnd(5, 8), color: Math.random() < 0.5 ? FOAM : TEAL2, kind: 'drop', add: false, rot: 0 }); }, done: () => { if (o.onHit) o.onHit(bx, by); } });
   }
   // a foam burst on a target: bold, spiky and inked (damage goes outward), pale teal over white
@@ -8675,6 +10043,7 @@ Object.assign(KIT_VFX, {
     V.flash(x, y - 16, 40 * s, FOAM, 0.2);
     V.shock(x, y, { r: 52 * s, color: FOAM, dur: 0.36, w: 3.4 });
     drops(x, y, { n: Math.round(10 * s), speed: 140 * s, up: 220 * s, size: s });
+    HEALFX.tcCrown(x, y, { r: 30 * s, h: 34 * s, z: 10, dur: 0.55 }); HEALFX.tcSheen(x, y + 6, 22 * s, 1.2, 0.2);
   }
   // a small glyph hovering over an ally's shoulder: the Riptide Mark's whirl in a ring, for as long as it lasts
   function markGlyph(ent, o = {}) {
@@ -8693,7 +10062,7 @@ Object.assign(KIT_VFX, {
   // ring of foam and pearl on an ally for a small heal
   function allyLand(w, o = {}) {
     const s = o.s ?? 1, strong = !!o.strong;
-    rollRing(w.x, w.y, { r0: 6, r: 34 * s + (strong ? 10 : 0), dur: 0.55, w: 4, n: 6 });
+    HEALFX.tcCrown(w.x, w.y, { r: 21 * s + (strong ? 5 : 0), h: 24 * s + (strong ? 9 : 0), dur: 0.55 }); HEALFX.tcSheen(w.x, w.y, 22 * s, 1.3, 0.26);
     column(w.x, w.y, { r: 14 * s, h: 62 * s + (strong ? 24 : 0), dur: 0.8, n: 4, follow: w });
     V.flash(w.x, bodyY(w), 28 * s, PEARL, 0.2);
     healMark(w.x, w.y, strong ? 4 : 2);
@@ -8706,7 +10075,7 @@ Object.assign(KIT_VFX, {
     spray: c => {
       const e = c.ent, a = Math.atan2(c.ty - c.y, c.tx - c.x), sx = c.x + Math.cos(a) * 20 - Math.sin(a) * 9, sy = c.y + Math.sin(a) * 14 + Math.cos(a) * 3;
       V.sparks(sx, sy - 24, { color: FOAM, n: 3, speed: 120, life: 0.6 });
-      lash(sx, sy, c.tx, c.ty, { dur: Math.max(0.16, Math.min(0.3, Math.hypot(c.tx - c.x, c.ty - c.y) / 1100)), bow: 22, onHit: (x, y) => {
+      lash(sx, sy, c.tx, c.ty, { dur: Math.max(0.16, Math.min(0.3, Math.hypot(c.tx - c.x, c.ty - c.y) / 1100)), bow: 22, big: 1.2, onHit: (x, y) => {
         foamBurst(x, y, { s: 0.8 });
         V.puddle(x, y + 8, { r: 22, color: TEAL, dark: DEEPER, dur: 1.6, bubbles: false, fumes: false });
         snd(e, 'spray', null);
@@ -8799,8 +10168,12 @@ Object.assign(KIT_VFX, {
   };
   // Sip and Swell land: a drop on the ally, ripples, a short column. At low water (the heal is 30% stronger) it is bigger and a
   // second ring follows; a free Sip (Low Water) has a pearl glint
+  // (healers pass) a raise: the tide comes in over the fallen hero as a tall spout, breaks in a great crown and a ring, and the water drains off them
+  const tcRaise = w => { column(w.x, w.y, { r: 24, h: 130, dur: 1.2, n: 4, follow: w, color: PEARL }); HEALFX.tcCrown(w.x, w.y, { r: 30, h: 36, z: 6, dur: 0.7, delay: 0.25 }); HEALFX.tcCrown(w.x, w.y, { r: 20, h: 30, z: 6, dur: 0.6, delay: 0.4 });
+    HEALFX.tcSpatter(w.x, w.y, { n: 14, z: 24, up: 230, speed: 80, delay: 0.3 }); rollRing(w.x, w.y, { r0: 8, r: 62, dur: 0.7, w: 4, delay: 0.3 }); HEALFX.tcSheen(w.x, w.y, 26, 1.6, 0.18); V.glint(w.x, w.y - 44, { color: PEARL, size: 30, z: 44 }); healMark(w.x, w.y, 5); };
   KIT_VFX.sip = (e, target, d) => {
     const w = target || e, low = d && d.low, free = d && d.free;
+    if (HEALFX.fallen(w)) { later(e, 0.2, () => tcRaise(w)); return; }
     later(e, 0.2, () => V.spawn({ x: w.x, y: w.y, z: 70, vz: -240, life: 0.2, size: 12, size1: 8, color: TEAL2, kind: 'drop', add: false, rot: 0 }));
     later(e, 0.37, () => {
       allyLand(w, { s: low ? 1.2 : 1, strong: low });
@@ -8810,6 +10183,7 @@ Object.assign(KIT_VFX, {
   };
   KIT_VFX.swell = (e, target, d) => {
     const w = target || e;
+    if (HEALFX.fallen(w)) { later(e, 0.2, () => tcRaise(w)); return; }
     later(e, 0.22, () => {
       allyLand(w, { s: 0.9 });
       // the tide climbs: three chevrons of pearl rise off the ring at the caster's feet
@@ -8843,7 +10217,7 @@ Object.assign(KIT_VFX, {
           try {
             column(w.x, w.y, { r: 14 + 8 * f, h: 56 + 90 * f, dur: 0.9, n: 4 + Math.round(f * 2), follow: w, color: flood ? '#fff6d8' : TEAL2 });
             V.flash(w.x, bodyY(w), 30 + 24 * f, flood ? MOON : PEARL, 0.22);
-            rollRing(w.x, w.y, { r0: 6, r: 30 + 24 * f, dur: 0.6, w: 3.4, n: 6 });
+            rollRing(w.x, w.y, { r0: 6, r: 30 + 24 * f, dur: 0.6, w: 3.4, n: 6 }); HEALFX.tcCrown(w.x, w.y, { r: 14 + 12 * f, h: 16 + 18 * f, dur: 0.55 }); HEALFX.tcSheen(w.x, w.y, 18 + 8 * f, 1.3);
             healMark(w.x, w.y, 2 + Math.round(2 * f));
             if (full || flood) { V.glint(w.x, w.y - 52, { color: flood ? MOON : PEARL, size: 26, z: 52 }); drops(w.x, w.y, { n: 6, speed: 60, up: 200 }); }
           } finally { V.setScale(1); }
@@ -8953,7 +10327,9 @@ Object.assign(KIT_VFX, {
       V.flash(e.x, bodyY(e), 150, MOON, 0.34);
       // (climax pass) the flood breaks as one great foam-and-moonlight starburst over the hero (more than twice their height), then pearl mist, a few
       // drifting moon-motes and a dim wet mark that is gone in under two seconds
-      V.climax(e.x, e.y, { shape: 'burst', r: 118, n: 14, color: TEAL2, core: '#fff8dc', ink: DEEPER, z: 22, flat: 0.8, hold: 0.12, dur: 0.75, after: { smoke: 0.5, embers: 0.6, mark: 0.8 }, smokeColor: PEARL });
+      // (ult pass) the flood breaks as the tide's own shape, not a starburst: great foam crowns stand up round the hero one inside the next (the class's crest), a pearl sheen over them and a throw of spray
+      HEALFX.tcCrown(e.x, e.y, { r: 78, h: 96, z: 10, dur: 0.8 }); HEALFX.tcCrown(e.x, e.y, { r: 52, h: 120, z: 10, dur: 0.75, delay: 0.1 }); HEALFX.tcCrown(e.x, e.y, { r: 30, h: 140, z: 10, dur: 0.7, delay: 0.2 });
+      HEALFX.tcSheen(e.x, e.y, 70, 1.6, 0.22); HEALFX.tcSpatter(e.x, e.y, { n: 16, z: 30, up: 260, speed: 140, s: 1.2 });
       waveWall(e.x, e.y, { r0: 18, r: 260, h: 70, dur: 1.2, color: TEAL, grow: 0.6, out: 0.4, waves: 12, span: TAU, a0: 0 });
       rollRing(e.x, e.y, { r0: 16, r: 280, dur: 1.2, w: 10, color: TEAL });
       rollRing(e.x, e.y, { r0: 10, r: 200, dur: 1.0, w: 5, delay: 0.12, color: MOON, beads: false });
@@ -9305,12 +10681,7 @@ Object.assign(KIT_VFX, {
   // of an ally draws a thin ember line from them to you
   KIT_VFX['ken-perfect'] = (e, target, d) => {
     const bust = d && d.b, s = bust ? 1.45 : 1.15, p = front(e, 26);
-    clash(p.x, p.y, { s, color: HOT, core: '#ffffff', spark: WGOLD, ring: WGOLD, n: 12 });
-    // (climax pass) the Perfect is ONE bold ember starburst where the blow was met (a tankbuster's is bigger), inked in soot, quick to clear
-    V.climax(p.x, p.y, { shape: 'burst', r: bust ? 100 : 80, n: 10, color: EMB, core: '#ffffff', ink: SOOT, z: 26, flat: 1, hold: 0.1, dur: 0.42, after: { embers: 0.4 } });
-    V.shock(p.x, p.y - 26, { r0: 6, r: 56 * s, color: EMB, dur: 0.34, w: 2.2, layer: 'air', flat: 1, delay: 0.03 });
-    V.glint(p.x, p.y, { color: '#ffffff', size: 26 * s, z: 26 });
-    V.sparks(p.x, p.y, { color: EMB, n: 6, speed: 260, z: 26, up: 120, size: 7 });
+    // (signature pass) the meeting itself (the clean crossing of lines, the spark, the ring) is drawn by the hero pass below (KIT_VFX['ken-perfect'] wrapper); this keeps the tankbuster's ring, the ally's thread and the sound
     if (bust) { V.shock(e.x, e.y, { r0: 8, r: 76, color: EMB, dur: 0.4, w: 3.4 }); shake(3); } else shake(1.2);
     if (d && d.to != null && target && ok(target.x) && target !== e) {
       streak(target.x, target.y - 14, e.x, e.y - 14, { dur: 0.4, run: 0.1, w: 2.4, bow: 6, color: EMB, core: WGOLD, n: 8, embers: 0.2 });
@@ -9414,8 +10785,14 @@ Object.assign(KIT_VFX, {
       streak(b.x + L * 0.8, cy - L * 0.5, b.x - L * 0.8, cy + L * 0.5, { dur: 1, run: 0.08, w: 8, bow: -10, color: EMB2, core: '#ffffff', n: 20, embers: 0.5 });
       V.flash(b.x, cy, 80, HOT, 0.22);
       // (climax pass) a four-armed star of ember and white-gold stands on the boss where the two strokes cross: the one shape to read, then ash and embers
-      V.climax(b.x, cy, { shape: 'cross', tilt: 0.45, r: 135, color: EMB, core: '#ffffff', ink: SOOT, z: 0, flat: 1, hold: 0.12, dur: 0.7, after: { embers: 0.7, smoke: 0.5, mark: 0.8 }, smokeColor: ASH });
-      V.spikeburst(b.x, b.y, { r: R * 1.5, n: 18, color: EMB, core: WGOLD, ink: SOOT, dur: 0.45, layer: 'ground', z: 0, flat: 0.6 });
+      // (ult pass) where the two strokes cross is the class's one spark, not a starburst: a hairline cross-flare along the strokes (white-hot, ember at its points,
+      // ink-rimmed, long and thin), a hard white heart, and a thin ink-rimmed ember ring running out along the floor
+      V.fx({ dur: 0.7, layer: 'air', draw: (c, p, t, fx) => { const q = Math.min(1, t / 0.05), k = fx.a * (1 - Math.min(1, Math.max(0, (t - 0.18) / 0.5))); if (k < 0.02) return; const L = 175 * (0.5 + 0.5 * easeOut(q)), x = b.x, y = cy;
+        c.save(); c.translate(x, y); c.lineCap = 'round';
+        for (const [ang, len] of [[0.58, L], [-0.58, L * 0.92], [Math.PI / 2, L * 0.45]]) { const ux = Math.cos(ang), uy = Math.sin(ang) * 0.8, vx = -uy, vy = ux * 0.8; for (const [col, w] of [[SOOT, 11], [EMB, 7], ['#fff6dc', 2.6]]) { c.globalAlpha = k; c.fillStyle = col; c.beginPath(); c.moveTo(ux * len * (w > 8 ? 1.06 : 1), uy * len * (w > 8 ? 1.06 : 1)); c.lineTo(vx * w * 0.5, vy * w * 0.5); c.lineTo(-ux * len * (w > 8 ? 1.06 : 1), -uy * len * (w > 8 ? 1.06 : 1)); c.lineTo(-vx * w * 0.5, -vy * w * 0.5); c.closePath(); c.fill(); } }
+        const R0 = 20 * (0.6 + 0.4 * easeOut(q)); c.globalAlpha = k; c.fillStyle = SOOT; c.beginPath(); c.arc(0, 0, R0 + 3, 0, TAU); c.fill(); c.fillStyle = '#fff6dc'; c.beginPath(); c.arc(0, 0, R0, 0, TAU); c.fill();
+        c.restore();
+        const rq = Math.min(1, t / 0.5); if (rq < 1) { const Rr = 20 + R * 2.2 * easeOut(rq), kk = fx.a * (1 - rq * rq); c.save(); c.beginPath(); c.ellipse(b.x, b.y, Rr, Rr * 0.6, 0, 0, TAU); c.globalAlpha = 0.8 * kk; c.strokeStyle = SOOT; c.lineWidth = 9 - 5 * rq; c.stroke(); c.globalAlpha = kk; c.strokeStyle = EMB2; c.lineWidth = 4.4 - 2.6 * rq; c.stroke(); c.restore(); } } });
       V.shock(b.x, b.y, { r: R * 2.8, color: WGOLD, dur: 0.6, w: 8 });
       V.shock(b.x, b.y, { r: R * 2, color: EMB, dur: 0.5, w: 5, delay: 0.06 });
       V.sparks(b.x, b.y, { color: GOLD, n: 14, speed: 380, z: 34, up: 200, life: 1.1 });
@@ -9551,6 +10928,263 @@ Object.assign(KIT_VFX, {
   }, { atTarget: true });
 })();
 
+// ======================================================================= HERO PASS · GLOOMSWORN (a vessel of dusk)
+// The dark is a thing the knight carries and pours: a thick cold violet-grey that drips off the blade, spills where a heavy blow lands
+// and pools on the stone (faint, so a telegraph under it reads), with a pale ghost-teal light in its cracks. The barriers are smoked
+// glass: a dark pane with a bright edge and a glint sliding across it. Ordinary compositing for the dark (ink), additive only for the
+// pale core, so the class never washes the floor out.
+(() => {
+  const V = VFX, TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a), shake = s => vfxShake(s);
+  const INK = '#0a0612', DEEP = '#2a1450', VIO = '#6a3aba', BRU = '#8a5ad8', LIL = '#c4a4ff', GHO = '#bff8ee', GHD = '#5fd8c8', POOL = '#2b2046', POOL2 = '#4a3a78';
+  const clamp01 = v => Math.max(0, Math.min(1, v));
+  const aim = c => Math.atan2(c.ty - c.y, c.tx - c.x);
+  const reach = (c, d) => { const a = aim(c), r = Math.min(d, Math.hypot(c.tx - c.x, c.ty - c.y)); return { x: c.x + Math.cos(a) * r, y: c.y + Math.sin(a) * r, a }; };
+  const mine = id => e => e && e.cls && e.cls.id === id;
+  // a pool of gloom on the stone: it spreads out of a point in a third of a second with a ragged edge, a paler rim and a few pale veins, then
+  // settles to a faint stain and thins out. Never denser than o.a (a boss's telegraph under it reads through it)
+  function pool(x, y, r, o = {}) {
+    const dur = o.dur ?? 2.4, lobes = 9, ph = Array.from({ length: lobes }, () => rnd(0.78, 1.18)), vein = Array.from({ length: 4 }, () => ({ a: rnd(0, TAU), l: rnd(0.35, 0.8), b: rnd(-0.6, 0.6) }));
+    const blob = (c, R) => { const P = ph.map((m, i) => { const a = i / lobes * TAU; return [Math.cos(a) * R * m, Math.sin(a) * R * m * 0.62]; }); c.beginPath(); c.moveTo((P[0][0] + P[lobes - 1][0]) / 2, (P[0][1] + P[lobes - 1][1]) / 2);
+      for (let i = 0; i < lobes; i++) { const A = P[i], B = P[(i + 1) % lobes]; c.quadraticCurveTo(A[0], A[1], (A[0] + B[0]) / 2, (A[1] + B[1]) / 2); } c.closePath(); };
+    V.fx({ dur, delay: o.delay, layer: 'ground', draw: (c, p, t, e) => {
+      const g = easeOut(clamp01(t / 0.35)), k = e.a * (o.a ?? 0.5) * Math.min(1, t / 0.08) * clamp01((1 - p) / 0.5) * (1 - 0.35 * clamp01((t - 0.5) / 1.2)), R = r * (0.35 + 0.65 * g);
+      if (k < 0.01) return;
+      c.save(); c.translate(x, y); c.lineJoin = 'round';
+      c.globalAlpha = k; c.fillStyle = POOL; blob(c, R); c.fill();
+      c.globalAlpha = k * 0.9; c.lineWidth = 2.4; c.strokeStyle = POOL2; c.stroke();
+      c.globalAlpha = k * 0.8; c.strokeStyle = GHD; c.lineWidth = 1; c.beginPath(); for (const v of vein) { const a = v.a, L = R * v.l * g; c.moveTo(Math.cos(a) * 4, Math.sin(a) * 2.5); c.quadraticCurveTo(Math.cos(a + v.b) * L * 0.6, Math.sin(a + v.b) * L * 0.4, Math.cos(a) * L, Math.sin(a) * L * 0.62); } c.stroke();
+      c.restore();
+    } });
+  }
+  // drops of dark flung from a point and falling: dense, opaque, a little glossy
+  function drips(x, y, o = {}) {
+    const n = o.n ?? 4, a = o.a ?? 0, sp = o.spread ?? 1.2, s = o.s ?? 1;
+    for (let i = 0; i < n; i++) { const d = a + rnd(-sp, sp), v = rnd(40, 120) * (o.speed ?? 1);
+      V.spawn({ x, y, z: o.z ?? rnd(10, 26), vx: Math.cos(d) * v, vy: Math.sin(d) * v * 0.6, vz: rnd(20, 90), g: 380, drag: 0.02, life: rnd(0.45, 0.8), size: rnd(5, 8) * s, size1: rnd(2, 4) * s, color: i % 3 ? POOL : DEEP, kind: 'glow', add: false, a: 0.95 }); }
+  }
+  // a stream of gloom poured from (x0, y0) to (x1, y1): a thick ink ribbon with a violet edge and a thin pale vein, sagging as it goes
+  function pour(x0, y0, x1, y1, o = {}) {
+    const dur = o.dur ?? 0.4, W = o.w ?? 7, dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, sag = o.sag ?? 14, z = o.z ?? 20, N = 12;
+    const at = q => [x0 + dx * q, y0 + dy * q - z - Math.sin(q * Math.PI) * 14 + sag * q * q];
+    V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const head = easeOut(clamp01(p / 0.5)), tail = clamp01((p - 0.25) / 0.75), k = e.a * (1 - clamp01((p - 0.7) / 0.3)), a = tail * head;
+      if (head - a < 0.02) return;
+      c.save(); c.lineCap = 'round';
+      for (const [cl, wm, al] of [[INK, 1.5, 0.85], [VIO, 0.95, 0.9], [GHO, 0.25, 0.85]]) for (let i = 0; i < N; i++) {
+        const q0 = a + (head - a) * i / N, q1 = a + (head - a) * (i + 1) / N, f = Math.pow(Math.sin(Math.PI * clamp01((i + 0.5) / N)), 0.55);
+        c.globalAlpha = al * k; c.strokeStyle = cl; c.lineWidth = W * wm * f + 0.6; const [px, py] = at(q0), [qx, qy] = at(q1); c.beginPath(); c.moveTo(px, py); c.lineTo(qx, qy); c.stroke(); }
+      c.restore();
+    } });
+  }
+  // a dusk cut on the target: an inked lens with a violet edge and a pale core, a little longer than the filler's
+  function cutG(x, y, ang, len, o = {}) { HFX.cut(x, y, ang, { len, w: o.w ?? 3.6, color: o.color || GHO, inner: o.inner || BRU, ink: INK, dur: o.dur ?? 0.36, z: o.z ?? 16, delay: o.delay, bend: 0.1 }); }
+
+  // ---- Rend / Sunder / Gloaming: the dark runs off the blade; each swing a little heavier; the third spills
+  const rend0 = ABILITY_VFX.gloomsworn.rend;
+  ABILITY_VFX.gloomsworn.rend = c => {
+    rend0(c);
+    const n = c.ent && c.ent.gloomBlade ? c.ent.gloomBlade.n : 0, a = aim(c);
+    c.later(0.1 + n * 0.02, () => { const p = reach(c, 52 + n * 10);
+      drips(p.x, p.y, { n: 2 + n * 2, a: p.a, spread: 1.3, s: 0.8 + n * 0.2 });
+      if (n === 1) pool(p.x, p.y + 4, 26, { dur: 1.4, a: 0.4 });
+      if (n === 2) { pool(p.x, p.y + 6, 58, { dur: 2.6, a: 0.5 }); drips(p.x, p.y, { n: 6, a: p.a, spread: 3.2, s: 1.2, speed: 1.2 }); } });
+  };
+  // ---- Gloom Strike: the vessel is spent in one overhead smash; what was in it spills across the stone
+  const strike0 = ABILITY_VFX.gloomsworn.strike;
+  ABILITY_VFX.gloomsworn.strike = c => {
+    strike0(c);
+    const full = (() => { const g = typeof window !== 'undefined' && window.__game, k = c.mine && g && g.actor && g.actor.kit; return k && k.g ? (k.g.gloom || 0) >= 55 : false; })();
+    c.later(0.3, () => { const p = reach(c, 58);
+      pool(p.x, p.y + 6, full ? 96 : 78, { dur: 3.4, a: 0.55 }); drips(p.x, p.y, { n: 10, a: 0, spread: 3.2, s: 1.3, speed: 1.4, z: 30 });
+      for (let i = 0; i < 3; i++) pour(p.x, p.y - 40 - i * 6, p.x + rnd(-46, 46), p.y + rnd(4, 24), { dur: 0.5, delay: i * 0.04, w: 6, z: 0, sag: 6 }); });
+  };
+  // ---- Shade Step: the knight pours out of where it stood and into the place it lands
+  const shade0 = ABILITY_VFX.gloomsworn.shade;
+  ABILITY_VFX.gloomsworn.shade = c => { shade0(c); pool(c.x, c.y + 4, 30, { dur: 1.6, a: 0.45 }); drips(c.x, c.y, { n: 4, spread: 3.2, s: 0.9 }); const p = reach(c, 40); c.later(0.07, () => { pool(p.x, p.y + 4, 24, { dur: 1.3, a: 0.4 }); drips(p.x, p.y, { n: 4, a: p.a, spread: 1.4 }); }); };
+  // ---- Black Pall: the bell is poured over the party: a wide pool of gloom spreads under it and stands faint for the bell's life
+  const pall0 = ABILITY_VFX.gloomsworn.pall;
+  ABILITY_VFX.gloomsworn.pall = c => { pall0(c); pool(c.x, c.y + 6, 120, { dur: 6, a: 0.22 }); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; pour(c.x + Math.cos(a) * 30, c.y - 70, c.x + Math.cos(a) * 100, c.y + Math.sin(a) * 50, { dur: 0.6, delay: i * 0.03, w: 5, z: 0, sag: 10 }); } };
+  // ---- Eclipse of the Vigil: the black sun's fall pools at the target too
+  const eclipse0 = KIT_VFX['gloom-eclipse'];
+  KIT_VFX['gloom-eclipse'] = Object.assign((e, target, d) => { eclipse0(e, target, d);
+    const t = target || { x: e.x + Math.cos(e.angle || 0) * 90, y: e.y + Math.sin(e.angle || 0) * 90 };
+    FX.later(0.52, () => { V.setScale(FX.camFor(e) ? 1 : 0.6); try { pool(t.x, t.y + 6, 150, { dur: 5, a: 0.5 }); drips(t.x, t.y, { n: 12, spread: 3.2, s: 1.5, speed: 1.6, z: 40 }); } finally { V.setScale(1); } });
+    // (ult pass) the release: the black sun LANDS on the target, the same disc that formed over the knight (black with a pale rim and a corona of cracked rays), pressed
+    // down hard (it drops in 0.08s, holds, then sinks into the pool it leaves); twelve pale cracks run out along the floor from it, ink-rimmed
+    const g = Math.max(0, Math.min(100, (d && d.g) || 0)) / 100, sc = 0.75 + 0.35 * g;
+    FX.later(0.5, () => { V.setScale(FX.camFor(e) ? 1 : 0.6); try {
+      V.fx({ dur: 1.1, layer: 'air', draw: (cx, p, tt, fx) => { const drop = easeOut(clamp01(tt / 0.08)), sink = clamp01((tt - 0.55) / 0.5), k = fx.a * (1 - sink * sink); if (k < 0.02) return;
+        const R = 44 * sc * (1 - 0.55 * sink), x = t.x, y = t.y - 30 - (1 - drop) * 150 + 22 * sink;
+        cx.save(); cx.translate(x, y); cx.lineCap = 'round'; cx.globalAlpha = k;
+        for (let i = 0; i < 16; i++) { const a = i * TAU / 16 + 0.1, l0 = R * 1.05, l1 = R * (1.5 + 0.7 * ((i * 37 % 10) / 10)) * (0.6 + 0.4 * drop); for (const [col, w] of [[INK, 6], [i % 3 ? GHO : LIL, 2.4]]) { cx.strokeStyle = col; cx.lineWidth = w; cx.beginPath(); cx.moveTo(Math.cos(a) * l0, Math.sin(a) * l0 * 0.9); cx.lineTo(Math.cos(a) * l1, Math.sin(a) * l1 * 0.9); cx.stroke(); } }
+        cx.fillStyle = INK; cx.beginPath(); cx.ellipse(0, 0, R + 4, (R + 4) * 0.92, 0, 0, TAU); cx.fill(); cx.strokeStyle = GHO; cx.lineWidth = 3.4; cx.beginPath(); cx.ellipse(0, 0, R, R * 0.92, 0, 0, TAU); cx.stroke(); cx.strokeStyle = '#ffffff'; cx.lineWidth = 1.2; cx.stroke();
+        cx.restore();
+        const rq = clamp01(tt / 0.5); if (rq < 1) { const Rr = 20 + 130 * sc * easeOut(rq), kk = fx.a * (1 - rq * rq); cx.save(); cx.beginPath(); cx.ellipse(t.x, t.y, Rr, Rr * 0.6, 0, 0, TAU); cx.globalAlpha = 0.85 * kk; cx.strokeStyle = INK; cx.lineWidth = 12 - 7 * rq; cx.stroke(); cx.globalAlpha = kk; cx.strokeStyle = GHO; cx.lineWidth = 4 - 2.4 * rq; cx.stroke(); cx.restore(); } } });
+    } finally { V.setScale(1); } }); }, { atTarget: true });
+
+  // ---- the auto: a short dusk cut, a drip
+  const slash0 = AUTO_VFX.slash;
+  AUTO_VFX.slash = c => {
+    if (!mine('gloomsworn')(c.ent)) return slash0(c);
+    OLD_PAINT.smear(c.ent.x, c.ent.y, c.ang, { r: 50, span: 1.7, w: 11, color: VIO, core: GHO, ink: INK, dur: 0.22, flip: c.alt, z: 12, lines: 1 });
+    c.later(0.08, () => { const p = reach({ x: c.ent.x, y: c.ent.y, tx: c.tx, ty: c.ty }, 56); cutG(p.x, p.y, c.ang + (c.alt ? -0.9 : 0.9), 30, { w: 3, dur: 0.28 }); drips(p.x, p.y, { n: 2, a: c.ang, spread: 1, s: 0.7 }); V.sparks(p.x, p.y, { color: LIL, n: 3, angle: c.ang, spread: 0.8, speed: 220 }); });
+  };
+  // ---- the crit: a dark X over the target, a pale light in the cut, and a drop of gloom
+  CRIT_IKG.gloomsworn = (x, y, tier) => { const s = [0, 1, 1.45, 2][tier], zc = 34;
+    V.fx({ dur: 0.5, layer: 'air', draw: (c, p, t, e) => { const open = easeOut(Math.min(1, p / 0.2)), k = e.a * (1 - clamp01((p - 0.35) / 0.65)), R = 28 * s * open; if (k < 0.02) return;
+      c.save(); c.translate(x, y - zc); c.lineCap = 'round';
+      for (const sd of [-1, 1]) { const a = sd * 0.72, x1 = Math.cos(a) * R, y1 = Math.sin(a) * R * 0.85;
+        c.globalAlpha = 0.95 * k; c.strokeStyle = INK; c.lineWidth = 8 * s; c.beginPath(); c.moveTo(-x1, -y1); c.lineTo(x1, y1); c.stroke();
+        c.strokeStyle = sd < 0 ? VIO : BRU; c.lineWidth = 4 * s; c.stroke(); c.strokeStyle = GHO; c.lineWidth = 1.3; c.globalAlpha = k; c.stroke(); }
+      c.restore(); } });
+    drips(x, y - 20, { n: 2 + tier * 2, a: Math.PI / 2, spread: 1.4, s: 0.9 });
+    if (tier >= 2) pool(x, y + 6, 40 * s, { dur: 1.6, a: 0.45 });
+    if (tier >= 3) V.shock(x, y, { r: 80, color: BRU, dur: 0.4, w: 3 }); };
+
+  // ---- Dread Mark (the taunt): a rope of gloom thrown to the target and a brand of dread set over it, a pool under its feet
+  const taunt0 = KIT_VFX.taunt;
+  KIT_VFX.taunt = (e, target) => {
+    if (!mine('gloomsworn')(e)) return taunt0(e, target);
+    const a = target ? Math.atan2(target.y - e.y, target.x - e.x) : (e.angle || 0);
+    drips(e.x + Math.cos(a) * 16, e.y + Math.sin(a) * 10, { n: 4, a, spread: 1.2 });
+    if (!target) return;
+    pour(e.x + Math.cos(a) * 16, e.y + Math.sin(a) * 10, target.x, target.y, { dur: 0.45, w: 8, sag: 18, z: 24 });
+    FX.later(0.2, () => { pool(target.x, target.y + 6, 46, { dur: 2.2, a: 0.5 });
+      V.fx({ dur: 0.9, layer: 'air', draw: (c, p, t, ee) => { const k = ee.a * Math.min(1, p / 0.12) * clamp01((1 - p) / 0.4), sc = 0.6 + 0.4 * easeOut(Math.min(1, p / 0.2)); c.save(); c.translate(target.x, target.y - 64); c.scale(sc, sc); c.lineCap = 'round';
+        const mark = () => { c.beginPath(); c.moveTo(-9, -8); c.lineTo(9, 8); c.moveTo(9, -8); c.lineTo(-9, 8); c.moveTo(-14, -14); c.lineTo(-9, -22); c.lineTo(-3, -14); c.lineTo(0, -24); c.lineTo(3, -14); c.lineTo(9, -22); c.lineTo(14, -14); };
+        c.globalAlpha = 0.9 * k; c.strokeStyle = INK; c.lineWidth = 7; mark(); c.stroke(); c.strokeStyle = BRU; c.lineWidth = 3.2; mark(); c.stroke(); c.strokeStyle = GHO; c.lineWidth = 1; c.globalAlpha = k; mark(); c.stroke(); c.restore(); } });
+      V.sparks(target.x, target.y, { color: LIL, n: 6, speed: 220 }); });
+  };
+})();
+
+// ======================================================================= HERO PASS · KENSEIER (ash and a clean steel line)
+// Steel is a thin bright line with an ink edge: cut once and clean, never a smear. What the line leaves is ash (grey flakes falling and
+// drifting) and embers (a few, rising and guttering out). A Perfect Deflect is one bright white-orange spark; the Deathblow is one long
+// unhurried cut that leaves a hot seam across the boss.
+(() => {
+  const V = VFX, TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a), shake = s => vfxShake(s);
+  const SOOT = '#14110f', EMB = '#ff8a3d', EMB2 = '#ffb070', STEEL = '#e4eaf2', WG = '#fff0c0', ASH = '#8a8478', ASH2 = '#5e5a52', GOLD = '#ffd27a';
+  const clamp01 = v => Math.max(0, Math.min(1, v));
+  const aim = c => Math.atan2(c.ty - c.y, c.tx - c.x);
+  const reach = (c, d) => { const a = aim(c), r = Math.min(d, Math.hypot(c.tx - c.x, c.ty - c.y)); return { x: c.x + Math.cos(a) * r, y: c.y + Math.sin(a) * r, a }; };
+  const mineK = e => e && e.cls && e.cls.id === 'kenseier';
+  // ash flakes: grey, falling slowly and drifting, a few of them lit orange at one edge for a moment (opaque, so they read on the floor)
+  function ash(x, y, o = {}) {
+    const n = o.n ?? 4, s = o.s ?? 1;
+    for (let i = 0; i < n; i++) V.spawn({ x: x + rnd(-10, 10), y: y + rnd(-5, 5), z: o.z ?? rnd(18, 40), vx: rnd(-18, 18) + (o.vx ?? 0), vy: rnd(-6, 6), vz: rnd(-6, 26), g: 40, drag: 0.04, life: rnd(0.9, 1.5), size: rnd(3.2, 5.6) * s, size1: rnd(1.5, 2.5) * s, color: i % 3 ? ASH : ASH2, kind: 'glow', add: false, a: 0.9, sway: rnd(10, 24), swayW: rnd(3, 6) });
+  }
+  function embers(x, y, o = {}) {
+    for (let i = 0; i < (o.n ?? 4); i++) V.spawn({ x: x + rnd(-8, 8), y: y + rnd(-4, 4), z: o.z ?? rnd(14, 34), vx: rnd(-20, 20), vy: rnd(-8, 8), vz: rnd(30, 90), drag: 0.03, life: rnd(0.7, 1.3), size: rnd(2.6, 4.4) * (o.s ?? 1), size1: 0, color: Math.random() < 0.55 ? EMB2 : EMB, sway: rnd(14, 28), swayW: rnd(4, 7), flick: rnd(20, 30), fadePow: 1.1 });
+  }
+  // one clean line of steel cut through (x, y) at ang, len long: it is drawn by a head in 0.07s, an ink edge, a steel-white body and an ember hairline,
+  // then closes from the old end. o.hot: the ember core wider (a heavier cut); o.dur
+  function line(x, y, ang, len, o = {}) {
+    const dur = o.dur ?? 0.36, W = o.w ?? 3.2, ca = Math.cos(ang), sa = Math.sin(ang) * 0.8, z = o.z ?? 22, N = 10;
+    V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
+      const head = easeOut(clamp01(t / 0.08)), tail = clamp01((p - 0.3) / 0.7), k = e.a * (1 - clamp01((p - 0.5) / 0.5));
+      if (head - tail < 0.02 || k < 0.02) return;
+      c.save(); c.translate(x, y - z); c.lineCap = 'round';
+      for (const [cl, wm, al] of [[SOOT, 2.3, 0.7], [o.col || STEEL, 1, 1], [o.hot ? EMB : EMB2, 0.42, 0.95], ['#ffffff', 0.2, 1]]) for (let i = 0; i < N; i++) {
+        const q0 = tail + (head - tail) * i / N, q1 = tail + (head - tail) * (i + 1) / N, f = Math.pow(Math.sin(Math.PI * clamp01((i + 0.5) / N)), 0.5);
+        c.globalAlpha = al * k; c.strokeStyle = cl; c.lineWidth = W * wm * f + 0.4; c.beginPath(); c.moveTo((q0 - 0.5) * len * ca, (q0 - 0.5) * len * sa); c.lineTo((q1 - 0.5) * len * ca, (q1 - 0.5) * len * sa); c.stroke(); }
+      c.restore();
+    } });
+  }
+
+  // ---- Cut / Rising Cut / Ember Cut: one steel line each, the second the other way up, the third longer with a hot seam and a cross-cut; ash falls from each
+  const cut0 = ABILITY_VFX.kenseier.cut;
+  ABILITY_VFX.kenseier.cut = c => {
+    const a = aim(c), s = (c.step | 0) % 3, f = s === 1 ? -1 : 1;
+    OLD_PAINT.thrust(c.x, c.y, c.x + Math.cos(a + f * 0.5) * 50, c.y + Math.sin(a + f * 0.5) * 36, { w: 4 + s, color: STEEL, core: '#ffffff', ink: SOOT, dur: 0.14, z: 24 });
+    c.later(0.08, () => { const p = reach(c, 66);
+      line(p.x, p.y, a + f * (s === 1 ? -0.9 : 0.9), 68 + s * 24, { w: 4.6 + s * 1.2, hot: s === 2, dur: 0.4 });
+      if (s === 2) line(p.x, p.y, a + 0.2, 90, { w: 4, hot: true, delay: 0.05, dur: 0.4 });
+      V.spawn({ x: p.x, y: p.y, z: 22, life: 0.12, size: 22 + s * 8, size1: 6, color: '#fff8e6', kind: 'star', vr: 4 });
+      V.sparks(p.x, p.y, { color: s === 2 ? EMB2 : STEEL, n: 4 + s * 2, angle: a, spread: 0.9, speed: 280, up: 90 });
+      ash(p.x, p.y, { n: 2 + s * 2 }); if (s === 2) embers(p.x, p.y, { n: 5 }); });
+  };
+  // ---- the auto: a short clean line and two flakes of ash
+  const slashK = AUTO_VFX.slash;
+  AUTO_VFX.slash = c => {
+    if (!mineK(c.ent)) return slashK(c);
+    OLD_PAINT.thrust(c.ent.x, c.ent.y, c.ent.x + Math.cos(c.ang + (c.alt ? -0.5 : 0.5)) * 42, c.ent.y + Math.sin(c.ang + (c.alt ? -0.5 : 0.5)) * 30, { w: 3.4, color: STEEL, core: '#ffffff', ink: SOOT, dur: 0.12, z: 22 });
+    c.later(0.07, () => { const p = reach({ x: c.ent.x, y: c.ent.y, tx: c.tx, ty: c.ty }, 62); line(p.x, p.y, c.ang + (c.alt ? -0.9 : 0.9), 46, { w: 3.4, dur: 0.3 }); V.sparks(p.x, p.y, { color: EMB2, n: 3, angle: c.ang, spread: 0.8, speed: 230 }); ash(p.x, p.y, { n: 1 }); });
+  };
+  // ---- the Deathblow cast: the draw, one clean white line across the hero's front (the blow is ken-deathblow)
+  ABILITY_VFX.kenseier.deathblow = c => { const a = aim(c), px = Math.cos(a + Math.PI / 2) * 36, py = Math.sin(a + Math.PI / 2) * 26;
+    line(c.x + Math.cos(a) * 26, c.y + Math.sin(a) * 18, a + Math.PI / 2, 80, { w: 4, dur: 0.42, hot: true }); ash(c.x, c.y, { n: 3 }); };
+  // ---- Deflect pressed: the blade lifted to meet the blow: a short bright line standing across the front, a spark at its heart
+  ABILITY_VFX.kenseier.deflect = c => { const a = c.ent.angle || 0, x = c.x + Math.cos(a) * 24, y = c.y + Math.sin(a) * 19;
+    line(x, y, a + Math.PI / 2, 38, { w: 3.2, dur: 0.3 }); V.glint(x, y, { color: WG, size: 16, z: 28 }); };
+  // ---- a Perfect: one bright spark where the blow was met (the older starburst and ring stay), a few embers rise from it and ash drifts down
+  // (signature pass) the Deflect's meeting, one clean beat of steel: the blade stands across the hero's front as a bright line, the blow comes in as an
+  // ember streak down the facing, and where they cross there is a hairline cross-flare (white-hot, ember at its points, ink-rimmed). A PERFECT turns the blow:
+  // a hot streak is thrown off one way along the blade's side (which way follows the hero's angle, so every client draws the same), and a thin ember ring
+  // rolls off the crossing. A GOOD only stops it: a short grey line, a small grey flare, ash; no streak, no ember. Done by 0.3s; embers and ash after.
+  function clang(e, o = {}) {
+    const a = e.angle || 0, ca = Math.cos(a), sa = Math.sin(a), s = o.s || 1, good = !!o.good, side = -1;   // (always off the hero's left, away from the katana's side)
+    const Cx = () => e.x + ca * 54, Cy = () => e.y + sa * 43, z = 24, COL = good ? STEEL : EMB, HOTC = good ? '#c9ccd0' : '#ffe9b8';
+    const diamond = (c, x, y, ang, L, W, col, al) => { const ux = Math.cos(ang), uy = Math.sin(ang) * 0.8, vx = -uy, vy = ux * 0.8; c.globalAlpha = al; c.fillStyle = col; c.beginPath(); c.moveTo(x + ux * L, y + uy * L); c.lineTo(x + vx * W, y + vy * W); c.lineTo(x - ux * L, y - uy * L); c.lineTo(x - vx * W, y - vy * W); c.closePath(); c.fill(); };
+    const taper = (c, x0, y0, x1, y1, w, col, al) => { const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, nx = -dy / L * w / 2, ny = dx / L * w / 2; c.globalAlpha = al; c.fillStyle = col; c.beginPath(); c.moveTo(x0 + nx, y0 + ny); c.lineTo(x1, y1); c.lineTo(x0 - nx, y0 - ny); c.closePath(); c.fill(); };
+    line(Cx(), Cy(), a + Math.PI / 2, (good ? 70 : 120) * s, { w: good ? 4 : 5.6, dur: good ? 0.28 : 0.36, hot: !good, z });
+    V.fx({ dur: 0.5, layer: 'air', draw: (c, p, t, f) => {
+      const x = Cx(), y = Cy() - z; if (f.a < 0.02) return; c.save(); c.lineCap = 'round';
+      if (!good) { const inq = clamp01(t / 0.03), tl = clamp01((t - 0.01) / 0.03), out = clamp01((t - 0.035) / 0.05);   // the blow arriving
+        if (out < 1) { const hx = x + ca * 100 * (1 - inq), hy = y + sa * 80 * (1 - inq), tx = x + ca * 100 * (1 - tl), ty = y + sa * 80 * (1 - tl);
+          taper(c, tx, ty, hx, hy, 22 * s, SOOT, f.a * (1 - out)); taper(c, tx, ty, hx, hy, 13 * s, EMB, f.a * (1 - out)); taper(c, tx, ty, hx, hy, 4.5 * s, '#ffffff', f.a * (1 - out)); } }
+      const q = clamp01((t - 0.012) / 0.035), k = f.a * (1 - clamp01((t - (good ? 0.07 : 0.1)) / (good ? 0.1 : 0.14)));
+      if (q > 0 && k > 0.02) { const LW = (good ? 38 : 74) * s * (0.55 + 0.45 * easeOut(q)) + 8, LA = (good ? 22 : 52) * s * (0.55 + 0.45 * easeOut(q)) + 4, R = (good ? 9 : 19) * s * (0.6 + 0.4 * easeOut(q));
+        diamond(c, x, y, a + Math.PI / 2, LW + 5, good ? 9.5 : 17, SOOT, k); diamond(c, x, y, a, LA + 5, good ? 8 : 14.5, SOOT, k);
+        diamond(c, x, y, a + Math.PI / 2, LW, good ? 6 : 11.5, COL, k); diamond(c, x, y, a, LA, good ? 5 : 9.5, COL, k);
+        diamond(c, x, y, a + Math.PI / 2, LW * 0.82, good ? 2.8 : 5, HOTC, k); diamond(c, x, y, a, LA * 0.82, good ? 2.4 : 4.2, HOTC, k);
+        c.globalAlpha = k; c.fillStyle = SOOT; c.beginPath(); c.arc(x, y, R + 2.4, 0, TAU); c.fill(); c.fillStyle = good ? '#d9dce0' : '#fff6dc'; c.beginPath(); c.arc(x, y, R, 0, TAU); c.fill(); }
+      const rq = clamp01((t - 0.03) / (good ? 0.22 : 0.3)); if (rq > 0 && rq < 1) { const R = 12 + (good ? 40 : 72) * s * easeOut(rq), kk = f.a * (1 - rq * rq);
+        c.beginPath(); c.ellipse(x, y + z * 0.5, R, R * 0.8, 0, 0, TAU); c.globalAlpha = 0.75 * kk; c.strokeStyle = SOOT; c.lineWidth = (good ? 5 : 8) - 4 * rq; c.stroke(); c.globalAlpha = kk; c.strokeStyle = good ? ASH : EMB2; c.lineWidth = (good ? 2.8 : 4.4) - 2.6 * rq; c.stroke(); }
+      c.restore(); } });
+    if (good) { ash(Cx(), Cy(), { n: 3, z: 28 }); return; }
+    // the blow turned: a hot streak thrown off along the blade's side, back toward the hero's shoulder
+    const ang = a + side * 0.9, L = (o.b ? 132 : 112) * s;
+    FX.later(0.03, () => { V.setScale(FX.camFor(e) ? 1 : 0.6); try { line(Cx() + Math.cos(ang) * L / 2, Cy() + Math.sin(ang) * 0.8 * L / 2, ang, L, { w: 9, hot: true, dur: 0.38, z });
+      V.sparks(Cx(), Cy(), { color: EMB2, n: o.b ? 10 : 7, angle: ang, spread: 0.7, speed: 330, z, up: 100, size: 6 });
+      if (o.b) line(Cx() + Math.cos(a - side * 1.05) * 40, Cy() + Math.sin(a - side * 1.05) * 32, a - side * 1.05, 80, { w: 4.2, hot: true, dur: 0.3, z, delay: 0.03 }); } finally { V.setScale(1); } });
+  }
+  const perfect0 = KIT_VFX['ken-perfect'];
+  KIT_VFX['ken-perfect'] = (e, target, d) => { perfect0(e, target, d); if (e.st) e.st.kenFlickT = e.st.t; clang(e, { s: d && d.b ? 1.3 : 1, b: !!(d && d.b) }); const p = { x: e.x + Math.cos(e.angle || 0) * 26, y: e.y + Math.sin(e.angle || 0) * 21 };
+    FX.later(0.05, () => { V.setScale(FX.camFor(e) ? 1 : 0.6); try { embers(p.x, p.y, { n: d && d.b ? 7 : 4, z: 26 }); ash(p.x, p.y, { n: 3, z: 30 }); } finally { V.setScale(1); } }); };
+  // a Good: the grey meeting (clang with good: true), the older small grey spark stays
+  const good0 = KIT_VFX['ken-good'];
+  KIT_VFX['ken-good'] = (e, target, d) => { good0(e, target, d); clang(e, { good: true, s: d && d.b ? 1.2 : 1 }); };
+  // ---- the Deathblow: the old long stroke, and the seam it leaves across the boss: a hot line that cools over a couple of seconds, ash coming off it
+  const death0 = KIT_VFX['ken-deathblow'];
+  KIT_VFX['ken-deathblow'] = Object.assign((e, target, d) => { death0(e, target, d);
+    const g = typeof window !== 'undefined' && window.__game, r = g && g.raid, b = target && Number.isFinite(target.x) ? target : (r && r.bossDraw ? { x: r.bossDraw.x, y: r.bossDraw.y } : null);
+    if (!b) return; const R = (typeof FIGHT !== 'undefined' && FIGHT.BOSS_R) || 70, u = d && d.u;
+    FX.later(0.12, () => { V.setScale(FX.camFor(e) ? 1 : 0.6); try {
+      V.fx({ dur: u ? 2.6 : 2.0, layer: 'air', draw: (c, p, t, ee) => { const k = ee.a * Math.min(1, t / 0.05) * clamp01((1 - p) / 0.6), heat = Math.max(0, 1 - t / 1.2); if (k < 0.02) return;
+          c.save(); c.translate(b.x, b.y - 34); c.lineCap = 'round'; const L = R * (u ? 1.8 : 1.35);
+          c.globalAlpha = 0.6 * k; c.strokeStyle = SOOT; c.lineWidth = 6; c.beginPath(); c.moveTo(-L, -L * 0.66); c.lineTo(L, L * 0.66); c.stroke();
+          c.globalAlpha = k * (0.35 + 0.65 * heat); c.strokeStyle = EMB; c.lineWidth = 2.6; c.stroke(); c.strokeStyle = WG; c.lineWidth = 1; c.globalAlpha = k * heat; c.stroke(); c.restore(); } });
+      ash(b.x, b.y - 30, { n: u ? 10 : 6, s: 1.2, z: 40 }); embers(b.x, b.y - 20, { n: u ? 10 : 6, z: 40 }); } finally { V.setScale(1); } }); }, { atTarget: true });
+  // ---- the crit: one clean ember line cut across, a white spark where it crosses
+  CRIT_IKG.kenseier = (x, y, tier) => { const s = [0, 1, 1.45, 2][tier];
+    line(x, y, -0.6, 70 * s, { w: 3.6 * Math.min(1.6, s), dur: 0.42, z: 34, hot: true });
+    if (tier >= 2) line(x, y, 0.5, 58 * s, { w: 3, dur: 0.42, z: 34, delay: 0.05 });
+    V.spawn({ x, y, z: 34, life: 0.18, size: 26 * s, size1: 6, color: '#fff8e6', kind: 'star', vr: 3 });
+    embers(x, y, { n: 2 + tier * 2, z: 34 }); if (tier >= 3) V.shock(x, y, { r: 80, color: EMB, dur: 0.4, w: 3 }); };
+  // ---- the taunt: the blade pointed, an ember line thrown to the target and a ring of ash set round it
+  const tauntK = KIT_VFX.taunt;
+  KIT_VFX.taunt = (e, target) => {
+    if (!mineK(e)) return tauntK(e, target);
+    const a = target ? Math.atan2(target.y - e.y, target.x - e.x) : (e.angle || 0);
+    V.glint(e.x + Math.cos(a) * 24, e.y + Math.sin(a) * 18, { color: WG, size: 20, z: 30 });
+    if (!target) return;
+    const L = Math.hypot(target.x - e.x, target.y - e.y);
+    OLD_PAINT.thrust(e.x + Math.cos(a) * 26, e.y + Math.sin(a) * 20, target.x - Math.cos(a) * 24, target.y - Math.sin(a) * 18, { w: 6, color: EMB, core: WG, ink: SOOT, dur: 0.32, z: 30 });
+    FX.later(0.16, () => { V.spawn({ x: target.x, y: target.y, z: 30, life: 0.2, size: 44, size1: 10, color: '#fff8e6', kind: 'star', vr: 3 });
+      V.shock(target.x, target.y, { r: 60, color: EMB, dur: 0.4, w: 3.4 }); ash(target.x, target.y, { n: 6, s: 1.2, z: 40 }); embers(target.x, target.y, { n: 4, z: 30 }); });
+  };
+})();
+
 // ======================================================================= Lanternkeeper (healer, class 21): the Last Light
 // Lantern light: warm gold and amber on soot and iron, a white-hot heart in every flame, embers thrown off as sparks, a thin
 // ring of light that shows how far a glow reaches (once, when it is lit, and never a filled disc: the floor stays clear so a
@@ -9598,10 +11232,13 @@ Object.assign(KIT_VFX, {
     V.fx({ dur: o.dur ?? 0.5, delay: o.delay, layer: 'air', draw: (c, p, t, e) => {
       const k = e.a * Math.min(1, p / 0.12) * (1 - p) * (o.alpha ?? 0.9), len = L * easeOut(Math.min(1, p / 0.5));
       if (k < 0.02) return;
-      c.save(); c.translate(x, y - z); c.globalCompositeOperation = 'lighter'; c.fillStyle = col; c.globalAlpha = Math.min(1, k);
-      for (let i = 0; i < n; i++) { c.save(); c.rotate(i / n * TAU + t * spin + (o.a0 || 0)); c.beginPath(); c.moveTo(len * 0.12, -w * 0.5); c.lineTo(len, 0); c.lineTo(len * 0.12, w * 0.5); c.closePath(); c.fill(); c.restore(); }
+      // (healers pass) rays are opaque slivers with an ink edge and a pale heart, so they read on the pale floor
+      c.save(); c.translate(x, y - z); c.lineJoin = 'round';
+      for (let i = 0; i < n; i++) { c.save(); c.rotate(i / n * TAU + t * spin + (o.a0 || 0)); c.beginPath(); c.moveTo(len * 0.12, -w * 0.8); c.lineTo(len, 0); c.lineTo(len * 0.12, w * 0.8); c.closePath();
+        c.globalAlpha = 0.7 * Math.min(1, k); c.strokeStyle = '#3a1e0a'; c.lineWidth = 2.4; c.stroke(); c.globalAlpha = Math.min(1, k); c.fillStyle = col === PALE ? GOLD : col; c.fill();
+        c.beginPath(); c.moveTo(len * 0.2, -w * 0.28); c.lineTo(len * 0.86, 0); c.lineTo(len * 0.2, w * 0.28); c.closePath(); c.fillStyle = '#fff6d8'; c.fill(); c.restore(); }
       c.restore();
-      V.glowAt(c, x, y - z, L * 0.6, col, 0.3 * k);
+      V.glowAt(c, x, y - z, L * 0.45, col, 0.22 * k);
     } });
   }
   // a flame that grows, flickers and dies back, standing at a point
@@ -9611,11 +11248,12 @@ Object.assign(KIT_VFX, {
       const g = Math.pow(Math.sin(Math.min(1, p) * Math.PI), 0.7), h = h0 * g, w = w0 * (0.5 + 0.5 * g);
       if (h < 1) return;
       const sw = Math.sin(t * 20) * w * 0.25;
+      // (healers pass) the lamp-flame is the opaque flame sprite (a white heart, a dark rim), so it reads on a pale floor
       c.save(); c.translate(x, y - (o.z ?? 4));
-      V.glowAt(c, 0, -h * 0.5, h * 1.1 + 8, col, 0.5 * e.a);
-      for (const [s, cl, a] of [[1, col, 0.9], [0.62, PALE, 0.95], [0.3, '#ffffff', 1]]) {
-        c.globalAlpha = Math.min(1, a * e.a); c.fillStyle = cl; c.beginPath(); c.moveTo(sw * s, -h * s); c.quadraticCurveTo(w * s, -h * 0.4 * s, 0, 0); c.quadraticCurveTo(-w * s, -h * 0.4 * s, sw * s, -h * s); c.fill();
-      }
+      V.glowAt(c, 0, -h * 0.5, h * 0.8 + 6, col, 0.3 * e.a);
+      const sw2 = Math.max(9, w * 3.4);
+      c.globalAlpha = Math.min(1, e.a); c.drawImage(V.sprite('flame', col), -sw2 / 2 + sw, -h * 1.05, sw2, h * 1.15);
+      c.globalAlpha = Math.min(1, 0.95 * e.a); c.drawImage(V.sprite('flame', PALE), -sw2 * 0.3 + sw * 0.6, -h * 0.72, sw2 * 0.6, h * 0.7);
       c.restore();
     } });
   }
@@ -9656,8 +11294,11 @@ Object.assign(KIT_VFX, {
     // Trim the Wick: a bolt of ember from the staff's lantern, the shears snipping where it lands
     trim: c => {
       const s = staff(c.ent), d = Math.hypot(c.tx - s.x, c.ty - s.y);
-      V.sparks(s.x, s.y - 10, { color: GOLD, n: 3, speed: 140, life: 0.6 });
-      orb(s.x, s.y - 12, c.tx, c.ty - 6, { dur: Math.max(0.14, Math.min(0.3, d / 1100)), arc: 10, onHit: (x, y) => { V.hit(x, y, AMBER, 0.8); snip(x, y - 4, 12); } });
+      // (healers pass) a teardrop of lamp-flame with a moth riding it; where it lands a small flame catches, a four-point glint pops and embers rise
+      V.glint(s.x, s.y - 14, { color: PALE, size: 16, z: 14, life: 0.16 });
+      HEALFX.lkFlameShot(s.x, s.y - 12, c.tx, c.ty - 6, { speed: Math.max(500, Math.min(1100, d / 0.2)), arc: 10, size: 0.95, onHit: (x, y) => {
+        V.fx({ dur: 0.26, layer: 'air', draw: (cc, p, t, e) => { const k = e.a * (1 - p), R = 15 * easeOut(Math.min(1, p / 0.3)); if (k > 0.02) HEALFX.star4(cc, x, y - 16, R, k, GOLD, '#ffffff', '#3a1e0a', 0.14); } });
+        HFX.flames(x, y, { n: 2, r: 3, s: 0.5, z: 10, out: 3, up: 0.6, color: '#ffb040' }); HFX.embers(x, y, { n: 4, s: 0.9, r: 8 }); V.hit(x, y, AMBER, 0.55); } });
     },
     // Set Lantern: the staff swings low, a ring of light opens at the feet (the lantern itself is the 'lk-place' moment)
     set: c => { const s = staff(c.ent); V.glint(s.x, s.y - 14, { color: PALE, size: 20, z: 14 }); ringOut(c.x, c.y, 36, { r0: 6, dur: 0.4, w: 2 }); V.sparks(c.x, c.y, { color: GOLD, n: 4, speed: 150, up: 120 }); },
@@ -9670,8 +11311,11 @@ Object.assign(KIT_VFX, {
     // Hand Lantern: a hook of light thrown from the staff to the ally (the lantern hanging is the 'lk-hang' moment)
     hand: c => {
       const s = staff(c.ent), w = c.tent || { x: c.tx, y: c.ty };
-      V.sparks(s.x, s.y - 10, { color: GOLD, n: 3, speed: 140, life: 0.6 });
-      orb(s.x, s.y - 12, w.x + 14, w.y - 34, { dur: 0.22, arc: 16, color: GOLD, size: 0.8 });
+      // (healers pass) a little lantern thrown on an arc to the ally's shoulder, swinging, a few sparks left in its wake
+      V.glint(s.x, s.y - 14, { color: PALE, size: 16, z: 14, life: 0.16 });
+      const tx = w.x + 14, ty = w.y - 34;
+      V.fx({ dur: 0.22, layer: 'air', draw: (cc, p, t, e) => { const x = s.x + (tx - s.x) * easeOut(p), y = s.y - 12 + (ty - s.y + 12) * easeOut(p) - Math.sin(p * Math.PI) * 20; HEALFX.lkLamp(cc, x, y, 1.7, e.a * (1 - Math.max(0, (p - 0.85) / 0.15)), t); },
+        tick: p => { if (Math.random() < 0.5) V.spawn({ x: s.x + (tx - s.x) * p, y: s.y + (ty - s.y) * p, z: 16, vz: rnd(10, 40), life: rnd(0.25, 0.45), size: rnd(3, 5), size1: 0, color: GOLD, kind: 'glow', sway: 12 }); } });
     },
     // Flare: the staff thrown up, rays off its lantern (every lantern bursts in 'lk-flare')
     flare: c => { const s = staff(c.ent); rays(s.x, s.y, { z: 14, r: 40, n: 6, dur: 0.45 }); V.flash(s.x, s.y - 14, 34, PALE, 0.18); },
@@ -9705,7 +11349,7 @@ Object.assign(KIT_VFX, {
   // the auto-attack: a small ember bolt off the staff
   SPARK.lanternkeeper = c => {
     const s = staff(c.ent), d = Math.hypot(c.tx - s.x, c.ty - s.y);
-    orb(s.x, s.y - 12, c.tx, c.ty - 6, { dur: Math.max(0.1, Math.min(0.26, d / 1300)), arc: 6, size: 0.55, onHit: (x, y) => V.hit(x, y, AMBER, 0.4) });
+    HEALFX.lkFlameShot(s.x, s.y - 12, c.tx, c.ty - 6, { speed: Math.max(500, Math.min(1400, d / 0.12)), arc: 6, size: 0.55, onHit: (x, y) => { V.hit(x, y, AMBER, 0.4); HFX.embers(x, y, { n: 2, s: 0.7, r: 6 }); } });
   };
 
   // ---- the moments
@@ -9719,6 +11363,8 @@ Object.assign(KIT_VFX, {
       flameLick(x, y, { h: beacon ? 38 : 22, w: beacon ? 8 : 5, z: beacon ? 40 : 14 });
       ringOut(x, y, R, { dur: 0.7, w: 2.2, r0: 10 });
       V.motes(x, y, { color: AMBER, n: 4, r: 10, rise: 0.8 });
+      // (healers pass) the light pools on the floor where it was set down and settles; two moths find it; a puff of soot from the thump
+      HEALFX.lkPool(x, y, R * 0.5, { a: beacon ? 0.34 : 0.3, dur: beacon ? 1.7 : 1.3 }); HEALFX.lkMoths(x, y, { n: beacon ? 3 : 2, z: beacon ? 34 : 20, r: 16, dur: 2.4 }); HFX.smokeUp(x, y, { n: 2, s: 0.5, a: 0.22, color: '#6a625a' });
       if (beacon) {
         V.pillar(x, y, { r: 16, h: 150, color: GOLD, dur: 0.9 });
         ringOut(x, y, R * 0.6, { dur: 0.55, w: 2, r0: 8, delay: 0.08, color: PALE });
@@ -9730,10 +11376,17 @@ Object.assign(KIT_VFX, {
   // a Hand Lantern hung on an ally: a hook of light settles on their shoulder, a warm ring opens round them
   KIT_VFX['lk-hang'] = (e, target, d) => {
     const w = target || e;
+    const down = HEALFX.fallen(w);
     later(e, 0.2, () => {
       V.flash(w.x + 14, w.y - 34, 30, GOLD, 0.22); V.glint(w.x + 14, w.y - 38, { color: PALE, size: 22, z: 36 });
-      ringOut(w.x, w.y, 90, { dur: 0.6, w: 2.2, r0: 10 });
-      V.sparks(w.x + 14, w.y - 34, { color: GOLD, n: 5, speed: 130, up: 90 }); V.plus(w.x, w.y, { color: PALE, n: 2 });
+      ringOut(w.x, w.y, down ? 70 : 90, { dur: 0.6, w: 2.2, r0: 10 });
+      if (down) { // (healers pass) the raise: the wick is lit in them: lamp-flames climb out of the body, the light pools wide, moths gather, embers rise
+        HEALFX.lkBloom(w.x, w.y - 18, { r: 58, n: 8 }); HFX.flames(w.x, w.y, { n: 6, r: 12, s: 0.95, z: 8, out: 8, up: 1.1, color: '#ffb040' }); HEALFX.lkPool(w.x, w.y, 58, { a: 0.34, dur: 1.9 }); rays(w.x, w.y, { z: 20, r: 44, n: 8, dur: 0.7, color: GOLD });
+        HFX.lightMotes(w.x, w.y, { n: 10, r: 20, color: '#ffd27a' }); HFX.embers(w.x, w.y, { n: 8, s: 1, r: 16 }); HEALFX.lkMoths(w.x, w.y, { n: 4, z: 32, r: 22, dur: 2.4 }); V.plus(w.x, w.y, { color: PALE, n: 4 });
+      } else {
+        V.sparks(w.x + 14, w.y - 34, { color: GOLD, n: 5, speed: 130, up: 90 }); V.plus(w.x, w.y, { color: PALE, n: 2 });
+        HEALFX.lkBloom(w.x + 14, w.y - 34, { r: 30, n: 6, dur: 0.45 }); HEALFX.lkPool(w.x, w.y, 40, { a: 0.3, dur: 1.1 }); HEALFX.lkMoths(w.x, w.y, { follow: w, dx: 14, dy: -(w.lift || 0), z: 36, n: 2, r: 13, dur: 9 });   // (a lantern hung on them keeps two moths round it for its life)
+      }
     });
   };
   // Flare: every lantern bursts at once. Rays off each, a ring showing its reach, sparks and a flame; everyone it heals gets a plus and a
@@ -9744,7 +11397,7 @@ Object.assign(KIT_VFX, {
       rays(s.x, s.y, { z: 14, r: 46 * kk, n: 8, dur: 0.5 }); V.flash(s.x, s.y - 14, 40 * kk, PALE, 0.2);
       for (const l of spots.slice(0, 12)) {
         V.flash(l.x, l.y - 14, 30 + l.r * 0.22, AMBER, 0.28);
-        ringOut(l.x, l.y, l.r, { dur: 0.55, w: 2.4 });
+        ringOut(l.x, l.y, l.r, { dur: 0.55, w: 2.4 }); HEALFX.lkPool(l.x, l.y, l.r * 0.55, { a: 0.26, dur: 1.0 });
         rays(l.x, l.y, { z: 16, r: 26 + l.r * 0.15, n: 7, dur: 0.5, color: GOLD, alpha: 0.8 });
         V.sparks(l.x, l.y, { color: GOLD, n: Math.round(8 * kk), speed: 250, up: 210 });
         flameLick(l.x, l.y, { h: 30 * kk, w: 7, z: l.hung ? 30 : 14 });
@@ -9753,15 +11406,16 @@ Object.assign(KIT_VFX, {
       // whole room, which also stands a ring of light round the caster. Lantern glows themselves are not touched. A twin Flare stays small
       if (!twin) {
         const R0 = all ? 100 : 80;
-        if (spots.length) for (const l of spots.slice(0, 3)) V.climax(l.x, l.y, { shape: 'burst', r: R0, n: 12, color: AMBER, core: PALE, ink: IRON, z: l.hung ? 30 : 14, flat: 0.9, hold: 0.1, dur: 0.5, after: { embers: 0.4 } });
-        else V.climax(s.x, s.y, { shape: 'burst', r: R0, n: 12, color: AMBER, core: PALE, ink: IRON, z: 14, flat: 0.9, hold: 0.1, dur: 0.5, after: { embers: 0.4 } });
+        // (healers pass) each bursting lantern blooms as a flower of lamp-flame, not an inked starburst (that is a hit's language)
+        if (spots.length) for (const l of spots.slice(0, 3)) { HEALFX.lkBloom(l.x, l.y - (l.hung ? 30 : 14), { r: R0 * 1.5, n: 10 }); HFX.embers(l.x, l.y, { n: 6, s: 1, r: 14 }); }
+        else { HEALFX.lkBloom(s.x, s.y - 14, { r: R0 * 1.5, n: 10 }); HFX.embers(s.x, s.y, { n: 6, s: 1, r: 14 }); }
         if (all) V.climax(e.x, e.y, { shape: 'ring', r: 130, color: GOLD, core: PALE, ink: IRON, z: 20, flat: 0.7, hold: 0.1, dur: 0.6 });
       }
       if (!spots.length) ringOut(e.x, e.y, 90, { dur: 0.5 });
       for (const w of us) {
         let n = 0; for (const l of spots) if (all || Math.hypot(w.x - l.x, w.y - l.y) <= l.r) n++;
         if (!n) continue;
-        FX.later(0.16, () => { V.setScale(FX.camFor(e) ? 1 : 0.6); try { V.plus(w.x, w.y, { color: PALE, n: Math.min(5, 1 + n) }); V.motes(w.x, w.y, { color: GOLD, n: 2 + n * 2, r: 14, rise: 0.8 }); V.flash(w.x, w.y - 14, 22 + n * 5, GOLD, 0.2);
+        FX.later(0.16, () => { V.setScale(FX.camFor(e) ? 1 : 0.6); try { V.plus(w.x, w.y, { color: PALE, n: Math.min(5, 1 + n) }); V.motes(w.x, w.y, { color: GOLD, n: 2 + n * 2, r: 14, rise: 0.8 }); V.flash(w.x, w.y - 14, 22 + n * 5, GOLD, 0.2); HEALFX.lkPool(w.x, w.y, 28 + n * 4, { a: 0.26, dur: 0.9 });
           // (Ult pass) Lighthouse Flare: the heal falls on each ally as a pillar of white-gold, taller for every lantern lit,
           // with a burst of rays at the feet
           if (all) { V.lightfall(w.x, w.y, { color: PALE, r: 22, h: 150 + 25 * Math.min(4, n), dur: 0.7, feathers: 0 }); rays(w.x, w.y, { z: 4, r: 30, n: 7, dur: 0.45, color: GOLD, alpha: 0.8 }); V.sparks(w.x, w.y - 12, { color: GOLD, n: 4, speed: 160, up: 180 }); } } finally { V.setScale(1); } });
@@ -9774,7 +11428,8 @@ Object.assign(KIT_VFX, {
   KIT_VFX['lk-carry'] = (e, target, d) => {
     if (!d || !ok(d.fx) || !ok(d.x)) return;
     V.flash(d.fx, d.fy - 12, 30, AMBER, 0.2); V.sparks(d.fx, d.fy, { color: GOLD, n: 5, speed: 170, up: 150 });
-    orb(d.fx, d.fy - 18, d.x, d.y - 18, { dur: 0.34, arc: 46, color: GOLD, size: 1.1, onHit: (x, y) => {
+    V.fx({ dur: 0.34, layer: 'air', draw: (cc, p, t, f) => { const x = d.fx + (d.x - d.fx) * easeOut(p), y = d.fy - 14 + (d.y - d.fy) * easeOut(p) - Math.sin(p * Math.PI) * 46; HEALFX.lkLamp(cc, x, y, 1.8, f.a * 0.92 * (1 - Math.max(0, (p - 0.8) / 0.2)), t); } });
+    orb(d.fx, d.fy - 18, d.x, d.y - 18, { dur: 0.34, arc: 46, color: GOLD, size: 0.7, onHit: (x, y) => {
       V.flash(x, y - 12, 34, AMBER, 0.22); V.sparks(x, y, { color: GOLD, n: 6, speed: 190, up: 160 }); ringOut(x, y, 60, { dur: 0.45, w: 2 }); flameLick(x, y, { h: 20, w: 5, z: 14 });
     } });
   };
@@ -9784,10 +11439,17 @@ Object.assign(KIT_VFX, {
     V.sparks(s.x, s.y - 12, { color: '#ffe9b0', n: 5, speed: 180, up: 130 });
     later(e, 0.15, () => {
       flameLick(s.x, s.y, { h: 36, w: 8, z: 14 }); V.flash(s.x, s.y - 14, 46, PALE, 0.22); V.plus(e.x, e.y, { color: PALE, n: 3 });
-      spots.slice(0, 10).forEach((l, i) => FX.later(0.05 + i * 0.06, () => {
+      // (healers pass) the match's flame hops from the staff to every wick in turn on a thin ember line, each lantern catching as it arrives
+      const pts = [{ x: s.x, y: s.y - 14 }].concat(spots.slice(0, 10).map(l => ({ x: l.x, y: l.y - (l.hung ? 30 : 14) })));
+      if (pts.length > 1) V.fx({ dur: 0.1 + (pts.length - 1) * 0.1 + 0.3, layer: 'air', draw: (c, p, t, f) => {
+        const u = Math.min(pts.length - 1, t / 0.1), i = Math.min(pts.length - 2, Math.floor(u)), q = u - i, a = pts[i], b = pts[i + 1], hx = a.x + (b.x - a.x) * q, hy = a.y + (b.y - a.y) * q - Math.sin(q * Math.PI) * 14, k = f.a * (1 - Math.max(0, (t - (pts.length - 1) * 0.1) / 0.3)); if (k < 0.02) return;
+        HEALFX.ink(c, () => { c.moveTo(pts[0].x, pts[0].y); for (let j = 1; j <= i; j++) c.lineTo(pts[j].x, pts[j].y); c.lineTo(hx, hy); }, 1.3, '#ffb040', '#fff0c8', '#3a1e0a', 0.6 * k);
+        if (u < pts.length - 1) { c.globalAlpha = k; c.fillStyle = '#3a1e0a'; c.beginPath(); c.arc(hx, hy, 8, 0, TAU); c.fill(); c.fillStyle = AMBER; c.beginPath(); c.arc(hx, hy, 6.2, 0, TAU); c.fill(); c.fillStyle = '#fff6d8'; c.beginPath(); c.arc(hx, hy, 3, 0, TAU); c.fill(); c.globalAlpha = 1; }
+      } });
+      spots.slice(0, 10).forEach((l, i) => FX.later(0.05 + i * 0.1, () => {
         V.setScale(FX.camFor(e) ? 1 : 0.6);
         try {
-          flameLick(l.x, l.y, { h: 34, w: 7, color: GOLD, z: l.hung ? 30 : 14 }); V.motes(l.x, l.y, { color: GOLD, n: 5, r: 10, rise: 1 });
+          flameLick(l.x, l.y, { h: 46, w: 9, color: GOLD, z: l.hung ? 30 : 14 }); HEALFX.lkBloom(l.x, l.y - (l.hung ? 30 : 14), { r: 30, n: 6, dur: 0.4 }); V.motes(l.x, l.y, { color: GOLD, n: 5, r: 10, rise: 1 });
           ringOut(l.x, l.y, 34, { dur: 0.4, w: 2, r0: 6 }); V.glint(l.x, l.y - 24, { color: PALE, size: 20, z: 24 });
         } finally { V.setScale(1); }
       }));
@@ -9809,9 +11471,9 @@ Object.assign(KIT_VFX, {
   // a lantern gone out: its flame shrinks to a red spark and a thread of smoke goes up
   KIT_VFX['lk-snuff'] = (e, target, d) => {
     if (!d || !ok(d.x)) return;
-    V.smoke(d.x, d.y, { n: 3, color: '#6a625a', size: 15, a: 0.45, speed: 18 });
-    V.motes(d.x, d.y, { color: EMB, n: 2, r: 4, rise: 0.4, size: 6 });
-    V.spawn({ x: d.x, y: d.y, z: 12, life: 0.35, size: 12, size1: 0, color: '#c8452a', kind: 'glow' });
+    // (healers pass) the flame draws down into a red spark and goes out, a thread of smoke climbing from the wick
+    V.fx({ dur: 0.5, layer: 'air', draw: (c, p, t, f) => { const k = f.a * (1 - p * p), h = 18 * (1 - p); if (h < 1.5) return; c.globalAlpha = k; c.drawImage(V.sprite('flame', p < 0.45 ? '#ff9a3a' : '#c8452a'), d.x - h * 0.36, d.y - 14 - h, h * 0.72, h * 1.1); c.globalAlpha = 1; } });
+    HFX.smokeUp(d.x, d.y - 12, { n: 3, s: 0.6, a: 0.3, color: '#6a625a', life: 1.4 }); V.motes(d.x, d.y, { color: EMB, n: 2, r: 4, rise: 0.4, size: 6 });
     snd(e, 'snuff', d);
   };
   // Lighthouse: a tall pale beam stands up from the staff's lantern for its 8s with a soft glow round it, a ring of light at the
@@ -9841,9 +11503,14 @@ Object.assign(KIT_VFX, {
     e._lkLight = V.fx({ dur: DUR, layer: 'air', draw: (c, p, t, f) => {
       const k = f.a * Math.min(1, p / 0.08, (1 - p) / 0.1); if (k < 0.02) return;
       const s = staff(e), up = easeOut(Math.min(1, t / 0.5)), h = 360 * up, w = 18 + Math.sin(t * 6) * 1.5;
-      c.save(); c.globalCompositeOperation = 'lighter';
-      c.globalAlpha = Math.min(1, 0.5 * k); c.drawImage(V.sprite('column', GOLD), s.x - w, s.y - 8 - h, w * 2, h);
-      c.globalAlpha = Math.min(1, 0.55 * k); c.drawImage(V.sprite('column', '#ffffff'), s.x - w * 0.22, s.y - 8 - h * 0.95, w * 0.44, h * 0.95);
+      // (healers pass) a tall tapering body of lamplight (a gold body fading upward, a dark edge each side, a white heart): it reads on the pale floor
+      c.save(); c.lineJoin = 'round'; const bx0 = s.x, by0 = s.y - 8, top = by0 - h;
+      const gb = c.createLinearGradient(0, by0, 0, top); gb.addColorStop(0, 'rgba(255,214,110,0.66)'); gb.addColorStop(1, 'rgba(255,232,150,0)');
+      const gi = c.createLinearGradient(0, by0, 0, top); gi.addColorStop(0, 'rgba(58,30,10,0.6)'); gi.addColorStop(1, 'rgba(58,30,10,0)');
+      const gw = c.createLinearGradient(0, by0, 0, top); gw.addColorStop(0, 'rgba(255,255,255,0.85)'); gw.addColorStop(1, 'rgba(255,255,255,0)');
+      c.globalAlpha = k; c.fillStyle = gb; c.beginPath(); c.moveTo(bx0 - w, by0); c.lineTo(bx0 - w * 0.45, top); c.lineTo(bx0 + w * 0.45, top); c.lineTo(bx0 + w, by0); c.closePath(); c.fill();
+      c.strokeStyle = gi; c.lineWidth = 2.2; c.beginPath(); c.moveTo(bx0 - w, by0); c.lineTo(bx0 - w * 0.45, top); c.moveTo(bx0 + w, by0); c.lineTo(bx0 + w * 0.45, top); c.stroke();
+      c.fillStyle = gw; c.beginPath(); c.moveTo(bx0 - w * 0.22, by0); c.lineTo(bx0 - w * 0.1, top); c.lineTo(bx0 + w * 0.1, top); c.lineTo(bx0 + w * 0.22, by0); c.closePath(); c.fill();
       c.restore();
       V.glowAt(c, s.x, s.y - 14, 60, PALE, 0.26 * k);
       V.neonRing(c, e.x, e.y + 3, 26 + Math.sin(t * 3) * 1.5, GOLD, 1.4, 0.5 * k, 0.78);
@@ -10001,10 +11668,10 @@ Object.assign(KIT_VFX, {
       const q = Math.min(1, t / 0.3), k = e.a * Math.min(1, (1 - p) / 0.5);
       if (k < 0.02) return;
       c.save(); c.lineCap = 'round';
-      for (const [cl, off, w] of [[c1, -2, 1.8], [c2, 2.4, 1.4]]) {
-        c.strokeStyle = SOOT; c.globalAlpha = 0.3 * k; c.lineWidth = w + 2;
+      for (const [cl, off, w] of [[c1, -2, 2.6], [c2, 2.4, 2.1]]) {
+        c.strokeStyle = SOOT; c.globalAlpha = 0.5 * k; c.lineWidth = w + 2.4;
         c.beginPath(); for (let i = 0; i <= 16; i++) { const [x, y] = pt(q * i / 16, off); i ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke();
-        c.strokeStyle = cl; c.globalAlpha = 0.85 * k; c.lineWidth = w; c.setLineDash([9, 5]); c.lineDashOffset = -t * 40;
+        c.strokeStyle = cl; c.globalAlpha = 0.95 * k; c.lineWidth = w; c.setLineDash([9, 5]); c.lineDashOffset = -t * 40;
         c.beginPath(); for (let i = 0; i <= 16; i++) { const [x, y] = pt(q * i / 16, off); i ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); c.setLineDash([]);
       }
       // note-heads: a round head with a stem and a flag, riding the curve
@@ -10062,30 +11729,109 @@ Object.assign(KIT_VFX, {
     } });
   }
 
+  // ---- (class pass) the Houndmaster's material: fur, teeth, thrown dirt and a whistle you can see. Bodies are opaque (bone, tan,
+  // steel on a soot rim), never additive light, so they read on a pale floor; small and short, and everything ends within a second.
+  // a spray of clods and a low dust puff kicked up at (x, y) (o.ang the way it flies, o.s the size, o.n the clods)
+  const hmClod = (x, y, o = {}) => {
+    const s = o.s ?? 1, n = o.n ?? 5;
+    for (let i = 0; i < n; i++) { const a = (o.ang ?? rnd(0, TAU)) + rnd(-0.9, 0.9), sp = rnd(70, 170) * s;
+      V.spawn({ x: x + rnd(-4, 4), y: y + rnd(-3, 3), z: rnd(4, 14), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rnd(70, 150), g: 520, drag: 0.04, life: rnd(0.5, 0.85), size: rnd(4, 7) * s, size1: 2, color: i % 2 ? '#6b5a42' : '#8a7452', kind: 'shard', add: false, vr: rnd(-8, 8) }); }
+    if (o.dust !== 0) V.smoke(x, y, { n: o.dust ?? 2, r: 6, color: DUST, size: 14 * s, a: 0.4, speed: 40, life: 0.7 });
+  };
+  // fur: a few tufts of coat torn loose, turning as they fall
+  const hmFur = (x, y, n = 4, col = TANL) => { for (let i = 0; i < n; i++) V.spawn({ x: x + rnd(-8, 8), y: y + rnd(-4, 4), z: rnd(12, 30), vx: rnd(-50, 50), vy: rnd(-20, 20), vz: rnd(20, 70), g: 90, drag: 0.05, life: rnd(0.7, 1.1), size: rnd(8, 12), size1: 5, color: col, kind: 'feather', add: false, vr: rnd(-5, 5) }); };
+  // a bundle of claw gashes through (x, y) along ang: n opaque lenses in a row, each opening a beat after the one before it
+  const hmRake = (x, y, ang, o = {}) => {
+    const n = o.n ?? 3, gap = o.gap ?? 10, nx = -Math.sin(ang), ny = Math.cos(ang) * 0.8;
+    for (let i = 0; i < n; i++) { const off = (i - (n - 1) / 2) * gap;
+      HFX.cut(x + nx * off, y + ny * off, ang, { len: (o.len ?? 60) * (1 - Math.abs(i - (n - 1) / 2) * 0.12), w: o.w ?? 3.4, color: o.color || BONE, inner: o.inner || RUST, ink: SOOT, delay: (o.delay || 0) + i * 0.035, bend: o.bend ?? 0.07, z: o.z ?? 22, dur: o.dur ?? 0.5 }); }
+  };
+  // a pair of jaws closing on (x, y) along ang: two rows of bone teeth snapping together from open, held a beat, then thinning
+  function hmJaws(x, y, ang, s = 1, o = {}) {
+    V.fx({ dur: o.dur ?? 0.5, layer: 'air', draw: (c, p, t, e) => {
+      const close = easeOut(Math.min(1, t / 0.09)), k = e.a * (1 - Math.max(0, (p - 0.5) / 0.5));
+      if (k < 0.02) return;
+      const gap = (1 - close) * 20 * s + 1.2 * s, R = 21 * s;
+      c.save(); c.translate(x, y - (o.z ?? 18)); c.scale(1, 0.88); c.rotate(ang); c.lineJoin = 'round'; c.globalAlpha = k;
+      c.fillStyle = SOOT; c.globalAlpha = 0.55 * k; c.beginPath(); c.ellipse(0, 0, R * 0.95, gap + 4 * s, 0, 0, TAU); c.fill(); c.globalAlpha = k;
+      for (const sd of [-1, 1]) {
+        const base = sd * (gap + 1 * s);
+        c.beginPath(); c.moveTo(-R, base);
+        for (let i = 0; i < 5; i++) { const u = (i - 2) / 2, bx = u * R * 0.82, h = (11 - Math.abs(u) * 4) * s * (1 - (1 - close) * 0.2), w = 4.4 * s; c.lineTo(bx - w, base + sd * 0.5); c.lineTo(bx + (i % 2 ? 1.2 : 0) * s, base - sd * h); c.lineTo(bx + w, base + sd * 0.5); }
+        c.lineTo(R, base); c.lineTo(R, base + sd * 5 * s); c.lineTo(-R, base + sd * 5 * s); c.closePath();
+        c.strokeStyle = SOOT; c.lineWidth = 2.6; c.stroke(); c.fillStyle = o.color || '#f4ecd6'; c.fill();
+      }
+      c.restore();
+    } });
+  }
+  // a whistle you can see: arcs of breath rolling out from the lips (x, y) along ang (spread PI is a full ring), ink under a cream line
+  function hmRipple(x, y, ang, o = {}) {
+    const col = o.color || BONE, dur = o.dur ?? 0.55, R0 = o.r0 ?? 16, R1 = o.r1 ?? 84, n = o.n ?? 3, spread = o.spread ?? 0.8, z = o.z ?? 16;
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      c.save(); c.translate(x, y - z); c.scale(1, 0.8); c.lineCap = 'round';
+      for (let i = 0; i < n; i++) {
+        const q = (t - i * 0.07) / (dur - 0.2); if (q <= 0 || q >= 1) continue;
+        const r = R0 + (R1 - R0) * easeOut(q), k = e.a * (1 - q) * Math.min(1, q * 8), sp = spread * (0.75 + 0.25 * q);
+        c.globalAlpha = 0.6 * k; c.strokeStyle = SOOT; c.lineWidth = 7.4 * (1 - q * 0.4); c.beginPath(); c.arc(0, 0, r, ang - sp, ang + sp); c.stroke();
+        c.globalAlpha = 0.95 * k; c.strokeStyle = col; c.lineWidth = 4.4 * (1 - q * 0.4); c.beginPath(); c.arc(0, 0, r, ang - sp, ang + sp); c.stroke();
+      }
+      c.restore();
+    } });
+  }
+  // dust shed behind each of the owner's hounds for a moment while they run (their own positions, read every frame)
+  function hmDustTrail(e, dur, only) {
+    let acc = 0;
+    V.fx({ dur, layer: 'air', tick: (p, dt) => { acc += (dt || 0.016); if (acc < 0.045) return; acc = 0;
+      for (const h of hounds(e)) { if (h.spectral || h.down || (only && !only.includes(h.id)) || !ok(h.x)) continue; V.smoke(h.x, h.y + 4, { n: 1, r: 4, color: DUST, size: 11, a: 0.38, speed: 30, life: 0.55 }); if (Math.random() < 0.35) hmClod(h.x, h.y, { n: 1, s: 0.6, dust: 0 }); } }, draw: () => {} });
+  }
+  // a strip of rust cloth thrown from (sx, sy) to (tx, ty): a ribbon with a wave running down it, flapping as it goes
+  function hmCloth(sx, sy, tx, ty, dur = 0.34) {
+    V.fx({ dur: dur + 0.25, layer: 'air', draw: (c, p, t, e) => {
+      const q = easeOut(Math.min(1, t / dur)), k = e.a * (1 - Math.max(0, (t - dur) / 0.25)), N = 12, a = Math.atan2(ty - sy, tx - sx), nx = -Math.sin(a), ny = Math.cos(a);
+      if (k < 0.02) return;
+      const pt = i => { const u = i / N, d = Math.max(0, q - u * 0.28), f = Math.sin(t * 22 - u * 6) * 5 * u + Math.sin(d * Math.PI) * 14; return [sx + (tx - sx) * d + nx * f, sy - 22 + (ty - sy) * d * 0.9 + ny * f]; };
+      c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
+      for (const [col, w, al] of [[SOOT, 8.5, 0.8], [RUST, 5.6, 1], [RUST2, 1.8, 0.9]]) { c.globalAlpha = al * k; c.strokeStyle = col; c.lineWidth = w; c.beginPath(); for (let i = 0; i <= N; i++) { const [x, y] = pt(i); i ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); }
+      c.restore();
+    } });
+  }
+  // the class's crit mark (HFX.crit calls it): three claw gashes across the target, bone on soot, with a few clods
+  const hmCrit = (x, y, tier) => { const s = [0, 1, 1.4, 1.9][tier] || 1; hmRake(x, y - 34, -0.6, { len: 56 * s, gap: 10 * s, w: 3.2 * s, color: tier >= 2 ? '#fff0b8' : BONE, inner: tier >= 2 ? GOLD : RUST, dur: 0.5, z: 0 }); hmClod(x, y, { n: 3 + tier * 2, s: 0.9, dust: 0 }); };
+  (globalThis.MHT_CRIT || (globalThis.MHT_CRIT = {})).houndmaster = hmCrit;
+
   // ---- the abilities (the cast itself; what comes of it is the moments below)
   ABILITY_VFX.houndmaster = {
-    // Hunting Knife: three cuts of a broad blade, steel and tan, the third heavier
+    // Hunting Knife: three cuts of a broad blade, each its own: Slash a clean diagonal draw, Skin a low backhand that throws tufts of
+    // coat, Gut a heavy upward gouge that throws dirt; a dark swing smear under each so the blade's path reads
     knife: c => {
-      const a = aim(c), s = c.step | 0;
-      V.slash(c.x, c.y, a, { r: 48 + s * 8, span: 1.5 + s * 0.35, color: s === 2 ? TANL : '#e8ecee', core: '#ffffff', dur: 0.22, w: 0.3 + s * 0.06, flip: s === 1, sparks: 1 + s });
-      c.later(0.07, () => { const p = reach(c, 62); V.hit(p.x, p.y, s === 2 ? TANL : '#dfe4e8', 0.34 + s * 0.16); });
+      const a = aim(c), s = c.step | 0, p = reach(c, 58), fl = s === 1;
+      HFX.inkSmear(c.x, c.y, a, { r: 46 + s * 8, span: 1.6 + s * 0.3, w: 10 + s * 3, flip: fl, color: '#1c130a', dur: 0.26 });
+      c.later(0.06, () => {
+        if (s === 0) { HFX.cut(p.x, p.y, a + 1.0, { len: 64, w: 3.4, color: '#f4f7f8', inner: '#cdd6da', ink: SOOT }); hmClod(p.x, p.y, { ang: a, n: 3, s: 0.8, dust: 1 }); V.hit(p.x, p.y, '#dfe4e8', 0.34); }
+        else if (s === 1) { HFX.cut(p.x, p.y, a - 1.45, { len: 86, w: 3, color: '#f4f7f8', inner: TANL, ink: SOOT, bend: 0.1 }); hmFur(p.x, p.y, 4); V.hit(p.x, p.y, '#dfe4e8', 0.45); }
+        else { HFX.cut(p.x, p.y, a - 0.7, { len: 104, w: 5.6, color: '#fff2d0', inner: RUST, ink: SOOT, z: 14, dur: 0.46 }); HFX.cut(p.x, p.y, a - 0.7 + 0.12, { len: 76, w: 3.2, color: '#ffffff', inner: TANL, ink: SOOT, delay: 0.04, z: 20 });
+          hmClod(p.x, p.y, { ang: a, n: 7, s: 1.2, dust: 3 }); V.shock(p.x, p.y, { r0: 6, r: 44, color: DUST, dur: 0.32, w: 3 }); V.hit(p.x, p.y, TANL, 0.7); }
+      });
     },
-    // Whistle: Flank: a glint at the lips (the notes to the hound are the 'whistle' moment)
-    flank: c => { const a = c.ent.angle || 0; V.glint(c.x + Math.cos(a) * 12, bodyY(c.ent) + Math.sin(a) * 6, { color: BONE, size: 16, z: 6 }); },
+    // Whistle: Flank: the breath of it rolls out from his lips toward the side he aims at (the notes to the hound are the 'whistle' moment)
+    flank: c => { const a = c.ent.angle || 0; hmRipple(c.x + Math.cos(a) * 12, bodyY(c.ent) + 18 + Math.sin(a) * 6, aim(c), { color: BONE, z: 14 }); },
     // Pack Finisher: a lunge of the knife; the pair's strike is the 'finisher' moment
-    finisher: c => { V.slash(c.x, c.y, aim(c), { r: 56, span: 1.7, color: BONE, core: '#ffffff', dur: 0.24, w: 0.32, sparks: 3 }); },
-    // Whistle: Hold / Pounce: a sharp glint at the lips, a rust spark
-    pounce: c => { const a = c.ent.angle || 0; V.glint(c.x + Math.cos(a) * 12, bodyY(c.ent) + Math.sin(a) * 6, { color: RUST2, size: 18, z: 6 }); V.sparks(c.x, c.y, { color: RUST2, n: 4, speed: 180, z: 22, up: 120 }); },
-    // Call Off: a ring of ash at his boots where they will stand guard
-    calloff: c => { V.shock(c.x, c.y, { r0: 8, r: 50, color: ASH, dur: 0.4, w: 3 }); V.smoke(c.x, c.y, { n: 2, r: 8, color: DUST, size: 14, a: 0.35, speed: 40 }); },
-    // Mark the Quarry: a strip of rust cloth snapped out toward the boss
-    quarry: c => { const p = reach(c, 40); V.glint(p.x, p.y, { color: RUST2, size: 24, z: 28 }); V.flash(c.x, bodyY(c.ent), 30, RUST, 0.2); },
+    finisher: c => { const a = aim(c), p = reach(c, 66); HFX.inkSmear(c.x, c.y, a, { r: 52, span: 1.9, w: 14, color: '#1c130a', dur: 0.28 });
+      c.later(0.05, () => { HFX.cut(p.x, p.y, a + 0.5, { len: 70, w: 3.8, color: '#fff6dc', inner: GOLD, ink: SOOT, z: 20 }); hmClod(c.x + Math.cos(a) * 20, c.y + Math.sin(a) * 20, { ang: a + Math.PI, n: 3, s: 0.8 }); }); },
+    // Whistle: Hold / Pounce: a rust whistle (a sharper, shorter breath), the hounds crouch (the dust is theirs)
+    pounce: c => { const a = c.ent.angle || 0; hmRipple(c.x + Math.cos(a) * 12, bodyY(c.ent) + 18 + Math.sin(a) * 6, aim(c), { color: RUST2, r1: 54, n: 2, spread: 0.6, dur: 0.45, z: 14 }); },
+    // Call Off: a ring of his breath rolling out all round him, the hounds' dust coming home along it
+    calloff: c => { hmRipple(c.x, c.y, 0, { color: ASH, spread: Math.PI, r0: 10, r1: 62, n: 3, z: 8 }); V.smoke(c.x, c.y, { n: 3, r: 10, color: DUST, size: 14, a: 0.35, speed: 40 }); },
+    // Mark the Quarry: a strip of rust cloth snapped out toward the boss (it knots over its head in the 'quarry' moment)
+    quarry: c => { const p = reach(c, 70); hmCloth(c.x, bodyY(c.ent) + 10, p.x, p.y); hmRipple(c.x, bodyY(c.ent) + 12, aim(c), { color: RUST2, r1: 46, n: 2, spread: 0.7, dur: 0.4, z: 6 }); },
     // Wild Hunt: the horn lifted (the blast and the pack are the 'wildhunt' moment, a beat later)
     // (Ultimate impact pass) no dim at the press (the world stays readable): a small gold seal at his boots as the horn comes up
+    // (class pass) the breath of the horn rolls out too, three broad gold arcs under the seal
     wildhunt: c => {
       V.charge(c.x, c.y, { color: GOLD, r: 50, n: 10, dur: 0.3, follow: c.ent });
       V.glint(c.x, bodyY(c.ent), { color: '#fff4d0', size: 34, z: 6 });
       V.sigil(c.x, c.y, { r: 44, style: 'runes', color: GOLD, dur: 0.7, spin: 3 });
+      hmRipple(c.x, bodyY(c.ent) + 22, aim(c), { color: '#ffe48a', r0: 18, r1: 96, n: 3, spread: 0.9, dur: 0.6, z: 22 });
     },
     // Relay: the whistle twice, quick (the swap is the 'relay' moment)
     relay: c => { V.glint(c.x, bodyY(c.ent), { color: BONE, size: 18, z: 6 }); c.later(0.1, () => V.glint(c.x, bodyY(c.ent), { color: ASH, size: 14, z: 6 })); },
@@ -10108,7 +11854,7 @@ Object.assign(KIT_VFX, {
       const h = houndAt(e, id); if (!h) return;
       later(e, i * 0.05, () => { const h2 = houndAt(e, id) || h; notes(me, { x: h2.x, y: h2.y }, kind, { dir: i ? -1 : 1 }); });
       // the hound answers: a short bark a beat later (not for a Hold: it just stills)
-      if (kind !== 'hold') later(e, 0.22 + i * 0.07, () => { pose(e, id, 'bark'); snd(e, 'bark', { hound: id }); });
+      if (kind !== 'hold') later(e, 0.22 + i * 0.07, () => { pose(e, id, 'bark'); snd(e, 'bark', { hound: id }); const h3 = houndAt(e, id); if (h3) hmClod(h3.x, h3.y, { n: 2, s: 0.6, dust: 1 }); });
       else pose(e, id, 'bark');
     });
     snd(e, 'whistle', { kind });
@@ -10119,8 +11865,9 @@ Object.assign(KIT_VFX, {
     const ang = h ? Math.atan2(b.y - h.y, b.x - h.x) : e.angle || 0, sx = h ? h.x : b.x - Math.cos(ang) * R, sy = h ? h.y : b.y - Math.sin(ang) * R;
     const px = b.x - Math.cos(ang) * R * 0.78, py = b.y - Math.sin(ang) * R * 0.78;
     pose(e, h ? h.id : null, 'bite');
-    fangs(px, py - 16, ang, big ? 1.35 : 0.9, big ? BONE : '#e8e0d0');
-    V.sparks(px, py, { color: big ? GOLD : TANL, n: big ? 7 : 3, speed: 240, z: 16, up: 90 });
+    hmJaws(px, py, ang, big ? 1.45 : 0.95, { z: 16 });
+    hmClod(px, py, { ang, n: big ? 5 : 2, s: big ? 1.1 : 0.7, dust: big ? 2 : 0 });
+    V.sparks(px, py, { color: big ? GOLD : TANL, n: big ? 5 : 2, speed: 240, z: 16, up: 90 });
     if (big) { V.shock(px, py, { r0: 4, r: 34, color: BONE, dur: 0.28, w: 2.4 }); shake(1.2); }
     snd(e, 'bite', { big: big ? 1 : 0, hound: d && d.hound });
   };
@@ -10130,15 +11877,14 @@ Object.assign(KIT_VFX, {
     for (const h of hounds(e)) if (!h.spectral && !h.down) pose(e, h.id, 'bite');
     if (pair === 'rend') {
       // two bundles of claw lines crossing on the boss, bright gold, and a spray of gold with a few rust drops
-      claws(b.x, cy, [a + 0.75, a - 0.75], { color: GOLD, core: '#fff8dc', len: R * 1.5, gap: 12 });
+      hmRake(b.x, cy, a + 0.75, { len: R * 1.9, gap: 15, w: 4.8, color: '#fff2c0', inner: GOLD, z: 0 }); hmRake(b.x, cy, a - 0.75, { len: R * 1.9, gap: 15, w: 4.8, color: '#fff2c0', inner: RUST, delay: 0.06, z: 0 });
       // (climax pass) the two bundles cross as one gold four-armed star on the boss, held a beat under the lines
       V.climax(b.x, cy, { shape: 'cross', tilt: a - 0.75, r: 100, color: GOLD, core: '#fff8dc', ink: SOOT, z: 0, flat: 1, hold: 0.1, dur: 0.55, after: { embers: 0.5 } });
       later(e, 0.05, () => { V.hit(b.x, cy + 10, GOLD, 0.8); V.sparks(b.x, cy, { color: GOLD, n: 9, speed: 320, z: 30, up: 150 }); V.sparks(b.x, cy, { color: RUST, n: 4, speed: 200, z: 30, up: 60 }); shake(2.2); });
     } else if (pair === 'hamstring') {
       // a low cut across the boss's feet, then a stumble: dust kicked up and a short green ring that settles
       const fy = b.y + R * 0.55, ang = a + Math.PI / 2;
-      V.slash(b.x, fy, ang, { r: R * 0.95, span: 1.7, color: LEAF, core: '#f0ffd8', dur: 0.3, w: 0.26, flat: 0.4, sparks: 3 });
-      claws(b.x, fy - 8, [a + Math.PI / 2 + 0.25], { n: 2, color: LEAF, core: '#f0ffd8', len: R * 1.3, gap: 9, dur: 0.45 });
+      HFX.cut(b.x, fy, ang + 0.05, { len: R * 1.9, w: 3.6, color: '#f6ffe0', inner: LEAF, ink: SOOT, z: 4, bend: 0.12, dur: 0.5 }); HFX.cut(b.x, fy + 8, ang - 0.04, { len: R * 1.5, w: 2.4, color: '#f6ffe0', inner: '#6fae3a', ink: SOOT, z: 2, delay: 0.05, bend: 0.1, dur: 0.46 });
       later(e, 0.1, () => { V.smoke(b.x - R * 0.4, fy, { n: 3, r: 10, color: DUST, size: 18, a: 0.5, speed: 70 }); V.smoke(b.x + R * 0.4, fy, { n: 3, r: 10, color: DUST, size: 18, a: 0.5, speed: 70 }); V.shock(b.x, fy, { r0: 10, r: R * 0.95, color: LEAF, dur: 0.5, w: 2.6 }); V.hit(b.x, fy - 6, LEAF, 0.6); shake(1.6); });
     } else if (pair === 'bringdown') {
       // both hounds leap together at the boss, then the ring of dust and the weight of it coming down
@@ -10152,7 +11898,7 @@ Object.assign(KIT_VFX, {
       V.glint(b.x, cy, { color: LILAC, size: 38, z: 30 });
     } else {
       // Snap: one clean bite
-      fangs(b.x - Math.cos(a) * R * 0.7, b.y - Math.sin(a) * R * 0.7 - 14, a, 1, BONE);
+      hmJaws(b.x - Math.cos(a) * R * 0.7, b.y - Math.sin(a) * R * 0.7 - 14, a, 1.05, { z: 0 }); hmClod(b.x - Math.cos(a) * R * 0.7, b.y - Math.sin(a) * R * 0.7, { ang: a, n: 2, s: 0.7, dust: 0 });
       V.hit(b.x - Math.cos(a) * R * 0.7, b.y - Math.sin(a) * R * 0.7, BONE, 0.5);
     }
     snd(e, 'finisher', { pair });
@@ -10171,6 +11917,7 @@ Object.assign(KIT_VFX, {
         V.climax(h2.x, h2.y, { shape: 'burst', r: 80, n: 10, color: RUST2, core: BONE, ink: SOOT, z: 14, flat: 0.9, hold: 0.1, dur: 0.45, after: { smoke: 0.3 }, smokeColor: DUST }); } });
       later(e, 0.05 + i * 0.04, () => { snd(e, 'bark', { hound: id, bold: 1 }); });
     });
+    hmDustTrail(e, 0.55, ids);
     snd(e, 'pounce', null);
     shake(0.8);
   };
@@ -10183,6 +11930,7 @@ Object.assign(KIT_VFX, {
       V.sparks(h.x, h.y, { color: DUST, n: 4, speed: 140, z: 6, up: 30 });
       pose(e, h.id, 'bark');
     });
+    hmDustTrail(e, 0.55);
     later(e, 0.3, () => { V.shock(e.x, e.y, { r0: 10, r: 58, color: ASH, dur: 0.5, w: 3 }); V.shock(e.x, e.y, { r0: 14, r: 40, color: BONE, dur: 0.4, w: 1.6 }); });
     snd(e, 'calloff', null);
   };
@@ -10297,8 +12045,10 @@ Object.assign(KIT_VFX, {
       goals.forEach((g, i) => { const ang = Math.atan2(b.y - g.y, b.x - g.x) + 0.35; FX.later(i * 0.03, () => huntClaw(b.x, b.y, ang, R * 0.75, { w: 7, color: i % 2 ? SPECT : '#fff4d0' })); });
       V.flash(b.x, b.y - 26, 90, '#eaf7ff', 0.22);
       // (climax pass) the pale starburst on the boss is now the pack's one big shape (it was 78): ink edge, pale-blue body, white core, held a beat
-      V.climax(b.x, b.y, { shape: 'burst', r: 125, n: 16, color: SPECT, core: '#ffffff', ink: '#14202a', z: 28, flat: 0.85, hold: 0.12, dur: 0.7, after: { embers: 0.5 } });
-      V.spikeburst(b.x, b.y, { r: R * 1.9, n: 22, hole: 0.6, color: GOLD, core: BONE, ink: SOOT, dur: 0.5, layer: 'ground', z: 0, flat: 0.6 });
+      // (ult pass) no starburst: the pack's four rakes (three ink-rimmed bone-and-pale claw lines each, the way the hound's own claw marks are drawn) cross over the boss from the four sides,
+      // a clod of earth is thrown up where they meet, and the claw scratches stay on the floor (below)
+      goals.forEach((g, i) => { const ang = Math.atan2(b.y - g.y, b.x - g.x); FX.later(i * 0.035, () => hmRake(b.x - Math.cos(ang) * R * 0.2, b.y - 30 - Math.sin(ang) * R * 0.12, ang + 0.15, { len: R * 1.9, gap: 15, w: 6.5, color: i % 2 ? '#eaf7ff' : '#fff4d0', inner: i % 2 ? SPECT : GOLD, dur: 0.7, z: 0 })); });
+      hmClod(b.x, b.y, { n: 8, s: 1.4, dust: 4 }); FX.later(0.08, () => { V.setScale(cam ? 1 : 0.6); try { hmJaws(b.x, b.y, a0 + Math.PI / 2, 3.4, { dur: 0.8, z: 30 }); } finally { V.setScale(1); } });   // (and the whole pack's jaws close on it)
       V.shock(b.x, b.y, { r: R * 2.6, color: GOLD, dur: 0.6, w: 8 }); V.shock(b.x, b.y, { r: R * 2, color: SPECT, dur: 0.5, w: 4, delay: 0.06 });
       V.debris(b.x, b.y, { n: 10, color: '#6a5e4c', speed: 1.2 });
       V.smoke(b.x, b.y, { n: 8, r: R, color: DUST, size: 34, a: 0.35, speed: 70, life: 1.6 });
@@ -10366,4 +12116,477 @@ Object.assign(KIT_VFX, {
     snd(e, 'longchase', null);
   };
   KIT_VFX.longchase.atTarget = true;
+  // (class pass) the auto-attack: a quick knife flick, a short steel cut on the target and a pinch of dirt (everyone else's slash is unchanged)
+  const hmAutoPrev = AUTO_VFX.slash;
+  AUTO_VFX.slash = c => {
+    if (!(c.ent && c.ent.cls && c.ent.cls.id === 'houndmaster')) return hmAutoPrev(c);
+    const a = c.ang, p = { x: c.ent.x + Math.cos(a) * Math.min(60, Math.hypot(c.tx - c.ent.x, c.ty - c.ent.y)), y: c.ent.y + Math.sin(a) * Math.min(60, Math.hypot(c.tx - c.ent.x, c.ty - c.ent.y)) };
+    HFX.inkSmear(c.ent.x, c.ent.y, a, { r: 44, span: 1.3, w: 8, flip: c.alt, color: '#1c130a', dur: 0.2 });
+    c.later(0.05, () => { HFX.cut(p.x, p.y, a + (c.alt ? -0.9 : 0.9), { len: 30, w: 2.2, color: '#f4f7f8', inner: '#cdd6da', ink: SOOT, dur: 0.3 }); hmClod(p.x, p.y, { ang: a, n: 1, s: 0.6, dust: 0 }); });
+  };
 })();
+
+// ======================================================================= HERO PASS · TANKS (Bloodreaver, Runeguard, Gorgemaw, Oathbroker, Bastion's Perfect Block and Last Bastion)
+// The second hero-VFX pass, after the Bastion / Shadowblade / Pyromancer / Cleric pilot: each tank gets its own material
+// (Bloodreaver blood and iron, Runeguard carved stone runes and ward-glass, Gorgemaw jaws and what he swallowed, Oathbroker
+// ink, paper and seals), drawn as opaque bodies with a hot core and a dark ink rim so they read on the pale floors, in four
+// beats where they apply: a gather, a travel, a hit and an aftermath. Cosmetic only; every recipe, hook and id is the old
+// one, only the picture is new. These recipes replace the older ones of the same name (Object.assign over ABILITY_VFX).
+const TANKS_VFX = (() => {
+  const V = VFX, TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a), cl = v => Math.max(0, Math.min(1, v)), shake = s => vfxShake(s);
+  const OP = OLD_PAINT, later = (d, fn) => OLD_PAINT.later(d, fn);
+  // a tapered band round an arc: thick toward its leading edge a1 (a swing's smear)
+  const bandShape = (c, a0, a1, R, W) => { c.beginPath(); const N = 16;
+    for (let i = 0; i <= N; i++) { const a = a0 + (a1 - a0) * i / N; c.lineTo(Math.cos(a) * R, Math.sin(a) * R); }
+    for (let i = N; i >= 0; i--) { const q = i / N, a = a0 + (a1 - a0) * q, th = W * Math.pow(q, 0.7) * Math.min(1, (1 - q) * 6 + 0.35); c.lineTo(Math.cos(a) * (R - th), Math.sin(a) * (R - th)); }
+    c.closePath(); };
+  // droplets flung in a fan (a wound's spray)
+  const fling = (x, y, ang, o = {}) => { for (let i = 0; i < (o.n ?? 6); i++) { const a = ang + rnd(-(o.spread ?? 0.9), o.spread ?? 0.9), s = rnd(120, 300) * (o.speed ?? 1);
+    V.spawn({ x, y, z: o.z ?? 22, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, vz: rnd(60, 200) * (o.up ?? 1), g: 720, life: rnd(0.4, 0.7), size: rnd(5, 9) * (o.size ?? 1), color: o.color || '#a8122a', kind: 'drop', add: false, rot: a + Math.PI / 2 }); } };
+  const between2 = (c, f) => ({ x: c.x + (c.tx - c.x) * f, y: c.y + (c.ty - c.y) * f });
+  return { V, TAU, rnd, cl, shake, OP, later, bandShape, fling, between2 };
+})();
+
+(() => {
+  const { V, TAU, rnd, cl, shake, OP, later, bandShape, fling, between2 } = TANKS_VFX;
+
+  // ====================================================================== BLOODREAVER: blood and iron
+  const RB = { red: '#c4182c', bright: '#ff4a5e', deep: '#6a0a1c', clot: '#2a0610', iron: '#4e464c', steel: '#d8dce4', wine: '#5a0a1a' };
+  // the reaver's heavy axe cut: a tapered band of dark iron with a hot-blood leading edge and a steel glint at its tip (o.heat: how red the edge runs)
+  function reaverCleave(x, y, ang, o = {}) {
+    const r = o.r ?? 70, span = o.span ?? 2.4, W = o.w ?? 20, dur = o.dur ?? 0.3, fl = o.flip ? -1 : 1, z = o.z ?? 12, heat = o.heat ?? 0.6;
+    V.fx({ dur, layer: 'air', draw: (c, p, t, e) => {
+      const sw = easeOut(Math.min(1, p / 0.38)), k = e.a * (1 - cl((p - 0.4) / 0.6)), lead = -span / 2 + span * sw, back = -span / 2 + span * cl((p - 0.15) / 0.8) * 0.92;
+      if (lead - back < 0.03 || k < 0.02) return;
+      c.save(); c.translate(x, y - z); c.scale(1, 0.82); c.rotate(ang); c.scale(1, fl);
+      c.globalAlpha = 0.7 * k; c.fillStyle = o.ink || RB.clot; bandShape(c, back - 0.03, lead + 0.03, r * 1.06, W * 1.4); c.fill();
+      c.globalAlpha = 0.93 * k; c.fillStyle = o.body || RB.iron; bandShape(c, back, lead, r, W); c.fill();
+      c.globalAlpha = 0.9 * k; c.fillStyle = o.mid || '#7a727a'; bandShape(c, back + (lead - back) * 0.45, lead, r * 0.99, W * 0.4); c.fill();
+      c.lineCap = 'round'; c.beginPath(); c.arc(0, 0, r * 0.995, back + (lead - back) * 0.2, lead);
+      c.globalAlpha = (0.55 + 0.4 * heat) * k; c.strokeStyle = o.edge || RB.bright; c.lineWidth = 2.4 + 2 * heat; c.stroke();
+      c.globalAlpha = 0.85 * k; c.strokeStyle = o.sheen || '#fff0ea'; c.lineWidth = 1; c.stroke();
+      c.globalAlpha = 0.5 * k; c.strokeStyle = o.ink || RB.clot; c.lineWidth = 1.2; for (let i = 0; i < 2; i++) { c.beginPath(); c.arc(0, 0, r - W * (0.45 + i * 0.25), back + (lead - back) * 0.3, lead - 0.1 - i * 0.12); c.stroke(); }
+      c.restore();
+      if (sw < 1) { const a = ang + fl * lead; V.glowAt(c, x + Math.cos(a) * r, y - z + Math.sin(a) * r * 0.82, 9 + W * 0.45, o.tip || '#ffffff', 0.85 * k); }
+    } });
+  }
+  // blood flung on the floor and drying: dark wine blots with a tail away from the blow (never bright red: red on the floor reads as a danger mark)
+  function reaverSpatter(x, y, o = {}) {
+    const R = o.r ?? 30, n = o.n ?? 8, dur = o.dur ?? 2.4, bl = Array.from({ length: n }, () => { const a = o.ang != null ? o.ang + rnd(-1, 1) : rnd(0, TAU), d = rnd(0.2, 1) * R; return { x: Math.cos(a) * d, y: Math.sin(a) * d * 0.6, a, r: rnd(2.5, 6) * (o.s ?? 1), L: rnd(1.1, 2.6) }; });
+    V.fx({ dur, layer: 'ground', delay: o.delay, draw: (c, p, t, e) => { const k = e.a * Math.min(1, t / 0.06) * (1 - cl((p - 0.5) / 0.5)) * (0.62 - 0.22 * cl(t / 0.8));
+      c.save(); c.translate(x, y); for (const b of bl) { c.globalAlpha = Math.min(1, k); c.fillStyle = RB.wine; c.beginPath(); c.ellipse(b.x, b.y, b.r * b.L, b.r * 0.62, b.a * 0.6, 0, TAU); c.fill();
+        c.globalAlpha = Math.min(1, k * 0.8); c.fillStyle = RB.red; c.beginPath(); c.ellipse(b.x - 0.5, b.y - 0.8, b.r * b.L * 0.5, b.r * 0.28, b.a * 0.6, 0, TAU); c.fill(); }
+      c.restore(); } });
+  }
+  // a crown of blood: tapered drops thrown up and out of a ring on the target, then flung off as droplets (o.s size, o.up height)
+  function reaverCrown(x, y, o = {}) {
+    const s = o.s ?? 1, n = o.n ?? 8, up = o.up ?? 1, col = o.color || '#a8122a', sp = Array.from({ length: n }, (_, i) => ({ a: i / n * TAU + rnd(-0.2, 0.2), L: rnd(0.75, 1.2), d: rnd(0, 0.05) }));
+    V.fx({ dur: 0.4, layer: 'air', draw: (c, p, t, e) => { const k = e.a * (1 - cl((p - 0.6) / 0.4)); if (k < 0.02) return;
+      for (const q of sp) { const tt = Math.max(0, t - q.d), u = cl(tt / 0.12), ca = Math.cos(q.a), sa = Math.sin(q.a) * 0.6, r0 = 7 * s, r1 = (16 + 36 * q.L * u) * s, h = (4 + 11 * q.L * Math.sin(Math.min(1, tt / 0.32) * Math.PI * 0.9)) * s * up, w = 5.2 * s * (1 - 0.4 * p);
+        const bx = x + ca * r0, by = y + sa * r0, tx = x + ca * r1, ty = y + sa * r1 - h, dx = tx - bx, dy = ty - by, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+        const drop = (ww, col2) => { c.beginPath(); c.moveTo(bx + nx * ww, by + ny * ww); c.quadraticCurveTo(bx + dx * 0.62 + nx * ww * 1.35, by + dy * 0.62 + ny * ww * 1.35, tx, ty); c.quadraticCurveTo(bx + dx * 0.62 - nx * ww * 1.35, by + dy * 0.62 - ny * ww * 1.35, bx - nx * ww, by - ny * ww); c.closePath(); c.fillStyle = col2; c.fill(); };
+        c.globalAlpha = 0.9 * k; drop(w + 1.6, RB.clot); c.fillStyle = RB.clot; c.beginPath(); c.arc(tx, ty, w * 1.5 + 1.6, 0, TAU); c.fill(); c.globalAlpha = k; drop(w, col); c.fillStyle = col; c.beginPath(); c.arc(tx, ty, w * 1.5, 0, TAU); c.fill(); c.globalAlpha = 0.75 * k; c.fillStyle = '#ff8a96'; c.beginPath(); c.arc(tx - w * 0.45, ty - w * 0.5, w * 0.5, 0, TAU); c.fill(); }
+    }, done: () => { for (let i = 0; i < Math.round(n / 2); i++) { const a = rnd(0, TAU); V.spawn({ x: x + Math.cos(a) * 20 * s, y: y + Math.sin(a) * 12 * s, z: 22 * s, vx: Math.cos(a) * rnd(30, 90), vy: Math.sin(a) * rnd(20, 50), vz: rnd(20, 90), g: 700, life: rnd(0.3, 0.55), size: rnd(4, 7) * s, color: col, kind: 'drop', add: false }); } } });
+  }
+  // a splat: an irregular blob of blood with round lobes that pops on the target in 0.07s, holds a beat and falls apart into droplets (the weight of a hit; o.s size)
+  function reaverSplat(x, y, o = {}) {
+    const R = (o.r ?? 34), n = o.n ?? 9, z = o.z ?? 22, lo = Array.from({ length: n }, (_, i) => ({ a: i / n * TAU + rnd(-0.15, 0.15), L: rnd(0.8, 1.35), w: rnd(0.22, 0.34) })), col = o.color || '#b01428';
+    V.fx({ dur: 0.34, layer: 'air', delay: o.delay, draw: (c, p, t, e) => { const pop = t < 0.07 ? easeOut(t / 0.07) * 1.15 : 1.15 - 0.15 * easeOut(cl((t - 0.07) / 0.1)), k = e.a * (1 - cl((p - 0.55) / 0.45)), r = R * pop * (1 - 0.18 * cl((p - 0.5) / 0.5));
+      if (k < 0.02) return; c.save(); c.translate(x, y - z); c.scale(1, 0.85);
+      const blob = (rr, wr) => { c.beginPath(); c.arc(0, 0, rr * 0.55, 0, TAU); for (const l of lo) { const ca = Math.cos(l.a), sa = Math.sin(l.a); c.moveTo(ca * rr * l.L * 0.78 + rr * l.w * wr, sa * rr * l.L * 0.78); c.arc(ca * rr * l.L * 0.78, sa * rr * l.L * 0.78, rr * l.w * wr, 0, TAU);
+          c.moveTo(ca * rr * 0.4, sa * rr * 0.4); c.lineTo(ca * rr * l.L * 0.78 - sa * rr * l.w * wr * 0.7, sa * rr * l.L * 0.78 + ca * rr * l.w * wr * 0.7); c.lineTo(ca * rr * l.L * 0.78 + sa * rr * l.w * wr * 0.7, sa * rr * l.L * 0.78 - ca * rr * l.w * wr * 0.7); c.lineTo(ca * rr * 0.4, sa * rr * 0.4); } };
+      c.globalAlpha = 0.92 * k; c.fillStyle = o.ink || RB.clot; blob(r * 1.12, 1.18); c.fill();
+      c.globalAlpha = k; c.fillStyle = col; blob(r, 1); c.fill();
+      c.globalAlpha = 0.9 * k; c.fillStyle = o.mid || '#e8283c'; blob(r * 0.62, 0.8); c.fill();
+      c.globalAlpha = 0.85 * k; c.fillStyle = o.hl || '#ffb0b8'; c.beginPath(); c.ellipse(-r * 0.18, -r * 0.2, r * 0.2, r * 0.11, -0.5, 0, TAU); c.fill(); c.restore(); },
+      done: () => { for (let i = 0; i < 5; i++) { const a = rnd(0, TAU); V.spawn({ x: x + Math.cos(a) * R * 0.5, y: y + Math.sin(a) * R * 0.3, z, vx: Math.cos(a) * rnd(40, 120), vy: Math.sin(a) * rnd(25, 70), vz: rnd(30, 120), g: 720, life: rnd(0.3, 0.5), size: rnd(4, 7), color: col, kind: 'drop', add: false }); } } });
+  }
+  // blood drawn back: threads of blood run from (x, y) into the reaver's chest, heavier and more of them the warmer the bank (warm 0-1)
+  function reaverThreads(x, y, ent, warm = 0.4, side = 1) {
+    const n = 3 + Math.round(3 * warm), th = Array.from({ length: n }, (_, i) => ({ d: i * 0.035, bend: (i - (n - 1) / 2) * 0.3 * side + rnd(-0.08, 0.08), w: (2.2 + 2.4 * warm) * rnd(0.8, 1.2), lift: rnd(26, 62) }));
+    V.fx({ dur: 0.5 + n * 0.035, layer: 'air', draw: (c, p, t, e) => { const ex = ent.x, ey = ent.y - 20, sy = y - 16;
+      for (const q of th) { const tt = t - q.d; if (tt < 0) continue; const head = easeOut(cl(tt / 0.28)), tail = cl((tt - 0.1) / 0.3), k = e.a * (1 - cl((tt - 0.34) / 0.14));
+        if (head - tail < 0.02 || k < 0.02) continue;
+        const mx = (x + ex) / 2 + (ey - sy) * q.bend, my = (sy + ey) / 2 - q.lift + (x - ex) * q.bend * 0.35, P = u => { const v = 1 - u; return [v * v * x + 2 * v * u * mx + u * u * ex, v * v * sy + 2 * v * u * my + u * u * ey]; };
+        const tr = () => { for (let i = 0; i <= 12; i++) { const [px, py] = P(tail + (head - tail) * i / 12); i ? c.lineTo(px, py) : c.moveTo(px, py); } };
+        c.lineCap = 'round'; c.lineJoin = 'round'; c.globalAlpha = 0.65 * k; c.strokeStyle = RB.clot; c.lineWidth = q.w + 4; c.beginPath(); tr(); c.stroke();
+        c.globalAlpha = 0.97 * k; c.strokeStyle = RB.red; c.lineWidth = q.w; c.beginPath(); tr(); c.stroke();
+        c.globalAlpha = 0.9 * k; c.strokeStyle = '#ff6a7a'; c.lineWidth = q.w * 0.4; c.beginPath(); tr(); c.stroke();
+        const [hx, hy] = P(head); c.globalAlpha = k; c.fillStyle = RB.clot; c.beginPath(); c.arc(hx, hy, q.w * 1.25 + 1.5, 0, TAU); c.fill(); c.fillStyle = RB.bright; c.beginPath(); c.arc(hx, hy, q.w * 1.25, 0, TAU); c.fill();
+        c.fillStyle = '#ffe0e4'; c.globalAlpha = 0.8 * k; c.beginPath(); c.arc(hx - q.w * 0.35, hy - q.w * 0.4, q.w * 0.4, 0, TAU); c.fill(); }
+    }, tick: p => { if (Math.random() < 0.5) { const q = th[(Math.random() * th.length) | 0], u = cl(Math.max(0.05, p * 1.1 - q.d)), ex = ent.x, ey = ent.y - 20;
+        V.spawn({ x: x + (ex - x) * u, y: y + (ey - y) * u, z: 20 + Math.sin(u * Math.PI) * 34, vz: -30, g: 300, life: 0.3, size: rnd(3, 5), color: '#b0142a', kind: 'drop', add: false }); } } });
+  }
+  // the heart: a dark-red heart that thumps twice over the reaver (lub-dub) and is gone in half a second; s sizes it
+  function reaverHeart(ent, s = 1, o = {}) {
+    V.fx({ dur: 0.7, delay: o.delay, layer: 'air', draw: (c, p, t, e) => { const pu = t0 => Math.max(0, 1 - Math.abs(t - t0) / 0.1), sc = (1 + 0.4 * pu(0.1) + 0.3 * pu(0.32)) * s, k = e.a * Math.min(1, t / 0.05) * (1 - cl((p - 0.62) / 0.38)), x = ent.x, y = ent.y - 46 - 8 * p - (ent.lift || 0);
+      if (k < 0.02) return; c.save(); c.translate(x, y); c.scale(sc, sc);
+      const heart = () => { c.beginPath(); c.moveTo(0, 8); c.bezierCurveTo(-14, -1, -10, -12, 0, -5); c.bezierCurveTo(10, -12, 14, -1, 0, 8); c.closePath(); };
+      V.glowAt(c, 0, 0, 22, RB.bright, 0.35 * k * (pu(0.1) + pu(0.32)));
+      heart(); c.globalAlpha = k; c.lineJoin = 'round'; c.lineWidth = 3.4; c.strokeStyle = RB.clot; c.stroke(); c.fillStyle = RB.red; c.fill();
+      c.globalAlpha = 0.75 * k; c.fillStyle = '#ff8a96'; c.beginPath(); c.ellipse(-4.5, -3.5, 2.6, 1.6, -0.6, 0, TAU); c.fill(); c.restore(); } });
+  }
+  // the floor splitting: dark cracks with heated iron-orange in them run out of (x, y) in 0.2s, then cool to black; o.n cracks
+  function reaverFissure(x, y, R, o = {}) {
+    const n = o.n ?? 9, rays = Array.from({ length: n }, (_, i) => { const a0 = i * TAU / n + rnd(-0.25, 0.25), L = R * rnd(0.6, 1), pts = [[0, 0]]; let px = 0, py = 0;
+      for (let s = 1; s <= 5; s++) { const a = a0 + rnd(-0.4, 0.4); px += Math.cos(a) * L / 5; py += Math.sin(a) * L / 5; pts.push([px, py]); } return pts; }), dur = o.dur ?? 3.4;
+    V.fx({ dur, layer: 'ground', draw: (c, p, t, e) => { const grow = easeOut(cl(t / 0.2)), heat = Math.max(0, 1 - t / 1.6), k = e.a * Math.min(1, t / 0.05) * (1 - cl((p - 0.7) / 0.3));
+      c.save(); c.translate(x, y); c.scale(1, 0.7); c.lineCap = 'round'; c.lineJoin = 'round';
+      for (const pts of rays) { const m = Math.max(2, Math.round(pts.length * grow)), tr = () => { c.beginPath(); for (let i = 0; i < m; i++) { const [a, b] = pts[i]; i ? c.lineTo(a, b) : c.moveTo(a, b); } };
+        c.globalAlpha = 0.78 * k; c.strokeStyle = o.dark || '#120608'; c.lineWidth = 7; tr(); c.stroke();
+        c.globalAlpha = k * (0.3 + 0.7 * heat); c.strokeStyle = heat > 0.5 ? (o.hot || '#ff6a2a') : (o.warm || '#b8401a'); c.lineWidth = 1.2 + 2.6 * heat; tr(); c.stroke(); }
+      c.restore(); V.glowAt(c, x, y, R * 0.5, o.glow || '#ff4a1a', 0.3 * k * heat); } });
+  }
+  // a ring of sound: crescents of dark red thrown outward round (x, y), widest at the start, gone as they thin (the roar)
+  function reaverRoar(x, y, R, o = {}) {
+    const n = o.n ?? 9, off = rnd(0, TAU), dur = o.dur ?? 0.55;
+    V.fx({ dur, layer: 'ground', delay: o.delay, draw: (c, p, t, e) => { const q = easeOut(p), r = R * (0.3 + 0.7 * q), k = e.a * (1 - cl((p - 0.45) / 0.55)), W = (o.w ?? 9) * (1 - 0.7 * p);
+      if (k < 0.02) return; c.save(); c.translate(x, y); c.scale(1, 0.7); c.lineCap = 'round';
+      for (let i = 0; i < n; i++) { const a = off + i * TAU / n, h = TAU / n * 0.34; c.beginPath(); c.arc(0, 0, r, a - h, a + h);
+        c.globalAlpha = 0.6 * k; c.strokeStyle = RB.clot; c.lineWidth = W + 4; c.stroke(); c.globalAlpha = 0.9 * k; c.strokeStyle = RB.red; c.lineWidth = W; c.stroke(); c.globalAlpha = 0.8 * k; c.strokeStyle = '#ff9aa4'; c.lineWidth = W * 0.3; c.stroke(); }
+      c.restore(); } });
+  }
+  // a column of blood out of the floor: stacked blobs that swell and thin, drops falling round it (the Eclipse's end)
+  function reaverGeyser(x, y, s = 1) {
+    V.fx({ dur: 0.7, layer: 'air', draw: (c, p, t, e) => { const up = easeOut(cl(p / 0.22)), out = cl((p - 0.4) / 0.6), k = e.a * (1 - out), H = 130 * s * up; if (k < 0.02) return;
+      for (const pass of [0, 1, 2]) for (let i = 0; i < 9; i++) { const q = i / 8, hh = H * q, w = (26 - 16 * q) * s * (1 - 0.5 * out) - (pass === 0 ? -3 : pass === 2 ? 5.5 * s : 0), sw = Math.sin(t * 13 + i * 1.2) * 4 * q;
+        if (w < 1) continue; c.globalAlpha = k * (pass === 2 ? 0.7 : 0.97); c.fillStyle = pass === 0 ? RB.clot : pass === 1 ? RB.red : '#ff5a6a'; c.beginPath(); c.ellipse(x + sw + (pass === 2 ? -w * 0.2 : 0), y - hh, w, w * 0.8, 0, 0, TAU); c.fill(); }
+      c.globalAlpha = 1; } });
+    for (let i = 0; i < 12; i++) { const a = rnd(0, TAU); V.spawn({ x, y, z: 20, vx: Math.cos(a) * rnd(30, 140) * s, vy: Math.sin(a) * rnd(20, 80) * s, vz: rnd(160, 340), g: 760, life: rnd(0.6, 1), size: rnd(6, 10) * s, color: '#a8122a', kind: 'drop', add: false }); }
+  }
+  // the reaver's heat: a warm shimmer and embers off the body (Frenzy and the Eclipse's roar); never a wash of red
+  const reaverHeat = (ent, n = 5) => { HFX.haze(ent.x, ent.y, { w: 40, h: 70, dur: 1.1, a: 0.1, follow: ent }); HFX.embers(ent.x, ent.y, { n, s: 1, r: 22, rise: 1.2 }); };
+  // how warm the blood is: your own Drain reads the kit (a warm bank, a big bank), anyone else's is a middling one
+  const reaverWarm = c => { try { const g = typeof window !== 'undefined' && window.__game, k = c.mine && g && g.actor && g.actor.kit; if (k && k.g) { const mx = k.env && k.env.maxHp ? k.env.maxHp() : 0; return cl((k.g.wound ? 0.55 : 0.2) + (mx > 0 && k.g.cashed ? Math.min(0.45, k.g.cashed / (mx * 0.5)) : 0)); } } catch (e) { } return 0.45; };
+  const reaverStep2 = c => { const e = c.ent, s = e.reaverHack || (e.reaverHack = { n: -1, at: -99 }); s.n = c.step != null ? c.step : FX.now - s.at > 15 ? 0 : (s.n + 1) % 2; s.at = FX.now; return s.n; };
+
+  Object.assign(ABILITY_VFX.bloodreaver, {
+    // Hack, Maul and Gore: iron cuts that open the target. Hack a plain heavy cut and a gash with a few drops; Maul swings back wider, tears the wound wide and
+    // throws a crown of blood and a spatter; Gore (a talent's third hit) rips straight up through the target and the blood rains back
+    hack: c => { const st = reaverStep2(c), maul = st >= 1, gore = st === 2, f = maul ? true : Math.random() < 0.5, R = maul ? 86 : 76, ang = c.ang;
+      if (gore) { OP.thrust(c.tx - Math.cos(ang) * 6, c.ty + 26, c.tx, c.ty - 96, { w: 15, color: RB.red, core: '#f0dcd4', ink: RB.clot, dur: 0.26, z: 0 }); reaverCleave(c.x, c.y, ang, { r: R - 14, span: 1.8, w: 16, dur: 0.22, heat: 0.9 }); }
+      else reaverCleave(c.x, c.y, ang, { r: R, span: maul ? 2.9 : 2.5, w: maul ? 28 : 20, dur: maul ? 0.34 : 0.27, flip: f, heat: maul ? 0.85 : 0.5 });
+      c.later(0.1, () => { const x = c.tx, y = c.ty, m = between2(c, 0.72);
+        if (gore) { HFX.cut(x, y, -Math.PI / 2 + 0.05, { len: 120, w: 7, color: '#ffd8d8', inner: '#b0102a', ink: RB.clot, z: 30, dur: 0.55, bend: 0.05 }); reaverSplat(x, y + 4, { r: 40, z: 12 }); reaverCrown(x, y + 8, { s: 1.5, n: 10, up: 1.6 }); fling(x, y, -Math.PI / 2, { n: 10, spread: 0.5, speed: 1.3, up: 2.2 }); reaverSpatter(m.x, m.y, { r: 40, n: 9 }); shake(3); return; }
+        HFX.cut(x, y, ang + (f ? -1.0 : 1.0), { len: maul ? 62 : 44, w: maul ? 4.6 : 3.4, color: '#ffd0d0', inner: '#b0102a', ink: RB.clot, dur: maul ? 0.45 : 0.36, bend: 0.14 });
+        V.sparks(x, y, { color: '#ffd0b0', n: maul ? 7 : 4, angle: ang, spread: 0.9, speed: 320 });
+        if (maul) { HFX.cut(x, y, ang + 1.1, { len: 40, w: 3, color: '#ffd0d0', inner: '#b0102a', ink: RB.clot, delay: 0.04 }); reaverSplat(x, y, { r: 58 }); reaverCrown(x, y, { s: 1.4, n: 9 }); fling(x, y, ang, { n: 11, speed: 1.2 }); reaverSpatter(m.x, m.y, { r: 36, n: 8, ang: ang }); V.debris(m.x, m.y, { n: 3, color: '#6a5048', speed: 0.6, up: 0.6 }); V.decal(m.x, m.y, { style: 'crack', r: 30, dur: 1.2, a: 0.4, seed: Math.random() * 6 }); shake(3); if (c.ent.st && typeof hitStop === 'function') hitStop(c.ent.st, 0.05, FX.now); }
+        else { reaverSplat(x, y, { r: 22, n: 7, z: 20 }); fling(x, y, ang, { n: 4, size: 0.8 }); reaverSpatter(m.x, m.y, { r: 20, n: 4, ang: ang, s: 0.8, dur: 1.6 }); } }); },
+    // Crimson Drain: the heavy cut that cashes the bank, and then the blood comes back: threads of it run off the wound into the reaver's chest (more, thicker
+    // and a bigger heart the warmer the bank) and the heart thumps twice
+    drain: c => { const w = reaverWarm(c), ang = c.ang, side = Math.random() < 0.5 ? 1 : -1;
+      reaverCleave(c.x, c.y, ang, { r: 80, span: 2.7, w: 24, dur: 0.3, heat: 1, flip: side < 0 });
+      c.later(0.1, () => { const x = c.tx, y = c.ty, m = between2(c, 0.6);
+        HFX.cut(x, y, ang + 1.0 * side, { len: 54, w: 4.2, color: '#ffd0d0', inner: '#b0102a', ink: RB.clot, dur: 0.5, bend: 0.14 }); reaverSplat(x, y, { r: 38 + 12 * w }); reaverCrown(x, y, { s: 1 + 0.4 * w, n: 8 + Math.round(3 * w), color: '#c01a30' });
+        fling(x, y, ang, { n: 6 + Math.round(5 * w), speed: 1 + 0.2 * w }); reaverSpatter(m.x, m.y, { r: 26, n: 5, ang: ang, s: 0.9, dur: 1.4 });
+        later(0.06, () => reaverThreads(x, y, c.ent, w, side)); later(0.34, () => { reaverHeart(c.ent, 0.85 + 0.55 * w); V.swirl(c.ent.x, c.ent.y, { r: 38, color: '#ff2a4a', dur: 0.35, follow: c.ent, inward: true }); }); }); },
+    // Bloodletting: two crossing iron cuts that leave an X open on the target, blood thrown along each, a small crown
+    letting: c => { const ang = c.ang;
+      for (const [i, s] of [[0, 1], [1, -1]]) c.later(i * 0.07, () => reaverCleave(c.x, c.y, ang + 0.4 * s, { r: 60, span: 1.5, w: 15, dur: 0.24, flip: s < 0, heat: 0.7 }));
+      c.later(0.14, () => { const x = c.tx, y = c.ty;
+        for (const s of [-1, 1]) HFX.cut(x, y, ang + Math.PI / 2 + s * 0.7, { len: 52, w: 3.6, color: '#ffd0d0', inner: '#b0102a', ink: RB.clot, dur: 0.5, bend: 0.06, delay: s > 0 ? 0.04 : 0 });
+        reaverSplat(x, y, { r: 34 }); reaverCrown(x, y, { s: 1.05, n: 8 }); fling(x, y, ang + 0.8, { n: 5, spread: 0.5 }); fling(x, y, ang - 0.8, { n: 5, spread: 0.5 }); reaverSpatter(x, y + 10, { r: 30, n: 7 }); }); },
+    // Frenzy: the blood runs hot (a shimmer and embers off the body, blood pulled in), then the axe comes down and the floor splits round the reaver, hot iron in the
+    // cracks, slabs thrown up and a ring of dust; the flame aura stays on
+    frenzy: c => { const e = c.ent; V.charge(c.x, c.y, { color: '#ff5a2a', r: 50, n: 8, dur: 0.25, follow: e }); V.aura(e, { color: '#ff2a1a', style: 'flame', dur: 12, r: 30, rate: 0.3 }); reaverHeat(e, 6);
+      c.later(0.18, () => { const x = e.x, y = e.y; reaverFissure(x, y, 135, { n: 11 }); V.ink(x, y, { r: 90, dur: 2.2, a: 0.34 }); V.crater(x, y, { r: 66, color: '#ff4a1a', dur: 3.2, flames: 5, a: 0.6, cracks: 8 }); reaverRoar(x, y, 150, { n: 8, w: 15, dur: 0.5 }); reaverRoar(x, y, 215, { n: 10, w: 9, dur: 0.6, delay: 0.07 }); V.shock(x, y, { r: 150, color: '#ff6a4a', dur: 0.4, w: 8 }); V.shock(x, y, { r: 210, color: '#ffd0b0', dur: 0.5, w: 4, delay: 0.05 });
+        V.debris(x, y, { n: 10, hot: true, color: '#5a3a2a' }); for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; V.spawn({ x: x + Math.cos(a) * 20, y: y + Math.sin(a) * 12, z: 4, vx: Math.cos(a) * 60, vy: Math.sin(a) * 36, vz: 20, drag: 0.04, life: 1.3, size: 24, size1: 52, color: '#5a4038', kind: 'smoke', add: false, a: 0.4, fadeIn: 0.1, fadePow: 2 }); }
+        HFX.embers(x, y, { n: 10, s: 1.2, r: 40, rise: 1.4 }); shake(6);
+        reaverSplat(x, y - 6, { r: 52, z: 30, n: 12 }); reaverCrown(x, y, { s: 1.1, n: 8, up: 1.1 }); });   // (landing pass: the roar lands with a hard blood-splat core and a crown, not only the floor and the rings)
+    },
+    // War Cry: a roar. Crescents of sound are thrown out of the reaver in a ring, dust and embers roll after them, and the blood shield goes up on him
+    warcry: c => { const e = c.ent; V.glint(c.x, c.y, { color: '#ffb08a', size: 26, z: 40 });
+      c.later(0.1, () => { reaverRoar(c.x, c.y, 150, { n: 10, w: 11 }); reaverRoar(c.x, c.y, 215, { n: 10, w: 7, delay: 0.1, dur: 0.6 }); V.shock(c.x, c.y, { r: 120, color: '#ff9a7a', dur: 0.4, w: 3 });
+        V.spikeburst(c.x, c.y, { r: 92, n: 16, hole: 0.7, color: '#b01a1a', core: '#ff7a5a', ink: RB.clot, dur: 0.4, layer: 'ground', z: 0, flat: 0.6 }); shake(4); });
+      c.later(0.3, () => { V.shield(e, { color: '#ff3a4a', dur: 0.9, r: 38 }); V.flash(e.x, e.y - 20, 44, '#ff4a4a', 0.25); V.sparks(e.x, e.y - 10, { color: '#ff8a7a', n: 6, speed: 170 }); });
+      c.later(0.45, () => { V.smoke(c.x, c.y, { n: 7, r: 70, color: '#8a5a40', size: 34, a: 0.35, speed: 40, life: 1.8 }); HFX.embers(c.x, c.y, { n: 9, s: 1, r: 80, rise: 0.8 }); }); },
+    // Undying: the blood pulls up out of the floor into the reaver (a red swirl, a dark ring that beats twice) and his heart thumps large; a faint ring of dark blood holds the 8s
+    undying: c => { const e = c.ent; V.swirl(c.x, c.y, { r: 66, color: '#c01a2a', dur: 0.5, follow: e, inward: true }); V.charge(c.x, c.y, { color: '#ff3a4a', r: 58, n: 9, dur: 0.35, follow: e });
+      c.later(0.25, () => reaverHeart(e, 1.5)); V.aura(e, { color: '#8a0010', style: 'shadow', dur: 8, r: 30, rate: 0.3 });
+      for (let i = 0; i < 2; i++) V.fx({ dur: 0.5, delay: 0.3 + i * 0.22, layer: 'ground', draw: (cc, p, t, fx) => { const k = fx.a * (1 - p), r = 22 + 52 * easeOut(p); cc.save(); cc.translate(e.x, e.y); cc.scale(1, 0.65); cc.beginPath(); cc.arc(0, 0, r, 0, TAU);
+        cc.globalAlpha = 0.6 * k; cc.strokeStyle = RB.clot; cc.lineWidth = 10 * (1 - p) + 3; cc.stroke(); cc.globalAlpha = 0.9 * k; cc.strokeStyle = RB.red; cc.lineWidth = 6 * (1 - p) + 1.4; cc.stroke(); cc.restore(); } });
+      vfxLingerSettle(V.ink(c.x, c.y, { r: 58, dur: 8, follow: e, a: 0.3 }), 0.5, 1);
+      OP.linger(8, 'ground', (cc, k, t) => { const beat = Math.max(0, 1 - ((t % 1.4) / 0.35)), r = 52 + 8 * beat; cc.save(); cc.translate(e.x, e.y); cc.scale(1, 0.65); cc.beginPath(); cc.arc(0, 0, r, 0, TAU); cc.globalAlpha = (0.35 + 0.4 * beat) * k; cc.strokeStyle = RB.wine; cc.lineWidth = 3 + 2 * beat; cc.stroke(); cc.restore(); }, { peak: 1, settle: 0.5, hold: 0.8 }); },
+  });
+  // the reaver's auto: a short heavy chop, a small gash and a few drops
+  AUTO_VFX.chop = c => { const x = c.ent.x, y = c.ent.y, a = c.ang; reaverCleave(x, y, a, { r: 58, span: 1.8, w: 12, dur: 0.22, flip: c.alt, heat: 0.3 });
+    c.later(0.1, () => { const d = Math.min(76, Math.hypot(c.tx - x, c.ty - y)), px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; HFX.cut(px, py, a + (c.alt ? -1 : 1), { len: 26, w: 2.4, color: '#ffd0d0', inner: '#b0102a', ink: RB.clot, dur: 0.3 }); fling(px, py, a, { n: 3, size: 0.7 }); }); };
+
+  Object.assign(TANKS_VFX, { RB, reaverCleave, reaverSplat, reaverCrown, reaverSpatter, reaverThreads, reaverHeart, reaverGeyser, reaverRoar, reaverFissure });
+})();
+
+// ---------------------------------------------------------------------- RUNEGUARD: carved stone runes and ward-glass that cracks and bursts
+(() => {
+  const { V, TAU, rnd, cl, shake, OP, later, bandShape, fling, between2, reaverCleave, reaverFissure } = TANKS_VFX;
+  const RG = { stone: '#2e3478', slab: '#3a42a0', mid: '#5a62c0', deep: '#6c74f2', vio: '#8e98ff', pale: '#dde3ff', ink: '#0c1236', glass: '#c8d0ff' };
+  // six carved rune strokes (traced at the origin, about 1 unit each way)
+  const GL = [
+    c => { c.moveTo(0, -1); c.lineTo(0, 1); c.moveTo(0, -1); c.lineTo(0.75, -0.35); c.moveTo(0, -0.15); c.lineTo(0.75, 0.5); },
+    c => { c.moveTo(-0.6, -1); c.lineTo(-0.6, 1); c.lineTo(0.6, 0.1); c.lineTo(0.6, -1); },
+    c => { c.moveTo(0, -1); c.lineTo(0.7, 0); c.lineTo(0, 1); c.lineTo(-0.7, 0); c.closePath(); c.moveTo(-0.4, -0.6); c.lineTo(0.4, 0.6); },
+    c => { c.moveTo(0, 1); c.lineTo(0, -0.2); c.moveTo(-0.7, -1); c.lineTo(0, -0.2); c.lineTo(0.7, -1); },
+    c => { c.moveTo(-0.3, -1); c.lineTo(-0.3, 1); c.moveTo(-0.3, -0.6); c.lineTo(0.6, -0.1); c.lineTo(-0.3, 0.4); },
+    c => { c.moveTo(-0.7, 1); c.lineTo(-0.7, -1); c.lineTo(0, -0.1); c.lineTo(0.7, -1); c.lineTo(0.7, 1); },
+  ];
+  // one rune carved at (x, y): an ink stroke under a bright one
+  function glyph(c, x, y, s, i, col, k, w = 1.6) {
+    c.save(); c.translate(x, y); c.scale(s, s); c.lineCap = 'round'; c.lineJoin = 'round'; c.beginPath(); GL[i % GL.length](c);
+    c.globalAlpha = 0.9 * k; c.strokeStyle = RG.ink; c.lineWidth = (w + 2.4) / s; c.stroke(); c.globalAlpha = k; c.strokeStyle = col; c.lineWidth = w / s; c.stroke(); c.restore();
+  }
+  const hexPath = (c, R, rot = 0, fy = 1) => { c.beginPath(); for (let i = 0; i < 6; i++) { const a = rot + i * Math.PI / 3; c.lineTo(Math.cos(a) * R, Math.sin(a) * R * fy); } c.closePath(); };
+  const chips = (x, y, z, n, col, sp = 1) => { for (let i = 0; i < n; i++) { const a = rnd(0, TAU), s = rnd(60, 170) * sp; V.spawn({ x, y, z, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, vz: rnd(80, 200), g: 700, bounce: true, life: rnd(0.4, 0.7), size: rnd(5, 9), color: col || RG.vio, kind: 'shard', add: false, vr: rnd(-12, 12) }); } };
+
+  // the rune stamped on a body: a carved hex stone slapped on it (it lands big and settles), a rune bright in it, hairline cracks, gone in half a second
+  function rgStamp(x, y, o = {}) {
+    const s = o.s ?? 1, gi = o.glyph ?? ((Math.random() * 6) | 0), z = o.z ?? 26, dur = o.dur ?? 0.5, cr = Array.from({ length: 4 }, () => { const a = rnd(0, TAU), pts = [[0, 0]]; let px = 0, py = 0; for (let j = 0; j < 3; j++) { const aa = a + rnd(-0.5, 0.5); px += Math.cos(aa) * 8; py += Math.sin(aa) * 8; pts.push([px, py]); } return pts; });
+    V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => { const pop = t < 0.07 ? 1.45 - 0.45 * t / 0.07 : 1, k = e.a * Math.min(1, t / 0.03) * (1 - cl((p - 0.55) / 0.45)), R = 19 * s * pop; if (k < 0.02) return;
+      c.save(); c.translate(x, y - z); hexPath(c, R, Math.PI / 6, 0.85); c.globalAlpha = k; c.fillStyle = RG.slab; c.fill(); c.lineJoin = 'round'; c.lineWidth = 3.2; c.strokeStyle = RG.ink; c.stroke();
+      c.save(); hexPath(c, R * 0.78, Math.PI / 6, 0.85); c.globalAlpha = 0.6 * k; c.strokeStyle = RG.pale; c.lineWidth = 1; c.stroke(); c.restore();
+      const hot = cl(1 - t / 0.16); V.glowAt(c, 0, 0, R * 1.2, RG.vio, 0.5 * k * (0.35 + hot)); glyph(c, 0, 0, R * 0.42, gi, hot > 0.3 ? '#ffffff' : RG.pale, k, 1.8);
+      if (t > 0.1) { c.globalAlpha = 0.9 * k; c.lineWidth = 1.1; const g = cl((t - 0.1) / 0.12); for (const pts of cr) { c.strokeStyle = RG.ink; c.beginPath(); pts.forEach(([a, b], i) => i ? c.lineTo(a * g * s, b * g * 0.85 * s) : c.moveTo(0, 0)); c.stroke(); } }
+      c.restore(); } });
+    chips(x, y, z - 6, Math.round(3 + 3 * s), RG.vio, 0.9);
+  }
+  // a ring of carved runes written on the floor (flat), each lighting in turn and the ring widening as they go out
+  function rgRuneRing(x, y, R, o = {}) {
+    const n = o.n ?? 10, dur = o.dur ?? 0.7, off = rnd(0, TAU), gs = Array.from({ length: n }, (_, i) => (i * 2 + ((Math.random() * 2) | 0)) % 6);
+    V.fx({ dur, delay: o.delay, layer: 'ground', draw: (c, p, t, e) => { const q = easeOut(cl(p / 0.5)), r = R * (0.55 + 0.45 * q), k = e.a * (1 - cl((p - 0.55) / 0.45)); if (k < 0.02) return;
+      c.save(); c.translate(x, y); c.scale(1, 0.65); c.lineCap = 'round'; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.globalAlpha = 0.5 * k; c.strokeStyle = RG.ink; c.lineWidth = 6; c.stroke(); c.globalAlpha = 0.9 * k; c.strokeStyle = RG.deep; c.lineWidth = 2.6; c.stroke(); c.globalAlpha = 0.7 * k; c.strokeStyle = RG.pale; c.lineWidth = 0.9; c.stroke();
+      for (let i = 0; i < n; i++) { const lit = cl((t - i * 0.025) / 0.08); if (lit <= 0) continue; const a = off + i * TAU / n; glyph(c, Math.cos(a) * r, Math.sin(a) * r, (o.gs ?? 10) * (1.35 - 0.35 * lit), gs[i], lit < 1 ? '#ffffff' : RG.pale, k * lit, 1.8); }
+      c.restore(); } });
+  }
+  // a carved slab falls out of the air onto (x, y), stands a beat with its rune burning, then cracks and bursts into shards (o.delay, o.s, o.stand)
+  function rgSlab(x, y, o = {}) {
+    const s = o.s ?? 1, d = o.delay ?? 0, FALL = 0.16, STAND = o.stand ?? 0.24, gi = o.glyph ?? 0, H = 190, cr = Array.from({ length: 3 }, () => { const a = rnd(0, TAU); return [a, rnd(10, 17)]; });
+    V.fx({ dur: FALL + STAND + 0.12, delay: d, layer: 'air', draw: (c, p, t, e) => { const q = cl(t / FALL), z = H * (1 - q * q), st = Math.max(0, t - FALL - STAND), k = e.a * (1 - cl(st / 0.1)), R = 17 * s; if (k < 0.02) return;
+      c.save(); c.globalAlpha = 0.35 * k * q; c.fillStyle = '#000'; c.beginPath(); c.ellipse(x, y, R * (0.5 + 0.5 * q), R * 0.4 * (0.5 + 0.5 * q), 0, 0, TAU); c.fill(); c.restore();
+      c.save(); c.translate(x, y - z - 15 * s); hexPath(c, R, Math.PI / 6, 0.9); c.globalAlpha = k; c.fillStyle = RG.stone; c.fill(); c.lineJoin = 'round'; c.lineWidth = 3.4; c.strokeStyle = RG.ink; c.stroke();
+      hexPath(c, R * 0.74, Math.PI / 6, 0.9); c.globalAlpha = 0.5 * k; c.strokeStyle = RG.vio; c.lineWidth = 1.2; c.stroke();
+      const glow = t > FALL ? 0.6 + 0.4 * Math.sin(t * 40) : 0.3; V.glowAt(c, 0, 0, R * 1.5, RG.vio, 0.45 * k * glow); glyph(c, 0, 0, R * 0.46, gi, RG.pale, k, 2);
+      if (st > 0 || t > FALL + STAND * 0.55) { const g = cl((t - FALL - STAND * 0.55) / 0.12); c.globalAlpha = 0.95 * k; c.strokeStyle = '#ffffff'; c.lineWidth = 1.3; for (const [a, L] of cr) { c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a) * L * g, Math.sin(a) * L * g * 0.9); c.stroke(); } }
+      c.restore(); } });
+    later(d + FALL, () => { V.smoke(x, y, { n: 3, r: 8, color: '#8a86a0', size: 16, a: 0.4, speed: 40, life: 0.7 }); chips(x, y, 4, 3, '#8a90e0', 0.7); V.shock(x, y, { r: 30 * s, color: RG.vio, dur: 0.25, w: 3 }); });
+    later(d + FALL + STAND, () => { chips(x, y, 22 * s, 9, RG.vio, 1.4); chips(x, y, 22 * s, 4, RG.pale, 1.2); V.shock(x, y, { r: 40 * s, color: RG.pale, dur: 0.3, w: 3 }); });
+  }
+  // flying wedges of broken stone thrown out of (x, y) and falling (the great rune stone bursting): n shards of ~R/3
+  function rgWedges(x, y, R, n, o = {}) {
+    const ws = Array.from({ length: n }, (_, i) => ({ a: i / n * TAU + rnd(-0.2, 0.2), sp: rnd(0.55, 1), L: rnd(0.7, 1.2), sa: rnd(-8, 8), a0: rnd(0, TAU) }));
+    V.fx({ dur: o.dur ?? 0.8, delay: o.delay, layer: 'air', draw: (c, p, t, e) => { const q = easeOut(cl(p / 0.6)), k = e.a * (1 - cl((p - 0.6) / 0.4)); if (k < 0.02) return;
+      for (const w of ws) { const r = R * q * w.sp, px = x + Math.cos(w.a) * r, py = y + Math.sin(w.a) * r * 0.55 - (o.z ?? 30) - Math.sin(Math.min(1, p / 0.5) * Math.PI) * 40 * w.sp + 160 * Math.pow(Math.max(0, p - 0.5), 2), L = R * 0.2 * w.L;
+        c.save(); c.translate(px, py); c.rotate(w.a0 + t * w.sa); c.beginPath(); c.moveTo(-L * 0.5, -L * 0.35); c.lineTo(L, 0); c.lineTo(-L * 0.5, L * 0.35); c.closePath(); c.globalAlpha = k; c.fillStyle = RG.slab; c.fill(); c.lineJoin = 'round'; c.lineWidth = 2.6; c.strokeStyle = RG.ink; c.stroke();
+        c.globalAlpha = 0.9 * k; c.strokeStyle = RG.pale; c.lineWidth = 1; c.beginPath(); c.moveTo(L * 0.9, -0.5); c.lineTo(-L * 0.1, -L * 0.2); c.stroke(); c.restore(); } } });
+  }
+  // the Ward breaking: its hex glass dome crazes with cracks, bursts into shards of glass and stone flung out, and a ring of runes runs out along the floor (f: how much it soaked, 0-1)
+  function rgGlassBurst(x, y, f) {
+    const cr = Array.from({ length: 6 }, () => { const a = rnd(0, TAU), pts = [[0, 0]]; let px = 0, py = 0; for (let j = 0; j < 3; j++) { const aa = a + rnd(-0.5, 0.5); px += Math.cos(aa) * 14; py += Math.sin(aa) * 11; pts.push([px, py]); } return pts; });
+    V.fx({ dur: 0.2, layer: 'air', draw: (c, p, t, e) => { const k = e.a * (1 - cl((p - 0.7) / 0.3)), g = cl(t / 0.1), R = 40 + 12 * f; c.save(); c.translate(x, y - 18); hexPath(c, R, 0, 0.8);
+      c.globalAlpha = 0.34 * k; c.fillStyle = RG.glass; c.fill(); c.lineJoin = 'round'; c.globalAlpha = k; c.lineWidth = 4; c.strokeStyle = RG.ink; c.stroke(); c.lineWidth = 2; c.strokeStyle = '#ffffff'; c.stroke();
+      c.globalAlpha = k; c.lineWidth = 1.4; c.strokeStyle = '#ffffff'; for (const pts of cr) { c.beginPath(); pts.forEach(([a, b], i) => i ? c.lineTo(a * g, b * g) : c.moveTo(0, 0)); c.stroke(); } c.restore(); } });
+    later(0.1, () => { const n = 8 + Math.round(10 * f); for (let i = 0; i < n; i++) { const a = rnd(0, TAU), s = rnd(120, 280) * (1 + 0.4 * f);
+        V.spawn({ x, y, z: rnd(10, 40), vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, vz: rnd(40, 200), g: 520, bounce: true, life: rnd(0.5, 0.9), size: rnd(7, 12), color: i % 3 ? RG.glass : RG.vio, kind: 'shard', add: false, vr: rnd(-14, 14) }); }
+      rgRuneRing(x, y, 60 + 80 * f, { n: 8 + Math.round(4 * f), gs: 8 + 4 * f, dur: 0.6 + 0.2 * f }); if (f >= 0.5) { rgWedges(x, y, 60 + 50 * f, 5, { z: 24, dur: 0.7 }); reaverFissure(x, y, 60 + 60 * f, { n: 7, dur: 1.8, hot: '#9aa4ff', warm: '#4a54c0', dark: RG.ink, glow: RG.deep }); } });
+  }
+
+  Object.assign(ABILITY_VFX.runeguard, {
+    // Glyph Burst: the three Runes fly off the guard at the target, a rune circle spins under it, then three carved slabs fall round it onto the circle, stand with their runes burning
+    // and burst together: a pillar of light, a ring of runes along the floor, the floor cracked, shards flung
+    glyph: c => { V.ink(c.tx, c.ty, { r: 70, dur: 0.5 }); V.sigil(c.tx, c.ty, { r: 70, style: 'runes', color: RG.deep, dur: 0.5, spin: 8 });
+      for (let i = 0; i < 3; i++) c.later(i * 0.05, () => V.missile(c.x, c.y - 24 - i * 4, c.tx, c.ty - 10, { style: 'orb', color: i === 1 ? RG.pale : '#9aa4ff', speed: TRV('runeguard', 'glyph'), size: 0.5, onHit: () => {} }));
+      for (let i = 0; i < 3; i++) { const a = -Math.PI / 2 + i * TAU / 3; c.later(0.12 + i * 0.04, () => rgSlab(c.tx + Math.cos(a) * 46, c.ty + Math.sin(a) * 30, { s: 1.15, glyph: i * 2, stand: 0.12 - i * 0.02 + 0.1 })); }
+      c.later(0.4, () => { V.flash(c.tx, c.ty - 20, 44, '#c8ceff', 0.16); rgWedges(c.tx, c.ty, 95, 7, { z: 26, dur: 0.75 }); rgRuneRing(c.tx, c.ty, 100, { n: 10, gs: 11, dur: 0.75 }); V.pillar(c.tx, c.ty, { r: 18, h: 190, color: '#8e98ff', dur: 0.5 }); V.shock(c.tx, c.ty, { r: 110, color: RG.vio, dur: 0.45, w: 5 });
+        reaverFissure(c.tx, c.ty, 76, { n: 8, dur: 1.8, hot: '#9aa4ff', warm: '#4a54c0', dark: RG.ink, glow: RG.deep });
+        shake(5); if (c.cam) c.cam.punch(0.03, 0.3); if (c.ent.st && typeof hitStop === 'function') hitStop(c.ent.st, 0.07, FX.now); }); },
+  });
+  // the guard's auto: a stone gauntlet cuff, a carved rune flashed on the target
+  AUTO_VFX.runebash = c => { const x = c.ent.x, y = c.ent.y, a = c.ang, d = Math.min(58, Math.hypot(c.tx - x, c.ty - y)), px = x + Math.cos(a) * d, py = y + Math.sin(a) * d;
+    reaverCleave(x, y, a, { r: 48, span: 1.5, w: 11, dur: 0.2, flip: c.alt, heat: 0.4, body: RG.stone, edge: RG.vio, ink: RG.ink, mid: RG.mid, sheen: RG.pale, tip: RG.pale });
+    c.later(0.07, () => { rgStamp(px, py, { s: 0.5, z: 20, dur: 0.34 }); V.sparks(px, py, { color: '#d0d6ff', n: 3, angle: a, spread: 0.7, speed: 240 }); }); };
+
+  Object.assign(TANKS_VFX, { RG, rgGlyph: glyph, rgStamp, rgRuneRing, rgSlab, rgWedges, rgGlassBurst, rgHexPath: hexPath, rgChips: chips });
+})();
+
+// ---------------------------------------------------------------------- GORGEMAW: jaws, teeth, and what he swallowed spat back in its own shape
+(() => {
+  const { V, TAU, rnd, cl, shake, OP, later, between2, reaverCleave } = TANKS_VFX;
+  const GM = { tooth: '#f4e4c8', toothD: '#c8a878', ink: '#1e0618', flesh: '#5a1648', rim: '#e0508a', glow: '#ff8a3a', slime: '#8ee03a' };
+  // an ivory tooth along +x from the origin (length L, half-width w) with an ink outline and a shaded side
+  function tooth(c, L, w, k, col) {
+    const path = () => { c.beginPath(); c.moveTo(0, -w); c.quadraticCurveTo(L * 0.55, -w * 0.75, L, 0); c.quadraticCurveTo(L * 0.55, w * 0.75, 0, w); c.closePath(); };
+    path(); c.globalAlpha = k; c.fillStyle = col || GM.tooth; c.fill(); c.globalAlpha = 0.45 * k; c.fillStyle = GM.toothD; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(L * 0.55, w * 0.75, L, 0); c.quadraticCurveTo(L * 0.55, w * 0.75, 0, w); c.closePath(); c.fill();
+    path(); c.globalAlpha = k; c.lineJoin = 'round'; c.lineWidth = 2; c.strokeStyle = GM.ink; c.stroke();
+  }
+  // the bite on a body: an upper and a lower jaw (a band of dark flesh with ivory teeth set in it) slide together on (x, y), meet, hold a beat and part and fade
+  // (ang: the way the bite comes from; o.r the jaw's half-width, o.n teeth in each; o.z the height; o.col a tint on the teeth's tips)
+  function gorgeBite(x, y, ang, o = {}) {
+    const R = o.r ?? 22, n = o.n ?? 5, z = o.z ?? 18, dur = o.dur ?? 0.34, tl = R * 0.5;
+    V.fx({ dur, delay: o.delay, layer: 'air', draw: (c, p, t, e) => { const shut = easeOut(cl(t / 0.09)), part = cl((t - 0.2) / 0.14), gap = (R * 0.95 * (1 - shut) + R * 0.12) + R * 0.35 * part, k = e.a * (1 - cl((p - 0.6) / 0.4)); if (k < 0.02) return;
+      c.save(); c.translate(x, y - z); c.rotate(ang + Math.PI / 2); c.scale(1, 0.85); c.lineCap = 'round'; c.lineJoin = 'round';
+      for (const s of [-1, 1]) { const arc = u => [R * Math.sin(u), s * (gap + R * 0.4 * (1 - Math.cos(u)) * -1 + 0)];
+        c.beginPath(); for (let i = 0; i <= 10; i++) { const u = (i / 10 * 2 - 1) * 1.15, [px, py] = arc(u); i ? c.lineTo(px, py) : c.moveTo(px, py); }
+        c.globalAlpha = k; c.strokeStyle = GM.ink; c.lineWidth = R * 0.34 + 3; c.stroke(); c.strokeStyle = GM.flesh; c.lineWidth = R * 0.34; c.stroke(); c.globalAlpha = 0.8 * k; c.strokeStyle = GM.rim; c.lineWidth = 1.6; c.stroke();
+        for (let i = 0; i < n; i++) { const u = ((i + 0.5) / n * 2 - 1) * 1.05, [px, py] = arc(u); c.save(); c.translate(px, py); c.rotate(s > 0 ? -Math.PI / 2 : Math.PI / 2); tooth(c, tl * (i % 2 ? 0.8 : 1.05), R * 0.13, k); c.restore(); } }
+      c.restore(); },
+      done: () => { for (let i = 0; i < 3; i++) { const a = rnd(0, TAU); V.spawn({ x: x + Math.cos(a) * R * 0.5, y: y + Math.sin(a) * R * 0.3, z, vx: Math.cos(a) * rnd(30, 80), vy: Math.sin(a) * rnd(20, 50), vz: rnd(30, 90), g: 700, life: rnd(0.3, 0.5), size: rnd(4, 6), color: o.drip || '#a8122a', kind: 'drop', add: false }); } } });
+  }
+  // a ring of teeth on the floor closing in on (x, y): n ivory teeth pointing inward on a flat ring that contracts from R to 0.55 R and fades
+  function gorgeTeethRing(x, y, R, o = {}) {
+    const n = o.n ?? 16, dur = o.dur ?? 0.55;
+    V.fx({ dur, delay: o.delay, layer: 'ground', draw: (c, p, t, e) => { const q = easeOut(cl(p / 0.45)), r = R * (1.1 - 0.5 * q), k = e.a * (1 - cl((p - 0.55) / 0.45)); if (k < 0.02) return;
+      c.save(); c.translate(x, y); c.scale(1, 0.65); c.beginPath(); c.arc(0, 0, r + R * 0.06, 0, TAU); c.globalAlpha = 0.55 * k; c.strokeStyle = GM.ink; c.lineWidth = R * 0.12 + 3; c.stroke(); c.globalAlpha = 0.8 * k; c.strokeStyle = GM.flesh; c.lineWidth = R * 0.12; c.stroke();
+      for (let i = 0; i < n; i++) { const a = i / n * TAU; c.save(); c.rotate(a); c.translate(r, 0); c.rotate(Math.PI); c.scale(1, 1 / 0.65 * 0.65); tooth(c, R * 0.2 * (i % 2 ? 0.75 : 1), R * 0.055, k); c.restore(); }
+      c.restore(); V.glowAt(c, x, y, R * 0.7, o.glow || GM.glow, 0.18 * k); } });
+  }
+  // a great fang driven into (x, y) from the way the Morsel came (ang): it stabs in 0.06s, holds, thins out (a Lance Morsel spat); col the Morsel's colour
+  function gorgeFang(x, y, ang, o = {}) {
+    const s = o.s ?? 1, L = 78 * s, W = 13 * s, col = o.col || '#7fd0ff';
+    V.fx({ dur: 0.42, layer: 'air', draw: (c, p, t, e) => { const go = easeOut(cl(t / 0.07)), k = e.a * (1 - cl((p - 0.5) / 0.5)); if (k < 0.02) return;
+      c.save(); c.translate(x, y - 16); c.rotate(ang); c.scale(1, 0.85); c.translate(-L * (1 - go) - L * 0.15, 0); V.glowAt(c, L * 0.9, 0, 26 * s, col, 0.5 * k); tooth(c, L, W, k);
+      c.globalAlpha = 0.9 * k; c.strokeStyle = col; c.lineWidth = 2; c.beginPath(); c.moveTo(L * 0.2, 0); c.lineTo(L * 0.92, 0); c.stroke(); c.restore(); } });
+    for (let i = 0; i < 5; i++) { const a = ang + rnd(-0.6, 0.6); V.spawn({ x, y, z: 16, vx: Math.cos(a) * rnd(60, 200), vy: Math.sin(a) * rnd(40, 120), vz: rnd(40, 120), g: 600, life: rnd(0.3, 0.5), size: rnd(4, 7), color: col, kind: 'drop', add: false }); }
+  }
+  // a cone of teeth: n great ivory teeth jut out of the mouth at (x, y) across a span, grow to len, then pull back (a Fang Morsel spat)
+  function gorgeTeethCone(x, y, ang, len, span, o = {}) {
+    const n = o.n ?? 7, col = o.col || '#ff5a6a', fz = o.z ?? 24;
+    V.fx({ dur: 0.45, layer: 'air', draw: (c, p, t, e) => { const go = easeOut(cl(t / 0.1)), k = e.a * (1 - cl((p - 0.5) / 0.5)); if (k < 0.02) return;
+      for (let i = 0; i < n; i++) { const u = n > 1 ? i / (n - 1) * 2 - 1 : 0, a = ang + u * span / 2, L = len * go * (0.7 + 0.3 * (1 - Math.abs(u))), Wd = 11 * (1 - 0.3 * Math.abs(u)) * (o.s ?? 1); c.save(); c.translate(x + Math.cos(a) * 14, y - fz + Math.sin(a) * 9); c.rotate(a); c.scale(1, 0.85); tooth(c, L, Wd, k);
+        c.globalAlpha = 0.85 * k; c.fillStyle = col; c.beginPath(); c.moveTo(L * 0.72, 0); c.lineTo(L * 0.4, -Wd * 0.4); c.lineTo(L * 0.4, Wd * 0.4); c.closePath(); c.fill(); c.restore(); } } });
+  }
+  // a Spike Morsel spat: a tall yellow spike drives up out of the floor under (x, y), holds and sinks, rock chipped from the floor round it (s sizes it)
+  function gorgeSpike(x, y, s = 1) {
+    V.fx({ dur: 0.7, layer: 'air', draw: (c, p, t, e) => { const up = easeOut(cl(t / 0.07)), sink = cl((p - 0.55) / 0.45), k = e.a * (1 - sink * sink), H = 112 * s * up * (1 - 0.5 * sink), W = 20 * s; if (k < 0.02) return;
+      c.save(); c.globalAlpha = 0.4 * k; c.fillStyle = '#000'; c.beginPath(); c.ellipse(x, y, W * 1.1, W * 0.5, 0, 0, TAU); c.fill();
+      const body = (ww, hh, col) => { c.beginPath(); c.moveTo(x - ww, y); c.lineTo(x - ww * 0.35, y - hh * 0.55); c.lineTo(x, y - hh); c.lineTo(x + ww * 0.35, y - hh * 0.55); c.lineTo(x + ww, y); c.closePath(); c.fillStyle = col; c.fill(); };
+      c.globalAlpha = k; c.lineJoin = 'round'; body(W + 3, H + 5, GM.ink); body(W, H, '#e8b81e'); body(W * 0.6, H * 0.9, '#ffd23a'); c.fillStyle = '#fff6c0'; c.globalAlpha = 0.9 * k; c.beginPath(); c.moveTo(x - W * 0.2, y); c.lineTo(x - W * 0.05, y - H * 0.85); c.lineTo(x + W * 0.02, y); c.closePath(); c.fill(); c.restore(); } });
+    later(0.02, () => { V.debris(x, y, { n: 6, color: '#6a5a48', speed: 1, up: 1 }); V.smoke(x, y, { n: 3, r: 10, color: '#a09078', size: 18, a: 0.4, speed: 50, life: 0.8 }); });
+  }
+
+  Object.assign(TANKS_VFX, { GM, gorgeBite, gorgeTeethRing, gorgeFang, gorgeTeethCone, gorgeSpike, gorgeTooth: tooth });
+
+  // the Gorgemaw's auto: a gauntlet cuff, then a small pair of jaws snapping shut on the target
+  AUTO_VFX.maw = c => { const x = c.ent.x, y = c.ent.y, a = c.ang; reaverCleave(x, y, a, { r: 52, span: 1.6, w: 12, dur: 0.22, flip: c.alt, heat: 0.4, body: GM.flesh, edge: GM.rim, ink: GM.ink, mid: '#8a2a6a', sheen: GM.tooth, tip: '#ffe8d0' });
+    c.later(0.09, () => { const d = Math.min(64, Math.hypot(c.tx - x, c.ty - y)), px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; gorgeBite(px, py, a, { r: 13, n: 3, z: 16, dur: 0.26, drip: '#c8e070' }); V.splash(px, py, { color: '#c8e070', n: 2, size: 0.5, speed: 0.5 }); }); };
+})();
+
+// ---------------------------------------------------------------------- OATHBROKER: ink, paper, seals, and ledger lines (debts written as script, then struck through)
+(() => {
+  const { V, TAU, rnd, cl, shake, OP, later, reaverCleave, reaverSplat } = TANKS_VFX;
+  const OB = { ink: '#1c1428', ink2: '#2e2440', violet: '#4a3a68', lil: '#b8a8e0', paper: '#efe4cc', paperD: '#cdbf9e', wax: '#b01a30', waxD: '#4a0a16', gold: '#ffd27a', gold2: '#d8a038' };
+  // an ink blot: a lobed splat of dark ink with a violet sheen and flecks flung off it (the weight of a strike)
+  function oathInk(x, y, o = {}) {
+    reaverSplat(x, y, { r: o.r ?? 28, z: o.z ?? 20, n: o.n ?? 9, color: OB.ink2, ink: OB.ink, mid: OB.violet, hl: OB.lil, delay: o.delay });
+    for (let i = 0; i < (o.drops ?? 4); i++) { const a = rnd(0, TAU); V.spawn({ x, y, z: o.z ?? 20, vx: Math.cos(a) * rnd(50, 150), vy: Math.sin(a) * rnd(30, 90), vz: rnd(40, 140), g: 700, life: rnd(0.3, 0.5), size: rnd(3, 6), color: OB.ink2, kind: 'drop', add: false }); }
+  }
+  // a tally: n strokes of ink written over the target, the fifth (n = 5) a stroke of wax struck across them (a debt entered, a line paid)
+  function oathTally(x, y, n, o = {}) {
+    const z = o.z ?? 36, s = o.s ?? 1;
+    V.fx({ dur: 0.55, delay: o.delay, layer: 'air', draw: (c, p, t, e) => { const k = e.a * Math.min(1, t / 0.04) * (1 - cl((p - 0.6) / 0.4)), rise = easeOut(cl(p / 0.5)) * 8; if (k < 0.02) return;
+      c.save(); c.translate(x, y - z - rise); c.scale(s, s); c.lineCap = 'round'; const m = Math.min(5, n), W = 7;
+      const stroke = (x0, y0, x1, y1, col, w) => { c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.strokeStyle = col; c.lineWidth = w; c.stroke(); };
+      for (let i = 0; i < Math.min(4, m); i++) { const g = cl((t - i * 0.035) / 0.06); if (g <= 0) continue; const px = (i - 1.5) * W; c.globalAlpha = k; stroke(px, -9, px, -9 + 18 * g, OB.paper, 5.2); stroke(px, -9, px, -9 + 18 * g, OB.ink, 3); }
+      if (m >= 5) { const g = cl((t - 0.16) / 0.07); if (g > 0) { c.globalAlpha = k; stroke(-17, 8, -17 + 34 * g, 8 - 16 * g, OB.ink, 6.4); stroke(-17, 8, -17 + 34 * g, 8 - 16 * g, OB.wax, 3.4); } }
+      c.restore(); } });
+  }
+  // paper ledger strips thrown out of (x, y) and lying on the floor, each written in script and struck through with a stroke of wax a beat after it lands (n strips, thrown R)
+  function oathStrips(x, y, R, n, o = {}) {
+    const st = Array.from({ length: n }, (_, i) => ({ a: i / n * TAU + rnd(-0.25, 0.25), sp: rnd(0.6, 1), rot: rnd(-0.6, 0.6), spin: rnd(-6, 6), sd: rnd(0, 6), L: rnd(0.85, 1.2) })), s = o.s ?? 1;
+    V.fx({ dur: o.dur ?? 1.1, delay: o.delay, layer: 'air', draw: (c, p, t, e) => { const q = easeOut(cl(p / 0.35)), k = e.a * (1 - cl((p - 0.62) / 0.38)); if (k < 0.02) return;
+      for (const w of st) { const r = R * q * w.sp, px = x + Math.cos(w.a) * r, py = y + Math.sin(w.a) * r * 0.55 - (o.z ?? 24) * (1 - q) - Math.sin(cl(p / 0.35) * Math.PI) * 26 * w.sp, fl = q < 1 ? w.spin * t : w.rot, W = 17 * s * w.L, H = 6 * s;
+        c.save(); c.translate(px, py); c.rotate(fl); c.globalAlpha = k; c.fillStyle = OB.paper; c.fillRect(-W, -H, W * 2, H * 2); c.lineWidth = 1.4; c.strokeStyle = OB.ink; c.strokeRect(-W, -H, W * 2, H * 2);
+        c.globalAlpha = 0.8 * k; c.lineWidth = 1; c.beginPath(); for (let l = 0; l < 2; l++) { const yy = -H * 0.45 + l * H * 0.9; for (let i = 0; i <= 8; i++) { const xx = -W * 0.8 + (W * 1.5) * i / 8 * (l ? 0.7 : 1); i ? c.lineTo(xx, yy + Math.sin(i * 2.3 + w.sd + l) * 1.3) : c.moveTo(xx, yy); } } c.stroke();
+        const g = cl((t - 0.3) / 0.1); if (g > 0) { c.globalAlpha = k; c.lineCap = 'round'; c.beginPath(); c.moveTo(-W * 0.95, H * 0.7); c.lineTo(-W * 0.95 + W * 1.9 * g, -H * 0.7); c.strokeStyle = OB.ink; c.lineWidth = 4.2; c.stroke(); c.strokeStyle = OB.wax; c.lineWidth = 2.4; c.stroke(); }
+        c.restore(); } } });
+  }
+  Object.assign(TANKS_VFX, { OB, oathInk, oathTally, oathStrips });
+
+  // the knight's auto: a swing of the stamp-mace and a dot of ink on the target
+  AUTO_VFX.stamp = c => { const x = c.ent.x, y = c.ent.y, a = c.ang; reaverCleave(x, y, a, { r: 50, span: 1.4, w: 11, dur: 0.22, flip: c.alt, heat: 0.3, body: '#463e56', edge: OB.gold2, ink: OB.ink, mid: '#6a6080', sheen: OB.paper, tip: '#fff2c0' });
+    c.later(0.08, () => { const d = Math.min(64, Math.hypot(c.tx - x, c.ty - y)), px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; oathInk(px, py, { r: 15, z: 16, n: 7, drops: 2 }); V.hit(px, py, '#e8dcff', 0.3); }); };
+})();
+
+// ---------------------------------------------------------------------- BASTION (the pilot's class): the Perfect Block and Last Bastion
+(() => {
+  const { V, TAU, rnd, cl, shake } = TANKS_VFX;
+  const B = { gold: '#ffd65a', dawn: '#ffe9a8', steel: '#7fb2ff', ink: '#0e1a30', plate: '#3a5288', pale: '#f2f8ff' };
+  // the Perfect Block's ring: the plate rings like a struck bell: three arcs of gold roll off its face the way it faces, a gold sun disc pops on the face (a disc with a cross of light, ink-rimmed) and a steel glint runs across it
+  function bastionPing(e) {
+    const a = e.angle || 0, fx = () => e.x + Math.cos(a) * 36, fy = () => e.y + Math.sin(a) * 30 - 14;
+    V.fx({ dur: 0.55, layer: 'air', draw: (c, p, t, f) => { const k = f.a * (1 - cl((p - 0.5) / 0.5)); if (k < 0.02) return;
+      for (let i = 0; i < 3; i++) { const q = cl((t - i * 0.07) / 0.32); if (q <= 0 || q >= 1) continue; const d = 34 + 120 * easeOut(q), R = 50 + 40 * q, cx = e.x + Math.cos(a) * d, cy = e.y - 14 + Math.sin(a) * d * 0.8, kk = k * (1 - q);
+        c.save(); c.lineCap = 'round'; c.beginPath(); c.ellipse(cx, cy, R * 0.45, R, a, -1.1, 1.1); c.globalAlpha = 0.7 * kk; c.strokeStyle = B.ink; c.lineWidth = 10 - 5 * q; c.stroke(); c.globalAlpha = kk; c.strokeStyle = B.gold; c.lineWidth = 6 - 3.5 * q; c.stroke(); c.restore(); }
+      const pop = t < 0.06 ? 0.6 + 0.9 * t / 0.06 : 1.5 - 0.5 * cl((t - 0.06) / 0.08), R = 21 * Math.min(1.5, pop) * (1 - 0.3 * cl((p - 0.3) / 0.7)), x = fx() + Math.cos(a) * 34, y = fy() + Math.sin(a) * 28;
+      c.save(); c.translate(x, y); V.glowAt(c, 0, 0, R * 2.4, B.gold, 0.55 * k * (1 - cl(t / 0.3)));
+      c.globalAlpha = k; c.fillStyle = B.ink; c.beginPath(); c.arc(0, 0, R + 2.4, 0, TAU); c.fill(); c.fillStyle = B.gold; c.beginPath(); c.arc(0, 0, R, 0, TAU); c.fill(); c.fillStyle = B.dawn; c.beginPath(); c.arc(0, 0, R * 0.62, 0, TAU); c.fill();
+      c.strokeStyle = '#fffbe8'; c.lineWidth = 1.8; c.lineCap = 'round'; c.beginPath(); c.moveTo(-R * 0.45, 0); c.lineTo(R * 0.45, 0); c.moveTo(0, -R * 0.45); c.lineTo(0, R * 0.45); c.stroke();
+      c.restore(); } });
+  }
+  // (signature pass) the Perfect Block as ONE clean beat, small and hard: the blow arrives as a bright streak, meets the plate with a white-gold clang
+  // (a cross-flare rimmed in ink, wider across the plate than along it), is TURNED (two bright streaks glancing off sideways), and the plate rings:
+  // two thin rings roll off it a beat apart. Quick: the hard part is over by 0.2s, the rings and motes by 0.5s. Opaque, ink-rimmed: it reads on the pale floor
+  function bastionPerfect(e) {
+    const a = e.angle || 0, ca = Math.cos(a), sa = Math.sin(a), Cx = () => e.x + ca * 64, Cy = () => e.y + sa * 51 - 14;
+    const taper = (c, x0, y0, x1, y1, w, col, al) => { const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, nx = -dy / L * w / 2, ny = dx / L * w / 2; c.globalAlpha = al; c.fillStyle = col; c.beginPath(); c.moveTo(x0 + nx, y0 + ny); c.lineTo(x1, y1); c.lineTo(x0 - nx, y0 - ny); c.closePath(); c.fill(); };
+    const diamond = (c, x, y, ang, L, W, col, al) => { const ux = Math.cos(ang), uy = Math.sin(ang) * 0.8, vx = -uy, vy = ux * 0.8; c.globalAlpha = al; c.fillStyle = col; c.beginPath(); c.moveTo(x + ux * L, y + uy * L); c.lineTo(x + vx * W, y + vy * W); c.lineTo(x - ux * L, y - uy * L); c.lineTo(x - vx * W, y - vy * W); c.closePath(); c.fill(); };
+    V.fx({ dur: 0.62, layer: 'air', draw: (c, p, t, f) => {
+      const x = Cx(), y = Cy(); if (f.a < 0.02) return;
+      c.save(); c.lineCap = 'round';
+      // the blow arriving: a pale streak out of the boss's side, 0.045s
+      const inq = cl(t / 0.03), inout = cl((t - 0.03) / 0.05);
+      if (inq > 0 && inout < 1) { const hx = x + ca * 110 * (1 - inq), hy = y + sa * 88 * (1 - inq), tx = x + ca * 110 * (1 - cl((t - 0.008) / 0.03)), ty = y + sa * 88 * (1 - cl((t - 0.008) / 0.03));
+        taper(c, tx, ty, hx, hy, 18, B.ink, f.a * (1 - inout)); taper(c, tx, ty, hx, hy, 10, '#dbe9ff', f.a * (1 - inout)); taper(c, tx, ty, hx, hy, 4, '#ffffff', f.a * (1 - inout)); }
+      // the clang: a flat disc and a cross-flare
+      const q = cl((t - 0.02) / 0.04), fade = 1 - cl((t - 0.1) / 0.14), k = f.a * fade;
+      if (q > 0 && k > 0.02) { const R = 14 + 22 * easeOut(q), LW = (50 + 60 * easeOut(q)), LA = 44 + 44 * easeOut(q);
+        diamond(c, x, y, a + Math.PI / 2, LW + 5, 14, B.ink, k); diamond(c, x, y, a, LA + 5, 12, B.ink, k);
+        diamond(c, x, y, a + Math.PI / 2, LW, 9.5, B.gold, k); diamond(c, x, y, a, LA, 8, B.gold, k);
+        diamond(c, x, y, a + Math.PI / 2, LW * 0.8, 4, '#ffffff', k); diamond(c, x, y, a, LA * 0.8, 3.4, '#ffffff', k);
+        c.globalAlpha = k; c.fillStyle = B.ink; c.beginPath(); c.arc(x, y, R + 2.6, 0, TAU); c.fill(); c.fillStyle = B.gold; c.beginPath(); c.arc(x, y, R, 0, TAU); c.fill(); c.fillStyle = '#ffffff'; c.beginPath(); c.arc(x, y, R * 0.64, 0, TAU); c.fill(); }
+      // the blow turned: two bright streaks glance off the plate, one each way, back along the shield's face
+      for (const s of [-1, 1]) { const ang = a + s * 0.9, hq = easeOut(cl((t - 0.025) / 0.07)), tq = cl((t - 0.07) / 0.16), L = 120, kk = f.a * (1 - cl((t - 0.18) / 0.14)); if (hq <= 0 || kk < 0.02 || tq >= 1) continue;
+        const ux = Math.cos(ang), uy = Math.sin(ang) * 0.8, x0 = x + ux * L * tq * 0.9, y0 = y + uy * L * tq * 0.9, x1 = x + ux * L * hq, y1 = y + uy * L * hq;
+        taper(c, x0, y0, x1, y1, 22, B.ink, kk); taper(c, x0, y0, x1, y1, 14, B.gold, kk); taper(c, x0, y0, x1, y1, 6, '#ffffff', kk); }
+      // the plate rings: two thin rings roll off it a beat apart, ink under gold under white
+      for (let i = 0; i < 2; i++) { const rq = cl((t - 0.03 - i * 0.09) / 0.36); if (rq <= 0 || rq >= 1) continue; const R = 16 + (i ? 64 : 84) * easeOut(rq), kk = f.a * (1 - rq * rq);
+        c.beginPath(); c.ellipse(x, y + 10, R, R * 0.8, 0, 0, TAU); c.globalAlpha = 0.8 * kk; c.strokeStyle = B.ink; c.lineWidth = 9 - 5 * rq; c.stroke();
+        c.globalAlpha = kk; c.strokeStyle = i ? B.steel : B.gold; c.lineWidth = 5 - 3 * rq; c.stroke(); c.globalAlpha = kk * (1 - rq); c.strokeStyle = '#ffffff'; c.lineWidth = 1.8; c.stroke(); }
+      c.restore(); } });
+    OLD_PAINT.later(0.02, () => { const x = Cx(), y = Cy(); VFX.sparks(x, y, { color: '#fff2b0', n: 16, angle: a + Math.PI, spread: 2.8, speed: 420, z: 20, up: 140, size: 7 }); });
+    OLD_PAINT.later(0.1, () => { const x = Cx(), y = Cy(); HFX.lightMotes(x, y, { n: 5, r: 16, color: '#ffe08a' }); });
+  }
+  // a great sword of light driven point-down into (x, y): it falls in 0.1s, stands planted with a shimmer along its blade, then comes apart upward in motes (s sizes it)
+  function bastionSword(x, y, s = 1) {
+    V.fx({ dur: 1.0, layer: 'air', draw: (c, p, t, e) => { const fall = easeOut(cl(t / 0.1)), out = cl((t - 0.55) / 0.45), k = e.a * (1 - out * out), L = 150 * s, W = 15 * s, tip = y - 6, z = (1 - fall) * 260 * s, top = tip - L - z; if (k < 0.02) return;
+      c.save(); c.globalAlpha = 0.35 * k * fall; c.fillStyle = '#000'; c.beginPath(); c.ellipse(x, y, W * 1.4, W * 0.6, 0, 0, TAU); c.fill(); c.restore();
+      const blade = (w, l0, col, al) => { c.beginPath(); c.moveTo(x, tip - z); c.lineTo(x - w, tip - z - L * 0.2); c.lineTo(x - w, top + l0); c.lineTo(x + w, top + l0); c.lineTo(x + w, tip - z - L * 0.2); c.closePath(); c.globalAlpha = al * k; c.fillStyle = col; c.fill(); };
+      blade(W + 3, -3, B.ink, 0.9); blade(W, 0, '#aab8d8', 1); blade(W * 0.6, L * 0.06, '#e8f0ff', 1); blade(W * 0.22, L * 0.1, '#ffffff', 1);
+      const sh = (t * 1.4) % 1; c.globalAlpha = 0.8 * k; c.fillStyle = '#ffffff'; c.fillRect(x - W * 0.5, top + L * 0.1 + (L * 0.75) * sh, W, 3);
+      c.globalAlpha = k; c.lineCap = 'round'; c.strokeStyle = B.ink; c.lineWidth = 8 * s; c.beginPath(); c.moveTo(x - 30 * s, top + 4); c.lineTo(x + 30 * s, top + 4); c.stroke(); c.strokeStyle = B.gold; c.lineWidth = 4.4 * s; c.stroke();
+      c.fillStyle = B.ink; c.beginPath(); c.arc(x, top - 6 * s, 9 * s, 0, TAU); c.fill(); c.fillStyle = B.gold; c.beginPath(); c.arc(x, top - 6 * s, 6.6 * s, 0, TAU); c.fill();
+      V.glowAt(c, x, top - 6 * s, 20 * s, '#ffffff', 0.5 * k); if (fall >= 1) V.glowAt(c, x, tip, 30 * s, B.gold, 0.6 * k * (1 - cl(t / 0.4))); } });
+    OLD_PAINT.later(0.55, () => HFX.lightMotes(x, y - 60 * s, { n: 10, r: 14, color: '#ffe08a' }));
+  }
+  // a wall of tower-shield plates stands up out of the floor round (x, y) at radius R, holds a moment and sinks (the dome's footing): n plates of steel with a gold rim and a gold sun on each
+  function bastionWall(x, y, R, n = 12, hold = 1.4) {
+    V.fx({ dur: hold + 0.9, layer: 'air', draw: (c, p, t, e) => { for (let i = 0; i < n; i++) { const a = i / n * TAU + 0.2, d = i * 0.025, up = easeOut(cl((t - d) / 0.2)), sink = cl((t - hold - d) / 0.6), k = e.a * (1 - sink * sink), H = 44 * up * (1 - 0.8 * sink), W = 15; if (k < 0.02 || H < 2) continue;
+      const px = x + Math.cos(a) * R, py = y + Math.sin(a) * R * 0.62; c.save(); c.translate(px, py); c.globalAlpha = 0.3 * k; c.fillStyle = '#000'; c.beginPath(); c.ellipse(0, 0, W, 4, 0, 0, TAU); c.fill();
+      c.globalAlpha = k; c.beginPath(); c.moveTo(-W, 0); c.lineTo(-W, -H * 0.7); c.quadraticCurveTo(-W, -H, 0, -H * 1.08); c.quadraticCurveTo(W, -H, W, -H * 0.7); c.lineTo(W, 0); c.closePath(); c.fillStyle = B.plate; c.fill(); c.lineJoin = 'round'; c.lineWidth = 3; c.strokeStyle = B.ink; c.stroke();
+      c.lineWidth = 1.6; c.strokeStyle = B.gold; c.stroke(); c.fillStyle = B.gold; c.beginPath(); c.arc(0, -H * 0.5, Math.min(5, H * 0.14), 0, TAU); c.fill(); c.restore(); } } });
+  }
+  Object.assign(TANKS_VFX, { bastionPing, bastionPerfect, bastionSword, bastionWall });
+})();
+
+// ---------------------------------------------------------------------- tanks pass: crit marks (main.js heroHitMark -> HFX.crit -> TANK_CRIT[class](x, y, tier)); yours alone, like the number
+globalThis.TANK_CRIT = Object.assign(globalThis.TANK_CRIT || {}, (() => {
+  const T = TANKS_VFX, V = VFX, ang = () => -Math.PI / 2 + (Math.random() - 0.5) * 0.8;
+  return {
+    // Bloodreaver: three claw gashes opened across the target, a splat and a few drops (a crown on a big one, a spatter on the floor on the biggest)
+    bloodreaver: (x, y, tier) => { const s = [0, 1, 1.4, 1.9][tier];
+      for (let i = -1; i <= 1; i++) HFX.cut(x + i * 10 * s, y + 6 * Math.abs(i), -0.9, { len: 40 * s, w: 3.2, color: '#ffd0d0', inner: '#b0102a', ink: '#2a0610', dur: 0.45, z: 30, delay: Math.abs(i) * 0.03, bend: 0.1 });
+      T.reaverSplat(x, y, { r: 20 * s, z: 32, n: 8 }); if (tier >= 2) T.reaverCrown(x, y, { s: 0.8 * s, n: 8, up: 1.2 }); if (tier >= 3) T.reaverSpatter(x, y, { r: 50, n: 8, dur: 1.6 }); },
+    // Runeguard: a carved rune stone stamped on the target (a ring of runes round it on a big one)
+    runeguard: (x, y, tier) => { const s = [0, 0.8, 1.15, 1.5][tier]; T.rgStamp(x, y, { s, z: 34, dur: 0.5 }); if (tier >= 2) T.rgRuneRing(x, y, 50 + 20 * tier, { n: 8, gs: 8, dur: 0.55 }); },
+    // Gorgemaw: the jaws snap shut on the target (a bigger bite, and a ring of teeth on the floor, on a big one)
+    gorgemaw: (x, y, tier) => { const s = [0, 1, 1.35, 1.7][tier]; T.gorgeBite(x, y, ang(), { r: 22 * s, n: 5 + tier, z: 34, dur: 0.4 }); if (tier >= 2) T.gorgeTeethRing(x, y, 50 + 18 * tier, { n: 14, dur: 0.5 }); },
+    // Oathbroker: five strokes of ink entered and struck through in wax (ledger strips thrown out on a big one)
+    oathbroker: (x, y, tier) => { const s = [0, 1, 1.3, 1.6][tier]; T.oathTally(x, y, 5, { z: 34, s: s * 1.2 }); if (tier >= 2) T.oathStrips(x, y, 50 + 20 * tier, 2 + tier, { z: 30, dur: 0.8 }); },
+  };
+})());

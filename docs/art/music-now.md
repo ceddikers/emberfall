@@ -160,6 +160,90 @@ driven cold fantasy chase boss theme, 76 BPM felt in double time, B minor, runni
 [Scent: the tune in full strings and low brass, the horn at full, the toms booming softly, a step higher in the last bars]
 ```
 
+### Vesper, the Mirror Knight · `mus-vesper`
+A silent duelist in a hall of mirrors, first half of the fight: still, bright and glassy, polished silver and a great deal of space, every sound answered a moment later by its own reflection. Bowed crystal glasses, harp harmonics, celesta, one solo violin very high and clean, pizzicato violas and cellos like footsteps on stone, a single low drum far off. A short, plain, rising four-note tune, answered at once by the same four notes turned upside down. Never warm, never romantic, never a march: a duel, not a battle. This pairs with the next track, which is the same tune precise and driven and plays from the turn of the mirror on: make both in the same key (B minor), the same tempo (88 BPM) and the same length (44 bars, about 2:00), and keep the sections in the same order. End each section of this one on one dry soft tick (a fingertip on glass or a felted wood block), not a long tail. If it turns into pop or anime rock, add `no pop, no EDM, no guitar`; if it is too busy or too warm, add `sparse, still, lots of space between phrases, glassy and cold`; if it has a snare crack or cymbals, add `no snare, no cymbals`.
+```text
+still bright glassy duel boss theme, 88 BPM, B minor, bowed crystal glasses, harp harmonics, celesta, solo violin in the high register, pizzicato violas and cellos walking, a single far low drum, mirrored melodies, silent, precise, cold, instrumental, no lyrics
+```
+```text
+[Instrumental]
+[Hall: one bowed crystal glass held over a still string drone, one harp harmonic and its echo a beat later, one dry glass tick]
+[Duel: the four-note tune on a solo violin, high and still, over pizzicato violas and cellos at a walking pace, the celesta answering with the same four notes turned upside down, one low drum on the first beat of every fourth bar]
+[Glass: the tune and its upside-down copy played together by two violins in opposite directions, a bowed crystal glass beneath, the pizzicato quickening a little]
+[Hush: only the drone, one harp harmonic and one crystal-glass note, the tune stops]
+[Salute: the tune in full strings with its mirror on harp and celesta, the low drum on every other bar, a step higher in the last bars]
+```
+
+### Vesper, the Dance · `mus-vesper-hard`
+The second half: the sword dance, from the turn of the mirror on. This is not a harder track: it is the same four-note tune and its mirror, key and tempo as `mus-vesper`, precise and driven, and the game crossfades into it on a bar line, starting it at the same position in time. So it must be the same length with the same section order, and every section must work on its own (open each on a struck crystal glass ringing like a blade drawn across a bell; no quiet intro it depends on). Everything is short and exact: staccato strings in unison, col legno, pizzicato basses, glass marimba and harp, a steady low drum, never a snare crack or a cymbal wash. The tune and its mirror run in opposite directions, and each phrase lands a half beat sooner than the one before, so the dance seems to climb. Hard and relentless but never warm. Keep the tempo the same. If it speeds up, add `same tempo, steady`; if it is not driven enough, add `staccato, exact, a steady low drum, climbing phrases`; if it turns warm or heroic, add `cold, minor, no major-key colour, no fanfare`.
+```text
+driven precise sword dance boss theme, 88 BPM, B minor, tight staccato strings in unison, col legno, pizzicato basses, glass marimba and harp, struck crystal glasses ringing like blades, low war drum, the tune and its mirror in contrary motion, cold, exact, relentless, instrumental, no lyrics
+```
+```text
+[Instrumental]
+[Draw: a struck crystal glass ringing like a blade drawn across a bell, the drone drops a step, one low drum]
+[Cut: the tune driven in unison by staccato strings over pizzicato basses and a steady low drum, the mirror answer on glass marimba, every phrase landing a half beat sooner than the one before]
+[Both: the tune and its mirror stacked in opposite directions by two string choirs, col legno ticking between them, the harp running up and down]
+[Still: the drone and one struck glass left ringing, the drum down to one soft pulse]
+[Last cut: the tune in full strings and low brass, the mirror on bells and harp, the drum booming softly, a step higher in the last bars]
+```
+
+### Ormun, the Tide-Weigher · `mus-ormun`
+A patient old god who weighs what comes over his scales, first half of the fight: slow, heavy and enormous, a very old thing that has never hurried and does not mean to start, the sea under it breathing. Low bowed basses and contrabassoon, a deep bell tolling now and then with a second bell answering a shade lower so the two are never quite level, dripping water and a long swell, soft low gongs, a solo cello. A short, heavy, four-note tune that leans one way and then the other like a beam, answered from the other side of the stereo field like the second pan. Never warm, never a fanfare, never quick: pressure, not speed. This pairs with the next track, which is the same tune lower and heavier and plays from the Burdens on: make both in the same key (B minor), the same tempo (52 BPM) and the same length (32 bars, about 2:28), and keep the sections in the same order. End each section of this one on one soft drip of water and a bell damped by the hand, not a long tail. If it turns into pop or anime rock, add `no pop, no EDM, no guitar`; if it is too busy or too warm, add `sparse, very slow, lots of space between phrases, huge and patient`; if it has a snare crack or cymbals, add `no snare, no cymbals`.
+```text
+slow heavy ancient sea god boss theme, 52 BPM, B minor, huge low bowed basses and contrabassoon, deep tolling bell answered by a second bell a shade lower, dripping water and a long swell, soft low gongs, solo cello, patient, immense, instrumental, no lyrics
+```
+```text
+[Instrumental]
+[Sea: a long swell of low water under a bowed bass drone, one deep bell toll, slow drips]
+[Beam: the four-note tune on solo cello and contrabassoon, low and slow, leaning one way and then the other, a bell toll every second bar, a soft bass drum like a heartbeat every fourth bar]
+[Pans: the tune answered from the far side by low horns half a bar late, the two lines never quite level, a bowed gong swelling and falling]
+[Still: only the drone, the swell and one bell, the tune stops]
+[Weight: the tune in full low strings with the bells and a soft choir of low voices on one open vowel, the bass drum at full weight but still soft, a step lower in the last bars]
+```
+
+### Ormun, the Weight · `mus-ormun-hard`
+The second half: the weight grows, from the Burdens on. This is not a harder track: it is the same four-note tune, key and tempo as `mus-ormun`, lower, heavier and larger, and the game crossfades into it on a bar line, starting it at the same position in time. So it must be the same length with the same section order, and every section must work on its own (open each on one huge bell toll with a rush of sea under it; no quiet intro it depends on). It gets heavier by going lower and louder, never faster: the lowest strings, contrabassoon and low brass, the bells tolling in pairs, the strings swelling and falling every two bars like a rising tide, a low choir on one open vowel, a slow deep bass drum, bowed gongs, never a snare crack or a cymbal wash. Pressing and immense, never warm. Keep the tempo the same. If it speeds up, add `same tempo, very slow and steady`; if it is not heavy enough, add `lowest register, deep bass drum, bells in pairs, a rising tide in the strings`; if it turns warm or heroic, add `cold, minor, no major-key colour, no fanfare`.
+```text
+heavier deeper sea god boss theme, 52 BPM, B minor, lowest strings and contrabassoon, low brass, tolling bells in pairs, strings swelling and falling like a rising tide, low choir on one open vowel, slow deep bass drum, bowed gongs, pressing, immense, never faster, instrumental, no lyrics
+```
+```text
+[Instrumental]
+[Toll: one huge bell toll with a rush of sea under it, the drone drops a step]
+[Beam: the tune in the lowest strings, contrabassoon and low brass, a bass drum on every beat of every second bar, the bells tolling in pairs, the strings swelling and falling every two bars like a tide]
+[Pans: the tune answered from the far side by low horns and a low choir half a bar late, the two lines further apart, bowed gongs]
+[Deep: the sea at full over one held choir chord, one bell, the pulse down to a single beat]
+[Weight: the tune in full strings, low brass and choir, the bells tolling together, the bass drum booming softly, sinking a step in the last bars]
+```
+
+### Maelis Orne, the Pale Regent · `mus-maelis`
+The calm final villain of a Final Fantasy, first half of the fight: a regent in her own house, grand, quiet and cold, who does not ask you to leave and does not raise her voice. A very soft wordless choir, a slow pipe organ pedal, harp, celesta, bowed crystal glasses, strings in long lines, a far soft timpani, and one solo wordless voice singing a long, plain, rising four-note tune like a moon coming up. Majesty through quiet, grief rather than menace, never a march, never warm, never cruel. This pairs with the next track, which is the same tune low and heavy in a dark full choir and plays from the moment she rides the Hound to the end of the fight: make both in the same key (B minor), the same tempo (66 BPM) and the same length (36 bars, about 2:11), and keep the sections in the same order. End each section of this one on one soft felted timpani tap, not a long tail. If it turns into pop or anime rock, add `no pop, no EDM, no guitar`; if it is too busy or too big, add `sparse, quiet, lots of space between phrases, regal and cold`; if vocals with words creep in, add `wordless choir, no singing words`.
+```text
+grand quiet cold final boss theme, 66 BPM, B minor, very soft wordless choir, slow pipe organ pedal, harp, celesta, bowed crystal glasses, strings in long lines, solo wordless voice, far soft timpani, regal, patient, grief and majesty, instrumental, no lyrics
+```
+```text
+[Instrumental]
+[Moonrise: a pale high choir chord rising out of silence over a deep organ pedal and one harp harmonic, one felted timpani tap]
+[Regent: the four-note tune sung by one wordless voice, quiet and unhurried, over long low strings and a slow harp, a celesta glint every other bar]
+[Court: the tune taken up by a small choir in open fifths, the strings widening beneath, a soft timpani roll every fourth bar, bowed crystal glasses ringing above]
+[Dust: the choir stops, only the pedal, the harp, one celesta note and one far horn]
+[Crown: the tune in full choir and strings with organ and soft horns, grand but still, a step higher in the last bars]
+```
+
+### Maelis Orne, the Dark Red · `mus-maelis-hard`
+The second half: the long dark red, from the moment she vaults onto the Hound to the end of the fight. This is the longer half of the fight, so it must loop cleanly many times, and it is not a harder track: it is the same four-note tune, key and tempo as `mus-maelis`, low and heavy in a full dark choir, and the game crossfades into it on a bar line, starting it at the same position in time. So it must be the same length with the same section order, and every section must work on its own (open each on one deep struck gong under a rising choir swell; no quiet intro it depends on). The strings in dark tremolo over a running ostinato, low brass, deep organ, timpani and low war drums running at twice the speed on the same bar grid, never a snare crack or a cymbal wash, the choir wordless throughout. Once per loop a falling four-note figure sounds low in the cellos, like the hound's own tune from Garrow's fight: a quiet reminder that she rides him. Enormous and doomed, never hysterical, never warm, never a metal riff. Keep the tempo the same. If it speeds up, add `same tempo, steady`; if it is not dark enough, add `low voices, dark tremolo strings, deep organ, slow and enormous`; if it turns warm or heroic, add `cold, minor, no major-key colour, no fanfare`.
+```text
+dark blood red epic final boss theme, 66 BPM felt in double time, B minor, full dark wordless choir in low voices, strings in dark tremolo over a running ostinato, low brass, deep pipe organ, timpani and low war drums running, deep struck gong, enormous, doomed, grief and majesty, never hysterical, instrumental, no lyrics
+```
+```text
+[Instrumental]
+[Mount: a deep struck gong and a rising choir swell, the pedal drops a step, one close horn howl far under it]
+[Hunt: the tune driven low by cellos, basses and low brass over a running dark ostinato, timpani and low war drums at double speed, the choir holding dark chords]
+[Eclipse: the tune sung by a full choir in low voices, answered a bar late by a second choir higher and a third higher still, like a crown being covered, the strings in dark tremolo, one falling four-note figure low in the cellos]
+[Hush: the ostinato down to its bare pulse, one held choir chord, one far gong and one bowed crystal glass]
+[Red: the tune in the full choir, strings, low brass and organ, grand and slow and enormous, the drums booming softly, a step higher in the last bars]
+```
+
 ### The Silver Road · `mus-silver-road` (1:00 to 1:30 loop, not wired yet)
 One short piece for the whole of Season 2, for the Raid Board's Season 2 heading or the walk into a Season 2 room: the Moon's road of moon-silver coming down to the valley, and something far off slowly coming nearer. Quiet, wide and still, with no drums and no tune to hum, and not Garrow's four-note tune, so it can sit beside any of the four fights. Same key as Garrow (B minor) so it can run into his track. Nothing plays it yet: the game does not have a set theme for any set, so send it over and I'll decide where it goes. If it turns into a fanfare, add `no fanfare, no drums, quiet and still`.
 ```text
@@ -414,7 +498,7 @@ somber short fantasy sting, D minor, slow sinking low strings, a lone whistle, a
 
 ---
 
-## Checklist (28 tracks still to make)
+## Checklist (34 tracks still to make)
 
 Already in the game: title, town, and every set 1 and set 2 boss track.
 
@@ -431,6 +515,12 @@ Already in the game: title, town, and every set 1 and set 2 boss track.
 **Season 2**
 - [ ] `mus-garrow`
 - [ ] `mus-garrow-hard`
+- [ ] `mus-vesper`
+- [ ] `mus-vesper-hard`
+- [ ] `mus-ormun`
+- [ ] `mus-ormun-hard`
+- [ ] `mus-maelis`
+- [ ] `mus-maelis-hard`
 - [ ] `mus-silver-road` (not wired yet)
 
 **The Ultimate**

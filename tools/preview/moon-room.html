@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Maelis: the face of the moon</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body { margin: 0; background: #0b0b0d; color: #cfc8bc; font: 13px/1.4 system-ui, sans-serif; }
+  header { padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; border-bottom: 1px solid #222; }
+  select, button, input { background: #17171b; color: #cfc8bc; border: 1px solid #333; border-radius: 5px; padding: 4px 8px; font: inherit; }
+  canvas { width: auto; max-width: 100%; max-height: calc(100vh - 48px); display: block; margin: 0 auto; background: #03050a; }
+  #err { color: #ff9a8a; padding: 4px 16px; white-space: pre-wrap; }
+</style></head>
+<body>
+<header>
+  <b>Maelis: the face of the moon</b>
+  <label>view <select id="view"><option value="game">game view</option><option value="north">game view, north (the world)</option><option value="full">whole room box</option></select></label>
+  <label>dark <input type="range" id="dark" min="0" max="1" step="0.05" value="0" style="width:90px"></label>
+  <label>red <input type="range" id="red" min="0" max="1" step="0.05" value="0" style="width:90px"></label>
+  <label>form <select id="form"><option value="1">1</option><option value="2">2 (the Hunt)</option></select></label>
+  <label><input type="checkbox" id="tells" checked> sample telegraphs</label>
+  <label><input type="checkbox" id="boss" checked> Maelis</label>
+  <label><input type="checkbox" id="pause"> pause</label>
+  <span id="fps"></span>
+</header>
+<div id="err"></div>
+<canvas id="cv" width="1600" height="900"></canvas>
+<script>window.__errs = []; window.onerror = (m, s, l) => { window.__errs.push(m + ' (' + String(s).split('/').pop() + ':' + l + ')'); document.getElementById('err').textContent = window.__errs.join(' | '); };</script>
+<script src="../../client/js/draw-util.js"></script>
+<script src="../../client/js/data.js"></script>
+<script src="../../client/js/bosses.js"></script>
+<script src="../../client/js/arena/shapes.js"></script>
+<script src="../../client/js/arena/boss-tells.js"></script>
+<script src="../../client/js/arena/arena-view.js"></script>
+<script src="../../client/js/garrow-art.js"></script>
+<script src="../../client/js/maelis-art.js"></script>
+<script src="../../client/js/maelis-room.js"></script>
+<script>
+  // ?view=game|north|full  ?dark=0..1  ?red=0..1  ?form=1|2  ?t=seconds  ?tells=0  ?boss=0  ?z= ?cx= ?cy= (a free camera)  ?scale=1.5 (the floor's pixel scale)
+  // ?crown=crescent:40:1:0:0 (phase:turn degrees:wax:umbral:red)  ?lune=crescent:40  (the sample telegraph: a lune of the engine's shapes)
+  // ?perf=1 how long a frame of the floor and the life cost
+  const q = new URLSearchParams(location.search), $ = id => document.getElementById(id);
+  if (q.has('view')) $('view').value = q.get('view');
+  if (q.has('dark')) $('dark').value = q.get('dark');
+  if (q.has('red')) $('red').value = q.get('red');
+  if (q.has('form')) $('form').value = q.get('form');
+  if (q.get('tells') === '0') $('tells').checked = false;
+  if (q.get('boss') === '0') $('boss').checked = false;
+  if (typeof ARENA_DEFS !== 'undefined' && !ARENA_DEFS.maelis) ARENA_DEFS.maelis = { kind: 'circle', r: 560 };   // (the script agent's shapes.js entry, until it lands)
+  ARENA.use('maelis');
+  ArenaView.buildFloor('maelis', Number(q.get('scale')) || 1);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  let t = Number(q.get('t')) || 30, last = performance.now(), frames = 0, acc = 0;
+  const room = { ev: {} }; ArenaView.liveRoom = room;
+  const boss = { t: 0, moving: false, action: null, phase: 0, props: {} };
+  const cs = (q.get('crown') || 'crescent:40:1:0:0').split(':');
+  room.ev.mlcrown = { k: 'mlcrown', phase: cs[0], turn: (+cs[1] || 0) * Math.PI / 180, wax: +cs[2] || 1, umbral: +cs[3] || 0, red: +cs[4] || 0, start: 0, end: 9999 };
+  // the sample telegraphs: the engine's lune shapes as I read them from the design (a crescent: the disc outside a circle of the same radius set
+  // back 0.55 R toward the dark side; a gibbous: inside one set 0.55 R toward the lit side; a half: a half-disc)
+  function lunePath(kind, ang) {
+    const R = 560; ctx.save(); ctx.rotate(ang);
+    ctx.beginPath();
+    if (kind === 'half') { ctx.arc(0, 0, R, -Math.PI / 2, Math.PI / 2); ctx.closePath(); }
+    else if (kind === 'crescent') { ctx.arc(0, 0, R, 0, TAU); ctx.arc(-0.55 * R, 0, R, 0, TAU, true); }
+    else { const a = Math.atan2(Math.sqrt(1 - 0.275 * 0.275), 0.275); ctx.arc(0, 0, R, -a, a); ctx.arc(0.55 * R, 0, R, Math.PI - a, Math.PI + a); ctx.closePath(); }
+    ctx.restore();
+  }
+  function draw() {
+    const W = cv.width, H = cv.height, { bx, by } = ArenaView.floorBox;
+    room.ev.mlroom = { k: 'mlroom', dark: +$('dark').value, red: +$('red').value, form: +$('form').value, start: 0, end: 9999 };
+    if ($('form').value === '2') room.ev.mlform = { k: 'mlform', n: 2, start: 0, end: 9999 }; else delete room.ev.mlform;
+    const view = $('view').value, z0 = Math.min(W, H) / 960;
+    const cam = { game: [0.92, 0, 0], north: [0.92, 200, -330], full: [Math.min(W / (bx * 2), H / (by * 2)), 0, 0] }[view];
+    const z = q.has('z') ? Number(q.get('z')) : cam[0], cx = q.has('cx') ? Number(q.get('cx')) : cam[1], cy = q.has('cy') ? Number(q.get('cy')) : cam[2];
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#03050a'; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(z, z); ctx.translate(-cx, -cy);
+    ArenaView.drawFloor(ctx, 'maelis', Math.min(1.5, z));
+    ArenaView.drawAmbient(ctx, t);
+    if ($('tells').checked) {   // (the tells' red and blue, roughly: a wash and a solid rim; the big ones are the cuts that cover a third to most of the floor)
+      const tl = (fill, rim) => { ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = rim; ctx.lineWidth = 2.5; ctx.stroke(); };
+      const kind = (q.get('lune') || 'crescent:20').split(':');
+      ctx.save(); ctx.beginPath(); ctx.arc(0, 0, 560, 0, TAU); ctx.clip(); lunePath(kind[0], (+kind[1] || 0) * Math.PI / 180); tl('rgba(255,59,47,0.28)', '#ff3b2f'); ctx.restore();
+      ctx.beginPath(); ctx.arc(-300, 260, 90, 0, TAU); tl('rgba(80,150,255,0.26)', '#5aa0ff');
+      ctx.beginPath(); ctx.arc(120, -150, 60, 0, TAU); tl('rgba(80,150,255,0.26)', '#5aa0ff');
+      ctx.beginPath(); ctx.arc(-120, -250, 150, 0, TAU); ctx.arc(-120, -250, 60, 0, TAU, true); tl('rgba(255,59,47,0.28)', '#ff3b2f');
+      [['#7aa0ff', -200, 120], ['#ffd27a', 120, 140], ['#7aff9a', 220, 70], ['#ff9ad0', -60, 180]].forEach(([col, x, y]) => circle(ctx, x, y, 11, col, OUT, 2.5));
+    }
+    if ($('boss').checked && typeof drawBoss === 'function') {
+      boss.t = t;
+      drawBoss(ctx, { id: 'maelis' }, 0, -90, Math.PI / 2, boss, 1.3);
+    }
+    ctx.restore();
+  }
+  window.__moon = { draw, setT: v => { t = v; draw(); }, boss };
+  function frame(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (!$('pause').checked) t += dt;
+    try { draw(); } catch (e) { if (window.__errs.length < 3) { window.__errs.push(e.message + ' ' + (e.stack || '').split('\n')[1]); $('err').textContent = window.__errs.join(' | '); } }
+    frames++; acc += dt;
+    if (acc > 1) { $('fps').textContent = Math.round(frames / acc) + ' fps'; frames = 0; acc = 0; }
+    requestAnimationFrame(frame);
+  }
+  if (q.has('perf')) {
+    const time = (n, fn) => { const t0 = performance.now(); for (let i = 0; i < n; i++) fn(i); return ((performance.now() - t0) / n).toFixed(3); };
+    const build = time(1, () => ArenaView.buildFloor('maelis', 1.5));
+    const life = time(300, i => { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.translate(800, 450); ArenaView.drawFloor(ctx, 'maelis', 1.5); ArenaView.drawAmbient(ctx, 30 + i / 60); });
+    ArenaView.liveRoom.ev.mlroom = { dark: 0.8, red: 0.6, form: 2 };
+    const lifeFull = time(300, i => { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.translate(800, 450); ArenaView.drawFloor(ctx, 'maelis', 1.5); ArenaView.drawAmbient(ctx, 30 + i / 60); });
+    $('err').textContent = 'build ' + build + ' ms (once); floor+life per frame ' + life + ' ms, with dark/red/hunt ' + lifeFull + ' ms';
+    $('pause').checked = true;
+  }
+  if (q.has('sim')) { for (let i = 0, n = Math.round(Number(q.get('sim')) * 30); i < n; i++) { t += 1 / 30; draw(); } $('pause').checked = true; }
+  requestAnimationFrame(frame);
+</script>
+</body></html>

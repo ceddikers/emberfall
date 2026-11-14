@@ -16,8 +16,8 @@
 //   post3: post2 + a set-2 Hard clear: two set-2 Mythics and more Legendaries. SET 3 NORMAL, SET 2 EXTREME
 //   post4: post3 + a set-3 Normal clear: one set-3 Rare and two set-3 Legendaries swapped in (items.js SET3_STEP). SET 3 HARD
 //   post5: post4 + a set-3 Hard clear: two set-3 Mythics (Crown of Dead Leaves, The Sunwheel) and two more set-3 Legendaries (Halo Shard Pendant, Last Watch Medal) swapped in. THE ULTIMATE, SET 3 EXTREME
-//   post6: post5 + a set-4 Normal clear: two set-4 Rares and one set-4 Legendary swapped in (Broken Link Charm, Snowprint Ring, Moon-Silver Whistle; items.js SET4_STEP). SET 4 HARD
-//   post7: post6 + a set-4 Hard clear: both set-4 Mythics (The Broken Silver Chain, Mantle of the Long Mere) and two more Moon-Silver Whistles swapped in (set 4 has one Legendary so far; more arrive with its other bosses). SET 4 EXTREME
+//   post6: post5 + a set-4 Normal clear: six Rare and Legendary pieces swapped for set-4 ones of the same rarity, from all four bosses (tiers 13 to 16; items.js SET4_STEP). SET 4 HARD
+//   post7: post6 + a set-4 Hard clear: two set-4 Mythics (Mantle of the Long Mere, The Faceless Visor) and two more Legendaries swapped in; every set-4 tier has two wearers. SET 4 EXTREME
 const BotGear = (() => {
   const I = typeof module !== 'undefined' ? require('./items.js') : null;   // (Node: the tools; the browser has items.js's globals)
   const items = () => (I ? I : { ITEMS, CLASS_MAIN, gearTotals, gearMods, sanitizeGear, gearSources, partyBonus });
@@ -59,20 +59,20 @@ const BotGear = (() => {
     { m_crown: 'm_leafcrown', g_ninthhead: 'g_lastwatch' },          // M4 to M11, L8 to L9
     { m_broodeye: 'm_sunwheel' },                                    // M2 to M10
   ];
-  // post6: set 4's Normal clear (Garrow's tier 13): the tank's Pass Lantern to a Broken Link Charm, the healer's Halo Shard to a Whistle, one dps's Pit Champion's Laurel
-  // to a Snowprint Ring. Tier 13 then has three wearers (a 3-piece party bonus); Corvane's 2-piece bonus goes (the tank no longer wears Pass Lantern).
+  // post6: set 4's Normal clear, as post2 was for set 2: six Rare and Legendary pieces swapped for set-4 pieces of the same rarity, from all four bosses (tiers 13 to 16: two each
+  // from Garrow and Vesper, one each from Ormun and Maelis). The tiers 9 and 11 pieces go, so their party bonuses go; tiers 13 and 14 have two wearers each (their bonuses).
   const POST6 = [
-    { g_passlantern: 'g_brokenlink' },                                // R9 to R13 (the tank keeps its health and defence)
-    { g_haloshard: 'g_moonwhistle' },                                // L12 to L13
-    {},
-    { g_champlaurel: 'g_snowprint' },                                // L10 to R13
+    { g_ninthhead: 'g_evenpendant', g_passlantern: 'g_brokenlink' },   // L8 to L15, R9 to R13 (the tank keeps its health and defence)
+    { g_haloshard: 'g_twinpendant', g_lastleaf: 'g_litsidependant' },  // L12 to L14, L11 to L16
+    { g_lastwatch: 'g_moonwhistle' },                                  // L9 to L13
+    { g_champlaurel: 'g_twinpendant' },                                // L10 to L14
   ];
-  // post7: set 4's Hard clear: both Mythics and two more Whistles (the set's only Legendary so far), four wearers of tier 13 (the 4-piece bonus)
+  // post7: set 4's Hard clear, as post5 was for set 3: two Mythics (Mantle of the Long Mere, The Faceless Visor) and two more Legendaries swapped in. Every tier has two wearers.
   const POST7 = [
-    { g_ninthhead: 'g_moonwhistle' },                                // L8 to L13
     {},
-    { m_titanfur: 'm_longmere', g_lastwatch: 'g_moonwhistle' },      // M6 to M13, L9 to L13
-    { m_sunwheel: 'm_silverchain' },                                 // M10 to M13
+    {},
+    { m_titanfur: 'm_longmere', g_moonwhistle: 'g_litsidependant' },   // M6 to M13, L13 to L16
+    { m_sunwheel: 'm_faceless', g_twinpendant: 'g_evenpendant' },      // M10 to M14, L14 to L15
   ];
   const LEVELS = ['fresh', 'mid', 'full', 'post1', 'post2', 'post3', 'post4', 'post5', 'post6', 'post7'];
   // the gear a fight is tuned for (CLAUDE.md "Tuning gear"): each set's Normal and Hard, and Extreme (the party that has cleared that set's Hard)

@@ -143,8 +143,9 @@ const HY_EL = {
     ctx.globalAlpha = 1;
     ctx.restore();
     // ---- her face, turned to the tank
-    const s = swing(actP(st, 'attack')), maul = props.maul ? 1 : 0, cry = props.cry ? 1 : 0;
-    const lunge = maul ? (-0.4 + Math.max(0, s) * 1.2) * 14 : 0, open = cry ? 0.95 : maul ? 0.75 : 0.16 + Math.max(0, Math.sin(t * 1.2)) * 0.05;
+    const MB = strikeBeats(st), s = swing(actP(st, 'attack')), maul = props.maul ? 1 : 0, cry = props.cry ? 1 : 0;
+    // the Maul: her face is drawn back as the cast gathers, then driven in at the mark the moment the cast ends (and a little past it), then let come back
+    const hv = st.action && st.action.wk > 0, lunge = maul ? (MB.on ? -0.4 - (hv ? 0.7 : 0.4) * MB.load * (1 - MB.hit) + 1.6 * (MB.hit + 0.15 * MB.ovr) * (1 - MB.rest) : -0.4) * 14 : 0, open = cry ? 0.95 : maul ? (hv && MB.on && MB.hit < 1 ? 0.3 + 0.45 * Math.min(1, MB.coil * 1.4) : 0.75) : 0.16 + Math.max(0, Math.sin(t * 1.2)) * 0.05;   // (a heavy Maul draws her head back and opens the jaw by degrees across the bar)
     if (sink) ctx.globalAlpha = 0.5;
     ctx.save(); ctx.translate(26 + lunge, 0);
     poly(ctx, [-14, -17, 6, -22, 30, -12, 36, 0, 30, 12, 6, 22, -14, 17], MOSS, OUT, 3);   // the broad head

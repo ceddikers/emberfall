@@ -32,7 +32,7 @@ const GW_FX = (() => {
   const WIND = Math.atan2(0.34, 0.94), WC = Math.cos(WIND), WS = Math.sin(WIND);   // (the flurry's way across the lake: garrow-room.js)
   const S = {
     room: null, lastT: -1, active: false, camAt: -99, paths: [], heroes: new Map(), pos: new Map(), marks: new Map(), pend: [], wipe: null, wipeSeen: -1,
-    ridges: new Map(), net: false, fired: new Set(), cold: null, coldPend: null, sp: {}, unitsAt: -1,
+    ridges: new Map(), net: false, fired: new Set(), cold: null, coldPend: null, sp: {}, unitsAt: -1, wt: [],
   };
   const evs = () => (typeof ArenaView !== 'undefined' && ArenaView.liveRoom && ArenaView.liveRoom.ev) || {};
   function cam(stop = 0.1, punch = 0.035, dur = 0.5, gap = 3) {
@@ -200,6 +200,7 @@ const GW_FX = (() => {
       if (!S.active || (m.name !== 'run' && m.name !== 'pounce') || typeof window === 'undefined' || !window.__game) return;
       const raid = window.__game.raid, now = window.__game.now; if (!raid || !raid.props) return;
       const k = m.name === 'run' ? 'gaRun' : 'gaPounce'; raid.props[k] = true; raid.propsUntil[k] = now + (m.dur || 0.7) + 0.1;
+      if (m.name === 'pounce') raid.props.gaDur = m.dur || 0.7;   // (garrow-art.js lands the pounce on the banim's own length)
     });
     wrap('addev', m => {
       if (!S.active || m.k !== 'bite') return;
@@ -213,7 +214,7 @@ const GW_FX = (() => {
     if (!ArenaView.amb || ArenaView.amb.kind !== 'mere') { S.active = false; return; }
     S.active = true;
     if (room !== S.room || t < S.lastT - 1) {   // a new pull
-      S.room = room; S.paths.length = 0; S.heroes.clear(); S.pos.clear(); S.marks.clear(); S.pend.length = 0; S.wipe = null; S.wipeSeen = -1; S.ridges.clear(); S.fired.clear(); S.cold = null; S.coldPend = null;
+      S.room = room; S.paths.length = 0; S.heroes.clear(); S.pos.clear(); S.marks.clear(); S.pend.length = 0; S.wipe = null; S.wipeSeen = -1; S.wt.length = 0; S.ridges.clear(); S.fired.clear(); S.cold = null; S.coldPend = null;
       for (const k in room.ev) if (k.startsWith('gwpath:')) S.paths.push(room.ev[k]);
     }
     S.lastT = t;
@@ -224,12 +225,73 @@ const GW_FX = (() => {
     trackUnits(v && v.units, t);
     ctx.save(); ARENA.trace(ctx, 0); ctx.clip();
     if (ev.gwfrost && t < ev.gwfrost.end + 2) frostEdge(ctx, ev.gwfrost, t);
+    if (S.wt.length) drawWeight(ctx, t);
     drawPrints(ctx, t, ev);
     if (S.cold) coldTrails(ctx, t);
     if (ev.gwdrift && t < ev.gwdrift.end + 0.5) driftFront(ctx, ev.gwdrift, t);
     if (S.wipe && t < S.wipe.start + S.wipe.dur + 0.4) wipeVeil(ctx, S.wipe, t);
     if (ev.gwlast && t < ev.gwlast.start + 3.4) clearRing(ctx, ev.gwlast, t, v);
     ctx.restore();
+  }
+
+  // ---------------------------------------------------------------- weight: what a heavy landing does to the lake, and how the lake puts itself back
+  // A furrow is torn through the snow (a dark trough, the snow it threw aside lying along both lips) and a crack runs out under the snow from the blow, the ice groaning in it;
+  // dust of snow hangs a moment low over the floor, and the reeds at the edge shiver. Then it recovers: the snow slumps back and fills the furrow from the lips, the crack
+  // frosts over (a white rime grows along it while its dark goes out) and fades, the reeds come to rest. Under the prints and every warning (under()), faint, gone in about
+  // four seconds so the floor is clean before the next move; no shake, flash or sound is added here. mag: 0.5 a ring .. 1 Throat Snap.
+  const lite = () => typeof FX !== 'undefined' && FX.quality && FX.quality !== 'full';
+  function crackPts(x, y, ang, len, seed) {
+    const pts = [x, y]; let a = ang, px = x, py = y;
+    for (let i = 0; i < 6; i++) { a += (hash(i, seed) - 0.5) * 0.9; px += Math.cos(a) * len / 6; py += Math.sin(a) * len / 6; pts.push(px, py); }
+    return pts;
+  }
+  function weightLand(o, mag) {
+    if (S.wt.length > 8) return;
+    const t0 = S.lastT, seed = (Math.abs((o.x || 0) * 7 + (o.y || 0) * 3) | 0) & 255, w = { t0, dur: Math.min(4.8, 3.6 + 1.0 * mag), mag, line: o.line || null, pit: o.pit || null, ring: o.ring || null, cracks: [] };
+    for (const c of o.cracks || []) w.cracks.push(crackPts(c.x, c.y, c.ang, c.len, seed + w.cracks.length * 7));
+    S.wt.push(w);
+    const n = Math.round((lite() ? 5 : 14) * mag) + 4, src = o.line || (o.pit ? [o.pit[0], o.pit[1], o.pit[0], o.pit[1]] : [o.x, o.y, o.x, o.y]);
+    for (let i = 0; i < n; i++) {   // snow dust: lifted, it hangs low and settles
+      const q = Math.random(), x = src[0] + (src[2] - src[0]) * q, y = src[1] + (src[3] - src[1]) * q, a = rand(0, TAU), sp = rand(14, 46) * (0.6 + mag);
+      VFX.spawn({ x, y, z: rand(2, 10), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: rand(24, 60) * (0.6 + mag), g: 80, drag: 0.05, life: rand(1.5, 2.3), size: rand(18, 32), size1: 44, color: '#e8f1fb', kind: 'smoke', add: false, ground: true, a: 0.4 });
+    }
+    try { if (typeof GW_ROOM !== 'undefined' && GW_ROOM.jolt) GW_ROOM.jolt(t0 + 0.3, 0.6 + 0.6 * mag); } catch (e) { /* cosmetic */ }
+  }
+  function drawWeight(c, t) {
+    c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
+    for (let i = S.wt.length - 1; i >= 0; i--) {
+      const w = S.wt[i], age = t - w.t0;
+      if (age > w.dur || age < -1) { if (age > w.dur) S.wt.splice(i, 1); continue; }
+      if (age < 0) continue;
+      const fill = clamp((age - 0.5) / (w.dur * 0.8), 0, 1), dent = Math.pow(1 - fill, 1.4), open = Math.min(1, age / 0.08), m = w.mag;
+      if (w.line && dent > 0.01) {   // the furrow: the trough narrows from its lips as the snow slumps back; the thrown snow lies along both edges and goes in with it
+        const [x1, y1, x2, y2] = w.line, L = Math.hypot(x2 - x1, y2 - y1) || 1, nx = -(y2 - y1) / L, ny = (x2 - x1) / L, fw = (28 + 24 * m) * dent * open, off = fw * 0.5 + 2 + 5 * dent;
+        c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.strokeStyle = 'rgba(40,64,112,' + (0.5 * dent) + ')'; c.lineWidth = fw; c.stroke();
+        c.strokeStyle = 'rgba(244,250,255,' + (0.8 * dent) + ')'; c.lineWidth = 4 * dent + 0.8;
+        c.beginPath(); c.moveTo(x1 + nx * off, y1 + ny * off); c.lineTo(x2 + nx * off, y2 + ny * off); c.moveTo(x1 - nx * off, y1 - ny * off); c.lineTo(x2 - nx * off, y2 - ny * off); c.stroke();
+      }
+      if (w.pit && dent > 0.01) {   // a crater's dent: a dark bowl in the snow that fills from its rim, the heaped rim slumping in
+        const [px, py, pr] = w.pit, r = pr * (0.55 + 0.45 * dent) * open;
+        c.beginPath(); c.arc(px, py, r, 0, TAU); c.fillStyle = 'rgba(40,64,112,' + (0.34 * dent) + ')'; c.fill();
+        c.beginPath(); c.arc(px, py, r, 0, TAU); c.strokeStyle = 'rgba(244,250,255,' + (0.7 * dent) + ')'; c.lineWidth = 4.5 * dent + 0.8; c.stroke();
+      }
+      if (w.ring && dent > 0.01) {   // a ring of the track that burst: a narrow trough that closes
+        const [rx, ry, rr] = w.ring;
+        c.beginPath(); c.arc(rx, ry, rr, 0, TAU); c.strokeStyle = 'rgba(40,64,112,' + (0.45 * dent) + ')'; c.lineWidth = (18 + 10 * m) * dent; c.stroke();
+        c.beginPath(); c.arc(rx, ry, rr + 8 * dent + 4, 0, TAU); c.arc(rx, ry, Math.max(1, rr - 8 * dent - 4), 0, TAU, true); c.strokeStyle = 'rgba(244,250,255,' + (0.65 * dent) + ')'; c.lineWidth = 2.6; c.stroke();
+      }
+      // the crack: it runs out quickly under the snow, dark with a pale edge; then frost grows over it and it goes
+      const run = easeOut(clamp(age / 0.28, 0, 1)), frost = clamp((age - 0.9) / 1.6, 0, 1), end = 1 - clamp((age - w.dur * 0.62) / (w.dur * 0.38), 0, 1);
+      if (end > 0.01) for (const pts of w.cracks) {
+        const n = pts.length / 2 - 1, lim = run * n;
+        c.beginPath(); c.moveTo(pts[0], pts[1]);
+        for (let k = 1; k <= n; k++) { const f = Math.min(1, lim - (k - 1)); if (f <= 0) break; c.lineTo(pts[(k - 1) * 2] + (pts[k * 2] - pts[(k - 1) * 2]) * f, pts[(k - 1) * 2 + 1] + (pts[k * 2 + 1] - pts[(k - 1) * 2 + 1]) * f); }
+        c.strokeStyle = 'rgba(8,16,34,' + (0.7 * (1 - frost) * end) + ')'; c.lineWidth = 4; c.stroke();
+        c.strokeStyle = 'rgba(207,232,255,' + (0.5 * (1 - 0.5 * frost) * end) + ')'; c.lineWidth = 1; c.stroke();
+        if (frost > 0.02) { c.strokeStyle = 'rgba(240,248,255,' + (0.62 * frost * end) + ')'; c.lineWidth = 1.5 + 3.4 * frost; c.stroke(); }
+      }
+    }
+    c.restore();
   }
 
   // prints: every hero's, faint; a scented hero's last six seconds lit; a hero that carries Blood on the Snow in red
@@ -757,6 +819,10 @@ const GW_FX = (() => {
     iceUp(x, y, 6 + Math.round(10 * heavy), { size: 1.2, speed: 1 + heavy });
     for (const u of inside(ctx, s, 4)) { VFX.hit(u.x, u.y, '#eaf4ff', 2); snowUp(u.x, u.y, 6, { size: 1 }); if (isMe(u)) flinch(C.ice, 0.12 + 0.06 * heavy, 0.25, 0.022); }
     H.shake(wide ? 14 : 8); if (wide) cam(0.12, 0.04, 0.55, 1.5); else cam(0.05, 0.02, 0.4, 3);
+    try {   // (a dent in the snow that fills, and cracks that run out from it and frost over: weightLand above)
+      const cr = []; for (let i = 0; i < 6; i++) cr.push({ x: x + Math.cos(i * TAU / 6 + 0.3) * R * 0.2, y: y + Math.sin(i * TAU / 6 + 0.3) * R * 0.2, ang: i * TAU / 6 + 0.3 + (hash(i, 2) - 0.5) * 0.4, len: R * (0.55 + 0.3 * hash(i, 5)) });
+      weightLand({ x, y, pit: [x, y, R * 0.85], cracks: cr }, 0.9 + 0.5 * heavy);
+    } catch (e) { /* cosmetic */ }
   };
 
   // Throat Snap: the jaws slam shut along the cone, white teeth meeting, the snow thrown off it
@@ -770,6 +836,10 @@ const GW_FX = (() => {
     snowUp(x, y, 10, { size: 1.2, speed: 1.3 }); iceUp(x, y, 8, { size: 1.1 });
     for (let d = 90; d < s.r; d += 90) { const a = s.angle + (Math.random() - 0.5) * s.arc * 0.7; snowUp(s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 2, { size: 0.8 }); }
     H.shake(9); cam(0.07, 0.03, 0.4, 2.5);
+    try {   // (the lake takes the blow and recovers: weightLand above)
+      const ca = Math.cos(s.angle), sa = Math.sin(s.angle), d = Math.hypot(x - s.x, y - s.y);
+      weightLand({ x, y, line: [s.x + ca * 60, s.y + sa * 60, s.x + ca * s.r * 0.88, s.y + sa * s.r * 0.88], pit: [s.x + ca * s.r * 0.55, s.y + sa * s.r * 0.55, 105], cracks: [{ x, y, ang: s.angle - 0.5, len: 150 }, { x, y, ang: s.angle + 0.45, len: 170 }, { x, y, ang: s.angle, len: 110 + Math.min(80, d * 0.2) }] }, 1.6);   // (the heaviest ordinary thing he does: the groove runs the whole cone, with a bowl under it)
+    } catch (e) { /* cosmetic */ }
   };
 
   // Howl: the sound goes through the lake: three rings of pale light out from him, the whole floor catching it a moment, snow thrown up at the edge
@@ -810,6 +880,7 @@ const GW_FX = (() => {
       H.after(i / n * 0.28, () => { snowUp(x, y, 3, { size: 1.1, up: 1.2 }); iceUp(x, y, 2, { size: 1 }); if (i % 3 === 0) VFX.pillar(x, y, { r: 16, h: 100 + rand(0, 50), color: '#eaf4ff', dur: 0.4 }); });
     }
     for (const u of inside(ctx, s, 6)) { VFX.hit(u.x, u.y, '#eaf4ff', 1.9); snowUp(u.x, u.y, 6, { size: 1 }); if (isMe(u)) flinch(C.ice, 0.1, 0.22, 0.018); }
+    try { weightLand({ x: s.x, y: s.y, ring: [s.x, s.y, Rm], cracks: [{ x: s.x + Math.cos(a0) * Rm, y: s.y + Math.sin(a0) * Rm, ang: a0 + Math.PI / 2, len: 120 }, { x: s.x + Math.cos(a0 + 2.1) * Rm, y: s.y + Math.sin(a0 + 2.1) * Rm, ang: a0 + 2.1 + Math.PI / 2, len: 120 }] }, 0.5); } catch (e) { /* cosmetic */ }
     H.shake(9);
   };
 
@@ -914,8 +985,8 @@ const GW_FX = (() => {
   }
   function enrageLand(b, H) {
     for (let i = 0; i < 4; i++) H.shockAt(0, 0, { r: H.AR * (1.5 - i * 0.2), color: i % 2 ? '#ffffff' : C.ice, w: 16 - i * 3, dur: 0.9 + i * 0.1, flat: 0.8, delay: i * 0.1 });
-    H.roomTint('#dff0ff', 0.45, 1.2);
-    for (const q of H.scatter({ kind: 'circle', x: 0, y: 0, r: H.AR - 40 }, 14)) VFX.flash(q.x, q.y - 10, 70, '#ffffff', 0.3);
+    H.roomTint('#c4def8', 0.22, 1.2);   // (a cold tint, not a white-out: the no-white-out rule)
+    for (const q of H.scatter({ kind: 'circle', x: 0, y: 0, r: H.AR - 40 }, 14)) VFX.flash(q.x, q.y - 10, 34, '#cfe4ff', 0.15);
     H.shake(16);
   }
   // the entrance: he comes out of the mist across the lake, head low: mist boiling where he will stand, thinning, his eyes the first thing there

@@ -29,14 +29,23 @@
 //   The Second Hound:  a shade of him hunts a second hero at the same moment (two corridors and two pounces at once).
 //   Stillness:         two heroes who are not the scented one carry `still` through a hunt: every step either takes while it lasts
 //                      bursts when the trail locks, so the scented hero writes a line that asks neither of them to move.
+// ROOM EVENTS (f.emit({ t: 'roomev', k, dur, ... }); the room and the staging (garrow-room.js, garrow-fx.js, walls/garrow.js) draw from them; none changes a move):
+//   gwpath:<n> { l, w, sp, at, who, kd, dur }   a laid run (the lit corridor);  gwring { x, y, r, a0, dir, dur }   Circle the Prey;  gwdrift { dur }   Snowdrift's flurry (the one of the Whiteout also carries wo: 1);
+//   gwwipe { dur: 1 }   the snow takes every track;  gwfrost { dur: 4 }   Act III begins;  gwlast { dur: 9999 }   Act IV begins.
+// MOMENTS (the Whiteout, a showpiece; nothing is added to the floor by these, they only say when):
+//   THE WHITEOUT: Snowdrift (gwdrift { dur: cast + 1, wo: 1 }) -> the wipe (gwwipe, as the cast ends) -> gwhold { dur: 1.2 }, THE CALM AFTER THE WIPE (the same instant, no cast and nothing laid
+//     on the floor for its length) -> gwchase { dur: the whole chase (three hunts and their tail), hunts: 3 } as The Long Chase begins (he goes into the mist) -> gwchaseend { dur: 1.6 }
+//     as it ends (the last mist: he is back at his place, the Howl's cast follows at once). Act III's single Snowdrift sends gwdrift and gwwipe only (no wo, no gwhold).
 
 const GARROW = {
   id: 'garrow', name: 'Garrow', title: "the Moon's Hound",
   // Tuned 2026-11-11 at GEAR=post5 / post6 / post7, the standard line-up, 24 pulls a sample (Hard and Extreme on seeds 1000 and 5000):
   //   HUMAN=dps: Normal 23 of 24, Hard 27 of 48, Extreme 8 of 48; perfect bots: Normal 24 of 24, Hard 23 of 24, Extreme 19 of 24.
   //   A human-like party kills at about 9:10 on Normal and 9:40 on Hard.
+  //   2026-11-13: post6 and post7 became the whole set's gear (all four bosses' tiers; bot-gear.js), no longer Garrow's tier alone, so Hard's damage went 1.85 -> 1.80 and Extreme's 1.85 -> 1.96
+  //   to bring the old rates back (48 pulls, seeds 1 and 2): HUMAN=dps Hard 29 of 48 and Extreme 16 of 48; perfect bots Hard 40 and Extreme 36. The new gear alone gave 20 / 18 and 19 / 44.
   hp: { normal: 8600000, hard: 9100000, extreme: 10300000 },
-  normalDmg: 1.06, hardDmg: 1.85, extremeDmg: 1.85,
+  normalDmg: 1.06, hardDmg: 1.80, extremeDmg: 1.96,
   autoDmg: { normal: 2700, hard: 2700, extreme: 2700 },
   enrage: { normal: 600, hard: 620, extreme: 620 },   // the cast starts here and lands 8 s later
   enrageName: 'Cold Trail',
@@ -390,22 +399,24 @@ const GARROW = {
       if (!quiet) { clearRidges(); f.clearZones(); for (const a of houndsOut()) dissolve(a); }
       f.emit({ t: 'roomev', k: 'gwwipe', dur: 1 });
     };
-    const drift = () => {
+    const CALM = 1.2;   // (the calm after the Whiteout's wipe, before the chase begins)
+    const drift = wo => {
       const d = f.ct(3.6);
       f.cast('Snowdrift', d, 'drift');
-      f.emit({ t: 'roomev', k: 'gwdrift', dur: +(d + 1).toFixed(2) });
-      f.afterKeep(d, () => wipe(false));
+      f.emit({ t: 'roomev', k: 'gwdrift', dur: +(d + 1).toFixed(2), ...(wo === 'whiteout' ? { wo: 1 } : {}) });
+      f.afterKeep(d, () => { wipe(false); if (wo === 'whiteout' && f.state === 'live') f.emit({ t: 'roomev', k: 'gwhold', dur: CALM }); });
     };
     // The Long Chase: he is in the white, and hunts three heroes in turn, each from clean snow
     const CHASE_T = f.ct(4), CHASE_GAP = 0.8, CHASE_TAIL = 2.2, CHASE_LEN = 3 * CHASE_T + 2 * CHASE_GAP + CHASE_TAIL;
     const chase = () => {
       const order = f.shuffle(f.nonTanks().length ? f.nonTanks() : f.alive()); if (!order.length) return;
       f.cast('The Long Chase', CHASE_LEN - CHASE_TAIL, 'drift');
+      f.emit({ t: 'roomev', k: 'gwchase', dur: +CHASE_LEN.toFixed(2), hunts: 3 });
       mistTo(B.x, B.y);
       B.untargetable = true; chasing = true;
       for (let i = 0; i < 3; i++) f.afterKeep(i * (CHASE_T + CHASE_GAP), () => { const p = live(order[i % order.length].id) || f.nonTanks()[0] || f.alive()[0]; if (p) scent({ who: [p.id], D: CHASE_T, quiet: true }); });
       busyUntil = Math.max(busyUntil, f.t + CHASE_LEN);
-      f.afterKeep(CHASE_LEN, () => { if (f.state !== 'live') return; chasing = false; mistTo(HOME.x, HOME.y); B.untargetable = false; B.lockFacing = false; });
+      f.afterKeep(CHASE_LEN, () => { if (f.state !== 'live') return; chasing = false; f.emit({ t: 'roomev', k: 'gwchaseend', dur: 1.6 }); mistTo(HOME.x, HOME.y); B.untargetable = false; B.lockFacing = false; });
     };
 
     // --- the dance (Hard draws one of three orders of an act's middle sets per pull; Normal and Extreme run the order as written) -----
@@ -493,7 +504,7 @@ const GARROW = {
 
     // Whiteout: no gate of its own; it runs its course and the frost begins
     const whiteout = from => f.course({
-      sets: [S([0.6, free(drift), 'Snowdrift'], [f.ct(3.6) + 1.2, chase, 'The Long Chase'], [CHASE_LEN + 0.1, () => howl(dmg.chaseHowl), 'Howl'], [f.ct(4.4) + 0.4])],   // (the gap after the Howl: a course's very last step would be cut by the next act beginning)
+      sets: [S([0.6, free(() => drift('whiteout')), 'Snowdrift'], [f.ct(3.6) + CALM, chase, 'The Long Chase'], [CHASE_LEN + 0.1, () => howl(dmg.chaseHowl), 'Howl'], [f.ct(4.4) + 0.4])],   // (the gap after the Howl: a course's very last step would be cut by the next act beginning)
       next: frost,
     }, from);
 

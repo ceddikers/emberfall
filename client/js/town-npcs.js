@@ -414,6 +414,9 @@ const TOWN_NPCS = [
     arrives: null,
     entrance: null,
     talk: [
+      { when: { beaten: ['ormun'], notFlags: ['bram-tide-told'] }, set: 'bram-tide-told',
+        lines: ["Somebody's put a post in the shallows at the west end. Tide marks up one side, cut very neat. I've read it every morning since.",
+          "This morning it said the water stands exactly where it ought to. In all my years at this pond, it has never once done that."] },
       { when: { flags: ['moon-road'], notFlags: ['bram-moon-told'] }, set: 'bram-moon-told',
         lines: ["There's a line across the pond that wasn't there. Dead straight, and not a ripple under it. The fish won't go near it, and I'm not about to ask them why."],
         choices: [{ text: "I've got fish", next: 'shop' }, { text: 'Goodbye' }] },
@@ -702,6 +705,12 @@ const TOWN_UNLOCKS = {
   // set 6 (Season 2; there is no statue terrace for it yet, so the trophy is drawn only once a pedestal exists, and the toast says nothing of one)
   //   moon-stray: a lean, mist-grey stray that follows Pip about at a little distance, sits when she stops and now and then looks toward the pond
   garrow: { toast: 'The Long Mere is quiet. A lean grey stray with no collar has come down the valley road and taken up with Pip, who says she never asked it to.', trophy: 'broken-chain', decor: 'moon-stray' },
+  //   tankard-glass: a tall standing glass at the Tankard's right-hand corner; tide-post: a marked post in the shallows at the pond's west end (Bram reads it, his talk below);
+  //   moon-koi: on clear nights a pale fish comes up to the pond's surface. All three are drawn in town-life.js. Set 6 has no statue terrace, so the four trophies
+  //   (broken-chain, mirror-shard, tide-weight, pale-crown) stand on one dais in the Trophy Hall, in this order (town-life.js drawSilverRoad).
+  vesper: { toast: 'The Argent Hall has gone silent. A tall looking-glass has been set down at the corner of the Tankard, and nobody will say who carried it there.', trophy: 'mirror-shard', decor: 'tankard-glass' },
+  ormun: { toast: 'The Scales hang level. A weathered post stands in the shallows at the west end of the pond with marks cut up one side, and Bram has already been out to look at it.', trophy: 'tide-weight', decor: 'tide-post' },
+  maelis: { toast: 'The moon is low and quiet over Emberfall tonight. On clear nights now, something pale comes up to the surface of the pond and looks at it.', trophy: 'pale-crown', decor: 'moon-koi' },
 };
 
 // Quill's wards (the Archmage's apprentice): a small hour-long buff on yourself that stacks with a feast. `buff.stat` is

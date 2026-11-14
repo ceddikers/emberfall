@@ -59,8 +59,11 @@ const SV_ART = (() => {
       return { p: u, g: clamp(u * 2, 0, 1) * (1 - k), k, r: 0, kS: k, fade: 1, flash: bump(u, 0.35, 0.65), age, u };
     }
     const a = st.action, p = a && a.type === 'attack' ? (actT(st) - a.t0) / a.dur : age / 1.2;
-    const k = p < 0.3 ? 0 : p < 0.55 ? easeOut((p - 0.3) / 0.25) : 1, r = p >= 1 ? 1 : p < 0.55 ? 0 : easeOut((p - 0.55) / 0.45);
-    return { p, g: easeOut(clamp(p / 0.3, 0, 1)) * (1 - r), k, r, kS: k * (1 - r), fade: p < 0.3 ? 0 : Math.max(0, 1 - (p - 0.3) / 0.7), flash: bump(p, 0.3, 0.5), age, u: clamp(p, 0, 1) };
+    // (the blow k is strikeBeats' hit, draw-util.js: fast, and whole the moment the cast ends; the way back r is its settle)
+    const B = strikeBeats(st);
+    const k = B.on ? B.hit : p < 0.3 ? 0 : p < 0.55 ? easeOut((p - 0.3) / 0.25) : 1, r = B.on ? B.rest : p >= 1 ? 1 : p < 0.55 ? 0 : easeOut((p - 0.55) / 0.45);
+    const g0 = a && a.wk > 0 && B.on ? B.coil : easeOut(clamp(p / 0.3, 0, 1));   // (a heavy cast gathers the whole way across the bar: draw-util.js windUp)
+    return { p, g: g0 * (1 - r), k, r, kS: k * (1 - r), fade: p < 0.3 ? 0 : Math.max(0, 1 - (p - 0.3) / 0.7), flash: bump(p, 0.3, 0.5), age, u: clamp(p, 0, 1) };
   }
 
   // ---------------------------------------------------------------------------------------------------------- small parts
@@ -506,6 +509,8 @@ const SV_ART = (() => {
     const base = Math.atan2(-0.85, 0.52), mir = a => sg > 0 ? a : Math.PI - a, X = v => sg * v;
     const T = { hx: X(30), hy: -16, ba: mir(base), L: 1, ox: -X(30), oy: -14, eb: 1, fwd: 0, fl: 1, arms: 0, core: 0.5 + 0.12 * wheel, halB: 0.6, eye: 0.7, up: 0, spinV: 0.12, turn: 0, orbit: 0, crumple: 0 };
     const { g, k, kS, u } = ph;
+    // the blow's weight (strikeBeats): the body goes back a little as the cast gathers, steps into the blow and carries past it, dips where it lands
+    const B = strikeBeats(st), swung = B.on && pose !== 'idle' && !SUSTAIN[pose] && pose !== 'rebirth';
     switch (pose) {
       case 'kindling': {   // the ember brought to the heart, both hands closing on it; then thrown wide in front and the robe flares
         T.ox = lerp(lerp(-X(30), -X(8), g), -X(3), k); T.oy = lerp(lerp(-14, -8, g), -62, k); T.eb = 1 + 0.5 * g + 0.9 * k;
@@ -560,7 +565,9 @@ const SV_ART = (() => {
         T.hx = X(26); T.hy = -32; T.ba = mir(-1.3); T.up = 0.85 * kS; T.L = lerp(1, 0.5, kS); T.ox = -X(26); T.oy = -32; T.eb = 1 + 1.5 * kS; T.fl = 1 + 0.35 * kS; T.arms = kS; T.core = 0.6 + 0.9 * kS; T.halB = 0.8 + 0.8 * kS; T.eye = 1; T.spinV = 0.12 + 0.9 * kS; T.turn = 0.4 * kS; break;
       }
     }
-    const rate = pose !== 'idle' && !SUSTAIN[pose] && ph.p >= 0.25 && ph.p < 0.62 ? 0.34 : 0.12;
+    if (swung) T.fwd += (-3 * B.load * (1 - B.hit) + 4 * B.ovr) * (1 - B.rest);
+    T.fl += swung ? 0.2 * B.trail : 0;   // (the robe arrives late)
+    const rate = swung && B.u >= 0.30 && B.u < 0.82 ? 0.6 : swung && B.u < 0.30 ? 0.16 : pose !== 'idle' && !SUSTAIN[pose] && !B.on && ph.p >= 0.25 && ph.p < 0.62 ? 0.34 : 0.12;
     const P = smv(st, 'svP', [T.hx, T.hy, T.L, T.ox, T.oy, T.eb, T.fwd, T.fl, T.arms, T.core, T.up, T.halB, T.eye, T.turn, T.crumple], rate);
     const bA = smA(st, 'svBa', T.ba, rate), orbit = sm(st, 'svOb', T.orbit, 0.18);
     // the halo's turning (one clock, so the echoes can find a sigil); the dance's spin settles to the nearest whole turn when it stops
@@ -590,8 +597,9 @@ const SV_ART = (() => {
     // ---- the figure, in its own frame: forward is up in the concept's plate, so turn it a quarter to face +x
     ctx.save(); ctx.rotate(Math.PI / 2);
     trail(ctx, t, mv, P[7], heat);
-    ctx.save(); ctx.translate(0, -P[6] - 4 * gut);
+    ctx.save(); ctx.translate(swung ? 1.2 * B.shud : 0, -P[6] - 4 * gut + (swung ? 1.8 * B.land : 0));
     const tip0 = [hx + Math.cos(bFin) * (5 + L), hy + Math.sin(bFin) * (5 + L)];
+    bladeSmear(ctx, st, 'bl', swung && (pose === 'sweep' || pose === 'crescent' || pose === 'brand' || pose === 'lance' || pose === 'pyre') && B.u > 0.3 && B.u < 0.9, hx, hy, tip0[0], tip0[1], H.g, { a: 0.3, min: 5 });   // (the path of the blow, left behind it)
     const fx = { t, s: sg, ph, P, tip: tip0, bFin, eHand, spinV: st.svDv };
     poseBack(ctx, pose, fx);
     // the hitbox ring: bright at the front, dim at the sides, faint behind

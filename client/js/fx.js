@@ -133,7 +133,7 @@ const FX = {
     const now = this.now;
     const ang = Math.atan2(ty - ent.y, tx - ent.x);
     if (!f.onTarget && ab.target !== 'ally' && (tx !== ent.x || ty !== ent.y)) { ent.faceTo = ang; ent.faceLock = now + 0.5; }   // turned toward over a few frames (see turnFacing in main.js)
-    if (ab.anim && ab.anim !== 'dash' && ent.st) ent.st.action = { type: ab.anim, t0: now, dur: ANIM_DUR[ab.anim] };
+    if (ab.anim && ab.anim !== 'dash' && ent.st) ent.st.action = { type: ab.anim, t0: now, dur: ANIM_DUR[ab.anim], step: Number.isInteger(opts.step) ? opts.step : undefined, id: ab.fxId || ab.id };
     // (a window's empowered move looks like itself: fxId, engine.js ultOver)
     const recipe = ent.cls && typeof ABILITY_VFX !== 'undefined' && ABILITY_VFX[ent.cls.id] && ABILITY_VFX[ent.cls.id][ab.fxId || ab.id];
     if (recipe) {

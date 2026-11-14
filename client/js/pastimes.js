@@ -639,6 +639,8 @@ const Pastimes = (() => {
     if (!st().story.prologue) { storyPages('prologue'); return; }
     // the epilogue, once, after this account's first clear of the Ultimate
     if (!st().story.epilogue && deps.beaten('sovereign')) storyPages('epilogue');
+    // the Silver Road's epilogue, once, after this account's first clear of its last fight (the town's change for that fight waits for it: town-life.js)
+    else if (!st().story.epilogue2 && deps.beaten('maelis')) storyPages('epilogue2');
   }
 
   // ---------------------------------------------------------------- each frame / drawing hooks

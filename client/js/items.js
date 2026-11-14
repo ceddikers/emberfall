@@ -57,7 +57,7 @@ const gearStep = tier => (tier >= 13 ? SET2_STEP * SET3_STEP * SET4_STEP : tier 
 const gearIlvl = tier => (tier >= 13 ? SET4_ILVL : tier >= 9 ? SET3_ILVL : tier >= 5 ? SET2_ILVL : 0);
 const TIERS = { 0: { name: 'Recruit' }, 1: { name: 'Grubnak' }, 2: { name: 'Skitterra' }, 3: { name: 'Volkar' }, 4: { name: 'Hollow King' },
   5: { name: 'Vhalgrath' }, 6: { name: 'Hrimgar' }, 7: { name: 'Azerath' }, 8: { name: 'The Hydra' }, 9: { name: 'Corvane' }, 10: { name: 'Brannoc' }, 11: { name: 'Morrow-Oak' }, 12: { name: 'Caelum Vey' },
-  13: { name: 'Garrow' } };
+  13: { name: 'Garrow' }, 14: { name: 'Vesper' }, 15: { name: 'Ormun' }, 16: { name: 'Maelis Orne' } };
 
 const CLASS_GEAR = {
   bastion: { wtype: 'sword', w: ["Recruit's Arming Sword", 'Cleaverguard Sword', 'Silkrend Oathblade', 'Stormward Oathblade', 'Barrowking Oathblade'], a: ['Iron Skillet Plate', 'Broodwarden Plate', 'Thunderforged Plate', 'Gravewarden Plate'] },
@@ -544,6 +544,56 @@ const ITEMS = {};
       fx: [{ on: 'gcd', buff: { dmg: 0.01 }, dur: 8, stacks: 5, name: 'Link' }], fxText: 'Link by Link: each GCD forges a silver link: +1% damage for 8 s, stacking up to 5 times. Stop and the chain falls away.' },
     { key: 'm_longmere', name: 'Mantle of the Long Mere', slot: 'armor', atype: 'shroud', tier: 13, rarity: M, base: { hp: 75, def: 50 },
       fx: [{ while: 'always', recast: 0.06 }, { on: 'dash', icd: 10, ward: 160, dur: 6 }], fxText: 'Whiteout: your oGCD cooldowns are 6% shorter, and after you dash (once every 10 s) the mist closes round you: a ward of about 80 for 6 s.' },
+
+    // Vesper, the Mirror Knight (set 4, tier 14): the keeper of the Argent Hall, in mirror-bright plate with a visor that shows whoever looks
+    // into it, and the reflection that fights beside her. Polished moon-silver, glass, a long blade carried point-down; everything twice.
+    // The same budget as Garrow's tier (SET4_STEP above), so the same cap arithmetic holds.
+    { key: 'g_glassblade', name: 'Evenfall Glass Blade', slot: 'weapon', main: 'phys', wtype: 'greatsword', tier: 14, rarity: U, base: { main: 86, crit: 2, haste: 1 } },
+    { key: 'g_handwand', name: 'Hand-Mirror Wand', slot: 'weapon', main: 'mag', wtype: 'wand', tier: 14, rarity: U, base: { main: 86, crit: 1, haste: 2 } },
+    { key: 'g_argentplate', name: 'Mirror-Bright Cuirass', slot: 'armor', tier: 14, rarity: U, atype: 'scale', base: { hp: 84, def: 50 } },
+    { key: 'g_argentsignet', name: 'Argent Signet', slot: 'accessory', atype: 'ring', tier: 14, rarity: R, base: { crit: 3, main: 12 },
+      fx: [{ on: 'gcd', chance: 0.1, strike: 80 }], fxText: 'Echo: each GCD has a 10% chance to be struck again from the glass, for about 40 extra damage.' },
+    { key: 'g_visorglint', name: 'Visor Glint Charm', slot: 'accessory', atype: 'charm', tier: 14, rarity: R, base: { hp: 55, def: 25 },
+      fx: [{ on: 'ogcd', icd: 12, ward: 120, dur: 6 }], fxText: 'Glint: an oGCD (once every 12 s) throws your own face back at the blow: a ward of about 60 for 6 s.' },
+    { key: 'g_twinpendant', name: 'Pendant of Two Rooms', slot: 'accessory', atype: 'amulet', tier: 14, rarity: L, base: { crit: 3, main: 12 },
+      fx: [{ while: 'always', crit: 0.02, haste: 0.02 }], fxText: 'Twice Over: +2% critical chance and +2% haste.' },
+    { key: 'm_faceless', name: 'The Faceless Visor', slot: 'accessory', atype: 'crown', tier: 14, rarity: M, base: { main: 12, haste: 3 },
+      fx: [{ on: 'ogcd', icd: 8, strike: 160, buff: { dmg: 0.03 }, dur: 6, name: 'Reflected' }], fxText: 'Reflected: an oGCD (at most once every 8 s) is struck again in the glass for about 80 extra damage, and leaves you +3% damage for 6 s.' },
+    { key: 'm_argenthall', name: 'Mantle of the Argent Hall', slot: 'armor', atype: 'shroud', tier: 14, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ on: 'dash', icd: 10, ward: 160, dur: 6 }, { while: 'hpAbove', frac: 0.5, dmg: 0.04 }], fxText: 'Unscratched: after you dash (once every 10 s) the glass stands up round you: a ward of about 80 for 6 s; and while above 50% HP, +4% damage.' },
+
+    // Ormun, the Tide-Weigher (set 4, tier 15): the keeper of the Scales, a colossus of pale drowned stone with water running from his sleeves.
+    // Silver pan-weights, sea-stone, brine, chain and beam; things that weigh, and what a count is worth. Same budget as the tier before.
+    { key: 'g_panmaul', name: 'Pan-Weight Maul', slot: 'weapon', main: 'phys', wtype: 'maul', tier: 15, rarity: U, base: { main: 86, crit: 2, haste: 1 } },
+    { key: 'g_beamscepter', name: 'Beam-Rod Scepter', slot: 'weapon', main: 'mag', wtype: 'scepter', tier: 15, rarity: U, base: { main: 86, crit: 1, haste: 2 } },
+    { key: 'g_stonecoat', name: 'Drowned-Stone Coat', slot: 'armor', tier: 15, rarity: U, atype: 'coat', base: { hp: 84, def: 50 } },
+    { key: 'g_brinering', name: 'Brine-Silver Ring', slot: 'accessory', atype: 'ring', tier: 15, rarity: R, base: { crit: 3, main: 12 },
+      fx: [{ on: 'crit', icd: 8, buff: { haste: 0.05 }, dur: 6, name: 'Rising Tide' }], fxText: 'Rising Tide: a critical hit (at most once every 8 s) lifts you: +5% haste for 6 s.' },
+    { key: 'g_crackedweight', name: 'Cracked Silver Weight', slot: 'accessory', atype: 'charm', tier: 15, rarity: R, base: { hp: 55, def: 25 },
+      fx: [{ on: 'dash', icd: 12, mend: 0.04 }], fxText: 'Let Go: after you dash (once every 12 s) the sea takes the weight off you and mends 4% of your HP.' },
+    { key: 'g_evenpendant', name: 'Pendant of the Level Beam', slot: 'accessory', atype: 'amulet', tier: 15, rarity: L, base: { crit: 3, main: 12 },
+      fx: [{ while: 'hpAbove', frac: 0.5, dmg: 0.03 }, { while: 'hpBelow', frac: 0.5, recast: 0.08 }], fxText: 'Either Pan: while above 50% HP, +3% damage; while below it, your oGCD cooldowns are 8% shorter.' },
+    { key: 'm_counterweight', name: "The Tide-Weigher's Counterweight", slot: 'accessory', atype: 'torc', tier: 15, rarity: M, base: { main: 12, haste: 3 },
+      fx: [{ on: 'ogcd', icd: 8, buff: { dmg: 0.015 }, dur: 12, stacks: 4, name: 'Counterweight' }], fxText: 'Counterweight: each oGCD (at most once every 8 s) sets a silver weight on your side: +1.5% damage for 12 s, stacking up to 4 times.' },
+    { key: 'm_beamraiment', name: 'Raiment of the Beam', slot: 'armor', atype: 'scale', tier: 15, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ on: 'crit', icd: 12, ward: 160, dur: 6 }, { while: 'hpBelow', frac: 0.5, recast: 0.08 }], fxText: 'Undertow: a critical hit (once every 12 s) draws the sea up round you: a ward of about 80 for 6 s; and while below 50% HP your oGCD cooldowns are 8% shorter.' },
+
+    // Maelis Orne, the Pale Regent (set 4, tier 16; the finale of the Silver Road): very tall and still, hair to the ground, a robe lit on one side
+    // and black on the other, a crescent blade as long as she is and a small moon behind her head as a crown. Moon phases, pale dust, the
+    // crescent blade, the regent's house; what is lit and what is not. Same budget as the tiers before it (SET4_STEP above).
+    { key: 'g_crescentblade', name: 'Pale Crescent Blade', slot: 'weapon', main: 'phys', wtype: 'sabre', tier: 16, rarity: U, base: { main: 86, crit: 2, haste: 1 } },
+    { key: 'g_phasebook', name: 'Book of Phases', slot: 'weapon', main: 'mag', wtype: 'tome', tier: 16, rarity: U, base: { main: 86, crit: 1, haste: 2 } },
+    { key: 'g_palevestment', name: 'Pale-Dust Vestment', slot: 'armor', tier: 16, rarity: U, atype: 'shroud', base: { hp: 84, def: 50 } },
+    { key: 'g_quarterring', name: 'Quarter-Moon Ring', slot: 'accessory', atype: 'ring', tier: 16, rarity: R, base: { crit: 3, main: 12 },
+      fx: [{ on: 'ogcd', icd: 8, buff: { crit: 0.05 }, dur: 6, name: 'Waxing' }], fxText: 'Waxing: an oGCD (at most once every 8 s) brightens you: +5% critical chance for 6 s.' },
+    { key: 'g_earthshinecharm', name: 'Earthshine Charm', slot: 'accessory', atype: 'charm', tier: 16, rarity: R, base: { hp: 55, def: 25 },
+      fx: [{ on: 'dash', icd: 10, ward: 120, dur: 6 }], fxText: 'Earthshine: after you dash (once every 10 s) a pale glow rests on you: a ward of about 60 for 6 s.' },
+    { key: 'g_litsidependant', name: 'Pendant of the Lit Side', slot: 'accessory', atype: 'amulet', tier: 16, rarity: L, base: { crit: 3, main: 12 },
+      fx: [{ while: 'hpAbove', frac: 0.5, crit: 0.03 }, { while: 'hpBelow', frac: 0.5, haste: 0.04 }], fxText: 'Lit Side, Dark Side: while above 50% HP, +3% critical chance; while below it, +4% haste.' },
+    { key: 'm_palecrown', name: "The Pale Regent's Crown", slot: 'accessory', atype: 'crown', tier: 16, rarity: M, base: { main: 12, haste: 3 },
+      fx: [{ on: 'crit', icd: 6, strike: 140, buff: { haste: 0.04 }, dur: 6, name: 'Moonrise' }], fxText: 'Moonrise: a critical hit (at most once every 6 s) lets a small moon rise behind you: a pale cut for about 70 extra damage and +4% haste for 6 s.' },
+    { key: 'm_regentmantle', name: 'Mantle of the Dark Side', slot: 'armor', atype: 'shroud', tier: 16, rarity: M, base: { hp: 75, def: 50 },
+      fx: [{ on: 'ogcd', icd: 10, ward: 160, dur: 6 }, { while: 'hpBelow', frac: 0.5, dmg: 0.04 }], fxText: 'The Dark Side: an oGCD (once every 10 s) wraps the unlit half of the robe round you: a ward of about 80 for 6 s; and while below 50% HP, +4% damage.' },
   ];
   for (const it of gen) ITEMS[it.key] = it;
   // every effect gets an id (its proc cooldowns and buffs are tracked by it)
@@ -690,6 +740,12 @@ const PARTY_BONUS = {
   // set 4 (Season 2: one more step, kept small like its gear; the first boss of the set starts near set 3's first)
   13: { name: 'One Trail', boss: 'Garrow', flavor: 'He follows where you have walked. Walk the same road, together.',
     tiers: { 2: { dmg: 0.04, haste: 0.03 }, 3: { dmg: 0.05, haste: 0.03, crit: 0.03 }, 4: { dmg: 0.06, haste: 0.04, crit: 0.04 } } },
+  14: { name: 'Both Sides', boss: 'Vesper', flavor: 'Every blow has a twin. Stand where neither of you is in the way.',
+    tiers: { 2: { dmg: 0.04, crit: 0.03 }, 3: { dmg: 0.05, crit: 0.03, haste: 0.03 }, 4: { dmg: 0.06, crit: 0.04, haste: 0.04 } } },
+  15: { name: 'Even Beam', boss: 'Ormun', flavor: 'Everything weighs. Make sure you are counted together.',
+    tiers: { 2: { dmg: 0.04, hp: 0.05 }, 3: { dmg: 0.05, hp: 0.06, haste: 0.03 }, 4: { dmg: 0.06, hp: 0.07, haste: 0.04 } } },
+  16: { name: 'The Lit Side', boss: 'Maelis Orne', flavor: 'She shows you the moon, and asks how much of her is lit. Stand together, and none of you is in the dark.',
+    tiers: { 2: { crit: 0.03, hp: 0.04 }, 3: { dmg: 0.05, crit: 0.03, hp: 0.05 }, 4: { dmg: 0.06, crit: 0.04, hp: 0.06 } } },
 };
 const BONUS_STAT = { hp: 'max HP', dmg: 'damage', crit: 'critical chance', haste: 'haste' };
 const bonusText = m => Object.entries(m).map(([k, v]) => `+${Math.round(v * 100)}% ${BONUS_STAT[k]}`).join(', ');
@@ -717,7 +773,7 @@ function partyBonus(counts) {
 // A clear drops a chest: 4 items on Normal, 5 on Hard. Each item rolls its rarity first, then picks an item of that
 // rarity from the boss's table. Class items only roll for classes a human in the run plays (bots don't count).
 // The chest is first come: anyone takes an item and the party can trade it on (loot.js).
-const BOSS_TIER = { grubnak: 1, skitterra: 2, volkar: 3, hollowking: 4, wyrm: 5, titan: 6, archmage: 7, hydra: 8, corvane: 9, brannoc: 10, morrowoak: 11, caelum: 12, garrow: 13 };
+const BOSS_TIER = { grubnak: 1, skitterra: 2, volkar: 3, hollowking: 4, wyrm: 5, titan: 6, archmage: 7, hydra: 8, corvane: 9, brannoc: 10, morrowoak: 11, caelum: 12, garrow: 13, vesper: 14, ormun: 15, maelis: 16 };
 const CHEST_SIZE = { normal: 4, hard: 5, extreme: 5 };   // (an Extreme chest is the Hard chest)
 const CHEST_ODDS = {   // percent by rarity: [Uncommon, Rare, Legendary, Mythic]
   normal: [55, 30, 12, 3],
@@ -731,7 +787,7 @@ for (const [boss, tier] of Object.entries(BOSS_TIER)) {
   for (const it of Object.values(ITEMS)) if (it.tier === tier && t[it.rarity]) t[it.rarity].push(it.key);
 }
 // gold for clearing a boss (Hard doubles it, Extreme triples it; wipes and trials give nothing)
-const CLEAR_GOLD = { grubnak: 40, skitterra: 45, volkar: 50, hollowking: 60, wyrm: 65, titan: 70, archmage: 75, hydra: 85, corvane: 95, brannoc: 105, morrowoak: 115, caelum: 125, garrow: 140 };
+const CLEAR_GOLD = { grubnak: 40, skitterra: 45, volkar: 50, hollowking: 60, wyrm: 65, titan: 70, archmage: 75, hydra: 85, corvane: 95, brannoc: 105, morrowoak: 115, caelum: 125, garrow: 140, vesper: 155, ormun: 170, maelis: 190 };
 const clearGold = (bossId, mode) => (CLEAR_GOLD[bossId] || 0) * (mode === 'extreme' ? 3 : mode === 'hard' ? 2 : 1);
 
 // classes: the classes the humans in the run play. -> [item keys]

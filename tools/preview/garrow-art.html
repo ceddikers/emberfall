@@ -42,6 +42,8 @@
       st.t = tt; st.moving = !!(o.moving && tt > 0.6); st.props = {}; st.action = null;
       if (o.pose && tt >= 1) st.props[GA_ART.KEYS[GA_ART.POSES.indexOf(o.pose)]] = true;
       if (o.bite != null && tt >= 1) st.action = { type: 'attack', t0: 1 + o.bite, dur: 1 };
+      if (o.hold != null) st.action = { type: 'attack', t0: 1 + o.hold - 0.45, dur: 1.2 };   // (a cast: main.js gives the action at the cast's start, its t0 0.45 s before the landing)
+      if (o.gadur && tt >= 1) st.props.gaDur = o.gadur;
       if (tt < T - 1e-6) { sx.save(); sx.clearRect(0, 0, 8, 8); BOSS_ART.garrow(sx, st, ang(tt)); sx.restore(); }
     }
     const a = ang(T);
@@ -65,7 +67,21 @@
   }
   const ridgeDraw = (c, pr, t) => { c.save(); c.globalAlpha = Math.min(1, (t - pr.born) / 0.25); ArenaView.drawProp(c, pr, t, null); c.restore(); };   // (through the game's own prop switch, so the hook is exercised)
 
-  const CELLS = [
+  if (Q.get('strip')) {   // ?strip=snap&hold=3.2&us=-2.8,... : one move across its cast and landing, a cell per moment (us: seconds from the landing). pounce: &gadur=0.8 (the banim's length; it lands at gadur - 0.1)
+    const pose = Q.get('strip'), hold = +Q.get('hold') || 3.2, gadur = +Q.get('gadur') || 0, land = gadur ? gadur - 0.1 : hold;
+    const us = (Q.get('us') || '-2.8,-2.0,-1.2,-0.6,-0.3,-0.12,0.0,0.1,0.25,0.5,1.0').split(',').map(Number);
+    document.getElementById('grid').style.cssText = 'display:flex;flex-wrap:nowrap;gap:2px;padding:2px';
+    for (const u of us) {
+      const cv = document.createElement('canvas'); cv.width = 300; cv.height = 250; document.getElementById('grid').append(cv);
+      const c = cv.getContext('2d'); backdrop(c, 300, 250, 5);
+      const big = document.createElement('canvas'); big.width = W; big.height = H; const bc = big.getContext('2d');
+      bossCell(bc, { pose, tp: land + u, hold: gadur ? null : hold, gadur, zoom: 1.15, angle: +Q.get('angle') || 0 });
+      c.drawImage(big, 0, 0, W, H, -50, -25, 400, 300);
+      c.font = '12px Georgia'; c.fillStyle = Math.abs(u) < 0.01 ? '#a01010' : 'rgba(10,18,36,0.95)'; c.fillText((u >= 0 ? '+' : '') + u.toFixed(2) + ' s' + (u === 0 ? ' (lands)' : ''), 8, 16);
+    }
+    window.__ready = true;
+  }
+  const CELLS = Q.get('strip') ? [] : [
     ['idle', c => bossCell(c, { tp: 0.0 })],
     ['trot (moving)', c => bossCell(c, { moving: true, tp: 1.2 })],
     ['scent, 1.0 s', c => bossCell(c, { pose: 'scent', tp: 1.0 })],

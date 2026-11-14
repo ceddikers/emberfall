@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Boss weight: a heavy move across its whole cast and the room after it</title>
+<style>
+  body { margin: 0; background: #151b26; color: #b8cce0; font: 12px Georgia, serif; }
+  #grid { display: flex; flex-wrap: wrap; gap: 2px; padding: 2px; }
+  canvas { display: block; }
+  #err { color: #ff9a8a; padding: 4px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="err"></div>
+<div id="grid"></div>
+<script>window.__errs = []; window.onerror = (m, s, l) => { window.__errs.push(m + ' (' + String(s).split('/').pop() + ':' + l + ')'); document.getElementById('err').textContent = window.__errs.join(' | '); };</script>
+<script>
+  // The real scripts the game runs a boss from, in the game's order (the preview's own page stands in for main.js: it drives the boss's action, the cast and the landing the way
+  // main.js 'bcast' and 'tgx' do). ?orig_<file>=<url> loads an earlier copy of a file (before / after).
+  (function () {
+    const q = new URLSearchParams(location.search), base = '../../client/js/';
+    const list = ['draw-util', 'boss-weight', 'status-icons', 'interp', 'data', 'arena/bosses/archmage', 'heroes', 'bosses', 'hydra-art', 'arena/shapes', 'arena/boss-tells', 'arena/arena-view', 'archmage-art', 'titan-art', 'wyrm-art', 'hydra-view', 'set3-sky',
+      'corvane-art', 'corvane-fx', 'brannoc-art', 'morrowoak-art', 'morrowoak-fx', 'caelum-art', 'caelum-fx', 'volkar-storm', 'brannoc-fx', 'hollowking-fx', 'skitterra-moth', 'skitterra-fx', 'grubnak-fx', 'sovereign-rooms', 'sovereign-art',
+      'sovereign-fx', 'hood-art', 'hood-fx', 'vfx', 'fx', 'boss-vfx'];
+    for (const n of list) document.write('<script src="' + (q.get('orig_' + n) || base + n + '.js') + '"><' + '/script>');
+  })();
+</script>
+<script>
+(function () {
+  // ?boss=grubnak &anim=cleaver &props=windup,... &name=Tenderize &cast=3.4 (the bar's length) &shape=circle|cone|rect &r=95 &len=900 &w=100 &at=130,6 (the target) &cam=x,y (the world point at the middle of each cell) &tag=buster &type=buster
+  //   &floor=tile (the backdrop) &prop=cask &ts=-3,-2,... (seconds from the landing) &zoom=0.8 &w=300&h=290 &cols=6 &view=body (close on the boss, the cast and the blow) &view=impact (close on the target, the landing and the room recovering) &noweight=1 (the old boss: nothing of boss-weight.js) &perf=1 &angle=E|S|N|W
+  const Q = new URLSearchParams(location.search);
+  const BID = Q.get('boss') || 'grubnak', ANIM = Q.get('anim') || 'cleaver', NAME = Q.get('name') || '', D = +Q.get('cast') || 3.4;
+  const UPR = new Set(['caelum', 'hood', 'seraph']);
+  const MANG = { E: 0, S: Math.PI / 2, N: -Math.PI / 2, W: Math.PI }[Q.get('angle') || 'E'];
+  const MW = +Q.get('w') || 300, MH = +Q.get('h') || 290, BODY = Q.get('view') === 'body', HIT = Q.get('view') === 'impact', ZOOM = +Q.get('zoom') || (BODY ? 1.2 : HIT ? 1.0 : 0.72), COLS = +Q.get('cols') || 6;
+  const PROPS = {}; for (const f of (Q.get('props') || '').split(',').filter(Boolean)) { const [k, v] = f.split(':'); PROPS[k] = v === undefined ? true : (isNaN(+v) ? v : +v); }
+  const AT = (Q.get('at') || '130,6').split(',').map(Number), BX = -100, BY = 0, CAM = (Q.get('cam') || (HIT ? (AT[0] - 20) + ',' + (AT[1] - 10) : BODY ? (BX + 30) + ',0' : (BX + AT[0]) / 2 + ',0')).split(',').map(Number);
+  const TS = (Q.get('ts') || (HIT ? [0.03, 0.1, 0.2, 0.4, 0.7, 1.1, 1.7, 2.4, 3.1, 3.8, 4.5, 5.4] : BODY ? [-D + 0.1, -D * 0.74, -D * 0.5, -D * 0.28, -1.0, -0.5, -0.2, -0.06, 0.02, 0.12, 0.3, 0.7] : [-D + 0.2, -D * 0.62, -D * 0.32, -0.8, -0.25, 0, 0.18, 0.6, 1.3, 2.3, 3.3, 4.2]).map(v => v.toFixed(2)).join(',')).split(',').map(Number);
+  const TW = 1.0, TL = TW + D, END = TL + Math.max(...TS, 0) + 0.2;   // the cast bar begins at TW, the blow lands at TL
+  const FLOOR = { tile: ['#cdbf9e', '#a89a78'], rock: ['#4d4658', '#383244'], stone: ['#5a625c', '#444c46'], ice: ['#a9cbe6', '#7ea9cf'], snow: ['#d6e0ea', '#b9c8d8'], scorch: ['#3c302c', '#2a201c'], sand: ['#c9ad78', '#a98f5c'], water: ['#4a7c78', '#365e5c'], dirt: ['#5a5238', '#443e2a'] };
+  const fl = FLOOR[Q.get('floor') || (BOSS_WEIGHT.PROFILE[BID] || {}).floor || 'stone'];
+  if (Q.get('noweight')) { Object.assign(BOSS_WEIGHT, { cast: () => 0, land() {}, body() {}, castFx() {}, rattle: () => null }); }
+  window.FX = window.FX || { quality: 'full', flashK: 1 };
+  ARENA.use(BID);
+  const grid = document.getElementById('grid');
+  const bd = { x: BX, y: BY, f: MANG, fade: 1, st: { t: 0, moving: false, action: null, phase: 0, props: {} } };
+  const st = bd.st, sx = document.createElement('canvas'); sx.width = sx.height = 8; const sctx = sx.getContext('2d');
+  let simT = 0; BOSS_VFX.setClock(() => simT);
+  const hero = { x: AT[0], y: AT[1] };
+  const shape = Q.get('shape') || 'circle', R = +Q.get('r') || 95;
+  const live = shape === 'circle' ? { kind: 'circle', x: AT[0], y: AT[1], r: R } : shape === 'cone' ? { kind: 'cone', x: BX, y: BY, r: R, arc: 1.4, angle: MANG } : { kind: 'rect', x: BX, y: BY, angle: MANG, len: +Q.get('len') || 900, w: +Q.get('w2') || 100 };
+  const tg = { id: 1, type: Q.get('type') || 'buster', tag: Q.get('tag') || 'buster', live, shape: live, target: 1, start: 0 };
+  const ctxE = { entById: () => hero, boss: BID, pol: new Map(), units: [], props: [], room: { props: [] }, bossDraw: bd };
+  const PR = Q.get('prop') ? [{ kind: Q.get('prop'), x: AT[0] + 150, y: AT[1] - 80, r: 30, hp: 3, maxHp: 3, id: 7 }, { kind: Q.get('prop'), x: AT[0] - 60, y: AT[1] + 120, r: 30, hp: 3, maxHp: 3, id: 8 }] : [];
+  ctxE.props = ctxE.room.props = PR;
+  function floor(c) {
+    ARENA.trace(c, 0); c.save(); c.clip(); c.fillStyle = fl[0]; c.fillRect(-700, -500, 1400, 1000);
+    c.strokeStyle = fl[1]; c.lineWidth = 2; for (let x = -700; x < 700; x += 100) { c.beginPath(); c.moveTo(x, -500); c.lineTo(x, 500); c.stroke(); } for (let y = -500; y < 500; y += 100) { c.beginPath(); c.moveTo(-700, y); c.lineTo(700, y); c.stroke(); }
+    c.restore();
+  }
+  if (Q.get('bench')) {   // the cost of boss-weight.js alone: the landing call, and what its effects add to a frame (the old landing is not played)
+    const cv = document.createElement('canvas'); cv.width = 900; cv.height = 700; const c = cv.getContext('2d'); BOSS_WEIGHT.castFx(BID, ANIM, NAME, D, bd); const slow = []; let tl = 0, worst = 0, sum = 0, nfr = 0, tmax = 0, parts = 0;
+    for (let rep = 0; rep < 40; rep++) {
+      VFX.clear(); VFX.update(1000, 1 / 60); let m = performance.now(); BOSS_WEIGHT.land(tg, {}, ctxE); const d = performance.now() - m; tl += d; tmax = Math.max(tmax, d);
+      for (let f = 1; f <= 360; f++) { VFX.update(1000 + f / 60, 1 / 60); m = performance.now(); c.save(); c.setTransform(1, 0, 0, 1, 450, 350); VFX.draw(c, 'ground'); VFX.draw(c, 'air'); c.restore(); const e = performance.now() - m; if (rep > 4) { sum += e; nfr++; worst = Math.max(worst, e); if (e > 4) slow.push(rep + ":" + f + "=" + e.toFixed(1)); } }
+    }
+    let idle = 0; VFX.clear(); VFX.update(2000, 1 / 60); for (let f = 0; f < 600; f++) { const m = performance.now(); BOSS_WEIGHT.rattle({ x: 1, y: 1 }, 5); BOSS_WEIGHT.body(BID, st, { ox: 0, oy: 0, sx: 1, sy: 1, rot: 0, grow: 1 }, 0); idle += performance.now() - m; }
+    document.getElementById('err').textContent = 'BENCH ' + BID + ' ' + tg.tag + ': land() mean ' + (tl / 40).toFixed(3) + ' ms (worst ' + tmax.toFixed(3) + '); effect drawing over the next 6 s: mean ' + (sum / nfr).toFixed(3) + ' ms a frame, worst ' + worst.toFixed(3) + ' ms; idle rattle()+body() ' + (idle / 600 * 1000).toFixed(2) + ' us a frame; slow frames: ' + slow.slice(0, 12).join(' ') + ' (' + slow.length + ' of ' + nfr + ')';
+    window.__ready = true; return;
+  }
+  function cell(label) {
+    const cv = document.createElement('canvas'); cv.width = MW; cv.height = MH; grid.append(cv);
+    const c = cv.getContext('2d'); c.fillStyle = '#0c1018'; c.fillRect(0, 0, MW, MH);
+    c.save(); c.translate(MW / 2 - CAM[0] * ZOOM, MH / 2 - CAM[1] * ZOOM + (UPR.has(BID) ? 40 : 10)); c.scale(ZOOM, ZOOM);
+    floor(c);
+    VFX.draw(c, 'ground');
+    for (const p of PR) ArenaView.drawProp(c, p, simT, { props: PR, ev: {} });
+    // the target and the boss, by y (a stand-in hero: an outlined figure with its shadow)
+    const drawHero = () => { c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(hero.x, hero.y + 4, 16, 8, 0, 0, 6.3); c.fill(); c.fillStyle = '#e8c070'; c.strokeStyle = '#1a1622'; c.lineWidth = 2.5; c.beginPath(); c.roundRect(hero.x - 8, hero.y - 34, 16, 34, 6); c.fill(); c.stroke(); c.beginPath(); c.arc(hero.x, hero.y - 40, 8, 0, 6.3); c.fill(); c.stroke(); };
+    const items = [{ y: hero.y, f: drawHero }, { y: BY, f: () => BOSS_VFX.drawBody(c, { id: BID }, bd, { scale: 1.3 }) }].sort((a, b) => a.y - b.y);
+    for (const it of items) it.f();
+    VFX.draw(c, 'air');
+    c.restore();
+    c.fillStyle = Math.abs(label) < 0.01 ? '#ffb0a0' : '#e8eef8'; c.font = '13px Georgia';
+    c.fillText((label >= 0 ? '+' : '') + label.toFixed(2) + ' s from the landing' + (Math.abs(label) < 0.01 ? '  (lands)' : '') + (label < -D + 0.4 ? '  (cast begins)' : ''), 8, 16);
+    return cv;
+  }
+  const marks = TS.map((v, i) => ({ t: TL + v, label: v, i })).sort((a, b) => a.t - b.t);
+  let mi = 0, landed = false, started = false, cost = [];
+  const eps = 1 / 120;
+  try {
+    for (let tt = 0; tt <= END + 1e-6; tt += 1 / 60) {
+      simT = tt; st.t = tt;
+      if (!started && tt >= TW) {
+        started = true;
+        const pose = (typeof BOSS_VFX !== 'undefined') ? BOSS_VFX.castStart(BID, ANIM, D, bd, NAME) : null;
+        for (const [k, after] of pose || []) { st.props[k] = true; }
+        for (const k in PROPS) st.props[k] = PROPS[k];
+        st.action = { type: 'attack', t0: TL - 0.45, dur: 1.2, w0: TW, wk: BOSS_WEIGHT.cast(BID, ANIM, NAME, D) };
+      }
+      if (started && tt >= TL + 0.5) st.props = {};
+      if (!landed && tt >= TL - 1e-6) { landed = true; const m0 = performance.now(); BOSS_VFX.impact(tg, {}, ctxE); cost.push(performance.now() - m0); }
+      const m1 = performance.now();
+      VFX.update(tt, 1 / 60);
+      sctx.save(); sctx.clearRect(0, 0, 8, 8); try { BOSS_ART[BID](sctx, st, MANG); } finally { sctx.restore(); }
+      if (landed && tt < TL + 0.2) cost.push(performance.now() - m1);
+      while (mi < marks.length && marks[mi].t <= tt + eps) { cell(marks[mi].label); mi++; }
+    }
+    if (landed) document.getElementById('err').textContent = 'landing cost on the frames around it (ms): impact ' + cost[0].toFixed(2) + '; update+art frames ' + cost.slice(1).map(v => v.toFixed(2)).join(' ');
+  } catch (e) { window.__errs.push(String(e && e.stack || e)); document.getElementById('err').textContent = window.__errs.join(' | '); }
+  window.__ready = true;
+})();
+</script>
+</body>
+</html>

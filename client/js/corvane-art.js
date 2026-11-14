@@ -111,12 +111,12 @@ const CV_ART = (() => {
 
   // ---------------------------------------------------------------------------------------------------------- the figure
   function cloak(ctx, t, sway, flare, small) {
-    const N = 9, hem = small ? -28 : -40, W = 19, pts = [6, -14, -2, -W * flare];
+    const N = 9, hem = small ? -28 : -40, W = 21.5, pts = [6, -15, -2, -W * flare];
     for (let i = 0; i <= N; i++) {
       const u = i / N, y = (-W + u * 2 * W) * flare;
       pts.push(hem * (0.72 + 0.28 * Math.sin(u * Math.PI)) * (flare > 1 ? 1.2 : 1) - (i % 2 ? 7 : 0) + Math.sin(t * 2.3 + i * 0.9) * sway, y + Math.sin(t * 1.7 + i) * sway * 0.4);
     }
-    pts.push(-2, W * flare, 6, 14);
+    pts.push(-2, W * flare, 6, 15);
     poly(ctx, pts, '#141a2b', OUT, 2.6);
     // the stiff folds, lit along one side
     for (let i = 2; i < N; i += 3) {
@@ -148,30 +148,33 @@ const CV_ART = (() => {
   }
   function torso(ctx, lean, cr) {
     // the back and breastplate, black lacquer; a standing collar round the neck
-    ellipse(ctx, -1, 0, 12, 14.5, 0, '#1b202e', OUT, 2.6);
-    for (const q of [-6, -2, 2, 6]) line(ctx, q, -11, q, 11, rgba('#43506e', 0.75), 1.4);   // the lames
-    line(ctx, -9, 0, 9, 0, rgba('#43506e', 0.5), 1.2);
+    ellipse(ctx, -1, 0, 15.5, 18.5, 0, '#1b202e', OUT, 3);
+    ellipse(ctx, 1, -3, 9, 10, 0, rgba('#37425a', 0.4));   // the light on the breastplate
+    for (const q of [-7.5, -2.5, 2.5, 7.5]) line(ctx, q, -13.5, q, 13.5, rgba('#43506e', 0.75), 1.5);   // the lames
+    line(ctx, -11, 0, 11, 0, rgba('#43506e', 0.5), 1.3);
     // pauldrons: three layered lames each, a lit rim, frost growing at the outer corners
     for (const sy of [-1, 1]) {
-      ctx.save(); ctx.translate(-0.5, sy * 15.5); ctx.rotate(sy * 0.16);
-      rrect(ctx, -11.5, -8.5, 23, 17, 5, '#222a3d', OUT, 2.4);
-      rrect(ctx, -8.5, -6.5, 17, 13, 4, '#2a3348', OUT, 1.6);
-      rrect(ctx, -5.5, -4.5, 11, 9, 3, '#38445f', OUT, 1.3);
-      ctx.beginPath(); ctx.moveTo(-9.5, sy * -6.5); ctx.lineTo(9.5, sy * -6.5); ctx.strokeStyle = rgba('#7c8fb5', 0.8); ctx.lineWidth = 1.2; ctx.stroke();
-      for (const [px, py, h] of [[-3, sy * 10.5, 5], [4, sy * 10.5, 4.5]]) poly(ctx, [px - 2, py - sy * 2.5, px, py + sy * h, px + 2, py - sy * 2.5], '#eaf9ff', OUT, 0.9);
+      ctx.save(); ctx.translate(-0.5, sy * 19); ctx.rotate(sy * 0.16);
+      rrect(ctx, -14.5, -10.5, 29, 21, 6.5, '#222a3d', OUT, 2.5);
+      rrect(ctx, -10.8, -8, 21.6, 16, 5.2, '#2a3348', OUT, 1.7);
+      rrect(ctx, -7, -5.5, 14, 11, 3.6, '#38445f', OUT, 1.4);
+      ctx.beginPath(); ctx.moveTo(-11, sy * -7.5); ctx.lineTo(11, sy * -7.5); ctx.strokeStyle = rgba('#7c8fb5', 0.8); ctx.lineWidth = 1.2; ctx.stroke();
+      for (const [px, py, h] of [[-3, sy * 14, 5.5], [4.5, sy * 14, 5]]) poly(ctx, [px - 2, py - sy * 2.5, px, py + sy * h, px + 2, py - sy * 2.5], '#eaf9ff', OUT, 0.9);
       ctx.restore();
     }
-    ctx.beginPath(); ctx.ellipse(0, 0, 9, 10.5, 0, 0, TAU); ctx.strokeStyle = '#242c40'; ctx.lineWidth = 4.2; ctx.stroke(); ctx.strokeStyle = rgba('#5a6a90', 0.7); ctx.lineWidth = 1; ctx.stroke();   // the collar
-    line(ctx, 9.5, -6.5, 9.5, 6.5, rgba(K.cyan, 0.25 + 0.25 * cr), 1.5);
+    ctx.beginPath(); ctx.ellipse(0, 0, 10.5, 12, 0, 0, TAU); ctx.strokeStyle = '#242c40'; ctx.lineWidth = 4.8; ctx.stroke(); ctx.strokeStyle = rgba('#5a6a90', 0.7); ctx.lineWidth = 1; ctx.stroke();   // the collar
+    line(ctx, 11, -7.5, 11, 7.5, rgba(K.cyan, 0.25 + 0.25 * cr), 1.6);
     crack(ctx, 2, -11, 1.9, 12, 1); crack(ctx, -3, 11, -1.5, 11, 5, 0.8); crack(ctx, 0.5, -19, 2.1, 9, 11, 0.8); crack(ctx, -1, 19, -2.1, 8, 14, 0.8);
   }
   // a gauntleted hand
-  const fist = (ctx, x, y) => circle(ctx, x, y, 4.1, '#262e41', OUT, 1.8);
+  const fist = (ctx, x, y) => { circle(ctx, x, y, 6.3, '#262e41', OUT, 2); circle(ctx, x - 1.3, y - 1.6, 2.8, rgba('#4a5878', 0.55)); };
   // a sleeve from the shoulder (sx, sy) to the hand (hx, hy), the elbow bent out to one side
   function arm(ctx, sx, sy, hx, hy, bend) {
     const mx = (sx + hx) / 2, my = (sy + hy) / 2, dx = hx - sx, dy = hy - sy, L = Math.hypot(dx, dy) || 1;
-    limb(ctx, [sx, sy, mx - dy / L * bend, my + dx / L * bend, hx, hy], '#1a1f2d', 8);
-    line(ctx, sx, sy, mx - dy / L * bend, my + dx / L * bend, rgba(K.lacH, 0.45), 1.4);
+    limb(ctx, [sx, sy, mx - dy / L * bend, my + dx / L * bend, hx, hy], '#1a1f2d', 11);
+    line(ctx, sx, sy, mx - dy / L * bend, my + dx / L * bend, rgba(K.lacH, 0.5), 1.7);
+    const ex = mx - dy / L * bend, ey = my + dx / L * bend, bx = ex + (hx - ex) * 0.3, by = ey + (hy - ey) * 0.3, cx = ex + (hx - ex) * 0.86, cy = ey + (hy - ey) * 0.86;
+    line(ctx, bx, by, cx, cy, OUT, 14.6); line(ctx, bx, by, cx, cy, '#262e41', 11.6); line(ctx, bx - 1.6, by - 1.6, cx - 1.6, cy - 1.6, rgba(K.lacH, 0.6), 1.4);   // the bracer
   }
 
   // Still Water's glass, stood up in front of him: a pane of ice that always faces the player, rim bright, a glint sweeping across it, rippling white when
@@ -210,8 +213,7 @@ const CV_ART = (() => {
     const ca = Math.cos(angle), sa = Math.sin(angle), S = (x, y) => [x * ca - y * sa, x * sa + y * ca];
     const notch = Math.min(4, pr.notch | 0), over = pr.over | 0;
     const burn = !!pr.burn || (notch >= 4);
-    const act = actP(st, 'attack'), sw = swing(act);
-    const windUp = act < 0 || act < 0.3 ? 1 : sw;           // 1 while he gathers, then the stroke, 1 -> -1.2
+    const B = strikeBeats(st), G = B.on ? B.load * (1 - B.hit) : 0;   // (strikeBeats, draw-util.js: G is the last gathering, deeper than the held pose, before the blow)
     const stance = pr.stance || null, kneel = !!pr.kneel;
     let pose = 'idle';
     if (kneel) pose = 'kneel';
@@ -224,12 +226,24 @@ const CV_ART = (() => {
     else if (stance === 'crane') pose = 'crane';
     else if (stance === 'parting') pose = 'plant';
     else if (pr.breath) pose = 'breath';
+    // a blow keeps its pose through the follow-through and the settle even after its prop has lapsed; his plain swing (an auto) is a smaller Sundering Cut
+    let side = pr.sweepL ? -1 : 1;
+    const autoSw = pose === 'idle' && B.on && st.action.dur <= 1.05;
+    if (autoSw) pose = 'raise';
+    if (B.on && (pose === 'raise' || pose === 'draw' || pose === 'sweep')) st._cvH = { pose, side, act: st.action };
+    else if (B.on && pose === 'idle' && st._cvH && st._cvH.act === st.action) { pose = st._cvH.pose; side = st._cvH.side; }
+    const blow = B.on && (pose === 'raise' || pose === 'draw' || pose === 'sweep');
+    const mx = blow ? (-3.5 * G + 10 * B.hit + 3.5 * B.ovr) * (1 - B.rest) : 0;   // the weight goes back as he gathers, then he steps into it
+    const foll = blow ? clamp((B.u - 0.45) / 0.14, 0, 1) : 0;
+    const tw = blow && pose !== 'raise' ? side * ((0.1 + 0.14 * B.load) * (1 - B.hit) - 0.17 * B.hit * (1 - B.rest) + 0.05 * B.ovr) : 0;   // the shoulders coil away from the cut, then turn through it
     const crouch = pose === 'crane' ? 1 : 0, flare = pr.gale ? 1.4 : 1;
     const breathe = Math.sin(t * 1.6) * 0.7, moving = st.moving ? 1 : 0;
     const full = burn ? 1 : 0;
 
     // the cold round him; more of it the fuller the gauge
     glow(ctx, 0, 0, 62 + notch * 5, K.cyan, 0.08 + 0.05 * notch + (full ? 0.12 : 0));
+    ctx.save();   // (the blow's weight: a step into it, a dip where it lands, a shudder after)
+    if (blow) { const q = 1 - 0.04 * B.land; ctx.translate(mx, 1.2 * B.shud); ctx.scale(q, q); }
     if (pose === 'still' && Math.sin(angle) < 0) ward(ctx, angle, t);   // (facing away from us: the glass stands behind him)
     if (pose === 'kneel') {   // the snow heaped about his knees
       ellipse(ctx, 6, 0, 36, 40, 0, rgba('#cddcf0', 0.55)); ellipse(ctx, 6, 0, 28, 31, 0, rgba('#e8f2ff', 0.5));
@@ -239,7 +253,8 @@ const CV_ART = (() => {
       line(ctx, -26 - q * 40, y, -52 - q * 70, y + (hash(i, 7) - 0.5) * 8, rgba('#e8f6ff', 0.55 * (1 - q)), 2.2);
     }
     ctx.save(); ctx.scale(pose === 'kneel' ? 0.92 : crouch ? 0.94 : 1, pose === 'kneel' ? 0.92 : crouch ? 1.06 : 1);
-    cloak(ctx, t, pose === 'kneel' ? 0.4 : 1.1 + moving * 1.4 + (pr.gale ? 2.2 : 0), flare, pose === 'kneel');
+    if (blow) ctx.translate(-B.cloth * 9, 0);   // (the cloak is behind the lunge, then swings through it)
+    cloak(ctx, t, pose === 'kneel' ? 0.4 : 1.1 + moving * 1.4 + (pr.gale ? 2.2 : 0) + (blow ? 2.6 * B.trail : 0), flare, pose === 'kneel');
     ctx.restore();
 
     // ---- what lies in the floor's own plane: a low blade (Rising Crane) swept back, a sheathed one swung out to the side
@@ -251,13 +266,17 @@ const CV_ART = (() => {
       ctx.save(); ctx.rotate(-angle); sword(ctx, gx, gy, tx, ty, { w: 11, n: notch, over, burn: full, t }); ctx.restore();
     }
     ctx.restore();
-    ctx.save(); ctx.scale(pose === 'kneel' ? 0.92 : crouch ? 0.94 : 1, pose === 'kneel' ? 0.92 : crouch ? 1.06 : 1);
+    ctx.save(); ctx.rotate(tw); ctx.scale(pose === 'kneel' ? 0.92 : crouch ? 0.94 : 1, pose === 'kneel' ? 0.92 : crouch ? 1.06 : 1);
     torso(ctx, lean, notch / 4);
     ctx.restore();
 
     // ---- hands and blade, on the screen's axes
     ctx.save(); ctx.rotate(-angle);
-    const sh = (sy) => S(0, sy * 15);
+    const sh = (sy) => { const a = angle + tw; return [-sy * 19 * Math.sin(a), sy * 19 * Math.cos(a)]; };   // (the shoulders turn with the coil)
+    const mixP = (a, b, q) => [lerp(a[0], b[0], q), lerp(a[1], b[1], q)];
+    // the walking stance, which every blow settles back into
+    const hpI = S(9, 17), handI = [hpI[0], hpI[1] - 2 + breathe * 0.3], dI = [0.12 + 0.15 * (ca > 0 ? 1 : 0), 1], dlI = Math.hypot(dI[0], dI[1]);
+    const gI = [handI[0] + dI[0] / dlI * 8, handI[1] + dI[1] / dlI * 8], tipI = [gI[0] + dI[0] / dlI * 56, gI[1] + dI[1] / dlI * 56], lhI0 = S(6, -15), lhI = [lhI0[0], lhI0[1] + 1];
     const L = sh(-1), R = sh(1);
     const swordOf = (g, tip, w = 13) => sword(ctx, g[0], g[1], tip[0], tip[1], { w, n: notch, over, burn: full, t });
     if (pose === 'idle' || pose === 'breath') {
@@ -293,28 +312,40 @@ const CV_ART = (() => {
       swordOf(g, tip, 14); fist(ctx, l1[0], l1[1]); fist(ctx, l2[0], l2[1]);
     } else if (pose === 'raise') {
       // Sundering Cut / Cracked Guard / the enrage: up for the stroke, then down the way he faces
-      const k = windUp >= 1 ? 1 : clamp((sw + 1.2) / 2.2, 0, 1), dir = S(1, 0), hp = S(6, 0);
-      const hand = [hp[0], hp[1] - 15 * k + 4 * (1 - k)];
-      const upTip = [hand[0] + dir[0] * 20, hand[1] - 92], fwd = S(88, 0), fTip = [fwd[0], fwd[1] + 10];
-      const tip = [lerp(fTip[0], upTip[0], k), lerp(fTip[1], upTip[1], k)];
+      // (anticipation: the blade tips back over his shoulder and rises as he gathers; the strike lands the moment the cast ends and the blade carries on
+      // past the mark before he lets it settle back into the walking stance. His plain swing is the same cut, smaller, lifted from rest.)
+      const k = B.on ? 1 - B.hit - 0.2 * B.ovr : 1, dir = S(1, 0), hp = S(6, 0), pre = autoSw ? B.load : st.action && st.action.wk > 0 ? Math.min(1, B.coil * 1.4) : 1;   // (a heavy cast brings the blade up from the walking stance by degrees across the bar)
+      let hand = [hp[0] - dir[0] * 5 * G, hp[1] - 15 * k + 4 * (1 - k)];
+      const upTip = [hand[0] + dir[0] * (20 - 26 * G), hand[1] - (autoSw ? 66 : 92) - 8 * G], fwd = S(88, 0), fTip = [fwd[0], fwd[1] + 10];
+      let tip = [lerp(fTip[0], upTip[0], k), lerp(fTip[1], upTip[1], k)];
+      let l1 = [hand[0] - 3, hand[1] + 4], l2 = [hand[0] + 3, hand[1] - 1];
+      if (pre < 1) { hand = mixP(handI, hand, pre); tip = mixP(tipI, tip, pre); l1 = mixP(lhI, l1, pre); l2 = mixP(handI, l2, pre); }
+      if (B.rest > 0) { hand = mixP(hand, handI, B.rest); tip = mixP(tip, tipI, B.rest); l1 = mixP(l1, lhI, B.rest); l2 = mixP(l2, handI, B.rest); }
       const dx = tip[0] - hand[0], dy = tip[1] - hand[1], dl = Math.hypot(dx, dy) || 1, g = [hand[0] + dx / dl * 8, hand[1] + dy / dl * 8];
-      const l1 = [hand[0] - 3, hand[1] + 4], l2 = [hand[0] + 3, hand[1] - 1];
-      if (k < 0.35) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(ctx, fTip[0] * 0.6, fTip[1] * 0.6, 60, '#dff6ff', 0.5 * (1 - k / 0.35)); ctx.restore(); }
+      if (k < 0.35 && B.rest < 0.5) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(ctx, fTip[0] * 0.6, fTip[1] * 0.6, 60, '#dff6ff', 0.5 * (1 - Math.max(0, k) / 0.35) * (1 - B.rest * 2)); ctx.restore(); }
       arm(ctx, L[0], L[1], l1[0], l1[1], 5); arm(ctx, R[0], R[1], l2[0], l2[1], -5);
+      bladeSmear(ctx, st, 'sw', blow && B.u > 0.3 && B.u < 0.9, g[0], g[1], tip[0], tip[1], '#dff6ff', { a: 0.34, min: 5 });
       swordOf(g, tip, 12); fist(ctx, l1[0], l1[1]); fist(ctx, l2[0], l2[1]);
     } else if (pose === 'draw') {
       // Draw Cut: the blade whips out level along the way he faces
-      const phi = -0.14 + clamp(windUp, -0.4, 1) * 2.3, hp = S(9, 13), g = [hp[0], hp[1]];
-      const a = [Math.cos(phi), Math.sin(phi)], e = S(a[0] * 82, a[1] * 82), tip = [hp[0] + e[0], hp[1] + e[1]];
-      const hl = S(0, -15), g2 = [g[0] - (tip[0] - g[0]) / 8, g[1] - (tip[1] - g[1]) / 8];
-      if (windUp < 0.2) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; line(ctx, g[0], g[1], tip[0] + 22 * a[0], tip[1] + 22 * a[1], rgba('#ffffff', 0.7), 3); glow(ctx, tip[0], tip[1], 40, '#bfeaff', 0.6); ctx.restore(); }
+      // (the blade is drawn back behind his right hip and held, then whips across the front: it is level with the way he faces the moment the cast ends
+      // and runs on past it before he settles)
+      const Wd = B.on ? 1 + 0.12 * G - 1.12 * B.hit - 0.28 * B.ovr : 1, phi = -0.14 + clamp(Wd, -0.55, 1.15) * 2.3, hp = S(9 - 3 * G, 13 + 2 * G);
+      const a = [Math.cos(phi), Math.sin(phi)], e = S(a[0] * 82, a[1] * 82);
+      let g = [hp[0], hp[1]], tip = [hp[0] + e[0], hp[1] + e[1]], hl = S(0, -15 - 2 * G);
+      if (B.on && st.action.wk > 0 && B.hit <= 0) { const pre = Math.min(1, B.coil * 1.4); g = mixP(gI, g, pre); tip = mixP(tipI, tip, pre); hl = mixP(lhI, hl, pre); }   // (a heavy cast draws the blade back from the walking stance by degrees)
+      if (B.rest > 0) { g = mixP(g, gI, B.rest); tip = mixP(tip, tipI, B.rest); hl = mixP(hl, lhI, B.rest); }
+      const g2 = [g[0] - (tip[0] - g[0]) / 8, g[1] - (tip[1] - g[1]) / 8], hot = B.on && B.hit > 0.45 && B.rest < 0.4;
+      if (hot) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; line(ctx, g[0], g[1], tip[0] + 22 * a[0], tip[1] + 22 * a[1], rgba('#ffffff', 0.7 * (1 - B.rest * 2.5)), 3); glow(ctx, tip[0], tip[1], 40, '#bfeaff', 0.6 * (1 - B.rest * 2.5)); ctx.restore(); }
       arm(ctx, L[0], L[1], hl[0], hl[1], 4); arm(ctx, R[0], R[1], g2[0], g2[1], -4);
+      bladeSmear(ctx, st, 'sw', blow && B.u > 0.3 && B.u < 0.9, g[0], g[1], tip[0], tip[1], '#dff6ff', { a: 0.34, min: 5 });
       swordOf([g[0] + (tip[0] - g[0]) * 0.1, g[1] + (tip[1] - g[1]) * 0.1], tip, 10); fist(ctx, hl[0], hl[1]); fist(ctx, g2[0], g2[1]);
     } else if (pose === 'sweep') {
       // Scabbard Sweep: the sheathed blade swung out to one side; the scabbard points to the side the floor is painted on
-      const side = pr.sweepL ? -1 : 1, al = side * (0.3 + 2.1 * clamp((windUp + 1.2) / 2.2, 0, 1));
+      // (drawn back further as he gathers; it is crossing the painted side the moment the cast ends, and the sweep runs on to the front before it settles)
+      const kw = B.on ? 1 + 0.12 * G - 0.5 * B.hit - 0.6 * foll : 1, al = side * (0.3 + 2.1 * clamp(kw, -0.1, 1.15));
       const hp = S(3, side * 15), a = [Math.cos(al), Math.sin(al)], e = S(a[0] * 64, a[1] * 64), tip = [hp[0] + e[0], hp[1] + e[1]];
-      if (windUp < 0.999) {   // the sweep's wind
+      if (blow && B.hit > 0.01 && B.rest < 0.6) {   // the sweep's wind
         ctx.save(); ctx.globalCompositeOperation = 'lighter';
         for (let i = 0; i < 3; i++) { ctx.beginPath(); const a0 = side * 2.45, r = 58 + i * 11; for (let j = 0; j <= 12; j++) { const aa = lerp(a0, al, j / 12), [px, py] = S(Math.cos(aa) * r, side * 15 + Math.sin(aa) * r); j ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.strokeStyle = rgba('#e8f8ff', 0.5 - i * 0.14); ctx.lineWidth = 3 - i * 0.7; ctx.stroke(); }
         ctx.restore();
@@ -344,6 +375,7 @@ const CV_ART = (() => {
       for (let i = 0; i < 6; i++) { const q = (t * 0.9 + i / 6) % 1; glow(ctx, 12 + q * 48, (hash(i, 6) - 0.5) * 18 * q, 12 + q * 22, '#dff2ff', 0.38 * (1 - q)); }
       ctx.restore();
     }
+    ctx.restore();   // (the blow's weight)
   }
 
   // ---------------------------------------------------------------------------------------------------------- the wisp

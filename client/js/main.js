@@ -36,7 +36,7 @@
   let scene = 'town', zoom = 1;
   // an Ultimate's screen moments (screenFlash, zoomPunch, hitStop... next to hurtVignette) and a fall noticed once
   const screenFx = { flash: null, dim: null };
-  let punch = null, vfxClock = 0, hitStopUntil = -9, wasDown = false;
+  let punch = null, vfxClock = 0, hitStopUntil = -9, wasDown = false, rimTopK = 0;   // (rimTopK: how much of the firmer telegraph pass is laid over the air effects, eased)
   const cam = { x: 0, y: 0 };
 
   initTown();
@@ -509,6 +509,7 @@
         } else {
           const e = enemyPos(); if (e) { tx = e.x; ty = e.y; } else { const m = mouseWorld(); tx = m.x; ty = m.y; }
         }
+        BossTells.noteCast(player.x, player.y, tx, ty, !!ab.ult, now);   // (where hero effects are about: the telegraph top pass is laid only near them)
         FX.cast(player, ab, tx, ty, { mine: true, tent: ally != null ? entById(ally) : null, step: ev.st });
         if (SH) { SH.castEnd(); SH.ability(player.cls.id, ab, true, null, Net.id); if (ab.ult) SH.vo('hero-ult', { classId: player.cls.id, ability: ab.id }); }
         Net.send(Object.assign({ t: 'cast', i, a: ab.fxId || ab.id, x: rnd(player.x), y: rnd(player.y), tx: rnd(tx), ty: rnd(ty), ally, s: scene === 'arena' ? 1 : 0, c: +rnow.toFixed(3) }, Number.isInteger(ev.st) ? { st: ev.st } : null));
@@ -618,6 +619,7 @@
       const e = entById(id);
       // (beside the body, right of it: clear of the name tag and the bar over their head)
       if (e && amount >= 1) FX.text(e.x, e.y - (e.lift || 0) - 18, '+' + rnd(amount), crit ? '#b6ff9a' : '#7dff8a', crit ? 17 : 14, 1, { kind: 'heal' });
+      if (e && crit && amount >= 1 && target !== 'party' && typeof HFX !== 'undefined' && HFX.healCrit && player.cls) { VFX.setScale(0.9); try { HFX.healCrit(e, player.cls, amount); } finally { VFX.setScale(1); } }   // (healer pass: your own critical heal draws a class-shaped mark on the ally, like the number it is yours alone)
       if (SH && id === Net.id && amount >= 1) SH.play('heal-land', { vol: 0.55, key: 'heal-land', minGap: 0.3 });
     }
   }
@@ -642,6 +644,16 @@
     return (ultCols[a] = `rgb(${up(n >> 16)},${up((n >> 8) & 255)},${up(n & 255)})`);
   }
 
+  // (hero pilot) your own crit, or a hit well above your usual, draws a small mark over the target in your class's material (ability-vfx.js HFX.crit); like the number it is yours alone
+  function heroHitMark(at, ev, sc) {
+    if (typeof HFX === 'undefined' || ev.dot || !(ev.amount > 0) || (ev.ab && ev.ab.ult)) return;
+    const big = !ev.auto && sc >= 1.35;
+    if (!ev.crit && !big) return;
+    const n = rnd(ev.amount), tier = ev.crit && n >= 800 ? 3 : (ev.crit && !ev.auto && (sc > 1.3 || n >= 400)) || (big && n >= 600) ? 2 : 1;
+    if (ev.auto) return;   // (autos are small and quick: the number alone)
+    VFX.setScale(0.9);
+    try { HFX.crit(at.x, at.y, player.cls, { tier }); } finally { VFX.setScale(1); }
+  }
   function onMyDamage(ev) {
     // auto-attacks and DoTs get small, muted numbers so the abilities stay the headline
     const sc = hitScale(ev);
@@ -669,6 +681,7 @@
       if (SH && !ev.auto && ev.amount > 0) SH.play('hit-confirm', { vol: ev.dot ? 0.18 : ev.crit ? 0.5 : 0.3, rate: clamp(1 / Math.sqrt(sc), 0.8, 1.1), at, key: ev.dot ? 'hitc-dot' : 'hitc', minGap: ev.dot ? 0.4 : 0.07 });
       if (ev.crit && !ev.dot && !ev.auto && sc > 1.15) { FX.addShake(2, true); hitStop(0.04); }
       FX.text(at.x, at.y - (tgt === 'boss' ? 70 : 34), txt, col, tgt === 'boss' ? big : big - 2, 0.9, tk);
+      heroHitMark(at, ev, sc);
       return;
     }
     const d = lastEnemy && lastEnemy.dummy;
@@ -676,6 +689,7 @@
     d.st.hit = now;
     const K = town.ken && town.ken.actor === actor ? town.ken : null, more = K && kenBrk(K) ? 1 + KENSEI.BREAK_DMG : 1;   // (a Break: the dummy takes 15% more, as a boss does)
     FX.text(d.x, d.y - 40, more > 1 ? rnd(ev.amount * more) + (ev.crit ? '!' : '') + (ev.positional ? ' ◆' : '') : txt, col, big, 0.9, tk);
+    heroHitMark(d, ev, sc);
     if (!town.meter || now - town.meter.last > 6) town.meter = { start: now, dmg: 0, last: now, gcd0: actor.kit.stats.gcdTime };
     town.meter.dmg += ev.amount * more; town.meter.last = now;
   }
@@ -1135,7 +1149,7 @@
     let a = Math.atan2(to.y - player.y, to.x - player.x);
     if (Math.hypot(to.x - player.x, to.y - player.y) < 4) a = player.angle;
     const dest = { x: player.x + Math.cos(a) * DASH_DIST, y: player.y + Math.sin(a) * DASH_DIST };
-    if (inArena()) { clampArena(dest); kitHoleClamp(player, dest, holeNear, !!actor.kit.def.blink); } else townClamp(dest, 40, player);   // (a dash stops at a hole's rim; a Blink only has to land clear)
+    if (inArena()) { clampArena(dest); if (ARENA.kind === 'union' && !actor.kit.def.blink) ARENA.reach(player, dest); kitHoleClamp(player, dest, holeNear, !!actor.kit.def.blink); } else townClamp(dest, 40, player);   // (a dash stops at a hole's rim; a Blink only has to land clear)
     // (a Reaper's Blink hears where it went from and to, and whether it crossed a telegraph: kits.js reapBlink)
     const through = inArena() && [0, 0.34, 0.67, 1].some(f => world.danger(actor, player.x + (dest.x - player.x) * f, player.y + (dest.y - player.y) * f, 99));
     if (!actor.useDash(now, { from: { x: player.x, y: player.y }, to: { x: dest.x, y: dest.y }, through })) return;
@@ -1174,6 +1188,9 @@
   RAID_DEFS.morrowoak = MORROWOAK;   // (set 3, Boss XI: morrowoak.js)
   RAID_DEFS.caelum = CAELUM;   // (set 3, Boss XII: caelum.js)
   if (typeof GARROW !== 'undefined') RAID_DEFS.garrow = GARROW;   // (set 6, Boss XIII, Season 2: garrow.js)
+  if (typeof VESPER !== 'undefined') RAID_DEFS.vesper = VESPER;   // (set 6, Boss XIV, Season 2: vesper.js)
+  if (typeof ORMUN !== 'undefined') RAID_DEFS.ormun = ORMUN;   // (set 6, Boss XV, Season 2: ormun.js)
+  if (typeof MAELIS !== 'undefined') RAID_DEFS.maelis = MAELIS;   // (set 6, Boss XVI, Season 2: maelis.js)
   RAID_DEFS.sovereign = SOVEREIGN;   // (the Ultimate: sovereign.js. Not on the Raid Board yet; window.__game.startRaid('normal', true, 'sovereign') starts it for testing)
   RAID_DEFS.hood = HOOD; RAID_DEFS.seraph = SERAPH;   // (the two gates of the fight found in town: hood.js, seraph.js)
   // an echo's flame leaves from the halo's real sigil (sovereign-art.js sigilPos, read off the boss as it is drawn)
@@ -2553,7 +2570,7 @@
       case 'howl': prop('howl', true, end + 0.3); break;
     }
     for (const [k, after] of castPose || []) prop(k, true, end + after);   // [boss presentation] (boss-vfx.js CAST_POSE)
-    if (msg.anim !== 'mince' && msg.anim !== 'boil') st.action = { type: 'attack', t0: end - 0.45, dur: 1.2 };
+    if (msg.anim !== 'mince' && msg.anim !== 'boil') st.action = { type: 'attack', t0: end - 0.45, dur: 1.2, w0: now, wk: typeof BOSS_WEIGHT !== 'undefined' ? BOSS_WEIGHT.cast(raid.def.id, msg.anim, msg.name, msg.dur) : 0 };   // (w0, wk: a heavy move gathers across the whole cast bar, boss-weight.js / draw-util.js windUp; the blow itself lands where it did)
   });
   Net.on('banim', msg => {
     if (!raid) return;
@@ -2579,6 +2596,9 @@
     else if (msg.name === 'ascendant') { raid.props.clAscendant = true; raid.propsUntil.clAscendant = now + msg.dur + 0.2; }   // (Caelum risen: caelum-art.js)
     else if (msg.name === 'pose' || msg.name === 'risen') { raid.props[msg.name] = true; raid.propsUntil[msg.name] = now + msg.dur + 0.2; }   // (Brannoc: arms up for the crowd; the Tidewrought risen: brannoc-art.js)
     else if (raid.def.id === 'garrow' && typeof GA_ART !== 'undefined' && GA_ART.POSES.includes(msg.name)) { const k = 'ga' + msg.name[0].toUpperCase() + msg.name.slice(1); raid.props[k] = true; raid.propsUntil[k] = now + msg.dur + 0.3; }   // (Garrow's poses that are not casts: garrow-art.js)
+    else if (raid.def.id === 'maelis' && typeof ML_VIEW !== 'undefined') ML_VIEW.banim(raid, msg, now, st);   // (her poses that are not casts, and when each swing lands: maelis-view.js)
+    else if (raid.def.id === 'vesper' && msg.name === 'cut' && msg.who !== 'g') { if (!(st.action && st.action.type === 'attack' && Math.abs(st.action.t0 - (now - 0.45)) < 0.3)) st.action = { type: 'attack', t0: now - 0.45, dur: 1.0 }; }   // (a dance cut of hers lands: her swing, vesper-art.js; the Glass Knight's cuts are its own)
+    else if (raid.def.id === 'vesper' && typeof VS_ART !== 'undefined' && VS_ART.POSES.includes(msg.name)) { const k = 'vs' + msg.name[0].toUpperCase() + msg.name.slice(1); raid.props[k] = true; raid.propsUntil[k] = now + msg.dur + 0.3; }   // (her poses that are not casts: vesper-art.js)
   });
   // --- adds, tethers, zones and Skitterra's legs (all host-driven)
   Net.on('adds', msg => {
@@ -2958,7 +2978,7 @@
 
   // ---------------------------------------------------------------- input
   const mouse = { x: 0, y: 0, rightDown: false, holdOff: false };
-  const mouseWorld = () => ({ x: mouse.x / zoom + cam.x, y: mouse.y / zoom + cam.y });
+  const mouseWorld = () => { const p = { x: mouse.x / zoom + cam.x, y: mouse.y / zoom + cam.y }; return scene === 'arena' && raid && raid.def.id === 'vesper' && typeof VS_VIEW !== 'undefined' ? VS_VIEW.unflip(raid, p, Net.id, now) : p; };   // (pulled through the glass, you are drawn in the glass and steer in the hall: vesper-view.js)
 
   function hoverTarget() {
     if (scene !== 'town') return null;
@@ -3609,6 +3629,8 @@
       raid.props.svForm = ({ forge: 'forge', crater: 'crater', square: 'square', night: 'square' })[raid.form] || 'hall';
       { const gu = ev.svgutter; raid.props.svGutter = gu ? Math.min(1, Math.max(0, (now - gu.start) / (gu.dur || 1))) : 0; }   // (the kill: roomev svgutter { dur } drains the fire 0..1, sovereign.js)
     }
+    if (raid.def.id === 'maelis' && typeof ML_VIEW !== 'undefined') ML_VIEW.frame(raid, now, entById);   // (her swings and look, the cast bar's dock: maelis-view.js)
+    if (raid.def.id === 'ormun' && typeof OR_VIEW !== 'undefined') OR_VIEW.frame(raid, now, entById);   // (his hands' aim, who carries a weight: ormun-view.js)
     if ((raid.def.id === 'hood' || raid.def.id === 'seraph') && typeof HD_FX !== 'undefined') HD_FX.props(raid, now);   // (the hands, the wings, the halo, the hover and the openings: hood-art.js reads them off raid.props)
     if (raid.def.id === 'grubnak') { raid.props.gorged =raid.form === 'gorged'; raid.props.gAge = raid.props.gorged ? now - (raid.formAt ?? now - 9) : 0; }   // (Hard: the swollen second form after Clean Plate; bosses.js draws it, gAge is the seconds since the swell)
     if (raid.def.id === 'volkar') {   // (Hard's second form, volkar-storm.js: the body cracking, then the Storm Heart under a face in the clouds)
@@ -3748,7 +3770,10 @@
     if (scene === 'arena') {
       // About 82% of the arena's height fits on screen. The camera leans toward you but stops where the rim
       // would leave empty space at the screen edge, so as much of the room as possible stays in view.
-      zoom = clamp(Math.min(W, H) / 960, 0.55, 1.1) * camOut() * (typeof SV_ROOMS !== 'undefined' ? SV_ROOMS.camZoom(now) : 1);  // the Ultimate's pull-back (svcam)
+      if (raid && raid.def.id === 'ormun' && typeof OR_VIEW !== 'undefined') { const v = OR_VIEW.camera(raid, now, W, H, bossPlateH(), dt, snap, camOut()); zoom = v.zoom; cam.x = v.x; cam.y = v.y; return; }   // (both pans, the beam and him whole, no leaning: ormun-view.js)
+      if (raid && raid.def.id === 'vesper' && typeof VS_VIEW !== 'undefined') { const v = VS_VIEW.camera(raid, now, W, H, bossPlateH(), dt, snap, camOut()); zoom = v.zoom; cam.x = v.x; cam.y = v.y; return; }   // (the hall and its glass whole, no leaning: vesper-view.js)
+      const mlv = raid && raid.def.id === 'maelis' && typeof ML_MOM !== 'undefined' ? ML_MOM.view(raid.room, now) : null;   // (her moments' pull-back and pull toward the sky: walls/maelis.js)
+      zoom = clamp(Math.min(W, H) / 960, 0.55, 1.1) * camOut() * (typeof SV_ROOMS !== 'undefined' ? SV_ROOMS.camZoom(now) : 1) * (mlv ? mlv.z : 1);  // the Ultimate's pull-back (svcam)
       const vw = W / zoom, vh = H / zoom;
       // lo / hi: screen margins (px) you're never pushed into, so you never stand under the ability bar or boss plate
       const lean = (p, v, size, lo, hi, edge, edgeTop = edge) => {
@@ -3762,7 +3787,8 @@
       // (far enough past the walls to show the scenery there: the stoves, shelves and pillars)
       // (at the top the camera can go as much again as the boss plate is tall, so the scenery there clears the plate)
       const plate = bossPlateH();
-      const tx = lean(player.x, vw, W, 60, 60, ARENA.hw + 100) - vw / 2, ty = lean(player.y, vh, H, 150, 190, ARENA.hh + 110, ARENA.hh + 110 + plate / zoom) - vh / 2;
+      let tx = lean(player.x, vw, W, 60, 60, ARENA.hw + 100) - vw / 2, ty = lean(player.y, vh, H, 150, 190, ARENA.hh + 110, ARENA.hh + 110 + plate / zoom) - vh / 2;
+      if (mlv && mlv.c > 0.004) { const mp = ML_MOM.pull(mlv, tx, ty, vw, vh, zoom, player.x, player.y); tx = mp.x; ty = mp.y; }
       const ka = 1 - Math.exp(-6 * dt);   // (frame-rate independent easing)
       cam.x += (tx - cam.x) * ka;
       cam.y += (ty - cam.y) * ka;
@@ -3856,7 +3882,7 @@
     ctx.restore();
   }
   // the dust a foot lifts in each room (stone grey when a room is not listed)
-  const ARENA_DUST = { grubnak: '#c8b690', hydra: '#8fa890', morrowoak: '#a4b07c', titan: '#e6eef6', corvane: '#e6eef6', brannoc: '#d8bc84', garrow: '#e6eef6' };
+  const ARENA_DUST = { grubnak: '#c8b690', hydra: '#8fa890', morrowoak: '#a4b07c', titan: '#e6eef6', corvane: '#e6eef6', brannoc: '#d8bc84', garrow: '#e6eef6', vesper: '#d4dce8', ormun: '#bdd0cc', maelis: '#c2cad8' };
   function drawEntity(e) {
     switch (e.kind) {
       case 'hero': drawHero(ctx, e.cls, e.x, e.y, e.angle, e.st, HERO_SCALE); break;
@@ -4069,7 +4095,10 @@
   }
   function render() {
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    if (scene === 'arena' && raid) renderArena(); else renderTown();
+    if (typeof VS_VIEW !== 'undefined' && !(scene === 'arena' && raid && raid.def.id === 'vesper')) VS_VIEW.release();   // (the cast bar docked for her fight goes back: vesper-view.js)
+    if (typeof OR_VIEW !== 'undefined' && !(scene === 'arena' && raid && raid.def.id === 'ormun')) OR_VIEW.release();   // (the cast bar docked for his fight goes back: ormun-view.js)
+    if (typeof ML_VIEW !== 'undefined' && !(scene === 'arena' && raid && raid.def.id === 'maelis')) ML_VIEW.release();   // (the cast bar docked for her fight goes back: maelis-view.js)
+    if (scene === 'arena' && raid) { try { renderArena(); } finally { if (typeof VS_VIEW !== 'undefined') VS_VIEW.flipEnd(); } } else renderTown();   // (flipEnd: the heroes the wall pulled through the glass are put back, vesper-view.js)
   }
 
   let lineupLabelAt = null;   // (the last frame the deck heroes' names were eased)
@@ -4158,7 +4187,7 @@
   // from his silhouette, instead of a CSS filter with a drop-shadow on a canvas up to ~1320 px a side every frame.
 
   function renderArena() {
-    ctx.fillStyle = { volkar: '#080b11', hollowking: '#0a0c0e', wyrm: '#0b0706', titan: '#070d14' }[raid.def.id] || (raid.def.id === 'hydra' ? '#04100c' : raid.def.id === 'archmage' ? '#04141a' : raid.def.id === 'corvane' ? '#070a14' : raid.def.id === 'brannoc' ? '#04121a' : raid.def.id === 'morrowoak' ? '#07080a' : raid.def.id === 'caelum' ? '#05060e' : raid.def.id === 'garrow' ? '#050912' : '#120d0a'); ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = { volkar: '#080b11', hollowking: '#0a0c0e', wyrm: '#0b0706', titan: '#070d14' }[raid.def.id] || (raid.def.id === 'hydra' ? '#04100c' : raid.def.id === 'archmage' ? '#04141a' : raid.def.id === 'corvane' ? '#070a14' : raid.def.id === 'brannoc' ? '#04121a' : raid.def.id === 'morrowoak' ? '#07080a' : raid.def.id === 'caelum' ? '#05060e' : raid.def.id === 'garrow' ? '#050912' : raid.def.id === 'vesper' ? '#04060b' : raid.def.id === 'ormun' ? '#03070e' : raid.def.id === 'maelis' ? '#02040a' : '#120d0a'); ctx.fillRect(0, 0, W, H);
     const [sx, sy] = shakeOffset(), px = DPR * zoom;
     ctx.scale(zoom, zoom);
     // (snapped to device pixels, like the town's camera, so a resting or shaking view never shimmers half a pixel)
@@ -4230,7 +4259,7 @@
     const knights = [...raid.knights.values()].map(k => ({ kind: 'knight', y: k.y, k }));
     const lants = raid.lanterns.filter(l => l.carrier == null).map(l => ({ kind: 'lantern', y: l.y, l }));
     const roomProps = raid.room.props.map(pr => ({ kind: 'prop', y: pr.y + (pr.shape === 'rect' ? 0 : pr.r * 0.4), pr }));
-    const all = [...ents, ...(raid.pvp ? [] : [bossEnt]), ...adds, ...husks, ...posts, ...knights, ...lants, ...roomProps, ...Stagecraft.entities(now, scEnv), ...Kennel.entities(now, scEnv)].sort((a, b) => a.y - b.y);
+    const all = [...ents, ...(raid.def.id === 'vesper' && typeof VS_VIEW !== 'undefined' ? VS_VIEW.entities(ents, bd, now, { raid, me: player, meId: Net.id, scale: heroScale(), color: partyColor }) : []), ...(raid.pvp ? [] : [bossEnt]), ...adds, ...husks, ...posts, ...knights, ...lants, ...roomProps, ...Stagecraft.entities(now, scEnv), ...Kennel.entities(now, scEnv)].sort((a, b) => a.y - b.y);
     const bossDef = BOSSES.find(x => x.id === raid.def.id) || (raid.def.id === ULTIMATE_BOSS.id ? ULTIMATE_BOSS : undefined) || SECRET_BOSSES.find(x => x.id === raid.def.id);   // (the Ultimate and the two fights found in town are not in BOSSES: data.js)
     for (const e of all) {
       if (e === bossEnt) {
@@ -4277,15 +4306,6 @@
       if (!on && st.wrapAt) { st.wrapAt = 0; if (e && st.alive) BOSS_VFX.silkFree(e); }
       if (on && e) ArenaView.cocoon(ctx, e.x, e.y - (e.lift || 0), now - st.wrapAt, now);
     }
-    if (raid.hmarks.size) {
-      const seen = new Map();   // (two marks on one hero sit side by side)
-      for (const [k, m] of raid.hmarks) {
-        if (now >= m.end) { raid.hmarks.delete(k); continue; }
-        const e = entById(m.pid), st = raid.party.get(m.pid); if (!e || (st && !st.alive)) continue;
-        const i = seen.get(m.pid) || 0; seen.set(m.pid, i + 1);
-        ArenaView.headMark(ctx, e.x + i * 34, e.y - (e.lift || 0) - 96 * heroScale() / HERO_SCALE, m, m.end === Infinity ? 1 : (m.end - now) / Math.max(0.1, m.end - m.start), now);
-      }
-    }
     for (const [id, d] of raid.doom) {
       const e = entById(id); if (!e) continue;
       ArenaView.doomMark(ctx, e.x, e.y - (e.lift || 0) - 92 * heroScale() / HERO_SCALE, (d.end - now) / Math.max(0.1, d.end - d.start), now);
@@ -4301,6 +4321,18 @@
     Lamps.drawOver(ctx, now, { entById, me: Net.id, party: units });
     drawScreenFx('dim');
     VFX.draw(ctx, 'air');
+    // what the fight asks of the party is the last thing under the numbers: the telegraph rims (with a faint wash and an inner edge band) and the head marks
+    // are laid over the air effects, so no stack of ability light, Ultimates or props can cover a telegraph's edge or a mark (the rule: telegraphs are never hidden)
+    { const lit = VFX.count + 3 * VFX.effects, aim = Math.min(1, lit / 24); rimTopK += (aim - rimTopK) * (aim > rimTopK ? 0.6 : 0.1); if (lit === 0 && rimTopK < 0.02) rimTopK = 0; BossTells.rimsTop(ctx, raid.tgs, now, tellEnv, rimTopK); }   // (nothing is laid while no effect is up)
+    if (raid.hmarks.size) {   // (head marks: drawn here, over the air effects, not with the units)
+      const seen = new Map();   // (two marks on one hero sit side by side)
+      for (const [k, m] of raid.hmarks) {
+        if (now >= m.end) { raid.hmarks.delete(k); continue; }
+        const e = entById(m.pid), st = raid.party.get(m.pid); if (!e || (st && !st.alive)) continue;
+        const i = seen.get(m.pid) || 0; seen.set(m.pid, i + 1);
+        ArenaView.headMark(ctx, e.x + i * 34, e.y - (e.lift || 0) - 96 * heroScale() / HERO_SCALE, m, m.end === Infinity ? 1 : (m.end - now) / Math.max(0.1, m.end - m.start), now);
+      }
+    }
     // add health bars
     for (const a of raid.adds.values()) {
       const w = 46, f = a.mx ? a.hp / a.mx : 0, y = a.y - 40;
@@ -4417,10 +4449,11 @@
     const a = Math.max(age > 0.4 ? 0 : raid.hurtK * (1 - age / 0.4) * 0.55, low);
     if (a < 0.004) return;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    if (hurtFor !== W + 'x' + H) {
-      hurtFor = W + 'x' + H;
+    const red = '200,20,10';   // (the same red in every room: being hit and being low on health are the player's own signals, not part of a boss's palette)
+    if (hurtFor !== W + 'x' + H + red) {
+      hurtFor = W + 'x' + H + red;
       hurtGrad = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.hypot(W, H) * 0.55);
-      hurtGrad.addColorStop(0, 'rgba(200,20,10,0)'); hurtGrad.addColorStop(1, 'rgba(200,20,10,1)');
+      hurtGrad.addColorStop(0, 'rgba(' + red + ',0)'); hurtGrad.addColorStop(1, 'rgba(' + red + ',1)');
     }
     ctx.globalAlpha = a; ctx.fillStyle = hurtGrad; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
   }
@@ -5306,6 +5339,7 @@
     if (!ab) return;
     let tx = msg.tx, ty = msg.ty, tent = null;
     if (msg.ally != null) { tent = entById(msg.ally); if (tent) { tx = tent.x; ty = tent.y; } }
+    BossTells.noteCast(e.x, e.y, tx, ty, !!ab.ult, now);
     FX.cast(e, ab, tx, ty, { tent, step: msg.st });   // (st: its combo step, engine.js fxStep)
     if (!e.bot && ab.ult && SH && inArena()) SH.vo('bot-bark', { kind: 'ult', classId: e.cls.id, name: e.name, ally: true });   // (a teammate's Ultimate: their class's shout, as a small caption)
     if (SH) SH.ability(e.cls.id, ab, false, e, msg.id);

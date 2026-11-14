@@ -1370,6 +1370,312 @@ const BotAI = {
     }
     return r;
   },
+  // Vesper (vesper.js): every hero has a twin in the glass, and the sim stores every danger in hall coordinates (the tag's room letter says where it is
+  // painted), so the ordinary read of the telegraphs is right as it stands. `r` is what that read chose. What it cannot see:
+  //   the wall: two heroes are pulled through the glass (view.room.flipped()); each blue soak (vbSoak, wants two) is filled by a body at the soak and by a
+  //     pulled-through body at the soak's flipped point (view.room.flipPoint). Anyone who is not a bot holds the soak nearest where they stand (their test
+  //     point), and the bots, in id order, fill whatever room is left, nearest first, so the soaks are filled round wherever people actually go.
+  //   a third body (Hand Mirror, Hard), a lagging twin (Lagging Glass, Extreme: the twin stands where the hero was 1.5 s ago) and a wrong-hand twin (Wrong
+  //     Hand, Extreme: it stands at (-x, -y)): each hero's several points are scored against the telegraphs that strike them, and a lagging one counts the
+  //     place it was 1.5 s ago for whatever lands inside that time (it has to be clear of those early, and then it can hold).
+  vesperRule(bot, view, r) {
+    const rm = view.room;
+    if (!rm || !rm.flipPoint) return r;
+    if (rm.wall) return this.vsSoak(bot, view) || r;
+    return this.vsTwin(bot, view, r);
+  },
+  vsSoak(bot, view) {
+    const rm = view.room, soaks = view.mechs.filter(m => m.tag === 'vbSoak' && m.resolveAt - view.t > -0.2).sort((a, b) => a.id - b.id);
+    if (!soaks.length) return null;
+    const fl = rm.flipped(), al = view.players.filter(p => p.alive);
+    const tp = p => (fl.includes(p.id) ? rm.flipPoint(p.x, p.y) : { x: p.x, y: p.y });
+    const take = soaks.map(() => 0);
+    const nearest = (q, ok) => { let bi = -1, bd = Infinity; soaks.forEach((s, i) => { if (!ok(i)) return; const d = hypot2(s.shape.x - q.x, s.shape.y - q.y); if (d < bd) { bd = d; bi = i; } }); return bi; };
+    for (const h of al.filter(p => !p.bot)) { const q = tp(h), i = nearest(q, () => true); if (i >= 0 && hypot2(soaks[i].shape.x - q.x, soaks[i].shape.y - q.y) < 330) take[i]++; }
+    for (const b of al.filter(p => p.bot).sort((a, c) => a.id - c.id)) {
+      let i = nearest(tp(b), j => take[j] < 2); if (i < 0) i = nearest(tp(b), () => true);
+      take[i]++;
+      if (b.id === bot.id) { const s = soaks[i]; return fl.includes(bot.id) ? rm.flipPoint(s.shape.x, s.shape.y) : { x: s.shape.x, y: s.shape.y }; }
+    }
+    return null;
+  },
+  vsTwin(bot, view, r) {
+    const rm = view.room, t = view.t;
+    const mk = key => (view.marks || []).find(m => m.pid === bot.id && m.key === key && m.end > t);
+    const lagM = mk('vslag'), wrongM = mk('vswrong'), hands = rm.hands ? rm.hands() : [];
+    if (!lagM && !wrongM && !hands.length) return r;
+    if (!view.mechs.some(m => /^v[hgb]/.test(m.tag || '') && m.type !== 'raidwide' && m.resolveAt - t < 6)) return r;
+    const tr = bot.vsTr || (bot.vsTr = []);
+    if (!tr.length || tr[tr.length - 1].t !== t) tr.push({ t, x: bot.x, y: bot.y });
+    while (tr.length > 1 && tr[0].t < t - 2.6) tr.shift();
+    let lagAt = tr[0]; for (let i = tr.length - 1; i >= 0; i--) if (tr[i].t <= t - 1.5) { lagAt = tr[i]; break; }
+    const sub = f => Object.assign({}, view, { mechs: view.mechs.filter(f) });
+    const noG = sub(m => !/^vg/.test(m.tag || '')), gSoon = sub(m => /^v[gb]/.test(m.tag || '') && m.resolveAt - t < 1.6), gLater = sub(m => /^v[gb]/.test(m.tag || '') && m.resolveAt - t >= 1.6), gAll = sub(m => /^v[gb]/.test(m.tag || ''));
+    const wallPen = (x, y) => { const w = ARENA.sd(x, y) + 45; return w > 0 ? 8000 + w * 100 : 0; };
+    const dng = (vw, x, y) => Math.max(0, this.danger(bot, x, y, vw) - wallPen(x, y));
+    // (a third body alone: the ordinary read stands unless the spot it chose, or this one, has a third body in something that lands)
+    if (!lagM && !wrongM) {
+      const q1 = rm.third(r.x, r.y), q0 = rm.third(bot.x, bot.y);
+      if (!(q1 && dng(view, q1.x, q1.y) > 300) && !(q0 && dng(view, q0.x, q0.y) > 300)) return r;
+    }
+    const home = this.home(bot, view);
+    const score = c => {
+      let s;
+      if (lagM || wrongM) {
+        s = this.danger(bot, c.x, c.y, noG);
+        if (lagM) s += dng(gSoon, lagAt.x, lagAt.y) + dng(gLater, c.x, c.y); else s += dng(gAll, -c.x, -c.y);
+      } else s = this.danger(bot, c.x, c.y, view);
+      if (hands.length) { const q = rm.third(c.x, c.y); if (q) s += dng(view, q.x, q.y); }
+      return s + hypot2(c.x - bot.x, c.y - bot.y) * 0.6 + hypot2(c.x - home.x, c.y - home.y) * 1.2;
+    };
+    const cands = [{ x: bot.x, y: bot.y }, home];
+    for (const c of [{ x: bot.x, y: bot.y }, home]) for (let i = 0; i < BOT_RING.length; i += 2) cands.push(ARENA.clamp({ x: c.x + BOT_RING[i], y: c.y + BOT_RING[i + 1] }, 50));
+    let best = r, bs = score(r);
+    for (const c of cands) { const sc = score(c); if (sc < bs) { bs = sc; best = c; } }
+    return best;
+  },
+  // Ormun (ormun.js): everything weighs, and a judgement is settled by the count on each pan when its bar ends. `r` is what the ordinary read chose.
+  //   the script's solver (view.room.plan) gives the cheapest way for the living to stand and carry so that nobody is struck; this bot walks its part of it:
+  //   to the weight it should lift (and stands on it until it is up), or to its place on a pan or the bridge (over the bridge when it must cross).
+  //   Before a Tip the plan is only who lifts what; the throw does the crossing. With no judgement near a bot that carries a weight sets it down, and
+  //   nobody stands on a weight that is not theirs to lift (a hero who stays on one lifts it). A human-like bot starts counting a moment later.
+  //   The solver counts what a judgement will find: cracked weights as half (Hollow Weight), a hero weighing 2, 0 or minus one (Burden, Buoy, Buoyed), the water of The Tide Weighs Too
+  //   as it stands, and Exact Measure's lit pan and number (it reads them from the judgement running); a Double Judgement is two answers in turn, and each is read when its own bar
+  //   begins. Once the strike is fixed a bot that is clear of it holds its place. Teach the bots before softening a move: nothing in the fight was made easier for them.
+  ormunRule(bot, view, r) {
+    const d = this.ormunPlan(bot, view, r);
+    return d ? this.ormunHand(bot, view, d) : d;
+  },
+  // The Heavy Hand's cone (a buster aimed at the tank) cleaves every other hero in it for most of a hero's health. Whoever the answer above leaves in it steps out to the
+  // nearest place that is clear of it, on the pan the answer meant (a melee hero keeps to where the boss is still in reach), without standing on a weight at rest.
+  // (The ordinary read keeps 45 from every wall and may find no way out of a cone that sweeps a pan's inner edge.)
+  ormunHand(bot, view, d) {
+    const rm = view.room, t = view.t, me = bot.id;
+    if (!rm || !rm.panOf) return d;
+    const cones = view.mechs.filter(m => m.type === 'buster' && m.shape.kind === 'cone' && (m.target ?? m.follow) !== me && m.resolveAt - t < 4.6 && m.resolveAt - t > -0.1);
+    if (!cones.length) return d;
+    const bad = (x, y) => cones.some(m => SHAPES.contains(m.shape, x, y, 36));
+    if (!bad(d.x, d.y) && !bad(bot.x, bot.y)) return d;
+    const want = rm.bridgeOn ? rm.panOf(d.x, d.y) : rm.panOf(bot.x, bot.y), melee = this.isMelee(bot.cls), rest = rm.weights.filter(w => !w.carrier), b = view.boss;
+    let best = null, bs = Infinity;
+    for (let x = -680; x <= 680; x += 20) for (let y = -240; y <= 380; y += 20) {
+      if (!ARENA.contains(x, y, 16) || bad(x, y) || rm.panOf(x, y) !== want || rest.some(w => hypot2(x - w.x, y - w.y) < 48)) continue;
+      const sc = hypot2(x - bot.x, y - bot.y) + hypot2(x - d.x, y - d.y) * 0.5 + (melee && hypot2(x - b.x, y - b.y) > 250 ? 300 : 0);
+      if (sc < bs) { bs = sc; best = { x, y }; }
+    }
+    return best || d;
+  },
+  ormunPlan(bot, view, r) {
+    const rm = view.room;
+    if (!rm || !rm.plan || !rm.agenda) return r;
+    const t = view.t, me = bot.id;
+    const v2 = Object.assign({}, view, { mechs: view.mechs.filter(m => m.tag !== 'ormJudge') });
+    // (anything else landing on this spot comes first: the ordinary read, without the judgement's own wash)
+    // (the ordinary read also keeps 45 from every wall, which is no use on a span 100 wide: only a telegraph's own area counts here)
+    if (v2.mechs.some(m => m.resolveAt - t < 3 && m.type !== 'raidwide' && m.type !== 'safe' && m.type !== 'drop' && !(m.type === 'buster' && (m.target ?? m.follow) !== me) && (m.follow == null || m.follow === me || m.type === 'spread') && SHAPES.contains(m.shape, bot.x, bot.y, 24))) return this.think(bot, v2);
+    const mine = rm.carryOf(me), ag = rm.agenda();
+    const rest = rm.weights.filter(w => !w.carrier);
+    const away = p => {   // (a spot not within reach of a lift; and, between counts, a hero keeps to their own pan: what the ordinary read wants across the boss waits for the count that sends them there)
+      let q = p || { x: bot.x, y: bot.y };
+      const mp = rm.panOf(bot.x, bot.y);
+      if ((mp === 'L' || mp === 'R') && rm.panOf(q.x, q.y) !== mp) { const cx = mp === 'L' ? -380 : 380, vx = q.x - cx, vy = q.y - 60, vl = hypot2(vx, vy) || 1; if (vl > 262) q = { x: cx + vx / vl * 262, y: 60 + vy / vl * 262 }; }
+      for (const w of rest) { const d = hypot2(q.x - w.x, q.y - w.y); if (d < 46) { const u = d > 0.5 ? 1 / d : 0; q = ARENA.clamp({ x: w.x + (d > 0.5 ? (q.x - w.x) * u : 1) * 52, y: w.y + (d > 0.5 ? (q.y - w.y) * u : 0) * 52 }, 14); } }
+      // a Driftblade only builds Drift while it moves, and a Passing Strike is running into his body: his hit circle (190 and a step) overlaps each pan's inner edge about 58 deep, so where it
+      // would stand still it zigzags along that edge, a leg in through it and a leg out again, each leg walked to its end (a Passing Strike every time it comes in, and an Orbit if it has one, circling him close)
+      if (bot.cls.id === 'driftblade' && (mp === 'L' || mp === 'R') && hypot2(q.x - bot.x, q.y - bot.y) < 50) {
+        const bb = view.boss, body = FIGHT.BOSS_R + 12, inN = hypot2(bot.x - bb.x, bot.y - bb.y) <= body, ax = Math.atan2(60 - bb.y, (mp === 'L' ? -380 : 380) - bb.x), dir = bot.ormDir || 1;
+        const turn = c => { const d = Math.atan2(c.y - bb.y, c.x - bb.x) - Math.atan2(bot.y - bb.y, bot.x - bb.x); return d - Math.round(d / (Math.PI * 2)) * Math.PI * 2; };
+        const lg = bot.ormLeg;
+        if (lg && view.t < lg.until && hypot2(lg.x - bot.x, lg.y - bot.y) > 14 && rm.panOf(lg.x, lg.y) === mp && !rest.some(w => hypot2(lg.x - w.x, lg.y - w.y) < 52) && this.danger(bot, lg.x, lg.y, view) < 400) q = lg;   // (a leg is walked to its end before the next turns it back)
+        else {
+        let best = null, bs = Infinity;
+        for (const rr of inN ? [body + 36, body + 50] : [body - 10, body - 24]) for (let i = -4; i <= 4; i++) {
+          const c = { x: bb.x + Math.cos(ax + i * 0.13) * rr, y: bb.y + Math.sin(ax + i * 0.13) * rr };
+          if (!ARENA.contains(c.x, c.y, 22) || rm.panOf(c.x, c.y) !== mp || rest.some(w => hypot2(c.x - w.x, c.y - w.y) < 52)) continue;
+          const sc = Math.abs(hypot2(c.x - bot.x, c.y - bot.y) - 150) + (Math.sign(turn(c)) * dir < 0 ? 40 : 0);   // (a leg of about 150 px, on the way it was going)
+          if (sc < bs && this.danger(bot, c.x, c.y, view) < 400) { bs = sc; best = c; }
+        }
+        if (best) { bot.ormDir = Math.sign(turn(best)) || dir; best.until = view.t + 1.6; bot.ormLeg = best; q = best; }
+        }
+      }
+      return q;
+    };
+    const go = to => {   // (walk to a point, over the bridge when it is on the other pan)
+      const pf = rm.panOf(bot.x, bot.y), pt = rm.panOf(to.x, to.y);
+      if (rm.bridgeOn && pf !== 'B' && pt !== 'B' && pf !== pt) return { x: (pf === 'L' ? -1 : 1) * 40, y: 60 };
+      if (rm.bridgeOn && pf === 'B' && pt !== 'B' && Math.abs(bot.x) < 95) return { x: (pt === 'L' ? -1 : 1) * 100, y: 60 };
+      return { x: to.x, y: to.y };
+    };
+    // nothing to count yet (or a weight in hand and time to spare): put it down in the nearest empty cradle, else keep clear of the weights
+    if (!ag || (!ag.cast && ag.startIn > 5)) {
+      if (mine && (!ag || ag.startIn > 9)) {
+        let best = null, bd = Infinity;
+        for (const c of rm.cradles) { if (rest.some(w => w.idx === c.idx)) continue; const d = hypot2(c.x - bot.x, c.y - bot.y) + (rm.panOf(c.x, c.y) === rm.panOf(bot.x, bot.y) ? 0 : 400); if (d < bd) { bd = d; best = c; } }
+        if (best) return go(best);
+      }
+      return away(r);
+    }
+    // a human-like bot takes a moment to count, and now and then starts late
+    const h = bot.human, key = ag.rule + ':' + Math.round((t + ag.left) / 4);
+    if (!bot.ormAg || bot.ormAg.key !== key) {
+      const react = h ? BotHuman.rand(h, h.p.react) + 0.9 : 0, late = h && h.rng() < h.p.misjudge ? Math.max(0, ag.left - 2.6) : 0;
+      bot.ormAg = { key, at: t + Math.max(react, late) };
+    }
+    if (t < bot.ormAg.at) return away(r);
+    // the strike is fixed for the last half second: whoever is clear of it stays clear, whatever the count does now
+    const dm = rm.doom;
+    if (dm && dm.locked && dm.rule !== 'under' && !dm.regions.includes(rm.panOf(bot.x, bot.y))) return { x: bot.x, y: bot.y };
+    const pl = rm.plan(ag.rule, { tip: ag.tip && !rm.bridgeOn, left: ag.cast ? ag.left - 0.5 : ag.left - 0.5 });
+    const a = pl && pl.assign[me];
+    if (!a) return away(r);
+    if (a.lift != null && !mine && a.cradle) { const lw = rest.find(w => w.id === a.lift); if (lw && lw.lock === me && hypot2(bot.x - lw.x, bot.y - lw.y) < 58) { const pc = lw.x < 0 ? -380 : 380, vx = pc - lw.x, vy = 60 - lw.y, vl = hypot2(vx, vy) || 1; return go({ x: lw.x + vx / vl * 80, y: lw.y + vy / vl * 80 }); } return go(a.cradle); }   // (a hero who has just set a weight down is held off it until they have stepped away from it: the answer that has them lift it again starts with that step)
+    if (ag.tip && !rm.bridgeOn && !ag.cast) return away(r);   // (stand where you are: the Tip does the crossing)
+    if (rm.panOf(bot.x, bot.y) === a.to) return away({ x: bot.x, y: bot.y });
+    return go(a.spot);
+  },
+  // Maelis Orne (maelis.js): the floor is the moon. The ordinary read sees every painted cut (SHAPES 'lune'), but a gibbous leaves only a sliver at the far edge, farther than its
+  // candidate spots reach, and a dance's later cuts are not painted yet. `r` is what the ordinary read chose. This rule adds:
+  //   Moonwell: shafts that want two heroes each (a person holds the nearest shaft to where they stand, the bots in id order fill the room left, nearest first)
+  //   a run to write (prey / fresh: the Hunt's Pass and the Hound's Return): the longest clean line away from the others, inside the dark of the cut she will make as she passes
+  //   a moonlet in hand: set it down on the dark side of the dance that follows (the crown shows its turn), apart from the other carrier
+  //   a number in the wall (mlstep): stand clear of the pool of the last light, off the line to it from her, where the dash will lock
+  //   any cut near: a wide search of the floor for the ground that is dark for the cut on the floor and the cuts still to come, with the walk and the way there priced
+  maelisRule(bot, view, r) {
+    const rm = view.room;
+    if (!rm || !rm.crown) return r;
+    const t = view.t, mk = key => (view.marks || []).find(m => m.pid === bot.id && m.key === key && m.end > t);
+    const wells = view.mechs.filter(m => m.tag === 'mlWell' && m.resolveAt - t > -0.2);
+    if (wells.length) return this.mlSoak(bot, view, wells) || r;
+    const prey = mk('mlprey') || mk('mlfresh') || mk('mlhowl2');
+    if (prey) return this.mlWrite(bot, view, prey, r);
+    if (mk('mlmoon')) return this.mlMoonlet(bot, view) || r;
+    if (mk('mlmoonfall')) return this.mlFall(bot, view) || r;
+    if (mk('mlstep')) return this.mlStep(bot, view) || r;
+    if (mk('mleye')) return this.mlTouched(bot, view, r);
+    return this.mlLune(bot, view, r);
+  },
+  mlSoak(bot, view, soaks0) {
+    const soaks = soaks0.slice().sort((a, b) => a.id - b.id), al = view.players.filter(p => p.alive), take = soaks.map(() => 0);
+    if (!soaks.length) return null;
+    const nearest = (q, ok) => { let bi = -1, bd = Infinity; soaks.forEach((s, i) => { if (!ok(i)) return; const d = hypot2(s.shape.x - q.x, s.shape.y - q.y); if (d < bd) { bd = d; bi = i; } }); return bi; };
+    for (const h of al.filter(p => !p.bot)) { const i = nearest(h, () => true); if (i >= 0 && hypot2(soaks[i].shape.x - h.x, soaks[i].shape.y - h.y) < 330) take[i]++; }
+    for (const b of al.filter(p => p.bot).sort((a, c) => a.id - c.id)) {
+      let i = nearest(b, j => take[j] < 2); if (i < 0) i = nearest(b, () => true);
+      take[i]++;
+      if (b.id === bot.id) return { x: soaks[i].shape.x, y: soaks[i].shape.y };
+    }
+    return null;
+  },
+  // the longest clean line away from everyone, in the dark of the cut she will make as she passes (the crown shows it; the script lists it as pending)
+  mlWrite(bot, view, prey, r) {
+    const t = view.t, rm = view.room;
+    if (this.danger(bot, bot.x, bot.y, view) >= 400) return r;
+    const g = bot.mlGoal && bot.mlGoal.end === prey.end ? bot.mlGoal : null;
+    if (g && hypot2(g.x - bot.x, g.y - bot.y) > 24) return { x: g.x, y: g.y };
+    const want = Math.max(160, Math.min(640, (prey.end - t) * 225)), others = view.players.filter(p => p.alive && p.id !== bot.id);
+    const cuts = (rm.pending ? rm.pending() : []).filter(e => e.shape && e.at - t < 9);
+    const lit = (x, y) => cuts.some(e => SHAPES.contains(e.shape, x, y, 40));
+    let best = null, bs = -Infinity;
+    for (let k = 0; k < 16; k++) {
+      const a = k * Math.PI / 8;
+      if (g && Math.cos(a - g.a) < -0.2) continue;
+      const c = ARENA.clamp({ x: bot.x + Math.cos(a) * want, y: bot.y + Math.sin(a) * want }, 70), len = hypot2(c.x - bot.x, c.y - bot.y);
+      if (len < 60) continue;
+      let near = Infinity;
+      for (const o of others) near = Math.min(near, PROPS.segDist(o.x, o.y, bot.x, bot.y, c.x, c.y));
+      const mid = { x: (bot.x + c.x) / 2, y: (bot.y + c.y) / 2 };
+      const sc = len + Math.min(near, 260) * 1.2 - this.danger(bot, c.x, c.y, view) * 0.5 - (g ? (1 - Math.cos(a - g.a)) * 120 : 0) - (lit(c.x, c.y) ? 5000 : 0) - (lit(mid.x, mid.y) ? 1500 : 0);
+      if (sc > bs) { bs = sc; best = { x: c.x, y: c.y, a, end: prey.end }; }
+    }
+    if (best) { bot.mlGoal = best; return { x: best.x, y: best.y }; }
+    return r;
+  },
+  // the dark side of the dance the crown shows: the middle of the dark sliver, a moonlet to either side of it (the lower id of two carriers takes the left)
+  mlMoonlet(bot, view) {
+    const rm = view.room, cr = rm.crown(), t = view.t;
+    const carriers = (view.marks || []).filter(m => m.key === 'mlmoon' && m.end > t).map(m => m.pid).sort((a, b) => a - b);
+    const mine = carriers.indexOf(bot.id), side = carriers.length < 2 ? 1 : mine === 0 ? 1 : -1;
+    const dir = cr.turn + Math.PI, c = Math.cos(dir), s = Math.sin(dir), u = 400, v = 230 * side;
+    return ARENA.clamp({ x: c * u - s * v, y: s * u + c * v }, 60);
+  },
+  // the marked hero's dash line locks on where they stand: be far from the pool of the last light, and not on the line from her to it
+  mlStep(bot, view) {
+    const t = view.t, b = view.boss, pool = view.mechs.filter(m => m.tag === 'mlPool' && m.resolveAt > t).sort((a, c) => a.resolveAt - c.resolveAt)[0];
+    if (!pool) return null;
+    const P = pool.shape, ab = Math.atan2(P.y - b.y, P.x - b.x);
+    let best = null, bd = Infinity;
+    for (let i = 0; i < 24; i++) for (const rr of [300, 380, 440]) {
+      const a = i * Math.PI / 12, c = { x: Math.cos(a) * rr, y: Math.sin(a) * rr };
+      let da = Math.abs(Math.atan2(c.y - b.y, c.x - b.x) - ab); if (da > Math.PI) da = Math.PI * 2 - da;
+      if (da < 1.2 || hypot2(c.x - P.x, c.y - P.y) < P.r + 260 || hypot2(c.x - b.x, c.y - b.y) < 220) continue;
+      const d = hypot2(c.x - bot.x, c.y - bot.y) + this.danger(bot, c.x, c.y, view) * 0.2;
+      if (d < bd) { bd = d; best = c; }
+    }
+    return best;
+  },
+  // Hard, Moonfall: a moonlet falls on this hero and stays where it lands (it bursts when the light returns): set it down far from the others
+  mlFall(bot, view) {
+    const others = view.players.filter(p => p.alive && p.id !== bot.id);
+    let best = null, bs = -Infinity;
+    for (let i = 0; i < 16; i++) {
+      const a = i * Math.PI / 8, c = ARENA.clamp({ x: Math.cos(a) * 340, y: Math.sin(a) * 340 }, 70);
+      let near = Infinity;
+      for (const o of others) near = Math.min(near, hypot2(o.x - c.x, o.y - c.y));
+      const sc = Math.min(near, 420) - this.danger(bot, c.x, c.y, view) * 0.5 - hypot2(c.x - bot.x, c.y - bot.y) * 0.25;
+      if (sc > bs) { bs = sc; best = c; }
+    }
+    return best;
+  },
+  // Extreme, Moon-Touched: light does not harm this hero and darkness does, so every cut still to land (the painted ones and the dance's later ones) is ground to stand IN. The ordinary read
+  // sees the red cuts as danger, so it is given the floor without them.
+  mlTouched(bot, view, r) {
+    const rm = view.room, t = view.t, isCut = m => m.type === 'aoe' && m.tag && /^ml(Crescent|Half|Gibbous|UCrescent|UHalf|Twin|Annular|Pass|Lib)/.test(m.tag);
+    const pend = (rm.pending ? rm.pending() : []).filter(e => e.shape && e.at - t < 9 && e.at - t > -0.1);
+    if (!pend.length) return r;
+    const v2 = Object.assign({}, view, { mechs: view.mechs.filter(m => !isCut(m)) });
+    const inside = (x, y) => { let p = 0; for (const e of pend) if (!SHAPES.contains(e.shape, x, y, -25)) p += e.at - t < 7 ? 2600 : 900; return p; };
+    const home = this.freeOfProps(this.home(bot, view), view);
+    const cost = c => this.danger(bot, c.x, c.y, v2) + inside(c.x, c.y) + hypot2(c.x - home.x, c.y - home.y) * 0.4 + hypot2(c.x - bot.x, c.y - bot.y) * 0.6;
+    const cands = [{ x: bot.x, y: bot.y }, home, r];
+    for (const rr of [100, 200, 300, 400, 480]) for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8 + rr * 0.003; cands.push({ x: Math.cos(a) * rr, y: Math.sin(a) * rr }); }
+    let out = r, bs = Infinity;
+    for (const c of cands) { const sc = cost(c); if (sc < bs) { bs = sc; out = c; } }
+    return out;
+  },
+  // a wide search of the floor for ground that is dark for the cut on the floor and for the cuts still to come
+  mlLune(bot, view, r) {
+    const rm = view.room, t = view.t;
+    const lunes = view.mechs.filter(m => m.shape && (m.shape.kind === 'lune' || m.tag === 'mlAnnular') && m.type === 'aoe' && m.resolveAt - t < 6.5 && m.resolveAt - t > -0.1);
+    const pend = (rm.pending ? rm.pending() : []).filter(e => e.shape && !e.laid && e.at - t < 10 && e.at - t > -0.1);
+    if (!lunes.length && !pend.length) return r;
+    const cached = bot.mlC;
+    if (cached && t - cached.t < 0.2 && lunes.length === cached.n) return cached.v;
+    const fut = (x, y) => { let p = 0; for (const e of pend) if (SHAPES.contains(e.shape, x, y, 30)) p += e.at - t < 7 ? 2600 : 900; return p; };
+    const speed = 230 * (view.debuffs(bot.id).slowed ? FIGHT.SLOWED : 1);
+    const near = lunes.filter(m => m.resolveAt - t < 3);
+    const path = c => {
+      let pen = 0;
+      const dist = hypot2(c.x - bot.x, c.y - bot.y);
+      for (const m of near) {
+        const q = Math.min(1, Math.max(0, m.resolveAt - t) * speed / Math.max(1, dist));
+        if (SHAPES.contains(m.shape, bot.x + (c.x - bot.x) * q, bot.y + (c.y - bot.y) * q, 22)) pen += 6000;
+      }
+      return pen;
+    };
+    const home = this.freeOfProps(this.home(bot, view), view);
+    const cost = c => this.danger(bot, c.x, c.y, view) + fut(c.x, c.y) + path(c) + hypot2(c.x - home.x, c.y - home.y) * 1.2 + hypot2(c.x - bot.x, c.y - bot.y) * 0.6;
+    const base = this.danger(bot, r.x, r.y, view) + fut(r.x, r.y) + path(r);
+    let out = r;
+    if (base >= 300) {
+      const cands = [{ x: bot.x, y: bot.y }, home, r];
+      for (const rr of [100, 200, 300, 400, 480]) for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8 + rr * 0.003; cands.push({ x: Math.cos(a) * rr, y: Math.sin(a) * rr }); }
+      let bs = cost(r);
+      out = r;
+      for (const c of cands) { const s = cost(c); if (s < bs) { bs = s; out = c; } }
+    }
+    bot.mlC = { t, n: lunes.length, v: out };
+    return out;
+  },
   // Hrimgar (titan.js): the sign over a hero's head is a rule to keep. Standing-still sign: hold this spot (unless something lands on it). Keep-moving sign:
   // never be still for long, so a bot that would stay put takes a short step in the safest direction, again and again. `r` is what the ordinary read chose.
   titanRule(bot, view, r) {
@@ -1967,6 +2273,8 @@ const BotAI = {
       if (k.gcdRemaining() < 0.65 && !k.cast) continue;
       if (a.target === 'ally' || (hotAndHurt && a.id === 'fireblast')) continue;
       if (bot.role === 'tank' && BotAI.tankHold(k, a)) continue;   // (a tank talent's move with its own timing: BotAI.tankTalents)
+      // Ormun stands at the fulcrum: a step behind him or a swing round him lands you on the other pan, and what is on each pan is what he weighs. A bot keeps its feet on its own pan.
+      if (view.bossId === 'ormun' && (a.id === 'step' || a.id === 'hook')) continue;
       // a step that puts you behind the boss (Shadowstep) isn't taken with floor about to land: it could land you in it
       if (a.id === 'step' && view.mechs.some(m => ['aoe', 'safe', 'tower', 'proximity', 'gale', 'drop', 'gaze', 'stack', 'spread'].includes(m.type) && m.resolveAt - view.t < 2.5)) continue;
       // a Ranger pools Focus for Hunter's Mark: Rapid Fire only while it glows (90 Focus, or 25 inside the Mark, where it costs half)
@@ -2119,7 +2427,8 @@ const BOT_CLASS = {
       const idx = id => k.abilities.findIndex(a => a.id === id || a.replaces === id);
       const ok = i => { const a = k.abilities[i]; return !!a && k.usable(a) && k.readyIn(a) <= 0.0001 && k.available(a); };
       const weave = k.gcdRemaining() > 0.65 && !k.cast, full = driftMax(k), flank = k.env.positional() === 'flank';
-      const gale = idx('gale'), hook = idx('hook'), slip = idx('slip'), still = idx('still');
+      const orm = view.bossId === 'ormun';   // (Ormun's pans: a Hook Turn or an Eye Step round the boss lands on the other pan, so a bot leaves them)
+      const gale = idx('gale'), hook = orm ? -1 : idx('hook'), slip = idx('slip'), still = orm ? -1 : idx('still');
       const myHit = view.mechs.some(m => m.type === 'buster' && (m.target ?? m.follow) === bot.id && m.resolveAt - view.t < 0.7);
       // no flashy moves while there's something on the floor to dodge: a dash or a swing round can land you in it
       const calm = !view.mechs.some(m => m.type !== 'raidwide' && m.resolveAt - view.t < 3) && !(view.rollers || []).length && !(view.sweeps || []).some(s => view.t < s.end) && !view.puddles.some(p => hypot2(p.x - view.boss.x, p.y - view.boss.y) < p.r + 240);
@@ -3244,7 +3553,7 @@ BOT_CLASS.thresher = {
     const marks = reapMostMarks(k), tm = reapTargetMarks(k).length;
     const ending = reapAllMarks(k).some(e => e.kinds.some(kd => k.g.marks[e.id][kd].until - k.now < 3));
     // a Phantom blinks about every 7s between strings (in place: a bot walks, it does not dash), so its next finisher is the teleport slash
-    if (k.def.phantom && !open && k.now >= (bot.rpBlink || 0) && bot.actor.dashReady(k.now)) { bot.rpBlink = k.now + 7; bot.actor.useDash(k.now, { from: { x: bot.x, y: bot.y }, to: { x: bot.x, y: bot.y }, through: false }); }
+    if (k.def.phantom && view.bossId !== 'ormun' && !open && k.now >= (bot.rpBlink || 0) && bot.actor.dashReady(k.now)) { bot.rpBlink = k.now + 7; bot.actor.useDash(k.now, { from: { x: bot.x, y: bot.y }, to: { x: bot.x, y: bot.y }, through: false }); }
     // (a finisher locks 0.55s inside a 1.0s GCD, so a gate of "lock over and 0.4s of GCD left" was one 0.05s tick wide: ok() already
     // waits for the lock, so all that is asked of the GCD is that one is running, for a window of about 0.4s)
     // the talents that use the Blink (the dash: two charges, 12s each; the bot walks, so it blinks in place and the kit is told where from and to). Through the
@@ -3252,13 +3561,13 @@ BOT_CLASS.thresher = {
     // A charge is kept for the dodge.
     if (bot.actor.dashReady(k.now) && (k.talent('thresher_step') || k.talent('thresher_flicker') || k.talent('thresher_unbroken') || k.talent('thresher_moonrise'))) {
       const spare = bot.actor.dash.charges >= 2, from = { x: bot.x, y: bot.y }, bb = view.boss, fl = Math.atan2(bb.y - bot.y, bb.x - bot.x);
-      if (BotAI.dollDanger(view, bot.x, bot.y, k.talent('thresher_flicker') || k.talent('thresher_unbroken') ? 2.2 : 1.0) && (k.talent('thresher_step') || k.talent('thresher_flicker') || k.talent('thresher_unbroken'))) {   // (Flicker and Unbroken Step pay for a Blink through the red, so a bot holding them blinks early out of it as a person would)
+      if (view.bossId !== 'ormun' && BotAI.dollDanger(view, bot.x, bot.y, k.talent('thresher_flicker') || k.talent('thresher_unbroken') ? 2.2 : 1.0) && (k.talent('thresher_step') || k.talent('thresher_flicker') || k.talent('thresher_unbroken'))) {   // (Flicker and Unbroken Step pay for a Blink through the red, so a bot holding them blinks early out of it as a person would)
         // (it leaves the ring: a Blink that stays in it is dodged by nothing, and Flicker's charge back would only be spent in it again)
         const to = view.t - (bot.rpDodge ?? -9) > 1.5 ? reapEscape(bot, view) : null;
         if (to) { bot.rpDodge = view.t; bot.actor.useDash(k.now, { from, to, through: true }); bot.x = to.x; bot.y = to.y; }
       }
-      else if (spare && k.talent('thresher_unbroken') && open && n >= 1 && n < 3 && bot.rpUnb !== k.g.str.start) { bot.rpUnb = k.g.str.start; const slash = k.talent('thresher_moonrise') && Math.hypot(bb.x - bot.x, bb.y - bot.y) < 260; bot.actor.useDash(k.now, { from, to: slash ? { x: bot.x + Math.cos(fl) * 200, y: bot.y + Math.sin(fl) * 200 } : from, through: false }); }   // (the spare charge goes into a string already swinging; with Moonrise it is a slash through the boss as well)
-      else if (spare && k.talent('thresher_moonrise') && !k.talent('thresher_unbroken') && Math.hypot(bb.x - bot.x, bb.y - bot.y) < 260) bot.actor.useDash(k.now, { from, to: { x: bot.x + Math.cos(fl) * 200, y: bot.y + Math.sin(fl) * 200 }, through: false });
+      else if (view.bossId !== 'ormun' && spare && k.talent('thresher_unbroken') && open && n >= 1 && n < 3 && bot.rpUnb !== k.g.str.start) { bot.rpUnb = k.g.str.start; const slash = k.talent('thresher_moonrise') && Math.hypot(bb.x - bot.x, bb.y - bot.y) < 260; bot.actor.useDash(k.now, { from, to: slash ? { x: bot.x + Math.cos(fl) * 200, y: bot.y + Math.sin(fl) * 200 } : from, through: false }); }   // (the spare charge goes into a string already swinging; with Moonrise it is a slash through the boss as well)
+      else if (view.bossId !== 'ormun' && spare && k.talent('thresher_moonrise') && !k.talent('thresher_unbroken') && Math.hypot(bb.x - bot.x, bb.y - bot.y) < 260) bot.actor.useDash(k.now, { from, to: { x: bot.x + Math.cos(fl) * 200, y: bot.y + Math.sin(fl) * 200 }, through: false });
     }
     if (!open && k.gcdRemaining() > 0.1 && !k.cast) {
       if (ok(frenzy) && view.burst) return frenzy;

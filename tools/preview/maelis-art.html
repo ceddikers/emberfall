@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Maelis art: poses, the crown, the Wild Hunt</title>
+<style>
+  body { margin: 0; background: #151b26; color: #b8cce0; font: 12px Georgia, serif; }
+  #grid { display: grid; grid-template-columns: repeat(4, 400px); gap: 4px; padding: 4px; }
+  canvas { display: block; }
+  #err { color: #ff9a8a; padding: 4px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="err"></div>
+<div id="grid"></div>
+<script>window.__errs = []; window.onerror = (m, s, l) => { window.__errs.push(m + ' (' + String(s).split('/').pop() + ':' + l + ')'); document.getElementById('err').textContent = window.__errs.join(' | '); };</script>
+<script src="../../client/js/draw-util.js"></script>
+<script src="../../client/js/data.js"></script>
+<script src="../../client/js/bosses.js"></script>
+<script src="../../client/js/arena/shapes.js"></script>
+<script src="../../client/js/arena/boss-tells.js"></script>
+<script src="../../client/js/arena/arena-view.js"></script>
+<script src="../../client/js/garrow-art.js"></script>
+<script src="../../client/js/maelis-art.js"></script>
+<script>(function () { const b = new URLSearchParams(location.search).get('before'); if (b) document.write('<script src="' + b + '"><\/script>'); })();</script>
+<script>
+  // ?pose=cut&tp=3.05&hold=3&zoom=2&angle=0&form=2&bg=dust|sky   draws one cell large; no query draws the whole sheet.
+  // tp: seconds since the pose turned on. hold: for the cuts, how long the cast bar runs (the blow lands at hold; the swing is st.action as main.js sets it).
+  // angle: the facing in radians (0 = east, PI/2 = south, -PI/2 = north). form=2: the Wild Hunt. wolf=howl: a Garrow pose by hand.
+  // crown=<phase>:<turn deg>:<wax 1|-1>:<umbral 0|1>:<red 0..1>   the crown's state (default crescent:0:1:0:0)
+  // sheet=crowns (&wax=-1 &um=1)  every phase at eight turns, at game size;  sheet=eclipse  the eclipse at six stages;  sheet=poses | hunt  (the default sheet is both)
+  // sheet=facing  &pose=cut&tp=3.02&hold=3&form=2&z=1 (game scale; 2 = twice that)  &from=0&n=8 (which of the eight facings: E SE S SW W NW N NE)  &before=<url of a renamed old art file>  adds a BEFORE row above the AFTER row.
+  // perf=1  how long a frame of each form costs.
+  const Q = new URLSearchParams(location.search);
+  const W = 400, H = 400;
+  const BG = Q.get('bg') || 'dust';
+  function backdrop(c, w, h, seed) {
+    if (BG === 'sky') { c.fillStyle = '#03060d'; c.fillRect(0, 0, w, h); const r = rng(seed || 3); for (let i = 0; i < 40; i++) circle(c, r() * w, r() * h, 0.5 + r() * 0.8, 'rgba(210,225,255,' + (0.3 + r() * 0.5) + ')'); return; }
+    const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#9aa3b4'); g.addColorStop(1, '#b3bbc8');
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+    const r = rng(seed || 7);
+    for (let i = 0; i < 14; i++) { const x = r() * w, y = r() * h, rr = 14 + r() * 50; c.beginPath(); c.arc(x, y, rr, 0, TAU); c.strokeStyle = 'rgba(255,255,255,0.08)'; c.lineWidth = 2; c.stroke(); }
+  }
+  function setCrown(room, s) {
+    const [phase, turn, wax, um, red] = s.split(':');
+    room.ev.mlcrown = { k: 'mlcrown', phase: phase || 'crescent', turn: (+turn || 0) * Math.PI / 180, wax: +wax || 1, umbral: +um || 0, red: +red || 0, start: 0, end: 9999 };
+  }
+  ArenaView.liveRoom = { ev: {} };
+  // Runs her from rest, turns the pose on at 1 s and draws the frame tp seconds into it (so the smoothing and the sequences are as they are in play).
+  function bossCell(c, o) {
+    const sc = o.scale || 1.3, st = { t: 0, moving: false, action: null, phase: 0, props: {} };
+    const scratch = document.createElement('canvas'); scratch.width = scratch.height = 8; const sx = scratch.getContext('2d');
+    const T = 1 + (o.tp || 0), ang = o.angle || 0;
+    const keep = BOSS_ART.maelis; if (o.before && BOSS_ART.maelisBefore) BOSS_ART.maelis = BOSS_ART.maelisBefore;
+    ArenaView.liveRoom = { ev: {} };
+    setCrown(ArenaView.liveRoom, o.crown || Q.get('crown') || 'crescent:0:1:0:0');
+    if (o.form === 2) ArenaView.liveRoom.ev.mlform = { k: 'mlform', n: 2, start: 0, end: 9999 };
+    const step = o.fast ? 1 / 15 : 1 / 60;
+    for (let tt = 0; tt <= T + 1e-6; tt += step) {
+      st.t = tt; st.moving = !!(o.moving && tt > 0.6); st.props = {}; st.action = null;
+      if (o.pose && tt >= 1) st.props[ML_ART.KEYS[ML_ART.POSES.indexOf(o.pose)]] = true;
+      if (o.wolf) st.props.mlWolf = o.wolf;
+      if (o.hold != null && tt >= 0) st.action = { type: 'attack', t0: 1 + o.hold - 0.45, dur: 1.2 };
+      if (o.hold2 != null && tt >= 1 + o.hold + 0.6) st.action = { type: 'attack', t0: 1 + o.hold2 - 0.45, dur: 1.0 };
+      if (o.plain != null && tt >= 1) st.action = { type: 'attack', t0: 1 + o.plain, dur: 1.0 };
+      if (tt < T - 1e-6) { sx.save(); sx.clearRect(0, 0, 8, 8); BOSS_ART.maelis(sx, st, ang); sx.restore(); }
+    }
+    c.save(); c.translate(W / 2 + (o.dx || 0), H / 2 + 70 + (o.dy || 0)); c.scale(o.zoom || 1, o.zoom || 1);
+    drawBoss(c, { id: 'maelis' }, 0, 0, ang, st, sc);
+    c.restore();
+    if (o.before) BOSS_ART.maelis = keep;
+  }
+  const F2 = { form: 2 };
+  const CELLS = [
+    ['rest', c => bossCell(c, { tp: 0.5 })],
+    ['walk', c => bossCell(c, { moving: true, tp: 2 })],
+    ['cut, wind-up', c => bossCell(c, { pose: 'cut', tp: 2.2, hold: 3 })],
+    ['cut, mid-cut', c => bossCell(c, { pose: 'cut', tp: 3.02, hold: 3 })],
+    ['cut, landed', c => bossCell(c, { pose: 'cut', tp: 3.25, hold: 3 })],
+    ['dance, 1st landed', c => bossCell(c, { pose: 'dance', tp: 3.2, hold: 3 })],
+    ['full moon', c => bossCell(c, { pose: 'full', tp: 2, crown: 'full:0:1:0:0' })],
+    ['buster, raised', c => bossCell(c, { pose: 'buster', tp: 2.2, hold: 3, angle: Math.PI / 2 })],
+    ['buster, down', c => bossCell(c, { pose: 'buster', tp: 3.2, hold: 3, angle: Math.PI / 2 })],
+    ['buster, pale 2nd', c => bossCell(c, { pose: 'buster', tp: 3.9, hold: 3, angle: Math.PI / 2 })],
+    ['dash, stance', c => bossCell(c, { pose: 'dash', tp: 1.4, moving: true })],
+    ['dash, cut', c => bossCell(c, { pose: 'dash', tp: 3.0, hold: 3, moving: true })],
+    ['call the hound', c => bossCell(c, { pose: 'call', tp: 2, angle: Math.PI / 2 })],
+    ['eclipse begins', c => bossCell(c, { pose: 'eclipse', tp: 2.4, crown: 'crescent:200:1:1:0.4' })],
+    ['enrage', c => bossCell(c, { pose: 'enrage', tp: 1.5, crown: 'new:0:1:0:1' })],
+    ['intro 0.6 s', c => bossCell(c, { pose: 'intro', tp: 0.6, angle: Math.PI / 2 })],
+    ['intro 1.8 s', c => bossCell(c, { pose: 'intro', tp: 1.8, angle: Math.PI / 2 })],
+    ['intro 3 s', c => bossCell(c, { pose: 'intro', tp: 3, angle: Math.PI / 2 })],
+    ['death 1.2 s', c => bossCell(c, { pose: 'death', tp: 1.2 })],
+    ['death 2.6 s', c => bossCell(c, { pose: 'death', tp: 2.6 })],
+    ['death 3.8 s', c => bossCell(c, { pose: 'death', tp: 3.8 })],
+    ['bow (the wall)', c => bossCell(c, { pose: 'bow', tp: 2, crown: 'new:0:1:0:0' })],
+    ['plain chop', c => bossCell(c, { plain: 0.5, tp: 0.8 })],
+    ['facing south', c => bossCell(c, { angle: Math.PI / 2, tp: 0.5 })],
+    ['facing north', c => bossCell(c, { angle: -Math.PI / 2, tp: 0.5 })],
+    ['facing east', c => bossCell(c, { angle: 0, tp: 0.5 })],
+    ['facing west', c => bossCell(c, { angle: Math.PI, tp: 0.5 })],
+    ['south-east, cut', c => bossCell(c, { pose: 'cut', tp: 3.02, hold: 3, angle: 0.8 })],
+    ['north-west, cut', c => bossCell(c, { pose: 'cut', tp: 3.02, hold: 3, angle: -2.4 })],
+  ];
+  const HUNT = [
+    ['HUNT rest', c => bossCell(c, Object.assign({ tp: 0.5 }, F2))],
+    ['HUNT rest, south', c => bossCell(c, Object.assign({ tp: 0.5, angle: Math.PI / 2 }, F2))],
+    ['HUNT rest, north', c => bossCell(c, Object.assign({ tp: 0.5, angle: -Math.PI / 2 }, F2))],
+    ['HUNT rest, west', c => bossCell(c, Object.assign({ tp: 0.5, angle: Math.PI }, F2))],
+    ['HUNT mounting 0.5 s', c => bossCell(c, Object.assign({ pose: 'mount', tp: 0.9 }, F2))],
+    ['HUNT mounting 1.3 s', c => bossCell(c, Object.assign({ pose: 'mount', tp: 1.5 }, F2))],
+    ['HUNT mounted 2.4 s', c => bossCell(c, Object.assign({ pose: 'mount', tp: 2.6 }, F2))],
+    ['HUNT ride, east', c => bossCell(c, Object.assign({ pose: 'ride', tp: 1.5, moving: true }, F2))],
+    ['HUNT ride, cut', c => bossCell(c, Object.assign({ pose: 'ride', tp: 3.1, hold: 3, moving: true }, F2))],
+    ['HUNT cut, wind-up', c => bossCell(c, Object.assign({ pose: 'cut', tp: 2.2, hold: 3 }, F2))],
+    ['HUNT cut, mid-cut', c => bossCell(c, Object.assign({ pose: 'cut', tp: 3.02, hold: 3 }, F2))],
+    ['HUNT buster, raised', c => bossCell(c, Object.assign({ pose: 'buster', tp: 2.2, hold: 3, angle: Math.PI / 2 }, F2))],
+    ['HUNT buster, down', c => bossCell(c, Object.assign({ pose: 'buster', tp: 3.3, hold: 3, angle: Math.PI / 2 }, F2))],
+    ['HUNT full moon (howl)', c => bossCell(c, Object.assign({ pose: 'full', tp: 2.4, crown: 'full:0:1:0:0' }, F2))],
+    ['HUNT eclipse', c => bossCell(c, Object.assign({ pose: 'eclipse', tp: 2.6, crown: 'half:150:1:1:0.5' }, F2))],
+    ['HUNT enrage', c => bossCell(c, Object.assign({ pose: 'enrage', tp: 1.5, crown: 'new:0:1:0:1' }, F2))],
+    ['HUNT intro 0.8 s', c => bossCell(c, Object.assign({ pose: 'intro', tp: 0.8 }, F2))],
+    ['HUNT intro 1.8 s', c => bossCell(c, Object.assign({ pose: 'intro', tp: 1.8 }, F2))],
+    ['HUNT death 1.5 s', c => bossCell(c, Object.assign({ pose: 'death', tp: 1.5 }, F2))],
+    ['HUNT death 3 s', c => bossCell(c, Object.assign({ pose: 'death', tp: 3 }, F2))],
+    ['HUNT dash (run)', c => bossCell(c, Object.assign({ pose: 'dash', tp: 1.6, moving: true, angle: 0.5 }, F2))],
+    ['HUNT facing south-west', c => bossCell(c, Object.assign({ tp: 0.5, angle: 2.2 }, F2))],
+  ];
+  if (Q.get('perf')) {   // how long a frame of each costs
+    const cv = document.createElement('canvas'); cv.width = 700, cv.height = 500; const c = cv.getContext('2d');
+    const time = (n, fn) => { const t0 = performance.now(); for (let i = 0; i < n; i++) fn(i); return ((performance.now() - t0) / n).toFixed(3); };
+    ArenaView.liveRoom = { ev: {} }; setCrown(ArenaView.liveRoom, 'crescent:40:1:0:0');
+    const s1 = { t: 0, moving: false, action: null, phase: 0, props: { mlCut: true } };
+    const form1 = time(400, i => { s1.t = i / 60; c.save(); c.translate(350, 300); c.scale(1.3, 1.3); BOSS_ART.maelis(c, s1, i * 0.01); c.restore(); });
+    ArenaView.liveRoom.ev.mlform = { n: 2, start: 0, end: 9999 };
+    const s2 = { t: 0, moving: true, action: null, phase: 0, props: {} };
+    const form2 = time(400, i => { s2.t = i / 60; c.save(); c.translate(350, 300); c.scale(1.3, 1.3); BOSS_ART.maelis(c, s2, i * 0.01); c.restore(); });
+    const g1 = { t: 0, moving: true, action: null, phase: 0, props: {} };
+    const wolf = time(400, i => { g1.t = i / 60; c.save(); c.translate(350, 300); c.scale(1.3, 1.3); BOSS_ART.garrow(c, g1, i * 0.01); c.restore(); });
+    document.getElementById('err').textContent = 'ms/frame: Maelis ' + form1 + ', the Hunt ' + form2 + ' (Garrow alone ' + wolf + ')';
+  }
+  if (Q.get('sweep')) {   // every pose, both forms, eight facings, a few moments: counts exceptions
+    let n = 0, bad = 0; const msgs = [];
+    const cv = document.createElement('canvas'); cv.width = 600; cv.height = 500; const c = cv.getContext('2d');
+    for (const form of [1, 2]) for (const pose of [null].concat(ML_ART.POSES)) for (let k = 0; k < 8; k += 2) for (const tp of [0.6, 2.2, 4.2]) for (const hold of [null, 3]) {
+      try { c.save(); c.clearRect(0, 0, 600, 500); c.translate(300, 300); bossCell(c, { pose, form, angle: k * Math.PI / 4 - Math.PI, tp, hold, moving: k % 4 === 0, zoom: 1, fast: true }); c.restore(); n++; }
+      catch (e) { bad++; if (msgs.length < 4) msgs.push(form + ' ' + pose + ' ' + k + ' ' + tp + ' ' + e.message + ' ' + (e.stack || '').split(String.fromCharCode(10))[1]); }
+    }
+    document.getElementById('err').textContent = 'sweep: ' + n + ' ok, ' + bad + ' failed ' + msgs.join(' | ');
+  }
+  const grid = document.getElementById('grid');
+  function sheetCells(cells) {
+    for (const [label, fn] of cells) {
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = H; grid.append(cv);
+      const c = cv.getContext('2d'); backdrop(c, W, H, label.length * 13);
+      try { fn(c); } catch (e) { window.__errs.push(label + ': ' + e.message + ' ' + (e.stack || '').split('\n')[1]); document.getElementById('err').textContent = window.__errs.join(' | '); }
+      c.font = '12px Georgia'; c.fillStyle = BG === 'sky' ? 'rgba(210,225,245,0.95)' : 'rgba(10,18,36,0.95)'; c.fillText(label, 8, 16);
+    }
+  }
+  // the crown sheets: game size (the crown is drawn at 38 px radius and the boss at 1.3: 49 px), cells 130 x 130
+  function crownCell(c, x, y, state, label, z) {
+    const t = 3.3;
+    c.save(); c.translate(x + 65, y + 65); c.scale(z, z); ML_ART.crown(c, state, t, ML_ART.CROWN_R, 1); c.restore();
+    if (label) { c.font = '10px Georgia'; c.fillStyle = BG === 'sky' ? 'rgba(210,225,245,0.85)' : 'rgba(10,18,36,0.9)'; c.fillText(label, x + 4, y + 12); }
+  }
+  const mk = (phase, deg, wax, um, red) => ({ m: ML_ART.PHM[phase], turn: deg * Math.PI / 180, wax, um, red });
+  if (Q.get('sheet') === 'crowns') {
+    const wax = +Q.get('wax') || 1, um = +Q.get('um') || 0, z = +Q.get('z') || 1.3, ph = ['new', 'crescent', 'half', 'gibbous', 'full'];
+    const cs = Math.round(130 * z / 1.3);
+    const cv = document.createElement('canvas'); cv.width = cs * 8; cv.height = cs * 5; grid.style.display = 'block'; grid.append(cv);
+    const c = cv.getContext('2d'); backdrop(c, cv.width, cv.height, 5);
+    ph.forEach((p, r) => { for (let k = 0; k < 8; k++) { c.save(); c.translate(k * cs, r * cs); c.scale(cs / 130, cs / 130); crownCell(c, 0, 0, mk(p, k * 45, wax, um, 0), p + ' ' + k * 45 + (wax < 0 ? ' wane' : ' wax') + (um ? ' umbral' : ''), 1.3); c.restore(); } });
+  } else if (Q.get('sheet') === 'facing') {   // the eight facings of one pose, one row (and a BEFORE row over it with &before=)
+    const z = +Q.get('z') || 1, hunt = +Q.get('form') === 2, cw = Math.round((hunt ? 400 : 300) * z), ch = Math.round((hunt ? 470 : 390) * z), from = +Q.get('from') || 0, n = +Q.get('n') || (Q.get('angs') ? Q.get('angs').split(',').length : 8), rows = Q.get('before') ? 2 : 1;
+    let NAMES = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'], ANG = [0, 1, 2, 3, 4, -3, -2, -1].map(k => k * Math.PI / 4);
+    if (Q.get('angs')) { const ds = Q.get('angs').split(',').map(Number); NAMES = ds.map(d => d + ' deg'); ANG = ds.map(d => d * Math.PI / 180); }   // &angs=0,15,30 (degrees: 0 east, 90 south, -90 north) in place of the eight
+    const cv = document.createElement('canvas'); cv.width = cw * n; cv.height = ch * rows; grid.style.display = 'block'; grid.append(cv);
+    const c = cv.getContext('2d');
+    for (let r = 0; r < rows; r++) for (let k = 0; k < n; k++) {
+      const i = (from + k) % ANG.length; c.save(); c.beginPath(); c.rect(k * cw, r * ch, cw, ch); c.clip(); c.translate(k * cw, r * ch);
+      backdrop(c, cw, ch, 9);
+      const pose = Q.get('pose') === 'rest' || !Q.get('pose') ? null : Q.get('pose');
+      const o = { pose, tp: +Q.get('tp') || 0.5, hold: Q.get('hold') != null ? +Q.get('hold') : null, angle: ANG[i], moving: Q.get('moving') === '1', zoom: z, form: +Q.get('form') || 1, before: Q.get('before') && r === 0 };
+      c.save(); c.translate(cw / 2 - W / 2, ch * (hunt ? 0.64 : 0.74) - (H / 2 + 70)); bossCell(c, Object.assign(o, { dx: 0, dy: 0 })); c.restore();
+      c.font = (12 * Math.max(1, z * 0.8)) + 'px Georgia'; c.fillStyle = 'rgba(10,18,36,0.95)'; c.fillText((rows > 1 ? (r === 0 ? 'BEFORE ' : 'AFTER ') : '') + NAMES[i], 8, 16 * Math.max(1, z * 0.8)); c.restore();
+    }
+  } else if (Q.get('sheet') === 'eclipse') {
+    const z = +Q.get('z') || 1.3, cs = Math.round(130 * z / 1.3), reds = [0, 0.2, 0.4, 0.6, 0.8, 1];
+    const cv = document.createElement('canvas'); cv.width = cs * 6; cv.height = cs * 3; grid.style.display = 'block'; grid.append(cv);
+    const c = cv.getContext('2d'); backdrop(c, cv.width, cv.height, 5);
+    [['crescent', 40, 1], ['half', 200, -1], ['gibbous', 300, 1]].forEach(([p, d, wx], r) => reds.forEach((rd, k) => { c.save(); c.translate(k * cs, r * cs); c.scale(cs / 130, cs / 130); crownCell(c, 0, 0, mk(p, d, wx, 1, rd), p + ' umbral, red ' + rd, 1.3); c.restore(); }));
+  } else if (Q.get('strip')) {   // ?strip=cut&hold=3.2&angle=0&form=2&us=-2.8,... : one move across its cast and landing, a cell per moment (us: seconds from the landing)
+    const pose = Q.get('strip'), hold = +Q.get('hold') || 3.2, form = +Q.get('form') || 1;
+    const us = (Q.get('us') || '-2.8,-2.0,-1.2,-0.6,-0.25,-0.1,0.0,0.1,0.25,0.5,1.0').split(',').map(Number);
+    grid.style.cssText = 'display:flex;flex-wrap:nowrap;gap:2px;padding:2px';
+    for (const u of us) {
+      const big = document.createElement('canvas'); big.width = W; big.height = H;
+      const bc = big.getContext('2d'); backdrop(bc, W, H, 5);
+      bossCell(bc, { pose, hold, tp: hold + u, angle: +Q.get('angle') || 0, form, zoom: 0.95 });
+      const cv = document.createElement('canvas'); cv.width = 280; cv.height = 300; grid.append(cv);
+      const c = cv.getContext('2d'); c.drawImage(big, 60, 30, 280, 300, 0, 0, 280, 300);
+      c.font = '12px Georgia'; c.fillStyle = Math.abs(u) < 0.01 ? '#a01010' : 'rgba(10,18,36,0.95)'; c.fillText((u >= 0 ? '+' : '') + u.toFixed(2) + ' s' + (u === 0 ? ' (lands)' : ''), 8, 16);
+    }
+  } else if (Q.get('pose') || Q.get('one')) {
+    const cv = document.createElement('canvas'); cv.width = 960; cv.height = 880; grid.style.display = 'block'; grid.append(cv);
+    const c = cv.getContext('2d'); backdrop(c, 960, 880, 3);
+    const z = +Q.get('zoom') || 2.4;
+    c.save(); c.translate(480 - W / 2, 440 - H / 2 - 20);
+    const o = { pose: Q.get('pose') === 'rest' || !Q.get('pose') ? null : Q.get('pose'), tp: +Q.get('tp') || 0, hold: Q.get('hold') != null ? +Q.get('hold') : null, angle: +Q.get('angle') || 0, moving: Q.get('moving') === '1', zoom: z, form: +Q.get('form') || 1, wolf: Q.get('wolf') || null, plain: Q.get('plain') != null ? +Q.get('plain') : null };
+    bossCell(c, o); c.restore();
+  } else if (Q.get('sheet') === 'hunt') sheetCells(HUNT.slice(+Q.get('from') || 0, (+Q.get('from') || 0) + (+Q.get('n') || 100)));
+  else if (Q.get('sheet') === 'poses') sheetCells(CELLS.slice(+Q.get('from') || 0, (+Q.get('from') || 0) + (+Q.get('n') || 100)));
+  else if (!Q.get('perf') && !Q.get('sweep')) sheetCells(CELLS.concat(HUNT));
+</script>
+</body>
+</html>

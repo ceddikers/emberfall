@@ -25,6 +25,9 @@ const PracticeHall = (() => {
     morrowoak: ['The Grove', 'Hollowing', 'The Grove Remade', 'Last Bloom'],
     caelum: ['Descent', 'Starfall', 'Ascendant', 'The Sky Comes Down'],
     garrow: ['First Snow', 'The Pack', 'Whiteout', 'Hard Frost', 'Last Light'],   // (set 6, Boss XIII)
+    vesper: ['The Hall', 'Out of Step', 'The Mirror Turns', 'The Line'],   // (set 6, Boss XIV: four courses; Through the Glass, the wall, is the end of Out of Step)
+    ormun: ['First Weighing', 'The Heavier', 'Burdens', 'The Last Weighing'],   // (set 6, Boss XV: four courses; Spring Tide, the wall, is the end of The Heavier)
+    maelis: ['Moonrise', 'The Waxing', 'The Wild Hunt', "Hunter's Moon", 'The Long Eclipse'],   // (set 6, Boss XVI: five courses, one per act with the Hunt's two halves; New Moon, the wall, is the end of The Waxing)
     // the two fights found in town (data.js SECRET_BOSSES): one difficulty like the Ultimate, listed only once found, offered up to the account's reach (deps.reach)
     hood: ['The Oath', 'Severance', 'The Procession', 'The Tolling', 'The Hunt', 'Rimelight', 'Hollowing', 'The Scales', 'Dead Calm', 'Interment', 'Two Hands', 'Communion', 'Verdict'],
     seraph: ['Broken Halo', 'Radiance', 'Wingfall', 'Second Shard', 'Benediction', 'Third Shard', 'Last Rites', 'Fourth and Fifth', 'Sixth Shard', 'Six Wings'],

@@ -660,8 +660,9 @@
     'ab-tidecaller-bore': -2.5, 'ab-tidecaller-breakwater': 1, 'ab-tidecaller-current': 5.5, 'ab-tidecaller-maelstrom': 2.5,
     'ab-tidecaller-riptide': 4.5, 'ab-tidecaller-sip': 1, 'ab-tidecaller-spray': 4.5, 'ab-tidecaller-springflood': -4,
     'ab-tidecaller-surge': -3.5, 'ab-tidecaller-swell': 4, 'ab-tidecaller-undertow': 2, 'ab-time': -0.5,
-    'ab-wind': 5.5, 'amb-fountain': -11, 'amb-pond': -16.5, 'amb-tavern': -13,
-    'amb-town': -18.5, 'arrival': -8, 'bm-archmage-arcane-burst': -0.5, 'bm-archmage-arcane-mark': 2,
+    'ab-wind': 5.5, 'amb-fountain': -11, 'amb-garrow-mere': -16.5, 'amb-maelis-moon': -0.5,
+    'amb-ormun-scales': -13.5, 'amb-pond': -16.5, 'amb-tavern': -13, 'amb-town': -18.5,
+    'amb-vesper-hall': -13, 'arrival': -8, 'bm-archmage-arcane-burst': -0.5, 'bm-archmage-arcane-mark': 2,
     'bm-archmage-call-of-the-circle': 2.5, 'bm-archmage-cascading-convergence': -0.5, 'bm-archmage-cinder-rune': 1, 'bm-archmage-circle-brand': 0.5,
     'bm-archmage-circle-of-fire': 1.5, 'bm-archmage-circle-of-lightning': 1, 'bm-archmage-circle-of-the-void': 0.5, 'bm-archmage-convergence': 1.5,
     'bm-archmage-counterspell': 2.5, 'bm-archmage-ice-lances': 3, 'bm-archmage-leaping-bolt': 1, 'bm-archmage-pyre-rings': 1,
@@ -689,203 +690,261 @@
     'bm-corvane-m-ring-throw': 3.5, 'bm-corvane-m-shrine': 2.5, 'bm-corvane-m-wall': 2.5, 'bm-corvane-rising-crane': 1,
     'bm-corvane-scabbard-sweep': 2.5, 'bm-corvane-the-circle': 1.5, 'bm-corvane-the-last-vigil': -1.5, 'bm-corvane-the-shrine': 3.5,
     'bm-corvane-the-vigil': 1, 'bm-corvane-three-lessons': 4, 'bm-corvane-whetted-edge': -0.5, 'bm-corvane-white-gale': 3.5,
-    'amb-garrow-mere': -16.5, 'bm-garrow-buried-scent': 7, 'bm-garrow-circle-the-prey': 5.5, 'bm-garrow-cold-trail': -3.5,
-    'bm-garrow-double-scent': 5.5, 'bm-garrow-doubling-back': 5.5, 'bm-garrow-howl': -4, 'bm-garrow-intro': -1,
-    'bm-garrow-m-flurry': 4.5, 'bm-garrow-m-hound-bite': 11, 'bm-garrow-m-hound-fade': 16.5, 'bm-garrow-m-hound-scent': 10.5,
-    'bm-garrow-m-hound-spawn': 9.5, 'bm-garrow-m-hounds-meet': 4.5, 'bm-garrow-m-last': 6, 'bm-garrow-m-lock': 5,
-    'bm-garrow-m-mist-in': 5.5, 'bm-garrow-m-mist-out': 4.5, 'bm-garrow-m-pounce': 6, 'bm-garrow-m-pounce-wide': 1,
-    'bm-garrow-m-ridge': 2, 'bm-garrow-m-rime-land': 5, 'bm-garrow-m-ring-burst': 1.5, 'bm-garrow-m-run': 6,
-    'bm-garrow-m-run-start': 9, 'bm-garrow-m-scent': 4, 'bm-garrow-m-still-burst': 5, 'bm-garrow-m-still-mark': 8.5,
-    'bm-garrow-m-wipe': 7.5, 'bm-garrow-mist-hounds': 9, 'bm-garrow-on-the-scent': 6, 'bm-garrow-rime': 6.5,
-    'bm-garrow-snowdrift': 3.5, 'bm-garrow-stillness': 2.5, 'bm-garrow-the-long-chase': 2.5, 'bm-garrow-the-second-hound': 5,
-    'bm-garrow-the-whole-trail': 5.5, 'bm-garrow-throat-snap': 1.5,
-    'bm-grubnak-belly-flop': -1, 'bm-grubnak-butchers-charge': -0.5, 'bm-grubnak-chop-chop': 1, 'bm-grubnak-clean-plate': -3,
-    'bm-grubnak-cleaver-toss': 1.5, 'bm-grubnak-clogged-drains': 3.5, 'bm-grubnak-dessert-is-served': 2.5, 'bm-grubnak-dinner-bell': -1.5,
-    'bm-grubnak-dinner-rush': 3.5, 'bm-grubnak-double-chop': 1, 'bm-grubnak-family-meal': 0.5, 'bm-grubnak-flambe': -0.5,
-    'bm-grubnak-flare-up': -1.5, 'bm-grubnak-flashover': 1.5, 'bm-grubnak-flashover-burst': -1.5, 'bm-grubnak-gorge': 2,
-    'bm-grubnak-gorged': -2, 'bm-grubnak-gorged-mend': 1, 'bm-grubnak-grease-fire': 0.5, 'bm-grubnak-intro': -1,
-    'bm-grubnak-kitchen-staff': 2.5, 'bm-grubnak-ladle-spin': 4, 'bm-grubnak-larder-toss': 2.5, 'bm-grubnak-lid-slam': -1.5,
-    'bm-grubnak-long-skewer': 0.5, 'bm-grubnak-meat-toss': 1.5, 'bm-grubnak-mince': 1.5, 'bm-grubnak-mise-en-place': 4,
-    'bm-grubnak-order-served': 3, 'bm-grubnak-order-up': -3, 'bm-grubnak-plate-spoiled': 1.5, 'bm-grubnak-rolling-meatballs': 2.5,
-    'bm-grubnak-service': -1, 'bm-grubnak-simmer': 2, 'bm-grubnak-skewer': 2, 'bm-grubnak-spice-rack': 0.5,
-    'bm-grubnak-spit-up': 1.5, 'bm-grubnak-stockpot': 1.5, 'bm-grubnak-tenderize': 1, 'bm-grubnak-ticket': 3.5,
-    'bm-grubnak-whisk': 7, 'bm-hollowking-barrow-bells': -1.5, 'bm-hollowking-barrow-knell': 1.5, 'bm-hollowking-coffin-lids': 2,
-    'bm-hollowking-court-of-bones': 1.5, 'bm-hollowking-crown-of-graves': 3.5, 'bm-hollowking-dirge': 0.5, 'bm-hollowking-echo-knights': 4.5,
-    'bm-hollowking-exile': 1, 'bm-hollowking-funeral-march': 0.5, 'bm-hollowking-grave-cleave': 0.5, 'bm-hollowking-grave-marks': 4,
-    'bm-hollowking-grave-summons': 1.5, 'bm-hollowking-gravebind': 2.5, 'bm-hollowking-intro': 1.5, 'bm-hollowking-judgement': 0.5,
-    'bm-hollowking-kneel': 2.5, 'bm-hollowking-lantern': 8.5, 'bm-hollowking-lights-out': 2, 'bm-hollowking-roll-call': 0.5,
-    'bm-hollowking-roll-called': 4, 'bm-hollowking-roll-caught': 2, 'bm-hollowking-roll-judged': 5, 'bm-hollowking-royal-audience': -1.5,
-    'bm-hollowking-royal-decree': -1, 'bm-hollowking-royal-doom': 1, 'bm-hollowking-royal-gaze': -1.5, 'bm-hollowking-sceptre-rebuke': 1.5,
-    'bm-hollowking-sceptre-sweep': 3.5, 'bm-hollowking-sceptre-throw': 2, 'bm-hollowking-shackle': 1, 'bm-hollowking-the-charge-sheet': 1.5,
-    'bm-hollowking-the-king-rises': -1, 'bm-hollowking-the-long-night': 1.5, 'bm-hollowking-the-sentence': 2, 'bm-hollowking-turned-out': 1,
-    'bm-hollowking-writ-of-execution': 1.5, 'bm-hood-burial': -0.5, 'bm-hood-calm-breaks': 0.5, 'bm-hood-cold-breath': 3,
-    'bm-hood-communion': -1, 'bm-hood-dead-calm': -1, 'bm-hood-echo': -2, 'bm-hood-frostfall': -3,
-    'bm-hood-hollow-echo': -2, 'bm-hood-hollow-step': 1, 'bm-hood-hollowing': -1, 'bm-hood-interment': -0.5,
-    'bm-hood-intro': -1.5, 'bm-hood-last-toll': -2, 'bm-hood-pale-waltz': 1, 'bm-hood-pursuit': 0.5,
-    'bm-hood-rimeburst': -1.5, 'bm-hood-rimelight': -2.5, 'bm-hood-severance': 1, 'bm-hood-the-scales': 1,
-    'bm-hood-the-tolling': 2, 'bm-hood-two-hands': 1, 'bm-hood-verdict': -0.5, 'bm-hood-verdict-eternal': -1,
-    'bm-hood-weighing': -0.5, 'bm-hydra-acid-spray': 3, 'bm-hydra-breach': 0.5, 'bm-hydra-entwined-necks': 0.5,
-    'bm-hydra-flame-gout': 3, 'bm-hydra-intro': -3, 'bm-hydra-mire-spit': 2, 'bm-hydra-mothers-cry': -1.5,
-    'bm-hydra-mothers-heart': 0.5, 'bm-hydra-regrowth': 0.5, 'bm-hydra-rending-maul': 1.5, 'bm-hydra-rime-crown': 1,
-    'bm-hydra-scalding': 2.5, 'bm-hydra-searing': 2.5, 'bm-hydra-stonegaze': 0.5, 'bm-hydra-stormcall': 3,
-    'bm-hydra-stump-echo': -0.5, 'bm-hydra-tail-thrash': 1, 'bm-hydra-the-drowning': -2.5, 'bm-hydra-tidal-dance': 3.5,
-    'bm-hydra-tidal-line': 2, 'bm-hydra-undertow': 3, 'bm-hydra-venom-bloom': 3, 'bm-morrowoak-barrow-lantern': 2,
-    'bm-morrowoak-brood-roots': 2.5, 'bm-morrowoak-deeper-roots': -1, 'bm-morrowoak-fourfold-bloom': 1, 'bm-morrowoak-frost-fist': -0.5,
-    'bm-morrowoak-grafting': 2, 'bm-morrowoak-greenseed': -1.5, 'bm-morrowoak-hunger-seed': -1, 'bm-morrowoak-hungering-dark': -1,
-    'bm-morrowoak-hungers-reach': 2, 'bm-morrowoak-hydra-head': 1.5, 'bm-morrowoak-inhale': -1.5, 'bm-morrowoak-intro': -1,
-    'bm-morrowoak-m-graft': 3.5, 'bm-morrowoak-m-mend': 2, 'bm-morrowoak-m-seed-mark': 1, 'bm-morrowoak-m-stir': 1.5,
-    'bm-morrowoak-nothing-left': -3, 'bm-morrowoak-root-lash': -0.5, 'bm-morrowoak-sap-tide': -0.5, 'bm-morrowoak-saplings': 3,
-    'bm-morrowoak-starved': -1.5, 'bm-morrowoak-storm-knot': 0.5, 'bm-morrowoak-take-root': -1.5, 'bm-morrowoak-the-grove-remade': -1,
-    'bm-morrowoak-the-hunger-stirs': 1.5, 'bm-morrowoak-the-swallowing': -3, 'bm-morrowoak-twin-seed': -0.5, 'bm-morrowoak-wyrm-wing': -1,
-    'bm-seraph-absolution': -1, 'bm-seraph-afterglow': -1.5, 'bm-seraph-ash-landing': -1.5, 'bm-seraph-benediction': -0.5,
-    'bm-seraph-broken-halo': -1, 'bm-seraph-cold-sermon': -0.5, 'bm-seraph-following-light': 0.5, 'bm-seraph-frost-shadow': -0.5,
-    'bm-seraph-intro': -2.5, 'bm-seraph-last-rites': 0.5, 'bm-seraph-radiance': -3, 'bm-seraph-return': -1,
-    'bm-seraph-returning-edge': -0.5, 'bm-seraph-six-wings': 5, 'bm-seraph-the-unsaid': -1.5, 'bm-seraph-wingbeat': -1,
-    'bm-seraph-wingfall': 0.5, 'bm-skitterra-acid-deluge': 0.5, 'bm-skitterra-brood': 4.5, 'bm-skitterra-cats-cradle': 1.5,
-    'bm-skitterra-ceiling-ambush': 1, 'bm-skitterra-chrysalis': 4, 'bm-skitterra-cocoon-crack': 6.5, 'bm-skitterra-cocoon-drop': 1.5,
-    'bm-skitterra-cocoon-split': 0.5, 'bm-skitterra-cradle-burn': 7, 'bm-skitterra-cradle-tighten': -1, 'bm-skitterra-eclosion': -0.5,
-    'bm-skitterra-egg-sacs': 1.5, 'bm-skitterra-eightfold-lunge': 6.5, 'bm-skitterra-fang-rush': 2, 'bm-skitterra-fang-strike': 1,
-    'bm-skitterra-flutter': 3.5, 'bm-skitterra-from-the-dark': 2, 'bm-skitterra-heartbeat': 2.5, 'bm-skitterra-imprint': 2.5,
-    'bm-skitterra-imprint-wash': 3, 'bm-skitterra-into-the-dark': 2, 'bm-skitterra-intro': -1, 'bm-skitterra-lure-crush': 3.5,
-    'bm-skitterra-lure-hatch': 5, 'bm-skitterra-molt': 8, 'bm-skitterra-moonlight': -0.5, 'bm-skitterra-moth-queen': 1.5,
-    'bm-skitterra-moth-shriek': -4, 'bm-skitterra-rebirth': 1, 'bm-skitterra-scale-wave': 0.5, 'bm-skitterra-silk-lines': 3.5,
-    'bm-skitterra-silk-reel': 3.5, 'bm-skitterra-silk-wrap': 2.5, 'bm-skitterra-snare-weave': 2, 'bm-skitterra-spiderlings': 11,
-    'bm-skitterra-spin': 8, 'bm-skitterra-spinneret-volley': 16, 'bm-skitterra-strand-cut': 6, 'bm-skitterra-strand-reel': 5.5,
-    'bm-skitterra-the-swarm': 11.5, 'bm-skitterra-the-web-gives-way': 0.5, 'bm-skitterra-tightening-web': 2, 'bm-skitterra-venom-cure': 6,
-    'bm-skitterra-venom-drip': 4, 'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4, 'bm-sovereign-aftershock': -1.5,
-    'bm-sovereign-ashen-sweep': -1, 'bm-sovereign-brand': -1.5, 'bm-sovereign-brand-sear': 1.5, 'bm-sovereign-burning-web': 4,
-    'bm-sovereign-call': 1, 'bm-sovereign-cinder-dive': -2, 'bm-sovereign-cloche': 3.5, 'bm-sovereign-crescent': 2,
-    'bm-sovereign-crier': 1, 'bm-sovereign-crossed-blades': 2, 'bm-sovereign-cupped-ember': -0.5, 'bm-sovereign-ember-and-ash': 1,
-    'bm-sovereign-emberfall': -1, 'bm-sovereign-flambe': 0.5, 'bm-sovereign-flambe-service': 0.5, 'bm-sovereign-foretold': 1,
-    'bm-sovereign-fuse': 7.5, 'bm-sovereign-glass-floor': -1.5, 'bm-sovereign-grace-withdrawn': -2.5, 'bm-sovereign-halo-procession': -0.5,
-    'bm-sovereign-halo-turn': -1.5, 'bm-sovereign-heads-of-flame': -2, 'bm-sovereign-hollow-kings-bell': 1.5, 'bm-sovereign-intro': -0.5,
-    'bm-sovereign-kindling': -2, 'bm-sovereign-knights-sweep': -0.5, 'bm-sovereign-knot': 4, 'bm-sovereign-lance': -3,
-    'bm-sovereign-lantern': 4, 'bm-sovereign-mince': 0.5, 'bm-sovereign-nightfall': -1, 'bm-sovereign-pyre': 2.5,
-    'bm-sovereign-royal-doom': 1, 'bm-sovereign-scatter': 0.5, 'bm-sovereign-seeds-of-ash': 1, 'bm-sovereign-shadow': -0.5,
-    'bm-sovereign-sovereigns-dance': -0.5, 'bm-sovereign-sunwheel-of-embers': 0.5, 'bm-sovereign-surge': -1.5, 'bm-sovereign-the-anvil-count': 2,
-    'bm-sovereign-twin-brands': 2, 'bm-sovereign-two-dancers': 2, 'bm-titan-avalanche': 0.5, 'bm-titan-breath-of-winter': 1.5,
-    'bm-titan-deep-winter': 0.5, 'bm-titan-endless-winter': -1.5, 'bm-titan-frostbite': 2.5, 'bm-titan-glacial-stomp': -0.5,
-    'bm-titan-ice-tomb': 1, 'bm-titan-icebreaker': 2, 'bm-titan-icefall': 2.5, 'bm-titan-intro': -3,
-    'bm-titan-rime-slam': 0.5, 'bm-titan-sunk-towers': 0.5, 'bm-titan-the-ice-groans': 2, 'bm-titan-titans-grip': 2.5,
-    'bm-titan-titans-sweep': 2, 'bm-titan-twin-slam': 2, 'bm-titan-two-winters': 1, 'bm-titan-whiteout': 1.5,
-    'bm-titan-winters-grasp': 2.5, 'bm-titan-winters-howl': -1, 'bm-volkar-avalanche': 0.5, 'bm-volkar-ball-lightning': 1.5,
-    'bm-volkar-chain-lightning': 3, 'bm-volkar-charge-swap': 5, 'bm-volkar-conduct-burst': -1, 'bm-volkar-conduct-leap': 2,
-    'bm-volkar-conduction': 3.5, 'bm-volkar-crossing-arms': 2.5, 'bm-volkar-eye-closes': 2, 'bm-volkar-eye-of-the-storm': 4.5,
-    'bm-volkar-gale-slam': 4, 'bm-volkar-gathering-storm': 0.5, 'bm-volkar-grounding-rods': 3, 'bm-volkar-heavens-fall': -1,
-    'bm-volkar-intro': -1.5, 'bm-volkar-lightning-rods': 9, 'bm-volkar-magnet-pull': 1.5, 'bm-volkar-magnet-push': 4,
-    'bm-volkar-magnetize': 0.5, 'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3, 'bm-volkar-polarity-surge': 1.5,
-    'bm-volkar-pulse': 4.5, 'bm-volkar-reaching-arms': 0.5, 'bm-volkar-rod-strike': 1.5, 'bm-volkar-skyfall': -0.5,
-    'bm-volkar-split-current': -1, 'bm-volkar-split-land': 1.5, 'bm-volkar-squall-line': 3, 'bm-volkar-static-field': 5,
-    'bm-volkar-static-lash': 4.5, 'bm-volkar-still-air': 3, 'bm-volkar-storm-burst': -1.5, 'bm-volkar-storm-groan': 1,
-    'bm-volkar-storm-heart': 1, 'bm-volkar-storm-hush': 1.5, 'bm-volkar-storm-roar': -1, 'bm-volkar-storm-roll': 2.5,
-    'bm-volkar-storm-unbound': -1, 'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2, 'bm-volkar-the-sky-lowers': 1,
-    'bm-volkar-thunder-crash': 1, 'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5, 'bm-volkar-titan-fist': -1.5,
-    'bm-volkar-twin-fall': -1.5, 'bm-wyrm-cinder-rain': 7.5, 'bm-wyrm-ember-breath': 3.5, 'bm-wyrm-ember-devils': 4,
-    'bm-wyrm-intro': -4, 'bm-wyrm-marked-prey': -0.5, 'bm-wyrm-molten-trail': 2, 'bm-wyrm-pounce': 0.5,
-    'bm-wyrm-skyward': 1, 'bm-wyrm-take-flight': 3.5, 'bm-wyrm-the-tyrant-wakes': -1.5, 'bm-wyrm-twin-breath': 3.5,
-    'boss-auto': 2.5, 'boss-death': -2.5, 'boss-enrage': -2.5, 'boss-impact-empty': 7,
-    'boss-impact-heavy': 0.5, 'boss-impact-light': 7, 'boss-intro': -1.5, 'boss-step': 6,
-    'buff-on': -0.5, 'chest-drop': 3.5, 'chest-open': -5, 'cleanse': -5,
-    'clear': -4.5, 'crit': 4, 'dash': 6.5, 'debuff-on': -1,
-    'dummy-hit': 3, 'emote-cheer': -6.5, 'emote-laugh': -2, 'emote-wave': 2,
-    'enrage-bell': 3, 'fd-alert': -6, 'fd-arrow': 7, 'fd-auto-cast': 7,
-    'fd-auto-ember': 12.5, 'fd-auto-hit-arrow': 8.5, 'fd-auto-hit-ember': 16, 'fd-auto-hit-holy': 11,
-    'fd-auto-hit-melee': 7.5, 'fd-auto-holy': 9, 'fd-auto-melee': -1, 'fd-auto-shot': 8.5,
-    'fd-ballista': 1, 'fd-banner': -0.5, 'fd-bash': 4, 'fd-boon': -3,
-    'fd-boss-arrive': -3, 'fd-boss-down': -2, 'fd-brace': 1, 'fd-brand': 9.5,
-    'fd-brute-slam': 3, 'fd-buy': -3, 'fd-camp-hit': 5.5, 'fd-carve': 5.5,
-    'fd-chain-ash-breath': 1, 'fd-chain-bell': 0.5, 'fd-chain-bubble': 3.5, 'fd-chain-down': -3,
-    'fd-chain-far': -3, 'fd-chain-oak-cut': 4.5, 'fd-chain-pike-lunge': 3.5, 'fd-chain-pike-slap': 5,
-    'fd-chain-ram-charge': 0.5, 'fd-chain-ram-stamp': 2.5, 'fd-chain-root-snare': 1, 'fd-chain-soak-ok': -1,
-    'fd-chain-stump-throw': 3, 'fd-chain-sweep': 2, 'fd-chain-whelp-call': 1.5, 'fd-count': 6,
-    'fd-cover': -1, 'fd-dawn': -0.5, 'fd-dawn-breaks': -1, 'fd-defeat': -1.5,
-    'fd-deliver': 1.5, 'fd-elite-die': -3, 'fd-enemy-die': 5, 'fd-enemy-hit': 5.5,
-    'fd-erupt': -0.5, 'fd-fireball-cast': 7.5, 'fd-fireball-hit': 3.5, 'fd-firestep': 3,
-    'fd-flamecircle': 1, 'fd-flood-rise': 2, 'fd-gate-break': 0.5, 'fd-gate-hit': 3,
-    'fd-gate-shut': -2.5, 'fd-gnaw-breath': -3, 'fd-gnaw-lunge': -2.5, 'fd-gnaw-sniff': 0.5,
-    'fd-gnaw-stamp': 1, 'fd-hero-down': -1, 'fd-hyperforge': -3, 'fd-levelup': -0.5,
-    'fd-log-break': 2.5, 'fd-loot-land': 1, 'fd-march': -6, 'fd-mark': 3.5,
-    'fd-mend': -2.5, 'fd-meteor-fall': 1.5, 'fd-meteor-hit': -2, 'fd-mire-charge': 2.5,
-    'fd-mire-drown': -1.5, 'fd-mire-stamp': -1, 'fd-night': -1, 'fd-page': 1.5,
-    'fd-perfect': 2, 'fd-pickup': 4, 'fd-pierce': 7, 'fd-ping': 8.5,
-    'fd-post-out': 5.5, 'fd-post-plant': 0.5, 'fd-quake': 0.5, 'fd-quest-done': -1.5,
-    'fd-quest-missed': -2, 'fd-quest-offer': -5.5, 'fd-rankup': 2.5, 'fd-recall': -3,
-    'fd-recall-done': -2.5, 'fd-relight': 0.5, 'fd-sanctum': -2.5, 'fd-sell': -2,
-    'fd-setdown': 2.5, 'fd-smite': 0.5, 'fd-soldier-heal': 9.5, 'fd-soldier-shot': 12,
-    'fd-soldier-swing': 4, 'fd-spire-bolt': 5.5, 'fd-spire-hit': 4.5, 'fd-spit': 6,
-    'fd-stalker': 1.5, 'fd-starfall': 2, 'fd-step': 1.5, 'fd-strike-claw': 7.5,
-    'fd-strike-dart': 7.5, 'fd-strike-shade': 7, 'fd-strike-slag': 4, 'fd-strike-torch': 7,
-    'fd-tail-sweep': 1, 'fd-tower-fall': -2.5, 'fd-trap-arm': 3, 'fd-trap-burst': 3.5,
-    'fd-tunnel-burrow': -0.5, 'fd-tunnel-surface': -1.5, 'fd-victory': -4.5, 'fd-wall': -1,
-    'fd-wave': -7, 'fd-waystone-wake': -4, 'fd-whelps': 15, 'fd-wick-breath': 0.5,
-    'fd-wick-eat': 5.5, 'fd-wick-glow': 2.5, 'fd-wick-lunge': 2, 'fd-wild-boar': -4.5,
-    'fd-wild-howl': -6.5, 'fd-wild-return': -3.5, 'fd-wild-snap': 2, 'fd-wild-stone': 2.5,
-    'fd-wild-wake': -3.5, 'fd-wild-wolf': -5, 'feast-chew': 6.5, 'feast-clink': -5.5,
-    'feast-serve': -3.5, 'feast-sting': -2.5, 'fish-bite': 3, 'fish-cast': 1.5,
-    'fish-catch': -3, 'fish-lost': -0.5, 'fish-reel': -0.5, 'gloom-hollow-off': -2,
-    'gloom-hollow-on': 2, 'hd-bell': 0.5, 'hd-blade-out': -2.5, 'hd-freeze': -2,
-    'hd-frost-hit': 2, 'hd-kneel': -1.5, 'hd-lie': -1, 'hd-open-2': -2,
-    'hd-palm-open': -4, 'hd-pillar': -0.5, 'hd-shard': -1, 'hd-thaw': 3,
-    'hd-wing': 5.5, 'heal-land': -2.5, 'hit-confirm': 5.5, 'hit-heavy': 5,
-    'hit-light': 9, 'hm-bark-ash': -0.5, 'hm-bark-ghost': 3.5, 'hm-bark-greyfang': 0.5,
-    'hm-bark-rust': 0.5, 'hm-bite': 8, 'hm-bite-big': 2.5, 'hm-bringdown': -3,
-    'hm-calloff': 1.5, 'hm-down': 3, 'hm-hamstring': 1, 'hm-horn': -6,
-    'hm-howl': -3.5, 'hm-longchase': 1.5, 'hm-mount': -1, 'hm-quarry': 6.5,
-    'hm-relay': 4, 'hm-rend': 0.5, 'hm-ridedown': 2.5, 'hm-snap': 7,
-    'hm-up': 2.5, 'hm-whistle-hold': -7.5, 'hm-whistle-pounce': -7, 'ken-blaze': 0.5,
-    'ken-break': -0.5, 'ken-deathblow': -2, 'ken-good': 8, 'ken-iai': 2.5,
-    'ken-miss': 7.5, 'ken-off': 4.5, 'ken-pass': 6.5, 'ken-perfect': 2,
-    'ken-pommel': 6.5, 'ken-redirect': 1, 'lamp-drop': 11, 'lamp-ember': 14.5,
-    'lamp-end': 6.5, 'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5, 'lamp-pillar': 3,
-    'lamp-snuff': 5.5, 'lamp-sparks': 5, 'lb-fire': -1.5, 'lb-ready': -5,
-    'loot-take': -2, 'low-hp': -4.5, 'npc-talk': -6, 'ping': 2.5,
-    'pip-up': 12, 'portal-enter': -3, 'portal-hum': -22.5, 'pull-count': 0.5,
-    'pull-count-last': -3.5, 'pull-go': -2, 'reaper-blink': 5.5, 'reaper-danse': 5,
-    'reaper-finish1': 4.5, 'reaper-finish2': -0.5, 'reaper-finish3': 1, 'reaper-finish4': -2,
-    'reaper-frenzy': -2.5, 'reaper-gate-bloom': -2.5, 'reaper-gate-close': -1, 'reaper-gate-open': 3.5,
-    'reaper-gate-tone': 8, 'reaper-gatebreaker': 1.5, 'reaper-harvest': -1, 'reaper-moon': 1.5,
-    'reaper-pop-bind': 4.5, 'reaper-pop-death': 3, 'reaper-pop-drain': 4, 'reaper-pop-thread': 9,
-    'reaper-rune': 12.5, 'reaper-rune-emp': 6, 'reaper-slack': 14.5, 'reaper-slash': 2.5,
-    'reaper-star-collapse': -2, 'reaper-star-open': 0.5, 'reaper-swing': 12, 'reaper-veil': -0.5,
-    'revive': -2, 'shield-break': 5, 'shield-up': -4, 'stack-1': 8,
-    'stack-2': -2.5, 'step-grass': 8, 'step-stone': 8.5, 'step-wood': 1.5,
-    'story-page': 3.5, 'sv-anvil-rise': 3.5, 'sv-anvil-strike': -1.5, 'sv-bite': 1,
-    'sv-boil': 3.5, 'sv-burnback': 0.5, 'sv-call-archmage': 0.5, 'sv-call-brannoc': 2.5,
-    'sv-call-corvane': -1, 'sv-call-grubnak': 0.5, 'sv-call-hollowking': 1.5, 'sv-call-hydra': -3,
-    'sv-call-morrowoak': 0.5, 'sv-call-skitterra': 3, 'sv-call-titan': 1, 'sv-call-volkar': 1,
-    'sv-call-wyrm': -3, 'sv-crescent-fan': -0.5, 'sv-crumble': -3.5, 'sv-cut': -2,
-    'sv-dance-cut': 0.5, 'sv-dance-cut2': 1, 'sv-dance-image': -1, 'sv-descent': -1.5,
-    'sv-dive-fall': -2, 'sv-dive-line': 1, 'sv-drift-loop': -11, 'sv-emberfall-below': -1,
-    'sv-everyname': -0.5, 'sv-fore-ghost': 0.5, 'sv-gutter': 1, 'sv-head-rise': -2,
-    'sv-heart-breath': 6, 'sv-heart-loop': -14, 'sv-hole-fall': -4.5, 'sv-hole-town': 0.5,
-    'sv-lance-dash': -1, 'sv-lantern-down': 0.5, 'sv-lantern-fly': 7, 'sv-lie-bell': -2.5,
-    'sv-pillar': -2, 'sv-proc-burst': -1, 'sv-pyre-cut': 1.5, 'sv-rebirth-blast': -1,
-    'sv-rebirth-choir': -1.5, 'sv-rebirth-draw': -1.5, 'sv-rebirth-halo': -1, 'sv-rebirth-sky': -2,
-    'sv-relight': -0.5, 'sv-sapling-arrive': -3, 'sv-sapling-creak': 2.5, 'sv-sapling-die': -4,
-    'sv-seal-shatter': -1.5, 'sv-seed-burst': -1.5, 'sv-seed-pulse': 2, 'sv-signal': -3,
-    'sv-stance-comet': -1, 'sv-stance-crane': 0.5, 'sv-stance-parting': 4, 'sv-steam-burst': -1,
-    'sv-twin-bloom': -2, 'sv-twin-bolt': 3.5, 'sv-twin-fire': -0.5, 'sv-twin-meet': -0.5,
-    'sv-twin-shift': 3.5, 'sv-twin-void': -0.5, 'sv-wall-fire': -0.5, 'sv-wall-out': 0.5,
-    'sv-water-hiss': -1.5, 'sv-wheel-clang': 3, 'sv-wheel-loop': -10, 'sv-wheel-throw': 1,
-    'sv-wipe-chord': -1.5, 'tg-aoe': 1.5, 'tg-buster': 1, 'tg-charge': 0.5,
-    'tg-gaze': 0.5, 'tg-knockback': 2.5, 'tg-raidwide': -0.5, 'tg-spread': 5.5,
-    'tg-stack': 1.5, 'tide-bell': 1, 'tide-crash': -1.5, 'tide-crest': 4.5,
-    'tide-gull': 9.5, 'tide-pop': 1.5, 'tide-slack': 10.5, 'tide-wave': 2.5,
-    'title-sting': -3, 'ui-bounty': 0.5, 'ui-buy': -6, 'ui-click': 2,
-    'ui-close': -0.5, 'ui-equip': -2.5, 'ui-error': -3, 'ui-feat': -7,
-    'ui-gold': -4, 'ui-hover': 13, 'ui-secret': -6, 'ult-alembist': 0.5,
-    'ult-bastion': 1.5, 'ult-bloodreaver': 1, 'ult-driftblade': 6.5, 'ult-fire': -1.5,
-    'ult-gloomsworn': -1, 'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5, 'ult-houndmaster': -3.5,
-    'ult-kenseier': -1.5, 'ult-lanternkeeper': -2, 'ult-marionettist': 0.5, 'ult-oathbroker': -1,
-    'ult-pyromancer': -1, 'ult-ranger': 3, 'ult-ready': -4, 'ult-runeguard': -1,
-    'ult-shadowblade': 4, 'ult-thermist': -1, 'ult-threadweaver': -1, 'ult-tidecaller': -2,
-    'wall-break': -1.5, 'wall-caelum-break': -1, 'wall-caelum-seal': -1.5, 'wall-caelum-vigil': -19.5,
-    'wall-corvane-kneel': -1.5, 'wall-corvane-rise': -1, 'wall-corvane-take': 1, 'wall-corvane-toll': -18.5,
-    'wall-hydra-break': -2, 'wall-hydra-heart': -11.5, 'wall-hydra-up': -3, 'wall-morrowoak-gulp': -13,
-    'wall-morrowoak-out': -0.5, 'wall-morrowoak-up': -2, 'wall-titan-break': -1, 'wall-titan-up': -3,
-    'wall-titan-wind': -5.5, 'wall-up': -3.5, 'wall-wyrm-close': -1.5, 'wall-wyrm-fall': -1.5,
-    'wall-wyrm-heart': -12, 'wall-wyrm-open': -3.5, 'wall-wyrm-rise': -0.5, 'wall-wyrm-storm': -11,
-    'waymark': 11.5, 'wipe': -2,
+    'bm-garrow-buried-scent': 7, 'bm-garrow-circle-the-prey': 5.5, 'bm-garrow-cold-trail': -3.5, 'bm-garrow-double-scent': 5.5,
+    'bm-garrow-doubling-back': 5.5, 'bm-garrow-howl': -4, 'bm-garrow-intro': -1, 'bm-garrow-m-flurry': 4.5,
+    'bm-garrow-m-hound-bite': 11, 'bm-garrow-m-hound-fade': 16.5, 'bm-garrow-m-hound-scent': 10.5, 'bm-garrow-m-hound-spawn': 9.5,
+    'bm-garrow-m-hounds-meet': 4.5, 'bm-garrow-m-last': 6, 'bm-garrow-m-lock': 5, 'bm-garrow-m-mist-in': 5.5,
+    'bm-garrow-m-mist-out': 4.5, 'bm-garrow-m-pounce': 6, 'bm-garrow-m-pounce-wide': 1, 'bm-garrow-m-ridge': 2,
+    'bm-garrow-m-rime-land': 5, 'bm-garrow-m-ring-burst': 1.5, 'bm-garrow-m-run': 6, 'bm-garrow-m-run-start': 9,
+    'bm-garrow-m-scent': 4, 'bm-garrow-m-still-burst': 5, 'bm-garrow-m-still-mark': 8.5, 'bm-garrow-m-wipe': 7.5,
+    'bm-garrow-mist-hounds': 9, 'bm-garrow-on-the-scent': 6, 'bm-garrow-rime': 6.5, 'bm-garrow-snowdrift': 3.5,
+    'bm-garrow-stillness': 2.5, 'bm-garrow-the-long-chase': 2.5, 'bm-garrow-the-second-hound': 5, 'bm-garrow-the-whole-trail': 5.5,
+    'bm-garrow-throat-snap': 1.5, 'bm-garrow-w-arrive': -0.5, 'bm-garrow-w-called': -2, 'bm-garrow-w-cold': 0.5,
+    'bm-garrow-w-drift': 5, 'bm-garrow-w-enrage-land': -2.5, 'bm-garrow-w-hold': 1, 'bm-garrow-w-return': -3.5,
+    'bm-garrow-w-road': 2, 'bm-garrow-w-vanish': 1, 'bm-garrow-w-wipe': 3.5, 'bm-grubnak-belly-flop': -1,
+    'bm-grubnak-butchers-charge': -0.5, 'bm-grubnak-chop-chop': 1, 'bm-grubnak-clean-plate': -3, 'bm-grubnak-cleaver-toss': 1.5,
+    'bm-grubnak-clogged-drains': 3.5, 'bm-grubnak-dessert-is-served': 2.5, 'bm-grubnak-dinner-bell': -1.5, 'bm-grubnak-dinner-rush': 3.5,
+    'bm-grubnak-double-chop': 1, 'bm-grubnak-family-meal': 0.5, 'bm-grubnak-flambe': -0.5, 'bm-grubnak-flare-up': -1.5,
+    'bm-grubnak-flashover': 1.5, 'bm-grubnak-flashover-burst': -1.5, 'bm-grubnak-gorge': 2, 'bm-grubnak-gorged': -2,
+    'bm-grubnak-gorged-mend': 1, 'bm-grubnak-grease-fire': 0.5, 'bm-grubnak-intro': -1, 'bm-grubnak-kitchen-staff': 2.5,
+    'bm-grubnak-ladle-spin': 4, 'bm-grubnak-larder-toss': 2.5, 'bm-grubnak-lid-slam': -1.5, 'bm-grubnak-long-skewer': 0.5,
+    'bm-grubnak-meat-toss': 1.5, 'bm-grubnak-mince': 1.5, 'bm-grubnak-mise-en-place': 4, 'bm-grubnak-order-served': 3,
+    'bm-grubnak-order-up': -3, 'bm-grubnak-plate-spoiled': 1.5, 'bm-grubnak-rolling-meatballs': 2.5, 'bm-grubnak-service': -1,
+    'bm-grubnak-simmer': 2, 'bm-grubnak-skewer': 2, 'bm-grubnak-spice-rack': 0.5, 'bm-grubnak-spit-up': 1.5,
+    'bm-grubnak-stockpot': 1.5, 'bm-grubnak-tenderize': 1, 'bm-grubnak-ticket': 3.5, 'bm-grubnak-whisk': 7,
+    'bm-hollowking-barrow-bells': -1.5, 'bm-hollowking-barrow-knell': 1.5, 'bm-hollowking-coffin-lids': 2, 'bm-hollowking-court-of-bones': 1.5,
+    'bm-hollowking-crown-of-graves': 3.5, 'bm-hollowking-dirge': 0.5, 'bm-hollowking-echo-knights': 4.5, 'bm-hollowking-exile': 1,
+    'bm-hollowking-funeral-march': 0.5, 'bm-hollowking-grave-cleave': 0.5, 'bm-hollowking-grave-marks': 4, 'bm-hollowking-grave-summons': 1.5,
+    'bm-hollowking-gravebind': 2.5, 'bm-hollowking-intro': 1.5, 'bm-hollowking-judgement': 0.5, 'bm-hollowking-kneel': 2.5,
+    'bm-hollowking-lantern': 8.5, 'bm-hollowking-lights-out': 2, 'bm-hollowking-roll-call': 0.5, 'bm-hollowking-roll-called': 4,
+    'bm-hollowking-roll-caught': 2, 'bm-hollowking-roll-judged': 5, 'bm-hollowking-royal-audience': -1.5, 'bm-hollowking-royal-decree': -1,
+    'bm-hollowking-royal-doom': 1, 'bm-hollowking-royal-gaze': -1.5, 'bm-hollowking-sceptre-rebuke': 1.5, 'bm-hollowking-sceptre-sweep': 3.5,
+    'bm-hollowking-sceptre-throw': 2, 'bm-hollowking-shackle': 1, 'bm-hollowking-the-charge-sheet': 1.5, 'bm-hollowking-the-king-rises': -1,
+    'bm-hollowking-the-long-night': 1.5, 'bm-hollowking-the-sentence': 2, 'bm-hollowking-turned-out': 1, 'bm-hollowking-writ-of-execution': 1.5,
+    'bm-hood-burial': -0.5, 'bm-hood-calm-breaks': 0.5, 'bm-hood-cold-breath': 3, 'bm-hood-communion': -1,
+    'bm-hood-dead-calm': -1, 'bm-hood-echo': -2, 'bm-hood-frostfall': -3, 'bm-hood-hollow-echo': -2,
+    'bm-hood-hollow-step': 1, 'bm-hood-hollowing': -1, 'bm-hood-interment': -0.5, 'bm-hood-intro': -1.5,
+    'bm-hood-last-toll': -2, 'bm-hood-pale-waltz': 1, 'bm-hood-pursuit': 0.5, 'bm-hood-rimeburst': -1.5,
+    'bm-hood-rimelight': -2.5, 'bm-hood-severance': 1, 'bm-hood-the-scales': 1, 'bm-hood-the-tolling': 2,
+    'bm-hood-two-hands': 1, 'bm-hood-verdict': -0.5, 'bm-hood-verdict-eternal': -1, 'bm-hood-weighing': -0.5,
+    'bm-hydra-acid-spray': 3, 'bm-hydra-breach': 0.5, 'bm-hydra-entwined-necks': 0.5, 'bm-hydra-flame-gout': 3,
+    'bm-hydra-intro': -3, 'bm-hydra-mire-spit': 2, 'bm-hydra-mothers-cry': -1.5, 'bm-hydra-mothers-heart': 0.5,
+    'bm-hydra-regrowth': 0.5, 'bm-hydra-rending-maul': 1.5, 'bm-hydra-rime-crown': 1, 'bm-hydra-scalding': 2.5,
+    'bm-hydra-searing': 2.5, 'bm-hydra-stonegaze': 0.5, 'bm-hydra-stormcall': 3, 'bm-hydra-stump-echo': -0.5,
+    'bm-hydra-tail-thrash': 1, 'bm-hydra-the-drowning': -2.5, 'bm-hydra-tidal-dance': 3.5, 'bm-hydra-tidal-line': 2,
+    'bm-hydra-undertow': 3, 'bm-hydra-venom-bloom': 3, 'bm-maelis-annular': 3, 'bm-maelis-blood-harvest': 1.5,
+    'bm-maelis-blood-moon-dance': 1.5, 'bm-maelis-crescent': 4, 'bm-maelis-earthshine': 2, 'bm-maelis-full-moon': 2,
+    'bm-maelis-gibbous': 2.5, 'bm-maelis-half-moon': 4, 'bm-maelis-harvest': 3, 'bm-maelis-hunters-moon': 2.5,
+    'bm-maelis-hunts-pass': 5.5, 'bm-maelis-intro': 2, 'bm-maelis-libration': 2, 'bm-maelis-m-crown-crescent': 7.5,
+    'bm-maelis-m-crown-crescent-wane': 7.5, 'bm-maelis-m-crown-full': 10.5, 'bm-maelis-m-crown-full-wane': 10.5, 'bm-maelis-m-crown-gibbous': 8,
+    'bm-maelis-m-crown-gibbous-wane': 9, 'bm-maelis-m-crown-half': 8.5, 'bm-maelis-m-crown-half-wane': 8, 'bm-maelis-m-crown-new': 5.5,
+    'bm-maelis-m-crown-ring': 7, 'bm-maelis-m-crown-umbral': 1, 'bm-maelis-m-crown2': 12.5, 'bm-maelis-m-cut-crescent': 4.5,
+    'bm-maelis-m-cut-gibbous': 1, 'bm-maelis-m-cut-half': 4, 'bm-maelis-m-cut-ring': 2.5, 'bm-maelis-m-cut-ucrescent': -0.5,
+    'bm-maelis-m-dance-end': 5, 'bm-maelis-m-dash': 9, 'bm-maelis-m-earth': -1, 'bm-maelis-m-earth2': 5,
+    'bm-maelis-m-full': -0.5, 'bm-maelis-m-hound': 14, 'bm-maelis-m-line': 6.5, 'bm-maelis-m-line-lock': 18.5,
+    'bm-maelis-m-lock': 6.5, 'bm-maelis-m-mark-eye': 2.5, 'bm-maelis-m-mark-moon': 2, 'bm-maelis-m-mark-prey': 7.5,
+    'bm-maelis-m-mark-step': 8.5, 'bm-maelis-m-moonlet-burst': 4.5, 'bm-maelis-m-moonlet-fall': 2, 'bm-maelis-m-moonlet-gone': 7,
+    'bm-maelis-m-moonlet-harvest': 1.5, 'bm-maelis-m-moonlet-hum': 8, 'bm-maelis-m-moonlet-rest': 9.5, 'bm-maelis-m-open': 2,
+    'bm-maelis-m-pool': 6.5, 'bm-maelis-m-pool-met': 4.5, 'bm-maelis-m-pounce': 4.5, 'bm-maelis-m-pounce-wide': 0.5,
+    'bm-maelis-m-ride': 9, 'bm-maelis-m-ride-start': 8, 'bm-maelis-m-rock': -1, 'bm-maelis-m-run': 7.5,
+    'bm-maelis-m-shade': 9.5, 'bm-maelis-m-step-cut': 5.5, 'bm-maelis-m-touch': 1, 'bm-maelis-m-touch-end': 10.5,
+    'bm-maelis-m-well-met': -2.5, 'bm-maelis-m-well-missed': -1, 'bm-maelis-moon-touched': 4, 'bm-maelis-moonless-steps': 1.5,
+    'bm-maelis-moonlets': 3, 'bm-maelis-moonrise': 3.5, 'bm-maelis-moonwell': 5, 'bm-maelis-new-moon': 3,
+    'bm-maelis-the-hounds-return': 7.5, 'bm-maelis-the-last-dance': 1, 'bm-maelis-the-last-light': 4, 'bm-maelis-the-long-eclipse': 1.5,
+    'bm-maelis-the-waxing': 4, 'bm-maelis-totality': 0.5, 'bm-maelis-two-crowns': 9.5, 'bm-maelis-umbral-crescent': 1,
+    'bm-maelis-umbral-half-moon': 1, 'bm-maelis-w-answer': -1, 'bm-maelis-w-breath': 2, 'bm-maelis-w-dark': 1,
+    'bm-maelis-w-dusk': -1, 'bm-maelis-w-enter': -2, 'bm-maelis-w-fall': -1, 'bm-maelis-w-fall2': -4,
+    'bm-maelis-w-gather': -1.5, 'bm-maelis-w-hold': 1.5, 'bm-maelis-w-howl': -5.5, 'bm-maelis-w-hunt': -4.5,
+    'bm-maelis-w-light': -3, 'bm-maelis-w-streak': 3.5, 'bm-maelis-w-total': -2.5, 'bm-maelis-w-total-build': -0.5,
+    'bm-maelis-w-vault': 4, 'bm-maelis-w-wane': -1, 'bm-maelis-waning-dance': 3.5, 'bm-maelis-waxing-dance': 3.5,
+    'bm-morrowoak-barrow-lantern': 2, 'bm-morrowoak-brood-roots': 2.5, 'bm-morrowoak-deeper-roots': -1, 'bm-morrowoak-fourfold-bloom': 1,
+    'bm-morrowoak-frost-fist': -0.5, 'bm-morrowoak-grafting': 2, 'bm-morrowoak-greenseed': -1.5, 'bm-morrowoak-hunger-seed': -1,
+    'bm-morrowoak-hungering-dark': -1, 'bm-morrowoak-hungers-reach': 2, 'bm-morrowoak-hydra-head': 1.5, 'bm-morrowoak-inhale': -1.5,
+    'bm-morrowoak-intro': -1, 'bm-morrowoak-m-graft': 3.5, 'bm-morrowoak-m-mend': 2, 'bm-morrowoak-m-seed-mark': 1,
+    'bm-morrowoak-m-stir': 1.5, 'bm-morrowoak-nothing-left': -3, 'bm-morrowoak-root-lash': -0.5, 'bm-morrowoak-sap-tide': -0.5,
+    'bm-morrowoak-saplings': 3, 'bm-morrowoak-starved': -1.5, 'bm-morrowoak-storm-knot': 0.5, 'bm-morrowoak-take-root': -1.5,
+    'bm-morrowoak-the-grove-remade': -1, 'bm-morrowoak-the-hunger-stirs': 1.5, 'bm-morrowoak-the-swallowing': -3, 'bm-morrowoak-twin-seed': -0.5,
+    'bm-morrowoak-wyrm-wing': -1, 'bm-ormun-buoyed': 5.5, 'bm-ormun-burden': 5, 'bm-ormun-counterweight': 1.5,
+    'bm-ormun-exact-measure': 7.5, 'bm-ormun-first-weighing': 5, 'bm-ormun-heavy-hand': 4.5, 'bm-ormun-hollow-weight': 3.5,
+    'bm-ormun-let-it-be-level': 6.5, 'bm-ormun-m-beat': 5, 'bm-ormun-m-bell': 2, 'bm-ormun-m-bite': 12,
+    'bm-ormun-m-buoy': 4.5, 'bm-ormun-m-burden': 4.5, 'bm-ormun-m-clear': 13.5, 'bm-ormun-m-crack': 5.5,
+    'bm-ormun-m-creak': 5, 'bm-ormun-m-drop': 2, 'bm-ormun-m-exact': 12.5, 'bm-ormun-m-fall': 1,
+    'bm-ormun-m-fall-bridge': 5, 'bm-ormun-m-fall-light': 4.5, 'bm-ormun-m-flood': 3.5, 'bm-ormun-m-hand': 2,
+    'bm-ormun-m-lap': 16.5, 'bm-ormun-m-lift': 9.5, 'bm-ormun-m-mark': 14, 'bm-ormun-m-read': 8.5,
+    'bm-ormun-m-rise': 5, 'bm-ormun-m-roll': 15, 'bm-ormun-m-scatter': 3, 'bm-ormun-m-set': 7.5,
+    'bm-ormun-m-sink': 11, 'bm-ormun-m-swing': 3.5, 'bm-ormun-m-throw': 4.5, 'bm-ormun-m-tide-in': 2,
+    'bm-ormun-scatter-the-silver': 6, 'bm-ormun-spring-tide': 5.5, 'bm-ormun-the-beam-leans': 5.5, 'bm-ormun-the-bridge-breaks': 2.5,
+    'bm-ormun-the-heavier-falls': 4, 'bm-ormun-the-lighter-rises': 6.5, 'bm-ormun-the-scale-falls': 1.5, 'bm-ormun-the-tide-arrives': 5.5,
+    'bm-ormun-the-tide-comes-in': 2.5, 'bm-ormun-the-tide-weighs-too': 3.5, 'bm-ormun-the-weight-of-things': 5, 'bm-ormun-three-burdens': 5,
+    'bm-ormun-tip-the-scale': 3, 'bm-ormun-twin-undertow': 5.5, 'bm-ormun-undertow': 3.5, 'bm-ormun-w-break': -1,
+    'bm-ormun-w-ebb': -1, 'bm-ormun-w-enrage-land': -1.5, 'bm-ormun-w-fall': -1.5, 'bm-ormun-w-hold': 3,
+    'bm-ormun-w-pass': 1, 'bm-ormun-w-release': -1.5, 'bm-ormun-w-span-fall': -1, 'bm-ormun-w-span-groan': 1.5,
+    'bm-ormun-w-tip': -1, 'bm-seraph-absolution': -1, 'bm-seraph-afterglow': -1.5, 'bm-seraph-ash-landing': -1.5,
+    'bm-seraph-benediction': -0.5, 'bm-seraph-broken-halo': -1, 'bm-seraph-cold-sermon': -0.5, 'bm-seraph-following-light': 0.5,
+    'bm-seraph-frost-shadow': -0.5, 'bm-seraph-intro': -2.5, 'bm-seraph-last-rites': 0.5, 'bm-seraph-radiance': -3,
+    'bm-seraph-return': -1, 'bm-seraph-returning-edge': -0.5, 'bm-seraph-six-wings': 5, 'bm-seraph-the-unsaid': -1.5,
+    'bm-seraph-wingbeat': -1, 'bm-seraph-wingfall': 0.5, 'bm-skitterra-acid-deluge': 0.5, 'bm-skitterra-brood': 4.5,
+    'bm-skitterra-cats-cradle': 1.5, 'bm-skitterra-ceiling-ambush': 1, 'bm-skitterra-chrysalis': 4, 'bm-skitterra-cocoon-crack': 6.5,
+    'bm-skitterra-cocoon-drop': 1.5, 'bm-skitterra-cocoon-split': 0.5, 'bm-skitterra-cradle-burn': 7, 'bm-skitterra-cradle-tighten': -1,
+    'bm-skitterra-eclosion': -0.5, 'bm-skitterra-egg-sacs': 1.5, 'bm-skitterra-eightfold-lunge': 6.5, 'bm-skitterra-fang-rush': 2,
+    'bm-skitterra-fang-strike': 1, 'bm-skitterra-flutter': 3.5, 'bm-skitterra-from-the-dark': 2, 'bm-skitterra-heartbeat': 2.5,
+    'bm-skitterra-imprint': 2.5, 'bm-skitterra-imprint-wash': 3, 'bm-skitterra-into-the-dark': 2, 'bm-skitterra-intro': -1,
+    'bm-skitterra-lure-crush': 3.5, 'bm-skitterra-lure-hatch': 5, 'bm-skitterra-molt': 8, 'bm-skitterra-moonlight': -0.5,
+    'bm-skitterra-moth-queen': 1.5, 'bm-skitterra-moth-shriek': -4, 'bm-skitterra-rebirth': 1, 'bm-skitterra-scale-wave': 0.5,
+    'bm-skitterra-silk-lines': 3.5, 'bm-skitterra-silk-reel': 3.5, 'bm-skitterra-silk-wrap': 2.5, 'bm-skitterra-snare-weave': 2,
+    'bm-skitterra-spiderlings': 11, 'bm-skitterra-spin': 8, 'bm-skitterra-spinneret-volley': 16, 'bm-skitterra-strand-cut': 6,
+    'bm-skitterra-strand-reel': 5.5, 'bm-skitterra-the-swarm': 11.5, 'bm-skitterra-the-web-gives-way': 0.5, 'bm-skitterra-tightening-web': 2,
+    'bm-skitterra-venom-cure': 6, 'bm-skitterra-venom-drip': 4, 'bm-skitterra-venom-mist': -1.5, 'bm-skitterra-venom-spit': 4,
+    'bm-sovereign-aftershock': -1.5, 'bm-sovereign-ashen-sweep': -1, 'bm-sovereign-brand': -1.5, 'bm-sovereign-brand-sear': 1.5,
+    'bm-sovereign-burning-web': 4, 'bm-sovereign-call': 1, 'bm-sovereign-cinder-dive': -2, 'bm-sovereign-cloche': 3.5,
+    'bm-sovereign-crescent': 2, 'bm-sovereign-crier': 1, 'bm-sovereign-crossed-blades': 2, 'bm-sovereign-cupped-ember': -0.5,
+    'bm-sovereign-ember-and-ash': 1, 'bm-sovereign-emberfall': -1, 'bm-sovereign-flambe': 0.5, 'bm-sovereign-flambe-service': 0.5,
+    'bm-sovereign-foretold': 1, 'bm-sovereign-fuse': 7.5, 'bm-sovereign-glass-floor': -1.5, 'bm-sovereign-grace-withdrawn': -2.5,
+    'bm-sovereign-halo-procession': -0.5, 'bm-sovereign-halo-turn': -1.5, 'bm-sovereign-heads-of-flame': -2, 'bm-sovereign-hollow-kings-bell': 1.5,
+    'bm-sovereign-intro': -0.5, 'bm-sovereign-kindling': -2, 'bm-sovereign-knights-sweep': -0.5, 'bm-sovereign-knot': 4,
+    'bm-sovereign-lance': -3, 'bm-sovereign-lantern': 4, 'bm-sovereign-mince': 0.5, 'bm-sovereign-nightfall': -1,
+    'bm-sovereign-pyre': 2.5, 'bm-sovereign-royal-doom': 1, 'bm-sovereign-scatter': 0.5, 'bm-sovereign-seeds-of-ash': 1,
+    'bm-sovereign-shadow': -0.5, 'bm-sovereign-sovereigns-dance': -0.5, 'bm-sovereign-sunwheel-of-embers': 0.5, 'bm-sovereign-surge': -1.5,
+    'bm-sovereign-the-anvil-count': 2, 'bm-sovereign-twin-brands': 2, 'bm-sovereign-two-dancers': 2, 'bm-titan-avalanche': 0.5,
+    'bm-titan-breath-of-winter': 1.5, 'bm-titan-deep-winter': 0.5, 'bm-titan-endless-winter': -1.5, 'bm-titan-frostbite': 2.5,
+    'bm-titan-glacial-stomp': -0.5, 'bm-titan-ice-tomb': 1, 'bm-titan-icebreaker': 2, 'bm-titan-icefall': 2.5,
+    'bm-titan-intro': -3, 'bm-titan-rime-slam': 0.5, 'bm-titan-sunk-towers': 0.5, 'bm-titan-the-ice-groans': 2,
+    'bm-titan-titans-grip': 2.5, 'bm-titan-titans-sweep': 2, 'bm-titan-twin-slam': 2, 'bm-titan-two-winters': 1,
+    'bm-titan-whiteout': 1.5, 'bm-titan-winters-grasp': 2.5, 'bm-titan-winters-howl': -1, 'bm-vesper-backhand': 7.5,
+    'bm-vesper-counterpoint': -1.5, 'bm-vesper-cross-cut': 6.5, 'bm-vesper-double-glass': 5.5, 'bm-vesper-evenfall-dance': 2,
+    'bm-vesper-hairline-fracture': 15.5, 'bm-vesper-hand-mirror': 9.5, 'bm-vesper-intro': 1, 'bm-vesper-lagging-glass': 1,
+    'bm-vesper-last-reflection': -1.5, 'bm-vesper-lay-glass': 7.5, 'bm-vesper-m-back': 6, 'bm-vesper-m-backhand': 10.5,
+    'bm-vesper-m-counter': 2, 'bm-vesper-m-counter-glass': 5.5, 'bm-vesper-m-cross': 3.5, 'bm-vesper-m-cross-glass': 9,
+    'bm-vesper-m-cut': 7, 'bm-vesper-m-cut-draw': 9.5, 'bm-vesper-m-cut-draw-glass': 11.5, 'bm-vesper-m-cut-glass': 7.5,
+    'bm-vesper-m-cut-last': 0.5, 'bm-vesper-m-evenfall': 2, 'bm-vesper-m-fracture': 7.5, 'bm-vesper-m-hair': 8,
+    'bm-vesper-m-hand-break': 5, 'bm-vesper-m-hand-land': 4.5, 'bm-vesper-m-mark-aim': 8, 'bm-vesper-m-mark-chain': 12,
+    'bm-vesper-m-mark-lag': 13, 'bm-vesper-m-mark-wrong': 0.5, 'bm-vesper-m-open': 4.5, 'bm-vesper-m-pull': 2,
+    'bm-vesper-m-shard': 3.5, 'bm-vesper-m-shard-hall': 4.5, 'bm-vesper-m-soak-met': 3.5, 'bm-vesper-m-soak-missed': 6.5,
+    'bm-vesper-m-step': 6.5, 'bm-vesper-m-swap': 1, 'bm-vesper-m-thread-lock': -2, 'bm-vesper-m-thread-snap': 5,
+    'bm-vesper-m-through': 3.5, 'bm-vesper-m-trade': 5, 'bm-vesper-m-verdict': 1, 'bm-vesper-m-verdict-glass': 6.5,
+    'bm-vesper-out-of-step': 2.5, 'bm-vesper-ring-true': -1, 'bm-vesper-shared-reflection': 0.5, 'bm-vesper-silver-thread': 0.5,
+    'bm-vesper-the-hall': 3, 'bm-vesper-the-line': 2, 'bm-vesper-the-mirror-turns': 1, 'bm-vesper-through-the-glass': 3,
+    'bm-vesper-through-the-glass-again': 1, 'bm-vesper-trading-places': 2, 'bm-vesper-twin-verdict': -3.5, 'bm-vesper-two-threads': 1.5,
+    'bm-vesper-w-breath': 1.5, 'bm-vesper-w-dark': -0.5, 'bm-vesper-w-enrage-land': -3, 'bm-vesper-w-fall': -1,
+    'bm-vesper-w-latch': -2, 'bm-vesper-w-peak': -2.5, 'bm-vesper-w-plant': -3.5, 'bm-vesper-w-step': 3,
+    'bm-vesper-w-trade': 3, 'bm-vesper-w-turn': -3, 'bm-vesper-wrong-hand': 1, 'bm-volkar-avalanche': 0.5,
+    'bm-volkar-ball-lightning': 1.5, 'bm-volkar-chain-lightning': 3, 'bm-volkar-charge-swap': 5, 'bm-volkar-conduct-burst': -1,
+    'bm-volkar-conduct-leap': 2, 'bm-volkar-conduction': 3.5, 'bm-volkar-crossing-arms': 2.5, 'bm-volkar-eye-closes': 2,
+    'bm-volkar-eye-of-the-storm': 4.5, 'bm-volkar-gale-slam': 4, 'bm-volkar-gathering-storm': 0.5, 'bm-volkar-grounding-rods': 3,
+    'bm-volkar-heavens-fall': -1, 'bm-volkar-intro': -1.5, 'bm-volkar-lightning-rods': 9, 'bm-volkar-magnet-pull': 1.5,
+    'bm-volkar-magnet-push': 4, 'bm-volkar-magnetize': 0.5, 'bm-volkar-polarity-minus': 3, 'bm-volkar-polarity-plus': 3,
+    'bm-volkar-polarity-surge': 1.5, 'bm-volkar-pulse': 4.5, 'bm-volkar-reaching-arms': 0.5, 'bm-volkar-rod-strike': 1.5,
+    'bm-volkar-skyfall': -0.5, 'bm-volkar-split-current': -1, 'bm-volkar-split-land': 1.5, 'bm-volkar-squall-line': 3,
+    'bm-volkar-static-field': 5, 'bm-volkar-static-lash': 4.5, 'bm-volkar-still-air': 3, 'bm-volkar-storm-burst': -1.5,
+    'bm-volkar-storm-groan': 1, 'bm-volkar-storm-heart': 1, 'bm-volkar-storm-hush': 1.5, 'bm-volkar-storm-roar': -1,
+    'bm-volkar-storm-roll': 2.5, 'bm-volkar-storm-unbound': -1, 'bm-volkar-storm-walls': 2, 'bm-volkar-supercell': 2,
+    'bm-volkar-the-sky-lowers': 1, 'bm-volkar-thunder-crash': 1, 'bm-volkar-thunderclap': 1.5, 'bm-volkar-thunderhead': 2.5,
+    'bm-volkar-titan-fist': -1.5, 'bm-volkar-twin-fall': -1.5, 'bm-wyrm-cinder-rain': 7.5, 'bm-wyrm-ember-breath': 3.5,
+    'bm-wyrm-ember-devils': 4, 'bm-wyrm-intro': -4, 'bm-wyrm-marked-prey': -0.5, 'bm-wyrm-molten-trail': 2,
+    'bm-wyrm-pounce': 0.5, 'bm-wyrm-skyward': 1, 'bm-wyrm-take-flight': 3.5, 'bm-wyrm-the-tyrant-wakes': -1.5,
+    'bm-wyrm-twin-breath': 3.5, 'boss-auto': 2.5, 'boss-death': -2.5, 'boss-enrage': -2.5,
+    'boss-impact-empty': 7, 'boss-impact-heavy': 0.5, 'boss-impact-light': 7, 'boss-intro': -1.5,
+    'boss-step': 6, 'buff-on': -0.5, 'chest-drop': 3.5, 'chest-open': -5,
+    'cleanse': -5, 'clear': -4.5, 'crit': 4, 'dash': 6.5,
+    'debuff-on': -1, 'dummy-hit': 3, 'emote-cheer': -6.5, 'emote-laugh': -2,
+    'emote-wave': 2, 'enrage-bell': 3, 'fd-alert': -6, 'fd-arrow': 7,
+    'fd-auto-cast': 7, 'fd-auto-ember': 12.5, 'fd-auto-hit-arrow': 8.5, 'fd-auto-hit-ember': 16,
+    'fd-auto-hit-holy': 11, 'fd-auto-hit-melee': 7.5, 'fd-auto-holy': 9, 'fd-auto-melee': -1,
+    'fd-auto-shot': 8.5, 'fd-ballista': 1, 'fd-banner': -0.5, 'fd-bash': 4,
+    'fd-boon': -3, 'fd-boss-arrive': -3, 'fd-boss-down': -2, 'fd-brace': 1,
+    'fd-brand': 9.5, 'fd-brute-slam': 3, 'fd-buy': -3, 'fd-camp-hit': 5.5,
+    'fd-carve': 5.5, 'fd-chain-ash-breath': 1, 'fd-chain-bell': 0.5, 'fd-chain-bubble': 3.5,
+    'fd-chain-down': -3, 'fd-chain-far': -3, 'fd-chain-oak-cut': 4.5, 'fd-chain-pike-lunge': 3.5,
+    'fd-chain-pike-slap': 5, 'fd-chain-ram-charge': 0.5, 'fd-chain-ram-stamp': 2.5, 'fd-chain-root-snare': 1,
+    'fd-chain-soak-ok': -1, 'fd-chain-stump-throw': 3, 'fd-chain-sweep': 2, 'fd-chain-whelp-call': 1.5,
+    'fd-count': 6, 'fd-cover': -1, 'fd-dawn': -0.5, 'fd-dawn-breaks': -1,
+    'fd-defeat': -1.5, 'fd-deliver': 1.5, 'fd-elite-die': -3, 'fd-enemy-die': 5,
+    'fd-enemy-hit': 5.5, 'fd-erupt': -0.5, 'fd-fireball-cast': 7.5, 'fd-fireball-hit': 3.5,
+    'fd-firestep': 3, 'fd-flamecircle': 1, 'fd-flood-rise': 2, 'fd-gate-break': 0.5,
+    'fd-gate-hit': 3, 'fd-gate-shut': -2.5, 'fd-gnaw-breath': -3, 'fd-gnaw-lunge': -2.5,
+    'fd-gnaw-sniff': 0.5, 'fd-gnaw-stamp': 1, 'fd-hero-down': -1, 'fd-hyperforge': -3,
+    'fd-levelup': -0.5, 'fd-log-break': 2.5, 'fd-loot-land': 1, 'fd-march': -6,
+    'fd-mark': 3.5, 'fd-mend': -2.5, 'fd-meteor-fall': 1.5, 'fd-meteor-hit': -2,
+    'fd-mire-charge': 2.5, 'fd-mire-drown': -1.5, 'fd-mire-stamp': -1, 'fd-night': -1,
+    'fd-page': 1.5, 'fd-perfect': 2, 'fd-pickup': 4, 'fd-pierce': 7,
+    'fd-ping': 8.5, 'fd-post-out': 5.5, 'fd-post-plant': 0.5, 'fd-quake': 0.5,
+    'fd-quest-done': -1.5, 'fd-quest-missed': -2, 'fd-quest-offer': -5.5, 'fd-rankup': 2.5,
+    'fd-recall': -3, 'fd-recall-done': -2.5, 'fd-relight': 0.5, 'fd-sanctum': -2.5,
+    'fd-sell': -2, 'fd-setdown': 2.5, 'fd-smite': 0.5, 'fd-soldier-heal': 9.5,
+    'fd-soldier-shot': 12, 'fd-soldier-swing': 4, 'fd-spire-bolt': 5.5, 'fd-spire-hit': 4.5,
+    'fd-spit': 6, 'fd-stalker': 1.5, 'fd-starfall': 2, 'fd-step': 1.5,
+    'fd-strike-claw': 7.5, 'fd-strike-dart': 7.5, 'fd-strike-shade': 7, 'fd-strike-slag': 4,
+    'fd-strike-torch': 7, 'fd-tail-sweep': 1, 'fd-tower-fall': -2.5, 'fd-trap-arm': 3,
+    'fd-trap-burst': 3.5, 'fd-tunnel-burrow': -0.5, 'fd-tunnel-surface': -1.5, 'fd-victory': -4.5,
+    'fd-wall': -1, 'fd-wave': -7, 'fd-waystone-wake': -4, 'fd-whelps': 15,
+    'fd-wick-breath': 0.5, 'fd-wick-eat': 5.5, 'fd-wick-glow': 2.5, 'fd-wick-lunge': 2,
+    'fd-wild-boar': -4.5, 'fd-wild-howl': -6.5, 'fd-wild-return': -3.5, 'fd-wild-snap': 2,
+    'fd-wild-stone': 2.5, 'fd-wild-wake': -3.5, 'fd-wild-wolf': -5, 'feast-chew': 6.5,
+    'feast-clink': -5.5, 'feast-serve': -3.5, 'feast-sting': -2.5, 'fish-bite': 3,
+    'fish-cast': 1.5, 'fish-catch': -3, 'fish-lost': -0.5, 'fish-reel': -0.5,
+    'gloom-hollow-off': -2, 'gloom-hollow-on': 2, 'hd-bell': 0.5, 'hd-blade-out': -2.5,
+    'hd-freeze': -2, 'hd-frost-hit': 2, 'hd-kneel': -1.5, 'hd-lie': -1,
+    'hd-open-2': -2, 'hd-palm-open': -4, 'hd-pillar': -0.5, 'hd-shard': -1,
+    'hd-thaw': 3, 'hd-wing': 5.5, 'heal-land': -2.5, 'hit-confirm': 5.5,
+    'hit-heavy': 5, 'hit-light': 9, 'hm-bark-ash': -0.5, 'hm-bark-ghost': 3.5,
+    'hm-bark-greyfang': 0.5, 'hm-bark-rust': 0.5, 'hm-bite': 8, 'hm-bite-big': 2.5,
+    'hm-bringdown': -3, 'hm-calloff': 1.5, 'hm-down': 3, 'hm-hamstring': 1,
+    'hm-horn': -6, 'hm-howl': -3.5, 'hm-longchase': 1.5, 'hm-mount': -1,
+    'hm-quarry': 6.5, 'hm-relay': 4, 'hm-rend': 0.5, 'hm-ridedown': 2.5,
+    'hm-snap': 7, 'hm-up': 2.5, 'hm-whistle-hold': -7.5, 'hm-whistle-pounce': -7,
+    'ken-blaze': 0.5, 'ken-break': -0.5, 'ken-deathblow': -2, 'ken-good': 8,
+    'ken-iai': 2.5, 'ken-miss': 7.5, 'ken-off': 4.5, 'ken-pass': 6.5,
+    'ken-perfect': 2, 'ken-pommel': 6.5, 'ken-redirect': 1, 'lamp-drop': 11,
+    'lamp-ember': 14.5, 'lamp-end': 6.5, 'lamp-eternal': 0.5, 'lamp-pilgrim': 4.5,
+    'lamp-pillar': 3, 'lamp-snuff': 5.5, 'lamp-sparks': 5, 'lb-fire': -1.5,
+    'lb-ready': -5, 'loot-take': -2, 'low-hp': -4.5, 'npc-talk': -6,
+    'ping': 2.5, 'pip-up': 12, 'portal-enter': -3, 'portal-hum': -22.5,
+    'pull-count': 0.5, 'pull-count-last': -3.5, 'pull-go': -2, 'reaper-blink': 5.5,
+    'reaper-danse': 5, 'reaper-finish1': 4.5, 'reaper-finish2': -0.5, 'reaper-finish3': 1,
+    'reaper-finish4': -2, 'reaper-frenzy': -2.5, 'reaper-gate-bloom': -2.5, 'reaper-gate-close': -1,
+    'reaper-gate-open': 3.5, 'reaper-gate-tone': 8, 'reaper-gatebreaker': 1.5, 'reaper-harvest': -1,
+    'reaper-moon': 1.5, 'reaper-pop-bind': 4.5, 'reaper-pop-death': 3, 'reaper-pop-drain': 4,
+    'reaper-pop-thread': 9, 'reaper-rune': 12.5, 'reaper-rune-emp': 6, 'reaper-slack': 14.5,
+    'reaper-slash': 2.5, 'reaper-star-collapse': -2, 'reaper-star-open': 0.5, 'reaper-swing': 12,
+    'reaper-veil': -0.5, 'revive': -2, 'shield-break': 5, 'shield-up': -4,
+    'stack-1': 8, 'stack-2': -2.5, 'step-grass': 8, 'step-stone': 8.5,
+    'step-wood': 1.5, 'story-page': 3.5, 'sv-anvil-rise': 3.5, 'sv-anvil-strike': -1.5,
+    'sv-bite': 1, 'sv-boil': 3.5, 'sv-burnback': 0.5, 'sv-call-archmage': 0.5,
+    'sv-call-brannoc': 2.5, 'sv-call-corvane': -1, 'sv-call-grubnak': 0.5, 'sv-call-hollowking': 1.5,
+    'sv-call-hydra': -3, 'sv-call-morrowoak': 0.5, 'sv-call-skitterra': 3, 'sv-call-titan': 1,
+    'sv-call-volkar': 1, 'sv-call-wyrm': -3, 'sv-crescent-fan': -0.5, 'sv-crumble': -3.5,
+    'sv-cut': -2, 'sv-dance-cut': 0.5, 'sv-dance-cut2': 1, 'sv-dance-image': -1,
+    'sv-descent': -1.5, 'sv-dive-fall': -2, 'sv-dive-line': 1, 'sv-drift-loop': -11,
+    'sv-emberfall-below': -1, 'sv-everyname': -0.5, 'sv-fore-ghost': 0.5, 'sv-gutter': 1,
+    'sv-head-rise': -2, 'sv-heart-breath': 6, 'sv-heart-loop': -14, 'sv-hole-fall': -4.5,
+    'sv-hole-town': 0.5, 'sv-lance-dash': -1, 'sv-lantern-down': 0.5, 'sv-lantern-fly': 7,
+    'sv-lie-bell': -2.5, 'sv-pillar': -2, 'sv-proc-burst': -1, 'sv-pyre-cut': 1.5,
+    'sv-rebirth-blast': -1, 'sv-rebirth-choir': -1.5, 'sv-rebirth-draw': -1.5, 'sv-rebirth-halo': -1,
+    'sv-rebirth-sky': -2, 'sv-relight': -0.5, 'sv-sapling-arrive': -3, 'sv-sapling-creak': 2.5,
+    'sv-sapling-die': -4, 'sv-seal-shatter': -1.5, 'sv-seed-burst': -1.5, 'sv-seed-pulse': 2,
+    'sv-signal': -3, 'sv-stance-comet': -1, 'sv-stance-crane': 0.5, 'sv-stance-parting': 4,
+    'sv-steam-burst': -1, 'sv-twin-bloom': -2, 'sv-twin-bolt': 3.5, 'sv-twin-fire': -0.5,
+    'sv-twin-meet': -0.5, 'sv-twin-shift': 3.5, 'sv-twin-void': -0.5, 'sv-wall-fire': -0.5,
+    'sv-wall-out': 0.5, 'sv-water-hiss': -1.5, 'sv-wheel-clang': 3, 'sv-wheel-loop': -10,
+    'sv-wheel-throw': 1, 'sv-wipe-chord': -1.5, 'tg-aoe': 1.5, 'tg-buster': 1,
+    'tg-charge': 0.5, 'tg-gaze': 0.5, 'tg-knockback': 2.5, 'tg-raidwide': -0.5,
+    'tg-spread': 5.5, 'tg-stack': 1.5, 'tide-bell': 1, 'tide-crash': -1.5,
+    'tide-crest': 4.5, 'tide-gull': 9.5, 'tide-pop': 1.5, 'tide-slack': 10.5,
+    'tide-wave': 2.5, 'title-sting': -3, 'ui-bounty': 0.5, 'ui-buy': -6,
+    'ui-click': 2, 'ui-close': -0.5, 'ui-equip': -2.5, 'ui-error': -3,
+    'ui-feat': -7, 'ui-gold': -4, 'ui-hover': 13, 'ui-secret': -6,
+    'ult-alembist': 0.5, 'ult-bastion': 1.5, 'ult-bloodreaver': 1, 'ult-driftblade': 6.5,
+    'ult-fire': -1.5, 'ult-gloomsworn': -1, 'ult-gorgemaw': 1, 'ult-grovekeeper': 2.5,
+    'ult-houndmaster': -3.5, 'ult-kenseier': -1.5, 'ult-lanternkeeper': -2, 'ult-marionettist': 0.5,
+    'ult-oathbroker': -1, 'ult-pyromancer': -1, 'ult-ranger': 3, 'ult-ready': -4,
+    'ult-runeguard': -1, 'ult-shadowblade': 4, 'ult-thermist': -1, 'ult-threadweaver': -1,
+    'ult-tidecaller': -2, 'wall-break': -1.5, 'wall-caelum-break': -1, 'wall-caelum-seal': -1.5,
+    'wall-caelum-vigil': -19.5, 'wall-corvane-kneel': -1.5, 'wall-corvane-rise': -1, 'wall-corvane-take': 1,
+    'wall-corvane-toll': -18.5, 'wall-hydra-break': -2, 'wall-hydra-heart': -11.5, 'wall-hydra-up': -3,
+    'wall-morrowoak-gulp': -13, 'wall-morrowoak-out': -0.5, 'wall-morrowoak-up': -2, 'wall-titan-break': -1,
+    'wall-titan-up': -3, 'wall-titan-wind': -5.5, 'wall-up': -3.5, 'wall-wyrm-close': -1.5,
+    'wall-wyrm-fall': -1.5, 'wall-wyrm-heart': -12, 'wall-wyrm-open': -3.5, 'wall-wyrm-rise': -0.5,
+    'wall-wyrm-storm': -11, 'waymark': 11.5, 'wipe': -2,
   };
   // @@TRIM-END
 
@@ -1604,6 +1663,513 @@
   //
   //
   //
+
+  // @@WALL-garrow (its recipes go right under this line)
+  // Garrow's staged moments (walls/garrow.js): a hunter on a frozen lake, so cold and patient: soft thuds in snow, wind, ice, one long low note from far off. The entrance (the road's prints, the held beat,
+  // his arrival), the whiteout (the flurry building, the wipe, the white taking him, his return), the enrage's long cold and its land, and the kill (he is called off, down the road). His casts and smaller
+  // moves are the sound lane's (bm-garrow-*, bm-garrow-m-*).
+  const gwwHowl = (S, at, dur, pk, f = 150) => {   // one long low note from far off: rising a little, then settling, a slap-back behind it and a thin edge of frost
+    S.echo({ time: 0.8, fb: 0.4, lp: 1400, kill: at + dur + 3.4 });
+    const d1 = dur * 0.6;
+    S.voice({ at, f: f * 0.8, f1: f * 1.18, dur: d1, vowel: 'o', vowel1: 'u', breath: 1.1, lp: 2000, peak: pk, ech: 0.55, rev: 0.7, verb: 'cave', pts: [[0.4, 0.6], [d1 - 0.05, 1], [d1, 0]] });
+    S.voice({ at: at + dur * 0.42, f: f * 1.18, f1: f * 0.74, dur: dur * 0.58, vowel: 'u', vowel1: 'o', breath: 1.1, lp: 1800, peak: pk * 0.9, ech: 0.55, rev: 0.7, verb: 'cave', pts: [[0.2, 0.9], [dur * 0.2, 1], [dur * 0.44, 0.5], [dur * 0.58, 0]] });
+    S.tone({ at: at + 0.3, f: f * 7, f1: f * 9, dur: dur * 0.7, a: dur * 0.3, peak: pk * 0.04, ech: 0.6 });
+  };
+  def('bm-garrow-w-road', 'bm', S => {            // the first thing down the road: nine soft thuds in the snow, each a little nearer, a thin wind rising under them and a cold tone drawn tight
+    S.space('hall', 0.4);
+    S.noise({ color: 'pink', bp: 500, bp1: 1500, q: 0.6, dur: 2.4, a: 0.4, pts: [[0.6, 0.5], [1.8, 1], [2.4, 0]], peak: 0.07 });
+    for (let i = 0; i < 9; i++) {
+      const at = 0.2 + i * 0.2;
+      S.thud({ at, f: 76 - 1.6 * i, f1: 40, dur: 0.5, drive: 1.3, peak: 0.07 + 0.012 * i, click: 0.15, sub: 0.1 });
+      S.noise({ at, color: 'white', bp: 3000 + 160 * i, q: 1.2, dur: 0.12, a: 0.01, pts: [[0.02, 1], [0.12, 0]], peak: 0.03 + 0.004 * i });
+    }
+    S.tone({ f: mf(46), dur: 2.4, a: 0.8, peak: 0.05, pts: [[1.0, 0.3], [1.9, 1], [2.4, 0]] });
+  });
+  def('bm-garrow-w-hold', 'bm', S => {            // the held beat: a pale pair of tones beating slowly, drawn tight, and then nothing
+    S.space('hall', 0.4);
+    S.tone({ f: mf(70), dur: 1.4, peak: 0.05, pts: [[0.5, 0.45], [1.25, 1], [1.4, 0]] });
+    S.tone({ f: mf(70), det: 7, dur: 1.4, peak: 0.05, pts: [[0.5, 0.45], [1.25, 1], [1.4, 0]] });
+    S.tone({ f: mf(82), dur: 1.4, peak: 0.016, pts: [[0.8, 0.5], [1.25, 1], [1.4, 0]], pan: 0.4 });
+  });
+  def('bm-garrow-w-arrive', 'bm', S => {          // he is there: a deep soft knock under the ice, the ice cracking out in a ring, a long breath of mist, a low chord settling
+    S.space('hall', 0.55);
+    S.thud({ f: 62, f1: 26, dur: 1.5, drive: 2.2, peak: 0.55, sub: 0.3, click: 0.1 });
+    S.crack({ f: 2400, peak: 0.28, dur: 0.5 });
+    for (let i = 0; i < 7; i++) S.glass({ at: 0.04 + i * 0.06 + S.rr(0, 0.03), f: S.rr(2200, 6200), dur: S.rr(0.4, 0.9), peak: 0.05 + 0.03 * Math.random(), pan: S.rr(-0.8, 0.8) });
+    S.noise({ color: 'pink', bp: 700, bp1: 280, q: 0.7, dur: 1.9, a: 0.2, pts: [[0.3, 1], [1.9, 0]], peak: 0.16 });
+    S.rumble({ at: 0.05, dur: 2.2, f: 80, peak: 0.2, a: 0.05 });
+    S.pad({ at: 0.4, notes: [mf(46), mf(53), mf(58)], type: 'tri', a: 0.5, dur: 2.8, lp: 2600, peak: 0.11 });
+  });
+  def('bm-garrow-w-drift', 'bm', S => {           // the Whiteout's wind: it climbs over the whole cast, howling higher and wider, and is cut dead where the cast ends (3.6 s; played faster for a shorter cast)
+    S.space('hall', 0.4);
+    S.noise({ color: 'pink', bp: 250, bp1: 2800, q: 0.6, dur: 3.6, a: 3.0, pts: [[3.3, 0.85], [3.5, 1], [3.58, 0]], peak: 0.12 });
+    S.noise({ color: 'white', bp: 3800, bp1: 1800, q: 0.9, dur: 3.6, a: 3.1, pts: [[3.3, 0.6], [3.5, 1], [3.58, 0]], peak: 0.035 });
+    S.tone({ f: mf(52), f1: mf(68), dur: 3.6, a: 3.0, peak: 0.045, pts: [[3.3, 0.7], [3.5, 1], [3.58, 0]] });
+    S.rumble({ dur: 3.55, f: 60, peak: 0.1, a: 3.0 });
+  });
+  def('bm-garrow-w-wipe', 'bm', S => {            // the snow takes every track, the wind gone: a soft low settle into the quiet, one thin glass note
+    S.space('hall', 0.45);
+    S.thud({ at: 0.02, f: 70, f1: 36, dur: 0.9, drive: 1.1, peak: 0.2, click: 0, sub: 0.1 });
+    S.noise({ color: 'pink', bp: 1400, bp1: 500, q: 0.8, dur: 0.6, a: 0.05, pts: [[0.15, 1], [0.6, 0]], peak: 0.05 });
+    S.glass({ at: 0.15, f: mf(86), dur: 1.8, peak: 0.035 });
+  });
+  def('bm-garrow-w-vanish', 'bm', S => {          // he is gone into the white: the sound swallowed, a hush closing over it, a low note falling away under the snow
+    S.space('hall', 0.5);
+    S.noise({ color: 'pink', bp: 1900, bp1: 260, q: 0.7, dur: 1.8, a: 0.05, pts: [[0.1, 1], [1.8, 0]], peak: 0.17 });
+    S.thud({ f: 58, f1: 24, dur: 1.4, drive: 1.8, peak: 0.34, sub: 0.2, click: 0.05 });
+    S.whoosh({ f: 6000, f1: 400, dur: 0.9, peakAt: 0.15, peak: 0.12, q: 0.9 });
+    S.tone({ f: mf(60), f1: mf(48), dur: 1.8, a: 0.1, peak: 0.06, pts: [[0.2, 1], [1.8, 0]] });
+  });
+  def('bm-garrow-w-return', 'bm', S => {          // he comes out of the white: a long low note from far off answering, the snow letting go with a breath, a soft chord opening
+    S.space('cave', 0.6);
+    gwwHowl(S, 0.15, 4.4, 0.2, 150);
+    gwwHowl(S, 2.4, 3.0, 0.045, 130);
+    S.noise({ color: 'pink', bp: 1200, bp1: 3000, q: 0.7, dur: 1.2, a: 0.12, pts: [[0.2, 1], [1.2, 0]], peak: 0.1 });
+    S.thud({ at: 0.04, f: 66, f1: 30, dur: 0.9, drive: 1.5, peak: 0.28, click: 0.1 });
+    S.rumble({ at: 0.2, dur: 4.2, f: 66, peak: 0.08, a: 1.0 });
+  });
+  def('bm-garrow-w-cold', 'bm', S => {            // the enrage's long cold: ice creeping in from every edge; one tone climbing, creaks of ice and a rising shimmer, over eight seconds
+    S.space('hall', 0.5);
+    S.pad({ notes: [mf(40), mf(47)], type: 'sine', a: 3.0, dur: 8.2, lp: 1600, peak: 0.08, pts: [[5.0, 0.5], [7.8, 1], [8.2, 0]] });
+    S.tone({ f: mf(52), f1: mf(76), dur: 8.0, a: 4.0, peak: 0.05, pts: [[6.0, 0.5], [7.8, 1], [8.0, 0]] });
+    S.noise({ color: 'pink', bp: 400, bp1: 2400, q: 0.7, dur: 8.0, a: 4.0, pts: [[6.0, 0.6], [7.8, 1], [8.0, 0]], peak: 0.08 });
+    for (let i = 0; i < 14; i++) S.glass({ at: 0.5 + i * 0.5 + S.rr(0, 0.2), f: S.rr(2400, 7200), dur: S.rr(0.4, 1.0), peak: 0.03 + 0.004 * i, pan: S.rr(-0.9, 0.9) });
+    S.rumble({ dur: 8.0, f: 54, peak: 0.1, a: 4.0 });
+  });
+  def('bm-garrow-w-enrage-land', 'bm', S => {     // Cold Trail lands: a huge flat boom, the whole lake cracking across, glass thrown, a low note held as the room goes out
+    S.space('hall', 0.75);
+    S.thud({ f: 58, f1: 20, dur: 2.0, drive: 3, peak: 0.95, sub: 0.45, click: 0.2 });
+    S.crack({ f: 2800, peak: 0.42, dur: 0.6 });
+    for (let i = 0; i < 20; i++) S.glass({ at: 0.01 + i * 0.05 + S.rr(0, 0.03), f: S.rr(1600, 6800), dur: S.rr(0.5, 1.1), peak: 0.07 + 0.05 * Math.random(), pan: S.rr(-0.9, 0.9) });
+    S.whoosh({ at: 0.03, f: 300, f1: 6800, dur: 0.9, peakAt: 0.35, peak: 0.26, q: 0.9 });
+    S.rumble({ at: 0.05, dur: 2.8, f: 90, peak: 0.3, a: 0.05 });
+    S.pad({ at: 0.5, notes: [mf(40), mf(47), mf(52)], type: 'tri', a: 0.6, dur: 3.2, lp: 2200, peak: 0.12 });
+  });
+  def('bm-garrow-w-called', 'bm', S => {          // the kill: he is called off, not broken: the lake stills, a chain drawn taut and singing, one long note from far off going away down the road, the wind dying
+    S.space('hall', 0.7);
+    S.thud({ at: 0.02, f: 60, f1: 28, dur: 1.4, drive: 1.6, peak: 0.28, sub: 0.2, click: 0 });
+    S.metal({ at: 0.9, f: 1300, dur: 1.4, peak: 0.1, click: 0.1 });
+    S.tone({ at: 0.9, f: mf(80), f1: mf(86), dur: 2.4, a: 0.4, peak: 0.04, pts: [[0.6, 1], [2.4, 0]] });
+    S.noise({ at: 0.1, color: 'pink', bp: 1400, bp1: 300, q: 0.7, dur: 3.2, a: 0.2, pts: [[0.4, 1], [3.2, 0]], peak: 0.1 });
+    gwwHowl(S, 1.0, 4.6, 0.18, 140);
+    S.bell({ at: 0.04, f: mf(36), dur: 5.4, peak: 0.26, lp: 2400 });
+    S.pad({ at: 1.0, notes: [mf(46), mf(53), mf(58)], type: 'sine', a: 1.6, dur: 5.0, lp: 2400, peak: 0.07 });
+  });
+
+  // @@WALL-vesper (its recipes go right under this line)
+  // Vesper's showpiece moments (walls/vesper.js): cool and quiet, struck glass and a held breath. The wall: a note for each soak met (the same recipe, climbing by its rate), the latch of the last, the
+  // held beat (almost nothing), the riser of the turn and its release, the breath after. The line: the glass going dark, the plant, the Glass Knight stepping through. The dance's last cut, the enrage's
+  // long build and its land, and the kill.
+  def('bm-vesper-w-latch', 'bm', S => {           // the last soak met: a small bright catch, a deep knock, three panes struck climbing across the hall and the glass, the air drawn in
+    S.space('hall', 0.75);
+    S.metal({ f: 2100, dur: 0.28, peak: 0.16 });
+    S.thud({ at: 0.02, f: 70, f1: 34, dur: 0.9, drive: 1.6, peak: 0.45, click: 0, sub: 0.3 });
+    [[76, 0.04, 0.26], [88, 0.14, 0.22], [95, 0.26, 0.16]].forEach(([n, at, pk], i) => S.glass({ at, f: mf(n), dur: 3.2, peak: pk, pan: (i - 1) * 0.35 }));
+    S.whoosh({ at: 0.05, f: 6200, f1: 900, dur: 0.6, peakAt: 0.3, peak: 0.12 });
+  });
+  def('bm-vesper-w-hold', 'bm', S => {            // the held beat: a pale pair of tones beating slowly, drawn tight, and then nothing
+    S.space('hall', 0.5);
+    S.tone({ f: mf(88), dur: 1.5, peak: 0.05, pts: [[0.55, 0.45], [1.35, 1], [1.5, 0]] });
+    S.tone({ f: mf(88), det: 9, dur: 1.5, peak: 0.05, pts: [[0.55, 0.45], [1.35, 1], [1.5, 0]] });
+    S.tone({ f: mf(100), dur: 1.5, peak: 0.018, pts: [[0.8, 0.5], [1.35, 1], [1.5, 0]], pan: 0.4 });
+  });
+  def('bm-vesper-w-turn', 'bm', S => {            // the mirror turns: a deep boom, the north glass coming apart in a rain, the pane of light swung through, the hall opening in a chord
+    S.space('hall', 0.7);
+    S.thud({ f: 66, f1: 24, dur: 1.9, drive: 3, peak: 0.9, sub: 0.4, click: 0.2 });
+    S.crack({ f: 2600, peak: 0.4, dur: 0.5 });
+    for (let i = 0; i < 18; i++) S.glass({ at: 0.01 + i * 0.045 + S.rr(0, 0.03), f: S.rr(1800, 6800), dur: S.rr(0.5, 1.1), peak: 0.07 + 0.05 * Math.random(), pan: S.rr(-0.9, 0.9) });
+    S.whoosh({ at: 0.03, f: 300, f1: 7000, dur: 0.95, peakAt: 0.4, peak: 0.28, q: 0.9 });
+    S.rumble({ at: 0.05, dur: 2.4, f: 120, peak: 0.28, a: 0.05 });
+    S.pad({ at: 0.55, notes: [mf(52), mf(59), mf(64), mf(71)], type: 'tri', a: 0.5, dur: 3.0, lp: 3000, peak: 0.13 });
+    [88, 95, 100].forEach((n, i) => S.glass({ at: 0.9 + i * 0.12, f: mf(n), dur: 2.4, peak: 0.06 }));
+  });
+  def('bm-vesper-w-breath', 'bm', S => {          // after the turn: the hall breathes out, a soft rush of air through a high pane and a low settling
+    S.space('hall', 0.6);
+    S.noise({ color: 'pink', bp: 2400, bp1: 900, q: 0.8, dur: 1.4, a: 0.25, pts: [[0.3, 1], [1.4, 0]], peak: 0.1 });
+    S.tone({ f: mf(45), dur: 1.4, a: 0.2, peak: 0.08, pts: [[0.3, 1], [1.4, 0]] });
+    S.glass({ at: 0.4, f: mf(83), dur: 2.2, peak: 0.05 });
+  });
+  def('bm-vesper-w-trade', 'bm', S => {           // Through the Glass, again: two panes passing, one note falling as another rises a step apart, a small low knock under them (smaller than the turn)
+    S.space('hall', 0.65);
+    S.glass({ f: mf(88), f1: mf(83), glide: 0.5, dur: 1.6, peak: 0.14, pan: -0.35 });
+    S.glass({ at: 0.04, f: mf(81), f1: mf(86), glide: 0.5, dur: 1.6, peak: 0.14, pan: 0.35 });
+    S.thud({ at: 0.02, f: 80, f1: 40, dur: 0.5, peak: 0.25, click: 0 });
+    S.whoosh({ at: 0.02, f: 3000, f1: 1000, dur: 0.4, peakAt: 0.4, peak: 0.06 });
+  });
+  def('bm-vesper-w-dark', 'bm', S => {            // the glass going dark: its notes falling away one after another, an exhale, the low note thinning out
+    S.space('hall', 0.75);
+    [100, 95, 91, 88, 83, 76].forEach((n, i) => S.glass({ at: i * 0.3, f: mf(n), dur: 2.0, peak: 0.12 - 0.012 * i, pan: (i % 2 ? 0.3 : -0.3) }));
+    S.noise({ color: 'brown', lp: 900, lp1: 160, dur: 2.2, a: 0.3, pts: [[0.4, 1], [2.2, 0]], peak: 0.2 });
+    S.tone({ f: mf(33), dur: 2.4, a: 0.1, peak: 0.16, pts: [[0.2, 1], [2.4, 0]] });
+  });
+  def('bm-vesper-w-plant', 'bm', S => {           // the blade driven into the floor: a huge low knock, the blade ringing, the cracks running out, the line singing
+    S.space('hall', 0.7);
+    S.thud({ f: 74, f1: 28, dur: 2.2, drive: 3.4, peak: 0.95, sub: 0.5, click: 0.3 });
+    S.metal({ f: 520, dur: 2.5, peak: 0.28 });
+    S.crack({ at: 0.01, f: 2200, peak: 0.45, dur: 0.6 });
+    S.crackle({ at: 0.05, f: 3800, dens: 1.5, dur: 1.2, peak: 0.12, pts: [[0.2, 1], [1.2, 0]] });
+    S.whoosh({ at: 0.04, f: 500, f1: 6500, dur: 0.8, peakAt: 0.3, peak: 0.2 });
+    S.pad({ at: 0.15, notes: [mf(64), mf(71), mf(76)], type: 'sine', a: 0.2, dur: 3.4, lp: 4000, peak: 0.12 });
+    [88, 95].forEach((n, i) => S.glass({ at: 0.2 + i * 0.1, f: mf(n), dur: 3.0, peak: 0.07 }));
+  });
+  def('bm-vesper-w-step', 'bm', S => {            // the Glass Knight steps out of the glass: a soft plate step, a pane rung low, a ripple falling away
+    S.space('hall', 0.65);
+    S.metal({ f: 380, dur: 0.5, peak: 0.12, click: 0.2 });
+    S.thud({ at: 0.01, f: 90, f1: 46, dur: 0.4, peak: 0.25, click: 0 });
+    S.glass({ at: 0.06, f: mf(83), dur: 2.2, peak: 0.1 });
+    S.tone({ at: 0.04, f: 1500, f1: 520, glide: 0.6, dur: 0.7, peak: 0.04, a: 0.02 });
+  });
+  def('bm-vesper-w-peak', 'bm', S => {            // the last cut of the dance: two blades meeting, one note struck on the other, glass in a fine rain, a deep release
+    S.space('hall', 0.7);
+    S.thud({ f: 62, f1: 26, dur: 1.5, drive: 2.8, peak: 0.85, sub: 0.4 });
+    S.thud({ at: 0.035, f: 88, f1: 40, dur: 0.9, drive: 2, peak: 0.45, click: 0, pan: 0.4 });
+    S.crack({ f: 2400, peak: 0.45, dur: 0.5 });
+    S.metal({ f: 700, dur: 1.8, peak: 0.22 });
+    for (let i = 0; i < 12; i++) S.glass({ at: 0.03 + i * 0.05 + S.rr(0, 0.03), f: S.rr(2200, 7200), dur: S.rr(0.4, 0.9), peak: 0.06 + 0.04 * Math.random(), pan: S.rr(-0.9, 0.9) });
+    [76, 88].forEach((n, i) => S.glass({ at: 0.1 + i * 0.05, f: mf(n), dur: 3.2, peak: 0.16 }));
+    S.whoosh({ at: 0.05, f: 700, f1: 6000, dur: 0.7, peakAt: 0.3, peak: 0.2 });
+  });
+  def('bm-vesper-w-enrage-land', 'bm', S => {     // the last reflection lands: every pane in the room struck at once, a deep fall under it, then the room goes out
+    S.space('hall', 0.8);
+    S.thud({ f: 58, f1: 20, dur: 2.6, drive: 3.6, peak: 1.0, sub: 0.5 });
+    S.crack({ f: 2000, peak: 0.55, dur: 0.7 });
+    for (let i = 0; i < 28; i++) S.glass({ at: i * 0.04 + S.rr(0, 0.03), f: S.rr(1500, 7500), dur: S.rr(0.6, 1.4), peak: 0.07 + 0.05 * Math.random(), pan: S.rr(-1, 1) });
+    S.metal({ f: 480, dur: 2.2, peak: 0.25 });
+    S.whoosh({ at: 0.03, f: 400, f1: 7200, dur: 1.0, peakAt: 0.35, peak: 0.3 });
+    S.rumble({ at: 0.05, dur: 2.8, f: 120, peak: 0.3, a: 0.05 });
+  });
+  def('bm-vesper-w-fall', 'bm', S => {            // she falls: a single struck pane and the notes of an open chord falling after it, one small bright tink at a time, a low hum, and a long quiet
+    S.space('hall', 0.85);
+    S.metal({ f: 420, dur: 1.6, peak: 0.16 });
+    S.thud({ at: 0.02, f: 60, f1: 28, dur: 1.4, drive: 1.6, peak: 0.5, click: 0, sub: 0.3 });
+    [100, 95, 88, 83, 76].forEach((n, i) => S.glass({ at: 0.15 + i * 0.35, f: mf(n), dur: 4.2, peak: 0.19 - 0.02 * i, pan: (i % 2 ? 0.35 : -0.35) }));
+    for (let i = 0; i < 10; i++) S.glass({ at: 0.5 + i * 0.23 + S.rr(0, 0.1), f: S.rr(3200, 7400), dur: 0.7, peak: 0.035 + 0.02 * Math.random(), pan: S.rr(-0.9, 0.9) });
+    S.tone({ f: mf(33), dur: 4.6, a: 0.3, peak: 0.18, pts: [[0.5, 1], [4.6, 0]] });
+    S.pad({ at: 0.6, notes: [mf(52), mf(59), mf(64)], type: 'sine', a: 1.0, dur: 4.2, lp: 2600, peak: 0.08 });
+  });
+
+  // @@WALL-ormun (its recipes go right under this line)
+  // Ormun's staged moments (walls/ormun.js): slow and heavy, black water and silver. Every release has a deep body and a mid body (a laptop speaker keeps only the mids): a low thud, a second knock an octave and
+  // a half up, water in the noise bands, and a bell. The Spring Tide: the gather, the held beat (almost nothing), the release, each pass under a pan, the ebb, the break. The bridge: the span's groan and its fall.
+  // The beam's groan and the Tip. The entrance (rise), the enrage's build and land, and the kill (fall). The count's bell, the verdict's lock and the strike are the sound lane's (bm-ormun-m-*).
+  def('bm-ormun-w-gather', 'bm', S => {           // the Tide gathering: the sea drawn back (a rising rumble and a rising band of water), the chains taking up the slack (three groans), a low chord swelling
+    S.space('hall', 0.6);
+    S.whoosh({ f: 500, f1: 1800, dur: 3.9, peakAt: 0.75, peak: 0.12, q: 0.7, pts: [[2.8, 1], [3.7, 0.4], [3.9, 0]] }); S.tone({ f: mf(67), dur: 3.8, a: 2.6, peak: 0.03, pts: [[2.6, 1], [3.8, 0]] });
+    S.rumble({ dur: 3.9, f: 110, f1: 280, a: 2.6, peak: 0.3, pts: [[2.7, 1], [3.8, 0.5], [3.9, 0]] });
+    S.noise({ color: 'pink', bp: 240, bp1: 1500, q: 0.8, dur: 3.9, pts: [[2.8, 1], [3.7, 0.35], [3.9, 0]], peak: 0.17 });
+    S.pad({ notes: [mf(31), mf(38), mf(43)], type: 'sine', a: 2.6, dur: 3.9, lp: 1500, peak: 0.15 });
+    S.tone({ f: mf(55), dur: 3.8, peak: 0.04, pts: [[2.4, 0.5], [3.6, 1], [3.8, 0]] }); S.tone({ f: mf(55), det: 11, dur: 3.8, peak: 0.04, pts: [[2.4, 0.5], [3.6, 1], [3.8, 0]] });
+    [0.8, 1.9, 2.8].forEach((at, i) => S.creak({ at, f: 26 - i * 2, f1: 19, dur: 0.9, res: [380 + i * 90, 900], q: 9, a: 0.25, peak: 0.14 + 0.03 * i }));
+  });
+  def('bm-ormun-w-hold', 'bm', S => {             // the held beat: one pale tone drawn thin over a still sea, and then nothing
+    S.space('hall', 0.55);
+    S.tone({ f: mf(79), dur: 1.5, peak: 0.045, pts: [[0.6, 0.4], [1.3, 1], [1.5, 0]] });
+    S.tone({ f: mf(79), det: 8, dur: 1.5, peak: 0.045, pts: [[0.6, 0.4], [1.3, 1], [1.5, 0]] });
+    S.tone({ f: mf(55), dur: 1.5, peak: 0.03, pts: [[0.8, 0.5], [1.3, 1], [1.5, 0]], pan: -0.3 });
+  });
+  def('bm-ormun-w-release', 'bm', S => {          // The Tide Arrives: the sea breaks open along its whole length, a deep knock and its octave and a half, a roar of water, a great low bell, the chains taking the strain
+    S.space('hall', 0.7);
+    S.thud({ f: 64, f1: 25, dur: 2.3, drive: 3, peak: 0.378, sub: 0.4, click: 0.2 });
+    S.thud({ at: 0.015, f: 170, f1: 62, dur: 1.0, drive: 1.6, peak: 0.21, click: 0, pan: 0.2 });
+    S.crack({ f: 1800, peak: 0.35, dur: 0.45 });
+    S.whoosh({ at: 0.03, f: 260, f1: 5200, dur: 1.5, peakAt: 0.32, peak: 0.714, q: 0.8 });
+    S.noise({ at: 0.04, color: 'white', hp: 1400, lp: 7500, dur: 1.4, a: 0.01, pts: [[0.05, 1], [0.5, 0.6], [1.4, 0]], peak: 0.34 });
+    [0.02, 0.2, 0.42, 0.7].forEach((at, i) => S.splat({ at, peak: 0.4 - i * 0.06, dur: 0.4, pan: (i % 2 ? 0.5 : -0.5) }));
+    S.bell({ at: 0.02, f: mf(40), dur: 3.2, peak: 0.34, lp: 3000 }); S.bell({ at: 0.04, f: mf(64), dur: 2.4, peak: 0.12, lp: 4200 });
+    S.metal({ at: 0.08, f: 250, dur: 0.9, peak: 0.27, click: 0.4 });
+    S.pad({ at: 0.5, notes: [mf(40), mf(47), mf(52), mf(59)], type: 'sine', a: 0.9, dur: 3.2, lp: 2600, peak: 0.12 });
+  });
+  def('bm-ormun-w-pass', 'bm', S => {             // the Tide sliding under a pan: a long surge of water, the chains groaning, the pan heaving up with a low knock, a soft ring of silver
+    S.space('hall', 0.65);
+    S.whoosh({ f: 180, f1: 900, dur: 2.6, peakAt: 0.42, peak: 0.476, q: 0.6 });
+    S.rumble({ dur: 2.6, f: 100, f1: 240, a: 0.9, peak: 0.073 });
+    S.creak({ at: 0.2, f: 28, f1: 17, dur: 1.9, res: [330, 720], q: 9, a: 0.3, peak: 0.21 });
+    S.thud({ at: 0.55, f: 150, f1: 58, dur: 0.9, drive: 1.2, peak: 0.143, click: 0.1, sub: 0.18 });
+    S.metal({ at: 0.6, f: 215, dur: 1.5, peak: 0.15, click: 0.2 });
+    S.noise({ at: 0.3, color: 'pink', bp: 700, bp1: 2400, q: 1, dur: 1.6, pts: [[0.5, 1], [1.6, 0]], peak: 0.102 });
+  });
+  def('bm-ormun-w-ebb', 'bm', S => {              // the Tide going out from under the pans: the water draining away, a falling note
+    S.space('hall', 0.6);
+    S.whoosh({ f: 1500, f1: 400, dur: 2.2, peakAt: 0.2, peak: 0.1, q: 0.7 });
+    S.noise({ color: 'pink', lp: 1800, lp1: 260, dur: 2.4, a: 0.2, pts: [[0.3, 1], [2.4, 0]], peak: 0.255 });
+    S.tone({ f: mf(48), f1: mf(40), glide: 2.2, dur: 2.4, a: 0.2, peak: 0.1, pts: [[0.3, 1], [2.4, 0]] });
+    S.creak({ at: 0.1, f: 22, f1: 17, dur: 1.4, res: [300, 640], q: 8, a: 0.3, peak: 0.098 });
+  });
+  def('bm-ormun-w-break', 'bm', S => {            // the third count: the Tide thrown away. A deep knock and its upper body, the bell struck clean, a rush of water going out, the sea settling, a chord opening
+    S.space('hall', 0.75);
+    S.thud({ f: 62, f1: 24, dur: 2.4, drive: 3.2, peak: 0.399, sub: 0.45, click: 0.25 });
+    S.thud({ at: 0.02, f: 180, f1: 66, dur: 1.0, drive: 1.6, peak: 0.21, click: 0, pan: -0.2 });
+    S.crack({ f: 2000, peak: 0.35, dur: 0.4 });
+    S.bell({ at: 0.02, f: mf(52), dur: 3.8, peak: 0.3, lp: 3600 }); S.bell({ at: 0.05, f: mf(76), dur: 3.2, peak: 0.12, lp: 5200 });
+    S.whoosh({ at: 0.9, f: 900, f1: 140, dur: 3.0, peakAt: 0.25, peak: 0.578, q: 0.7 });
+    S.rumble({ at: 0.9, dur: 3.2, f: 120, f1: 60, a: 0.3, peak: 0.083 });
+    [0.1, 0.3, 0.55].forEach((at, i) => S.splat({ at, peak: 0.4 - i * 0.07, dur: 0.4, pan: i % 2 ? 0.5 : -0.5 }));
+    S.pad({ at: 1.2, notes: [mf(52), mf(59), mf(64), mf(71)], type: 'tri', a: 0.9, dur: 3.6, lp: 3000, peak: 0.13 });
+    [88, 95, 100].forEach((n, i) => S.glass({ at: 1.6 + i * 0.25, f: mf(n), dur: 2.6, peak: 0.05 }));
+  });
+  def('bm-ormun-w-span-groan', 'bm', S => {       // the bridge groaning: stone grinding on iron, the span taking its last weight, grit falling
+    S.space('hall', 0.6);
+    S.noise({ at: 0.2, color: 'pink', bp: 700, bp1: 1900, q: 1.2, dur: 2.5, a: 1.4, peak: 0.07, pts: [[1.8, 1], [2.5, 0]] }); S.metal({ at: 1.9, f: 430, dur: 0.9, peak: 0.1 });
+    S.scrape({ f: 320, q: 3, rate: 9, dur: 2.7, a: 1.6, peak: 0.1, pts: [[1.8, 1], [2.6, 0.7], [2.7, 0]] });
+    [0.3, 1.2, 2.0].forEach((at, i) => S.creak({ at, f: 18 + i * 5, f1: 34 + i * 8, dur: 0.9, res: [200 + i * 80, 560, 1150], q: 8, a: 0.2, peak: 0.168 + 0.03 * i }));
+    S.rumble({ dur: 2.8, f: 90, a: 1.8, peak: 0.24, pts: [[1.9, 1], [2.7, 0.6], [2.8, 0]] });
+    S.crackle({ at: 0.4, f: 2200, dens: 0.6, dur: 2.2, peak: 0.07, pts: [[1.8, 1], [2.2, 0]] });
+    S.tone({ f: mf(36), dur: 2.7, a: 1.6, peak: 0.036, pts: [[1.8, 1], [2.7, 0]] });
+  });
+  def('bm-ormun-w-span-fall', 'bm', S => {        // the bridge goes: a crack through the stone, the slabs falling into the sea one after another, the chains whipping free, the pans ringing
+    S.space('hall', 0.7);
+    S.noise({ at: 0.04, color: 'pink', bp: 900, bp1: 2600, q: 0.8, dur: 1.6, pts: [[0.1, 1], [1.6, 0]], peak: 0.28 }); S.metal({ at: 0.06, f: 610, dur: 1.5, peak: 0.22, click: 0.4 }); S.bell({ at: 0.04, f: mf(62), dur: 2.2, peak: 0.1, lp: 4200 });
+    S.crack({ f: 1500, peak: 0.5, dur: 0.5 });
+    S.thud({ f: 62, f1: 24, dur: 2.4, drive: 3, peak: 0.378, sub: 0.4, click: 0.2 });
+    S.thud({ at: 0.02, f: 140, f1: 52, dur: 0.9, drive: 1.5, peak: 0.21, click: 0, pan: 0.15 });
+    [0.12, 0.26, 0.4, 0.55, 0.72].forEach((at, i) => { S.splat({ at, peak: 0.45 - i * 0.05, dur: 0.45, pan: (i - 2) * 0.3 }); S.thud({ at, f: 110 - i * 8, f1: 48, dur: 0.5, peak: 0.105, click: 0.2 }); });
+    S.whoosh({ at: 0.05, f: 300, f1: 4600, dur: 1.3, peakAt: 0.3, peak: 0.34 });
+    S.metal({ at: 0.1, f: 232, dur: 1.9, peak: 0.2 }); S.metal({ at: 0.24, f: 318, dur: 1.5, peak: 0.18, click: 0.3, pan: 0.4 });
+    S.rumble({ at: 0.05, dur: 2.8, f: 130, a: 0.15, peak: 0.086 });
+    S.bell({ at: 0.03, f: mf(50), dur: 2.8, peak: 0.16, lp: 3200 });
+  });
+  def('bm-ormun-w-beam-groan', 'bm', S => {       // the beam taking the god's hand: iron groaning along its length, the chains drawing tight, a held tension
+    S.space('hall', 0.6);
+    S.noise({ color: 'pink', bp: 900, bp1: 2200, q: 1.2, dur: 3.3, a: 2.0, peak: 0.07, pts: [[2.6, 1], [3.2, 0.5], [3.3, 0]] }); S.metal({ at: 2.9, f: 520, dur: 0.9, peak: 0.1 });
+    [0.2, 1.0, 1.8, 2.5].forEach((at, i) => S.creak({ at, f: 20 + i * 4, f1: 30 + i * 6, dur: 0.95, res: [700 + i * 150, 1500, 2900], q: 9, a: 0.2, peak: 0.154 + 0.02 * i }));
+    S.whoosh({ f: 140, f1: 700, dur: 3.3, peakAt: 0.8, peak: 0.272, q: 0.6, pts: [[2.6, 1], [3.2, 0.5], [3.3, 0]] });
+    S.rumble({ dur: 3.4, f: 90, a: 2.4, peak: 0.24, pts: [[2.6, 1], [3.3, 0.6], [3.4, 0]] });
+    S.tone({ f: mf(50), dur: 3.3, a: 2.2, peak: 0.05, pts: [[2.4, 0.6], [3.2, 1], [3.3, 0]] }); S.tone({ f: mf(50), det: 12, dur: 3.3, a: 2.2, peak: 0.05, pts: [[2.4, 0.6], [3.2, 1], [3.3, 0]] });
+  });
+  def('bm-ormun-w-tip', 'bm', S => {              // the Tip: both pans swung in one stroke, two heavy splashes under them, the chains and the beam ringing out
+    S.space('hall', 0.7);
+    S.noise({ at: 0.03, color: 'pink', bp: 900, bp1: 2800, q: 0.8, dur: 1.6, pts: [[0.1, 1], [1.6, 0]], peak: 0.28 }); S.metal({ at: 0.05, f: 720, dur: 1.6, peak: 0.2, click: 0.4 }); S.bell({ at: 0.04, f: mf(64), dur: 2.4, peak: 0.13, lp: 4200 });
+    S.thud({ f: 66, f1: 26, dur: 2.2, drive: 3, peak: 0.357, sub: 0.4, click: 0.2 });
+    S.thud({ at: 0.0, f: 150, f1: 56, dur: 0.9, drive: 1.5, peak: 0.189, click: 0, pan: -0.5 }); S.thud({ at: 0.07, f: 135, f1: 52, dur: 0.9, drive: 1.5, peak: 0.189, click: 0, pan: 0.5 });
+    S.whoosh({ at: 0.02, f: 250, f1: 5000, dur: 1.4, peakAt: 0.3, peak: 0.32 });
+    S.splat({ at: 0.3, peak: 0.6, dur: 0.5, pan: -0.6 }); S.splat({ at: 0.4, peak: 0.6, dur: 0.5, pan: 0.6 });
+    S.metal({ at: 0.04, f: 520, dur: 2.5, peak: 0.2 }); S.metal({ at: 0.1, f: 300, dur: 2.0, peak: 0.18, click: 0.3 });
+    S.rumble({ at: 0.05, dur: 2.5, f: 120, a: 0.2, peak: 0.079 });
+    S.pad({ at: 0.4, notes: [mf(43), mf(50), mf(55)], type: 'sine', a: 0.6, dur: 2.8, lp: 2600, peak: 0.1 });
+  });
+  def('bm-ormun-w-rise', 'bm', S => {             // he rises out of the water: a deep rumble swelling, a great sheet of water running off stone, the chains groaning, one low bell
+    S.space('hall', 0.7);
+    S.noise({ at: 0.5, color: 'pink', bp: 800, bp1: 2600, q: 0.8, dur: 4.0, a: 1.2, peak: 0.12, pts: [[1.4, 0.6], [2.6, 1], [4.0, 0]] }); S.bubbles({ at: 0.8, n: 8, f: 600, f1: 2200, spread: 3.0, peak: 0.12, size: 0.04 }); S.bell({ at: 1.15, f: mf(55), dur: 3.0, peak: 0.1, lp: 3600 });
+    S.rumble({ dur: 4.6, f: 80, f1: 220, a: 1.6, peak: 0.35, pts: [[1.6, 1], [3.6, 0.8], [4.6, 0]] });
+    S.noise({ color: 'pink', bp: 420, bp1: 1900, q: 0.7, dur: 4.6, a: 1.0, pts: [[1.2, 0.6], [2.8, 1], [4.6, 0]], peak: 0.221 });
+    S.bubbles({ at: 0.6, n: 10, f: 300, f1: 1300, spread: 3.2, peak: 0.1, size: 0.05 });
+    S.creak({ at: 0.4, f: 24, f1: 17, dur: 2.0, res: [340, 760], q: 9, a: 0.4, peak: 0.196 });
+    S.tone({ f: mf(31), dur: 4.4, a: 1.2, peak: 0.096, pts: [[1.4, 1], [4.4, 0]] }); S.tone({ f: mf(43), dur: 4.2, a: 1.4, peak: 0.07, pts: [[1.6, 1], [4.2, 0]] });
+    S.bell({ at: 1.1, f: mf(36), dur: 3.4, peak: 0.16, lp: 2600 });
+    S.thud({ at: 1.0, f: 130, f1: 50, dur: 1.2, drive: 1.2, peak: 0.126, click: 0 });
+  });
+  def('bm-ormun-w-enrage-build', 'bm', S => {     // The Scale Falls building: one tone climbing under a rising sea, the chains groaning faster and faster
+    S.space('hall', 0.65);
+    S.whoosh({ f: 400, f1: 2400, dur: 8.2, peakAt: 0.9, peak: 0.1, q: 0.8, pts: [[7.4, 1], [8.1, 0.4], [8.2, 0]] });
+    S.pad({ notes: [mf(38), mf(45), mf(50)], type: 'tri', bend: 7, a: 7.2, dur: 8.2, lp: 1800, peak: 0.14 });
+    S.rumble({ dur: 8.2, f: 90, f1: 420, a: 7, peak: 0.3, pts: [[7.4, 1], [8.1, 0.5], [8.2, 0]] });
+    S.noise({ color: 'pink', bp: 300, bp1: 2400, q: 0.8, dur: 8.2, pts: [[7.4, 1], [8.1, 0.4], [8.2, 0]], peak: 0.153 });
+    [0.8, 2.6, 4.0, 5.0, 5.8, 6.4, 6.9, 7.3].forEach((at, i) => S.creak({ at, f: 22 + i * 3, f1: 16 + i * 2, dur: 0.7, res: [360 + i * 90, 880, 1700], q: 9, a: 0.15, peak: 0.112 + 0.015 * i }));
+    S.tone({ f: mf(62), f1: mf(74), glide: 8, dur: 8.2, a: 7, peak: 0.05, pts: [[7.2, 1], [8.1, 0.6], [8.2, 0]] });
+  });
+  def('bm-ormun-w-enrage-land', 'bm', S => {      // The Scale Falls: the beam comes down, the sea breaks over both pans, every chain in the room struck at once, and then the room goes out
+    S.space('hall', 0.8);
+    S.noise({ at: 0.03, color: 'pink', bp: 900, bp1: 2600, q: 0.8, dur: 1.6, pts: [[0.1, 1], [1.6, 0]], peak: 0.26 }); S.bell({ at: 0.04, f: mf(65), dur: 2.6, peak: 0.12, lp: 4200 });
+    S.thud({ f: 58, f1: 20, dur: 2.8, drive: 3.6, peak: 0.42, sub: 0.3 });
+    S.thud({ at: 0.02, f: 160, f1: 58, dur: 1.1, drive: 2, peak: 0.231, click: 0, pan: 0.2 });
+    S.crack({ f: 1700, peak: 0.55, dur: 0.6 });
+    S.whoosh({ at: 0.03, f: 220, f1: 6000, dur: 1.5, peakAt: 0.3, peak: 0.714, q: 0.8 });
+    S.noise({ at: 0.04, color: 'white', hp: 1200, lp: 7000, dur: 1.5, a: 0.01, pts: [[0.05, 1], [0.6, 0.6], [1.5, 0]], peak: 0.34 });
+    for (let i = 0; i < 9; i++) S.metal({ at: i * 0.05 + S.rr(0, 0.03), f: S.rr(220, 760), dur: S.rr(0.9, 1.9), peak: 0.08 + 0.05 * Math.random(), pan: S.rr(-0.9, 0.9), click: 0.3 });
+    [0.02, 0.15, 0.32].forEach((at, i) => S.splat({ at, peak: 0.5 - i * 0.1, dur: 0.5, pan: i % 2 ? 0.5 : -0.5 }));
+    S.bell({ at: 0.02, f: mf(41), dur: 3.4, peak: 0.28, lp: 2800 });
+    S.rumble({ at: 0.05, dur: 3.2, f: 110, a: 0.1, peak: 0.099 });
+  });
+  def('bm-ormun-w-fall', 'bm', S => {             // he is brought down: the water stops, one very low bell and its upper notes falling after it, the sea draining to still, a single high note, a long quiet
+    S.space('hall', 0.85);
+    S.bell({ at: 0.08, f: mf(67), dur: 4.2, peak: 0.09, lp: 4200 }); S.noise({ at: 0.1, color: 'pink', bp: 900, bp1: 350, q: 0.8, dur: 2.4, pts: [[0.2, 1], [2.4, 0]], peak: 0.12 });
+    S.thud({ at: 0.02, f: 62, f1: 28, dur: 1.6, drive: 1.6, peak: 0.21, click: 0, sub: 0.18 });
+    S.thud({ at: 0.03, f: 150, f1: 70, dur: 0.8, drive: 1.2, peak: 0.118, click: 0 });
+    S.bell({ at: 0.04, f: mf(34), dur: 5.4, peak: 0.32, lp: 2600 }); S.bell({ at: 0.06, f: mf(46), dur: 4.8, peak: 0.14, lp: 3200 }); S.bell({ at: 0.9, f: mf(58), dur: 4.2, peak: 0.08, lp: 4000 });
+    S.noise({ color: 'brown', lp: 900, lp1: 70, dur: 3.2, a: 0.2, pts: [[0.3, 1], [3.2, 0]], peak: 0.374 });
+    S.noise({ color: 'pink', bp: 1200, bp1: 300, q: 0.7, dur: 2.6, a: 0.2, pts: [[0.3, 1], [2.6, 0]], peak: 0.17 });
+    S.pad({ at: 0.8, notes: [mf(46), mf(53), mf(58)], type: 'sine', a: 1.4, dur: 5.0, lp: 2400, peak: 0.08 });
+    [88, 93, 100].forEach((n, i) => S.glass({ at: 2.4 + i * 0.7, f: mf(n), dur: 3.2, peak: 0.045 - 0.008 * i, pan: (i - 1) * 0.3 }));
+    S.tone({ f: mf(31), dur: 5.6, a: 0.6, peak: 0.084, pts: [[0.8, 1], [5.6, 0]] });
+  });
+
+  // @@WALL-maelis (its recipes go right under this line)
+  // Maelis Orne's staged moments (walls/maelis.js): cool and quiet, struck glass, a held breath, one long cold note. Every release has a deep body AND a body above 250 Hz (crack, glass, metal, noise
+  // bands), so it lands on a small speaker too. New Moon: the crown going out (wane), the room going out (dark), the dash of the dance climbing (streak, played at a rising rate), the last light gathered
+  // (answer), the held beat (hold), the light drawn in (gather), the light's return (light) and the breath after. The Hound's Return: his howl, his landing (land), her vault, the second form (hunt).
+  // The eclipse (dusk, eclipse), Totality (total-build, total), the kill (fall, fall2) and the entrance (enter). Her casts and smaller moves are the sound lane's (bm-maelis-*, bm-maelis-m-*).
+  const mlHowl = (S, at, dur, pk, f = 300) => {   // one long cold note from far off: rising, then settling, with a slap-back and a thin edge of frost on it (no growl)
+    S.echo({ time: 0.74, fb: 0.4, lp: 1500, kill: at + dur + 3.4 });
+    const d1 = dur * 0.56, d2 = dur * 0.56;
+    S.voice({ at, f: f * 0.78, f1: f * 1.2, dur: d1, vowel: 'o', vowel1: 'u', breath: 1.2, lp: 2200, peak: pk, ech: 0.55, rev: 0.7, verb: 'cave', pts: [[0.4, 0.6], [d1 - 0.05, 1], [d1, 0]] });
+    S.voice({ at: at + dur * 0.44, f: f * 1.2, f1: f * 0.86, dur: d2, vowel: 'u', vowel1: 'o', breath: 1.2, lp: 2000, peak: pk * 0.9, ech: 0.55, rev: 0.7, verb: 'cave', pts: [[0.2, 0.9], [d2 * 0.3, 1], [d2 * 0.75, 0.5], [d2, 0]] });
+    S.tone({ at: at + 0.3, f: f * 6.1, f1: f * 8.6, dur: dur * 0.7, a: dur * 0.3, peak: pk * 0.05, ech: 0.6 });
+  };
+  def('bm-maelis-w-wane', 'bm', S => {            // New Moon begins, the crown going out: a pale chord drawn down a fourth, glass notes falling one by one, a low breath leaving the floor
+    S.space('hall', 0.7);
+    S.pad({ notes: [mf(76), mf(83), mf(88)], type: 'sine', bend: -5, a: 0.5, dur: 3.9, lp: 3200, peak: 0.1, pts: [[0.7, 1], [3.9, 0]] });
+    [100, 95, 91, 88, 83, 79].forEach((n, i) => S.glass({ at: 0.2 + i * 0.5, f: mf(n), dur: 2.2, peak: 0.12 - 0.012 * i, pan: i % 2 ? 0.35 : -0.35 }));
+    S.noise({ color: 'brown', lp: 760, lp1: 150, dur: 3.8, a: 0.5, pts: [[0.8, 1], [3.8, 0]], peak: 0.18 });
+    S.noise({ color: 'pink', bp: 2600, bp1: 700, q: 0.8, dur: 3.6, a: 0.4, pts: [[0.6, 1], [3.6, 0]], peak: 0.05 });
+    S.tone({ f: mf(40), dur: 3.9, a: 0.9, peak: 0.1, pts: [[1.6, 1], [3.9, 0]] });
+  });
+  def('bm-maelis-w-dark', 'bm', S => {            // the room goes out: one soft low knock, a high thin note drawn down to nothing, the air let out
+    S.space('hall', 0.8);
+    S.thud({ f: 60, f1: 30, dur: 1.4, drive: 1.4, peak: 0.34, click: 0, sub: 0.3 });
+    S.glass({ at: 0.05, f: mf(95), f1: mf(83), glide: 1.6, dur: 2.2, peak: 0.1 });
+    S.metal({ at: 0.02, f: 420, dur: 1.4, peak: 0.07, click: 0.2 });
+    S.noise({ at: 0.1, color: 'pink', bp: 1800, bp1: 450, q: 0.8, dur: 1.8, a: 0.1, pts: [[0.3, 1], [1.8, 0]], peak: 0.09 });
+  });
+  def('bm-maelis-w-streak', 'bm', S => {          // a dash of the sword dance (played at a rate that climbs): a bright draw of air, the cut struck on a glass note, a small knock
+    S.space('hall', 0.5);
+    S.whoosh({ f: 1300, f1: 7200, dur: 0.28, peakAt: 0.75, peak: 0.2, q: 0.9 });
+    S.crack({ at: 0.22, f: 2700, peak: 0.2, dur: 0.2 });
+    S.glass({ at: 0.2, f: mf(88), dur: 1.0, peak: 0.14 }); S.glass({ at: 0.23, f: mf(95), dur: 0.8, peak: 0.07, pan: 0.3 });
+    S.thud({ at: 0.21, f: 140, f1: 58, dur: 0.3, peak: 0.18, click: 0 });
+  });
+  def('bm-maelis-w-answer', 'bm', S => {          // the last light gathered: three struck notes climbing, a thread of shimmer drawn up, a soft knock under it
+    S.space('hall', 0.7);
+    [83, 88, 95].forEach((n, i) => S.glass({ at: i * 0.16, f: mf(n), dur: 2.2, peak: 0.18 - 0.02 * i, pan: (i - 1) * 0.35 }));
+    S.whoosh({ at: 0.04, f: 900, f1: 6800, dur: 0.9, peakAt: 0.8, peak: 0.1, q: 0.9 });
+    S.thud({ at: 0.02, f: 90, f1: 44, dur: 0.6, peak: 0.22, click: 0 });
+    S.tone({ at: 0.3, f: mf(100), dur: 1.4, a: 0.3, peak: 0.04, pts: [[0.6, 1], [1.4, 0]] });
+  });
+  def('bm-maelis-w-hold', 'bm', S => {            // the held beat: a pale pair of tones beating slowly, drawn tight, and then nothing
+    S.space('hall', 0.5);
+    S.tone({ f: mf(81), dur: 1.6, peak: 0.05, pts: [[0.6, 0.45], [1.45, 1], [1.6, 0]] });
+    S.tone({ f: mf(81), det: 9, dur: 1.6, peak: 0.05, pts: [[0.6, 0.45], [1.45, 1], [1.6, 0]] });
+    S.tone({ f: mf(93), dur: 1.6, peak: 0.016, pts: [[0.85, 0.5], [1.45, 1], [1.6, 0]], pan: 0.4 });
+  });
+  def('bm-maelis-w-gather', 'bm', S => {          // Full Moon building in the dark: light drawn in from every side, a chord climbing, a band of air rising, glass accumulating, ending on its peak
+    S.space('hall', 0.65);
+    S.pad({ notes: [mf(64), mf(71), mf(76)], type: 'tri', bend: 7, a: 3.2, dur: 3.75, lp: 2600, peak: 0.14, pts: [[3.3, 1], [3.7, 0.7], [3.75, 0]] });
+    S.whoosh({ f: 400, f1: 6400, dur: 3.75, peakAt: 0.88, peak: 0.16, q: 0.8, pts: [[3.1, 1], [3.55, 0.5], [3.75, 0]] });
+    S.rumble({ dur: 3.75, f: 100, f1: 240, a: 3.2, peak: 0.24, pts: [[3.3, 1], [3.7, 0.4], [3.75, 0]] });
+    for (let i = 0; i < 14; i++) S.glass({ at: 0.4 + i * 0.22 + S.rr(0, 0.08), f: mf(S.pick([88, 95, 100, 107])), dur: 0.9, peak: 0.03 + 0.012 * i, pan: S.rr(-0.8, 0.8) });
+    S.tone({ f: mf(88), f1: mf(100), glide: 3.6, dur: 3.75, a: 3.0, peak: 0.05, pts: [[3.2, 1], [3.7, 0.8], [3.75, 0]] });
+  });
+  def('bm-maelis-w-light', 'bm', S => {           // the light comes back all at once: a deep knock, a crack, a bright burst of air, the whole sky struck (glass in a rising chord), a bell, the room opening in a chord
+    S.space('hall', 0.75);
+    S.thud({ f: 62, f1: 24, dur: 2.2, drive: 3, peak: 0.5, sub: 0.3, click: 0.2 });
+    S.thud({ at: 0.02, f: 190, f1: 70, dur: 0.9, drive: 1.6, peak: 0.4, click: 0.3, pan: 0.2 });
+    S.crack({ f: 2400, peak: 0.8, dur: 0.5 });
+    S.noise({ at: 0.03, color: 'white', hp: 1500, lp: 9000, dur: 1.2, a: 0.006, pts: [[0.04, 1], [0.4, 0.55], [1.2, 0]], peak: 0.36 });
+    S.whoosh({ at: 0.03, f: 500, f1: 7400, dur: 1.0, peakAt: 0.3, peak: 0.5, q: 0.9 });
+    S.metal({ at: 0.04, f: 520, dur: 1.9, peak: 0.4 }); S.metal({ at: 0.06, f: 1300, set: 'bar', dur: 1.4, peak: 0.16, click: 0.3, pan: -0.3 });
+    for (let i = 0; i < 16; i++) S.glass({ at: 0.03 + i * 0.045 + S.rr(0, 0.03), f: S.rr(1600, 7000), dur: S.rr(0.6, 1.4), peak: 0.06 + 0.05 * Math.random(), pan: S.rr(-0.9, 0.9) });
+    [76, 83, 88, 95].forEach((n, i) => S.glass({ at: 0.08 + i * 0.07, f: mf(n), dur: 3.2, peak: 0.24 }));
+    S.bell({ at: 0.05, f: mf(52), dur: 3.4, peak: 0.26, lp: 3600 });
+    S.rumble({ at: 0.05, dur: 2.4, f: 120, peak: 0.1, a: 0.05 });
+    S.pad({ at: 0.45, notes: [mf(52), mf(59), mf(64), mf(71)], type: 'tri', a: 0.7, dur: 3.2, lp: 3200, peak: 0.12 });
+  });
+  def('bm-maelis-w-breath', 'bm', S => {          // after the light: the room breathes out, a soft rush of air over the dust and a low settling
+    S.space('hall', 0.6);
+    S.noise({ color: 'pink', bp: 2200, bp1: 800, q: 0.8, dur: 1.6, a: 0.3, pts: [[0.35, 1], [1.6, 0]], peak: 0.1 });
+    S.tone({ f: mf(45), dur: 1.6, a: 0.25, peak: 0.08, pts: [[0.35, 1], [1.6, 0]] });
+    S.glass({ at: 0.45, f: mf(88), dur: 2.0, peak: 0.05 });
+  });
+  def('bm-maelis-w-howl', 'bm', S => {            // the Hound's howl from far off: one long cold note, the dust holding still for it, a faint wind under it and a last answer from further away
+    S.space('cave', 0.6);
+    mlHowl(S, 0.2, 4.2, 0.26, 300);
+    mlHowl(S, 2.3, 3.0, 0.06, 262);
+    S.noise({ color: 'pink', bp: 360, bp1: 700, q: 0.7, dur: 4.8, a: 1.2, pts: [[2.0, 1], [4.8, 0]], peak: 0.05 });
+    S.rumble({ at: 0.3, dur: 4.2, f: 70, peak: 0.1, a: 1.2 });
+  });
+  def('bm-maelis-w-vault', 'bm', S => {           // she goes to him: a long breath of robe on the air, a soft note rising with her, a light step at the end
+    S.space('hall', 0.5);
+    S.whoosh({ f: 700, f1: 4200, dur: 0.9, peakAt: 0.45, peak: 0.2, q: 0.8 });
+    S.glass({ at: 0.05, f: mf(83), f1: mf(95), glide: 0.7, dur: 1.4, peak: 0.12 });
+    S.thud({ at: 0.62, f: 100, f1: 50, dur: 0.4, peak: 0.2, click: 0.1 });
+    S.metal({ at: 0.62, f: 380, dur: 0.6, peak: 0.07, click: 0.2 });
+  });
+  def('bm-maelis-w-hunt', 'bm', S => {            // she is on his back: the second form. A deep knock and a crack, a low horn call under his howl and hers answering, the sky struck in a chord, a bell, the room opening
+    S.space('hall', 0.75);
+    S.thud({ f: 58, f1: 22, dur: 2.4, drive: 3.2, peak: 0.9, sub: 0.45, click: 0.25 });
+    S.thud({ at: 0.02, f: 160, f1: 60, dur: 1.0, drive: 1.6, peak: 0.4, click: 0, pan: 0.15 });
+    S.crack({ f: 2200, peak: 0.52, dur: 0.5 });
+    S.noise({ at: 0.03, color: 'white', hp: 1400, lp: 8500, dur: 1.2, a: 0.006, pts: [[0.04, 1], [0.5, 0.5], [1.2, 0]], peak: 0.18 });
+    S.whoosh({ at: 0.04, f: 400, f1: 7000, dur: 1.1, peakAt: 0.3, peak: 0.3, q: 0.9 });
+    S.metal({ at: 0.05, f: 480, dur: 2.0, peak: 0.24 }); S.metal({ at: 0.09, f: 1900, set: 'bar', dur: 1.2, peak: 0.1, click: 0.3, pan: 0.4 });
+    S.horn({ at: 0.1, f: mf(45), dur: 2.4, peak: 0.2, bright: 5 });
+    S.echo({ time: 0.6, fb: 0.35, lp: 1700, kill: 7 });
+    S.voice({ at: 0.5, f: 240, f1: 380, dur: 1.6, vowel: 'o', vowel1: 'u', breath: 1.2, lp: 2400, peak: 0.22, ech: 0.5, rev: 0.5, pts: [[0.3, 0.7], [1.2, 1], [1.6, 0]] });
+    S.voice({ at: 1.6, f: 380, f1: 250, dur: 2.0, vowel: 'u', vowel1: 'o', breath: 1.2, lp: 2200, peak: 0.2, ech: 0.5, rev: 0.5, pts: [[0.2, 1], [0.8, 0.8], [2.0, 0]] });
+    [76, 83, 88, 95, 100].forEach((n, i) => S.glass({ at: 0.12 + i * 0.07, f: mf(n), dur: 3.4, peak: 0.12 }));
+    S.bell({ at: 0.06, f: mf(45), dur: 4.0, peak: 0.2, lp: 3200 });
+    S.pad({ at: 0.5, notes: [mf(45), mf(52), mf(57), mf(64)], type: 'tri', a: 0.9, dur: 3.8, lp: 3000, peak: 0.12 });
+    S.rumble({ at: 0.05, dur: 2.8, f: 100, peak: 0.26, a: 0.05 });
+  });
+  def('bm-maelis-w-dusk', 'bm', S => {            // the eclipse begins: a low drone creeping up out of the floor in a dark chord, a second note slipping out of tune with it, the air going thin and cold
+    S.space('hall', 0.7);
+    S.pad({ notes: [mf(34), mf(41), mf(44)], type: 'tri', a: 3.4, dur: 5.6, lp: 1700, lpEnv: [200, 1500, 900, 4.4], peak: 0.17, pts: [[3.6, 1], [5.4, 0.8], [5.6, 0]] });
+    S.tone({ f: mf(70), dur: 5.6, a: 3.2, peak: 0.04, pts: [[3.6, 1], [5.4, 0.8], [5.6, 0]] }); S.tone({ f: mf(70), det: 14, dur: 5.6, a: 3.2, peak: 0.04, pts: [[3.6, 1], [5.4, 0.8], [5.6, 0]] });
+    S.rumble({ dur: 5.6, f: 80, f1: 190, a: 3.6, peak: 0.24, pts: [[3.8, 1], [5.4, 0.6], [5.6, 0]] });
+    S.noise({ color: 'pink', bp: 1800, bp1: 500, q: 0.8, dur: 5.4, a: 2.0, pts: [[3.0, 1], [5.4, 0.3], [5.6, 0]], peak: 0.05 });
+    [1.4, 3.0, 4.4].forEach((at, i) => S.glass({ at, f: mf(83 - 2 * i), dur: 2.4, peak: 0.05 }));
+  });
+  def('bm-maelis-w-eclipse', 'bm', S => {         // the red takes the first edge: a great slow bell, a dark chord opening under it, a breath let out. Not a hit: a weight settling
+    S.space('hall', 0.85);
+    S.bell({ f: mf(34), dur: 6.0, peak: 0.34, lp: 2800 }); S.bell({ at: 0.03, f: mf(46), dur: 5.0, peak: 0.16, lp: 3400 }); S.bell({ at: 0.6, f: mf(58), dur: 4.0, peak: 0.08, lp: 4200 });
+    S.thud({ f: 52, f1: 30, dur: 2.0, drive: 1.6, peak: 0.3, click: 0.05, sub: 0.3 });
+    S.metal({ at: 0.02, f: 300, dur: 2.2, peak: 0.1, click: 0.2 });
+    S.pad({ at: 0.3, notes: [mf(46), mf(53), mf(56)], type: 'sine', a: 1.4, dur: 5.2, lp: 2200, peak: 0.1 });
+    S.noise({ at: 0.2, color: 'pink', bp: 1500, bp1: 380, q: 0.7, dur: 3.2, a: 0.3, pts: [[0.5, 1], [3.2, 0]], peak: 0.1 });
+    S.noise({ color: 'brown', lp: 800, lp1: 120, dur: 4.4, a: 0.2, pts: [[0.4, 1], [4.4, 0]], peak: 0.2 });
+  });
+  def('bm-maelis-w-total-build', 'bm', S => {     // Totality building: one tone climbing under a darkening sky, a low pulse faster and faster, the air drawn thin
+    S.space('hall', 0.65);
+    S.pad({ notes: [mf(38), mf(45), mf(50)], type: 'tri', bend: 8, a: 6.2, dur: 7.2, lp: 1900, peak: 0.14 });
+    S.tone({ f: mf(62), f1: mf(76), glide: 7, dur: 7.2, a: 6.2, peak: 0.05, pts: [[6.3, 1], [7.1, 0.6], [7.2, 0]] });
+    S.rumble({ dur: 7.2, f: 90, f1: 400, a: 6.2, peak: 0.3, pts: [[6.4, 1], [7.1, 0.5], [7.2, 0]] });
+    S.noise({ color: 'pink', bp: 300, bp1: 2600, q: 0.8, dur: 7.2, pts: [[6.4, 1], [7.1, 0.4], [7.2, 0]], peak: 0.14 });
+    S.whoosh({ f: 500, f1: 3000, dur: 7.2, peakAt: 0.9, peak: 0.1, q: 0.8, pts: [[6.4, 1], [7.1, 0.4], [7.2, 0]] });
+    [0.6, 2.4, 3.8, 4.8, 5.5, 5.9, 6.3, 6.6].forEach((at, i) => S.thud({ at, f: 70 + i * 4, f1: 38, dur: 0.4, peak: 0.1 + 0.02 * i, click: 0.1 }));
+  });
+  def('bm-maelis-w-total', 'bm', S => {           // Totality lands: the moon's shadow falls on the whole room. A very deep fall, a crack and a burst of dark air, every glass note in the sky struck at once and let go, a long hush
+    S.space('hall', 0.8);
+    S.thud({ f: 56, f1: 20, dur: 2.8, drive: 3.6, peak: 0.55, sub: 0.4 });
+    S.thud({ at: 0.02, f: 190, f1: 66, dur: 1.1, drive: 2, peak: 0.42, click: 0.3, pan: 0.2 });
+    S.crack({ f: 1800, peak: 0.85, dur: 0.6 });
+    S.noise({ at: 0.03, color: 'white', hp: 1200, lp: 7600, dur: 1.4, a: 0.006, pts: [[0.05, 1], [0.6, 0.6], [1.4, 0]], peak: 0.46 });
+    S.whoosh({ at: 0.03, f: 300, f1: 6000, dur: 1.4, peakAt: 0.3, peak: 0.6, q: 0.8 });
+    for (let i = 0; i < 24; i++) S.glass({ at: i * 0.04 + S.rr(0, 0.03), f: S.rr(1400, 7000), dur: S.rr(0.6, 1.4), peak: 0.09 + 0.06 * Math.random(), pan: S.rr(-1, 1) });
+    S.metal({ at: 0.02, f: 420, dur: 2.4, peak: 0.4 });
+    S.bell({ at: 0.04, f: mf(33), dur: 4.4, peak: 0.3, lp: 2600 });
+    S.rumble({ at: 0.05, dur: 3.2, f: 110, peak: 0.12, a: 0.05 });
+  });
+  def('bm-maelis-w-fall', 'bm', S => {            // she falls: a single struck bell and the notes of an open chord falling after it, one small bright note at a time, a low hum, and one warm high note left ringing at the end
+    S.space('hall', 0.85);
+    S.metal({ f: 440, dur: 1.6, peak: 0.16 });
+    S.thud({ at: 0.02, f: 58, f1: 28, dur: 1.4, drive: 1.6, peak: 0.45, click: 0, sub: 0.3 });
+    S.bell({ at: 0.04, f: mf(52), dur: 5.0, peak: 0.24, lp: 3200 });
+    [100, 95, 88, 83, 76].forEach((n, i) => S.glass({ at: 0.15 + i * 0.36, f: mf(n), dur: 4.2, peak: 0.18 - 0.02 * i, pan: i % 2 ? 0.35 : -0.35 }));
+    for (let i = 0; i < 9; i++) S.glass({ at: 0.6 + i * 0.25 + S.rr(0, 0.1), f: S.rr(3200, 7400), dur: 0.7, peak: 0.032 + 0.02 * Math.random(), pan: S.rr(-0.9, 0.9) });
+    S.tone({ f: mf(33), dur: 4.8, a: 0.3, peak: 0.16, pts: [[0.5, 1], [4.8, 0]] });
+    S.pad({ at: 0.6, notes: [mf(52), mf(59), mf(64)], type: 'sine', a: 1.0, dur: 4.4, lp: 2600, peak: 0.08 });
+    S.bell({ at: 3.2, f: mf(84), dur: 3.0, peak: 0.08, lp: 5000 }); S.tone({ at: 3.2, f: mf(84), dur: 2.8, a: 0.2, peak: 0.03, pts: [[0.4, 1], [2.8, 0]] });   // (the warm one: the town's light)
+  });
+  def('bm-maelis-w-fall2', 'bm', S => {           // she falls in the saddle: the howl begins and is cut off short, a hush, then the same bell and falling notes, quieter, and the one warm note
+    S.space('hall', 0.85);
+    S.echo({ time: 0.6, fb: 0.3, lp: 1500, kill: 4 });
+    S.voice({ f: 250, f1: 360, dur: 0.7, vowel: 'o', vowel1: 'u', breath: 1.2, lp: 2200, peak: 0.24, ech: 0.4, rev: 0.4, pts: [[0.25, 0.8], [0.62, 1], [0.7, 0]] });
+    S.thud({ at: 0.72, f: 60, f1: 28, dur: 1.4, drive: 1.6, peak: 0.42, click: 0, sub: 0.3 });
+    S.metal({ at: 0.72, f: 420, dur: 1.6, peak: 0.14 });
+    S.bell({ at: 0.76, f: mf(52), dur: 5.0, peak: 0.2, lp: 3200 });
+    [100, 95, 88, 83, 76].forEach((n, i) => S.glass({ at: 0.95 + i * 0.36, f: mf(n), dur: 4.0, peak: 0.15 - 0.016 * i, pan: i % 2 ? 0.35 : -0.35 }));
+    S.noise({ at: 0.8, color: 'pink', bp: 1500, bp1: 420, q: 0.7, dur: 2.4, a: 0.3, pts: [[0.6, 1], [2.4, 0]], peak: 0.08 });
+    S.tone({ at: 0.8, f: mf(33), dur: 4.8, a: 0.3, peak: 0.14, pts: [[0.5, 1], [4.8, 0]] });
+    S.bell({ at: 3.9, f: mf(84), dur: 3.0, peak: 0.08, lp: 5000 }); S.tone({ at: 3.9, f: mf(84), dur: 2.8, a: 0.2, peak: 0.03, pts: [[0.4, 1], [2.8, 0]] });
+  });
+  def('bm-maelis-w-enter', 'bm', S => {           // the entrance: the crown first (a pure high note and its shimmer), the light lowering her (a chord opening), her step on the dust, a low breath
+    S.space('hall', 0.7);
+    S.glass({ f: mf(100), dur: 3.0, peak: 0.16 }); S.glass({ at: 0.12, f: mf(107), dur: 2.6, peak: 0.08, pan: 0.3 });
+    S.tone({ f: mf(88), f1: mf(83), glide: 2.4, dur: 2.8, a: 0.9, peak: 0.05, pts: [[1.0, 1], [2.8, 0]] });
+    S.pad({ at: 0.6, notes: [mf(52), mf(59), mf(64), mf(71)], type: 'sine', a: 1.6, dur: 3.6, lp: 2800, peak: 0.1, pts: [[1.8, 1], [3.6, 0]] });
+    S.noise({ at: 0.8, color: 'pink', bp: 700, bp1: 2200, q: 0.8, dur: 1.8, a: 0.9, pts: [[1.3, 1], [1.8, 0]], peak: 0.06 });
+    S.thud({ at: 2.5, f: 90, f1: 44, dur: 0.6, drive: 1.2, peak: 0.34, click: 0.1, sub: 0.2 });
+    S.metal({ at: 2.5, f: 360, dur: 1.0, peak: 0.1, click: 0.2 });
+    S.bell({ at: 2.52, f: mf(57), dur: 3.0, peak: 0.1, lp: 3600 });
+  });
 
   def('ult-window-end', 'hud', S => {
     [84, 79, 76, 72].forEach((n, i) => S.glass({ at: i * 0.09, f: mf(n), dur: 0.6, peak: 0.08 }));
@@ -6533,6 +7099,1469 @@
     const hiss = L.c(L.src('white', 1.0), L.f('highpass', 5200), L.g(0.025)); L.lfo(hiss.gain, 0.061, 0.02); hiss.connect(L.out);
     const wh = L.c(L.src('pink', 0.6), L.f('bandpass', 1700, 14)), wn = L.g(0.03); L.lfo(wh.frequency, 0.037, 420); L.lfo(wn.gain, 0.05, 0.03); L.c(wh, wn, L.out);
     L.c(L.crackle(0.18), L.f('highpass', 3500), L.g(0.05), L.out);
+  }, 3);
+
+  // ============================================================================================== Vesper, the Mirror Knight (Season 2, boss XIV: the Argent Hall)
+  // Steel, glass and a held breath. She never speaks, breathes or grunts: her voice is plate stepping on stone, a blade drawn along itself, the ring a struck blade leaves (two of them a hair
+  // apart: the beat between a blade and its reflection) and, before a blow, the room drawing in and holding (a thin swell of air cut to nothing: the silence she fights in). The glass is the same
+  // sound seen through a window: vsGlass(S) is the recipe's own toolkit run through a high-pass and a dulling filter, a little sharp, quieter and wetter, so what lands in the glass is the hall's
+  // sound thinner, colder and farther off (pitched an octave up where it is a note); a move that lands in both rooms plays the sound and its glass answer a beat behind. The casts are the builds
+  // and each ends on the held breath, never on a blow: a landing sounds from its telegraph tag, exactly on its beat (the m- cues, sound-hooks.js "vesper" block). The showpiece beats' cues
+  // (bm-vesper-w-) are walls/vesper.js's.
+  const vsGlass = (S, o = {}) => {                                // the recipe's toolkit seen through the glass: every call is high-passed, dulled, quieter, sharper and wetter
+    const ctx = S.ctx, hp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+    hp.type = 'highpass'; hp.frequency.value = o.hp || 700; hp.Q.value = 0.5;
+    lp.type = 'lowpass'; lp.frequency.value = o.lp || 6000; lp.Q.value = 0.4;
+    g.gain.value = o.gain == null ? 0.6 : o.gain;
+    hp.connect(lp); lp.connect(g); g.connect(S.bus);
+    const V = Object.create(S);
+    Object.defineProperty(V, 'tail', { get: () => S.tail, set: v => { S.tail = v; } });
+    V.k = S.k * st(o.pitch == null ? 2 : o.pitch); V.revDefault = Math.max(S.revDefault, 0.3) * 1.5; V.verbType = 'hall';
+    for (const k in TOOLS) V[k] = q => TOOLS[k](V, Object.assign({ to: hp }, q));
+    return V;
+  };
+  const vsInhale = (S, at, dur, pk, pan = 0) => {                 // the room draws in and holds: a thin swell of high air and a pressure under it, cut to nothing
+    S.noise({ at, color: 'white', bp: 3800, bp1: 6800, q: 0.9, dur, pts: [[dur * 0.9, 1], [dur, 0]], peak: pk, pan });
+    S.tone({ at, f: 82, dur, pts: [[dur * 0.9, 1], [dur, 0]], peak: pk * 0.5, lp: 260, pan });
+  };
+  const vsSing = (S, at, f, dur, pk, o = {}) => {                 // a swelling pure note, a pair a hair apart (a blade and its reflection) through a soft low-pass, held and let go
+    const beat = o.beat == null ? 1.4 : o.beat, a = Math.min(o.a == null ? dur * 0.65 : o.a, dur * 0.9), f1 = o.f1, lp = o.lp || 2400;
+    const pts = [[a, 1], [Math.max(a + 0.05, dur - 0.15), 0.85], [dur, 0]];
+    S.tone({ at, f, f1, dur, pts, peak: pk, lp, pan: o.pan, vib: [5.2, 0.004, 0.4] });
+    S.tone({ at, f: f + beat, f1: f1 ? f1 + beat : null, dur, pts, peak: pk * 0.8, lp, pan: o.pan });
+    S.tone({ at, f: f * 2.01, f1: f1 ? f1 * 2.01 : null, dur, pts, peak: pk * 0.1, lp: 3600, pan: o.pan });
+  };
+  const vsRing = (S, at, f, dur, pk, pan = 0, beat = 1.6) => S.partials({ at, set: 'bar', f, dur, beat, peak: pk, spread: 5, strike: 0.2, pan });   // a struck blade: steel partials, the twin beating
+  const vsDraw = (S, at, dur, pk, pan = 0, up = 1) => {           // steel along steel: a narrow band of air sweeping up (or down) with a fine grain in it
+    S.noise({ at, color: 'white', bp: up ? 2600 : 6800, bp1: up ? 6800 : 2600, q: 4.5, dur, fd: dur, pts: [[dur * 0.2, 0.5], [dur * 0.85, 1], [dur, 0]], peak: pk, grain: 0.35, pan });
+    S.noise({ at, color: 'pink', hp: 5000, dur, pts: [[dur * 0.85, 0.6], [dur, 0]], peak: pk * 0.15, pan });
+  };
+  const vsStep = (S, at, pk, pan = 0, f = 64) => {                // plate on stone: a low blow with a short dry rattle of steel on it
+    S.thud({ at, f, f1: f * 0.52, dur: 0.3, click: 0.08, lp: 650, peak: pk, pan });
+    S.noise({ at, color: 'white', hp: 2200, bp: 4300, q: 1.6, dur: 0.08, pts: [[0.008, 1], [0.08, 0]], peak: pk * 0.28, grain: 0.5, pan });
+    S.metal({ at: at + 0.012, set: 'plate', f: 1750, dur: 0.2, peak: pk * 0.07, click: 0, pan });
+  };
+  const vsCut = (S, at, pk, pan = 0, f = 3800, f1 = 700, w = 0.4) => {   // a stroke of the blade: the air parted along it and a clean steel crack on the beat
+    S.whoosh({ at, color: 'pink', f, f1, dur: w, peakAt: 0.25, q: 1.5, peak: pk * 0.55, pan });
+    S.crack({ at, peak: pk * 0.3, dur: 0.12, f: 2600, pan });
+  };
+  // her entrance: the hall's own stone tone, three slow strides, the blade drawn and one long ring (the glass answers it a beat later, higher), and the held breath
+  def('bm-vesper-intro', 'sting', S => {
+    S.space('hall', 0.75); const G = vsGlass(S);
+    S.rumble({ dur: 4.6, f: 48, peak: 0.12, a: 1.8 });
+    S.pad({ notes: [mf(38), mf(45)], dur: 4.4, type: 'sine', det: 4, lpEnv: [200, 520, 200, 2.2], peak: 0.07 });
+    [0.55, 1.25, 1.95].forEach((t, i) => vsStep(S, t, 0.2 + i * 0.03, -0.15 + i * 0.15, 66 + i * 4));
+    vsDraw(S, 2.3, 0.9, 0.1, 0);
+    vsRing(S, 3.1, mf(74), 3.0, 0.1, -0.2, 1.4);
+    vsRing(G, 3.45, mf(86), 2.6, 0.08, 0.3, 1.1);
+    vsInhale(S, 3.9, 0.9, 0.045);
+  });
+  // ---- the casts: builds, each ending on the held breath
+  def('bm-vesper-the-hall', 'bm', S => {          // the act opens: the stone tone of the hall, two slow strides, the point of the blade set down and its ring answered from the glass
+    S.space('hall', 0.8); const G = vsGlass(S);
+    S.rumble({ dur: 3.2, f: 52, peak: 0.12, a: 1.4 });
+    S.pad({ notes: [mf(38), mf(45)], dur: 3.1, type: 'sine', det: 4, lpEnv: [200, 480, 220, 1.6], peak: 0.07 });
+    vsStep(S, 0.5, 0.2, -0.2, 64); vsStep(S, 1.3, 0.22, 0.2, 60);
+    S.metal({ at: 1.9, set: 'bar', f: mf(81), dur: 1.6, peak: 0.06, strike: 0.3, beat: 1.2 });
+    vsRing(G, 2.2, mf(93), 1.4, 0.07, 0.3, 1.2);
+    vsInhale(S, 2.0, 1.0, 0.04);
+  });
+  def('bm-vesper-evenfall', 'bm', S => {          // the wide cone and its mirror image: the blade drawn out and brought round, the same draw from the glass a beat behind, a swelling pair of notes in each
+    S.space('hall', 0.45); const G = vsGlass(S);
+    vsDraw(S, 0.3, 1.3, 0.16, -0.35);
+    vsDraw(G, 0.65, 1.2, 0.1, 0.35, 0);
+    vsSing(S, 0.9, mf(74), 2.4, 0.07, { pan: -0.25 });
+    vsSing(G, 1.2, mf(86), 2.2, 0.05, { pan: 0.3 });
+    vsInhale(S, 2.5, 1.1, 0.045);
+  });
+  def('bm-vesper-twin-verdict', 'bm', S => {      // the tank's cut, in the hall and then the glass: a low heavy build, a stride, a deep note and its rumble held, then the glass draws its own breath a second on
+    S.space('hall', 0.5); const G = vsGlass(S);
+    vsStep(S, 0.6, 0.26, -0.1, 58);
+    vsSing(S, 0.8, mf(50), 2.8, 0.1, { lp: 900, beat: 1.0, f1: mf(52) });
+    S.rumble({ at: 0.6, dur: 3.2, f: 62, peak: 0.12, a: 1.6 });
+    vsInhale(S, 2.9, 0.9, 0.05);
+    vsInhale(G, 4.0, 1.0, 0.07, 0.3);
+  });
+  def('bm-vesper-lay-glass', 'bm', S => {         // shards laid in the glass only: the hall stays quiet, and far off four thin notes are set down one by one, climbing, a fine hiss under them
+    S.space('hall', 0.55); const G = vsGlass(S, { gain: 0.8 });
+    S.rumble({ dur: 3.8, f: 50, peak: 0.07, a: 1.8 });
+    [0.7, 1.35, 1.95, 2.45].forEach((t, i) => {
+      const pan = [-0.5, 0.4, -0.15, 0.6][i];
+      G.glass({ at: t, f: mf(88 + [0, 3, 5, 8][i]), dur: 1.8, peak: 0.07, pan }); G.crack({ at: t, peak: 0.05, dur: 0.06, f: 3200, pan });
+    });
+    G.sizzle({ at: 0.6, dur: 3.0, hp: 6000, lp: 12000, pts: [[2.0, 1], [3.0, 0]], peak: 0.03 });
+    vsInhale(G, 3.0, 1.1, 0.06, 0.2);
+  });
+  def('bm-vesper-ring-true', 'bm', S => {         // both blades struck on the wall: two notes a hair apart rising together, the glass pair a beat behind and sharper
+    S.space('hall', 0.6); const G = vsGlass(S);
+    vsSing(S, 0.3, mf(62), 3.4, 0.09, { f1: mf(69), beat: 1.6, pan: -0.2 });
+    vsSing(G, 0.6, mf(74), 3.2, 0.06, { f1: mf(81), beat: 2.4, pan: 0.3 });
+    S.rumble({ dur: 4.0, f: 56, peak: 0.1, a: 2.0 });
+    vsInhale(S, 3.6, 0.7, 0.05);
+  });
+  def('bm-vesper-out-of-step', 'bm', S => {       // she steps half a pace out of line: a stride, a second a hair late from the glass, and the pair of notes drifting apart (the beat widening)
+    S.space('hall', 0.6); const G = vsGlass(S);
+    S.rumble({ dur: 3.0, f: 52, peak: 0.1, a: 1.2 });
+    vsStep(S, 0.45, 0.22, -0.15, 62); vsStep(S, 1.15, 0.2, -0.15, 62); vsStep(G, 1.34, 0.14, 0.4, 62);
+    S.tone({ at: 0.5, f: mf(70), dur: 2.4, pts: [[1.2, 1], [2.2, 0.8], [2.4, 0]], peak: 0.06, lp: 2200, pan: -0.2 });
+    G.tone({ at: 0.8, f: mf(82), f1: mf(82) * 1.012, dur: 2.2, pts: [[1.1, 1], [2.0, 0.8], [2.2, 0]], peak: 0.06, lp: 3000, pan: 0.3 });
+    vsInhale(S, 2.2, 0.8, 0.035);
+  });
+  def('bm-vesper-counterpoint', 'bm', S => {      // two voices in contrary motion: a low close note rising in the hall as a high thin one falls from the glass, passing in the middle, both held
+    S.space('hall', 0.55); const G = vsGlass(S);
+    vsSing(S, 0.3, mf(50), 3.8, 0.09, { f1: mf(62), beat: 1.0, lp: 1100, pan: -0.25 });
+    vsSing(G, 0.3, mf(98), 3.8, 0.05, { f1: mf(86), beat: 2.0, pan: 0.3 });
+    S.rumble({ dur: 4.2, f: 54, peak: 0.08, a: 2.2 });
+    vsInhale(S, 3.7, 0.9, 0.05);
+  });
+  def('bm-vesper-cross-cut', 'bm', S => {         // two strokes that will cross: one drawn up in the hall as another is drawn down in the glass, the two bands of air passing each other
+    S.space('hall', 0.45); const G = vsGlass(S);
+    vsStep(S, 0.3, 0.16, 0, 64);
+    vsDraw(S, 0.8, 1.4, 0.3, -0.5, 1);
+    vsDraw(G, 0.8, 1.4, 0.22, 0.5, 0);
+    vsRing(S, 2.3, mf(79), 1.4, 0.05, -0.3, 1.8);
+    vsInhale(S, 3.1, 1.0, 0.045);
+  });
+  def('bm-vesper-silver-thread', 'bm', S => {     // a thread drawn out between her and the glass: one thin note stretching upward, fine ticks as it tightens, the silver hiss of it running, then held taut
+    S.space('hall', 0.5);
+    S.tone({ at: 0.4, f: mf(88), f1: mf(94), dur: 4.4, pts: [[3.6, 1], [4.2, 0.9], [4.4, 0]], peak: 0.05, lp: 4000, vib: [6, 0.003, 1.0] });
+    S.noise({ at: 0.5, color: 'white', bp: 7200, q: 3, dur: 3.6, pts: [[2.8, 1], [3.6, 0]], peak: 0.04 });
+    [1.0, 1.8, 2.4, 2.9, 3.3, 3.6].forEach((t, i) => S.metal({ at: t, set: 'bar', f: 3300 + i * 190, dur: 0.14, peak: 0.03, strike: 0.2, pan: i % 2 ? 0.4 : -0.4 }));
+    vsStep(S, 0.3, 0.12, 0, 66);
+    vsInhale(S, 3.9, 0.7, 0.035);
+  });
+  def('bm-vesper-through-the-glass', 'bm', S => { // the wall begins: the glass draws in, a long inward sweep over a low chord, three notes sinking through it, the held breath
+    S.space('hall', 0.75); const G = vsGlass(S);
+    S.whoosh({ at: 0.2, color: 'pink', f: 5200, f1: 500, dur: 2.8, peakAt: 0.7, q: 1.0, peak: 0.16 });
+    S.pad({ notes: [mf(38), mf(45), mf(50)], dur: 3.3, type: 'sine', det: 4, lpEnv: [200, 560, 240, 1.8], peak: 0.08 });
+    [[1.4, 98], [1.9, 93], [2.4, 86]].forEach(([t, m]) => G.glass({ at: t, f: mf(m), dur: 1.6, peak: 0.06 }));
+    vsInhale(S, 2.6, 0.8, 0.04);
+  });
+  def('bm-vesper-shared-reflection', 'bm', S => { // two must stand together: a pair of notes a little apart, one either side, closing to a single unison, the glass a soft answer above
+    S.space('hall', 0.55); const G = vsGlass(S);
+    S.tone({ at: 0.3, f: mf(69) * 1.035, f1: mf(69), glide: 3.6, dur: 4.4, pts: [[1.2, 1], [3.8, 1], [4.2, 0.9], [4.4, 0]], peak: 0.06, lp: 2200, pan: -0.5 });
+    S.tone({ at: 0.3, f: mf(69) / 1.035, f1: mf(69), glide: 3.6, dur: 4.4, pts: [[1.2, 1], [3.8, 1], [4.2, 0.9], [4.4, 0]], peak: 0.06, lp: 2200, pan: 0.5 });
+    G.tone({ at: 1.0, f: mf(81), dur: 3.4, pts: [[1.2, 1], [3.0, 0.7], [3.4, 0]], peak: 0.03, lp: 3000, pan: 0.2 });
+    S.rumble({ dur: 4.6, f: 50, peak: 0.06, a: 2.2 });
+    vsInhale(S, 4.0, 0.7, 0.03);
+  });
+  def('bm-vesper-hairline-fracture', 'bm', S => { // a hairline crack drawn across the glass: small cracks running across the room with a thin ring each, a fine crackle along them, the held breath
+    S.space('hall', 0.5); const G = vsGlass(S);
+    for (let i = 0; i < 9; i++) { const pan = -0.8 + i * 0.2; G.crack({ at: 0.4 + i * 0.27, peak: 0.05, dur: 0.05, f: 3400, pan }); G.glass({ at: 0.4 + i * 0.27, f: 3000 + i * 260, dur: 0.5, peak: 0.035, pan }); }
+    G.crackle({ at: 0.4, dens: 0.8, f: 3200, dur: 2.4, pts: [[0.8, 1], [2.4, 0]], peak: 0.06 });
+    vsInhale(S, 2.5, 0.6, 0.035);
+  });
+  def('bm-vesper-the-mirror-turns', 'bm', S => {  // the mirror begins to turn: a deep slow grind rising a fifth, air swept past on one side and then the other, three glass notes climbing; no blow at the end
+    S.space('hall', 0.8); const G = vsGlass(S);
+    S.rumble({ dur: 3.6, f: 70, peak: 0.2, a: 1.8, am: [2.4, 0.4] });
+    S.pad({ notes: [mf(33), mf(40)], dur: 3.6, type: 'sine', det: 5, bend: 7, lpEnv: [160, 620, 200, 2.4], peak: 0.12 });
+    S.whoosh({ at: 0.4, color: 'pink', f: 300, f1: 2600, dur: 3.0, peakAt: 0.9, q: 1.0, peak: 0.1, pan: -0.5 });
+    G.whoosh({ at: 0.9, color: 'pink', f: 500, f1: 3200, dur: 2.5, peakAt: 0.9, q: 1.0, peak: 0.08, pan: 0.5 });
+    [[1.2, 86], [1.8, 91], [2.4, 98]].forEach(([t, m]) => G.glass({ at: t, f: mf(m), dur: 1.4, peak: 0.05 }));
+    vsInhale(S, 2.9, 0.6, 0.035);
+  });
+  // the dance: a stately bed of its own (a slow chord rising a fifth, plate strides alternating hall and glass, a few quiet glass notes), the cuts themselves are the moments'; Trading Places is the same
+  // dance after the knights have changed rooms: from its fourth stride the strides swap sides
+  const vsDanceBed = (S, swap) => {
+    S.space('hall', 0.6); const G = vsGlass(S);
+    S.pad({ notes: [mf(50), mf(57)], dur: 9.0, type: 'sine', det: 4, bend: 5, lpEnv: [220, 700, 260, 6], peak: 0.07 });
+    S.rumble({ dur: 9.2, f: 52, peak: 0.07, a: 3.0 });
+    [0.5, 1.8, 3.1, 4.3, 5.5, 6.6, 7.6].forEach((t, i) => { const glass = (i % 2 === 1) !== (swap && i >= 3); (glass ? vsStep(G, t, 0.1, 0.35, 64) : vsStep(S, t, 0.12, -0.35, 62)); });
+    [2.3, 3.6, 4.8, 5.9, 7.0].forEach((t, i) => G.glass({ at: t, f: mf(86 + [0, 2, 4, 7, 9][i]), dur: 1.4, peak: 0.03, pan: i % 2 ? 0.4 : -0.4 }));
+    if (swap) { S.whoosh({ at: 4.4, color: 'pink', f: 900, f1: 4200, dur: 0.8, peakAt: 0.5, q: 1.2, peak: 0.07, pan: -0.5 }); G.whoosh({ at: 4.4, color: 'pink', f: 4200, f1: 900, dur: 0.8, peakAt: 0.5, q: 1.2, peak: 0.06, pan: 0.5 }); }
+    vsInhale(S, 8.4, 0.7, 0.03);
+  };
+  def('bm-vesper-evenfall-dance', 'bm', S => vsDanceBed(S, false));
+  def('bm-vesper-trading-places', 'bm', S => vsDanceBed(S, true));
+  def('bm-vesper-the-line', 'bm', S => {          // she strides to the middle of the hall (four plate steps, the gaps lengthening), the glass dims, and everything holds; no blow at the end (the planting is the staged beat's)
+    S.space('hall', 0.8); const G = vsGlass(S);
+    S.rumble({ dur: 3.6, f: 48, peak: 0.1, a: 1.0 });
+    [0.2, 0.62, 1.08, 1.58].forEach((t, i) => vsStep(S, t, 0.2 + i * 0.02, -0.05, 56 + i * 3));
+    G.tone({ at: 0.3, f: mf(98), f1: mf(76), dur: 2.6, pts: [[0.3, 1], [2.4, 0.6], [2.6, 0]], peak: 0.05, lp: 4000 });
+    S.tone({ at: 1.5, f: mf(38), dur: 2.0, a: 0.4, peak: 0.05, lp: 200 });
+    vsInhale(S, 1.9, 1.3, 0.035);
+  });
+  def('bm-vesper-last-reflection', 'bm', S => {  // the enrage: every reflection in the hall ringing at once, a rising pair of notes in each room, glass notes multiplying faster and faster, a vast low swell, then the held breath and nothing
+    S.space('hall', 0.85); const G = vsGlass(S);
+    vsSing(S, 0.3, mf(62), 7.0, 0.1, { f1: mf(81), beat: 1.4, a: 5.5, pan: -0.2 });
+    vsSing(G, 0.5, mf(74), 6.8, 0.06, { f1: mf(93), beat: 2.2, a: 5.5, pan: 0.3 });
+    S.pad({ notes: [mf(38), mf(45), mf(50)], dur: 7.4, type: 'sine', det: 5, bend: 7, lpEnv: [180, 700, 220, 5.5], peak: 0.1 });
+    S.rumble({ dur: 7.6, f: 46, peak: 0.2, a: 5 });
+    let t = 1.0, gap = 0.9;
+    for (let i = 0; i < 14; i++) { G.glass({ at: t, f: mf(86 + [0, 3, 7, 10, 12][i % 5]), dur: 1.6, peak: 0.045, pan: Math.sin(i * 2.1) * 0.6 }); t += gap; gap *= 0.86; }
+    vsInhale(S, 6.9, 1.0, 0.07);
+  });
+  // ---- Hard and Extreme
+  def('bm-vesper-double-glass', 'bm', S => {      // Lay Glass in both rooms: four thin notes set down in the glass, and in the hall a row of four slow, heavy strides laid across it, left to right
+    S.space('hall', 0.55); const G = vsGlass(S, { gain: 0.8 });
+    S.rumble({ dur: 4.2, f: 50, peak: 0.08, a: 2.0 });
+    [0.8, 1.45, 2.05, 2.55].forEach((t, i) => { const pan = [0.5, -0.4, 0.2, -0.6][i]; G.glass({ at: t, f: mf(88 + [0, 3, 5, 8][i]), dur: 1.6, peak: 0.09, pan }); G.crack({ at: t, peak: 0.04, dur: 0.06, f: 3200, pan }); });
+    [1.0, 1.55, 2.1, 2.65].forEach((t, i) => vsStep(S, t, 0.14, -0.7 + i * 0.47, 72 - i * 4));
+    vsInhale(S, 3.5, 1.0, 0.055);
+  });
+  def('bm-vesper-two-threads', 'bm', S => {       // two threads, one and two: a thin note stretching up on the left, a fifth above it a second on the right, a single tick for the first and a pair for the second, held taut
+    S.space('hall', 0.5);
+    S.tone({ at: 0.4, f: mf(88), f1: mf(93), dur: 4.6, pts: [[3.8, 1], [4.4, 0.9], [4.6, 0]], peak: 0.045, lp: 4000, vib: [6, 0.003, 1.0], pan: -0.45 });
+    S.tone({ at: 0.9, f: mf(95), f1: mf(100), dur: 4.1, pts: [[3.3, 1], [3.9, 0.9], [4.1, 0]], peak: 0.04, lp: 5000, vib: [7, 0.003, 1.0], pan: 0.45 });
+    S.metal({ at: 0.4, set: 'bar', f: 3300, dur: 0.14, peak: 0.04, strike: 0.2, pan: -0.45 });
+    S.metal({ at: 0.9, set: 'bar', f: 3900, dur: 0.14, peak: 0.04, strike: 0.2, pan: 0.45 }); S.metal({ at: 1.05, set: 'bar', f: 3900, dur: 0.14, peak: 0.035, strike: 0.2, pan: 0.45 });
+    S.noise({ at: 0.6, color: 'white', bp: 7200, q: 3, dur: 3.8, pts: [[3.0, 1], [3.8, 0]], peak: 0.04 });
+    vsStep(S, 0.3, 0.12, 0, 66);
+    vsInhale(S, 4.2, 0.8, 0.035);
+  });
+  def('bm-vesper-hand-mirror', 'bm', S => {       // the Glass Knight throws a standing mirror: a stance, then a spinning whirr crossing the room and falling in pitch, a glass shimmer riding it; the landing is the moment's
+    S.space('hall', 0.55); const G = vsGlass(S, { hp: 600 });
+    vsStep(S, 0.2, 0.12, -0.1, 66);
+    S.whoosh({ at: 0.35, color: 'pink', f: 2800, f1: 700, dur: 2.2, peakAt: 0.5, q: 1.6, peak: 0.2, am: [14, 0.7], pan: -0.25 });
+    G.glass({ at: 0.6, f: mf(93), dur: 2.0, peak: 0.08, am: [14, 0.6], pan: 0.3 });
+    vsInhale(S, 2.0, 0.6, 0.035);
+  });
+  def('bm-vesper-backhand', 'bm', S => {          // a cross-cut that changes sides: the stroke drawn up on the left, held, and drawn again from the right (the glass), the breath after it; the change itself is the moment's
+    S.space('hall', 0.45); const G = vsGlass(S);
+    vsStep(S, 0.3, 0.16, -0.2, 64);
+    vsDraw(S, 0.6, 1.5, 0.28, -0.55, 1);
+    vsDraw(G, 3.7, 1.3, 0.22, 0.55, 0);
+    vsDraw(S, 3.9, 1.2, 0.22, 0.5, 1);
+    vsRing(S, 2.4, mf(79), 1.2, 0.04, -0.4, 1.8);
+    vsInhale(S, 4.9, 0.7, 0.045);
+  });
+  def('bm-vesper-through-the-glass-again', 'bm', S => {   // the glass lets go of one and takes the other: two notes crossing, one rising as one falls, a thin glass tick as they pass
+    S.space('hall', 0.6); const G = vsGlass(S);
+    S.tone({ at: 0.3, f: mf(62), f1: mf(74), dur: 2.6, pts: [[1.2, 1], [2.2, 0.8], [2.6, 0]], peak: 0.07, lp: 2000, pan: -0.5 });
+    S.tone({ at: 0.3, f: mf(74), f1: mf(62), dur: 2.6, pts: [[1.2, 1], [2.2, 0.8], [2.6, 0]], peak: 0.07, lp: 2000, pan: 0.5 });
+    G.glass({ at: 1.5, f: mf(93), dur: 1.0, peak: 0.07 });
+    S.rumble({ dur: 2.8, f: 50, peak: 0.07, a: 1.4 });
+    vsInhale(S, 2.3, 0.6, 0.035);
+  });
+  def('bm-vesper-lagging-glass', 'bm', S => {     // the twin that is a step behind: a struck note and its late echo, a second note, its late echo again, each repeat lower than the last
+    S.space('hall', 0.5); S.echo({ time: 0.72, fb: 0.5, lp: 2200, kill: 5.2 });
+    S.partials({ at: 0.4, set: 'bar', f: mf(74), dur: 1.8, beat: 1.4, peak: 0.12, strike: 0.2, ech: 0.8 });
+    S.partials({ at: 1.5, set: 'bar', f: mf(81), dur: 1.6, beat: 1.4, peak: 0.1, strike: 0.2, ech: 0.8 });
+    S.glass({ at: 2.1, f: mf(93), dur: 1.4, peak: 0.05, ech: 0.9 });
+    vsInhale(S, 2.3, 0.7, 0.035);
+  });
+  def('bm-vesper-wrong-hand', 'bm', S => {        // the twin raises the wrong hand: a warm low note on the left and a tritone clashing softly on the right, a wooden tap on one side and then, wrongly, the other
+    S.space('hall', 0.5); const G = vsGlass(S);
+    S.tone({ at: 0.3, f: mf(57), dur: 2.6, pts: [[1.0, 1], [2.2, 0.8], [2.6, 0]], peak: 0.08, lp: 700, pan: -0.5 });
+    S.tone({ at: 0.5, f: mf(63), dur: 2.4, pts: [[1.0, 1], [2.0, 0.8], [2.4, 0]], peak: 0.045, lp: 900, pan: 0.5 });
+    S.wood({ at: 0.6, f: 520, dur: 0.09, peak: 0.2, pan: -0.5 }); S.wood({ at: 1.0, f: 520, dur: 0.09, peak: 0.2, pan: 0.5 });
+    G.glass({ at: 1.3, f: mf(87), dur: 1.2, peak: 0.05, pan: 0.3 });
+    vsInhale(S, 2.2, 0.7, 0.035);
+  });
+  // ---- the moments (sound-hooks.js reads them off the room; every one begins on its beat)
+  def('bm-vesper-m-fracture', 'bm', S => {        // the twin is struck: a hairline crack runs through the glass, a few shards ring and fall, and a dull blow lands on the body
+    S.space('hall', 0.4); const G = vsGlass(S);
+    S.thud({ f: 84, f1: 44, dur: 0.3, click: 0, lp: 420, peak: 0.28 });
+    G.crack({ peak: 0.2, dur: 0.12, f: 3000 });
+    G.glass({ at: 0.02, f: mf(95), dur: 1.0, peak: 0.1 });
+    for (let i = 0; i < 4; i++) G.glass({ at: 0.08 + i * 0.07, f: 3300 + ((i * 577) % 2600), dur: 0.5, peak: 0.04, pan: i % 2 ? 0.5 : -0.5 });
+  });
+  def('bm-vesper-m-shard', 'bm', S => {           // a shard falling in the glass, far off: a thin crack, a bright ring and a few small pieces
+    S.space('hall', 0.5); const G = vsGlass(S, { gain: 0.8 });
+    G.crack({ peak: 0.22, dur: 0.1, f: 3200 });
+    G.glass({ at: 0.01, f: 3100, dur: 1.0, peak: 0.14 });
+    for (let i = 0; i < 3; i++) G.glass({ at: 0.06 + i * 0.06, f: 4200 + ((i * 733) % 2400), dur: 0.4, peak: 0.035, pan: i % 2 ? 0.5 : -0.5 });
+    S.thud({ f: 82, f1: 46, dur: 0.2, click: 0, lp: 380, peak: 0.08 });
+  });
+  def('bm-vesper-m-shard-hall', 'bm', S => {      // a shard of Double Glass in the hall itself: heavier, a low blow, a crack on the stone, steel ringing under glass
+    S.space('hall', 0.45); const G = vsGlass(S);
+    S.thud({ f: 70, f1: 36, dur: 0.5, drive: 1.6, click: 0.15, lp: 700, peak: 0.45 });
+    S.crack({ peak: 0.2, dur: 0.12, f: 1800 });
+    S.glass({ at: 0.01, f: 1800, dur: 0.8, peak: 0.1 });
+    S.metal({ at: 0.02, set: 'plate', f: 900, dur: 0.6, peak: 0.07, click: 0 });
+    for (let i = 0; i < 3; i++) G.glass({ at: 0.08 + i * 0.07, f: 3600 + ((i * 611) % 2200), dur: 0.5, peak: 0.03, pan: i % 2 ? 0.5 : -0.5 });
+  });
+  def('bm-vesper-m-evenfall', 'imp', S => {       // the wide cone lands in both rooms: a low blow, a wide stroke of air and its ring, and the glass's stroke a beat behind, thinner and from the other side
+    S.space('hall', 0.45); const G = vsGlass(S);
+    S.thud({ f: 66, f1: 32, dur: 0.8, drive: 1.8, peak: 0.5 });
+    S.crack({ peak: 0.22, dur: 0.14, f: 2400 });
+    S.whoosh({ color: 'pink', f: 4200, f1: 700, dur: 0.6, peakAt: 0.15, q: 1.4, peak: 0.26, pan: -0.5 });
+    vsRing(S, 0.02, mf(62), 1.8, 0.2, -0.1, 1.8);
+    G.whoosh({ at: 0.2, color: 'pink', f: 3800, f1: 900, dur: 0.5, peakAt: 0.15, q: 1.4, peak: 0.16, pan: 0.5 });
+    G.crack({ at: 0.2, peak: 0.12, dur: 0.1, f: 2600, pan: 0.3 });
+    vsRing(G, 0.22, mf(74), 1.6, 0.12, 0.35, 1.8);
+  });
+  def('bm-vesper-m-verdict', 'imp', S => {        // the tank's cut in the hall: the heaviest blow of hers, a deep blow with a low ring of steel under it and a stroke of air
+    S.space('hall', 0.5);
+    S.thud({ f: 56, f1: 26, dur: 1.0, drive: 2.4, peak: 0.6 });
+    S.crack({ peak: 0.3, dur: 0.14, f: 1500 });
+    S.whoosh({ color: 'pink', f: 3200, f1: 500, dur: 0.4, peakAt: 0.1, q: 1.4, peak: 0.2 });
+    vsRing(S, 0.02, mf(55), 2.2, 0.22, 0, 1.4);
+    S.rumble({ at: 0.02, dur: 0.9, f: 66, peak: 0.25, a: 0.04 });
+  });
+  def('bm-vesper-m-verdict-glass', 'imp', S => { // the second cut of Twin Verdict, from the glass: a small blow far under it, a thin crack and a high ring; lighter than the first
+    S.space('hall', 0.6); const G = vsGlass(S);
+    S.thud({ f: 62, f1: 32, dur: 0.5, click: 0, lp: 380, peak: 0.25 });
+    G.crack({ peak: 0.22, dur: 0.12, f: 2200 });
+    G.whoosh({ color: 'pink', f: 3600, f1: 800, dur: 0.4, peakAt: 0.1, q: 1.4, peak: 0.12 });
+    vsRing(G, 0.02, mf(67), 1.8, 0.14, 0.3, 1.6);
+  });
+  def('bm-vesper-m-counter', 'imp', S => {        // Vesper's close ring burst round her: a blow, a ring of air thrown outward and falling away, a low ring of steel
+    S.space('hall', 0.45);
+    S.thud({ f: 60, f1: 28, dur: 0.9, drive: 2.0, peak: 0.5 });
+    S.noise({ color: 'pink', bp: 3200, bp1: 500, q: 0.8, dur: 0.6, pts: [[0.05, 1], [0.6, 0]], peak: 0.28 });
+    vsRing(S, 0.02, mf(57), 1.8, 0.16, 0, 1.6);
+    S.crack({ peak: 0.14, dur: 0.1, f: 1800 });
+  });
+  def('bm-vesper-m-counter-glass', 'imp', S => {  // the Glass Knight's wide ring far out: a thin crack, two wide notes held apart (one either side) and a long hush of glass air
+    S.space('hall', 0.6); const G = vsGlass(S);
+    G.crack({ peak: 0.2, dur: 0.12, f: 2000 });
+    G.glass({ at: 0.02, f: 1900, dur: 1.6, peak: 0.1, pan: -0.6 }); G.glass({ at: 0.04, f: 2250, dur: 1.5, peak: 0.09, pan: 0.6 });
+    G.noise({ color: 'pink', bp: 700, bp1: 3500, q: 0.8, dur: 0.9, pts: [[0.12, 1], [0.9, 0]], peak: 0.1 });
+    S.rumble({ dur: 0.9, f: 70, peak: 0.12, a: 0.05 });
+  });
+  def('bm-vesper-m-cross', 'imp', S => {          // the hall's side of a Cross-Cut: a broad slap of steel on stone, a blow, two strokes of air crossing each other
+    S.space('hall', 0.45);
+    S.crack({ peak: 0.34, dur: 0.16, f: 1400 });
+    S.thud({ f: 62, f1: 30, dur: 0.7, drive: 1.8, peak: 0.5 });
+    S.whoosh({ color: 'pink', f: 800, f1: 4200, dur: 0.4, peakAt: 0.2, q: 1.4, peak: 0.2, pan: -0.5 });
+    S.whoosh({ color: 'pink', f: 4200, f1: 800, dur: 0.4, peakAt: 0.2, q: 1.4, peak: 0.2, pan: 0.5 });
+    vsRing(S, 0.02, mf(67), 1.4, 0.12, 0, 1.8);
+  });
+  def('bm-vesper-m-cross-glass', 'imp', S => {    // the stripe of glass: one narrow thin line, a crack along it, one high note
+    S.space('hall', 0.55); const G = vsGlass(S);
+    G.crack({ peak: 0.2, dur: 0.1, f: 2800 });
+    G.whoosh({ color: 'pink', f: 5200, f1: 2800, dur: 0.35, peakAt: 0.1, q: 2.0, peak: 0.12 });
+    G.glass({ at: 0.02, f: mf(88), dur: 1.2, peak: 0.1 });
+    S.thud({ f: 70, f1: 36, dur: 0.3, click: 0, lp: 360, peak: 0.15 });
+  });
+  def('bm-vesper-m-thread-lock', 'bm', S => {     // the thread locks taut between the hero and their twin: a thin note snapping up a step and holding, a tick of steel
+    S.space('hall', 0.4);
+    S.tone({ f: mf(90), f1: mf(93), glide: 0.12, dur: 0.9, pts: [[0.04, 1], [0.5, 0.5], [0.9, 0]], peak: 0.1, lp: 5000, vib: [7, 0.003, 0.1] });
+    S.metal({ set: 'bar', f: 3600, dur: 0.2, peak: 0.06, strike: 0.3 });
+    S.noise({ color: 'white', hp: 6500, dur: 0.3, pts: [[0.03, 1], [0.3, 0]], peak: 0.04 });
+  });
+  def('bm-vesper-m-thread-snap', 'imp', S => {    // the thread parts: a string let go (a bright twang falling), a crack, and the glass's thin answer a beat behind
+    S.space('hall', 0.45); const G = vsGlass(S);
+    S.tone({ f: 2300, f1: 1000, dur: 0.22, a: 0.002, peak: 0.12, lp: 4500 });
+    S.crack({ peak: 0.26, dur: 0.12, f: 2600 });
+    S.thud({ f: 70, f1: 36, dur: 0.4, click: 0, lp: 420, peak: 0.3 });
+    G.tone({ at: 0.18, f: 4600, f1: 2000, dur: 0.22, a: 0.002, peak: 0.1, lp: 6000 });
+    G.glass({ at: 0.2, f: mf(93), dur: 1.2, peak: 0.08 });
+  });
+  def('bm-vesper-m-cut-draw', 'bm', S => {        // a cut of the dance drawn (Vesper's): a short rising draw of steel and a small ring
+    S.space('hall', 0.35);
+    vsDraw(S, 0, 0.5, 0.12, 0);
+    vsRing(S, 0.35, mf(86), 0.8, 0.04, 0, 1.4);
+  });
+  def('bm-vesper-m-cut-draw-glass', 'bm', S => {  // a cut of the dance drawn by the Glass Knight: the same draw coming down, thin and far
+    S.space('hall', 0.5); const G = vsGlass(S);
+    vsDraw(G, 0, 0.5, 0.1, 0, 0);
+    vsRing(G, 0.35, mf(86), 0.8, 0.04, 0, 1.4);
+  });
+  def('bm-vesper-m-cut', 'imp', S => {            // a cut of Vesper's lands: a stroke of air, a steel crack, a short blow and the ring (the caller climbs the rate and the level up the dance)
+    S.space('hall', 0.4);
+    vsCut(S, 0, 0.5, -0.2);
+    S.thud({ f: 70, f1: 38, dur: 0.35, click: 0.1, lp: 700, peak: 0.4 });
+    vsRing(S, 0.02, mf(74), 1.2, 0.12, -0.1, 1.8);
+  });
+  def('bm-vesper-m-cut-glass', 'imp', S => {      // a cut of the Glass Knight's lands: a long thin stroke, a high crack and a high ring, a small blow far under
+    S.space('hall', 0.55); const G = vsGlass(S);
+    G.whoosh({ color: 'pink', f: 5200, f1: 900, dur: 0.5, peakAt: 0.15, q: 1.4, peak: 0.2, pan: 0.3 });
+    G.crack({ peak: 0.2, dur: 0.1, f: 2800, pan: 0.3 });
+    vsRing(G, 0.02, mf(86), 1.2, 0.12, 0.3, 1.8);
+    S.thud({ f: 66, f1: 34, dur: 0.3, click: 0, lp: 360, peak: 0.2 });
+  });
+  def('bm-vesper-m-cut-last', 'imp', S => {       // the last cut, both knights at once: a deep blow, a wide stroke in each room, a low long ring and its high twin, a long low swell under them
+    S.space('hall', 0.6); const G = vsGlass(S);
+    S.thud({ f: 50, f1: 24, dur: 1.3, drive: 2.6, peak: 0.65 });
+    S.crack({ peak: 0.34, dur: 0.16, f: 1500 });
+    S.whoosh({ color: 'pink', f: 4200, f1: 600, dur: 0.6, peakAt: 0.12, q: 1.3, peak: 0.3, pan: -0.4 });
+    vsRing(S, 0.02, mf(50), 3.0, 0.24, 0, 1.6);
+    G.whoosh({ at: 0.06, color: 'pink', f: 5200, f1: 800, dur: 0.6, peakAt: 0.12, q: 1.3, peak: 0.2, pan: 0.4 });
+    G.crack({ at: 0.06, peak: 0.2, dur: 0.12, f: 2600, pan: 0.4 });
+    vsRing(G, 0.08, mf(74), 2.4, 0.16, 0.35, 1.6);
+    S.rumble({ at: 0.02, dur: 1.5, f: 62, peak: 0.25, a: 0.05 });
+  });
+  def('bm-vesper-m-step', 'bm', S => {            // the Glass Knight steps out of line: one stride and a ring from the glass that does not agree with it, a hair flat and beating
+    S.space('hall', 0.55); const G = vsGlass(S);
+    vsStep(S, 0, 0.14, 0, 62);
+    vsRing(G, 0.1, mf(79), 1.4, 0.12, 0.3, 5);
+  });
+  def('bm-vesper-m-hand-land', 'imp', S => {      // a standing mirror set down in the hall: a blow, the frame knocking on stone, glass shivering in it
+    S.space('hall', 0.5); const G = vsGlass(S);
+    S.thud({ f: 60, f1: 35, dur: 0.5, drive: 1.4, peak: 0.45 });
+    S.wood({ at: 0.02, f: 380, dur: 0.18, peak: 0.28 });
+    S.metal({ at: 0.03, set: 'plate', f: 520, dur: 0.9, peak: 0.08, click: 0 });
+    [2200, 2900, 3600].forEach((f, i) => G.glass({ at: 0.05 + i * 0.06, f, dur: 1.0, peak: 0.07, pan: (i - 1) * 0.4 }));
+  });
+  def('bm-vesper-m-hand-break', 'imp', S => {     // the hand mirror shatters: a crack, a bright scatter of glass falling in many pieces and a low blow, then a hush
+    S.space('hall', 0.55); const G = vsGlass(S, { hp: 1500, lp: 7500 });
+    S.crack({ peak: 0.3, dur: 0.16, f: 2200 });
+    S.thud({ f: 70, f1: 34, dur: 0.5, drive: 1.6, click: 0.1, lp: 600, peak: 0.35 });
+    G.noise({ at: 0.02, color: 'white', hp: 4000, dur: 1.1, pts: [[0.05, 1], [1.1, 0]], peak: 0.14, grain: 0.9 });
+    for (let i = 0; i < 10; i++) G.glass({ at: 0.03 + i * 0.05 + (i % 3) * 0.02, f: 2400 + ((i * 677) % 4000), dur: 0.7, peak: 0.045, pan: Math.sin(i * 2.3) * 0.7 });
+    S.rumble({ at: 0.02, dur: 0.8, f: 66, peak: 0.12, a: 0.04 });
+  });
+  def('bm-vesper-m-pull', 'bm', S => {            // the glass reaches for a hero: an inward sweep growing, a low note rising under it, three glass notes drawn up
+    S.space('hall', 0.55); const G = vsGlass(S);
+    S.whoosh({ color: 'pink', f: 5200, f1: 600, dur: 1.3, peakAt: 0.85, q: 1.0, peak: 0.16 });
+    S.tone({ f: mf(45), f1: mf(52), dur: 1.4, pts: [[0.9, 1], [1.4, 0]], peak: 0.07, lp: 500 });
+    [0.2, 0.55, 0.9].forEach((t, i) => G.glass({ at: t, f: mf(86 + i * 4), dur: 1.0, peak: 0.05 }));
+  });
+  def('bm-vesper-m-through', 'bm', S => {         // a hero goes through the glass: a soft crack at the surface, a plunging sweep and a long thin ring, the hall's sound gone dull behind
+    S.space('hall', 0.6); const G = vsGlass(S);
+    S.crack({ peak: 0.12, dur: 0.1, f: 2400 });
+    S.whoosh({ color: 'pink', f: 2800, f1: 350, dur: 0.9, peakAt: 0.1, q: 0.9, peak: 0.2 });
+    S.thud({ at: 0.04, f: 60, f1: 32, dur: 0.5, click: 0, lp: 300, peak: 0.25 });
+    G.glass({ at: 0.06, f: mf(91), dur: 1.6, peak: 0.08 }); G.glass({ at: 0.1, f: mf(98), dur: 1.4, peak: 0.05 });
+  });
+  def('bm-vesper-m-back', 'bm', S => {            // a hero comes back through: the release, a rising sweep and a breath out, one glass tick
+    S.space('hall', 0.5); const G = vsGlass(S);
+    S.whoosh({ color: 'pink', f: 400, f1: 3400, dur: 0.8, peakAt: 0.7, q: 0.9, peak: 0.22 });
+    S.thud({ at: 0.55, f: 62, f1: 36, dur: 0.4, click: 0, lp: 300, peak: 0.12 });
+    G.glass({ at: 0.6, f: mf(95), dur: 1.0, peak: 0.05 });
+  });
+  def('bm-vesper-m-soak-met', 'bm', S => {        // a round of soaks met: two notes landing on the same pitch, a soft unison ring with its high twin
+    S.space('hall', 0.5); const G = vsGlass(S);
+    S.partials({ set: [[1, 1, 1], [2, 0.14, 0.7], [3, 0.05, 0.5]], f: mf(81), dur: 1.6, peak: 0.12, pan: -0.3 });
+    S.partials({ at: 0.01, set: [[1, 1, 1], [2, 0.14, 0.7], [3, 0.05, 0.5]], f: mf(81), dur: 1.6, peak: 0.12, pan: 0.3 });
+    G.glass({ at: 0.15, f: mf(93), dur: 1.2, peak: 0.05 });
+  });
+  def('bm-vesper-m-soak-missed', 'bm', S => {     // a soak that did not have its two: a dull knock and a pair of low notes that do not agree, quickly gone
+    S.space('hall', 0.4);
+    S.thud({ f: 74, f1: 40, dur: 0.35, click: 0, lp: 400, peak: 0.3 });
+    S.partials({ set: [[1, 1, 1], [2, 0.14, 0.7]], f: mf(62), dur: 0.9, peak: 0.1, pan: -0.3 });
+    S.partials({ at: 0.01, set: [[1, 1, 1], [2, 0.14, 0.7]], f: mf(62) * 1.045, dur: 0.9, peak: 0.1, pan: 0.3 });
+  });
+  def('bm-vesper-m-swap', 'bm', S => {            // the glass lets one hero go and takes another: two glass notes passing, one up and one down, a tick between
+    S.space('hall', 0.5); const G = vsGlass(S);
+    G.tone({ f: mf(86), f1: mf(98), dur: 0.9, pts: [[0.1, 1], [0.6, 0.6], [0.9, 0]], peak: 0.08, lp: 5000, pan: -0.5 });
+    G.tone({ f: mf(98), f1: mf(86), dur: 0.9, pts: [[0.1, 1], [0.6, 0.6], [0.9, 0]], peak: 0.08, lp: 5000, pan: 0.5 });
+    G.glass({ at: 0.4, f: mf(93), dur: 0.8, peak: 0.05 });
+  });
+  def('bm-vesper-m-trade', 'bm', S => {           // the knights trade rooms: four strides crossing from one side to the other as a stroke of air crosses the other way, a note and its answer
+    S.space('hall', 0.55); const G = vsGlass(S);
+    [0, 0.2, 0.4, 0.6].forEach((t, i) => vsStep(S, t, 0.16, -0.6 + i * 0.4, 62));
+    G.whoosh({ at: 0.05, color: 'pink', f: 4200, f1: 900, dur: 0.8, peakAt: 0.5, q: 1.2, peak: 0.12, pan: 0.4 });
+    vsRing(S, 0.7, mf(74), 1.4, 0.08, 0.2, 1.4); vsRing(G, 0.85, mf(86), 1.3, 0.06, -0.2, 1.4);
+  });
+  def('bm-vesper-m-backhand', 'bm', S => {        // the Backhand changes sides: the stroke drawn back in a quick falling sweep, a knock, the other side's rising from the glass
+    S.space('hall', 0.45); const G = vsGlass(S);
+    S.whoosh({ color: 'pink', f: 4200, f1: 800, dur: 0.35, peakAt: 0.3, q: 1.4, peak: 0.22, pan: -0.5 });
+    S.wood({ at: 0.3, f: 700, dur: 0.06, peak: 0.08 });
+    G.whoosh({ at: 0.32, color: 'pink', f: 900, f1: 4800, dur: 0.4, peakAt: 0.6, q: 1.4, peak: 0.2, pan: 0.5 });
+  });
+  def('bm-vesper-m-mark-aim', 'bm', S => {        // an eye on you (Evenfall is aimed at you): one thin glance, a high note and a tick
+    S.space('hall', 0.3);
+    S.glass({ f: mf(100), dur: 1.0, peak: 0.08 });
+    S.noise({ color: 'white', hp: 6500, dur: 0.1, pts: [[0.01, 1], [0.1, 0]], peak: 0.05 });
+  });
+  def('bm-vesper-m-mark-chain', 'bm', S => {      // the thread tied to you: three small links of silver running
+    S.space('hall', 0.3);
+    for (let i = 0; i < 3; i++) S.metal({ at: i * 0.07, set: 'bar', f: 3100 - i * 260, dur: 0.22, peak: 0.07, strike: 0.25, pan: i % 2 ? 0.3 : -0.3 });
+  });
+  def('bm-vesper-m-mark-lag', 'bm', S => {        // your twin will lag: a note and its late, lower copy
+    S.space('hall', 0.4);
+    S.glass({ f: mf(88), dur: 1.0, peak: 0.08, pan: -0.2 });
+    S.glass({ at: 0.45, f: mf(84), dur: 1.0, peak: 0.04, pan: 0.2 });
+  });
+  def('bm-vesper-m-mark-wrong', 'bm', S => {      // your twin will use the wrong hand: a warm low note and a tritone against it
+    S.space('hall', 0.4);
+    S.tone({ f: mf(57), dur: 0.9, pts: [[0.05, 1], [0.5, 0.6], [0.9, 0]], peak: 0.08, lp: 700 });
+    S.tone({ at: 0.05, f: mf(63), dur: 0.8, pts: [[0.05, 1], [0.4, 0.6], [0.8, 0]], peak: 0.04, lp: 900 });
+  });
+  def('bm-vesper-m-open', 'imp', S => {           // the light raidwide of an act's opening: a soft low blow and one ring of steel with its glass twin
+    S.space('hall', 0.55); const G = vsGlass(S);
+    S.thud({ f: 60, f1: 32, dur: 0.6, drive: 1.4, peak: 0.35 });
+    vsRing(S, 0.02, mf(62), 1.8, 0.12, -0.1, 1.4);
+    vsRing(G, 0.2, mf(74), 1.4, 0.08, 0.3, 1.4);
+  });
+  def('bm-vesper-m-ring', 'imp', S => {           // Ring True: both blades struck on the wall, a great ring in the hall and the glass's a beat behind
+    S.space('hall', 0.6); const G = vsGlass(S);
+    S.thud({ f: 56, f1: 28, dur: 0.9, drive: 2.0, peak: 0.5 });
+    S.crack({ peak: 0.24, dur: 0.14, f: 1800 });
+    vsRing(S, 0.02, mf(66), 3.2, 0.3, -0.15, 1.6);
+    vsRing(G, 0.24, mf(78), 2.8, 0.2, 0.3, 2.2);
+    S.rumble({ at: 0.02, dur: 1.2, f: 64, peak: 0.2, a: 0.05 });
+  });
+  def('bm-vesper-m-hair', 'imp', S => {           // Hairline Fracture lands: a thin crack that runs across the glass, a small blow, fine ticks falling away
+    S.space('hall', 0.5); const G = vsGlass(S);
+    S.thud({ f: 70, f1: 38, dur: 0.4, click: 0, lp: 420, peak: 0.3 });
+    for (let i = 0; i < 6; i++) { const pan = -0.7 + i * 0.28; G.crack({ at: i * 0.05, peak: 0.1, dur: 0.05, f: 3400, pan }); G.glass({ at: i * 0.05, f: 3200 + i * 300, dur: 0.6, peak: 0.04, pan }); }
+  });
+  // the room's bed: the Argent Hall at night, a large still room of stone and silver. Almost nothing: a very low room tone, a thin shimmer of silver air drifting, two high notes a hair apart
+  // beating once in a long while, the glass ticking as it cools
+  loop('amb-vesper-hall', 'amb', L => {
+    const room = L.c(L.src('brown', 0.7), L.f('lowpass', 160), L.g(0.35)); L.lfo(room.gain, 0.023, 0.12); room.connect(L.out);
+    const air = L.c(L.src('pink', 0.8), L.f('bandpass', 3100, 9)), ag = L.g(0.012); L.lfo(air.frequency, 0.031, 420); L.lfo(ag.gain, 0.043, 0.01); L.c(air, ag, L.out);
+    const a = L.g(0.005), b = L.g(0.005); L.lfo(a.gain, 0.037, 0.004); L.lfo(b.gain, 0.029, 0.004);
+    L.c(L.osc('sine', mf(86)), a, L.out); L.c(L.osc('sine', mf(86) * 1.0021), b, L.out);
+    const sub = L.c(L.osc('sine', 55), L.g(0.03)); L.lfo(sub.gain, 0.019, 0.015); sub.connect(L.out);
+    L.c(L.crackle(0.05), L.f('highpass', 4500), L.g(0.012), L.out);
+  }, 3);
+
+  // ============================================================================================== Ormun, the Tide-Weigher (Season 2, boss XV: the Scales)
+  // Deep water, stone, great chains and one huge slow bell. He never speaks, roars or grunts, and he never hurries: his voice is the sleeves' water running, a chain taken up link by link, a block of
+  // stone set down, and a bell struck so slowly and so low it is more felt than heard (church partials a long way down, dark, a slow beat in them). Every move keeps that voice and adds a turn of its
+  // own; the three kinds of judgement are told apart by the shape of what is rung: Let It Be Level is two even strokes, left and right, the same note, and a steady settling pair of links
+  // (everything symmetrical); The Heavier Falls is a falling scale of three tolls with the chain running out faster and faster; The Lighter Rises is a rising scale with the chain hauled
+  // up slower and slower and drops of water lifted off. The casts are the builds and each ends on a held silence, never on a blow: a landing sounds from its telegraph tag exactly on its beat (the m- cues,
+  // sound-hooks.js "ormun" block, so Hard's shorter casts stay in time). A judgement's count being read (the beam stopping dead) and the strike that follows are the m-read and m-fall cues.
+  // The staged beats (bm-ormun-w-) are walls/ormun.js's.
+  const omToll = (S, at, m, dur, pk, o = {}) =>                 // the huge slow bell: church partials very low, a slow soft stroke, dark, a slow beat in the first three
+    S.partials({ at, set: 'church', f: mf(m), dur, a: o.a == null ? 0.05 : o.a, beat: o.beat == null ? 0.6 : o.beat, peak: pk, spread: 6, lp: o.lp || 1700, pan: o.pan });
+  const omLinks = (S, at, n, gap, pk, o = {}) => {              // a great chain through its rings: n heavy low links; o.acc multiplies the gap each link, o.f -> o.f1 walks the pitch, o.pan -> o.pan1 the place
+    let t = at, g = gap;
+    for (let i = 0; i < n; i++) {
+      const x = n > 1 ? i / (n - 1) : 0, f0 = o.f || 400, f = f0 * Math.pow((o.f1 || f0) / f0, x), p0 = o.pan || 0, pan = p0 + ((o.pan1 == null ? p0 : o.pan1) - p0) * x;
+      const p = pk * (o.fade ? 1 - o.fade * x : 1) * (i % 2 ? 0.8 : 1);
+      S.metal({ at: t, set: 'plate', f, dur: o.dur || 0.3, peak: p, click: 0.3, pan });
+      if (o.body !== 0) S.thud({ at: t, f: 92, f1: 56, dur: 0.12, click: 0, lp: 420, peak: p * 0.4, pan });
+      t += g; g *= o.acc || 1;
+    }
+    return t;
+  };
+  const omSea = (S, at, dur, pk, o = {}) => {                   // the night sea moving along stone: pink noise in a drifting band, lapping slowly, a gurgle of grain in it, a dark wash under
+    const pts = o.pts || [[dur * 0.45, 1], [dur, 0]];
+    S.noise({ at, color: 'pink', bp: o.f || 600, bp1: o.f1 || 1100, q: 0.6, lp: 2800, hp: 110, dur, pts, peak: pk, am: [o.lap || 0.45, 0.55], grain: 0.3, pan: o.pan });
+    S.noise({ at, color: 'brown', lp: o.low || 360, dur, pts, peak: pk * 0.8, pan: o.pan });
+  };
+  const omStone = (S, at, pk, o = {}) => {                      // stone on stone: a low blow, the dull knock of a block settling, a little grit
+    const f = o.f || 62;
+    S.thud({ at, f, f1: f * 0.52, dur: o.dur || 0.5, click: 0.12, lp: 520, peak: pk, pan: o.pan });
+    S.partials({ at, set: 'stone', f: o.kf || 150, dur: 0.32, peak: pk * 0.28, pan: o.pan });
+    S.noise({ at, color: 'brown', lp: 900, dur: 0.2, pts: [[0.01, 1], [0.2, 0]], peak: pk * 0.3, pan: o.pan });
+  };
+  const omDrip = (S, at, pk, f, pan = 0) => S.tone({ at, f, f1: f * 1.35, glide: 0.05, dur: 0.18, a: 0.002, peak: pk, lp: 3000, pan });   // a drop off a sleeve into deep water
+  const omBeam = (S, at, dur, pk, o = {}) => S.creak({ at, f: o.f || 20, f1: o.f1 || 10, dur, res: [170, 400, 850, o.top || 0].filter(Boolean), q: 12, peak: pk, hp: 90, pts: o.pts || [[dur * 0.45, 1], [dur, 0]], pan: o.pan });   // the beam taking the strain
+
+  // his entrance: the sea a long way under, the great chains drawn taut one link at a time, water running from his sleeves, the beam creaking, one vast toll and the pans swaying to rest
+  def('bm-ormun-intro', 'sting', S => {
+    S.space('hall', 0.55);
+    omSea(S, 0, 4.4, 0.14, { f: 380, f1: 820, low: 280, lap: 0.28, pts: [[2.0, 1], [4.4, 0]] });
+    S.rumble({ dur: 5.0, f: 46, peak: 0.1, a: 2.2 });
+    omLinks(S, 0.7, 7, 0.4, 0.08, { f: 300, f1: 500, acc: 0.88, pan: -0.45, pan1: 0.45 });
+    [1.0, 1.6, 2.0, 2.6, 3.0].forEach((t, i) => omDrip(S, t, 0.035, 560 + i * 90, i % 2 ? 0.5 : -0.5));
+    omBeam(S, 2.0, 1.2, 0.07, { pts: [[0.5, 1], [1.2, 0]] });
+    omToll(S, 2.4, 36, 3.2, 0.22, { a: 0.08 });
+    S.thud({ at: 2.4, f: 46, f1: 26, dur: 1.2, drive: 1.4, peak: 0.3, click: 0 });
+    omBeam(S, 3.9, 1.2, 0.04, { f: 12, f1: 8, pan: 0.3 });
+  });
+  // ---- the openers: the scales taken in hand, each its own way
+  def('bm-ormun-first-weighing', 'bm', S => {      // the scales taken in hand: the left chain taken up, then the right a little higher, one toll as he looks down
+    S.space('hall', 0.55);
+    omSea(S, 0, 1.8, 0.06, { lap: 0.3, pts: [[0.9, 1], [1.8, 0]] });
+    omLinks(S, 0.2, 4, 0.2, 0.09, { f: 300, f1: 460, pan: -0.5, acc: 1.12 });
+    omLinks(S, 0.75, 4, 0.2, 0.09, { f: 340, f1: 520, pan: 0.5, acc: 1.12 });
+    omToll(S, 1.3, 43, 1.7, 0.13);
+  });
+  def('bm-ormun-the-beam-leans', 'bm', S => {      // the beam tilts: one chain runs out downward as the other is gently taken up, a long creak and a toll that is not quite true
+    S.space('hall', 0.55);
+    omLinks(S, 0.2, 6, 0.22, 0.08, { f: 480, f1: 280, acc: 0.88, pan: 0.5, pan1: 0.1 });
+    omLinks(S, 0.5, 4, 0.3, 0.05, { f: 300, f1: 340, acc: 1.1, pan: -0.5 });
+    omBeam(S, 0.5, 1.8, 0.09, { pts: [[0.8, 1], [1.8, 0]] });
+    omToll(S, 1.5, 40, 1.4, 0.1, { beat: 1.8 });
+  });
+  def('bm-ormun-the-weight-of-things', 'bm', S => { // everything weighs: two blocks of stone set down one after the other, the chains groaning, a deeper toll
+    S.space('hall', 0.6);
+    omStone(S, 0.4, 0.26, { f: 56, pan: -0.3 }); omStone(S, 1.1, 0.28, { f: 50, pan: 0.3 });
+    omLinks(S, 0.5, 5, 0.3, 0.06, { f: 260, f1: 220, acc: 1.05 });
+    S.rumble({ at: 0.3, dur: 2.2, f: 52, peak: 0.12, a: 1.2 });
+    omToll(S, 1.5, 36, 1.6, 0.13);
+  });
+  def('bm-ormun-the-bridge-breaks', 'bm', S => {   // the span groans: stone grinding on stone, the chains taking the strain faster and higher, the beam creaking to a pitch; ends in the held hush
+    S.space('hall', 0.6);
+    S.rumble({ dur: 2.3, f: 60, peak: 0.16, a: 1.4 });
+    S.scrape({ at: 0.2, f: 420, q: 2, rate: 9, dur: 2.0, pts: [[1.4, 1], [2.0, 0]], peak: 0.07 });
+    omLinks(S, 0.3, 10, 0.2, 0.07, { f: 300, f1: 700, acc: 0.88 });
+    omBeam(S, 0.4, 1.8, 0.1, { f: 14, f1: 28, pts: [[1.5, 1], [1.8, 0]] });
+    S.tone({ at: 1.0, f: mf(33), f1: mf(36), dur: 1.3, pts: [[1.0, 1], [1.3, 0]], peak: 0.05, lp: 400 });
+  });
+  def('bm-ormun-spring-tide', 'bm', S => {         // the wall begins: the sea drawn back out from under the pans, a deep pull rising, the chains slackening, a toll; then nothing (the stillness is staged)
+    S.space('hall', 0.65);
+    S.noise({ at: 0.1, color: 'pink', bp: 1600, bp1: 220, q: 0.7, lp: 3000, dur: 2.4, pts: [[0.5, 1], [2.4, 0]], peak: 0.2, am: [0.7, 0.5], grain: 0.25 });
+    S.rumble({ dur: 2.7, f: 55, peak: 0.16, a: 1.6 });
+    omLinks(S, 0.4, 5, 0.35, 0.06, { f: 500, f1: 300, acc: 0.9 });
+    omToll(S, 1.3, 36, 1.5, 0.12);
+  });
+  // ---- the three judgements: the same cast bar, three different shapes
+  def('bm-ormun-let-it-be-level', 'bm', S => {     // two strokes, the same note, left and then right, a steady even pair of links settling and one unison: everything symmetrical; then the silence the count is read in
+    S.space('hall', 0.6);
+    omToll(S, 0.3, 43, 3.0, 0.11, { pan: -0.55 }); omToll(S, 1.2, 43, 3.0, 0.11, { pan: 0.55 });
+    for (let i = 0; i < 6; i++) S.metal({ at: 1.5 + i * 0.4, set: 'plate', f: 380, dur: 0.28, peak: 0.07 * (1 - i * 0.1), click: 0.3, pan: i % 2 ? 0.5 : -0.5 });
+    omSea(S, 0.2, 3.6, 0.04, { lap: 0.25, pts: [[1.4, 1], [3.6, 0]] });
+    omToll(S, 3.3, 43, 1.2, 0.06);
+  });
+  def('bm-ormun-the-heavier-falls', 'bm', S => {   // a falling scale: three tolls each deeper, the chain running out faster and faster, a block coming to rest at the bottom
+    S.space('hall', 0.6);
+    omToll(S, 0.3, 50, 1.6, 0.1); omToll(S, 1.2, 43, 1.8, 0.12); omToll(S, 2.1, 36, 2.0, 0.14);
+    omLinks(S, 0.5, 14, 0.2, 0.07, { f: 520, f1: 260, acc: 0.88 });
+    S.rumble({ at: 1.5, dur: 2.6, f: 55, peak: 0.16, a: 1.0 });
+    omStone(S, 2.1, 0.22, { f: 48 });
+  });
+  def('bm-ormun-the-lighter-rises', 'bm', S => {   // a rising scale: three tolls each higher and lighter, the chain hauled up slower and slower, drops of water lifted off climbing
+    S.space('hall', 0.6);
+    omToll(S, 0.3, 36, 1.6, 0.09); omToll(S, 1.3, 43, 1.7, 0.09); omToll(S, 2.4, 50, 1.9, 0.09);
+    omLinks(S, 0.4, 8, 0.28, 0.06, { f: 260, f1: 520, acc: 1.1, body: 0 });
+    S.noise({ at: 0.5, color: 'pink', bp: 400, bp1: 2200, q: 0.8, lp: 3200, dur: 2.6, pts: [[1.8, 1], [2.6, 0]], peak: 0.07, grain: 0.3 });
+    [0.9, 1.5, 2.0, 2.4, 2.7].forEach((t, i) => omDrip(S, t, 0.03, 520 + i * 160, i % 2 ? 0.4 : -0.4));
+  });
+  // ---- the rest of his kit
+  def('bm-ormun-heavy-hand', 'bm', S => {          // the tank's blow: one great chain hauled back slowly, link after link, the sleeves pouring heavier, the lowest note he has; then the hush before the blow
+    S.space('hall', 0.55);
+    omLinks(S, 0.2, 7, 0.32, 0.09, { f: 260, f1: 380, acc: 0.95 });
+    omSea(S, 0.2, 2.2, 0.1, { f: 500, f1: 900, low: 240, pts: [[1.8, 1], [2.2, 0]] });
+    S.rumble({ at: 0.5, dur: 2.2, f: 50, peak: 0.18, a: 1.3 });
+    omToll(S, 1.5, 33, 1.4, 0.13);
+  });
+  def('bm-ormun-the-tide-comes-in', 'bm', S => {   // the sea rising over both rims: a long swell of water, a deep pressure under it, two far slow bells out on the dark water
+    S.space('hall', 0.65);
+    omSea(S, 0, 3.0, 0.24, { f: 300, f1: 900, low: 420, lap: 0.5, pts: [[2.2, 1], [3.0, 0]] });
+    S.rumble({ dur: 3.2, f: 70, peak: 0.22, a: 2.0 });
+    omToll(S, 1.0, 52, 2.0, 0.05, { lp: 900 }); omToll(S, 1.8, 50, 1.6, 0.04, { lp: 800, pan: 0.4 });
+  });
+  def('bm-ormun-counterweight', 'bm', S => {       // a weight let down on its chain: the links paying out fast and slower, a low hum climbing as it nears, one dry tick for the hero it is aimed at
+    S.space('hall', 0.55);
+    omLinks(S, 0.2, 18, 0.18, 0.07, { f: 360, acc: 0.93, pan: -0.3, pan1: 0.3 });
+    S.tone({ at: 0.6, f: mf(31), f1: mf(38), dur: 2.4, pts: [[1.6, 1], [2.4, 0]], peak: 0.08, lp: 300 });
+    S.tick({ at: 2.4, f: 1500, peak: 0.12 });
+  });
+  def('bm-ormun-hollow-weight', 'bm', S => {       // the same chain let down, but the weight is cracked: the links uneven, the hum wavering, a dull knock and a hairline crack, a flat dull toll
+    S.space('hall', 0.55);
+    omLinks(S, 0.2, 14, 0.2, 0.07, { f: 330, f1: 300, acc: 0.95, pan: -0.3, pan1: 0.3 });
+    S.tone({ at: 0.6, f: mf(30), f1: mf(37), dur: 2.4, pts: [[1.6, 1], [2.4, 0]], peak: 0.08, lp: 300, am: [5, 0.6] });
+    S.wood({ at: 1.2, f: 300, dur: 0.12, peak: 0.15 });
+    S.crack({ at: 2.0, peak: 0.05, dur: 0.1, f: 1600 });
+    omToll(S, 1.7, 39, 1.2, 0.07, { beat: 2.2, lp: 900 });
+  });
+  def('bm-ormun-undertow', 'bm', S => {            // the low rim floods: water drawn back across stone, its lapping quickening, a draining gurgle falling, a deep toll under it
+    S.space('hall', 0.6);
+    S.noise({ at: 0.1, color: 'pink', bp: 1400, bp1: 180, q: 0.8, lp: 3000, dur: 3.4, pts: [[0.6, 1], [1.6, 0.8], [3.4, 0]], peak: 0.22, am: [1.4, 0.6], grain: 0.4 });
+    S.rumble({ at: 0.2, dur: 3.6, f: 80, peak: 0.2, a: 1.2, am: [1.4, 0.4] });
+    S.tone({ at: 0.8, f: 170, f1: 70, dur: 2.2, a: 0.5, peak: 0.05, lp: 500 });
+    [1.0, 1.6, 2.0, 2.3].forEach((t, i) => omDrip(S, t, 0.03, 700 - i * 110, i % 2 ? 0.4 : -0.4));
+    omToll(S, 2.0, 31, 1.6, 0.09);
+  });
+  def('bm-ormun-twin-undertow', 'bm', S => {       // both rims: the same draining, once on each side and out of step, two tolls a fifth apart
+    S.space('hall', 0.6);
+    S.noise({ at: 0.1, color: 'pink', bp: 1400, bp1: 180, q: 0.8, lp: 3000, dur: 3.0, pts: [[0.6, 1], [1.5, 0.8], [3.0, 0]], peak: 0.17, am: [1.2, 0.6], grain: 0.4, pan: -0.6 });
+    S.noise({ at: 0.35, color: 'pink', bp: 1200, bp1: 160, q: 0.8, lp: 3000, dur: 3.0, pts: [[0.6, 1], [1.5, 0.8], [3.0, 0]], peak: 0.17, am: [1.7, 0.6], grain: 0.4, pan: 0.6 });
+    S.rumble({ at: 0.2, dur: 3.2, f: 80, peak: 0.2, a: 1.2, am: [1.4, 0.4] });
+    omToll(S, 1.8, 31, 1.5, 0.08, { pan: -0.5 }); omToll(S, 2.2, 38, 1.4, 0.07, { pan: 0.5 });
+  });
+  def('bm-ormun-burden', 'bm', S => {              // one hero made heavy, one made light: a block of stone sinking, the chain going taut, and a thin high note rising away from it
+    S.space('hall', 0.5);
+    omStone(S, 0.5, 0.22, { f: 50 });
+    omLinks(S, 0.45, 3, 0.18, 0.1, { f: 280, f1: 240, acc: 1.2 });
+    omToll(S, 1.0, 38, 1.3, 0.07);
+    S.tone({ at: 1.1, f: mf(76), f1: mf(83), dur: 1.0, a: 0.3, lp: 3000, peak: 0.04 });
+  });
+  def('bm-ormun-three-burdens', 'bm', S => {       // two made heavy and one made light: two stones sinking, one after the other, and the thin note rising
+    S.space('hall', 0.5);
+    omStone(S, 0.4, 0.2, { f: 54, pan: -0.3 }); omStone(S, 0.85, 0.24, { f: 48, pan: 0.3 });
+    omLinks(S, 0.35, 5, 0.17, 0.09, { f: 290, f1: 230, acc: 1.12 });
+    omToll(S, 1.1, 36, 1.2, 0.07);
+    S.tone({ at: 1.3, f: mf(78), f1: mf(86), dur: 0.9, a: 0.3, lp: 3000, peak: 0.035 });
+  });
+  def('bm-ormun-tip-the-scale', 'bm', S => {       // the beam taking all the strain: a creak quickening and climbing, the chains hauled faster and higher, water pouring off the high pan; ends in the held hush
+    S.space('hall', 0.6);
+    omBeam(S, 0.1, 2.3, 0.12, { f: 10, f1: 26, top: 1500, pts: [[1.8, 1], [2.3, 0]] });
+    omLinks(S, 0.4, 12, 0.2, 0.07, { f: 320, f1: 640, acc: 0.88, pan: -0.4 });
+    S.noise({ at: 0.6, color: 'pink', bp: 1000, bp1: 1800, q: 0.6, lp: 3000, dur: 1.8, pts: [[1.2, 1], [1.8, 0]], peak: 0.1, grain: 0.3, pan: 0.5 });
+    S.rumble({ dur: 2.5, f: 60, peak: 0.14, a: 1.8 });
+  });
+  def('bm-ormun-the-tide-arrives', 'bm', S => {    // the serpent comes (the arrival itself is staged and starts as this does): only a very low swell of water moving far under the pans, no edge, gone
+    S.space('hall', 0.6);
+    S.rumble({ dur: 2.0, f: 44, peak: 0.14, a: 1.4 });
+    S.noise({ color: 'brown', lp: 260, dur: 1.9, pts: [[1.2, 1], [1.9, 0]], peak: 0.12 });
+    S.tone({ f: mf(26), f1: mf(31), dur: 1.9, a: 0.9, peak: 0.06, lp: 200 });
+    omToll(S, 0.4, 29, 1.4, 0.06, { lp: 700 });
+  });
+  def('bm-ormun-the-scale-falls', 'bm', S => {     // the enrage: the sea rising over everything, every chain running at once, the bell tolled slower and deeper three times, then a long hush before the fall
+    S.space('hall', 0.8);
+    omSea(S, 0, 6.2, 0.26, { f: 200, f1: 1200, low: 500, lap: 0.35, pts: [[4.6, 1], [6.2, 0]] });
+    S.rumble({ dur: 6.4, f: 50, peak: 0.26, a: 4.2 });
+    omLinks(S, 0.8, 24, 0.3, 0.09, { f: 260, f1: 520, acc: 0.93, pan: -0.4, pan1: 0.4 });
+    omToll(S, 1.2, 33, 3.8, 0.17); omToll(S, 3.4, 31, 2.8, 0.15); omToll(S, 5.0, 29, 1.8, 0.13);
+    omBeam(S, 2.0, 3.6, 0.09, { f: 8, f1: 24, pts: [[3.0, 1], [3.6, 0]] });
+  });
+  def('bm-ormun-scatter-the-silver', 'bm', S => {  // the hand raised over a cradle: the chain hauled back, and silver pieces shaking against one another in the weight, faster; the hush
+    S.space('hall', 0.55);
+    omLinks(S, 0.2, 6, 0.3, 0.09, { f: 300, f1: 400, acc: 0.96 });
+    S.coins({ at: 0.8, n: 12, f: 2800, spread: 1.6, peak: 0.07 });
+    omToll(S, 1.6, 40, 1.6, 0.08);
+    S.rumble({ at: 0.3, dur: 2.2, f: 52, peak: 0.1, a: 1.2 });
+  });
+  def('bm-ormun-buoyed', 'bm', S => {              // one made lighter than nothing: the chain going slack, a few links falling away, a clear note rising and drops lifted off it
+    S.space('hall', 0.55);
+    omLinks(S, 0.2, 6, 0.1, 0.06, { f: 420, f1: 250, acc: 0.92, fade: 0.5, body: 0 });
+    S.tone({ at: 0.4, f: mf(72), f1: mf(84), dur: 1.4, a: 0.5, lp: 3500, peak: 0.05 });
+    [0.7, 1.0, 1.25].forEach((t, i) => omDrip(S, t, 0.03, 700 + i * 220, i % 2 ? 0.4 : -0.4));
+  });
+  def('bm-ormun-exact-measure', 'bm', S => {       // a number named: a rule laid across the pans, fine dry ticks spaced exactly, a thin pure note held over them, and one fixed toll set down at the end
+    S.space('hall', 0.55);
+    for (let i = 0; i < 8; i++) S.tick({ at: 0.3 + i * 0.3, f: 1700, peak: 0.07, pan: -0.3 + i * 0.085 });
+    S.partials({ at: 0.3, set: 'bar', f: mf(76), dur: 3.0, peak: 0.035, a: 0.4, swell: true });
+    omToll(S, 2.9, 43, 1.6, 0.09);
+  });
+  def('bm-ormun-the-tide-weighs-too', 'bm', S => { // the water takes a weight of its own: four heavy plunks of water, each lower and heavier than the last, the sea rising under them
+    S.space('hall', 0.6);
+    for (let i = 0; i < 4; i++) { S.thud({ at: 0.3 + i * 0.55, f: 110 - i * 14, f1: 52, dur: 0.5, lp: 500, click: 0, peak: 0.12 + i * 0.03 }); S.noise({ at: 0.3 + i * 0.55, color: 'pink', bp: 900, bp1: 300, q: 0.7, dur: 0.5, pts: [[0.05, 1], [0.5, 0]], peak: 0.09 }); }
+    omSea(S, 0.2, 2.4, 0.1, { f: 400, f1: 900, low: 320, pts: [[1.8, 1], [2.4, 0]] });
+    S.rumble({ dur: 2.6, f: 60, peak: 0.12, a: 1.6 });
+  });
+  // ---- the moments (sound-hooks.js reads them off the room)
+  def('bm-ormun-m-creak', 'bm', S => {             // the beam creaking as the count changes: quiet, a short stretch of wood and iron and one soft link
+    S.space('hall', 0.4);
+    omBeam(S, 0, 0.9, 0.12, { f: 24, f1: 11, pts: [[0.25, 1], [0.9, 0]] });
+    S.metal({ at: 0.35, set: 'plate', f: 330, dur: 0.2, peak: 0.03, click: 0 });
+  });
+  def('bm-ormun-m-lift', 'bm', S => {              // a weight lifted: the chain takes it, two links, stone leaving stone and a faint ring
+    S.space('hall', 0.35);
+    omLinks(S, 0, 2, 0.1, 0.06, { f: 360, f1: 440 });
+    S.noise({ at: 0.05, color: 'brown', bp: 600, q: 0.8, lp: 1400, dur: 0.3, pts: [[0.08, 1], [0.3, 0]], peak: 0.1 });
+    S.partials({ at: 0.1, set: 'stone', f: 220, dur: 0.5, peak: 0.04 });
+  });
+  def('bm-ormun-m-set', 'bm', S => {               // a weight set down in its cradle: a dull knock of stone on stone, a link slackening, a short ring of the rim
+    S.space('hall', 0.4);
+    omStone(S, 0, 0.32, { f: 68 });
+    S.metal({ at: 0.03, set: 'plate', f: 520, dur: 0.4, peak: 0.04, click: 0 });
+    S.metal({ at: 0.1, set: 'plate', f: 330, dur: 0.2, peak: 0.04, click: 0.3 });
+  });
+  def('bm-ormun-m-clear', 'bm', S => {             // every weight lifted away at once on his chains: a run of links hauled up, stone scraping, a dying sweep of air
+    S.space('hall', 0.5);
+    omLinks(S, 0, 8, 0.09, 0.05, { f: 300, f1: 600, acc: 0.9, body: 0 });
+    S.scrape({ at: 0.05, f: 500, q: 2, rate: 10, dur: 0.6, pts: [[0.2, 1], [0.6, 0]], peak: 0.05 });
+    S.whoosh({ at: 0.1, color: 'pink', f: 300, f1: 1400, dur: 0.8, peakAt: 0.4, peak: 0.07 });
+  });
+  def('bm-ormun-m-drop', 'imp', S => {             // a weight falling onto a hero: the chain whipped slack, a huge dull blow of stone, grit thrown out, a low shudder after it
+    S.space('hall', 0.45);
+    S.thud({ f: 52, f1: 24, dur: 0.9, drive: 2.4, click: 0.12, lp: 700, peak: 0.7 });
+    omStone(S, 0, 0.3, { f: 70 });
+    S.metal({ at: 0.02, set: 'plate', f: 260, dur: 0.6, peak: 0.1, click: 0.3 });
+    S.noise({ at: 0.02, color: 'brown', bp: 400, bp1: 160, q: 0.8, dur: 0.8, pts: [[0.04, 1], [0.8, 0]], peak: 0.3 });
+    S.rumble({ at: 0.04, dur: 1.0, f: 56, peak: 0.22, a: 0.04 });
+  });
+  def('bm-ormun-m-crack', 'imp', S => {            // a cracked weight comes down: the same blow but dull and hollow, a crack running through it, grit falling after
+    S.space('hall', 0.45);
+    S.thud({ f: 62, f1: 32, dur: 0.6, drive: 1.4, click: 0.1, lp: 520, peak: 0.45 });
+    S.wood({ at: 0.01, f: 260, dur: 0.2, peak: 0.3 });
+    S.crack({ at: 0.02, peak: 0.1, dur: 0.14, f: 1400 });
+    S.noise({ at: 0.1, color: 'white', hp: 3000, lp: 7000, dur: 0.5, pts: [[0.05, 1], [0.5, 0]], peak: 0.05, grain: 0.7 });
+  });
+  def('bm-ormun-m-read', 'bm', S => {              // the count is read: the beam stops dead. A single dry stop, stone on stone, and nothing after it
+    S.wood({ f: 520, dur: 0.07, peak: 0.4 });
+    S.thud({ f: 90, f1: 60, dur: 0.12, click: 0.5, lp: 900, peak: 0.3 });
+    S.metal({ at: 0.01, set: 'plate', f: 700, dur: 0.12, peak: 0.04, click: 0 });
+  });
+  def('bm-ormun-m-fall', 'imp', S => {             // a pan struck and ringing: a vast blow, the water slapped off the rim, the chains jolting, the pan ringing like a bell hung wrong
+    S.space('hall', 0.55);
+    S.thud({ f: 58, f1: 28, dur: 1.0, drive: 2.2, click: 0.1, lp: 700, peak: 0.6 });
+    omToll(S, 0.02, 38, 4.2, 0.3, { a: 0.012, beat: 0.7 });
+    S.noise({ at: 0.02, color: 'pink', bp: 700, bp1: 300, q: 0.7, dur: 0.8, pts: [[0.03, 1], [0.8, 0]], peak: 0.2 });
+    omLinks(S, 0.06, 4, 0.07, 0.1, { f: 420, f1: 300 });
+    S.rumble({ at: 0.02, dur: 1.4, f: 60, peak: 0.2, a: 0.04 });
+  });
+  def('bm-ormun-m-fall-light', 'imp', S => {       // a pan struck lightly (the pans were level): a shorter blow, a small toll, the same jolt of chain
+    S.space('hall', 0.5);
+    S.thud({ f: 66, f1: 34, dur: 0.6, drive: 1.4, click: 0.1, lp: 650, peak: 0.35 });
+    omToll(S, 0.02, 43, 2.2, 0.14, { a: 0.012, beat: 0.7 });
+    omLinks(S, 0.04, 3, 0.08, 0.06, { f: 440, f1: 330 });
+  });
+  def('bm-ormun-m-fall-bridge', 'imp', S => {      // the bridge struck (too many stood on it): a flat blow of stone on the span, plate rattling on it, grit, no bell
+    S.space('hall', 0.4);
+    omStone(S, 0, 0.5, { f: 74, dur: 0.6 });
+    S.metal({ at: 0.02, set: 'plate', f: 540, dur: 0.7, peak: 0.1, click: 0.3 });
+    S.noise({ at: 0.02, color: 'pink', bp: 1600, bp1: 500, q: 0.8, dur: 0.5, pts: [[0.03, 1], [0.5, 0]], peak: 0.14, grain: 0.5 });
+  });
+  def('bm-ormun-m-hand', 'imp', S => {             // Heavy Hand lands: a colossal fist of stone, water thrown off his sleeve in a sheet, the lowest toll he has, iron ringing under it
+    S.space('hall', 0.5);
+    S.thud({ f: 50, f1: 24, dur: 1.0, drive: 2.6, click: 0.1, lp: 700, peak: 0.75 });
+    S.noise({ at: 0.01, color: 'pink', bp: 1500, bp1: 300, q: 0.7, dur: 0.6, pts: [[0.04, 1], [0.6, 0]], peak: 0.26, grain: 0.3 });
+    omToll(S, 0.03, 33, 3.0, 0.2, { a: 0.015 });
+    S.metal({ at: 0.02, set: 'plate', f: 200, dur: 0.9, peak: 0.1, click: 0.3 });
+    S.rumble({ at: 0.02, dur: 1.2, f: 52, peak: 0.22, a: 0.04 });
+  });
+  def('bm-ormun-m-tide-in', 'imp', S => {          // The Tide Comes In lands: a wide wash of water over both rims at once, a deep blow under it, no bell
+    S.space('hall', 0.55);
+    omSea(S, 0, 1.6, 0.3, { f: 1400, f1: 400, low: 500, lap: 0.8, pts: [[0.12, 1], [1.6, 0]] });
+    S.thud({ f: 52, f1: 26, dur: 0.9, drive: 2.0, click: 0, lp: 600, peak: 0.55 });
+    S.rumble({ at: 0.02, dur: 1.4, f: 64, peak: 0.2, a: 0.05 });
+  });
+  def('bm-ormun-m-beat', 'imp', S => {             // the light blow that closes an opener: one soft low toll and a link
+    S.space('hall', 0.5);
+    S.thud({ f: 60, f1: 32, dur: 0.6, drive: 1.2, click: 0, lp: 500, peak: 0.3 });
+    omToll(S, 0.02, 36, 2.0, 0.12, { a: 0.02 });
+    omLinks(S, 0.05, 2, 0.1, 0.05, { f: 340, f1: 300 });
+  });
+  def('bm-ormun-m-flood', 'imp', S => {            // the rim floods inward: water rushing in over the stone in a ring, a wash that rises and drains away with a low gurgle
+    S.space('hall', 0.5);
+    S.noise({ color: 'pink', bp: 400, bp1: 1700, q: 0.7, lp: 3200, dur: 1.3, pts: [[0.2, 1], [1.3, 0]], peak: 0.28, grain: 0.35 });
+    S.thud({ at: 0.05, f: 60, f1: 32, dur: 0.6, click: 0, lp: 500, peak: 0.4 });
+    S.noise({ at: 0.4, color: 'brown', lp: 400, lp1: 120, dur: 1.0, pts: [[0.15, 1], [1.0, 0]], peak: 0.2 });
+    S.tone({ at: 0.5, f: 180, f1: 70, dur: 0.9, a: 0.1, peak: 0.04, lp: 500 });
+  });
+  def('bm-ormun-m-lap', 'bm', S => {               // water lapping onto the low pan's rim: a soft sheet of water over stone and one small drop
+    S.space('hall', 0.4);
+    S.noise({ color: 'pink', bp: 500, bp1: 900, q: 0.8, lp: 1800, dur: 0.9, pts: [[0.3, 1], [0.9, 0]], peak: 0.1, grain: 0.3 });
+    omDrip(S, 0.35, 0.025, 520);
+  });
+  def('bm-ormun-m-rise', 'bm', S => {              // a drowned thing climbing onto the pan: water sheeting off stone, a hand dragged over it, a low blow as it comes up
+    S.space('hall', 0.45);
+    S.noise({ color: 'pink', bp: 1400, bp1: 400, q: 0.7, lp: 3000, dur: 0.9, pts: [[0.1, 1], [0.9, 0]], peak: 0.15, grain: 0.35 });
+    S.scrape({ at: 0.15, f: 500, q: 2, rate: 12, dur: 0.5, pts: [[0.15, 1], [0.5, 0]], peak: 0.05 });
+    S.thud({ at: 0.5, f: 70, f1: 40, dur: 0.35, click: 0, lp: 400, peak: 0.25 });
+  });
+  def('bm-ormun-m-bite', 'imp', S => {             // a drowned thing's bite: a wet snap and a short splash
+    S.wood({ f: 600, dur: 0.08, peak: 0.2 });
+    S.noise({ at: 0.01, color: 'pink', bp: 1800, bp1: 600, q: 0.8, dur: 0.25, pts: [[0.03, 1], [0.25, 0]], peak: 0.12 });
+    S.thud({ at: 0.01, f: 100, f1: 50, dur: 0.15, click: 0, lp: 500, peak: 0.2 });
+  });
+  def('bm-ormun-m-sink', 'bm', S => {              // a drowned thing going under: water closing over, a falling drop, a low gurgle
+    S.space('hall', 0.45);
+    S.noise({ color: 'pink', bp: 900, bp1: 200, q: 0.7, lp: 2000, dur: 0.9, pts: [[0.08, 1], [0.9, 0]], peak: 0.12 });
+    S.tone({ at: 0.05, f: 420, f1: 210, dur: 0.5, a: 0.02, peak: 0.04, lp: 1200 });
+  });
+  def('bm-ormun-m-scatter', 'imp', S => {          // a cradle struck: the weight on it split with a great dull blow, a crack through the stone, silver pieces thrown out ringing
+    S.space('hall', 0.5);
+    S.thud({ f: 56, f1: 28, dur: 0.7, drive: 2.0, click: 0.1, lp: 650, peak: 0.55 });
+    S.crack({ at: 0.01, peak: 0.16, dur: 0.14, f: 1300 });
+    S.coins({ at: 0.03, n: 7, f: 2600, spread: 0.2, peak: 0.12 });
+    S.rumble({ at: 0.02, dur: 0.9, f: 60, peak: 0.16, a: 0.04 });
+  });
+  def('bm-ormun-m-roll', 'bm', S => {              // one silver piece rolling away across the pan: a thin rattle sliding off, slowing, one last small ring as it comes to rest in its cradle
+    S.noise({ color: 'white', bp: 1800, bp1: 900, q: 2, lp: 4000, dur: 0.7, pts: [[0.1, 1], [0.6, 0.6], [0.7, 0]], peak: 0.09, am: [22, 0.6], grain: 0.5 });
+    S.metal({ at: 0.65, set: 'bar', f: 2400, dur: 0.4, peak: 0.04, click: 0, strike: 0.2 });
+  });
+  def('bm-ormun-m-throw', 'bm', S => {             // thrown across by the tip: a rush of air and water pouring off, a heavy low landing
+    S.space('hall', 0.45);
+    S.whoosh({ color: 'pink', f: 300, f1: 2000, dur: 0.7, peakAt: 0.4, q: 0.9, peak: 0.2 });
+    S.noise({ at: 0.05, color: 'pink', bp: 900, bp1: 1500, q: 0.6, dur: 0.6, pts: [[0.2, 1], [0.6, 0]], peak: 0.06, grain: 0.3 });
+    S.thud({ at: 0.62, f: 66, f1: 34, dur: 0.4, click: 0.1, lp: 500, peak: 0.3 });
+  });
+  def('bm-ormun-m-burden', 'bm', S => {            // the weight settles on you: a block of stone sinking, two links going taut, a low note falling
+    S.space('hall', 0.4);
+    omStone(S, 0, 0.26, { f: 56 });
+    omLinks(S, 0.08, 2, 0.12, 0.08, { f: 280, f1: 240 });
+    S.tone({ at: 0.05, f: mf(40), f1: mf(33), dur: 0.7, a: 0.03, peak: 0.07, lp: 400 });
+  });
+  def('bm-ormun-m-buoy', 'bm', S => {              // weightless: a soft clear note rising away, two drops lifted off, a faint sweep of air up
+    S.space('hall', 0.45);
+    S.tone({ f: mf(79), f1: mf(86), dur: 1.0, a: 0.25, lp: 3500, peak: 0.07 });
+    omDrip(S, 0.1, 0.03, 800, -0.3); omDrip(S, 0.35, 0.03, 1050, 0.3);
+    S.whoosh({ color: 'pink', f: 600, f1: 2400, dur: 0.6, peakAt: 0.7, peak: 0.04 });
+  });
+  def('bm-ormun-m-mark', 'bm', S => {              // a sign over you before a weight falls: one small iron tick and a low knock
+    S.metal({ set: 'bar', f: 900, dur: 0.3, peak: 0.05, strike: 0.2 });
+    S.thud({ at: 0.01, f: 80, f1: 50, dur: 0.18, click: 0, lp: 400, peak: 0.12 });
+  });
+  def('bm-ormun-m-exact', 'bm', S => {             // Exact Measure names its number: one dry stone knock for each (called once per stroke) and a thin pure note over it
+    S.wood({ f: 800, dur: 0.06, peak: 0.25 });
+    S.partials({ set: 'bar', f: mf(76), dur: 0.7, peak: 0.05, strike: 0.2 });
+    S.thud({ f: 90, f1: 55, dur: 0.15, click: 0, lp: 500, peak: 0.2 });
+  });
+  def('bm-ormun-m-bell', 'bm', S => {              // the bell on the chain tolls the count: one slow stroke of the huge bell (called once for each, climbing a step on each)
+    S.space('hall', 0.6);
+    omToll(S, 0, 40, 3.2, 0.26, { a: 0.02, beat: 0.7 });
+    S.thud({ f: 56, f1: 30, dur: 0.6, click: 0, lp: 400, peak: 0.25 });
+  });
+  def('bm-ormun-m-swing', 'bm', S => {             // the count came out exactly level and nobody was struck: the beam swings hard, the pans lurch, water sloshes off each, two tolls a fifth apart ring together
+    S.space('hall', 0.6);
+    omBeam(S, 0, 1.2, 0.1, { f: 8, f1: 22, pts: [[0.5, 1], [1.2, 0]] });
+    omLinks(S, 0.1, 6, 0.08, 0.09, { f: 360, f1: 520, acc: 0.95, pan: -0.5, pan1: 0.5 });
+    S.noise({ at: 0.2, color: 'pink', bp: 1000, bp1: 400, q: 0.7, dur: 1.0, pts: [[0.15, 1], [1.0, 0]], peak: 0.12, grain: 0.3, pan: -0.6 });
+    S.noise({ at: 0.35, color: 'pink', bp: 1000, bp1: 400, q: 0.7, dur: 1.0, pts: [[0.15, 1], [1.0, 0]], peak: 0.12, grain: 0.3, pan: 0.6 });
+    omToll(S, 0.5, 38, 3.6, 0.14, { pan: -0.4 }); omToll(S, 0.55, 45, 3.4, 0.12, { pan: 0.4 });
+  });
+  // the room's bed: the night sea a long way below the pans. Almost nothing: a very deep swell, slow water on stone, drops now and then off his sleeves, a chain shifting once in a long while
+  loop('amb-ormun-scales', 'amb', L => {
+    const deep = L.c(L.src('brown', 0.7), L.f('lowpass', 130), L.g(0.4)); L.lfo(deep.gain, 0.021, 0.15); deep.connect(L.out);
+    const sea = L.c(L.src('pink', 0.8), L.f('bandpass', 520, 0.6)), sg = L.g(0.05); L.lfo(sea.frequency, 0.037, 180); L.lfo(sg.gain, 0.083, 0.035); L.c(sea, sg, L.out);
+    L.c(L.src(waterBuf(L.ctx), 0.55), L.f('bandpass', 700, 1.2), L.g(0.04), L.out);
+    L.c(L.crackle(0.1), L.f('bandpass', 700, 6), L.g(0.04), L.out);
+    const sub = L.c(L.osc('sine', 38), L.g(0.03)); L.lfo(sub.gain, 0.017, 0.015); sub.connect(L.out);
+  }, 3);
+
+  // ============================================================================================== Maelis Orne, the Pale Regent (Season 2, boss XVI: the Face of the Moon)
+  // Cold, high and clear: the face of the moon under a black sky, with no air to carry anything far, so every sound is close, thin and followed by a long silence. She never speaks, breathes or steps: her
+  // voice is struck glass (a pure high note with its glass harmonics), a blade bowed like a saw (a slow saw drawn through a closing filter, the rosin hissing), breath on frost (a thin high band of air) and, once in
+  // a long while, one distant bell. The crown's phase is a nested chord, so a cut can be told by ear before it lands: a crescent is one thin note (A6), a half is two (E6 and A6), a gibbous four, the full moon the
+  // whole chord down to its low A; waxing climbs the notes (low to high) and waning falls (high to low), and a dance rides its phases, its landings climbing or falling with it. The dark of the crown (umbral, the
+  // eclipse) is the same notes turned over: bowed, low, falling and beating, with no glass in them. In her second form the hound's breath joins hers (gwSniff, gwBreath and gwPaws, Garrow's own toolkit, a little
+  // colder and set on moon dust: no snow, no wind). The casts are the builds and each ends on a held silence, never on a blow: a landing sounds from its telegraph tag, exactly on its beat (the m- cues,
+  // sound-hooks.js "maelis" block). The staged beats (bm-maelis-w-) are walls/maelis.js's.
+  const MLP = { crescent: [93], half: [88, 93], gibbous: [81, 88, 93, 97], full: [57, 64, 69, 76, 81, 88, 93, 97] };   // the phases as nested chords (MIDI notes)
+  const mlGl = (S, at, m, dur, pk, pan = 0) => S.glass({ at, f: mf(m), dur, peak: pk, pan });   // a struck glass note: pure, high and quiet
+  const mlBow = (S, at, m, dur, pk, o = {}) => {                  // a bowed blade: two saws a hair apart through a closing filter, vibrato late, rosin in the air (o.m1: the note drawn to)
+    const f = mf(m), a = Math.min(o.a == null ? dur * 0.55 : o.a, dur * 0.85), pts = [[a, 1], [Math.max(a + 0.05, dur - 0.2), 0.8], [dur, 0]], f1 = o.m1 ? mf(o.m1) : null, lp = o.lp || f * 2.6;
+    S.tone({ at, type: 'sawtooth', f, f1, dur, pts, peak: pk, lp, vib: [5.3, 0.004, dur * 0.3], pan: o.pan });
+    S.tone({ at, type: 'sawtooth', f: f * 1.003, f1: f1 ? f1 * 1.003 : null, dur, pts, peak: pk * 0.6, lp, pan: o.pan });
+    S.noise({ at, color: 'white', bp: f * 2.4, q: 5, hp: 1200, dur, pts, peak: pk * 0.1, pan: o.pan });
+  };
+  const mlAir = (S, at, dur, pk, pan = 0, f = 4600) => S.noise({ at, color: 'white', bp: f, bp1: f * 0.85, q: 2.4, hp: 2600, dur, pts: [[dur * 0.55, 1], [dur, 0]], peak: pk, pan });   // breath on frost: a thin high band that swells and lets go
+  const mlHold = (S, at, dur, pk) => {                            // the held silence: a hair of frost drawn in and cut dead, one high note under it, and then nothing at all
+    S.noise({ at, color: 'white', bp: 6400, bp1: 7800, q: 3, hp: 4200, dur, pts: [[dur * 0.92, 1], [dur, 0]], peak: pk });
+    S.tone({ at, f: mf(100), f1: mf(101), dur, pts: [[dur * 0.9, 1], [dur, 0]], peak: pk * 0.3, lp: 8000 });
+  };
+  const mlBell = (S, at, m, dur, pk, pan = 0) => S.partials({ at, set: 'church', f: mf(m), dur, a: 0.02, beat: 0.5, peak: pk, spread: 5, lp: 3000, pan, rev: 1.1 });   // one distant bell
+  const mlDraw = (S, at, dur, pk, pan = 0, up = 1) => {           // a silver line drawn: a very narrow band of air sweeping high, thinner and higher than a blade on steel
+    S.noise({ at, color: 'white', bp: up ? 2400 : 5800, bp1: up ? 5800 : 2400, q: 5, dur, fd: dur, pts: [[dur * (up ? 0.85 : 0.15), 1], [dur, 0]], peak: pk, pan });
+    S.glass({ at: at + (up ? dur * 0.9 : 0), f: mf(up ? 98 : 93), dur: 0.8, peak: pk * 0.3, pan });
+  };
+  const mlShim = (S, at, dur, pk, pan = 0) => S.sizzle({ at, hp: 6500, lp: 13000, dur, pts: [[dur * 0.45, 1], [dur, 0]], peak: pk, am: [0.5, 0.6], pan });   // the faint high shimmer of glass dust
+  const mlPhase = (S, ph, at, step, pk, o = {}) => {              // a phase sounded: its nested chord, note by note (o.wane: from the top down), each held and let go
+    const ns = MLP[ph].slice(); if (o.wane) ns.reverse();
+    ns.forEach((m, i) => mlGl(S, at + i * step, m + (o.up || 0), o.dur || 2.0, pk / Math.sqrt(ns.length) * (m < 70 ? 0.8 : 1), o.pan || 0));
+  };
+  const mlUmb = (S, at, m, dur, pk, o = {}) => {                  // the dark of the crown: the same notes bowed low, falling and beating, with no glass in them
+    const f = mf(m), pts = [[dur * 0.3, 1], [dur * 0.8, 0.7], [dur, 0]], lp = Math.min(2200, f * 3);
+    S.tone({ at, type: 'tri', f, f1: f * 0.94, dur, pts, peak: pk, lp, pan: o.pan });
+    S.tone({ at, type: 'tri', f: f * 1.011, f1: f * 0.95, dur, pts, peak: pk * 0.8, lp, pan: o.pan });
+  };
+  const mlDust = (S, at, pk, pan = 0) => S.noise({ at, color: 'pink', lp: 1400, hp: 250, dur: 0.22, pts: [[0.02, 1], [0.22, 0]], peak: pk, pan });   // moon dust: a dry flump with no air in it
+  const mlPaws = (S, at, n, gap, pk, o = {}) => {                 // the hound's paws on moon dust: Garrow's soft thump and dry crunch, set higher and drier (no snow to muffle it), a mid knock on each so it carries
+    for (let i = 0; i < n; i++) {
+      const t = at + i * gap + (i % 2 ? gap * 0.1 : 0), f = (o.f || 190) * (i % 2 ? 0.9 : 1), pan = o.pan != null ? o.pan : Math.sin(i * 1.3) * 0.25, p2 = pk * (o.fade ? 1 - 0.8 * i / n : 1 - (i % 3) * 0.1);
+      S.thud({ at: t, f, f1: f * 0.6, dur: 0.14, peak: p2 * 0.6, click: 0, lp: 800, pan });
+      S.noise({ at: t, color: 'pink', bp: 1300, q: 0.8, hp: 700, lp: 5200, dur: 0.08, pts: [[0.012, 1], [0.08, 0]], peak: p2 * 1.2, grain: 0.6, pan });
+    }
+  };
+
+  // her entrance: a breath on frost, one far bell, a blade bowed up a fifth, the crown lit a phase at a time (crescent, half, gibbous, full), and the hush
+  def('bm-maelis-intro', 'sting', S => {
+    S.space('hall', 0.9);
+    mlAir(S, 0.2, 2.4, 0.05, 0, 4200);
+    mlBell(S, 0.8, 64, 4.0, 0.1);
+    mlBow(S, 1.4, 69, 3.2, 0.05, { m1: 76, a: 2.0, lp: 2600 });
+    [[2.5, 'crescent'], [3.1, 'half'], [3.7, 'gibbous']].forEach(([t, ph], i) => mlPhase(S, ph, t, 0.07, 0.05, { dur: 2.0, pan: (i - 1) * 0.25 }));
+    mlPhase(S, 'full', 4.4, 0.1, 0.06, { dur: 3.0 });
+    mlHold(S, 5.6, 0.8, 0.035);
+  });
+  // ---- the openers: each lights the crown its own way, then holds
+  def('bm-maelis-moonrise', 'bm', S => {          // the act opens: the moon coming up over a black edge: one bowed note climbing a fourth, a breath on frost, one far bell, the crescent lit last
+    S.space('hall', 0.85);
+    mlBow(S, 0.1, 64, 2.0, 0.055, { m1: 69, a: 1.2 });
+    mlAir(S, 0.2, 1.7, 0.04, -0.2);
+    mlBell(S, 0.8, 57, 2.0, 0.07);
+    mlGl(S, 1.5, 93, 1.4, 0.06, 0.2);
+    mlHold(S, 1.9, 0.5, 0.03);
+  });
+  def('bm-maelis-the-waxing', 'bm', S => {        // the second act: the crown waxing in front of you, three chords climbing (crescent, half, gibbous), the blade drawn up under them
+    S.space('hall', 0.8);
+    mlBow(S, 0.1, 57, 2.4, 0.05, { m1: 69, a: 1.6 });
+    [[0.35, 'crescent'], [0.9, 'half'], [1.45, 'gibbous']].forEach(([t, ph]) => mlPhase(S, ph, t, 0.08, 0.055, { dur: 1.6 }));
+    mlAir(S, 0.3, 1.8, 0.03, 0.2, 6000);
+    mlHold(S, 2.2, 0.5, 0.03);
+  });
+  def('bm-maelis-hunters-moon', 'bm', S => {      // the second half of the hunt: the hound's breath beside the bowed blade, three paws on moon dust, one bell, a high note over it
+    S.space('hall', 0.7);
+    mlBow(S, 0.1, 57, 2.2, 0.05, { m1: 64, a: 1.2 });
+    gwBreath(S, 0.3, 1.3, 0.05, 1500, -0.2);
+    mlPaws(S, 0.9, 3, 0.2, 0.05, { f: 100, pan: 0.2 });
+    mlBell(S, 1.1, 64, 2.0, 0.07);
+    mlGl(S, 1.6, 100, 1.0, 0.04);
+    mlHold(S, 2.1, 0.5, 0.03);
+  });
+  // ---- the cuts of one phase: a crescent is a thin sound, a half two voices, a gibbous full, the full moon the whole chord
+  def('bm-maelis-crescent', 'bm', S => {          // one thin note and a narrow line of air, a glass tremble on it, the line drawn high; nothing else
+    S.space('hall', 0.8);
+    mlAir(S, 0.2, 2.6, 0.035, 0.15, 6800);
+    mlGl(S, 0.7, 93, 2.6, 0.07);
+    S.tone({ at: 0.9, f: mf(93), dur: 2.0, a: 0.8, peak: 0.025, am: [6.5, 0.7], lp: 5000 });
+    mlDraw(S, 1.6, 1.0, 0.08, 0.3, 1);
+    mlHold(S, 3.0, 0.7, 0.03);
+  });
+  def('bm-maelis-half-moon', 'bm', S => {         // two notes (a fifth) and a broader frost, a bowed note below them, the line drawn from the left
+    S.space('hall', 0.8);
+    mlBow(S, 0.2, 76, 2.8, 0.04, { a: 1.6 });
+    mlPhase(S, 'half', 0.8, 0.35, 0.07, { dur: 2.6 });
+    mlAir(S, 0.4, 2.4, 0.04, -0.2, 5400);
+    mlDraw(S, 1.7, 1.1, 0.1, -0.3, 1);
+    mlHold(S, 3.1, 0.7, 0.03);
+  });
+  def('bm-maelis-gibbous', 'bm', S => {           // four notes, a bowed fifth under them, a wide frost and a bell: the fullest of her single cuts
+    S.space('hall', 0.85);
+    mlBow(S, 0.1, 69, 3.0, 0.05, { m1: 76, a: 1.8 });
+    mlPhase(S, 'gibbous', 0.6, 0.28, 0.08, { dur: 2.8 });
+    mlAir(S, 0.3, 2.8, 0.05, 0, 4400);
+    mlBell(S, 1.6, 64, 2.4, 0.07);
+    mlDraw(S, 1.9, 1.2, 0.11, 0, 1);
+    mlHold(S, 3.3, 0.6, 0.03);
+  });
+  def('bm-maelis-full-moon', 'bm', S => {         // the whole chord assembling note by note from its low A up to the top, a bell, the dust of glass; held before the blow
+    S.space('hall', 0.9);
+    MLP.full.forEach((m, i) => mlGl(S, 0.1 + i * 0.3, m, 3.0 - i * 0.2, 0.05, i % 2 ? 0.25 : -0.25));
+    mlBow(S, 0.1, 57, 2.6, 0.05, { a: 1.8 });
+    mlBell(S, 1.4, 64, 2.8, 0.07);
+    mlShim(S, 1.0, 1.8, 0.03);
+    mlHold(S, 2.6, 0.5, 0.04);
+  });
+  def('bm-maelis-umbral-crescent', 'bm', S => {   // the dark of a crescent (a gibbous in the dark): four bowed notes falling one after another with no glass among them, a low breath
+    S.space('hall', 0.9);
+    [[0.1, 76], [0.5, 69], [0.9, 64], [1.3, 57]].forEach(([t, m], i) => mlUmb(S, t, m, 2.2, 0.06, { pan: i % 2 ? 0.3 : -0.3 }));
+    mlAir(S, 0.2, 2.8, 0.03, 0, 2600);
+    S.rumble({ at: 0.2, dur: 2.4, f: 80, peak: 0.07, a: 1.4 });
+    mlHold(S, 3.0, 0.6, 0.03);
+  });
+  def('bm-maelis-umbral-half-moon', 'bm', S => {  // the dark of a half: two bowed notes falling a fifth together, a hollow beating between them
+    S.space('hall', 0.9);
+    mlUmb(S, 0.2, 69, 2.6, 0.065, { pan: -0.3 }); mlUmb(S, 0.7, 62, 2.4, 0.06, { pan: 0.3 });
+    S.tone({ at: 0.4, f: mf(64), dur: 2.2, a: 1.0, peak: 0.03, lp: 1200, am: [3.5, 0.7] });
+    mlAir(S, 0.3, 2.4, 0.03, 0, 2400);
+    mlHold(S, 3.0, 0.6, 0.03);
+  });
+  def('bm-maelis-earthshine', 'bm', S => {        // the tank's cut and its pale second: a long blade-note drawn up, a pale fifth lit above it, the line drawn through, held
+    S.space('hall', 0.8);
+    mlBow(S, 0.2, 64, 3.0, 0.06, { a: 2.0, lp: 1800 });
+    mlGl(S, 1.2, 81, 2.0, 0.055, -0.2); mlGl(S, 2.0, 88, 1.6, 0.035, 0.3);
+    mlDraw(S, 1.9, 1.0, 0.1, 0, 1);
+    mlHold(S, 3.2, 0.6, 0.03);
+  });
+  def('bm-maelis-moonwell', 'bm', S => {          // shafts of light, one after the other: each a pure held note with a slow shimmer in it and light falling from above (a high band sweeping down)
+    S.space('hall', 0.85);
+    [[0.4, 88, -0.45], [1.3, 93, 0.45]].forEach(([t, m, pan]) => {
+      S.tone({ at: t, f: mf(m), dur: 2.6, a: 0.6, peak: 0.05, lp: 4500, am: [3, 0.4], pan });
+      S.whoosh({ at: t, color: 'white', f: 9000, f1: 3500, q: 5, dur: 0.9, peakAt: 0.3, peak: 0.07, pan });
+    });
+    mlBell(S, 2.1, 69, 2.2, 0.06);
+    mlHold(S, 3.5, 0.6, 0.03);
+  });
+  def('bm-maelis-moonlets', 'bm', S => {          // small moons set to fall: soft round notes dropping one after another down the left and the right, a thin shimmer
+    S.space('hall', 0.8);
+    [[0.3, 88, -0.5], [0.8, 84, 0.5], [1.3, 81, -0.4], [1.7, 78, 0.4], [2.1, 76, 0]].forEach(([t, m, pan]) => {
+      S.tone({ at: t, f: mf(m), dur: 1.0, pts: [[0.02, 1], [1.0, 0]], peak: 0.05, lp: 3500, pan });
+      S.glass({ at: t, f: mf(m + 12), dur: 0.5, peak: 0.02, pan });
+    });
+    mlShim(S, 0.4, 2.0, 0.025);
+    mlHold(S, 2.8, 0.6, 0.03);
+  });
+  // ---- the dances: four phases in the moon's order, the blade drawn up (waxing) or down (waning) under them; the cuts themselves are the moments'
+  const mlDance = (S, o) => {
+    const dir = o.dir || 1, ph = dir > 0 ? ['crescent', 'half', 'gibbous', 'full'] : ['full', 'gibbous', 'half', 'crescent'];
+    S.space('hall', 0.85);
+    mlBow(S, 0.2, dir > 0 ? 57 : 81, 8.2, 0.045, { m1: dir > 0 ? 81 : 57, a: 4.2, lp: 3000 });
+    ph.forEach((p, k) => mlPhase(S, p, 0.9 + k * 2.0, 0.09, 0.05 + 0.008 * k, { dur: 2.4, wane: dir < 0, pan: k % 2 ? 0.3 : -0.3 }));
+    mlAir(S, 1.2, 6.0, 0.03, 0, dir > 0 ? 4600 : 6200);
+    if (o.moons) { [1.6, 3.2, 4.8, 6.4].forEach((t, i) => S.tone({ at: t, f: mf(76 + i * 2), dur: 0.9, pts: [[0.03, 1], [0.9, 0]], peak: 0.04, lp: 3000, pan: i % 2 ? 0.4 : -0.4 })); S.tone({ at: 6.6, f: mf(81), dur: 1.8, a: 1.4, swell: true, peak: 0.04, lp: 3500 }); }
+    if (o.dark) { mlUmb(S, 3.4, 64, 2.4, 0.06, { pan: -0.3 }); mlUmb(S, 5.4, 57, 2.4, 0.06, { pan: 0.3 }); S.tone({ at: 3.0, f: mf(52), dur: 5.0, a: 2.0, peak: 0.03, lp: 700, am: [2.2, 0.8] }); }
+    if (o.bell) mlBell(S, 7.0, 69, 2.4, 0.07);
+    mlHold(S, 8.8, 0.7, 0.035);
+  };
+  def('bm-maelis-waxing-dance', 'bm', S => mlDance(S, { dir: 1 }));
+  def('bm-maelis-waning-dance', 'bm', S => mlDance(S, { dir: -1 }));
+  def('bm-maelis-harvest', 'bm', S => mlDance(S, { dir: 1, moons: 1, bell: 1 }));
+  def('bm-maelis-blood-moon-dance', 'bm', S => mlDance(S, { dir: -1, dark: 1 }));
+  def('bm-maelis-blood-harvest', 'bm', S => mlDance(S, { dir: 1, moons: 1, dark: 1 }));
+  def('bm-maelis-the-last-dance', 'bm', S => {    // lit and umbral alternating up the chord, a glass note and then a dark one, six steps and the blade drawn up two octaves under them; ends before the full moon
+    S.space('hall', 0.9);
+    mlBow(S, 0.3, 57, 10.0, 0.05, { m1: 93, a: 6.0, lp: 3500 });
+    const lit = [[0.8, 'crescent'], [3.9, 'half'], [7.0, 'gibbous']];
+    lit.forEach(([t, ph]) => mlPhase(S, ph, t, 0.1, 0.06, { dur: 2.2 }));
+    [[2.35, 76], [5.45, 69], [8.55, 62]].forEach(([t, m], i) => { mlUmb(S, t, m, 2.0, 0.065, { pan: i % 2 ? 0.3 : -0.3 }); mlUmb(S, t + 0.12, m - 7, 1.9, 0.045, { pan: i % 2 ? -0.3 : 0.3 }); });
+    mlAir(S, 1.0, 9.0, 0.03, 0, 5600);
+    mlBell(S, 6.0, 64, 3.4, 0.07);
+    mlHold(S, 10.8, 0.7, 0.04);
+  });
+  def('bm-maelis-the-second-howl', 'bm', S => {   // Extreme, in the middle of the last dance: Garrow's long howl come back, low and far (his note, the lake's slap-back left to ring), her blade bowed up a fifth under it as if to answer him, one glass note on the crown; it sits below the dance's chord and leaves the shade's own sound (m-shade) for the run
+    S.space('hall', 0.8);
+    gwHowl(S, 0.1, 3.0, 0.12, 150);
+    gwWind(S, 0, 3.4, 0.03, 220, 600, 0.5);
+    mlBow(S, 0.5, 50, 2.6, 0.04, { m1: 57, a: 1.6, lp: 1200 });
+    mlGl(S, 1.7, 76, 1.4, 0.025, 0.3);
+  });
+  // ---- the wall and the hunt
+  def('bm-maelis-new-moon', 'bm', S => {          // the crown going dark: the whole chord struck once, the blade bowed down through it, the frost drawn out of the air and held; the dark itself is staged
+    S.space('hall', 0.9);
+    mlPhase(S, 'full', 0.05, 0.06, 0.07, { dur: 1.5 });
+    mlBow(S, 0.1, 81, 1.3, 0.05, { m1: 57, a: 0.3 });
+    mlAir(S, 0.2, 1.1, 0.04, 0, 6400);
+    mlHold(S, 1.2, 0.4, 0.03);
+  });
+  def('bm-maelis-moonless-steps', 'bm', S => {    // the sword dance in the dark: a low bowed note and its dark twin, six thin silver ticks climbing with a glass note on each, long silences between
+    S.space('hall', 0.9);
+    mlUmb(S, 0.2, 64, 6.0, 0.05); mlBow(S, 0.5, 69, 6.0, 0.03, { a: 3.0, lp: 1400 });
+    for (let i = 0; i < 6; i++) { const t = 1.2 + i * 1.0, pan = i % 2 ? 0.4 : -0.4; S.metal({ at: t, set: 'bar', f: 3000 + i * 180, dur: 0.16, peak: 0.045, strike: 0.2, pan }); mlGl(S, t + 0.02, 81 + [0, 2, 4, 7, 9, 12][i], 1.4, 0.05, pan); }
+    mlHold(S, 7.4, 0.7, 0.03);
+  });
+  def('bm-maelis-the-last-light', 'bm', S => {    // the last of the light drawn in: motes of glass from every side, closing in faster and faster toward the middle, a soft chord swelling under them; held
+    S.space('hall', 0.85);
+    for (let i = 0; i < 10; i++) { const x = i / 9, t = 0.2 + 2.3 * (1 - Math.pow(1 - x, 1.7)); mlGl(S, t, 88 + (i % 3) * 5, 1.0, 0.035, (i % 2 ? 1 : -1) * 0.7 * (1 - x)); }
+    S.tone({ at: 0.4, f: mf(76), dur: 2.6, a: 1.8, swell: true, peak: 0.05, lp: 3000 }); S.tone({ at: 0.6, f: mf(81), dur: 2.4, a: 1.6, swell: true, peak: 0.04, lp: 3000 });
+    mlHold(S, 2.6, 0.5, 0.03);
+  });
+  def('bm-maelis-the-hounds-return', 'bm', S => { // almost nothing: the road is quiet, a breath on frost, one long thin bowed note and a far glass note; his howl is the staged beat's and nothing here may cover it
+    S.space('hall', 0.9);
+    mlAir(S, 0.3, 2.2, 0.025, 0, 3800);
+    mlBow(S, 0.6, 60, 2.0, 0.03, { a: 1.4, lp: 1100 });
+    mlGl(S, 1.4, 76, 1.6, 0.035, 0.3);
+    mlHold(S, 2.2, 0.5, 0.02);
+  });
+
+  def('bm-maelis-hunts-pass', 'bm', S => {        // she rides a marked trail as the hound did: two cold sniffs and the close breath (his), a bowed note rising, the footprints lit one by one, a few far paws; held
+    S.space('hall', 0.8);
+    gwSniff(S, 0.3, 0.12, -0.3, 1.2); gwSniff(S, 0.8, 0.14, 0.3, 1.2);
+    gwBreath(S, 1.3, 1.2, 0.07, 1600);
+    mlBow(S, 0.4, 64, 2.8, 0.045, { m1: 76, a: 2.0 });
+    for (let i = 0; i < 8; i++) S.glass({ at: 1.6 + i * 0.14, f: 3000 + i * 350, dur: 0.35, peak: 0.03, pan: -0.4 + i * 0.11 });
+    mlPaws(S, 2.9, 4, 0.16, 0.05, { fade: 1 });
+    mlHold(S, 3.6, 0.6, 0.03);
+  });
+  def('bm-maelis-the-long-eclipse', 'bm', S => {  // the crown dimming: the whole chord struck once and then taken from the top down by dark bowed notes falling through it; held (the red itself is staged)
+    S.space('hall', 0.9);
+    mlPhase(S, 'full', 0.05, 0.1, 0.07, { dur: 1.6 });
+    mlUmb(S, 0.6, 69, 1.6, 0.06, { pan: -0.3 }); mlUmb(S, 0.9, 62, 1.5, 0.055, { pan: 0.3 });
+    mlAir(S, 0.2, 1.4, 0.03, 0, 3000);
+    mlHold(S, 1.7, 0.5, 0.03);
+  });
+  def('bm-maelis-totality', 'bm', S => {          // the enrage: the blade drawn up two octaves over six seconds, the phases cycling faster and faster, a far low bell, then the chord reddening (dark notes falling through it) and the hold
+    S.space('hall', 0.95);
+    mlBow(S, 0.2, 57, 6.0, 0.06, { m1: 93, a: 5.0, lp: 4200 });
+    mlBell(S, 0.6, 52, 5.5, 0.09);
+    let t = 0.3, g = 1.9, k = 0;
+    while (t < 4.8) { ['crescent', 'half', 'gibbous', 'full'].forEach((ph, i) => mlPhase(S, ph, t + g * i * 0.25, 0.04, 0.045, { dur: Math.max(0.8, g * 0.9), pan: Math.sin(k++ * 1.7) * 0.4 })); t += g; g *= 0.74; }
+    [[4.9, 76], [5.2, 69], [5.5, 64], [5.8, 57]].forEach(([tt, m], i) => mlUmb(S, tt, m, 1.0, 0.06, { pan: i % 2 ? 0.3 : -0.3 }));
+    mlAir(S, 0.5, 5.4, 0.04, 0, 5600);
+    mlHold(S, 6.1, 0.4, 0.035);
+  });
+  // ---- Hard and Extreme
+  def('bm-maelis-two-crowns', 'bm', S => {        // two crowns: her reflection in the dust shows its own phase; a half in front and a gibbous behind it a shade out of tune, one on either side, the line drawn between them
+    S.space('hall', 0.85);
+    mlPhase(S, 'half', 0.4, 0.2, 0.06, { pan: -0.5, dur: 2.4 });
+    mlPhase(S, 'gibbous', 1.1, 0.18, 0.045, { pan: 0.5, dur: 2.2, up: 0.35 });
+    mlAir(S, 0.4, 2.6, 0.035, 0, 5200);
+    mlDraw(S, 2.0, 1.0, 0.08, 0, 1);
+    mlHold(S, 3.4, 0.6, 0.03);
+  });
+
+  def('bm-maelis-annular', 'bm', S => {           // a ring of light: a rim tone (a glass sung round its edge, a beating pair) and the light spreading outward from the middle in two bands, a bell behind it; held
+    S.space('hall', 0.85);
+    S.partials({ at: 0.3, set: 'bar', f: mf(81), dur: 2.8, beat: 2.4, a: 1.2, swell: true, peak: 0.07 });
+    S.whoosh({ at: 0.8, color: 'pink', f: 800, f1: 6500, dur: 1.6, peakAt: 0.8, q: 3, peak: 0.08 });
+    S.whoosh({ at: 1.2, color: 'pink', f: 700, f1: 5200, dur: 1.4, peakAt: 0.8, q: 3, peak: 0.06, pan: 0.3 });
+    mlBell(S, 1.5, 69, 2.2, 0.06);
+    mlHold(S, 3.2, 0.6, 0.03);
+  });
+  def('bm-maelis-libration', 'bm', S => {         // the crown rocking: a glass note swaying slowly down and back, a creak of the blade bowed against itself, one dry tick as it stops; held
+    S.space('hall', 0.85);
+    S.tone({ at: 0.3, f: mf(93), f1: mf(90), glide: 1.8, dur: 3.0, pts: [[0.4, 1], [2.8, 0.8], [3.0, 0]], peak: 0.05, lp: 5000, am: [1.1, 0.8] });
+    mlBow(S, 0.3, 76, 3.2, 0.035, { a: 1.8 });
+    S.scrape({ at: 1.2, f: 600, q: 3, rate: 14, dur: 1.2, pts: [[0.5, 1], [1.2, 0]], peak: 0.03 });
+    S.tick({ at: 3.0, f: 2800, peak: 0.08 });
+    mlHold(S, 3.6, 0.6, 0.03);
+  });
+  def('bm-maelis-moonfall', 'bm', S => {          // one moon coming down on one hero: a long note falling from very high, shimmer trailing behind it, a breath of frost; held before the fall
+    S.space('hall', 0.85);
+    S.tone({ at: 0.3, f: mf(100), f1: mf(76), glide: 1.9, dur: 2.0, pts: [[0.2, 1], [1.8, 0.7], [2.0, 0]], peak: 0.05, lp: 5000 });
+    mlShim(S, 0.5, 1.8, 0.03);
+    mlAir(S, 0.8, 1.4, 0.03, 0.2, 3400);
+    mlHold(S, 2.2, 0.5, 0.03);
+  });
+  def('bm-maelis-moon-touched', 'bm', S => {      // two heroes touched: two eyes opening (a high note and a higher one a little apart), and a pair of notes crossing, one rising as one falls; held
+    S.space('hall', 0.85);
+    mlGl(S, 0.4, 100, 1.6, 0.06, -0.5); mlGl(S, 1.0, 103, 1.4, 0.05, 0.5);
+    S.tone({ at: 0.6, f: mf(88), f1: mf(76), dur: 1.8, pts: [[0.6, 1], [1.8, 0]], peak: 0.04, lp: 3500, pan: -0.3 });
+    S.tone({ at: 0.6, f: mf(76), f1: mf(88), dur: 1.8, pts: [[0.6, 1], [1.8, 0]], peak: 0.04, lp: 3500, pan: 0.3 });
+    mlAir(S, 0.5, 1.8, 0.025, 0, 6000);
+    mlHold(S, 2.4, 0.5, 0.03);
+  });
+
+  // ---- the moments (sound-hooks.js reads them off the room; every one begins on its beat)
+  // the crown changes phase: quiet, the phase as a nested chord (the hook rate-limits it); the waning ones fall from the top
+  for (const ph of ['crescent', 'half', 'gibbous', 'full']) for (const wane of [0, 1]) {
+    def('bm-maelis-m-crown-' + ph + (wane ? '-wane' : ''), 'bm', S => {
+      S.space('hall', 0.7);
+      mlPhase(S, ph, 0, ph === 'full' ? 0.1 : 0.11, 0.06, { dur: 1.4, wane });
+      if (ph === 'crescent') S.tone({ f: mf(93) * (wane ? 1.03 : 0.97), f1: mf(93) * (wane ? 0.97 : 1.03), dur: 0.5, pts: [[0.05, 1], [0.5, 0]], peak: 0.02, lp: 5000 });
+    });
+  }
+  def('bm-maelis-m-crown-umbral', 'bm', S => {    // the dark of the crown is what strikes: two bowed notes falling, hollow, no glass (the hook sets the pitch by the phase)
+    S.space('hall', 0.7);
+    mlUmb(S, 0, 69, 1.4, 0.06); mlUmb(S, 0.12, 62, 1.3, 0.05, { pan: 0.2 });
+  });
+  def('bm-maelis-m-crown-new', 'bm', S => {       // the crown goes out: one note sinking away, very quiet
+    S.space('hall', 0.7);
+    S.tone({ f: mf(88), f1: mf(76), dur: 1.4, glide: 1.4, pts: [[0.05, 1], [1.4, 0]], peak: 0.04, lp: 3500 });
+  });
+  def('bm-maelis-m-crown-ring', 'bm', S => {      // Annular's crown: full with a dark middle: a rim tone, a beating pair, one glass note
+    S.space('hall', 0.7);
+    S.partials({ set: 'bar', f: mf(81), dur: 1.6, beat: 2.4, peak: 0.06 });
+    mlGl(S, 0.05, 93, 1.2, 0.04);
+  });
+  def('bm-maelis-m-crown2', 'bm', S => {          // her reflection in the dust shows a second crown: a high note and its echo, thin and a step behind
+    S.space('hall', 0.9);
+    mlGl(S, 0, 96, 1.4, 0.05, 0.4); mlGl(S, 0.26, 96, 1.2, 0.03, -0.4);
+  });
+  def('bm-maelis-m-rock', 'bm', S => {            // Libration: the crown rocks a quarter turn and stops: a glass note slides down a step, a short bowed creak, a dry tick as it catches
+    S.space('hall', 0.6);
+    S.tone({ f: mf(93), f1: mf(90), glide: 0.45, dur: 0.8, pts: [[0.05, 1], [0.8, 0]], peak: 0.09, lp: 5000 });
+    S.scrape({ at: 0.05, f: 700, q: 3, rate: 16, dur: 0.4, pts: [[0.15, 1], [0.4, 0]], peak: 0.04 });
+    S.tick({ at: 0.5, f: 2800, peak: 0.1 });
+  });
+  def('bm-maelis-m-dance-end', 'bm', S => {       // a dance is over: a breath of frost let go and one note falling after it
+    S.space('hall', 0.8);
+    mlAir(S, 0, 1.2, 0.05, 0, 4800);
+    S.tone({ at: 0.1, f: mf(88), f1: mf(81), dur: 1.4, glide: 1.4, pts: [[0.05, 1], [1.4, 0]], peak: 0.04, lp: 3500 });
+  });
+  // ---- a cut lands, by phase: thin, two voices, full, the whole chord
+  def('bm-maelis-m-cut-crescent', 'imp', S => {   // a crescent lands: thin and bright, one clean high crack, a narrow line of air and a single glass note, only a small knock under it
+    S.space('hall', 0.55);
+    S.crack({ peak: 0.2, dur: 0.1, f: 4200 });
+    mlDraw(S, 0, 0.3, 0.14, 0.1, 0);
+    mlGl(S, 0.01, 93, 1.3, 0.14);
+    S.thud({ f: 92, f1: 56, dur: 0.22, click: 0, lp: 450, peak: 0.16 });
+  });
+  def('bm-maelis-m-cut-half', 'imp', S => {       // a half lands: two voices a fifth apart, a broader stroke of air, a knock with some body
+    S.space('hall', 0.55);
+    S.crack({ peak: 0.26, dur: 0.12, f: 3000 });
+    S.whoosh({ color: 'pink', f: 7000, f1: 1500, dur: 0.38, peakAt: 0.12, q: 2.2, peak: 0.2 });
+    mlPhase(S, 'half', 0.01, 0.02, 0.12, { dur: 1.5 });
+    S.thud({ f: 78, f1: 42, dur: 0.4, click: 0.1, lp: 600, peak: 0.3 });
+    S.partials({ at: 0.02, set: 'bar', f: mf(69), dur: 1.0, beat: 1.5, peak: 0.06 });
+  });
+  def('bm-maelis-m-cut-gibbous', 'imp', S => {    // a gibbous lands: four notes, a wide fall of air, a heavy body and a low ring of its own
+    S.space('hall', 0.6);
+    S.crack({ peak: 0.3, dur: 0.14, f: 2200 });
+    S.whoosh({ color: 'pink', f: 8500, f1: 900, dur: 0.55, peakAt: 0.1, q: 1.4, peak: 0.26 });
+    mlPhase(S, 'gibbous', 0.01, 0.02, 0.14, { dur: 1.8 });
+    S.thud({ f: 84, f1: 44, dur: 0.5, drive: 1.5, click: 0.12, lp: 800, peak: 0.3 });
+    S.partials({ at: 0.02, set: 'bar', f: mf(69), dur: 1.6, beat: 1.4, peak: 0.18 });
+    S.rumble({ at: 0.02, dur: 0.7, f: 70, peak: 0.05, a: 0.04 });
+  });
+  def('bm-maelis-m-full', 'imp', S => {           // the full moon lands: the whole chord struck at once to its low A, the deepest blow of hers, a bell and the long stroke of air
+    S.space('hall', 0.65);
+    S.thud({ f: 90, f1: 44, dur: 0.9, drive: 1.6, click: 0.1, lp: 1000, peak: 0.28 });
+    S.thud({ f: 56, f1: 30, dur: 1.0, click: 0, lp: 400, peak: 0.1 });
+    S.noise({ color: 'pink', bp: 700, bp1: 280, q: 0.7, lp: 2400, dur: 0.5, pts: [[0.03, 1], [0.5, 0]], peak: 0.2 });
+    S.crack({ peak: 0.3, dur: 0.16, f: 1700 });
+    S.whoosh({ color: 'pink', f: 7500, f1: 450, dur: 0.75, peakAt: 0.1, q: 1.2, peak: 0.28 });
+    mlPhase(S, 'full', 0.01, 0.018, 0.22, { dur: 2.6 });
+    mlBell(S, 0.03, 64, 3.2, 0.22);
+    S.partials({ at: 0.02, set: 'bar', f: mf(64), dur: 2.4, beat: 1.2, peak: 0.2 });
+    S.rumble({ at: 0.02, dur: 1.4, f: 70, peak: 0.05, a: 0.05 });
+  });
+  def('bm-maelis-m-cut-ucrescent', 'imp', S => {  // an umbral crescent lands: the dark of a crescent, a gibbous with no light in it: four bowed notes falling together, a band of air closing downward, a hollow blow
+    S.space('hall', 0.6);
+    S.thud({ f: 62, f1: 30, dur: 0.8, drive: 1.5, click: 0, lp: 520, peak: 0.45 });
+    S.noise({ color: 'pink', bp: 3600, bp1: 700, q: 0.8, lp: 3000, dur: 0.6, pts: [[0.05, 1], [0.6, 0]], peak: 0.2 });
+    [[0, 76], [0.05, 69], [0.1, 64], [0.15, 57]].forEach(([t, m], i) => mlUmb(S, t, m, 1.4, 0.1, { pan: i % 2 ? 0.3 : -0.3 }));
+    S.rumble({ at: 0.02, dur: 1.0, f: 66, peak: 0.16, a: 0.05 });
+  });
+  def('bm-maelis-m-cut-uhalf', 'imp', S => {      // an umbral half lands: two bowed notes falling a fifth, a hollow beating between them, a dull blow
+    S.space('hall', 0.6);
+    S.thud({ f: 76, f1: 40, dur: 0.55, click: 0, lp: 560, peak: 0.35 });
+    S.noise({ color: 'pink', bp: 3000, bp1: 900, q: 0.8, lp: 2600, dur: 0.45, pts: [[0.05, 1], [0.45, 0]], peak: 0.16 });
+    mlUmb(S, 0, 69, 1.2, 0.11, { pan: -0.3 }); mlUmb(S, 0, 62, 1.2, 0.1, { pan: 0.3 });
+  });
+  def('bm-maelis-m-cut-ring', 'imp', S => {       // Annular lands: the ring of light struck: a band of air thrown outward, a rim tone and a lower one beating, a blow with the middle left out of it
+    S.space('hall', 0.6);
+    S.thud({ f: 84, f1: 44, dur: 0.6, drive: 1.4, click: 0, lp: 700, peak: 0.26 });
+    S.whoosh({ color: 'pink', f: 700, f1: 6000, dur: 0.6, peakAt: 0.5, q: 2.5, peak: 0.26 });
+    S.partials({ set: 'bar', f: mf(81), dur: 2.0, beat: 2.2, peak: 0.16, strike: 0.2 });
+    S.partials({ at: 0.04, set: 'bar', f: mf(69), dur: 1.6, beat: 1.8, peak: 0.1 });
+    S.crack({ peak: 0.16, dur: 0.1, f: 2400 });
+  });
+  def('bm-maelis-m-open', 'imp', S => {           // the light raidwide of an opener: one soft blow, a distant bell and two glass notes after it
+    S.space('hall', 0.6);
+    S.thud({ f: 84, f1: 44, dur: 0.5, drive: 1.2, click: 0, lp: 700, peak: 0.22 });
+    mlBell(S, 0.02, 69, 2.2, 0.2);
+    mlGl(S, 0.04, 88, 1.2, 0.1); mlGl(S, 0.1, 93, 1.0, 0.08);
+  });
+  def('bm-maelis-m-earth', 'imp', S => {          // Earthshine's cut: the pale light on the tank, a deep blow and a long low ring of silver, a stroke of air, one glass note
+    S.space('hall', 0.5);
+    S.thud({ f: 100, f1: 50, dur: 0.6, drive: 1.5, lp: 1000, peak: 0.22 });
+    S.noise({ color: 'pink', bp: 900, bp1: 350, q: 0.7, lp: 2600, dur: 0.4, pts: [[0.03, 1], [0.4, 0]], peak: 0.2 });
+    S.crack({ peak: 0.3, dur: 0.14, f: 1500 });
+    S.whoosh({ color: 'pink', f: 5200, f1: 600, dur: 0.45, peakAt: 0.1, q: 1.3, peak: 0.22 });
+    S.partials({ at: 0.02, set: 'bar', f: mf(64), dur: 2.4, beat: 1.4, peak: 0.32, strike: 0.2 });
+    S.partials({ at: 0.03, set: 'bar', f: mf(76), dur: 1.8, beat: 1.1, peak: 0.12 });
+    mlGl(S, 0.03, 81, 1.8, 0.12);
+    S.rumble({ at: 0.02, dur: 1.0, f: 70, peak: 0.03, a: 0.04 });
+  });
+  def('bm-maelis-m-earth2', 'imp', S => {         // the pale second hit, a beat later: higher and thinner, a small blow, two glass notes a fifth apart, a thin stroke
+    S.space('hall', 0.55);
+    S.thud({ f: 84, f1: 46, dur: 0.35, click: 0.1, lp: 700, peak: 0.28 });
+    S.crack({ peak: 0.18, dur: 0.1, f: 2400 });
+    S.whoosh({ color: 'pink', f: 7000, f1: 1500, dur: 0.35, peakAt: 0.1, q: 1.8, peak: 0.14 });
+    mlGl(S, 0.02, 88, 1.4, 0.1); mlGl(S, 0.06, 93, 1.2, 0.08);
+  });
+  def('bm-maelis-m-ride', 'bm', S => {            // Earthshine from the saddle: a piece of the trail struck as the rider reaches it: two quick paws and a high tick of silver
+    mlPaws(S, 0, 2, 0.07, 0.16, { f: 200, pan: 0 });
+    S.wood({ at: 0.01, f: 900, dur: 0.06, peak: 0.1 });
+    mlGl(S, 0.01, 98, 0.5, 0.06);
+    mlDraw(S, 0.02, 0.18, 0.07, 0, 1);
+  });
+  // ---- Moonwell
+  def('bm-maelis-m-well-met', 'bm', S => {        // a shaft of light caught by two: a pure note rising a step and holding, two glass notes (a fifth) and a thin bell behind
+    S.space('hall', 0.6);
+    S.tone({ f: mf(88), f1: mf(93), glide: 0.15, dur: 1.2, pts: [[0.05, 1], [0.7, 0.6], [1.2, 0]], peak: 0.1, lp: 4500 });
+    mlGl(S, 0.02, 88, 1.4, 0.08, -0.3); mlGl(S, 0.04, 93, 1.4, 0.08, 0.3);
+    mlShim(S, 0.1, 0.9, 0.03);
+    mlBell(S, 0.1, 69, 1.4, 0.06);
+  });
+  def('bm-maelis-m-well-missed', 'bm', S => {     // a shaft with only one in it: a dull knock and a dark note falling, a flat tick; quickly gone
+    S.space('hall', 0.4);
+    S.thud({ f: 74, f1: 40, dur: 0.35, click: 0, lp: 400, peak: 0.3 });
+    mlUmb(S, 0, 64, 0.9, 0.09);
+    S.wood({ at: 0.04, f: 700, dur: 0.08, peak: 0.1 });
+  });
+  // ---- Moonlets and Moonfall: a small moon falls, rests where it landed and bursts
+  def('bm-maelis-m-mark-moon', 'bm', S => {       // a moon is on you: one soft round note and a tick
+    S.tone({ f: mf(88), dur: 0.8, pts: [[0.04, 1], [0.8, 0]], peak: 0.07, lp: 3500 });
+    S.tick({ at: 0.01, f: 2600, peak: 0.05 });
+  });
+  def('bm-maelis-m-moonlet-fall', 'imp', S => {   // a moonlet comes down: a note falling fast from very high, a bright tick, a dull knock of dust, a soft ring where it lands
+    S.space('hall', 0.5);
+    S.tone({ f: mf(98), f1: mf(76), glide: 0.35, dur: 0.5, pts: [[0.03, 1], [0.5, 0]], peak: 0.08, lp: 5000 });
+    S.thud({ at: 0.3, f: 70, f1: 38, dur: 0.4, click: 0.1, lp: 520, peak: 0.4 });
+    mlDust(S, 0.3, 0.14);
+    S.partials({ at: 0.3, set: 'bar', f: mf(76), dur: 1.0, peak: 0.08, strike: 0.2 });
+  });
+  def('bm-maelis-m-moonlet-rest', 'bm', S => {    // a moonlet at rest: a round held note breathing slowly, a little glass on it; quiet
+    S.space('hall', 0.7);
+    S.tone({ f: mf(81), dur: 1.8, a: 0.4, peak: 0.05, lp: 3500, am: [2.2, 0.5] });
+    mlGl(S, 0.02, 93, 1.0, 0.03);
+  });
+  def('bm-maelis-m-moonlet-hum', 'bm', S => {     // a moonlet about to burst: its note rising and brightening, a tight shimmer
+    S.space('hall', 0.6);
+    S.tone({ f: mf(81), f1: mf(88), dur: 0.9, a: 0.6, swell: true, peak: 0.06, lp: 4500 });
+    mlShim(S, 0, 0.9, 0.025);
+  });
+  def('bm-maelis-m-moonlet-burst', 'imp', S => {  // a moonlet bursts: glass thrown out in every direction, a small round blow, a ring of air
+    S.space('hall', 0.55);
+    S.glass({ f: mf(93), dur: 1.0, peak: 0.12 });
+    for (let i = 0; i < 6; i++) S.glass({ at: 0.02 + i * 0.04, f: 2800 + ((i * 631) % 3200), dur: 0.5, peak: 0.05, pan: Math.sin(i * 2.3) * 0.7 });
+    S.thud({ f: 100, f1: 52, dur: 0.4, click: 0.1, lp: 900, peak: 0.28 });
+    S.whoosh({ color: 'pink', f: 1500, f1: 6000, dur: 0.35, peakAt: 0.25, q: 1.6, peak: 0.14 });
+  });
+  def('bm-maelis-m-moonlet-harvest', 'imp', S => { // a moonlet lit twice bursts wider: the same, a second ring behind it, a bell and a deeper blow
+    S.space('hall', 0.6);
+    S.thud({ f: 84, f1: 40, dur: 0.7, drive: 1.5, click: 0.1, lp: 800, peak: 0.3 });
+    S.glass({ f: mf(88), dur: 1.4, peak: 0.14 });
+    for (let i = 0; i < 9; i++) S.glass({ at: 0.02 + i * 0.045, f: 2600 + ((i * 577) % 3600), dur: 0.6, peak: 0.045, pan: Math.sin(i * 2.1) * 0.8 });
+    S.whoosh({ color: 'pink', f: 1200, f1: 8000, dur: 0.5, peakAt: 0.3, q: 1.4, peak: 0.16 });
+    S.whoosh({ at: 0.14, color: 'pink', f: 900, f1: 6000, dur: 0.5, peakAt: 0.3, q: 1.4, peak: 0.1 });
+    mlBell(S, 0.03, 69, 2.0, 0.18);
+  });
+  def('bm-maelis-m-moonlet-gone', 'bm', S => {    // a moonlet gone without bursting: its note thinning to nothing, a sigh of frost
+    S.space('hall', 0.7);
+    S.tone({ f: mf(81), f1: mf(76), dur: 0.9, pts: [[0.05, 1], [0.9, 0]], peak: 0.04, lp: 3000 });
+    mlAir(S, 0, 0.7, 0.025, 0, 4400);
+  });
+  // ---- marks on a hero
+  def('bm-maelis-m-mark-prey', 'bm', S => {       // an eye on your trail: a cold sniff (his), a short bowed note falling a step, a tick of ice
+    S.space('hall', 0.35);
+    gwSniff(S, 0, 0.1, 0, 1.15);
+    mlBow(S, 0.15, 76, 0.8, 0.04, { m1: 74, a: 0.2 });
+    S.crack({ at: 0.3, peak: 0.04, dur: 0.08, f: 3200 });
+  });
+  def('bm-maelis-m-mark-step', 'bm', S => {       // a dash will take you: one clear thin note and a tick of silver (the hook climbs the pitch with the number)
+    S.space('hall', 0.4);
+    mlGl(S, 0, 93, 1.0, 0.09);
+    S.tick({ at: 0.01, f: 3000, peak: 0.08 });
+  });
+  def('bm-maelis-m-mark-eye', 'bm', S => {        // Moon-Touched: an eye opens on you: a soft bowed harmonic swelling and, a beat behind it, its small inverse falling
+    S.space('hall', 0.6);
+    S.tone({ f: mf(100), dur: 1.0, a: 0.25, swell: true, peak: 0.06, lp: 5000 });
+    S.tone({ at: 0.28, f: mf(100), f1: mf(88), dur: 0.8, pts: [[0.05, 1], [0.8, 0]], peak: 0.03, lp: 3500 });
+    mlAir(S, 0, 0.8, 0.025, 0, 6200);
+  });
+  def('bm-maelis-m-touch', 'bm', S => {           // the inversion begins: the lit chord rising and the dark one falling through it, once, and gone
+    S.space('hall', 0.8);
+    mlPhase(S, 'gibbous', 0, 0.12, 0.07, { dur: 1.4 });
+    mlUmb(S, 0.05, 69, 1.4, 0.07, { pan: -0.3 }); mlUmb(S, 0.2, 62, 1.3, 0.06, { pan: 0.3 });
+    mlAir(S, 0, 1.0, 0.03, 0, 5200);
+  });
+  def('bm-maelis-m-touch-end', 'bm', S => {       // the inversion is over: a falling pair of glass notes resolving to one
+    S.space('hall', 0.8);
+    mlGl(S, 0, 93, 1.4, 0.05, -0.3); mlGl(S, 0.1, 88, 1.4, 0.04, 0.3); mlGl(S, 0.5, 81, 1.4, 0.05);
+  });
+  // ---- the wall: the silver line of each dash in the dark, the dash, its small cut, the pools of the last light
+  def('bm-maelis-m-line', 'bm', S => {            // a silver line drawn from her to a hero in the dark: a thin band of air sweeping up and one bright note at the end of it
+    S.space('hall', 0.5);
+    mlDraw(S, 0, 0.6, 0.14, 0, 1);
+    mlGl(S, 0.55, 100, 0.8, 0.07);
+  });
+  def('bm-maelis-m-line-lock', 'bm', S => {       // the line locks (it is red now): one dry tick and a small ring
+    S.metal({ set: 'bar', f: 3400, dur: 0.2, peak: 0.07, strike: 0.3 });
+    S.crack({ peak: 0.08, dur: 0.06, f: 4200 });
+  });
+  def('bm-maelis-m-dash', 'imp', S => {           // she crosses the line: a thin fast stroke of air from end to end and a clean crack, a knock where she stops
+    S.space('hall', 0.4);
+    S.whoosh({ color: 'pink', f: 6500, f1: 600, dur: 0.35, peakAt: 0.2, q: 1.6, peak: 0.3 });
+    S.crack({ peak: 0.3, dur: 0.1, f: 2600 });
+    S.thud({ f: 110, f1: 56, dur: 0.25, click: 0.1, lp: 700, peak: 0.14 });
+    mlGl(S, 0.02, 100, 0.8, 0.06);
+  });
+  def('bm-maelis-m-step-cut', 'imp', S => {       // the small crescent at the end of a dash: a quick slice down and up, a glass note and its octave, a dry knock (the hook climbs it step by step)
+    S.space('hall', 0.5);
+    mlDraw(S, 0, 0.2, 0.12, 0, 0); mlDraw(S, 0.12, 0.2, 0.1, 0, 1);
+    mlGl(S, 0.01, 93, 1.2, 0.1); mlGl(S, 0.05, 105, 0.8, 0.04);
+    S.thud({ f: 86, f1: 48, dur: 0.25, click: 0, lp: 480, peak: 0.2 });
+  });
+  def('bm-maelis-m-pool', 'bm', S => {            // a pool of the last light laid: a soft pad of glass swelling and a bowed note settling under it (the hook climbs it as the pools shrink)
+    S.space('hall', 0.7);
+    mlBow(S, 0, 69, 1.4, 0.04, { a: 0.6, lp: 1800 });
+    mlGl(S, 0.1, 81, 1.2, 0.05); mlShim(S, 0.1, 1.0, 0.02);
+  });
+  def('bm-maelis-m-pool-met', 'bm', S => {        // the light gathered: three soft notes closing from either side to one, a small bell
+    S.space('hall', 0.6);
+    mlGl(S, 0, 88, 1.2, 0.06, -0.4); mlGl(S, 0.02, 88, 1.2, 0.06, 0.4); mlGl(S, 0.14, 93, 1.4, 0.06);
+    mlBell(S, 0.1, 76, 1.4, 0.05);
+  });
+  def('bm-maelis-m-pool-missed', 'bm', S => {     // the light scattered: a dull knock and a bowed note falling a step, a crack of glass
+    S.space('hall', 0.45);
+    S.thud({ f: 70, f1: 38, dur: 0.4, click: 0, lp: 420, peak: 0.3 });
+    mlUmb(S, 0, 76, 0.9, 0.08);
+    S.crack({ at: 0.03, peak: 0.1, dur: 0.1, f: 2800 });
+  });
+  // ---- the trail: footprints lighting, the ride, the pounce
+  def('bm-maelis-m-lock', 'bm', S => {            // the trail locks: its footprints lit end to end, eight small glass ticks climbing, a thin line drawn over them
+    S.space('hall', 0.45);
+    for (let i = 0; i < 8; i++) S.glass({ at: i * 0.045, f: 2000 + i * 300, dur: 0.35, peak: 0.05, pan: -0.5 + i * 0.14 });
+    mlDraw(S, 0, 0.45, 0.07, 0, 1);
+    mlGl(S, 0.4, 93, 1.0, 0.06);
+  });
+  def('bm-maelis-m-ride-start', 'bm', S => {      // she pushes off on the trail: a puff of dust, one low thump, a thin line of air rising behind
+    S.space('hall', 0.3);
+    mlDust(S, 0, 0.26);
+    S.thud({ f: 104, f1: 54, dur: 0.22, click: 0, lp: 600, peak: 0.22 });
+    S.whoosh({ at: 0.05, color: 'pink', f: 1500, f1: 6500, dur: 0.35, peakAt: 0.7, q: 2, peak: 0.16 });
+    mlGl(S, 0.1, 93, 0.8, 0.05);
+  });
+  def('bm-maelis-m-run', 'bm', S => {             // a piece of the trail lands as the rider reaches it: three quick paws, a flick of silver
+    mlPaws(S, 0.02, 3, 0.09, 0.2, { f: 210, pan: 0 });
+    mlGl(S, 0.03, 96, 0.5, 0.05);
+  });
+  def('bm-maelis-m-pounce', 'imp', S => {         // the pounce lands: a flump of dust, a crisp crunch, a ring of glass round it
+    S.space('hall', 0.35);
+    S.thud({ f: 104, f1: 50, dur: 0.4, drive: 1.4, click: 0.15, lp: 900, peak: 0.3 });
+    mlDust(S, 0.01, 0.38);
+    S.noise({ at: 0.02, color: 'white', hp: 2400, lp: 7000, dur: 0.14, pts: [[0.01, 1], [0.14, 0]], peak: 0.1, grain: 0.7 });
+    S.crack({ at: 0.01, peak: 0.16, dur: 0.1, f: 2000 });
+    for (let i = 0; i < 4; i++) mlGl(S, 0.03 + i * 0.05, 86 + i * 3, 0.9, 0.08, Math.sin(i * 2.1) * 0.6);
+  });
+  def('bm-maelis-m-pounce-wide', 'imp', S => {    // a hero fallen on (they never moved): the same landing heavy and wide, the dust blown out in a ring, a bell and the glass of the floor ringing
+    S.space('hall', 0.5);
+    S.thud({ f: 100, f1: 46, dur: 0.9, drive: 1.8, click: 0.15, lp: 1000, peak: 0.42 });
+    S.thud({ f: 54, f1: 26, dur: 1.0, click: 0, lp: 400, peak: 0.07 });
+    S.noise({ at: 0.02, color: 'pink', bp: 600, bp1: 200, q: 0.8, lp: 2000, dur: 1.0, pts: [[0.05, 1], [1.0, 0]], peak: 0.3 });
+    S.noise({ at: 0.03, color: 'pink', hp: 2000, lp: 8000, dur: 0.9, pts: [[0.06, 1], [0.9, 0]], peak: 0.14, grain: 0.7 });
+    S.crack({ at: 0.01, peak: 0.2, dur: 0.14, f: 1800 });
+    mlBell(S, 0.03, 64, 2.4, 0.22);
+    for (let i = 0; i < 6; i++) mlGl(S, 0.04 + i * 0.05, 83 + i * 2, 1.1, 0.07, Math.sin(i * 2.4) * 0.7);
+  });
+  def('bm-maelis-m-hound', 'bm', S => {           // his breath beside hers (the second form): a cold sniff, the low close breath, two paws, one thin glass note
+    S.space('hall', 0.4);
+    gwSniff(S, 0.05, 0.1, -0.3, 1.1);
+    gwBreath(S, 0.3, 1.0, 0.08, 1100, 0.2);
+    mlPaws(S, 0.9, 2, 0.16, 0.07, { f: 104, pan: 0.1 });
+    mlGl(S, 0.4, 88, 1.0, 0.03);
+  });
+  def('bm-maelis-m-shade', 'bm', S => {           // the Second Howl: his shade far down the road: hollow glass beating, a low far note, a breath; the howl is the shade's, not a dog's
+    S.space('hall', 0.9);
+    S.partials({ set: 'glass', f: mf(79), dur: 3.0, beat: 2.4, peak: 0.06, am: [5, 0.3], pan: -0.3 });
+    S.voice({ at: 0.5, f: 118, f1: 100, dur: 1.8, vowel: 'u', breath: 5, lp: 1100, peak: 0.05, pan: 0.3 });
+    gwBreath(S, 1.6, 1.4, 0.05, 800, 0.4);
+  });
+  // the room's bed: the face of the moon under a black sky. Almost nothing: a very narrow band of air drifting up high, two high notes a hair apart rising and falling on their own slow breaths,
+  // dust settling a long way off. No room tone to speak of: there is no air here to move
+  loop('amb-maelis-moon', 'amb', L => {
+    const air = L.c(L.src('white', 0.9), L.f('bandpass', 6400, 14)), ag = L.g(0.012); L.lfo(air.frequency, 0.021, 700); L.lfo(ag.gain, 0.037, 0.009); L.c(air, ag, L.out);
+    const a = L.g(0.004), b = L.g(0.004), c = L.g(0.0025); L.lfo(a.gain, 0.027, 0.0035); L.lfo(b.gain, 0.019, 0.0035); L.lfo(c.gain, 0.013, 0.002);
+    L.c(L.osc('sine', mf(93)), a, L.out); L.c(L.osc('sine', mf(93) * 1.0017), b, L.out); L.c(L.osc('sine', mf(76)), c, L.out);
+    L.c(L.src('brown', 0.6), L.f('lowpass', 120), L.g(0.1), L.out);
+    L.c(L.crackle(0.04), L.f('highpass', 5200), L.g(0.01), L.out);
   }, 3);
 
   // ============================================================================================== 6. loops

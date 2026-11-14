@@ -326,8 +326,12 @@ const MG_ART = (() => {
     };
     armDraw(-1, eL);
     if (doLash) {
-      const raised = [dxA * 52, dyA * 40 - 150], hit = [dxA * 118, dyA * 118], k = A.strike * (1 - A.rest);
-      const tip = [lerp(raised[0], hit[0], k) + (1 - k) * Math.sin(t * 9) * 4, lerp(raised[1], hit[1], k)];
+      // the Lash (strikeBeats, draw-util.js): the bough is hauled up and back as the cast gathers (the whole of him leaning away with it), then whipped down onto
+      // the mark the moment the cast ends, carries a little past, and is let down; a heavy limb, so the tip shudders where it lands
+      const BM = strikeBeats(st), GA = BM.on ? BM.load * (1 - BM.hit) : 0;
+      const up = st.action && st.action.wk > 0 ? Math.min(1, BM.coil * 1.6) : 1, raised = [dxA * (lerp(70, 52, up) - 12 * GA), dyA * 40 - lerp(30, 150, up) - 22 * GA], hit = [dxA * 118, dyA * 118], k = BM.on ? (BM.hit + 0.16 * BM.ovr) * (1 - BM.rest) : A.strike * (1 - A.rest);
+      const tip = [lerp(raised[0], hit[0], k) + (1 - k) * Math.sin(t * 9) * 4 + (BM.on ? BM.shud * 3 : 0), lerp(raised[1], hit[1], k)];
+      bladeSmear(ctx, st, 'bo', BM.on && BM.u > 0.3 && BM.u < 0.9, tip[0] - 16, tip[1] - 10, tip[0] + 16, tip[1] + 10, '#ffd9a0', { a: 0.3, min: 6 });
       const sx = 38, sy = -92, c = [lerp((sx + tip[0]) / 2 + 40, (sx + tip[0]) / 2, k), Math.min(sy, tip[1]) - 80 * (1 - k)];
       bough(ctx, sx, sy, c[0], c[1], tip[0], tip[1], 26, 12, { seed: 7, col: K.bark, n: 14 });
       const ang = Math.atan2(tip[1] - c[1], tip[0] - c[0]);

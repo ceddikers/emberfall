@@ -87,6 +87,30 @@ for (const b of ['grubnak', 'skitterra', 'volkar', 'hollowking']) {
   const s = fs.readFileSync(path.join(JS, 'arena', 'bosses', b + '.js'), 'utf8');
   moves[b] = new Set([...s.matchAll(/(?:name|cast|label|move)\s*[:(,]\s*(['"])([A-Z][^'"]{2,30})\1/g)].map(m => m[2]));
 }
+// Vesper (Season 2): her casts are named in the CONTRACT's CASTS paragraph of her script (several are passed in as variables, so the quoted-name scan alone misses them); every one must
+// have a sound of its own
+const vesperSrc = fs.readFileSync(path.join(JS, 'arena', 'bosses', 'vesper.js'), 'utf8');
+moves.vesper = new Set([...vesperSrc.matchAll(/f\.cast\((['"])([A-Z][^'"]{2,30})\1/g)].map(m => m[2]));
+{
+  const i = vesperSrc.indexOf('// CASTS (names the cast bar'), j = vesperSrc.indexOf("the dance's name on Extreme).", i);
+  if (i >= 0 && j > i) for (const part of vesperSrc.slice(i, j).replace(/\/\/ */g, ' ').replace(/\([^)]*\)/g, ' ').replace(/Hard:|Extreme:/g, ',').split(/[,:;]/).slice(1)) { const n = part.trim().replace(/ \($/, ""); if (/^[A-Z][A-Za-z' -]{2,30}$/.test(n)) moves.vesper.add(n); }
+}
+// Ormun (Season 2): his casts are the quoted names of f.cast calls plus the CAST NAMES paragraph of his CONTRACT (a judgement is cast under its rule's name, held in a table); every one must
+// have a sound of its own
+const ormunSrc = fs.readFileSync(path.join(JS, 'arena', 'bosses', 'ormun.js'), 'utf8');
+moves.ormun = new Set([...ormunSrc.matchAll(/f\.cast\((?:[^'"(),]*\? *)?(['"])([A-Z][^'"]{2,30})\1/g)].map(m => m[2]));
+{
+  const i = ormunSrc.indexOf('// CAST NAMES:'), e = 'The Tide Weighs Too.', j = ormunSrc.indexOf(e, i);
+  if (i >= 0 && j > i) for (const part of ormunSrc.slice(i, j + e.length).replace(/\/\/ */g, ' ').replace(/\([^)]*\)/g, ' ').replace(/Hard:|Extreme:/g, ',').split(/[,:;.]/).slice(1)) { const n = part.trim(); if (/^[A-Z][A-Za-z' -]{2,30}$/.test(n)) moves.ormun.add(n); }
+}
+// Maelis (Season 2): her casts are the quoted names of f.cast calls (several are passed in as variables) plus the CASTS paragraph of her CONTRACT (Hard's and Extreme's sit in it inside brackets); every
+// one must have a sound of its own
+const maelisSrc = fs.readFileSync(path.join(JS, 'arena', 'bosses', 'maelis.js'), 'utf8');
+moves.maelis = new Set([...maelisSrc.matchAll(/f\.cast\((['"])([A-Z][^'"]{2,30})\1/g)].map(m => m[2]));
+{
+  const i = maelisSrc.indexOf('// CASTS (names the cast bar'), e = 'Totality (the enrage).', j = maelisSrc.indexOf(e, i);
+  if (i >= 0 && j > i) for (const part of maelisSrc.slice(i, j + e.length).replace(/\/\/ */g, ' ').replace(/\(names[^)]*\)/, ' ').replace(/\(the enrage\)/, ' ').replace(/= [^;)]*/g, ' ').replace(/HARD:|EXTREME:/g, ',').replace(/[()]/g, ' ').split(/[,:;.]/).slice(1)) { const n = part.trim(); if (/^[A-Z][A-Za-z' -]{2,30}$/.test(n)) moves.maelis.add(n); }
+}
 const tut = fs.readFileSync(path.join(JS, 'tutorial-data.js'), 'utf8');
 for (const b of Object.keys(moves)) {
   const i = tut.indexOf('\n    ' + b + ':'); if (i < 0) continue;
@@ -103,6 +127,19 @@ for (const [b, set] of Object.entries(moves)) for (const name of set) {
   if (!ans) mFall.push(`${b}: ${name}`);
 }
 
+// every cast of Vesper's sounds different from every other of hers
+const vSeen = new Map(), vDupes = [];
+for (const name of moves.vesper) { const k = JSON.stringify(SfxMap.forBossMove('vesper', name)); if (vSeen.has(k)) vDupes.push(`vesper: ${vSeen.get(k)} and ${name} both -> ${k}`); else vSeen.set(k, name); }
+console.log(`vesper: ${moves.vesper.size} casts, ${vSeen.size} distinct sounds`);
+for (const d of vDupes) dupes.push(d);
+const oSeen = new Map(), oDupes = [];
+for (const name of moves.ormun) { const k = JSON.stringify(SfxMap.forBossMove('ormun', name)); if (oSeen.has(k)) oDupes.push(`ormun: ${oSeen.get(k)} and ${name} both -> ${k}`); else oSeen.set(k, name); }
+console.log(`ormun: ${moves.ormun.size} casts, ${oSeen.size} distinct sounds`);
+for (const d of oDupes) dupes.push(d);
+const mSeen = new Map(), mDupes = [];
+for (const name of moves.maelis) { const k = JSON.stringify(SfxMap.forBossMove('maelis', name)); if (mSeen.has(k)) mDupes.push(`maelis: ${mSeen.get(k)} and ${name} both -> ${k}`); else mSeen.set(k, name); }
+console.log(`maelis: ${moves.maelis.size} casts, ${mSeen.size} distinct sounds`);
+for (const d of mDupes) dupes.push(d);
 console.log(`recipes: ${defined.size} one-shots, ${loops.size} loops`);
 console.log(`abilities: ${total} found in the kits, ${mapped} in the per-class table, ${fall.length} by fallback`);
 if (fall.length) for (const f of fall) console.log('  fallback  ' + f);

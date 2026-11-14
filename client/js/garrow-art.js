@@ -85,20 +85,41 @@ const GA_ART = (() => {
     let rate = 7;
     if (pose >= 0) { Object.assign(tg, PRE[POSES[pose]]); rate = RATE[POSES[pose]] || 7; }
     const name = pose >= 0 ? POSES[pose] : '';
-    if (name === 'pounce') {
+    // A cast gives the body its action at the cast's START (main.js 'bcast': t0 = the cast's end - 0.45), so a move that lands with the bar can be gathered across the whole cast:
+    // L is the landing (null when this pose was not cast: the pounce and the run come from banim and keep the clock of their own), u the seconds from it, e how far he has loaded
+    // (0 .. 1 over the time to 0.16 s before the landing, slow at both ends: he lowers and gathers like an animal, holds a beat, then goes).
+    const pr = st.props || {}, a0 = st.action, L = a0 && a0.type === 'attack' && pose >= 0 && a0.t0 + 0.45 > g.t0 - 0.05 && a0.t0 + 0.45 - g.t0 < 14 && t < a0.t0 + 1.7 ? a0.t0 + 0.45 : null;
+    const u = L != null ? t - L : 0, x = L != null ? clamp((t - g.t0) / Math.max(0.5, L - 0.16 - g.t0), 0, 1) : 1, e = 0.5 * x + 0.5 * x * x * (3 - 2 * x);
+    if (name === 'pounce' && typeof pr.gaDur === 'number') {   // (garrow-fx.js hands the banim's length over: he lands on the pounce's own landing, not at a fixed 0.58 s)
+      const Lp = Math.max(0.5, pr.gaDur - 0.1), q = tp - Lp;
+      if (q < -0.32) { const x2 = clamp(tp / Math.max(0.2, Lp - 0.34), 0, 1); tg.cr = lerp(0.3, 1, x2); tg.st = 0; tg.hh = lerp(0.12, 0.03, x2); tg.sl = 0.6 + 0.4 * x2; }
+      else if (q < 0) { tg.ar = 1; tg.st = 1; tg.cr = 0; tg.hh = 0.38; tg.hx = 12; tg.jw = 0.55; tg.sl = 0; if (q > -0.12) rate = 30; }
+      else { const v = Math.min(1, q / 0.6); tg.ar = 0; tg.cr = 0.6 * (1 - v); tg.hh = 0.22; tg.hx = 3; tg.jw = 0.3 * (1 - v); tg.ms = 2.4 - 1.1 * v; tg.sl = 0; tg.sk = 0.5 * Math.exp(-q / 0.14); rate = q < 0.2 ? 30 : 10; }
+    } else if (name === 'pounce') {
       if (tp < 0.3) { tg.cr = lerp(0.3, 1, Math.min(1, tp / 0.3)); tg.st = 0; }
       else if (tp < 0.58) { tg.ar = 1; tg.st = 1; tg.cr = 0; tg.hh = 0.38; tg.hx = 12; tg.jw = 0.55; tg.sl = 0; }
       else { const u = Math.min(1, (tp - 0.58) / 0.6); tg.ar = 0; tg.cr = 0.6 * (1 - u); tg.hh = 0.22; tg.hx = 3; tg.jw = 0.3 * (1 - u); tg.ms = 2.4 - 1.1 * u; tg.sl = 0; }
+    } else if (name === 'snap' && L != null) {
+      if (u < -0.16) { tg.hh = lerp(0.28, 0.2, e); tg.hx = lerp(0, -9, e); tg.jw = lerp(0.05, 0.75, e); tg.cr = 0.75 * e; tg.ch = 0.5 * e; tg.ey = lerp(1, 1.35, e); tg.ms = lerp(1, 1.7, e); tg.sl = 0.8; rate = 5; }
+      else if (u < 0) { tg.hh = 0.14; tg.hx = 21; tg.jw = lerp(1, 0.3, (u + 0.16) / 0.16); tg.cr = 0.3; tg.ey = 1.35; rate = 40; }   // (the lunge: the jaws are shut as the bar empties)
+      else if (u < 0.16) { tg.hh = 0.16; tg.hx = 16; tg.jw = 0; tg.cr = 0.15; tg.sk = 0.35 * (1 - u / 0.16); rate = 30; }
+      else { tg.hh = 0.26; tg.hx = 3; tg.jw = 0; rate = 5; }
     } else if (name === 'snap') {
       if (tp < 0.42) { tg.hh = 0.5; tg.hx = -7; tg.jw = 0.25; }
       else if (tp < 0.64) { tg.hh = 0.54; tg.hx = -5; tg.jw = 1; tg.ey = 1.25; }
       else if (tp < 0.76) { tg.hh = 0.14; tg.hx = 19; tg.jw = 0.7; rate = 22; }
       else if (tp < 0.9) { tg.hh = 0.16; tg.hx = 15; tg.jw = 0; rate = 26; }
       else { tg.hh = 0.26; tg.hx = 3; tg.jw = 0; rate = 5; }
+    } else if (name === 'howl' && L != null) {
+      if (u < -0.16) { tg.hh = lerp(0.3, 0.85, e); tg.ch = e; tg.hx = lerp(0, -2, e); tg.jw = 0.12 * e; tg.ey = lerp(1, 1.3, e); tg.ms = lerp(1, 2.0, e); tg.cr = 0.2 * e; rate = 4; }   // (the chest fills and the head comes up by degrees; the howl is let go with the bar)
+      else { tg.hh = 1; tg.hx = -3; tg.ch = 1; tg.jw = 0.86 + 0.07 * Math.sin(t * 21); rate = u > -0.1 ? 22 : 8; }
     } else if (name === 'howl') {
       const u = Math.min(1, tp / 0.8), e = easeOut(u);
       tg.hh = lerp(0.3, 1, e); tg.ch = u; tg.hx = lerp(0, -3, e);
       tg.jw = tp < 0.8 ? 0.25 * u : 0.86 + 0.07 * Math.sin(t * 21);
+    } else if (name === 'rime' && L != null) {
+      if (u < -0.16) { tg.ch = 0.8 * e; tg.hh = lerp(0.3, 0.38, e); tg.jw = 0; tg.ms = lerp(1, 1.6, e); tg.cr = 0.25 * e; rate = 5; }
+      else { tg.ch = 0.4; tg.hh = 0.3; tg.jw = 0.55; rate = 18; }
     } else if (name === 'rime') {
       if (tp < 0.35) { tg.ch = 0.7; tg.hh = 0.34; tg.jw = 0; } else tg.jw = 0.5;
     } else if (name === 'enrage') tg.jw = 0.42 + 0.1 * Math.sin(t * 17);

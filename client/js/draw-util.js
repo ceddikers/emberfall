@@ -165,6 +165,79 @@ function swing(p) {
   return -1.2 * (1 - easeOut((p - 0.55) / 0.45));
 }
 function pulse(p) { return p < 0 ? 0 : Math.sin(p * Math.PI); }
+// The long gather of a heavy cast (cosmetic, boss-weight.js decides which casts are heavy). main.js 'bcast' stamps the action with w0 (when the cast bar began) and
+// wk (how heavy the move is: 0 = an ordinary cast, which gathers only in the last 0.30 s as before), and the body then loads slowly across the whole bar: load
+// climbs from 0 at the start of the cast to peak (1 for a light move, up to about 1.6 for a giant's: a deeper coil, so the swing out of it is longer) by the time the old
+// gather would begin (0.45 s before the blow lands), and stays there through a held beat (longer on a long cast) before the strike, which is exactly the old one and lands on the same frame. on: true from the first moment of the cast; hold: 0..1 once
+// the coil is full (a tremor of strain); left: seconds to the landing; q: seconds since it. Pure: it reads the clock and the action and changes nothing.
+function windUp(st) {
+  const a = st.action, z = { on: false, load: 0, coil: 0, peak: 1, hold: 0, wk: 0, left: 0, q: -1, D: 0 };
+  if (!a || a.type !== 'attack' || !(a.wk > 0) || a.w0 == null) return z;
+  const T = actT(st), land = a.t0 + 0.45, D = land - a.w0, c = T - a.w0;
+  if (c < 0 || D < 0.9) return z;
+  z.wk = a.wk; z.D = D; z.left = land - T; z.q = T - land; z.peak = 1 + 0.45 * Math.min(a.wk, 1.4);
+  if (T < land) {
+    const full = Math.max(0.3, D - 0.45 - Math.min(0.5, 0.12 * D)), x = Math.min(1, c / full), w = a.wk > 1 ? a.wk : 1;
+    const e = x * x * (3 - 2 * x), p = Math.pow(x, 0.9 + 0.5 * w * (a.wk > 0.7 ? 1 : 0.3));   // (a heavy body is slow to start and comes on harder; a light one is quicker to draw)
+    z.coil = x >= 1 ? 1 : 0.4 * x + 0.6 * (p * p * (3 - 2 * p) * 0.55 + e * 0.45); z.load = z.coil * z.peak;
+    z.hold = x >= 1 ? Math.min(1, (c - full) / 0.25) : 0;
+    z.on = true;
+  }
+  return z;
+}
+// A boss's blow in beats (cosmetic: it reads the clock and nothing else). A cast gives the body one 'attack' action whose t0 is 0.45 s before the blow
+// lands (main.js 'bcast'; a boss auto lands there too), so the beats are fixed in seconds from t0 and not in the action's progress (casts run 1.2 s,
+// autos 1.0 s): gather 0 -> 0.30 (load), a held beat to 0.34, the strike 0.34 -> 0.45 (hit reaches 1 the moment the cast ends: the landing does not
+// move), the follow-through to about 0.62 (ovr: the overshoot, then the recoil), the settle to the action's end (rest). land / shud: the weight of the
+// landing (a decaying dip and a shudder), trail: how far cloth and hair that hang off him are still swinging through. All 0 when there is no swing.
+function strikeBeats(st) {
+  const a = st.action, z = { u: -1, on: false, load: 0, hit: 0, ovr: 0, rest: 0, land: 0, shud: 0, trail: 0, cloth: 0, p: -1, wind: false, hold: 0, coil: 0, peak: 1 };
+  const c01 = v => v < 0 ? 0 : v > 1 ? 1 : v, sm = v => { v = c01(v); return v * v * (3 - 2 * v); };
+  const D = a && a.dur > 1.21 ? 1.2 : a ? a.dur : 0, u = a && a.type === 'attack' ? (actT(st) - a.t0) * D / a.dur : -1;   // (a longer action, a roar or a demo, plays the same beats slower)
+  const W = windUp(st);
+  if (u >= 0 && u <= D) {
+    const q = u - 0.45, end = Math.min(D, 1.12);
+    z.u = u; z.on = true; z.p = u / D;
+    const heavy = a.wk > 0 && a.w0 != null, pk = 1 + 0.45 * Math.min(a.wk, 1.4);
+    z.load = heavy ? pk : sm(u / 0.30);   // (a heavy cast has gathered the whole way by now: windUp)
+    z.hit = u < 0.34 ? 0 : Math.pow(c01((u - 0.34) / 0.11), 2);
+    z.ovr = q <= 0 ? 0 : q < 0.08 ? easeOut(q / 0.08) : Math.exp(-(q - 0.08) / 0.16);
+    z.rest = sm((u - 0.60) / Math.max(0.1, end - 0.60));
+    z.land = q < 0 ? 0 : Math.exp(-q / 0.13);
+    z.shud = q < 0 ? 0 : Math.sin(q * 48) * Math.exp(-q / 0.10);
+    z.trail = sm((u - 0.40) / 0.20) * Math.exp(-Math.max(0, u - 0.62) / 0.30);
+    z.hold = W.hold; if (heavy) { z.coil = 1; z.peak = pk; }   // (coil: how far the long gather of a heavy cast has got, 0..1, and peak: how deep it goes, which load reaches; 0 / 1 when the cast is an ordinary one)
+  } else if (W.on && u < 0) { z.on = true; z.wind = true; z.u = u; z.p = 0; z.load = W.load; z.hold = W.hold; z.coil = W.coil; z.peak = W.peak; }   // (the long gather of a heavy cast, before the action itself begins)
+  // cloth: a spring that follows the body's lunge (hit while it is out, back to 0 as it settles) a little late and rings past it, so what hangs off him
+  // lags behind the blow (positive), then swings through (negative) and settles. Stepped once per frame (st._bk keeps it); the clock may stop or jump.
+  const bk = st._bk || (st._bk = { t: st.t, x: 0, v: 0 }), tgt = z.hit * (1 - z.rest);
+  let dt = st.t - bk.t;
+  if (dt > 0.25 || dt < 0) { bk.x = tgt; bk.v = 0; dt = 0; }
+  for (; dt > 1e-6; dt -= 1 / 120) { const h = Math.min(dt, 1 / 120); bk.v += (150 * (tgt - bk.x) - 9 * bk.v) * h; bk.x += bk.v * h; }
+  bk.t = st.t; z.cloth = tgt - bk.x;
+  return z;
+}
+
+// A swept band behind a fast blade (cosmetic): remembers the last few places of the grip and the tip (st._sm[key], in the figure's own frame) and, while the
+// tip is moving quickly, paints the ground between them, fainter the older it is, so a blow leaves a clean after-image along the weapon's path. active: false
+// forgets it. o: { min (px per frame of tip travel before it shows), a (alpha), add (false: plain fill instead of light) }
+function bladeSmear(ctx, st, key, active, gx, gy, tx, ty, color, o) {
+  const m = st._sm || (st._sm = {}), H = m[key] || (m[key] = []);
+  if (!active) { H.length = 0; return; }
+  const l = H[H.length - 1];
+  if (l && st.t - l[4] > 0.15) H.length = 0;
+  if (!l || st.t > l[4] + 1e-4) { H.push([gx, gy, tx, ty, st.t]); if (H.length > 7) H.shift(); }
+  const mn = o && o.min != null ? o.min : 5, al = o && o.a != null ? o.a : 0.5, n = H.length;
+  if (n < 2) return;
+  ctx.save(); if (!o || o.add !== false) ctx.globalCompositeOperation = 'lighter';
+  for (let i = n - 1; i >= 1; i--) {
+    const p = H[i], q = H[i - 1];
+    if (Math.hypot(p[2] - q[2], p[3] - q[3]) < mn) continue;
+    ctx.beginPath(); ctx.moveTo(q[0], q[1]); ctx.lineTo(q[2], q[3]); ctx.lineTo(p[2], p[3]); ctx.lineTo(p[0], p[1]); ctx.closePath();
+    ctx.fillStyle = rgba(color, al * Math.pow(i / (n - 1), 1.4)); ctx.fill();
+  }
+  ctx.restore();
+}
 
 // Painted art that may not be in yet (a tank's own taunt icon, say). The server is asked once per file per session
 // and the answer kept: ok(path) is true once the file has loaded, false once it's known to be missing, null while

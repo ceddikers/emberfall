@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Vesper: the Argent Hall</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body { margin: 0; background: #0b0b0d; color: #cfc8bc; font: 13px/1.4 system-ui, sans-serif; }
+  header { padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; border-bottom: 1px solid #222; }
+  select, button { background: #17171b; color: #cfc8bc; border: 1px solid #333; border-radius: 5px; padding: 4px 8px; font: inherit; }
+  canvas { width: auto; max-width: 100%; max-height: calc(100vh - 48px); display: block; margin: 0 auto; background: #04060b; }
+  #err { color: #ff9a8a; padding: 4px 16px; white-space: pre-wrap; }
+</style></head>
+<body>
+<header>
+  <b>Vesper: the Argent Hall</b>
+  <label>view <select id="view"><option value="hall">game view, hall</option><option value="north">north glass (wide)</option><option value="east">east glass (wide)</option><option value="full">whole room box</option></select></label>
+  <label>mirror <select id="mirror"><option value="north">north (Acts I-III)</option><option value="east">east (Act IV)</option><option value="dark">dark (Act V)</option><option value="line">line (Act V)</option></select></label>
+  <label><input type="checkbox" id="shiver"> vsshiver</label>
+  <label><input type="checkbox" id="tells" checked> sample telegraphs</label>
+  <label><input type="checkbox" id="knights" checked> knights</label>
+  <label><input type="checkbox" id="pause"> pause</label>
+  <span id="fps"></span>
+</header>
+<div id="err"></div>
+<canvas id="cv" width="1600" height="900"></canvas>
+<script>window.__errs = []; window.onerror = (m, s, l) => { window.__errs.push(m + ' (' + String(s).split('/').pop() + ':' + l + ')'); document.getElementById('err').textContent = window.__errs.join(' | '); };</script>
+<script src="../../client/js/draw-util.js"></script>
+<script src="../../client/js/data.js"></script>
+<script src="../../client/js/bosses.js"></script>
+<script src="../../client/js/arena/shapes.js"></script>
+<script src="../../client/js/arena/boss-tells.js"></script>
+<script src="../../client/js/arena/arena-view.js"></script>
+<script src="../../client/js/vesper-art.js"></script>
+<script src="../../client/js/vesper-room.js"></script>
+<script>
+  // ?view=hall|north|east|full  ?mirror=north|east|dark|line  ?t=seconds  ?tells=0  ?knights=0  ?shiver=1  ?z= ?cx= ?cy= (a free camera)  ?scale=1.5 (the floor's pixel scale)
+  // ?flip=east  starts in the north state and sends 'east' at t+0.5 (to see the turn: use ?t=  to land inside it, ?flipat=seconds after the start)
+  const q = new URLSearchParams(location.search), $ = id => document.getElementById(id);
+  for (const k of ['view', 'mirror']) if (q.has(k)) $(k).value = q.get(k);
+  if (q.get('tells') === '0') $('tells').checked = false;
+  if (q.get('knights') === '0') $('knights').checked = false;
+  if (q.get('shiver') === '1') $('shiver').checked = true;
+  if (typeof ARENA_DEFS !== 'undefined' && !ARENA_DEFS.vesper) ARENA_DEFS.vesper = { kind: 'rect', hw: 480, hh: 260, corner: 0 };   // (the script agent's shapes.js entry, until it lands)
+  ARENA.use('vesper');
+  ArenaView.buildFloor('vesper', Number(q.get('scale')) || 1);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  let t = Number(q.get('t')) || 30, last = performance.now(), frames = 0, acc = 0, evStart = t, flipped = false;
+  const room = { ev: {} }; ArenaView.liveRoom = room;
+  const sendMirror = m => { room.ev.vsmirror = { k: 'vsmirror', m, dur: 9999, start: t, end: t + 9999 }; };
+  sendMirror($('mirror').value); let sent = $('mirror').value;
+  $('mirror').onchange = () => { if ($('mirror').value !== sent) { sent = $('mirror').value; sendMirror(sent); } };
+  const knight = { t: 0, moving: false, action: null, phase: 0, props: {} }, glass = { t: 0, moving: false, action: null, phase: 0, props: {} };
+  function draw() {
+    const W = cv.width, H = cv.height, { bx, by } = ArenaView.floorBox, hh = ARENA.hh, hw = ARENA.hw;
+    if (q.get('flip') && !flipped && t >= (evStart + (Number(q.get('flipat')) || 1))) { flipped = true; $('mirror').value = q.get('flip'); sent = q.get('flip'); sendMirror(sent); }
+    if ($('shiver').checked) room.ev.vsshiver = { k: 'vsshiver', dur: 1, start: t - 0.2 + ((t * 0.5) % 1) * 0, end: t + 0.9 }; else delete room.ev.vsshiver;
+    const view = $('view').value, z0 = Math.min(W, H) / 960;
+    const cam = { hall: [0.94, 0, 0], north: [0.62, 0, -hh - 60], east: [0.55, hw + 140, 0], full: [Math.min(W / (bx * 2), H / (by * 2)), 0, 0] }[view];
+    const z = q.has('z') ? Number(q.get('z')) : cam[0], cx = q.has('cx') ? Number(q.get('cx')) : cam[1], cy = q.has('cy') ? Number(q.get('cy')) : cam[2];
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#04060b'; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(z, z); ctx.translate(-cx, -cy);
+    ArenaView.drawFloor(ctx, 'vesper', Math.min(1.5, z));
+    ArenaView.drawAmbient(ctx, t);
+    if ($('tells').checked) {   // (the tells' red and blue, roughly: a wash and a solid rim; one of each in the glass too)
+      const tl = (fill, rim) => { ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = rim; ctx.lineWidth = 2.5; ctx.stroke(); };
+      ctx.beginPath(); ctx.rect(-300, -200, 640, 110); tl('rgba(255,59,47,0.28)', '#ff3b2f');
+      ctx.beginPath(); ctx.arc(-260, 120, 90, 0, TAU); tl('rgba(80,150,255,0.26)', '#5aa0ff');
+      ctx.beginPath(); ctx.arc(280, 160, 110, 0, TAU); ctx.arc(280, 160, 46, 0, TAU, true); tl('rgba(255,59,47,0.28)', '#ff3b2f');
+      ctx.beginPath(); ctx.arc(40, 40, 64, 0, TAU); tl('rgba(80,150,255,0.26)', '#5aa0ff');
+      const m = $('mirror').value;
+      if (m === 'north') { ctx.beginPath(); ctx.arc(-120, -520 - 120, 90, 0, TAU); tl('rgba(255,59,47,0.28)', '#ff3b2f'); }
+      if (m === 'east') { ctx.beginPath(); ctx.arc(960 + 160, 20, 90, 0, TAU); tl('rgba(255,59,47,0.28)', '#ff3b2f'); }
+      [['#7aa0ff', -200, 20], ['#ffd27a', 120, -140], ['#7aff9a', 220, 70], ['#ff9ad0', -60, 180]].forEach(([col, x, y]) => circle(ctx, x, y, 11, col, OUT, 2.5));
+    }
+    if ($('knights').checked && typeof drawBoss === 'function') {   // (the two knights at the mirrored spots: Vesper at (-80, -110), the Glass Knight opposite her across the wall)
+      const m = $('mirror').value;
+      knight.t = t; glass.t = t;
+      const ax = -80, ay = -110, fa = m === 'east' ? 0 : -Math.PI / 2;
+      drawBoss(ctx, { id: 'vesper' }, ax, ay, fa, knight, 1.3);
+      if (m === 'north') drawBoss(ctx, { id: 'vesperglass' }, ax, -2 * hh - ay, Math.PI / 2, glass, 1.3);
+      if (m === 'east') drawBoss(ctx, { id: 'vesperglass' }, 2 * hw - ax, ay, Math.PI, glass, 1.3);
+    }
+    ctx.restore();
+  }
+  window.__argent = { draw, setT: v => { t = v; evStart = v; draw(); }, state: m => { $('mirror').value = m; sendMirror(m); } };
+  function frame(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (!$('pause').checked) t += dt;
+    try { draw(); } catch (e) { if (window.__errs.length < 3) { window.__errs.push(e.message + ' ' + (e.stack || '').split('\n')[1]); $('err').textContent = window.__errs.join(' | '); } }
+    frames++; acc += dt;
+    if (acc > 1) { $('fps').textContent = Math.round(frames / acc) + ' fps'; frames = 0; acc = 0; }
+    requestAnimationFrame(frame);
+  }
+  if (q.has('sim')) { for (let i = 0, n = Math.round(Number(q.get('sim')) * 30); i < n; i++) { t += 1 / 30; draw(); } $('pause').checked = true; }   // ?sim=seconds: step the clock at 30 fps and stop (for screenshots of a change)
+  requestAnimationFrame(frame);
+</script>
+</body></html>

@@ -160,6 +160,16 @@ const VFX = (() => {
         x.globalCompositeOperation = 'source-over';
         x.strokeStyle = 'rgba(255,255,255,0.9)'; x.lineWidth = 1.2; x.beginPath(); x.moveTo(0, -s * 0.4); x.lineTo(0, s * 0.44); x.stroke();
       }); break;
+      case 'flame': c = makeCanvas(64, (x, s) => {
+        // (hero pilot) one tongue of fire standing on the floor: a white-yellow heart low in the body, the colour round it, a dark red rim so it
+        // reads on a pale floor, the tip drawn out. Spawn it with add: false (an opaque body) and rot 0 (tip up)
+        const tear = () => { x.beginPath(); x.moveTo(s * 0.5, s * 0.02);
+          x.quadraticCurveTo(s * 0.82, s * 0.38, s * 0.74, s * 0.68); x.quadraticCurveTo(s * 0.68, s * 0.96, s * 0.5, s * 0.96);
+          x.quadraticCurveTo(s * 0.32, s * 0.96, s * 0.26, s * 0.68); x.quadraticCurveTo(s * 0.2, s * 0.4, s * 0.5, s * 0.02); x.closePath(); };
+        const gr = x.createRadialGradient(s * 0.5, s * 0.72, 0, s * 0.5, s * 0.66, s * 0.42);
+        gr.addColorStop(0, 'rgba(255,250,225,1)'); gr.addColorStop(0.25, col(1)); gr.addColorStop(0.68, col(0.95)); gr.addColorStop(1, `rgba(${(r * 0.5) | 0},${(g * 0.16) | 0},${(b * 0.1) | 0},0.95)`);
+        tear(); x.fillStyle = gr; x.fill(); x.lineJoin = 'round'; x.lineWidth = 1.8; x.strokeStyle = `rgba(${(r * 0.32) | 0},${(g * 0.1) | 0},${(b * 0.06) | 0},0.8)`; x.stroke();
+      }); break;
       default: return sprite('glow', color);
     }
     cache.set(key, c);
@@ -222,6 +232,7 @@ const VFX = (() => {
       if (p.z < 0 && p.bounce) { p.z = 0; p.vz *= -0.35; p.vx *= 0.6; p.vy *= 0.6; }
       else if (p.z < 0 && p.g) { p.z = 0; p.vz = 0; p.vx *= 0.8; p.vy *= 0.8; }
       if (p.vr) p.rot += p.vr * dt;
+      if (p.sway) p.x += Math.sin(now * (p.swayW || 6) + p.t0 * 9) * p.sway * dt;   // (hero pilot: an ember or a mote drifting on the air)
       if (p.orbit) { // circling a point (auras, swirls)
         p.orbit.a += p.orbit.w * dt; p.orbit.r += (p.orbit.dr || 0) * dt;
         const c = p.orbit.follow || p.orbit;
@@ -246,6 +257,7 @@ const VFX = (() => {
   function drawPart(ctx, p) {
     const age = now - p.t0, q = age / p.life;
     let a = p.a * (q < (p.fadeIn || 0.08) ? q / (p.fadeIn || 0.08) : 1) * (1 - Math.pow(q, p.fadePow || 1.6));
+    if (p.flick) a *= 0.7 + 0.3 * Math.sin(now * p.flick + p.t0 * 13);   // (hero pilot: a spark guttering as it goes out)
     if (a <= 0.01) return;
     const size = p.size + ((p.size1 ?? p.size) - p.size) * q;
     const img = p.img || sprite(p.kind || 'glow', p.color);
@@ -770,10 +782,12 @@ const VFX = (() => {
     // ground decal that lingers (scorch, crack)
     decal(x, y, o = {}) {
       fx({ dur: o.dur ?? 3, layer: 'ground', draw: (c, p, t, e) => {
-        const k = Math.min(1, (1 - p) / 0.5) * e.a * (o.a ?? 0.5);
+        // (o.heal: a boss's cracks close up over the last 2.2 s instead of only fading: they shorten toward the middle as dust settles in)
+        const rc = o.heal ? Math.max(0, Math.min(1, (p * (o.dur ?? 3) - ((o.dur ?? 3) - 2.2)) / 2.2)) : 0, hs = rc * rc * (3 - 2 * rc);
+        const k = (o.heal ? Math.min(1, (1 - p) * (o.dur ?? 3) / 0.4) : Math.min(1, (1 - p) / 0.5)) * e.a * (o.a ?? 0.5);
         if (o.style === 'crack') {
-          c.globalAlpha = Math.min(1, k); c.strokeStyle = '#140c08'; c.lineWidth = 2.5; c.lineCap = 'round';
-          for (let i = 0; i < 7; i++) { const a = i * 0.9 + (o.seed || 0); let px = x, py = y; c.beginPath(); c.moveTo(px, py); for (let s = 0; s < 3; s++) { px += Math.cos(a + Math.sin(s * 3 + i) * 0.5) * (o.r ?? 40) / 3; py += Math.sin(a + Math.sin(s * 3 + i) * 0.5) * (o.r ?? 40) / 3 * 0.7; c.lineTo(px, py); } c.stroke(); }
+          c.globalAlpha = Math.min(1, k); c.strokeStyle = '#140c08'; c.lineWidth = 2.5 * (1 - 0.5 * hs); c.lineCap = 'round';
+          for (let i = 0; i < 7; i++) { const a = i * 0.9 + (o.seed || 0); let px = x, py = y; c.beginPath(); c.moveTo(px, py); for (let s = 0; s < 3; s++) { const sl = (o.r ?? 40) / 3 * (1 - 0.85 * hs); px += Math.cos(a + Math.sin(s * 3 + i) * 0.5) * sl; py += Math.sin(a + Math.sin(s * 3 + i) * 0.5) * sl * 0.7; c.lineTo(px, py); } c.stroke(); }
         } else {
           const R = o.r ?? 40;
           c.globalAlpha = Math.min(1, k); c.drawImage(sprite('char', ''), x - R, y - R * 0.7, R * 2, R * 1.4); c.globalAlpha = 1;
@@ -1033,12 +1047,17 @@ const VFX = (() => {
       const flames = Array.from({ length: o.flames ?? 5 }, () => { const a = Math.random() * Math.PI * 2, d = rand(0.3, 0.9) * r; return { x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.6, ph: rand(0, 6), s: rand(0.7, 1.2), life: rand(0.5, 0.9) }; });
       const trace = c => { for (const pts of cracks) { c.moveTo(x + pts[0][0], y + pts[0][1]); for (let i = 1; i < pts.length; i++) c.lineTo(x + pts[i][0], y + pts[i][1]); } };
       fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
-        const k = e.a * Math.min(1, (1 - p) / 0.4), heat = Math.max(0, 1 - p * 1.5);
+        // (o.heal: a boss's mark recovers instead of just fading: the pit and its cracks close up as dust settles into them over the last 2.2 s)
+        const rc = o.heal ? Math.max(0, Math.min(1, (p * dur - (dur - 2.2)) / 2.2)) : 0, hs = rc * rc * (3 - 2 * rc);
+        const k = e.a * (o.heal ? Math.min(1, (1 - p) * dur / 0.4) : Math.min(1, (1 - p) / 0.4)), heat = Math.max(0, 1 - p * 1.5);
         // the pit: a dark scorch with a darker lip (source-over, so it reads on light floors)
-        c.globalAlpha = Math.min(1, k * (o.a ?? 0.8) * 0.8); c.drawImage(sprite('pit', ''), x - r, y - r * 0.6, r * 2, r * 1.2);
+        c.globalAlpha = Math.min(1, k * (o.a ?? 0.8) * 0.8); c.drawImage(sprite('pit', ''), x - r * (1 - 0.8 * hs), y - r * 0.6 * (1 - 0.8 * hs), r * 2 * (1 - 0.8 * hs), r * 1.2 * (1 - 0.8 * hs));
+        if (hs > 0.02) { c.globalAlpha = Math.min(1, k * 0.4 * hs); c.fillStyle = o.dust || '#8a7e70'; c.beginPath(); c.ellipse(x, y, r * (0.9 - 0.4 * hs), r * 0.55 * (0.9 - 0.4 * hs), 0, 0, Math.PI * 2); c.fill(); }
+        if (hs > 0.02) { c.save(); c.translate(x, y); c.scale(1 - 0.75 * hs, 1 - 0.75 * hs); c.translate(-x, -y); }
         // cracks: ink first, then the heat glowing inside them while it lasts
         c.lineCap = 'round'; c.lineJoin = 'round';
         c.globalAlpha = k * 0.85; c.strokeStyle = '#1a0e08'; c.lineWidth = 3.5; c.beginPath(); trace(c); c.stroke();
+        if (hs > 0.02) c.restore();
         if (heat > 0.02) {
           c.globalCompositeOperation = 'lighter'; c.globalAlpha = k * heat;
           c.strokeStyle = glow; c.lineWidth = 2; c.beginPath(); trace(c); c.stroke();
@@ -1083,11 +1102,14 @@ const VFX = (() => {
       };
       fx({ dur, layer: 'ground', draw: (c, p, t, e) => {
         c.save(); if (typeof ARENA !== 'undefined') { ARENA.trace(c, 2); c.clip(); }
-        const life = p * dur, k = e.a * Math.min(1, life / 0.08) * Math.min(1, (dur - life) / 1.6) * (o.a ?? 1), heat = Math.max(0, 1 - life / heatT);   // (o.a: a boss's aftermath cap)
-        c.globalAlpha = k * 0.5; c.fillStyle = o.lip || '#5a3418'; trace(c, 1.9);
-        c.globalAlpha = k * 0.95; c.fillStyle = '#120804'; trace(c, 1);
-        c.strokeStyle = '#1a0e08'; c.lineWidth = 2; c.lineCap = 'round'; c.globalAlpha = k * 0.85;
-        for (const cr of cracks) { c.beginPath(); cr.pts.forEach(([u, v], i) => { const [x, y] = at(cr.q, 0); const px = x + ca * u - sa * v, py = y + sa * u + ca * v; i ? c.lineTo(px, py) : c.moveTo(px, py); }); c.stroke(); }
+        // (o.heal: a boss's mark recovers instead of just fading: over the last 2.2 s the cut narrows and the side cracks shorten as dust sifts into it)
+        const life = p * dur, rc = o.heal ? Math.max(0, Math.min(1, (life - (dur - 2.2)) / 2.2)) : 0, hs = rc * rc * (3 - 2 * rc);
+        const k = e.a * Math.min(1, life / 0.08) * (o.heal ? Math.min(1, (dur - life) / 0.4) : Math.min(1, (dur - life) / 1.6)) * (o.a ?? 1), heat = Math.max(0, 1 - life / heatT);   // (o.a: a boss's aftermath cap)
+        c.globalAlpha = k * 0.5; c.fillStyle = o.lip || '#5a3418'; trace(c, 1.9 * (1 - 0.85 * hs));
+        c.globalAlpha = k * 0.95; c.fillStyle = '#120804'; trace(c, 1 - 0.92 * hs);
+        if (hs > 0.02) { c.globalAlpha = k * 0.55 * hs; c.fillStyle = o.dust || '#8a7e70'; trace(c, 1.25 * (1 - 0.8 * hs)); }
+        c.strokeStyle = '#1a0e08'; c.lineWidth = 2 * (1 - 0.5 * hs); c.lineCap = 'round'; c.globalAlpha = k * 0.85;
+        for (const cr of cracks) { c.beginPath(); cr.pts.slice(0, hs > 0 ? Math.max(1, Math.ceil(cr.pts.length * (1 - 0.85 * hs))) : cr.pts.length).forEach(([u, v], i) => { const [x, y] = at(cr.q, 0); const px = x + ca * u - sa * v, py = y + sa * u + ca * v; i ? c.lineTo(px, py) : c.moveTo(px, py); }); c.stroke(); }
         if (heat > 0.01) {
           c.globalCompositeOperation = 'lighter'; c.globalAlpha = k * heat * 0.8; c.fillStyle = o.heat || '#ff5a14'; trace(c, 0.45);
           c.globalCompositeOperation = 'source-over';
@@ -1556,5 +1578,5 @@ const VFX = (() => {
   function clear() { parts.length = 0; effects.length = 0; oldest = -1; }
   function mute(on) { muted = !!on; }
 
-  return Object.assign({ update, draw, spawn, fx, sprite, setScale, clear, mute, glowAt, neonRing, neonPath, get count() { return parts.length; }, get scale() { return scale; }, streakTo, tint }, B);
+  return Object.assign({ update, draw, spawn, fx, sprite, setScale, clear, mute, glowAt, neonRing, neonPath, get count() { return parts.length; }, get effects() { return effects.length; }, get scale() { return scale; }, streakTo, tint }, B);
 })();

@@ -797,7 +797,7 @@ const SoundHooks = (() => {
   //   caelum     tgx clGlow right after The Shadow Lengthens or Sunless · roomev caelum-carried · roomev caelum-fallen (the stars land 1 s before it ends) · hmark clStar on you
   //              · propfx break of a starshard (burst or spent) · roomev caelum-pull wires the drift hum (svWire: the Pull is the same svdrift message the Sovereign's drift is)
   //   garrow     (set six) see the Long Mere block below s3Wire: its moments ride the same wrapped handlers (gwWire)
-  const S3_BOSS = new Set(['corvane', 'brannoc', 'morrowoak', 'caelum', 'garrow']);
+  const S3_BOSS = new Set(['corvane', 'brannoc', 'morrowoak', 'caelum', 'garrow', 'vesper', 'ormun', 'maelis']);
   let s3Wired = false, s3Boss = null, s3Cast = { name: '', at: 0, dur: 0 }, s3Gale = 0, s3Circle = 0, s3PostAt = 0;
   const s3Tags = new Map();   // tg id -> { tag, slot, cast, at } until it lands
   const s3Clock = () => Date.now() / 1000;
@@ -805,7 +805,7 @@ const SoundHooks = (() => {
   const s3Pt = (x, y) => (x == null || y == null ? null : { x, y });
   function s3Note(bossId, pull) {
     s3Boss = bossId;
-    if (pull) { s3Tags.clear(); s3Gale = s3Circle = s3PostAt = 0; s3Cast = { name: '', at: 0, dur: 0 }; gwReset(); }
+    if (pull) { s3Tags.clear(); s3Gale = s3Circle = s3PostAt = 0; s3Cast = { name: '', at: 0, dur: 0 }; gwReset(); vsReset(); omReset(); mlReset(); }
     if (S3_BOSS.has(bossId)) s3Wire();
   }
   function s3Wire() {
@@ -899,6 +899,9 @@ const SoundHooks = (() => {
       else if (s3Boss === 'brannoc' && m.d === 300) play('bm-brannoc-m-carry-throw', { vol: 0.85, key: 'br-carry', minGap: 0.5 });
     });
     gwWire(wrap);
+    vsWire(wrap);
+    omWire(wrap);
+    mlWire(wrap);
   }
 
   // ---------------------------------------------------------------- the Long Mere (boss id garrow, set 6, Season 2)
@@ -1007,6 +1010,366 @@ const SoundHooks = (() => {
     wrap('fight', m => { if (s3Boss === 'garrow' && (m.s === 'clear' || m.s === 'wipe')) gwBedStop(2.5); });   // (the result: the lake's bed goes with the fight)
   }
 
+  // ---------------------------------------------------------------- the Argent Hall (boss id vesper, set 6, Season 2)
+  // The casts sound from bossCast (SfxMap: bm-vesper-*): the builds, each ending on a held breath. The landings and the room's moments are read off the host's messages (vsWire, handed
+  // s3Wire's wrap), every one a recipe bm-vesper-m-* (sfx-synth.js, the Vesper block). The staged beats (the wall, the mirror turning, The Line, the enrage, the kill: bm-vesper-w-) are
+  // walls/vesper.js's and are not sounded here.
+  //   tgx by tag (the room letter says where it lands; a move in both rooms plays the hall's sound and the glass's answer a beat behind): vbEvenfall · vhVerdict / vgVerdict · vgLay (a shard
+  //   in the glass, each of a cast a step higher) · vhShard (Double Glass's row) · vhCounter / vgCounter · vhCross + vgCross and vhBackhand + vgBackhand · vbThread / vbTwoThread (the thread
+  //   parts) · vbRing · vbHair · vbOpen after The Hall or Out of Step (the other openers' raidwides belong to the staged beats)
+  //   roomev vsfracture (the twin struck: yours full, another's faint) · vsstep (the Glass Knight steps out of line, and back more softly) · vscut (a cut drawn, climbing the scale; its landing is
+  //   banim cut: Vesper's, the Glass Knight's, the last of both; Extreme's traded cuts swap voices) · vsthread (the thread locks taut; the second of Two Threads a fifth up) · vspull and vsflip (pulled
+  //   through the glass, and back; a pair trading at vswall2 is one passing sound) · vsroundmet (a round of soaks answered; the last round met is the held beat's) · vstrade · vsbackhand ·
+  //   vshand (the mirror lands, at s on) · vshandbreak
+  //   hmark vsaim · vschain · vslag · vswrong on you
+  //   The bed amb-vesper-hall plays from the pull until the fight ends or is left (svLoops).
+  const vsTags = new Map(), vsTraded = new Map();   // tg id -> { tag, at, cast } until it lands, cut n -> traded (Extreme) until it lands
+  let vsBed = null, vsShards = 0, vsThreadN = 0, vsSnapN = 0, vsTradeAt = 0, vsLastRound = false;
+  const VS_CUT_RATE = [1, 1.122, 1.26, 1.335, 1.5, 1.68];   // the dance climbs a scale
+  const vsPan = x => (x == null ? 0 : Math.max(-0.6, Math.min(0.6, x / 480 * 0.6)));
+  function vsBedStop(fade) { if (vsBed) { svLoops.delete(vsBed); vsBed.stop(fade == null ? 1.5 : fade); vsBed = null; } }
+  function vsBedStart() {
+    if (!has()) return;
+    safe(() => { vsBedStop(0.3); vsBed = Sound.loop('amb-vesper-hall', { bus: 'amb', vol: 0.6, fade: 3 }); if (vsBed) svLoops.add(vsBed); });
+  }
+  function vsReset() { vsTags.clear(); vsTraded.clear(); vsShards = vsThreadN = vsSnapN = vsTradeAt = 0; vsLastRound = false; vsBedStop(0.3); }
+  function vsWire(wrap) {
+    const mineIn = ids => Array.isArray(ids) && ids.some(s3Mine);
+    wrap('tg', m => {
+      if (s3Boss !== 'vesper' || typeof m.tag !== 'string' || m.tag.charAt(0) !== 'v') return;
+      const sh = m.shape || {}, t = s3Tags.get(m.id);   // (s3Wire's own handler has already noted the cast this was laid with)
+      vsTags.set(m.id, { tag: m.tag, at: sh.x != null ? { x: sh.x, y: sh.y } : null, cast: t ? t.cast : '' });
+      if (vsTags.size > 120) vsTags.delete(vsTags.keys().next().value);
+    });
+    wrap('tgx', m => {
+      if (s3Boss !== 'vesper') return;
+      const t = vsTags.get(m.id); if (!t) return;
+      vsTags.delete(m.id);
+      if (m.x) return;   // (taken off the floor before it landed)
+      const n = t.tag, at = t.at;
+      if (n === 'vbEvenfall') play('bm-vesper-m-evenfall', { vol: 0.9, key: 'vs-even', minGap: 0.5 });
+      else if (n === 'vhVerdict') play('bm-vesper-m-verdict', { vol: 0.95, key: 'vs-verdict', minGap: 0.5 });
+      else if (n === 'vgVerdict') play('bm-vesper-m-verdict-glass', { vol: 0.85, key: 'vs-verdictg', minGap: 0.5 });
+      else if (n === 'vgLay') { const i = vsShards++ % 4; play('bm-vesper-m-shard', { vol: 0.75, rate: [1, 1.19, 0.89, 1.33][i], pan: vsPan(at && at.x), key: 'vs-shard:' + i, minGap: 0.05 }); }
+      else if (n === 'vhShard') play('bm-vesper-m-shard-hall', { vol: 0.85, at, key: 'vs-shardh:' + (vsShards++ % 4), minGap: 0.05 });
+      else if (n === 'vhCounter') play('bm-vesper-m-counter', { vol: 0.9, at, key: 'vs-counter', minGap: 0.5 });
+      else if (n === 'vgCounter') svLater(0.14, () => play('bm-vesper-m-counter-glass', { vol: 0.85, key: 'vs-counterg', minGap: 0.5 }));
+      else if (n === 'vhCross' || n === 'vhBackhand') play('bm-vesper-m-cross', { vol: 0.9, key: 'vs-cross', minGap: 0.5 });
+      else if (n === 'vgCross' || n === 'vgBackhand') svLater(0.14, () => play('bm-vesper-m-cross-glass', { vol: 0.85, key: 'vs-crossg', minGap: 0.5 }));
+      else if (n === 'vbThread') play('bm-vesper-m-thread-snap', { vol: 0.9, key: 'vs-snap:' + m.id, minGap: 0.1 });
+      else if (n === 'vbTwoThread') play('bm-vesper-m-thread-snap', { vol: 0.85, rate: vsSnapN++ % 2 ? 1.5 : 1, key: 'vs-snap:' + m.id, minGap: 0.1 });
+      else if (n === 'vbRing') play('bm-vesper-m-ring', { vol: 0.95, key: 'vs-ring', minGap: 1 });
+      else if (n === 'vbHair') play('bm-vesper-m-hair', { vol: 0.8, key: 'vs-hair', minGap: 1 });
+      else if (n === 'vbOpen' && (t.cast === 'The Hall' || t.cast === 'Out of Step')) play('bm-vesper-m-open', { vol: 0.85, key: 'vs-open', minGap: 1 });
+    });
+    wrap('banim', m => {   // a cut of the dance lands (who: v Vesper, g the Glass Knight, vg both)
+      if (s3Boss !== 'vesper' || m.name !== 'cut') return;
+      const n = Math.max(1, Math.min(6, m.n | 0)), tr = vsTraded.get(n);
+      vsTraded.delete(n);
+      if (n === 6 || m.who === 'vg') play('bm-vesper-m-cut-last', { vol: 1, key: 'vs-cut', minGap: 0.3 });
+      else play((m.who === 'g') !== !!tr ? 'bm-vesper-m-cut-glass' : 'bm-vesper-m-cut', { vol: 0.62 + 0.06 * n, rate: VS_CUT_RATE[n - 1], key: 'vs-cut', minGap: 0.3 });
+    });
+    wrap('hmark', m => {   // a mark on you
+      if (s3Boss !== 'vesper' || !s3Mine(m.pid)) return;
+      const k = m.key;
+      if (k === 'vsaim') play('bm-vesper-m-mark-aim', { vol: 0.75, key: 'vs-aim', minGap: 0.5 });
+      else if (k === 'vschain') play('bm-vesper-m-mark-chain', { vol: 0.75, key: 'vs-chain', minGap: 0.5 });   // (Two Threads' number mark comes with it)
+      else if (k === 'vslag') play('bm-vesper-m-mark-lag', { vol: 0.75, key: 'vs-lag', minGap: 0.5 });
+      else if (k === 'vswrong') play('bm-vesper-m-mark-wrong', { vol: 0.75, key: 'vs-wrong', minGap: 0.5 });
+    });
+    wrap('roomev', m => {
+      if (s3Boss !== 'vesper' || typeof m.k !== 'string') return;
+      const k = m.k;
+      if (k === 'vsfracture') play('bm-vesper-m-fracture', s3Mine(m.pid) ? { vol: 0.9, key: 'vs-frac:' + m.pid, minGap: 0.5 } : { vol: 0.35, key: 'vs-frac:' + m.pid, minGap: 0.5 });
+      else if (k === 'vsstep') {
+        const pan = vsPan((+m.ox || +m.oy || 0) * 6);
+        play('bm-vesper-m-step', +m.ox || +m.oy ? { vol: 0.8, pan, key: 'vs-step', minGap: 0.5 } : { vol: 0.3, rate: 0.8, key: 'vs-step', minGap: 0.5 });   // (back in line: softer and lower)
+      } else if (k === 'vscut') {
+        const n = Math.max(1, Math.min(6, m.n | 0)), tr = +m.traded === 1;
+        vsTraded.set(n, tr);
+        if (n === 6) { play('bm-vesper-m-cut-draw', { vol: 0.8, rate: VS_CUT_RATE[5], key: 'vs-cutdraw:6', minGap: 0.2 }); svLater(0.12, () => play('bm-vesper-m-cut-draw-glass', { vol: 0.7, rate: VS_CUT_RATE[5], key: 'vs-cutdraw:6g', minGap: 0.2 })); }
+        else play((m.who === 'g') !== tr ? 'bm-vesper-m-cut-draw-glass' : 'bm-vesper-m-cut-draw', { vol: 0.5 + 0.05 * n, rate: VS_CUT_RATE[n - 1], key: 'vs-cutdraw:' + n, minGap: 0.2 });
+      } else if (k === 'vsthread') {
+        const two = +m.two === 1, mine = s3Mine(m.pid);
+        play('bm-vesper-m-thread-lock', { vol: mine ? 0.9 : 0.6, rate: two && vsThreadN++ % 2 ? 1.5 : 1, at: s3Pt(m.x1, m.y1), key: 'vs-lock:' + m.pid, minGap: 0.2 });
+      } else if (k === 'vspull') play('bm-vesper-m-pull', mineIn(m.ids) ? { vol: 0.8, key: 'vs-pull', minGap: 1 } : { vol: 0.4, key: 'vs-pull', minGap: 1 });
+      else if (k === 'vswall2') vsTradeAt = s3Clock() + (+m.at || 0);
+      else if (k === 'vsflip') {
+        const mine = mineIn(m.ids);
+        if (Math.abs(s3Clock() - vsTradeAt) < 0.8) play('bm-vesper-m-swap', { vol: mine ? 0.9 : 0.5, key: 'vs-swap', minGap: 1 });   // (the pairs trading: one passing sound for the two messages)
+        else if (+m.on === 1) play('bm-vesper-m-through', mine ? { vol: 0.85, key: 'vs-through', minGap: 0.5 } : { vol: 0.4, key: 'vs-through', minGap: 0.5 });
+        else play('bm-vesper-m-back', mine ? { vol: 0.7, key: 'vs-back', minGap: 0.5 } : { vol: 0.35, key: 'vs-back', minGap: 0.5 });
+      } else if (k === 'vsround') vsLastRound = +m.last === 1;
+      else if (k === 'vsroundmet') {
+        if (!+m.ok) play('bm-vesper-m-soak-missed', { vol: 0.8, key: 'vs-soak', minGap: 0.5 });
+        else if (!vsLastRound) play('bm-vesper-m-soak-met', { vol: 0.75, key: 'vs-soak', minGap: 0.5 });   // (the last round met is the held beat's)
+      } else if (k === 'vstrade') play('bm-vesper-m-trade', { vol: 0.85, key: 'vs-trade', minGap: 1 });
+      else if (k === 'vsbackhand') play('bm-vesper-m-backhand', { vol: 0.8, key: 'vs-backhand', minGap: 0.5 });
+      else if (k === 'vshand') svLater(Math.max(0, +m.at || 0), () => play('bm-vesper-m-hand-land', { vol: 0.9, at: s3Pt(m.x, m.y), key: 'vs-handland', minGap: 0.3 }));
+      else if (k === 'vshandbreak') play('bm-vesper-m-hand-break', { vol: 0.9, at: s3Pt(m.x, m.y), key: 'vs-handbreak', minGap: 0.3 });
+    });
+    wrap('fight', m => { if (s3Boss === 'vesper' && (m.s === 'clear' || m.s === 'wipe')) vsBedStop(2.5); });   // (the result: the hall's bed goes with the fight)
+  }
+
+  // ---------------------------------------------------------------- the Scales (boss id ormun, set 6, Season 2)
+  // The casts sound from bossCast (SfxMap: bm-ormun-*): the builds, each ending on a held silence. The landings and the room's moments are read off the host's messages (omWire, handed
+  // s3Wire's wrap), every one a recipe bm-ormun-m-* (sfx-synth.js, the Ormun block). The staged beats (the Spring Tide wall, the bridge breaking, the first tip, the enrage, the kill: bm-ormun-w-)
+  // are walls/ormun.js's and are not sounded here.
+  //   tgx by tag (a landing sounds from its telegraph tag, exactly on its beat): buster (Heavy Hand) · ormTide · ormCW / ormHollow (the weight falls on its hero; its number is from ormdrop) · ormUnder / ormTwin
+  //   (the rim floods; a flood parked off the floor by tgmod, as a judgement's are, is not a flood) · ormScatter · ormBeat after First Weighing, The Beam Leans or The Weight of Things (the other
+  //   openers' raidwides belong to the staged beats). A judgement's strike is not read off its telegraphs (they are parked and moved) but off roomev ormfall (one per place struck: the left pan
+  //   low, the right a fifth above it, the bridge dry, a light strike smaller)
+  //   roomev ormread (the count is read: the beam stops dead, and the bed drops away for a moment) · orscales (the beam creaks when the tilt changes: quiet, 2.2 s apart at most; Extreme's water
+  //   rising on a pan laps) · ormweight lift / set / clear / land · ormdrop (which number is coming) · ormscatter break (a silver piece rolls to each cradle it names) · ormbell (the count tolled, n
+  //   strokes, a step higher on each) · ormexact (n dry knocks over the lit pan) · ormundertow (water laps onto the rim) · ormwater on · ormtip (heroes thrown in the next seconds: kb) · ormcross
+  //   (yours thrown back) · orm-perfect-swing
+  //   hmark ormburden / ormbuoy / ormbuoyed (applied, a heavy settling or a lifting; the mark of the cast only ticks, on you) · ormfall (on you)
+  //   propfx ormrise (a drowned thing climbs on) · addev of a drowned thing: bite (yours full), death (going under)
+  //   The bed amb-ormun-scales plays from the pull until the fight ends or is left (svLoops).
+  const omTags = new Map(), omAdds = new Map();   // tg id -> { tag, at, cast, parked } until it lands, add id -> kind
+  let omBed = null, omBase = 0.6, omTilt = null, omDropN = 2, omTipUntil = 0, omRise = 0, omCradles = [], omWaterL = 0, omWaterR = 0;
+  const OM_PAN = { L: { x: -380, y: 60 }, R: { x: 380, y: 60 }, B: { x: 0, y: 60 } };
+  function omBedSet(v, fade) { if (omBed) omBed.setVol(v, fade == null ? 1.5 : fade); }
+  function omBedStop(fade) { if (omBed) { svLoops.delete(omBed); omBed.stop(fade == null ? 1.5 : fade); omBed = null; } }
+  function omBedStart() {
+    if (!has()) return;
+    safe(() => { omBedStop(0.3); omBase = 0.6; omBed = Sound.loop('amb-ormun-scales', { bus: 'amb', vol: omBase, fade: 3 }); if (omBed) svLoops.add(omBed); });
+  }
+  function omReset() { omTags.clear(); omAdds.clear(); omTilt = null; omDropN = 2; omTipUntil = omRise = omWaterL = omWaterR = 0; omCradles = []; omBedStop(0.3); }
+  function omWire(wrap) {
+    wrap('tg', m => {
+      if (s3Boss !== 'ormun' || typeof m.tag !== 'string' || (m.tag.slice(0, 3) !== 'orm' && m.tag !== 'buster')) return;
+      const sh = m.shape || {}, t = s3Tags.get(m.id);   // (s3Wire's own handler has already noted the cast this was laid with)
+      omTags.set(m.id, { tag: m.tag, at: sh.x != null ? { x: sh.x, y: sh.y } : null, cast: t ? t.cast : '', parked: sh.y != null && sh.y < -3000 });
+      if (omTags.size > 120) omTags.delete(omTags.keys().next().value);
+    });
+    wrap('tgmod', m => {   // (a judgement's or a flood's telegraph is moved on and off the floor: off is a speck far out in the sea)
+      const t = s3Boss === 'ormun' ? omTags.get(m.id) : null; if (!t || !m.shape) return;
+      t.parked = m.shape.y != null && m.shape.y < -3000;
+      if (!t.parked && m.shape.x != null) t.at = { x: m.shape.x, y: m.shape.y };
+    });
+    wrap('tgx', m => {
+      if (s3Boss !== 'ormun') return;
+      const t = omTags.get(m.id); if (!t) return;
+      omTags.delete(m.id);
+      if (m.x || t.parked) return;   // (taken off the floor before it landed, or never on it)
+      const n = t.tag, at = t.at;
+      if (n === 'buster') play('bm-ormun-m-hand', { vol: 0.95, key: 'orm-hand', minGap: 0.5 });
+      else if (n === 'ormTide') play('bm-ormun-m-tide-in', { vol: 0.9, key: 'orm-tidein', minGap: 1 });
+      else if (n === 'ormCW') play('bm-ormun-m-drop', { vol: 0.9, at, rate: [1.15, 1.15, 1, 0.88][Math.max(0, Math.min(3, omDropN))], key: 'orm-drop', minGap: 0.5 });
+      else if (n === 'ormHollow') play('bm-ormun-m-crack', { vol: 0.9, at, key: 'orm-crack', minGap: 0.5 });
+      else if (n === 'ormUnder' || n === 'ormTwin') play('bm-ormun-m-flood', { vol: 0.85, at, key: 'orm-flood:' + (at && at.x < 0 ? 'L' : 'R'), minGap: 0.3 });
+      else if (n === 'ormScatter') play('bm-ormun-m-scatter', { vol: 0.9, at, key: 'orm-scatter', minGap: 0.3 });
+      else if (n === 'ormBeat' && (t.cast === 'First Weighing' || t.cast === 'The Beam Leans' || t.cast === 'The Weight of Things')) play('bm-ormun-m-beat', { vol: 0.85, key: 'orm-beat', minGap: 1 });
+    });
+    wrap('hmark', m => {   // a mark: the cast's own (dur of the bar) only ticks, on you; once applied (20 s, 24, 34) the weight settles or lifts, yours full and another's faint
+      if (s3Boss !== 'ormun') return;
+      const k = m.key, mine = s3Mine(m.pid), applied = +m.dur >= 10;
+      if (k === 'ormburden') { if (applied) play('bm-ormun-m-burden', { vol: mine ? 0.9 : 0.4, rate: m.n >= 3 ? 0.84 : 1, key: 'orm-burden:' + m.pid, minGap: 0.5 }); else if (mine) play('bm-ormun-m-mark', { vol: 0.7, key: 'orm-mark', minGap: 0.5 }); }
+      else if (k === 'ormbuoy' || k === 'ormbuoyed') { if (applied) play('bm-ormun-m-buoy', { vol: mine ? 0.85 : 0.35, rate: k === 'ormbuoyed' ? 1.19 : 1, key: 'orm-buoy:' + m.pid, minGap: 0.5 }); else if (mine) play('bm-ormun-m-mark', { vol: 0.6, rate: 1.3, key: 'orm-mark', minGap: 0.5 }); }
+      else if (k === 'ormfall' && mine) play('bm-ormun-m-mark', { vol: 0.8, rate: 0.8, key: 'orm-mark', minGap: 0.5 });
+    });
+    wrap('addev', m => {   // the Drowned Things: a bite, and going under (the climbing on is propfx ormrise)
+      if (s3Boss !== 'ormun') return;
+      if (m.k === 'spawn') { omAdds.set(m.id, m.kind); if (omAdds.size > 40) omAdds.delete(omAdds.keys().next().value); return; }
+      if (omAdds.get(m.id) !== 'drowned') return;
+      if (m.k === 'bite') play('bm-ormun-m-bite', s3Mine(m.tg) ? { vol: 0.8, key: 'orm-bite', minGap: 0.2 } : { vol: 0.4, key: 'orm-bite', minGap: 0.2 });
+      else if (m.k === 'death') { omAdds.delete(m.id); play('bm-ormun-m-sink', { vol: 0.5, at: s3Pt(m.x, m.y), key: 'orm-sink', minGap: 0.35 }); }   // (a wall that breaks takes them all at once: one sound)
+      else if (m.k === 'gone') omAdds.delete(m.id);
+    });
+    wrap('propfx', m => { if (s3Boss === 'ormun' && m.k === 'ormrise') play('bm-ormun-m-rise', { vol: 0.5, at: s3Pt(m.x, m.y), key: 'orm-rise:' + (omRise++ % 3), minGap: 0.1 }); });
+    wrap('kb', m => {   // thrown across by a Tip (the staged beat has the swing; this is the one thrown)
+      if (s3Boss !== 'ormun' || s3Clock() >= omTipUntil) return;
+      if (s3Mine(m.id)) play('bm-ormun-m-throw', { vol: 0.85, key: 'orm-throw-me', minGap: 0.5 });
+      else play('bm-ormun-m-throw', { vol: 0.3, key: 'orm-throw-o', minGap: 0.5 });
+    });
+    wrap('roomev', m => {
+      if (s3Boss !== 'ormun' || typeof m.k !== 'string') return;
+      const k = m.k;
+      if (k === 'orscales') {
+        const tilt = +m.tilt || 0;
+        if (Array.isArray(m.cradles)) omCradles = m.cradles;
+        if (omTilt != null && omTilt !== tilt && !+m.locked) play('bm-ormun-m-creak', { vol: Math.min(0.55, 0.22 + 0.5 * Math.abs(tilt - omTilt)), rate: tilt > omTilt ? 0.92 : 1.08, key: 'orm-creak', minGap: 2.2 });   // (a party shuffling about is not a racket)
+        omTilt = tilt;
+        const wl = +m.waterL || 0, wr = +m.waterR || 0;   // (Extreme: the water on the low pan climbs a point at a time)
+        if (wl > omWaterL) play('bm-ormun-m-lap', { vol: 0.5, rate: 0.85 + 0.08 * wl, at: OM_PAN.L, key: 'orm-water:L', minGap: 1 });
+        if (wr > omWaterR) play('bm-ormun-m-lap', { vol: 0.5, rate: 0.85 + 0.08 * wr, at: OM_PAN.R, key: 'orm-water:R', minGap: 1 });
+        omWaterL = wl; omWaterR = wr;
+      } else if (k === 'ormweight') {
+        const at = s3Pt(m.x, m.y), a = m.a;
+        if (a === 'lift') play('bm-ormun-m-lift', { vol: s3Mine(m.who) ? 0.9 : 0.55, at, key: 'orm-lift:' + m.id, minGap: 0.1 });
+        else if (a === 'set') play('bm-ormun-m-set', { vol: s3Mine(m.who) ? 0.9 : 0.55, at, key: 'orm-set:' + m.id, minGap: 0.1 });
+        else if (a === 'clear') play('bm-ormun-m-clear', { vol: 0.7, key: 'orm-clear', minGap: 1 });
+        else if (a === 'land') svLater(m.who != null ? 0.3 : 0, () => play('bm-ormun-m-set', { vol: 0.5, rate: m.crack ? 0.85 : 1, at, key: 'orm-land:' + m.id, minGap: 0.05 }));   // (a drop settles a moment after it lands; a piece of silver is at rest as it arrives)
+      } else if (k === 'ormdrop') omDropN = +m.n || 2;
+      else if (k === 'ormscatter') {
+        if (m.a === 'break' && Array.isArray(m.to)) m.to.slice(0, 4).forEach((c, i) => svLater(0.1 + i * 0.12, () => play('bm-ormun-m-roll', { vol: 0.7, at: omCradles[c] ? s3Pt(omCradles[c][0], omCradles[c][1]) : null, rate: 0.9 + i * 0.07, key: 'orm-roll:' + i, minGap: 0.05 })));
+      } else if (k === 'ormread') {   // the count is read: the beam stops dead (half a second before the strike), the bed drops away
+        play('bm-ormun-m-read', { vol: 0.9, key: 'orm-read', minGap: 0.5 });
+        omBedSet(omBase * 0.2, 0.1); svLater(1.3, () => omBedSet(omBase, 2));
+      } else if (k === 'ormfall') {
+        const pan = m.pan === 'R' ? 'R' : m.pan === 'B' ? 'B' : 'L';
+        play(+m.light && pan !== 'B' ? 'bm-ormun-m-fall-light' : pan === 'B' ? 'bm-ormun-m-fall-bridge' : 'bm-ormun-m-fall', { vol: 0.95, at: OM_PAN[pan], rate: pan === 'R' ? 1.5 : 1, key: 'orm-fall:' + pan, minGap: 0.2 });
+      } else if (k === 'ormbell') {   // (the wall's counting: one stroke for each of the difference, a step higher on each; a level count is one low soft stroke)
+        const n = Math.max(0, Math.min(4, +m.n | 0)), at = m.pan === 'L' || m.pan === 'R' ? OM_PAN[m.pan] : null;
+        if (!n) play('bm-ormun-m-bell', { vol: 0.5, rate: 0.85, key: 'orm-bell:0', minGap: 0.3 });
+        else for (let i = 0; i < n; i++) svLater(i * 0.9, () => play('bm-ormun-m-bell', { vol: 0.8, at, rate: Math.pow(1.122, i), key: 'orm-bell:' + i, minGap: 0.3 }));
+      } else if (k === 'ormexact') {
+        const n = Math.max(1, Math.min(3, +m.n | 0)), at = OM_PAN[m.pan === 'R' ? 'R' : 'L'];
+        for (let i = 0; i < n; i++) svLater(0.15 + i * 0.28, () => play('bm-ormun-m-exact', { vol: 0.8, at, rate: m.pan === 'R' ? 1.19 : 1, key: 'orm-exact:' + i, minGap: 0.1 }));
+      } else if (k === 'ormundertow') {   // (water laps onto the rim as the flood is laid and as it changes; the flooding itself is its landing)
+        for (const p of (Array.isArray(m.pans) && m.pans.length ? m.pans.map(q => q[0]) : m.pan ? [m.pan] : [])) if (p === 'L' || p === 'R') play('bm-ormun-m-lap', { vol: 0.5, at: OM_PAN[p], key: 'orm-lap:' + p, minGap: 2.5 });
+      } else if (k === 'ormwater' && m.a === 'on') { play('bm-ormun-m-lap', { vol: 0.5, at: OM_PAN.L, key: 'orm-water-on:L', minGap: 1 }); play('bm-ormun-m-lap', { vol: 0.5, at: OM_PAN.R, key: 'orm-water-on:R', minGap: 1 }); }
+      else if (k === 'ormtip') omTipUntil = s3Clock() + 2.5;
+      else if (k === 'ormcross' && s3Mine(m.who)) play('bm-ormun-m-throw', { vol: 0.5, rate: 1.2, key: 'orm-cross', minGap: 0.5 });
+      else if (k === 'orm-perfect-swing') play('bm-ormun-m-swing', { vol: 0.8, key: 'orm-swing', minGap: 2 });
+    });
+    wrap('fight', m => { if (s3Boss === 'ormun' && (m.s === 'clear' || m.s === 'wipe')) omBedStop(2.5); });   // (the result: the sea's bed goes with the fight)
+  }
+
+  // ---------------------------------------------------------------- the Face of the Moon (boss id maelis, set 6, Season 2)
+  // The casts sound from bossCast (SfxMap: bm-maelis-*): the builds, each ending on a held silence. The landings and the room's moments are read off the host's messages (mlWire, handed
+  // s3Wire's wrap), every one a recipe bm-maelis-m-* (sfx-synth.js, the Maelis block). The staged beats (the wall going dark and the light returning, the Hound's howl, the mounting, the eclipse
+  // beginning, Totality's landing, the kill: bm-maelis-w-) are walls/maelis.js's and are not sounded here.
+  //   tgx by tag (a landing sounds from its telegraph tag, exactly on its beat): mlCrescent / mlHalf / mlGibbous / mlFull and the umbral mlUCrescent / mlUHalf, each its own recipe by phase (in a
+  //   dance the landings climb the scale, or fall it in a waning dance; Pass cuts lower and heavier, Twin cuts a fourth up and quieter) · mlAnnular · mlOpen after Moonrise, The Waxing or Hunter's
+  //   Moon (the other openers' raidwides belong to the staged beats) · buster (Earthshine) / mlEarthshine2 · mlRide · mlWell (met, or missed by tgx fail) · mlMoonlet / mlMoonfall (the fall)
+  //   mlBurst / mlHarvest · mlDash / mlStepCut (climbing with the dash) · mlPool (met, or missed; the last light met is the held beat's) · mlRun / mlShade / mlPounce / mlShadePounce (the Hound's
+  //   Return's own run and pounce play too, the run quietly)
+  //   roomev mlcrown (a change of phase, turn, waxing or umbral, quiet and rate-limited; not in the wall's dark, the eclipse's opening or during a rock) · mlcrown2 · mlform (his breath joins her
+  //   casts from the second form) · mlnight / mlcrown red (the bed) · mldance / mldanceend · mlstep (the silver line) / mlstepl (it locks) · mlpool (laid) · mlpath:<n> (the trail locks, and the
+  //   rider pushes off at s on; the Hound's road is the staged beat's) · mlmoonlet (at rest) / mlmoonx / mlburst (a rising hum) · mllibrate · mltouch (the inversion, and its end) · mlhowl2 (the shade)
+  //   hmark mlmoon / mlmoonfall · mlprey / mlfresh / mlhowl2 · mlstep n · mleye
+  //   The bed amb-maelis-moon plays from the pull until the fight ends or is left (svLoops); it falls to almost nothing in the wall's dark, climbs a little as the eclipse reddens the crown, is a
+  //   little lower in the second form and is cut at the kill.
+  const mlTags = new Map();   // tg id -> { tag, at, r, cast } until it lands
+  let mlBed = null, mlBase = 0.6, mlForm = 1, mlNight = false, mlWallOn = false, mlQuietUntil = 0, mlCrownKey = '', mlDance = null, mlStepI = 0, mlPoolTg = -1, mlLastTg = -1, mlRunKind = '';
+  let mlRideN = 0, mlBurstN = 0, mlLibAt = 0, mlRedLast = 0;
+  const ML_CLIMB = [1, 1.0595, 1.1225, 1.1892, 1.2599, 1.3348];   // a dance climbs a scale (a waning dance walks it down)
+  const ML_UMB_RATE = { crescent: 1.12, half: 1, gibbous: 0.9, full: 0.8 }, ML_CR2_RATE = { crescent: 1.19, half: 1, gibbous: 0.89, full: 0.8 };
+  function mlBedSet(v, fade) { if (mlBed) mlBed.setVol(v, fade == null ? 1.5 : fade); }
+  function mlBedLevel(fade) { mlBedSet(mlBase * (mlNight ? 0.15 : 1) * (1 + 0.6 * mlRedLast), fade); }
+  function mlBedStop(fade) { if (mlBed) { svLoops.delete(mlBed); mlBed.stop(fade == null ? 1.5 : fade); mlBed = null; } }
+  function mlBedStart() {
+    if (!has()) return;
+    safe(() => { mlBedStop(0.3); mlBase = 0.6; mlBed = Sound.loop('amb-maelis-moon', { bus: 'amb', vol: mlBase, fade: 3 }); if (mlBed) svLoops.add(mlBed); });
+  }
+  function mlReset() {
+    mlTags.clear(); mlForm = 1; mlNight = mlWallOn = false; mlQuietUntil = 0; mlCrownKey = ''; mlDance = null; mlStepI = 0; mlPoolTg = mlLastTg = -1; mlRunKind = '';
+    mlRideN = mlBurstN = mlLibAt = mlRedLast = 0; mlBedStop(0.3);
+  }
+  function mlCrown(m) {   // the crown changed: its phase as a quiet chord (the red creeping over it only bends the bed)
+    const red = +m.red || 0;
+    if (Math.abs(red - mlRedLast) >= 0.1) { mlRedLast = red; mlBedLevel(2); }
+    const key = [m.phase, m.turn, m.wax, m.umbral, m.ring].join(), old = mlCrownKey;
+    if (key === mlCrownKey) return;
+    mlCrownKey = key;
+    if (!old || s3Clock() < mlQuietUntil || mlWallOn || mlNight || s3Clock() - mlLibAt < 0.6) return;   // (the first message is the room as it is; the wall, the eclipse and a rock have their own)
+    const ph = m.phase;
+    if (ph === 'new') play('bm-maelis-m-crown-new', { vol: 0.3, key: 'ml-crown', minGap: 0.6 });
+    else if (+m.ring) play('bm-maelis-m-crown-ring', { vol: 0.4, key: 'ml-crown', minGap: 0.6 });
+    else if (+m.umbral) play('bm-maelis-m-crown-umbral', { vol: 0.4, rate: ML_UMB_RATE[ph] || 1, key: 'ml-crown', minGap: 0.6 });
+    else if (MLP_OK[ph]) play('bm-maelis-m-crown-' + ph + (m.wax < 0 ? '-wane' : ''), { vol: 0.4, key: 'ml-crown', minGap: 0.6 });
+  }
+  const MLP_OK = { crescent: 1, half: 1, gibbous: 1, full: 1 };
+  function mlWire(wrap) {
+    const mineIn = ids => Array.isArray(ids) && ids.some(s3Mine);
+    wrap('bcast', m => {   // her second form: his breath beside hers when a cast begins (not the enrage's)
+      if (s3Boss !== 'maelis' || mlForm !== 2 || /Totality/.test(String(m.name)) || !(+m.dur > 2.5)) return;
+      svLater(0.35, () => play('bm-maelis-m-hound', { vol: 0.4, key: 'ml-hound', minGap: 6 }));
+    });
+    wrap('tg', m => {
+      if (s3Boss !== 'maelis' || typeof m.tag !== 'string' || (m.tag.slice(0, 2) !== 'ml' && m.tag !== 'buster')) return;
+      const sh = m.shape || {};
+      let at = null;
+      if (sh.kind === 'rect') { const k = m.tag === 'mlDash' ? 0.5 : 1; at = { x: sh.x + Math.cos(sh.angle || 0) * (sh.len || 0) * k, y: sh.y + Math.sin(sh.angle || 0) * (sh.len || 0) * k }; }   // (a run's piece lands where the rider reaches its end; a dash is heard midway)
+      else if (sh.x != null && (sh.kind !== 'lune' || m.tag === 'mlStepCut') && (sh.x || sh.y)) at = { x: sh.x, y: sh.y };   // (a cut of the room is everywhere)
+      const t = s3Tags.get(m.id);   // (s3Wire's own handler has already noted the cast this was laid with)
+      mlTags.set(m.id, { tag: m.tag, at, r: +sh.r || 0, cast: t ? t.cast : '' });
+      if (mlTags.size > 120) mlTags.delete(mlTags.keys().next().value);
+      if (m.tag === 'mlPool') mlPoolTg = m.id;
+    });
+    wrap('tgx', m => {
+      if (s3Boss !== 'maelis') return;
+      const t = mlTags.get(m.id); if (!t) return;
+      mlTags.delete(m.id);
+      if (m.x) return;   // (taken off the floor before it landed)
+      const n = t.tag, at = t.at, c = t.cast;
+      const cut = /^ml(Pass|Twin|Lib|U)?(Crescent|Half|Gibbous|Full)$/.exec(n);
+      if (cut) {   // a cut by phase; in a dance each lands a step up (waxing) or down (waning) the scale and a little harder
+        const pre = cut[1] || '', ph = cut[2].toLowerCase(), plain = pre === '' || pre === 'U';
+        if (ph === 'full' && mlWallOn) return;   // (the wall's release is the staged beat's)
+        let rate = 1, vol = 0.9;
+        if (plain && mlDance) { const i = mlDance.i++, N = mlDance.n; rate = ML_CLIMB[Math.max(0, Math.min(5, mlDance.wax < 0 ? N - 1 - i : i))]; vol = Math.min(1, 0.62 + 0.06 * (i + 1)); }
+        else if (pre === 'Pass') { rate = 0.9; vol = 0.85; }
+        else if (pre === 'Twin') { rate = 1.26; vol = 0.6; }
+        play(pre === 'U' ? 'bm-maelis-m-cut-u' + ph : ph === 'full' ? 'bm-maelis-m-full' : 'bm-maelis-m-cut-' + ph, { vol, rate, key: 'ml-cut:' + pre + ph, minGap: 0.25 });
+        return;
+      }
+      if (n === 'mlAnnular') play('bm-maelis-m-cut-ring', { vol: 0.9, key: 'ml-ring', minGap: 0.5 });
+      else if (n === 'mlOpen') { if (c === 'Moonrise' || c === 'The Waxing' || c === "Hunter's Moon") play('bm-maelis-m-open', { vol: 0.85, key: 'ml-open', minGap: 1 }); }
+      else if (n === 'buster') play('bm-maelis-m-earth', { vol: 0.95, key: 'ml-earth', minGap: 0.5 });
+      else if (n === 'mlEarthshine2') play('bm-maelis-m-earth2', { vol: 0.85, key: 'ml-earth2', minGap: 0.5 });
+      else if (n === 'mlRide') play('bm-maelis-m-ride', { vol: 0.5, at, rate: 1 + 0.03 * (mlRideN++ % 5), key: 'ml-ride', minGap: 0.1 });
+      else if (n === 'mlWell') play(m.fail ? 'bm-maelis-m-well-missed' : 'bm-maelis-m-well-met', { vol: m.fail ? 0.8 : 0.75, at, key: 'ml-well:' + (at ? Math.round(at.x / 100) : 0), minGap: 0.3 });
+      else if (n === 'mlMoonlet' || n === 'mlMoonfall') play('bm-maelis-m-moonlet-fall', { vol: 0.85, rate: n === 'mlMoonfall' ? 0.85 : 1, at, key: 'ml-mfall:' + n, minGap: 0.1 });
+      else if (n === 'mlBurst' || n === 'mlHarvest') { const i = mlBurstN++ % 4; play(n === 'mlHarvest' ? 'bm-maelis-m-moonlet-harvest' : 'bm-maelis-m-moonlet-burst', { vol: 0.85, rate: 1 - 0.05 * i, at, key: 'ml-burst:' + i, minGap: 0.05 }); }
+      else if (n === 'mlDash') play('bm-maelis-m-dash', { vol: 0.85, at, rate: 1 + 0.03 * mlStepI, key: 'ml-dash', minGap: 0.3 });
+      else if (n === 'mlStepCut') play('bm-maelis-m-step-cut', { vol: 0.85, at, rate: 1 + 0.045 * mlStepI, key: 'ml-stepcut', minGap: 0.3 });
+      else if (n === 'mlPool') {
+        if (m.fail) play('bm-maelis-m-pool-missed', { vol: 0.8, key: 'ml-pool', minGap: 0.5 });
+        else if (m.id !== mlLastTg) play('bm-maelis-m-pool-met', { vol: 0.65, key: 'ml-pool', minGap: 0.5 });   // (the last light met is the held beat's)
+      } else if (n === 'mlRun' || n === 'mlShade') play('bm-maelis-m-run', n === 'mlShade' ? { vol: 0.28, rate: 1.3, at, key: 'ml-run', minGap: 0.14 } : { vol: mlRunKind === 'return' ? 0.35 : 0.45, at, key: 'ml-run', minGap: 0.14 });
+      else if (n === 'mlPounce') { const wide = t.r >= 300; play(wide ? 'bm-maelis-m-pounce-wide' : 'bm-maelis-m-pounce', { vol: wide ? 0.95 : 0.85, at, key: 'ml-pounce', minGap: 0.2 }); }
+      else if (n === 'mlShadePounce') play('bm-maelis-m-pounce', { vol: 0.55, rate: 1.3, at, key: 'ml-pounce', minGap: 0.2 });
+    });
+    wrap('hmark', m => {   // a mark on a hero: yours full, another's faint
+      if (s3Boss !== 'maelis') return;
+      const k = m.key, mine = s3Mine(m.pid);
+      if (k === 'mlmoon' || k === 'mlmoonfall') play('bm-maelis-m-mark-moon', { vol: mine ? 0.75 : 0.25, rate: k === 'mlmoonfall' ? 0.85 : 1, key: 'ml-mmark:' + m.pid, minGap: 0.5 });
+      else if (k === 'mlprey') play('bm-maelis-m-mark-prey', { vol: mine ? 0.8 : 0.3, key: 'ml-prey:' + m.pid, minGap: 1 });
+      else if (k === 'mlfresh') { if (mine) play('bm-maelis-m-mark-prey', { vol: 0.5, rate: 0.9, key: 'ml-fresh', minGap: 1 }); }   // (the Hound's road: the staged beat has the rest)
+      else if (k === 'mlhowl2') { if (mine) play('bm-maelis-m-mark-prey', { vol: 0.65, rate: 0.75, key: 'ml-howl2', minGap: 1 }); }
+      else if (k === 'mlstep') play('bm-maelis-m-mark-step', { vol: mine ? 0.85 : 0.3, rate: 1 + 0.06 * Math.max(0, (m.n | 0) - 1), key: 'ml-stepmark:' + m.pid, minGap: 0.5 });
+      else if (k === 'mleye') play('bm-maelis-m-mark-eye', { vol: mine ? 0.85 : 0.3, key: 'ml-eye:' + m.pid, minGap: 0.5 });
+    });
+    wrap('roomev', m => {
+      if (s3Boss !== 'maelis' || typeof m.k !== 'string') return;
+      const k = m.k;
+      if (k === 'mlcrown') mlCrown(m);
+      else if (k === 'mlcrown2') { if (+m.on === 1 && m.phase && m.phase !== 'new') play('bm-maelis-m-crown2', { vol: 0.4, rate: ML_CR2_RATE[m.phase] || 1, key: 'ml-crown2', minGap: 0.6 }); }
+      else if (k === 'mlform') { mlForm = m.n === 2 ? 2 : 1; mlBase = mlForm === 2 ? 0.5 : 0.6; mlBedLevel(3); }
+      else if (k === 'mlnight') { mlNight = +m.on === 1; mlBedLevel(mlNight ? 1.4 : 2.5); }
+      else if (k === 'mlwallup') mlWallOn = true;
+      else if (k === 'mlnmdown') mlWallOn = false;
+      else if (k === 'mldance') mlDance = { n: Math.max(1, m.n | 0), wax: +m.wax || 1, i: 0 };
+      else if (k === 'mldanceend') { if (mlDance) { mlDance = null; play('bm-maelis-m-dance-end', { vol: 0.4, key: 'ml-danceend', minGap: 1 }); } }
+      else if (k === 'mlstep') { mlStepI = m.i | 0; play('bm-maelis-m-line', { vol: 0.7, rate: 1 + 0.045 * mlStepI, key: 'ml-line', minGap: 0.5 }); }   // (the thin silver line, foretold)
+      else if (k === 'mlstepl') { mlStepI = m.i | 0; play('bm-maelis-m-line-lock', { vol: 0.6, at: s3Pt(m.x2, m.y2), key: 'ml-linelock', minGap: 0.3 }); }
+      else if (k === 'mlpool') { play('bm-maelis-m-pool', { vol: 0.5, rate: +m.last ? 1.35 : 1 + 0.05 * (m.i | 0), at: s3Pt(m.x, m.y), key: 'ml-poollay', minGap: 0.5 }); if (+m.last) mlLastTg = mlPoolTg; }
+      else if (/^mlpath:/.test(k)) {   // a trail locks: its footprints lit; the rider pushes off when it starts (the Hound's road is the staged beat's)
+        mlRunKind = m.kd;
+        if (m.kd === 'return') return;
+        const l = Array.isArray(m.l) && m.l.length ? m.l[0] : null, v = m.kd === 'pass' ? 1 : m.kd === 'ride' ? 0.7 : 0.55;
+        play('bm-maelis-m-lock', { vol: 0.6 * v, rate: m.kd === 'shade' ? 0.8 : m.kd === 'ride' ? 0.9 : 1, key: 'ml-trail', minGap: 0.5 });
+        if (l && +m.at >= 0) svLater(Math.max(0, +m.at - 0.05), () => play('bm-maelis-m-ride-start', { vol: 0.7 * v, rate: m.kd === 'shade' ? 1.25 : 1, at: s3Pt(l[0], l[1]), key: 'ml-ridestart', minGap: 0.4 }));
+      } else if (k === 'mlmoonlet') svLater(0.3, () => play('bm-maelis-m-moonlet-rest', { vol: 0.4, at: s3Pt(m.x, m.y), key: 'ml-rest:' + m.id, minGap: 0.2 }));   // (it settles a moment after it lands)
+      else if (k === 'mlmoonx') { if (!+m.burst) play('bm-maelis-m-moonlet-gone', { vol: 0.4, at: s3Pt(m.x, m.y), key: 'ml-gone:' + m.id, minGap: 0.2 }); }
+      else if (k === 'mlburst') svLater(Math.max(0, (+m.at || 0) - 0.9), () => play('bm-maelis-m-moonlet-hum', { vol: 0.3, at: s3Pt(m.x, m.y), key: 'ml-hum', minGap: 0.5 }));
+      else if (k === 'mllibrate') { mlLibAt = s3Clock(); play('bm-maelis-m-rock', { vol: 0.6, rate: (+m.dir || 1) > 0 ? 1.06 : 0.94, key: 'ml-rock', minGap: 1 }); }
+      else if (k === 'mltouch') {   // Moon-Touched: the inversion holds from `at` for `life`
+        const at = Math.max(0, +m.at || 0), life = +m.life || 20, mine = mineIn(m.ids);
+        svLater(at, () => play('bm-maelis-m-touch', { vol: mine ? 0.8 : 0.5, key: 'ml-touch', minGap: 1 }));
+        svLater(at + life, () => play('bm-maelis-m-touch-end', { vol: mine ? 0.4 : 0.2, key: 'ml-touchend', minGap: 1 }));
+      } else if (k === 'mlhowl2') svLater(Math.max(0, +m.at || 1.5), () => play('bm-maelis-m-shade', { vol: 0.5, key: 'ml-shade', minGap: 2 }));   // (the cast's own howl, bm-maelis-the-second-howl, is the first 1.5 s: the shade's sound is as the road locks and he runs)
+      else if (k === 'mleclipse0') mlQuietUntil = s3Clock() + 9;
+      else if (k === 'mleclipse') mlQuietUntil = s3Clock() + 4;
+      else if (k === 'mltotality') mlQuietUntil = s3Clock() + 99;   // (the enrage: the crown is red all over and nothing changes it again)
+      else if (k === 'mlfall') { mlQuietUntil = s3Clock() + 99; mlBedSet(0, 0.8); }   // (the kill is the staged beat's: the bed goes under it)
+    });
+    wrap('fight', m => { if (s3Boss === 'maelis' && (m.s === 'clear' || m.s === 'wipe')) mlBedStop(2.5); });   // (the result: the moon's bed goes with the fight)
+  }
+
   // ---------------------------------------------------------------- music
   const music = (id, o) => { if (has()) safe(() => Sound.music.set(id, o)); };
   // The Founding's music (founding/client.js picks the slot from what the run shows; the prompts are in docs/art/music-prompts.md). A slot is the track mus-fd-<slot>. Until that
@@ -1020,13 +1383,17 @@ const SoundHooks = (() => {
     return true;
   }
   // the phase (course) where Normal crossfades into the boss's Hard track, late in the fight
-  const LAYER_AT = { grubnak: 3, skitterra: 3, volkar: 3, hollowking: 5, wyrm: 4, titan: 3, archmage: 4, hydra: 4, corvane: 3, brannoc: 3, morrowoak: 3, caelum: 3, garrow: 3 };   // (garrow: as the Whiteout begins)
+  const LAYER_AT = { grubnak: 3, skitterra: 3, volkar: 3, hollowking: 5, wyrm: 4, titan: 3, archmage: 4, hydra: 4, corvane: 3, brannoc: 3, morrowoak: 3, caelum: 3, garrow: 3, vesper: 3, ormun: 3 };   // (garrow: as the Whiteout begins; vesper: as the Mirror Turns, after the wall; ormun: as Burdens begin, after the Spring Tide)
+  // maelis is not in that table: her staged mount (walls/maelis.js) layers the harder music as she vaults onto the Hound, ten seconds into the Hunt. A start or a rejoin after the mount has no
+  // mount to stage, so it catches up here, from the first phase that always comes after it (Hunter's Moon); a rejoin during the Hunt's first half is caught up by the replay of her second form (walls/maelis.js)
+  const LAYER_LATE = { maelis: 4 };
   // a boss whose second track is its second form's music, not a harder take of the first: both difficulties start on the
-  // first track and turn at the form change
-  const TURN = new Set(['brannoc', 'morrowoak', 'caelum']);
+  // first track and turn at the form change (maelis: the Wild Hunt's music, from her mount on every difficulty: walls/maelis.js, LAYER_LATE above)
+  const TURN = new Set(['brannoc', 'morrowoak', 'caelum', 'maelis']);
   function phase(bossId, n) {
     // (on Hard that track plays the whole fight: it is not layered over)
-    if (has() && LAYER_AT[bossId] && n >= LAYER_AT[bossId] && !/-hard$/.test(String(Sound.music.current() || ''))) safe(() => Sound.music.layer('mus-' + bossId));
+    const at = LAYER_AT[bossId] || LAYER_LATE[bossId];
+    if (has() && at && n >= at && !/-hard$/.test(String(Sound.music.current() || ''))) safe(() => Sound.music.layer('mus-' + bossId));
   }
   // the fight's track: 'mus-<boss>-hard' on Hard if that track exists, else 'mus-<boss>'
   // act: for the Ultimate, the act in play (a practice start, a rejoin; absent or 0 is the first); other bosses ignore it
@@ -1034,6 +1401,9 @@ const SoundHooks = (() => {
     s1Note(bossId, true);   // (the pull: set one's revamp wires its room's moments once, below)
     s3Note(bossId, true);   // (the pull: set three's revamp wires its room's moments once, below)
     if (bossId === 'garrow') gwBedStart();   // (the Long Mere's bed, until the fight ends)
+    if (bossId === 'vesper') vsBedStart();   // (the Argent Hall's bed, until the fight ends)
+    if (bossId === 'maelis') mlBedStart();   // (the face of the moon's bed, until the fight ends)
+    if (bossId === 'ormun') omBedStart();   // (the sea's bed under the Scales, until the fight ends)
     if (bossId === 'sovereign') { svClear(svMusT); svClear(svFxT); svMusOn = true; svAct = act >= 1 && act <= 4 ? Math.floor(act) : 1; svSlot = svAct; return (SV_MUS[svAct] || SV_MUS[1]).ids; }   // (the act the room is in: Act I on a normal pull; the chain, see SV_MUS)
     if (bossId === 'hood') return ['mus-hood', 'mus-hollowking'];      // (the first court's own tune, else the Hollow King's)
     if (bossId === 'seraph') return ['mus-seraph', 'mus-hydra-hard'];  // (the second court's, else the Mother's harder tune)
@@ -1045,7 +1415,7 @@ const SoundHooks = (() => {
   let amb = null, hum = null, heart = null, wasLow = false, musicScene = null, lastStep = 0;
   const STEP = { grass: 'step-grass', stone: 'step-stone', wood: 'step-wood' }, STEP_O = { vol: 0.2 };   // (made once: nothing new per frame)
   // what each room's floor is, as far as the three step recipes go (the soft crunch stands in for snow, sand, mud and leaves)
-  const ARENA_GROUND = { grubnak: 'wood', hydra: 'grass', morrowoak: 'grass', titan: 'grass', corvane: 'grass', brannoc: 'grass', garrow: 'grass' };   // (any other room is stone; the soft crunch stands in for snow)
+  const ARENA_GROUND = { grubnak: 'wood', hydra: 'grass', morrowoak: 'grass', titan: 'grass', corvane: 'grass', brannoc: 'grass', garrow: 'grass', maelis: 'grass' };   // (any other room is stone; the soft crunch stands in for snow)
   // a footstep in the fight: yours at 0.12, anyone else's at 0.05 and placed where they stand; k is a landing's extra weight
   function step(bossId, mine, e, k = 1) {
     if (!has() || !e) return;

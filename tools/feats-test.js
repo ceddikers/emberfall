@@ -38,12 +38,12 @@ const check = (ok, what) => { if (!ok) probs.push(what); };
   check(FEAT_CATS.map(c => c[0]).indexOf('extreme') === FEAT_CATS.map(c => c[0]).indexOf('hard') + 1, 'the Extreme section follows Hard');
   check(xf.every(f => f.check.mode === 'extreme'), 'every Extreme feat checks Extreme');
   for (const b of BOSSES.filter(b => b.playable)) check(xf.some(f => f.check.type === 'clear' && f.check.boss === b.id), `${b.id}: no Extreme clear feat`);
-  for (const set of [1, 2, 3]) {
+  for (const set of [1, 2, 3, 6]) {
     const f = xf.find(x => x.check.type === 'clearAll' && (x.check.set || 1) === set);
     check(f && f.title, `set ${set}: no Extreme set feat with a title`);
     if (set > 1 && f) check(f.needs, `set ${set}: its Extreme set feat needs a gate`);
   }
-  check(xf.length === 16, `expected 16 Extreme feats, have ${xf.length}`);
+  check(xf.length === 20, `expected 20 Extreme feats, have ${xf.length}`);   // (12 bosses of sets 1 to 3, the four Season 2 bosses, four set feats)
 }
 
 // ---------------------------------------------------------------- 2. the rules

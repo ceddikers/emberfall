@@ -72,20 +72,117 @@ const BossTells = (() => {
     ctx.restore();
   }
   // The rims again, over the floor VFX (lingering fire, smoke, auras), so a shape is never lost under them.
-  function rims(ctx, tgs, t, env) {
+  // rimsTop() is the same pass run once more as the last thing over the hero and boss effects (main.js, after the air layer): no stack of
+  // ability light, props or Ultimates can cover a telegraph's edge. It is drawn a little firmer (a dark keyline under the role colour, so the
+  // line reads on a bleached or fiery floor too) and lays a faint wash and an inner edge band back, so the shape still reads red or blue.
+  // The firmer edge of the top pass, one drawing for every telegraph (and for the outline-less tells, topTell): a faint wash and an inner edge band that keep the shape red or blue,
+  // then a dark casing, the role colour and a pale line down its middle. The three do not share a hue with anything a hero throws: whatever sits under it (orange flame, purple smoke,
+  // blue frost, red blood) is darker or paler than one of them, so the edge reads on any colour. The path is already traced.
+  function topEdge(ctx, col, kt, late, soft = 1, slim = false, heavy = false) {
+    if (heavy) { topEdge(ctx, col, kt, late, soft, slim); ctx.lineJoin = 'round'; ctx.strokeStyle = rgba(COL.casing || '#14070c', 0.5 * kt); ctx.lineWidth = 6.4; ctx.stroke(); ctx.strokeStyle = rgba('#ffffff', 0.95 * kt); ctx.lineWidth = 2.2; ctx.stroke(); return; }   // (a tank buster: its own art lays bright edge lines the plain keyline has to stand in for)
+    // (the wash is laid twice: a light multiply of the role colour, which tints whatever is under it toward red or blue instead of mixing with it (orange flame stays flame, purple smoke goes
+    // deeper), and the plain faint fill)
+    if (/^#[0-9a-f]{6}$/i.test(col)) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = rgba(lerpColor(col, '#ffffff', 0.5), 0.34 * kt * soft); ctx.fill(); ctx.restore(); }
+    ctx.fillStyle = rgba(col, 0.05 * kt * soft); ctx.fill();
+    ctx.save(); ctx.clip(); ctx.strokeStyle = rgba(col, 0.24 * kt * soft); ctx.lineWidth = 16; ctx.stroke(); ctx.restore();
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = rgba(col, kt); ctx.lineWidth = (slim ? 8 : 8.6) + late * 1.2; ctx.stroke();
+    ctx.strokeStyle = rgba(COL.casing || '#14070c', 0.94 * kt); ctx.lineWidth = slim ? 4.4 : 4.6; ctx.stroke();
+    ctx.strokeStyle = rgba('#ffffff', 0.9 * kt); ctx.lineWidth = slim ? 1.5 : 1.6; ctx.stroke();
+  }
+  // The tells that draw no rim of their own (outline: false: plates, bubbling floors, spreads, the stack rings, the lanes of a thrown spear...) are skipped by the ordinary rim, so a stack
+  // of hero effects could bury their edge the old way. In the top pass each gets the same keyline, restrained (a thinner casing and a fainter wash and band than a plain telegraph, since their
+  // own art carries the inside), laid on the EXACT shape the sim tests, in the role colour: so it follows the danger and nothing else. Left alone on purpose: the arena-wide blasts (gut, deluge,
+  // decree: the whole room is the warning and the cover's shadows are never painted, so there is no edge to lay), tells with no area (the Inhale), a Writ's lane while it is only being aimed.
+  const NO_EDGE = { gut: 1, deluge: 1, decree: 1, mgInhale: 1 };
+  // (their own art covers the inside most heavily, an opaque plate, a swirl, a rod's glow, so the wash that keeps the inside red or blue is laid thicker)
+  const WASH_MORE = { plate: 1.6, gale: 1.6, rodstrike: 1.6 };
+  // the two cones the Hollow King's gaze draws under every hero (only the ones that are caught get an edge, the pale ones say nothing about where to stand)
+  function facingTop(ctx, p, kt, late, env, caughtFacing, t) {
+    const b = env.boss; if (!b) return;
+    for (const u of env.units || []) {
+      if (u.a == null) continue;
+      let d = Math.atan2(b.y - u.y, b.x - u.x) - u.a;
+      while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU;
+      if ((Math.abs(d) < 1.2) !== caughtFacing) continue;
+      const kz = zoneK({ kind: 'circle', x: u.x, y: u.y, r: 95 }, t); if (kz <= 0) continue;
+      ctx.beginPath(); ctx.moveTo(u.x, u.y); ctx.arc(u.x, u.y, 95, u.a - 1.2, u.a + 1.2); ctx.closePath();
+      topEdge(ctx, COL.danger, kt * kz * (0.55 + 0.45 * p), late, 0.8, true);
+    }
+  }
+  function topTell(ctx, tg, tell, k, t, env, top, acc) {
+    if (NO_EDGE[tg.tag] || tell.raidwide) return;
+    const p = clamp((t - tg.start) / tg.dur, 0, 1), late = clamp(1 - (1 - p) * tg.dur / 0.6, 0, 1), kt = k * top;
+    if (tg.tag === 'gaze' || tg.tag === 'audience') { facingTop(ctx, p, kt, late, env, tg.tag === 'gaze', t); return; }
+    if (tg.tag === 'writ' && (1 - p) * tg.dur > (tg.lockAt || 0)) return;   // (a Writ's lane is only a pale guide until it sets)
+    const s = tg._orShape || tg.live;
+    if (!s || !s.kind || (s.kind === 'circle' && (!(s.r > 2) || s.r >= 1000))) return;   // (no area: nothing to follow; or wider than the room: no edge in view)
+    const kz = zoneK(s, t); if (kz <= 0) return;
+    if (tg.tag === 'svWedge' && s.kind === 'cone') { acc.wedge.push({ s, kt: kt * kz, late }); return; }
+    SHAPES.trace(ctx, s); topEdge(ctx, roleColor(tg, tell), kt * kz, late, WASH_MORE[tg.tag] || 0.8, true);
+  }
+  // Halo Procession's wedge is a run of narrow cones laid a beat apart: their edges are laid as the one shape they make (neighbouring slices share their sides)
+  function wedgeTop(ctx, list) {
+    list.sort((a, b) => (a.s.x - b.s.x) || (a.s.y - b.s.y) || (a.s.angle - b.s.angle));
+    const out = [];
+    for (const w of list) {
+      const lo = w.s.angle - w.s.arc / 2, hi = w.s.angle + w.s.arc / 2, c = out[out.length - 1];
+      if (c && Math.abs(c.x - w.s.x) < 3 && Math.abs(c.y - w.s.y) < 3 && lo <= c.hi + 0.03 && hi >= c.lo - 0.03) { c.lo = Math.min(c.lo, lo); c.hi = Math.max(c.hi, hi); c.kt = Math.max(c.kt, w.kt); c.late = Math.max(c.late, w.late); }
+      else out.push({ x: w.s.x, y: w.s.y, r: w.s.r, lo, hi, kt: w.kt, late: w.late });
+    }
+    for (const c of out) { SHAPES.trace(ctx, { kind: 'cone', x: c.x, y: c.y, r: c.r, angle: (c.lo + c.hi) / 2, arc: c.hi - c.lo }); topEdge(ctx, COL.danger, c.kt, c.late, 0.8, true); }
+  }
+  // Where hero effects can be. Every cast (main.js, the player's and everyone else's) notes where it was cast from and where it was aimed; for a few seconds a disc round each (wider for an
+  // Ultimate) is "effect about". The top pass is laid on a telegraph only as far as it lies inside one of those, so a telegraph with no hero effect near it keeps exactly its ordinary look.
+  const zones = [];
+  function noteCast(x, y, tx, ty, ult, t) {
+    if (!(x === x && y === y)) return;
+    if (zones.length > 40) zones.splice(0, zones.length - 40);
+    zones.push({ x, y, tx: tx === tx && tx != null ? tx : x, ty: ty === ty && ty != null ? ty : y, reach: ult ? 430 : 320, until: t + (ult ? 6 : 4.5) });
+  }
+  function boundOf(s) {   // (a circle that holds the whole shape, a little generously)
+    switch (s.kind) {
+      case 'circle': case 'donut': return [s.x, s.y, s.r];
+      case 'rect': { const c = Math.cos(s.angle), sn = Math.sin(s.angle); return [s.x + c * s.len / 2, s.y + sn * s.len / 2, Math.hypot(s.len / 2, s.w / 2)]; }
+      case 'cone': return [s.x + Math.cos(s.angle) * s.r * 0.5, s.y + Math.sin(s.angle) * s.r * 0.5, Math.hypot(s.r * 0.5, s.r * Math.sin(Math.min(s.arc, Math.PI) / 2))];
+      default: return [s.x, s.y, (s.len || s.r || 300) * 1.2];
+    }
+  }
+  function zoneK(s, t) {
+    if (!s || !s.kind) return 1;
+    for (let i = zones.length - 1; i >= 0; i--) if (t > zones[i].until + 0.1) zones.splice(i, 1);
+    if (!zones.length) return 0;
+    const [cx, cy, cr] = boundOf(s); let best = 0;
+    for (const z of zones) {
+      const ex = z.tx - z.x, ey = z.ty - z.y, L2 = ex * ex + ey * ey, q = L2 > 1 ? clamp(((cx - z.x) * ex + (cy - z.y) * ey) / L2, 0, 1) : 0;
+      const d = Math.hypot(cx - (z.x + ex * q), cy - (z.y + ey * q)) - cr, g = clamp((z.reach - d) / 90, 0, 1) * clamp((z.until - t) / 1.2, 0, 1);
+      if (g > best) best = g;
+    }
+    return best < 0.12 ? 0 : (best - 0.12) / 0.88;   // (the thin fringe of a zone lays nothing: an effect that barely reaches a telegraph does not change it)
+  }
+  let topPass = 0;   // (0 in the ordinary pass; 0..1 in rimsTop: how much of the firmer pass is laid)
+  function rims(ctx, tgs, t, env, clipFn) {   // (clipFn: a room that is not the arena, Vesper's glass, brings its own clip)
+    const top = topPass;
     ctx.save();
-    ARENA.trace(ctx, 4); ctx.clip();
+    if (clipFn) clipFn(ctx); else { ARENA.trace(ctx, 4); ctx.clip(); }
+    const acc = top ? { wedge: [] } : null;
     for (const tg of tgs.values()) {
       if (tg.hidden || tg.type === 'raidwide' || tg.type === 'safe' || tg.gone != null) continue;
       const tell = get(tg, env);
-      if (tell && tell.outline === false) continue;
+      if (tell && tell.outline === false) { if (top) { const k0 = fade(tg, t) * ghost(tg, env); if (k0 > 0) topTell(ctx, tg, tell, k0, t, env, top, acc); } continue; }
       const k = fade(tg, t) * ghost(tg, env);
       if (k <= 0) continue;
       const p = clamp((t - tg.start) / tg.dur, 0, 1), late = clamp(1 - (1 - p) * tg.dur / 0.6, 0, 1);
+      if (top) {
+        const kz = zoneK(tg.live, t); if (kz <= 0) continue;
+        SHAPES.trace(ctx, tg.live); topEdge(ctx, roleColor(tg, tell), k * top * kz, late, 1, false, tg.type === 'buster');
+        continue;
+      }
       SHAPES.trace(ctx, tg.live);
       if (COL.casing) { ctx.strokeStyle = rgba(COL.casing, 0.45 * k); ctx.lineWidth = 4.5; ctx.stroke(); }
       ctx.strokeStyle = rgba(roleColor(tg, tell), (0.35 + 0.35 * late) * k); ctx.lineWidth = 1.5; ctx.stroke();
     }
+    if (acc && acc.wedge.length) wedgeTop(ctx, acc.wedge);
     ctx.restore();
   }
 
@@ -2121,6 +2218,9 @@ const BossTells = (() => {
       if (env.bossId === 'morrowoak' && typeof MG_FX !== 'undefined') { MG_FX.buster(ctx, tg, s, p, k, t, env); return; }   // Morrow-Oak's Root Lash (morrowoak-fx.js)
       if (env.bossId === 'caelum' && typeof CL_FX !== 'undefined') { CL_FX.buster(ctx, tg, s, p, k, t, env); return; }   // Caelum's Cinder Crown and Pinning Thrust (caelum-fx.js)
       if (env.bossId === 'garrow' && typeof GW_FX !== 'undefined') { GW_FX.buster(ctx, tg, s, p, k, t, env); return; }   // Garrow's Throat Snap (garrow-fx.js)
+      if (env.bossId === 'ormun' && typeof OR_FX !== 'undefined') { OR_FX.buster(ctx, tg, s, p, k, t, env); return; }   // Ormun's Heavy Hand: the shadow of his arm and fist (ormun-fx.js)
+      if (env.bossId === 'vesper' && typeof VS_FX !== 'undefined') { VS_FX.buster(ctx, tg, s, p, k, t, env); return; }   // Vesper's Twin Verdict, in the hall and in the glass (vesper-fx.js)
+      if (env.bossId === 'maelis' && typeof ML_FX !== 'undefined') { ML_FX.buster(ctx, tg, s, p, k, t, env); return; }   // Maelis's Earthshine and its pale second hit (maelis-fx.js)
       if (env.bossId === 'volkar') {
         // Titan Fist: lightning gathers along the cone and runs to the tank
         for (let i = 0; i < 5; i++) {
@@ -2597,6 +2697,9 @@ const BossTells = (() => {
     if (env.bossId === 'morrowoak') return (typeof MG_FX !== 'undefined' && MG_FX.tell(tg.tag)) || null;   // (morrowoak-fx.js)
     if (env.bossId === 'caelum') return (typeof CL_FX !== 'undefined' && CL_FX.tell(tg.tag)) || null;   // (caelum-fx.js)
     if (env.bossId === 'garrow') return (typeof GW_FX !== 'undefined' && GW_FX.tell(tg.tag)) || null;   // (garrow-fx.js)
+    if (env.bossId === 'vesper') return (typeof VS_FX !== 'undefined' && VS_FX.tell(tg.tag)) || null;   // (vesper-fx.js)
+    if (env.bossId === 'maelis') return (typeof ML_FX !== 'undefined' && ML_FX.tell(tg.tag)) || null;   // (maelis-fx.js)
+    if (env.bossId === 'ormun') return (typeof OR_FX !== 'undefined' && OR_FX.tell(tg.tag)) || (typeof OR_VIEW !== 'undefined' && OR_VIEW.tell(tg.tag)) || null;   // (his own over a judgement's red, which is one telegraph per pan: ormun-fx.js over ormun-view.js)   // (a judgement's red is one telegraph per pan, Tip the Scale's blue: ormun-view.js)
     if (env.bossId === 'hood' || env.bossId === 'seraph') return (typeof HD_FX !== 'undefined' && HD_FX.tell(tg.tag)) || null;   // (the Hollow Hood and the Six-Winged Seraph: hood-fx.js)
     if (env.bossId === 'sovereign') return SV[tg.tag] || null;   // (the Ultimate: SV above)
     return G[tg.tag] || null;
@@ -2942,5 +3045,10 @@ const BossTells = (() => {
   }
 
   window.HY_BT = { AFTERMATH, mark, AFTER };   // (the Hydra's floor marks are set up in hydra-view.js)
-  return { COL, setRoom, AFTER, afterK, get, ground, air, fade, rims, roleColor, track, drawAftermath, drawRollers, drawReels, drawSweeps, rodPost: (ctx, x, y, t, a) => rodPole(ctx, x, y, t, a, 0.15) };
+  const API = { COL, setRoom, AFTER, afterK, get, ground, air, fade, rims, roleColor, track, drawAftermath, drawRollers, drawReels, drawSweeps, rodPost: (ctx, x, y, t, a) => rodPole(ctx, x, y, t, a, 0.15) };
+  // (through API.rims, so the Vesper and Maelis wrappers that pick which shapes get a rim still apply)
+  API.topK = () => topPass;
+  API.noteCast = noteCast; API.zoneK = zoneK; API.zones = zones;
+  API.rimsTop = function (ctx, tgs, t, env, k = 1) { if (!(k > 0.01)) return; topPass = Math.min(1, k); try { API.rims(ctx, tgs, t, env); } finally { topPass = 0; } };
+  return API;
 })();

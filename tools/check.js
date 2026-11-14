@@ -116,6 +116,9 @@ RAIDS.push(
   ['Caelum Vey', 'caelum', 'runeguard:runeblade', 'grovekeeper:moonwell', 'shadowblade:bladedancer', 'pyromancer:sigilmancer', 'gear=post3', 'runs=6'],   // (this line-up clears Caelum about 45% after the 2026-10-26 pass, which made his Normal busier: six tries)
   // set 6, the fourth set: Garrow, the Moon's Hound (Boss XIII; the others of the set are not built yet), a party that has cleared the Ultimate's gear step (post5)
   ['Garrow', 'garrow', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5'],
+  ['Vesper', 'vesper', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5'],
+  ['Ormun', 'ormun', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5'],
+  ['Maelis Orne', 'maelis', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5'],
   // the Ultimate, one act at a time (bot-raid.js phase=N until=N: the run starts at act N and counts as a clear when the fight passes its gate, so the suite never plays the 15 minute fight; Act IV plays to the kill).
   // Perfect-bot clear rates per run at gear=post5, 24 runs each 2026-10-29: Act I 100%, II 83%, III 88%, IV 67%: the tries below make a chance miss rare.
   ['Sovereign, Act I', 'sovereign', 'bastion:base', 'cleric:aegis', 'ranger:sharpshooter', 'pyromancer:cataclysm', 'gear=post5', 'phase=1', 'until=1'],
@@ -163,8 +166,9 @@ HARD_BOSSES.push(['Brannoc', 'brannoc', 'gear=post3']);
 HARD_BOSSES.push(['Morrow-Oak', 'morrowoak', 'gear=post3']);
 HARD_BOSSES.push(['Caelum Vey', 'caelum', 'gear=post3']);
 HARD_BOSSES.push(['Garrow', 'garrow', 'gear=post6']);
+HARD_BOSSES.push(['Vesper', 'vesper', 'gear=post6'], ['Ormun', 'ormun', 'gear=post6'], ['Maelis Orne', 'maelis', 'gear=post6']);   // (set 6, Bosses XIV to XVI)
 // Extreme (docs/plans/2026-11-boss-revamp.md): Hard plus three mechanics of its own on every set boss, smoke-run at its tuning gear (bot-gear.js TUNED)
-const EXTREME_BOSSES = HARD_BOSSES.map(([name, id], i) => [name, id, 'gear=' + (i < 4 ? 'full' : ['wyrm', 'titan', 'hydra', 'archmage'].includes(id) ? 'post3' : id === 'garrow' ? 'post7' : 'post5')]);
+const EXTREME_BOSSES = HARD_BOSSES.map(([name, id], i) => [name, id, 'gear=' + (i < 4 ? 'full' : ['wyrm', 'titan', 'hydra', 'archmage'].includes(id) ? 'post3' : ['garrow', 'vesper', 'ormun', 'maelis'].includes(id) ? 'post7' : 'post5')]);
 const results = [];
 let into = results;   // where pass() and fail() write: the stage being read (see stage)
 const pass = (name, detail = '') => into.push({ ok: true, name, detail });
@@ -253,7 +257,7 @@ function data() {
     ARENA.use(id);
     let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647) * 2 - 1;
     for (let i = 0; i < 3000; i++) { const p = ARENA.clamp({ x: rnd() * 1200, y: rnd() * 1200 }, 12); if (ARENA.sd(p.x, p.y) > -11.5) { shapeProbs.push(`${id}: clamp left (${p.x | 0}, ${p.y | 0}) outside`); break; } }
-    for (let a = 0; a < TAU; a += 0.37) { const e = ARENA.edge(a); if (Math.abs(ARENA.sd(Math.cos(a) * e, Math.sin(a) * e)) > 1) { shapeProbs.push(`${id}: edge() off at angle ${a.toFixed(2)}`); break; } }
+    for (let a = 0; a < TAU; a += 0.37) { const e = ARENA.edge(a); if (e >= 0 && Math.abs(ARENA.sd(Math.cos(a) * e, Math.sin(a) * e)) > 1) { shapeProbs.push(`${id}: edge() off at angle ${a.toFixed(2)}`); break; } }
   }
   if (shapeProbs.length) fail('Arena shapes hold players in', shapeProbs.join('\n')); else pass('Arena shapes hold players in', Object.keys(ARENA_DEFS).join(', ') + ', circle');
   props();
@@ -683,6 +687,7 @@ CHOREO.push(['Brannoc', 'brannoc', 'BRANNOC']);
 CHOREO.push(['Morrow-Oak', 'morrowoak', 'MORROWOAK']);
 CHOREO.push(['Caelum Vey', 'caelum', 'CAELUM']);
 CHOREO.push(['Garrow', 'garrow', 'GARROW']);
+CHOREO.push(['Vesper', 'vesper', 'VESPER'], ['Ormun', 'ormun', 'ORMUN'], ['Maelis Orne', 'maelis', 'MAELIS']);
 const TL = { WARN_MIN: 1.2, GAP_MAX: 16, RAID_MAX: 150, BUSTER_MAX: 180, LEN_MIN: 480, LEN_MAX: 600 };
 function timelines() {
   const load = p => require(path.join(ROOT, 'client/js', p));

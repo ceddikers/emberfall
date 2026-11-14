@@ -177,13 +177,17 @@ function raidTests() {
     hydra: load('arena/bosses/hydra.js').HYDRA, archmage: load('arena/bosses/archmage.js').AZERATH,
     corvane: load('arena/bosses/corvane.js').CORVANE, brannoc: load('arena/bosses/brannoc.js').BRANNOC, morrowoak: load('arena/bosses/morrowoak.js').MORROWOAK, caelum: load('arena/bosses/caelum.js').CAELUM, garrow: load('arena/bosses/garrow.js').GARROW,
   };
+  // (Season 2, Bosses XIV and XV: each joins once its script file exists, so a boss still being built never breaks the test)
+  for (const [id, name] of [['vesper', 'VESPER'], ['ormun', 'ORMUN'], ['maelis', 'MAELIS']]) if (fs.existsSync(path.join(__dirname, '../client/js/arena/bosses', id + '.js'))) DEFS[id] = load('arena/bosses/' + id + '.js')[name];
   const people = [
     { id: 1, name: 'Tank', cls: 'bastion', spec: null, role: 'tank', x: 0, y: 320, a: -1.57 },
     { id: 2, name: 'Heal', cls: 'cleric', spec: null, role: 'healer', x: -60, y: 350, a: -1.57 },
   ];
+  // (the heroes start 320 and 350 below the middle: kept on the floor of a room that is smaller than that, as the Argent Hall is, 520 tall; a hero off the floor falls)
+  const inArena = p => ARENA.clamp(Object.assign({}, p), 60);
   for (const [id, def] of Object.entries(DEFS)) for (const mode of ['normal', 'hard']) {
     const held = new Set(), sent = [];
-    const host = new RaidHost({ def, mode, humans: () => people.filter(p => !held.has(p.id)).map(p => Object.assign({}, p)), bots: ['ranger', 'pyromancer'], emit: m => sent.push(m), seed: 11, waitPull: true });
+    const host = new RaidHost({ def, mode, humans: () => people.filter(p => !held.has(p.id)).map(p => inArena(p)), bots: ['ranger', 'pyromancer'], emit: m => sent.push(m), seed: 11, waitPull: true });
     const tag = `${id} ${mode}`;
     host.sim.pull();
     let snaps = 0, tgSeen = 0, standSnap = null;
@@ -193,9 +197,9 @@ function raidTests() {
       for (const p of people) { const s = host.sim.ps.get(p.id); if (s) { s.alive = true; s.hp = s.maxHp; } }
       if (i === 20 * 12) {   // the healer's link drops
         held.add(2);
-        const bot = host.standIn(people[1]);
+        const bot = host.standIn(inArena(people[1]));
         check(bot && bot.id === 2 && bot.standIn, `${tag}: a stand-in takes the healer's place`);
-        check(host.standIn(people[1]) === null, `${tag}: only one stand-in per player`);
+        check(host.standIn(inArena(people[1])) === null, `${tag}: only one stand-in per player`);
         check(new Set(host.allPlayers().map(p => p.id)).size === host.allPlayers().length, `${tag}: no player twice`);
       }
       if (i % (20 * 8) === 0 && i > 0) {

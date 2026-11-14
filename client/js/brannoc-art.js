@@ -29,13 +29,13 @@ const BR_ART = (() => {
   };
   // where a cast is in its swing: strike 0 (gathering) .. 1 (the blow has landed), then rest 0 .. 1 (back to standing). Before the cast's own
   // swing begins, and with no swing at all, it is the gathering.
+  // (strikeBeats, draw-util.js: the blow is fast and lands the moment the cast ends; load is the last gathering before it, ovr the carry past the mark,
+  // land / shud the weight of the landing, cloth how far his loincloth is behind the lunge. He is a showman: he holds the finished pose a beat before he settles.)
   function atk(st) {
-    const a = st.action;
-    if (!a || a.type !== 'attack') return { strike: 0, rest: 0, p: -1 };
-    const p = (actT(st) - a.t0) / a.dur;
-    if (p < 0.3) return { strike: 0, rest: 0, p };
-    if (p < 0.55) return { strike: easeOut((p - 0.3) / 0.25), rest: 0, p };
-    return { strike: 1, rest: p >= 1 ? 1 : easeOut((p - 0.55) / 0.45), p };
+    const B = strikeBeats(st), a = st.action;
+    if (!B.on) return { strike: 0, rest: 0, p: -1, load: 0, ovr: 0, land: 0, shud: 0, cloth: B.cloth, on: false, u: -1, coil: 0, wk: false };
+    const e = Math.min(a.dur, 1.12), r = clamp((B.u - 0.70) / Math.max(0.1, e - 0.70), 0, 1);
+    return { strike: B.hit, rest: r * r * (3 - 2 * r), p: B.p, load: B.load, ovr: B.ovr, land: B.land, shud: B.shud, cloth: B.cloth, on: true, u: B.u, auto: a.dur <= 1.05, coil: B.coil, wk: a.wk > 0 };
   }
 
   // ---------------------------------------------------------------------------------------------------------- small parts
@@ -111,7 +111,7 @@ const BR_ART = (() => {
     ctx.strokeStyle = K.gold; ctx.lineWidth = 1.7; ctx.lineJoin = 'round'; ctx.stroke();
     for (let i = 0; i <= N; i += 2) circle(ctx, pts[4 + i * 2], pts[5 + i * 2], 1.4, K.goldH);
   }
-  function sandal(ctx, x, y, rot, s = 1) {
+  function sandal(ctx, x, y, rot, s = 1.2) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
     ellipse(ctx, 0, 0, 10, 5.6, 0, '#6f4421', OUT, 2);
     for (const q of [-3, 1.5, 6]) line(ctx, q, -4.6, q, 4.6, K.bronzeH, 1.4);
@@ -119,9 +119,9 @@ const BR_ART = (() => {
     ctx.restore();
   }
   function torso(ctx, hot, t) {
-    ellipse(ctx, -1, 0, 17, 26, 0, K.skin, OUT, 2.8);
-    ellipse(ctx, 1, -2, 11, 15, 0, rgba(K.skinH, 0.4));
-    for (const sy of [-1, 1]) { ellipse(ctx, -5, sy * 9, 7, 6, 0.3 * sy, rgba(K.skinD, 0.4)); circle(ctx, 0, sy * 21, 8.4, K.skin, OUT, 2); circle(ctx, -1.5, sy * 20, 4.6, rgba(K.skinH, 0.55)); }   // blades and shoulders
+    ellipse(ctx, -1, 0, 19.5, 28.5, 0, K.skin, OUT, 3);
+    ellipse(ctx, 1, -2, 12.5, 17, 0, rgba(K.skinH, 0.42));
+    for (const sy of [-1, 1]) { ellipse(ctx, -5, sy * 9, 7, 6, 0.3 * sy, rgba(K.skinD, 0.4)); circle(ctx, 0, sy * 23, 10.4, K.skin, OUT, 2.2); circle(ctx, -1.8, sy * 22, 5.8, rgba(K.skinH, 0.55)); }   // blades and shoulders
     line(ctx, -13, 0, 11, 0, rgba(K.skinD, 0.75), 1.8);
     for (let i = -5; i <= 5; i += 2) circle(ctx, i * 2.1, 0, 1.1, rgba(K.skinD, 0.9));
     brandMark(ctx, -5, -12, 0.5, hot, 0.9); brandMark(ctx, -8, 11, -0.4, hot, 0.85); brandMark(ctx, 4, 12, 0.9, hot, 0.7); brandMark(ctx, 6, -10, -0.2, hot, 0.7);
@@ -132,13 +132,13 @@ const BR_ART = (() => {
   // a bare arm from the shoulder to the hand, an elbow out to one side, the victory brands along it, a bronze bracer by the wrist, a fist
   function arm(ctx, sx, sy, hx, hy, bend, hot, seed, o = {}) {
     const mx = (sx + hx) / 2, my = (sy + hy) / 2, dx = hx - sx, dy = hy - sy, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, ex = mx + nx * bend, ey = my + ny * bend;
-    limb(ctx, [sx, sy, ex, ey, hx, hy], K.skin, 11.5);
-    line(ctx, sx + nx * -2, sy + ny * -2, ex - nx * 2, ey - ny * 2, rgba(K.skinH, 0.5), 2);
-    for (let i = 0; i < 4; i++) { const q = 0.14 + i * 0.13, px = lerp(sx, ex, q * 1.6), py = lerp(sy, ey, q * 1.6); line(ctx, px - ny * 4.5, py + nx * 4.5, px + ny * 4.5, py - nx * 4.5, rgba(K.brand, 0.7 + 0.25 * hot), 1.3); }
+    limb(ctx, [sx, sy, ex, ey, hx, hy], K.skin, 15);
+    line(ctx, sx + nx * -2.6, sy + ny * -2.6, ex - nx * 2.6, ey - ny * 2.6, rgba(K.skinH, 0.5), 2.4);
+    for (let i = 0; i < 4; i++) { const q = 0.14 + i * 0.13, px = lerp(sx, ex, q * 1.6), py = lerp(sy, ey, q * 1.6); line(ctx, px - ny * 5.8, py + nx * 5.8, px + ny * 5.8, py - nx * 5.8, rgba(K.brand, 0.7 + 0.25 * hot), 1.4); }
     const bx = lerp(ex, hx, 0.45), by = lerp(ey, hy, 0.45), cx = lerp(ex, hx, 0.8), cy = lerp(ey, hy, 0.8);
-    line(ctx, bx, by, cx, cy, OUT, 12.5); line(ctx, bx, by, cx, cy, K.bronze, 9.5); line(ctx, bx + nx, by + ny, cx + nx, cy + ny, rgba(K.bronzeH, 0.85), 2);
-    if (o.open) { const ux = dx / L, uy = dy / L; for (let i = -2; i <= 2; i++) { const fx = hx + ux * 9 - uy * i * 4.2, fy = hy + uy * 9 + ux * i * 4.2; line(ctx, hx, hy, fx, fy, OUT, 4.4); line(ctx, hx, hy, fx, fy, K.skin, 2.6); } circle(ctx, hx, hy, 5.6, K.skin, OUT, 2); }
-    else { circle(ctx, hx, hy, 6.8, K.skin, OUT, 2); circle(ctx, hx - 1.4, hy - 1.6, 3.4, rgba(K.skinH, 0.55)); for (const q of [-3, 0, 3]) line(ctx, hx + 2.4, hy + q, hx + 5.4, hy + q * 1.2, rgba(K.skinD, 0.85), 1); }
+    line(ctx, bx, by, cx, cy, OUT, 16.4); line(ctx, bx, by, cx, cy, K.bronze, 13.2); line(ctx, bx + nx * 1.4, by + ny * 1.4, cx + nx * 1.4, cy + ny * 1.4, rgba(K.bronzeH, 0.85), 2.4);
+    if (o.open) { const ux = dx / L, uy = dy / L; for (let i = -2; i <= 2; i++) { const fx = hx + ux * 9 - uy * i * 4.2, fy = hy + uy * 9 + ux * i * 4.2; line(ctx, hx, hy, fx, fy, OUT, 5.4); line(ctx, hx, hy, fx, fy, K.skin, 3.4); } circle(ctx, hx, hy, 7.2, K.skin, OUT, 2.2); }
+    else { circle(ctx, hx, hy, 8.4, K.skin, OUT, 2.2); circle(ctx, hx - 1.6, hy - 1.9, 4.2, rgba(K.skinH, 0.55)); for (const q of [-3.6, 0, 3.6]) line(ctx, hx + 3, hy + q, hx + 6.6, hy + q * 1.2, rgba(K.skinD, 0.85), 1.1); }
   }
   // the head: a gilded half-helm with a red crest streaming back, the face open below the brim, a red-brown beard, a laughing mouth
   function head(ctx, t, laugh, hot, up) {
@@ -173,13 +173,17 @@ const BR_ART = (() => {
     const pr = st.props || {};
     if (pr.titan) return titan(ctx, st, angle);
     const t = st.t || 0, ca = Math.cos(angle), sa = Math.sin(angle), S = (x, y) => [x * ca - y * sa, x * sa + y * ca];
-    const A = atk(st);
+    const A = atk(st), GA = A.load * (1 - A.strike), kk = A.strike + 0.22 * A.ovr;
     let pose = 'idle';
     if (pr.leap) pose = 'air'; else if (pr.rise) pose = 'rise'; else if (pr.pose) pose = 'pose'; else if (pr.heel) pose = 'heel'; else if (pr.kick) pose = 'kick';
     else if (pr.roar) pose = 'roar'; else if (pr.furrow) pose = 'furrow'; else if (pr.throw) pose = 'throw';
     const breathe = Math.sin(t * 1.7) * 0.8, moving = st.moving ? 1 : 0, step = Math.sin(t * 9) * 3 * moving;
     const up = pose === 'air' || pose === 'pose' || pose === 'rise', hot = up ? 1 : pose === 'roar' ? 0.6 : pose === 'throw' ? 0.35 * (1 - A.strike) : 0;
-    const wheelOut = !!pr.wheelOut || (pose === 'throw' && A.strike > 0.35);
+    const wheelOut = !!pr.wheelOut || (pose === 'throw' && A.strike > 0.9);   // (it leaves his hand the moment the cast ends)
+    const blow = A.on && (pose === 'throw' || pose === 'heel' || pose === 'kick');
+    // the weight: back as he gathers, into it as it lands, a dip and a shudder; the throw also coils the shoulders away from the mark and turns them through it
+    const mx = blow ? (-3.5 * GA + (pose === 'heel' ? 5 : 9) * A.strike + 3 * A.ovr) * (1 - A.rest) : 0;
+    const tw = blow && pose === 'throw' ? (0.2 * A.load * (1 - A.strike) - 0.14 * kk * (1 - A.rest)) : 0;
     const wheelHand = pose === 'throw' && !wheelOut;
 
     // the light that follows his glory: the brands and the rim of his shield catch it
@@ -200,8 +204,9 @@ const BR_ART = (() => {
       ctx.save(); ctx.rotate(-angle); circle(ctx, px, py - q * 8, 1.6 + (1 - q) * 2, rgba('#c8ad78', 0.7 * (1 - q))); ctx.restore();
     }
 
+    ctx.save(); if (blow) { const q = 1 - 0.045 * A.land; ctx.translate(mx, 1.3 * A.shud); ctx.scale(q, q); }   // (the blow's weight)
     // ---- what lies in the floor's plane: the loincloth, the feet
-    ctx.save(); if (pose === 'furrow') ctx.translate(5, 0);
+    ctx.save(); if (pose === 'furrow') ctx.translate(5, 0); if (blow) ctx.translate(-A.cloth * 6, 0);
     loincloth(ctx, t, 1.2 + moving * 2.2 + (pose === 'air' ? 2.5 : 0), pose === 'air' || pose === 'pose' ? 1.15 : 1);
     ctx.restore();
     if (pose !== 'air') {
@@ -212,19 +217,27 @@ const BR_ART = (() => {
     }
     ctx.save(); if (pose === 'furrow') { ctx.translate(6, 2); ctx.scale(0.95, 1.04); } if (pose === 'roar') ctx.translate(-1.5, 0);
     ctx.save(); if (pose === 'air') { ctx.rotate(-angle); ctx.translate(0, -26); ctx.rotate(angle); ctx.scale(1.18, 1.18); }
+    ctx.save(); ctx.rotate(tw);
     if (!wheelOut && !wheelHand) wheel(ctx, -18, 1, 21, { rot: t * 0.04 + 0.4, blaze: 0.35 + hot * 0.5, t });   // slung across his back: its blazing rim shows round him
     torso(ctx, hot, t);
+    ctx.restore();
 
     // ---- hands, wheel and fists, on the screen's axes
     ctx.save(); ctx.rotate(-angle);
-    const shL = S(0, -21), shR = S(0, 21);
+    let wheelHandPos = null;
+    const shA = angle + tw, shL = [23 * Math.sin(shA), -23 * Math.cos(shA)], shR = [-23 * Math.sin(shA), 23 * Math.cos(shA)];   // (the shoulders turn with the coil)
     const fistRest = (side) => { const p = S(14, side * 31 + side * breathe * 0.4); return [p[0], p[1] + breathe * 0.3]; };
     let hL = fistRest(-1), hR = fistRest(1), bendL = 5, bendR = -5, openL = false, openR = false;
     if (pose === 'throw') {
-      const back = S(-12, 35), fwd = S(46, 9), rest = fistRest(1);
-      const sw = A.rest > 0 ? [lerp(fwd[0], rest[0], A.rest), lerp(fwd[1], rest[1], A.rest)] : [lerp(back[0], fwd[0], A.strike), lerp(back[1], fwd[1], A.strike)];
-      hR = sw; bendR = lerp(-6, -2, A.strike); openR = A.strike > 0.4;
-      const bk = S(8, -30); hL = [lerp(hL[0], bk[0], 0.7), lerp(hL[1], bk[1], 0.7)];
+      // the wheel is drawn well back behind his right hip (further as he gathers, the off hand reaching out toward the mark to aim), thrown out along the
+      // line he faces as the cast ends (the arm carries on past it, the off hand flung back), and the finished pose is held a beat
+      const back = S(-12 - 12 * GA, 35 + 6 * GA), fwd = S(46, 9), over = S(60, 3), rest = fistRest(1);
+      const sw = [lerp(back[0], fwd[0], A.strike) + (over[0] - fwd[0]) * A.ovr, lerp(back[1], fwd[1], A.strike) + (over[1] - fwd[1]) * A.ovr];
+      hR = A.rest > 0 ? [lerp(sw[0], rest[0], A.rest), lerp(sw[1], rest[1], A.rest)] : sw; bendR = lerp(-6, -2, A.strike); openR = A.strike > 0.4;
+      const bk = S(8 - 6 * A.strike, -30 - 4 * A.strike), aim = S(28, -16);
+      hL = [lerp(hL[0], bk[0], 0.7), lerp(hL[1], bk[1], 0.7)];
+      if (GA > 0) hL = [lerp(hL[0], aim[0], 0.6 * GA), lerp(hL[1], aim[1], 0.6 * GA)];
+      wheelHandPos = hR;
     } else if (pose === 'kick') { const b = S(10, 27); hR = b; hL = S(10, -27); }
     else if (pose === 'furrow') { hR = S(34, 21); hL = S(2, -26); bendR = -2; }
     else if (pose === 'heel') { hR = S(9, 30); hL = S(9, -30); bendR = -8; bendL = 8; }
@@ -236,7 +249,8 @@ const BR_ART = (() => {
     // the Sunwheel: slung across his back (drawn flat to the floor so it reads from above), or in his hand for the throw, or gone
     if (wheelHand) {
       ctx.save(); ctx.rotate(-angle);
-      const back = S(-12, 35), wx = back[0] - 8 * Math.cos(angle), wy = back[1] - 8 * Math.sin(angle);
+      const back = A.on && wheelHandPos ? wheelHandPos : S(-12, 35), wx = back[0] - 8 * Math.cos(angle), wy = back[1] - 8 * Math.sin(angle);   // (it travels with the hand)
+      bladeSmear(ctx, st, 'wh', A.on && A.u > 0.32 && A.u < 0.9, wx, wy - 22, wx, wy + 14, '#ffd978', { a: 0.34, min: 5 });
       wheel(ctx, wx, wy - 4, 22, { rot: t * 1.2, blaze: 0.6 + 0.4 * Math.min(1, (t * 3) % 1), tilt: 0.88, t });
       ctx.restore();
     }
@@ -244,11 +258,15 @@ const BR_ART = (() => {
     // ---- the raised foot of Hammer Heel, over everything
     if (pose === 'heel' || pose === 'kick') {
       ctx.save(); ctx.rotate(-angle);
-      const hip = S(2, 11), kp = pose === 'heel' ? S(18, 4) : S(32, 4), ft = [kp[0], kp[1] - (pose === 'heel' ? 22 : 8)];
+      // Hammer Heel: the foot is hauled higher as he gathers and stamped down onto the floor in front of him as the cast ends; Riposte: the foot is
+      // chambered back (further as he gathers) and snapped out along the line he faces, carrying a little past the mark
+      const heelUp = Math.max(0, ((A.wk ? 8 + 14 * Math.min(1, A.coil * 2.2) : 22) + 12 * GA) * (1 - A.strike) - 3 * A.ovr), kickX = 22 - 6 * GA + 24 * kk;
+      const hip = S(2, 11), kp = pose === 'heel' ? S(18 + 3 * A.strike, 4) : S(A.on ? kickX : 32, 4), ft = [kp[0], kp[1] - (pose === 'heel' ? (A.on ? heelUp : 22) : (A.on ? 10 - 4 * A.strike + 4 * GA : 8))];
       ellipse(ctx, kp[0] + 3, kp[1] + 14, 18, 10, 0, 'rgba(0,0,0,0.28)');
       limb(ctx, [hip[0], hip[1], (hip[0] + ft[0]) / 2 - 3, (hip[1] + ft[1]) / 2 + 4, ft[0], ft[1]], K.skin, 12);
       line(ctx, lerp(hip[0], ft[0], 0.45), lerp(hip[1], ft[1], 0.45), ft[0], ft[1], OUT, 13); line(ctx, lerp(hip[0], ft[0], 0.45), lerp(hip[1], ft[1], 0.45), ft[0], ft[1], K.bronze, 9.5);   // the greave
-      ctx.translate(ft[0], ft[1]); ctx.rotate(0.15); ctx.scale(1.55, 1.55);
+      const fsc = pose === 'heel' && A.on ? 1.3 + 0.3 * Math.min(1, heelUp / 22) + 0.06 * GA : 1.55;   // (a raised foot is nearer to us)
+      ctx.translate(ft[0], ft[1]); ctx.rotate(0.15); ctx.scale(fsc, fsc);
       ellipse(ctx, 3, 0, 11, 7, 0, '#6f4421', OUT, 2); for (const q of [-2, 3, 8]) line(ctx, q, -6, q, 6, K.bronzeH, 1.5);
       for (const [px, py] of [[-4, -3], [-4, 3], [2, -3.5], [2, 3.5], [8, -2.5], [8, 2.5]]) circle(ctx, px + 0.5, py, 0.9, K.goldH);
       ctx.restore();
@@ -261,6 +279,7 @@ const BR_ART = (() => {
     head(ctx, t, pose === 'roar' || up || pose === 'idle' || pose === 'heel', hot, up);
     ctx.restore();
     ctx.restore();
+    ctx.restore();   // (the blow's weight)
     if (up) {   // sparks of gold off the brands
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       for (let i = 0; i < 7; i++) { const q = (t * 0.9 + i / 7) % 1, a = hash(i, 8) * TAU; circle(ctx, Math.cos(a) * (14 + q * 40), Math.sin(a) * (14 + q * 40) - q * 18, 1.4 + (1 - q) * 1.2, rgba(K.goldH, 0.9 * (1 - q))); }
@@ -391,7 +410,10 @@ const BR_ART = (() => {
     const pr = st.props || {}, t = st.t || 0, A = atk(st);
     const pose = pr.slam ? 'slam' : pr.grip ? 'grip' : pr.unbound ? 'unbound' : (pr.call || pr.risen || pr.rise || pr.bell) ? 'call' : 'idle';
     const bob = Math.sin(t * 0.8) * 3, br = Math.sin(t * 1.1) * 2.5, out = !!pr.wheelOut;
-    ctx.save(); ctx.rotate(-angle); ctx.translate(0, WL + bob * 0.3); ctx.scale(TS, TS);
+    // A colossus's blow: the fist is drawn higher and further back as he gathers and his whole upper body leans back with it, then it comes down the moment
+    // the cast ends, the carry past the mark pushes the fist into the floor, and the weight of it goes through him (a dip, a shudder) before the arm is let back.
+    const GT = A.load * (1 - A.strike), kT = A.strike + 0.12 * A.ovr, tBlow = A.on && (pose === 'slam' || pose === 'unbound' || pose === 'grip');
+    ctx.save(); ctx.rotate(-angle); ctx.translate(tBlow ? 3 * A.shud : 0, WL + bob * 0.3 + (tBlow ? -7 * GT + 9 * A.land : 0)); ctx.scale(TS, TS);
     // the sea round him, and the storm's light on his shell
     glow(ctx, 0, -150, 460, '#2fb3b0', 0.1); ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(ctx, 0, -130, 300, '#9ff0e8', 0.07 + (pose === 'call' ? 0.08 : 0)); ctx.restore();
     if (pr.bell) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 3; i++) { const q = (t * 0.9 + i / 3) % 1; ctx.beginPath(); ctx.ellipse(0, -90, 150 + q * 300, 90 + q * 190, 0, 0, TAU); ctx.strokeStyle = rgba(K.gold, 0.6 * (1 - q)); ctx.lineWidth = 5 - q * 3; ctx.stroke(); } glow(ctx, 0, -90, 380, K.gold, 0.14); ctx.restore(); }
@@ -401,14 +423,14 @@ const BR_ART = (() => {
     let hR = rest.R, hL = rest.L, curl = 0, dirL = Math.PI / 2, blaze = 0.5, fs = 1;
     const mix = (a, b, q) => [lerp(a[0], b[0], q), lerp(a[1], b[1], q)];
     if (pose === 'slam') {
-      const raised = [320, -300], down = [95, 175], base = mix(raised, down, A.strike);
-      hR = mix(base, rest.R, A.rest); fs = lerp(1.05, 1.3, A.strike) * (1 - A.rest) + A.rest;
+      const raised = [320 + 22 * GT, -300 - 36 * GT], down = [95, 175], lift = A.wk ? Math.min(1, A.coil * 1.7) : 1, base = mix(mix(rest.R, raised, lift), down, kT);   // (a heavy cast lifts the fist from the water by degrees across the bar)
+      hR = mix(base, rest.R, A.rest); fs = (lerp(1.05 + 0.08 * GT, 1.3, kT) * (1 - A.rest) + A.rest);
     } else if (pose === 'unbound') {
-      const raised = [300, -330], fwd = [210, -120]; blaze = lerp(0.9, 1.4, 1 - A.strike);
-      hR = mix(mix(raised, fwd, A.strike), rest.R, A.rest); fs = 1.12;
+      const raised = [300 + 20 * GT, -330 - 30 * GT], fwd = [210, -120], lift = A.wk ? Math.min(1, A.coil * 1.7) : 1; blaze = lerp(0.9, 1.4, 1 - A.strike);
+      hR = mix(mix(mix(rest.R, raised, lift), fwd, kT), rest.R, A.rest); fs = 1.12;
     } else if (pose === 'grip') {
       const lo = [-250, -40], hi = [-60, 150];
-      hL = mix(mix(lo, hi, 0.55 + 0.45 * A.strike), rest.L, A.rest); curl = A.strike * (1 - A.rest);
+      hL = mix(mix([lo[0] - 24 * GT, lo[1] - 14 * GT], hi, 0.55 + 0.45 * kT), rest.L, A.rest); curl = A.strike * (1 - A.rest);
     } else if (pose === 'call') { hR = [385, -190 + Math.sin(t * 2) * 6]; hL = [-385, -190 + Math.sin(t * 2 + 1) * 6]; dirL = -Math.PI / 2; blaze = 0.9; }
 
     // ---- his body: the sea hides all of him below the waterline

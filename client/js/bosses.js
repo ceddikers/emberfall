@@ -7,6 +7,12 @@ const BOSS_ART = {
     const skin = '#7fa650', apron = '#f1ede2';
     const props = st.props || {};
     const s = swing(actP(st, 'attack'));
+    // The chop (Tenderize's windup, and his plain swing): the cleaver is hauled up behind his shoulder (further back as he gathers) while his weight goes
+    // back, then it comes round and down in front of him the moment the cast ends, carries past, and he settles; heavy, so he dips where it lands. The
+    // other casts keep the old arm.
+    const B = strikeBeats(st), GA = B.on ? B.load * (1 - B.hit) : 0, big = B.on && (props.windup || st.action.dur <= 1.05) && !props.mince && !props.toss;
+    let cAng = props.mince ? 0.9 : props.toss ? 2.2 : props.windup && !(s > 0.05) ? 2.6 + Math.sin(st.t * 4) * 0.06 : 0.15 + s * 1.2;
+    if (big) { const gat = props.windup ? (st.action.wk > 0 ? 0.45 + 2.7 * B.coil + Math.sin(st.t * 2.6) * 0.05 * B.coil : 2.6 + 0.35 * B.load) : 0.15 + 2.2 * B.load; cAng = (gat + (0.0 - gat) * B.hit - 1.0 * B.ovr); cAng += (0.15 - cAng) * B.rest; }   // (a heavy cast hauls the cleaver up and back by degrees across the whole bar: draw-util.js windUp)
     const w = st.moving ? Math.sin(st.t * 7) * 6 : 0;
     // ---- the Gorged form (Hard, Dessert): props.gorged is raid.form === 'gorged' (main.js), props.gAge the seconds since the swell, st.gulp when
     // a thing last went down his throat (grubnak-fx.js). The same cook, a third as big again: a bloated belly rising and falling, the apron
@@ -64,6 +70,8 @@ const BOSS_ART = {
       }
       return;
     }
+    ctx.save();   // (the chop's weight: back as he gathers, into it, a dip where it lands)
+    if (big) { const q = 1 - 0.06 * B.land; ctx.translate((-5 * GA + 9 * B.hit + 3 * B.ovr) * (1 - B.rest), 1.6 * B.shud); ctx.scale(q, q); }
     // raid props (the arena sets st.props from the boss's cast): held tools tell you what's coming
     if (props.held === 'ladle' && props.spin) {
       for (let i = 0; i < 3; i++) {
@@ -240,13 +248,14 @@ const BOSS_ART = {
     // (Cleaver Toss, Hard: the cleaver drawn back over his shoulder, glinting)
     // ([boss presentation] Tenderize: the cleaver hauled up behind his shoulder, its edge brightening as the blow nears)
     const rg = props.mince ? (props.mince.side === 'right' ? 0.75 + Math.sin(st.t * 10) * 0.2 : props.mince.second === 'right' ? 0.25 : 0) : props.toss ? 0.6 + Math.sin(st.t * 12) * 0.2 : props.windup ? 0.45 + Math.sin(st.t * 9) * 0.2 : 0;
-    ctx.save(); ctx.translate(2, 27); ctx.rotate(props.mince ? 0.9 : props.toss ? 2.2 : props.windup && !(s > 0.05) ? 2.6 + Math.sin(st.t * 4) * 0.06 : 0.15 + s * 1.2);
+    if (big) bladeSmear(ctx, st, 'cl', B.u > 0.3 && B.u < 0.9, 2 + Math.cos(cAng) * 20 - Math.sin(cAng) * 6, 27 + Math.sin(cAng) * 20 + Math.cos(cAng) * 6, 2 + Math.cos(cAng) * 58 - Math.sin(cAng) * 8, 27 + Math.sin(cAng) * 58 + Math.cos(cAng) * 8, '#f4f0e0', { a: 0.34, min: 6 });
+    ctx.save(); ctx.translate(2, 27); ctx.rotate(cAng);
     ellipse(ctx, 9, 0, 14, 9, 0, skin, OUT, 2.5);
     cleaver(rg);
     circle(ctx, 20, 0, 8.5, skin, OUT, 2.5);
     ctx.restore();
     // head, tusks, chef hat ([boss presentation] Butcher's Charge: head down, tusks first, the hat pushed forward)
-    const hd = props.headdown ? 7 + Math.sin(st.t * 16) * 1.2 : props.gInhale ? -4 : props.gSpit ? 4 : 0;
+    const hd = props.headdown ? 7 + Math.sin(st.t * 16) * 1.2 : props.gInhale ? -4 : props.gSpit ? 4 : big ? (3 * B.hit - 2.5 * GA) * (1 - B.rest) : 0;
     ctx.save(); ctx.translate(hd, 0);
     if (G) { ctx.translate(23, 0); ctx.scale(1.15, 1.15); ctx.translate(-23, 0); }   // (the face has to read on a body this size)
     circle(ctx, 23, 0, 13, skin, OUT, 2.5);
@@ -303,6 +312,7 @@ const BOSS_ART = {
         circle(ctx, Math.cos(a) * (30 + q * 30), Math.sin(a) * (30 + q * 30), 8 + q * 10, `rgba(240,240,240,${0.35 * (1 - q)})`);
       }
     }
+    ctx.restore();   // (the chop's weight)
   },
 
   skitterra(ctx, st) {
@@ -311,7 +321,11 @@ const BOSS_ART = {
     // a shed husk is the same shape, pale and hollow
     const husk = !!props.husk;
     const body = husk ? '#b8a99a' : '#3a2448', dark = husk ? '#8a7c70' : '#24152e', mark = husk ? '#c8b8a8' : '#d6304a', gold = husk ? '#d8ccb8' : '#e8c15a';
-    const rear = Math.max(pulse(actP(st, 'attack')), props.rear ? 0.55 + Math.sin(st.t * 7) * 0.12 : 0);
+    // her strike (strikeBeats, draw-util.js): she rears back as the cast gathers, the head drawn in and the front legs lifted, then lunges the moment the
+    // cast ends (the head and fangs thrown forward, she steps into it), carries a little past, and settles; the landing shudders through her
+    const B = strikeBeats(st), GA = B.on ? B.load * (1 - B.hit) : 0, hitK = B.on ? (B.hit + 0.25 * B.ovr) * (1 - B.rest) : 0;
+    const rear = Math.max(B.on ? Math.max(0.8 * GA, hitK) : 0, props.rear ? 0.55 + Math.sin(st.t * 7) * 0.12 : 0);
+    if (B.on) ctx.translate(-4 * GA + 8 * hitK, 1.2 * B.shud);
     const speed = st.moving ? 10 : 2.2;
     const cr = props.crouch || 0;   // (the Dark Between: down on the stone with her legs splayed wide, skitterra-fx.js pose)
     // Silk: threads stream from her spinnerets and wheel around her
@@ -348,7 +362,7 @@ const BOSS_ART = {
     if (husk) for (const pts of [[-44, -6, -34, 0, -40, 8], [-14, -14, -20, -4, -12, 4]]) { tracePath(ctx, pts); ctx.strokeStyle = '#6a5c50'; ctx.lineWidth = 1.5; ctx.stroke(); }
     ellipse(ctx, 6, 0, 15, 13, 0, shade(body, 0.08), OUT, 2.5);
     // head, fangs, eyes, crown
-    const hx = 22 + rear * 6 - 3 * cr;
+    const hx = 22 + rear * 6 + 6 * hitK - 6 * GA - 3 * cr;
     circle(ctx, hx, 0, 9, dark, OUT, 2.5);
     const open = 0.35 + rear * 0.5 + Math.sin(st.t * 6) * 0.05;
     for (const sy of [-1, 1]) {
@@ -378,10 +392,17 @@ const BOSS_ART = {
     if (props.storm && typeof VK_STORM !== 'undefined') { if (st.raid) ctx.scale(1.35, 1.35); return VK_STORM.heart(ctx, st, angle || 0, props); }
     const pk = props.stormBreak || 0;   // the body cracking before it breaks apart
     const pa = actP(st, 'attack');
+    // Titan Fist (and his plain swing): a haymaker (strikeBeats, draw-util.js). The right fist is drawn back and out as the cast gathers, his shoulders coiling
+    // away; it comes through toward the middle of the front the moment the cast ends, carries on past it, and he settles; a giant, so a dip and a shudder
+    // where it lands. Every other cast keeps the old two-fisted punch.
+    const B = strikeBeats(st), big = B.on && (props.fist || st.action.dur <= 1.05), GA = big ? B.load * (1 - B.hit) : 0, kk = big ? (B.hit + 0.22 * B.ovr) * (1 - B.rest) : 0;
     let f = 0; // fist punch: pull back, slam forward, recover
     if (pa >= 0) f = pa < 0.4 ? -easeOut(pa / 0.4) * 0.6 : pa < 0.55 ? -0.6 + 1.6 * ((pa - 0.4) / 0.15) : 1 - (pa - 0.55) / 0.45;
+    if (big) f = kk;
     if (st.raid) ctx.scale(1.35, 1.35);   // in his own arena he is a giant
     if (pk > 0 && typeof VK_STORM !== 'undefined') { const [tx, ty] = VK_STORM.tremble(pk, st.t, props); ctx.translate(tx, ty); }
+    ctx.save();
+    if (big) { const q = 1 - 0.06 * B.land; ctx.translate((-5 * GA + 10 * B.hit + 3 * B.ovr) * (1 - B.rest), 2 * B.shud); ctx.rotate((0.26 * B.load * (1 - B.hit) - 0.12 * B.ovr) * (1 - B.rest)); ctx.scale(q, q); }
     glow(ctx, 0, 0, 80, bolt, props.charge ? 0.3 : 0.12);
     // Thunderclap / Eye of the Storm: the sky churns overhead
     if (props.sky) for (let i = 0; i < 7; i++) {
@@ -412,8 +433,12 @@ const BOSS_ART = {
       ctx.lineWidth = 1.6; ctx.strokeStyle = bolt; ctx.stroke();
     }
     for (const sy of [-1, 1]) {
-      const fx = 16 + f * 18, fy = 36 * sy;
-      ellipse(ctx, 4 + f * 8, 32 * sy, 14, 10, 0, dark, OUT, 2.5);
+      let fx = 16 + f * 18, fy = 36 * sy;
+      if (big) {   // the right fist is the haymaker, the left stays up as a guard
+        if (sy > 0) { fx = (16 - 22 * GA + 46 * kk); fy = 36 + 15 * GA - 28 * kk; } else { fx = 16 - 7 * GA + 6 * kk; fy = -36 + 6 * GA - 4 * kk; }
+        bladeSmear(ctx, st, 'f' + sy, sy > 0 && B.u > 0.32 && B.u < 0.9, fx - 12, fy - 11, fx - 12, fy + 11, '#7fe8ff', { a: 0.3, min: 5 });
+      }
+      ellipse(ctx, big ? 4 + (fx - 16) * 0.45 : 4 + f * 8, big ? 32 * sy + (fy - 36 * sy) * 0.6 : 32 * sy, 14, 10, 0, dark, OUT, 2.5);
       // Polarity Surge: one hand burns gold, the other cold blue. Titan Fist: the right fist gathers lightning.
       if (props.polar) glow(ctx, fx, fy, 30, sy < 0 ? '#ffc24a' : '#4ad8ff', 0.6 + Math.sin(st.t * 8) * 0.15);
       if (props.fist && sy > 0) { glow(ctx, fx, fy, 34, bolt, 0.7 + Math.sin(st.t * 12) * 0.2); if (Math.floor(st.t * 14) % 2) jagged(ctx, fx, fy, fx + 30, fy + (Math.random() - 0.5) * 30, Math.floor(st.t * 14), bolt, 1.2); }
@@ -437,17 +462,26 @@ const BOSS_ART = {
     glow(ctx, 23, 0, 12, bolt, 0.5);
     circle(ctx, 23, -4, 2.2, '#dffbff'); circle(ctx, 23, 4, 2.2, '#dffbff');
     if (Math.floor(st.t * 10) % 3 === 0) jagged(ctx, -12, -30, 2, -18, Math.floor(st.t * 20), bolt, 1);
+    ctx.restore();   // (the blow's weight)
     if (pk > 0 && typeof VK_STORM !== 'undefined') VK_STORM.crumble(ctx, st, pk, angle || 0, props);
   },
 
   hollowking(ctx, st) {
     const iron = '#3a3d48', ghost = '#6dff9a', gold = '#b89a4a';
     const props = st.props || {};
-    let s = swing(actP(st, 'attack'));
-    if (props.rise || props.raise) s = -0.9;   // Rise, My Guard / a big swing coming: the greatsword held high
-    if (props.windup && !(s > 0.05)) s = -1.35 + Math.sin(st.t * 5) * 0.04;   // [boss presentation] Grave Cleave: hauled right back
+    // The cleave (strikeBeats, draw-util.js): the blade is drawn out to his right and back (further as the cast gathers), his shoulders coiling away from
+    // the mark; it crosses the front and lands the moment the cast ends, then runs on past it; the whole of him settles after. A heavy blow: the weight
+    // goes back, then he steps into it, a dip where it lands and a shudder after; the cape arrives late.
+    const B = strikeBeats(st), GA = B.on ? B.load * (1 - B.hit) : 0, held = !!(props.rise || props.raise);
+    let s = 0;
+    if (held) s = -0.9;   // Rise, My Guard / a big swing coming: the greatsword held high
+    else if (B.on) { const gat = props.windup ? (st.action.wk > 0 ? 0.3 + 1.95 * B.coil + Math.sin(st.t * 2.2) * 0.04 * B.coil : 1.0 + 0.35 * B.load) : 1.35 * B.load; s = (gat + (-0.3 - gat) * B.hit - 1.0 * B.ovr) * (1 - B.rest); }   // (a heavy cast draws the blade out and back by degrees across the whole bar)
+    else if (props.windup) s = 1.0 + Math.sin(st.t * 5) * 0.04;   // [boss presentation] Grave Cleave: drawn out to his right
+    const blow = B.on && !held, tw = blow ? (((props.windup ? 0.12 : 0) + 0.16 * B.load) * (1 - B.hit) - 0.14 * B.ovr) * (1 - B.rest) : (props.windup && !held ? 0.12 : 0);
+    const mx = blow ? (-3 * GA + 7 * B.hit + 2 * B.ovr) * (1 - B.rest) : 0;
     if (st.raid) ctx.scale(1.2, 1.2);
     glow(ctx, 0, 0, 75, ghost, 0.14);
+    ctx.save(); ctx.translate(mx, blow ? 1.2 * B.shud : 0); ctx.rotate(tw); if (blow) { const q = 1 - 0.05 * B.land; ctx.scale(q, q); }
     // Barrow Knell: rings of a tolling bell roll off him
     if (props.knell) for (let i = 0; i < 3; i++) { const q = (st.t * 0.9 + i / 3) % 1; ellipse(ctx, 0, 0, 30 + q * 70, 30 + q * 70, 0, null, rgba('#d8ffe4', 0.5 * (1 - q)), 2.5); }
     // Crown of Graves / Barrow Stomp: grave-light pools under him
@@ -456,7 +490,7 @@ const BOSS_ART = {
     const cape = [-2, -24];
     for (let i = 0; i <= 8; i++) cape.push(-38 - (i % 2) * 8 + Math.sin(st.t * 3 + i) * 3, -26 + i * 6.5);
     cape.push(-2, 24);
-    poly(ctx, cape, '#1c1a24', OUT, 2.5);
+    ctx.save(); if (blow) { ctx.rotate(-tw * 0.8); ctx.translate(-B.cloth * 6, 0); } poly(ctx, cape, '#1c1a24', OUT, 2.5); ctx.restore();
     // orbiting ghost skulls
     for (let i = 0; i < 3; i++) {
       const a = -st.t * 1.1 + i * TAU / 3, x = Math.cos(a) * 54, y = Math.sin(a) * 54;
@@ -506,6 +540,7 @@ const BOSS_ART = {
     } else glow(ctx, 16, -24, 14, ghost, 0.6);
     circle(ctx, 16, -24, 5, '#4a4e5c', OUT, 2);
     // greatsword
+    { const a = 0.3 + s * 1.2; bladeSmear(ctx, st, 'sw', blow && B.u > 0.3 && B.u < 0.9, 10 + Math.cos(a) * 14, 24 + Math.sin(a) * 14, 10 + Math.cos(a) * 58, 24 + Math.sin(a) * 58, '#d8ffe4', { a: 0.3, min: 6 }); }
     ctx.save(); ctx.translate(10, 24); ctx.rotate(0.3 + s * 1.2);
     poly(ctx, [4, -3.5, 52, -3.5, 60, 0, 52, 3.5, 4, 3.5], '#2b2f3a', OUT, 2);
     line(ctx, 8, 0, 50, 0, rgba(ghost, 0.9), 1.5);
@@ -534,6 +569,7 @@ const BOSS_ART = {
       glow(ctx, 11, 0, 10, ghost, 0.6);
       circle(ctx, 10.5, -3.5, 1.8, ghost); circle(ctx, 10.5, 3.5, 1.8, ghost);
     }
+    ctx.restore();   // (the blow's weight)
   },
   // Vhalgrath, the Ember Wyrm: black basalt scale, a belly that glows from within, a spined back, a long tail. Facing +x.
   // props (set from his casts, main.js): claw, tail, breath, roar, fly/dive (wings), perch, heart (the Ember Heart open); props.air: in the
@@ -546,6 +582,9 @@ const BOSS_ART = {
     const open = props.breath ? 0.55 : props.roar ? 0.7 : 0.08 + Math.max(0, Math.sin(t * 1.3)) * 0.04;
     const pa = actP(st, 'attack');
     const s = swing(pa);
+    // Rending Claws (strikeBeats, draw-util.js): the left claw is reared back as the cast gathers (the weight going back with it), then raked forward and
+    // inward the moment the cast ends, carries on past, and he settles; heavy, so he steps into it and the landing shudders through him.
+    const B = strikeBeats(st), clawB = !!props.claw && B.on, GA = clawB ? B.load * (1 - B.hit) : 0, kk = clawB ? (B.hit + 0.2 * B.ovr) * (1 - B.rest) : 0;
     if (air) {
       // lifted: a long shadow stays on the ground (drawn without his turn), he is drawn higher and larger
       ctx.save(); ctx.rotate(-angle);
@@ -554,6 +593,7 @@ const BOSS_ART = {
       ctx.scale(1.15, 1.15);
     }
     if (perch) { ctx.rotate(-angle); ctx.translate(0, -18); ctx.rotate(angle); }
+    if (clawB) { const q = 1 - 0.04 * B.land; ctx.translate((-4 * GA + 7 * B.hit + 2 * B.ovr) * (1 - B.rest), 1.5 * B.shud); ctx.scale(q, q); }
     glow(ctx, 0, 0, 100, ember, props.heart ? 0.32 : props.breath ? 0.26 : 0.14);
     // ---- the tail: tapering, swaying, a blade at the end; it lashes round when Tail Lash is called
     const sway = Math.sin(t * 2.1) * 10 + (props.tail ? Math.sin(t * 9) * 16 : 0), n = 12, up = [], dn = [];
@@ -602,9 +642,10 @@ const BOSS_ART = {
       for (let i = 0; i < 7; i++) { const a = i * TAU / 7 + 0.3; line(ctx, 8 + Math.cos(a) * 10, Math.sin(a) * 8, 8 + Math.cos(a + 0.2) * 30, Math.sin(a + 0.2) * 22, rgba(hot, 0.7 * pulse), 1.6); }   // (light cracking out across his scales)
     }
     // ---- front claws (Rending Claws: one rears back and rakes)
-    const rake = props.claw ? -0.7 + s * 1.4 : 0;
+    const rake = clawB ? -0.7 - 0.9 * GA + 2.6 * kk : props.claw ? -0.7 + s * 1.4 : 0;   // (a heavy cast reaches the claw further back, and out, by degrees)
     for (const sy of [-1, 1]) {
-      const fx = 28 + (sy < 0 ? rake * 12 : 0), fy = 28 * sy;
+      const fx = 28 + (sy < 0 ? rake * 12 : 0), fy = 28 * sy + (clawB && sy < 0 ? 10 * kk - 5 * GA : 0);
+      if (clawB && sy < 0) bladeSmear(ctx, st, 'claw', B.u > 0.3 && B.u < 0.9, fx + 8, fy - 7, fx + 22, fy + 7, '#ffd9a0', { a: 0.34, min: 4 });
       ellipse(ctx, fx, fy, 14, 8, 0.2 * sy, hide, OUT, 2.5);
       for (let k = -1; k <= 1; k++) poly(ctx, [fx + 9, fy + k * 4, fx + 20, fy + k * 5 + sy * 1.5, fx + 9, fy + k * 4 + 3], bone, OUT, 1);
     }
@@ -642,7 +683,13 @@ const BOSS_ART = {
     let s = swing(pa);
     const up = props.raise || props.fist ? 1 : 0;
     if (up && !(s > 0.05)) s = -0.9 + Math.sin(t * 5) * 0.03;
+    // The slam (strikeBeats, draw-util.js): the right fist is held up high over his shoulder (bigger: it is nearer to us), hauled further back as the cast gathers
+    // with his weight going back, then it comes down and out in front of him the moment the cast ends and shrinks onto the floor, he steps into it, dips where
+    // it lands and shudders; the fist carries a little past before he lets it come back. His plain swing is the same blow, lifted from rest.
+    const B = strikeBeats(st), big = !props.howl && !props.breath && (up || (B.on && st.action.dur <= 1.05)), GA = B.on ? B.load * (1 - B.hit) : 0, kk = B.on ? (B.hit + 0.15 * B.ovr) : 0;
     if (st.raid) ctx.scale(1.5, 1.5);   // in his own arena he is a giant (his hitbox is the same as anyone's; the art is not)
+    ctx.save();
+    if (big && B.on) { const q = 1 - 0.05 * B.land; ctx.translate((-5 * GA + 9 * B.hit + 3 * B.ovr) * (1 - B.rest), 1.8 * B.shud); ctx.scale(q, q); }
     glow(ctx, 0, 0, 110, '#9fe8ff', props.howl || props.breath ? 0.3 : 0.12);
     // frost breath: a cone of white from the mouth
     if (props.breath) for (let i = 0; i < 14; i++) {
@@ -673,7 +720,17 @@ const BOSS_ART = {
     // arms and fists: the right one lifts and slams
     for (const sy of [-1, 1]) {
       const lift = sy > 0 ? s : 0.1 * s;
-      const hx = 30 + lift * 16 + (props.howl ? -8 : 0), hy = 34 * sy - lift * 4 * sy, ew = 14 + lift * 4;
+      let hx = 30 + lift * 16 + (props.howl ? -8 : 0), hy = 34 * sy - lift * 4 * sy, ew = 14 + lift * 4;
+      if (big) {
+        const pre = up ? (st.action.wk > 0 ? Math.min(1, B.coil * 1.8) : 1) : B.load;   // (a plain swing lifts the fist from rest; a cast holds it up already; a heavy one raises it by degrees across the bar, then hauls it further back)
+        const rx = 30, ry = 34, rw = 14, ux = 24 - 10 * GA, uy = 40 + 4 * GA, uw = 19 + 3 * GA;   // rest; raised
+        if (sy > 0) {
+          let ax = rx + (ux - rx) * pre, ay = ry + (uy - ry) * pre, aw = rw + (uw - rw) * pre;
+          ax += (64 - ax) * kk; ay += (20 - ay) * kk; aw += (13 - aw) * Math.min(1, kk);   // down and out onto the floor, shrinking as it comes down
+          const r = B.on ? B.rest : 0; hx = ax + (rx - ax) * r; hy = ay + (ry - ay) * r; ew = aw + (rw - aw) * r;
+          bladeSmear(ctx, st, 'fist', B.on && B.u > 0.32 && B.u < 0.9, hx - 6, hy - ew * 0.8, hx - 6, hy + ew * 0.8, '#e8f8ff', { a: 0.3, min: 5 });
+        } else { hx = 30 + 6 * pre - 4 * B.hit; hy = -34 - 3 * pre; }   // the other arm comes up as a guard
+      }
       line(ctx, 8, 30 * sy, hx, hy, OUT, 18); line(ctx, 8, 30 * sy, hx, hy, skin, 13);
       if (up && sy > 0) glow(ctx, hx + 6, hy, 34, '#bff0ff', 0.4 + Math.sin(t * 8) * 0.1);
       circle(ctx, hx + 4, hy, ew, skin, OUT, 3);
@@ -693,6 +750,7 @@ const BOSS_ART = {
     circle(ctx, 26, -4.4, 2.4, eye); circle(ctx, 26, 4.4, 2.4, eye);
     // sparks of frost drifting off him
     for (let i = 0; i < 6; i++) { const q = (t * 0.5 + i / 6) % 1, a = i * 1.7 + t * 0.2; circle(ctx, Math.cos(a) * (30 + q * 24), Math.sin(a) * (34 + q * 20) - q * 8, 1.5, rgba('#ffffff', 0.7 * (1 - q))); }
+    ctx.restore();   // (the slam's weight)
   },
 
 };

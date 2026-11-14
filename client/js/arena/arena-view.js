@@ -13,7 +13,7 @@ const ArenaView = {
     // a round room is drawn at its full size (Volkar's closes in later; the dead ground is drawn over it)
     const ex = ARENA.kind === 'poly' ? ARENA.R : ARENA.kind === 'circle' ? ARENA.full : ARENA.hw;
     const ey = ARENA.kind === 'poly' ? ARENA.R : ARENA.kind === 'circle' ? ARENA.full : ARENA.hh;
-    const M = bossId === 'volkar' || bossId === 'volkar:storm' ? 260 : bossId === 'hollowking' ? 160 : bossId === 'brannoc' ? 260 : bossId === 'brannoc:sea' ? 340 : bossId === 'morrowoak' ? 220 : bossId === 'morrowoak:remade' ? 300 : bossId === 'caelum' ? 300 : bossId === 'caelum:sky' ? 320 : (bossId === 'wyrm' || bossId === 'corvane') ? 200 : bossId === 'garrow' ? 380 : 120, bx = Math.ceil(ex + M), by = Math.ceil(ey + M);
+    const M = bossId === 'volkar' || bossId === 'volkar:storm' ? 260 : bossId === 'hollowking' ? 160 : bossId === 'brannoc' ? 260 : bossId === 'brannoc:sea' ? 340 : bossId === 'morrowoak' ? 220 : bossId === 'morrowoak:remade' ? 300 : bossId === 'caelum' ? 300 : bossId === 'caelum:sky' ? 320 : (bossId === 'wyrm' || bossId === 'corvane') ? 200 : bossId === 'garrow' ? 380 : bossId === 'vesper' ? 340 : bossId === 'ormun' ? 360 : bossId === 'maelis' ? 360 : 120, bx = Math.ceil(ex + M), by = Math.ceil(ey + M);
     const cv = document.createElement('canvas');
     cv.width = Math.ceil(bx * 2 * scale); cv.height = Math.ceil(by * 2 * scale);
     const c = cv.getContext('2d');
@@ -34,6 +34,9 @@ const ArenaView = {
     else if (bossId === 'morrowoak:remade') this.buildRemade(c, bx, by);   // (morrowoak-art.js: the second form's room)
     else if (bossId === 'caelum') this.buildStarCrater(c, bx, by);   // (caelum-art.js: the crater round the half-buried star)
     else if (bossId === 'garrow') this.buildMere(c, bx, by);   // (garrow-room.js: the Long Mere, a frozen lake under fresh snow)
+    else if (bossId === 'vesper') this.buildArgent(c, bx, by);   // (vesper-room.js: the Argent Hall and its reflection)
+    else if (bossId === 'ormun') this.buildScales(c, bx, by);   // (ormun-room.js: the Scales, two silver pans over a night sea)
+    else if (bossId === 'maelis') this.buildMoon(c, bx, by);   // (maelis-room.js: the face of the moon, the world hanging in a black sky)
     else if (bossId === 'caelum:sky') this.buildSky(c, bx, by);   // (caelum-art.js: the second form's room, the cloud above the meteor)
     else this.buildKitchen(c, bx, by);
     this.floor = cv; this.floorFor = bossId + '@' + scale; this.floorBox = { bx, by };
@@ -814,6 +817,8 @@ const ArenaView = {
     if (ARENA.kind === 'rect') {
       const w = ARENA.hw + grow, h = ARENA.hh + grow, c = Math.max(0, ARENA.corner + grow);
       p.moveTo(-w + c, -h); p.arcTo(w, -h, w, h, c); p.arcTo(w, h, -w, h, c); p.arcTo(-w, h, -w, -h, c); p.arcTo(-w, -h, w, -h, c); p.closePath();
+    } else if (ARENA.kind === 'union') {
+      for (const q of ARENA.parts) { if (q.kind === 'circle') { p.moveTo(q.x + q.r + grow, q.y); p.arc(q.x, q.y, q.r + grow, 0, TAU); } else p.rect(q.x0 - grow, q.y0 - grow, q.x1 - q.x0 + grow * 2, q.y1 - q.y0 + grow * 2); }   // (the Scales: two discs and a bridge)
     } else if (ARENA.kind === 'poly') {
       ARENA.corners(grow).forEach(([x, y], i) => (i ? p.lineTo(x, y) : p.moveTo(x, y))); p.closePath();
     } else { p.moveTo(ARENA.r + grow, 0); p.arc(0, 0, ARENA.r + grow, 0, TAU); }
@@ -846,6 +851,9 @@ const ArenaView = {
     else if (a.kind === 'starcrater') this.starCraterLife(ctx, a, t);   // (caelum-art.js)
     else if (a.kind === 'skyring') this.skyLife(ctx, a, t);   // (caelum-art.js)
     else if (a.kind === 'mere') this.mereLife(ctx, a, t);   // (garrow-room.js)
+    else if (a.kind === 'argent') this.argentLife(ctx, a, t);   // (vesper-room.js)
+    else if (a.kind === 'scales') this.scalesLife(ctx, a, t);   // (ormun-room.js)
+    else if (a.kind === 'moon') this.moonLife(ctx, a, t);   // (maelis-room.js)
     else if (a.kind === 'temple') this.templeLife(ctx, a, t);
   },
 
@@ -1691,6 +1699,7 @@ const ArenaView = {
     switch (s.kind) {
       case 'circle': return Object.assign({}, s, { r: s.r * e });
       case 'cone': return Object.assign({}, s, { r: s.r * e });
+      case 'lune': return Object.assign({}, s, { r: s.r * e });   // (Maelis Orne's phases: the same cut at a smaller size, so the wash swells out of the middle of its own disc)
       case 'rect': return Object.assign({}, s, { len: Math.min(s.len, 900) * e });
       case 'cross': return Object.assign({}, s, { len: Math.min(s.len, 700) * e });
       case 'donut': { const r = Math.min(s.r, ARENA.R + 20); return Object.assign({}, s, { r, r2: r - (r - s.r2) * e }); }
@@ -2248,6 +2257,7 @@ const ArenaView = {
   drawProp(ctx, pr, t, room) {
     const k = Math.min(1, (t - (pr.born ?? t - 1)) / 0.25), last = pr.maxHp > 1 && pr.hp <= 1, worn = pr.maxHp > 2 && pr.hp === pr.maxHp - 1;
     ctx.save(); ctx.globalAlpha = k;
+    { const rt = typeof BOSS_WEIGHT !== 'undefined' && BOSS_WEIGHT.rattle(pr, t); if (rt) { ctx.translate(pr.x + rt.dx, pr.y + rt.dy); ctx.rotate(rt.rot); ctx.translate(-pr.x, -pr.y); } }   // (a heavy blow shook it: boss-weight.js, a jolt and then a lean that swings back)
     // (Clean Plate: while he breathes in, what is about to go leans toward his mouth and rattles: grubnak-fx.js lean)
     const ih = room && room.ev && room.ev.inhale;
     if (ih && !ih.again && t >= ih.start && t < ih.end && typeof GR_FX !== 'undefined') { const o = GR_FX.lean(pr, ih, t); ctx.translate(pr.x + o.dx, pr.y + o.dy); ctx.rotate(o.rot); ctx.translate(-pr.x, -pr.y); }
@@ -2267,6 +2277,7 @@ const ArenaView = {
       case 'starcore': this.starCore(ctx, pr, t); break;   // (caelum-art.js)
       case 'starshard': this.starShard(ctx, pr, t); break;   // (caelum-art.js)
       case 'ridge': if (this.ridgeProp) this.ridgeProp(ctx, pr, t); break;   // (garrow-art.js)
+      case 'ormcradle': case 'ormweight': case 'ormgap': if (this.ormProp) this.ormProp(ctx, pr, t, room); break;   // (a silver weight resting in a cradle; the cradle and the fallen bridge are the room's own: ormun-view.js)
       default: ellipse(ctx, pr.x + 4, pr.y + 6, pr.r * 1.1, pr.r * 0.6, 0, 'rgba(0,0,0,0.4)'); circle(ctx, pr.x, pr.y, pr.r, '#6a6a72', OUT, 2.5);
     }
     ctx.restore();

@@ -343,6 +343,9 @@ const Sound = (() => {
     'mus-corvane': 'mus-wyrm', 'mus-corvane-hard': 'mus-wyrm-hard', 'mus-brannoc': 'mus-titan', 'mus-brannoc-hard': 'mus-titan-hard',
     'mus-morrowoak': 'mus-archmage', 'mus-morrowoak-hard': 'mus-archmage-hard', 'mus-caelum': 'mus-hydra', 'mus-caelum-hard': 'mus-hydra-hard',
     'mus-garrow': 'mus-titan', 'mus-garrow-hard': 'mus-titan-hard',   // (Season 2: a cold night hunt; Hrimgar's glacier theme until his own track lands)
+    'mus-vesper': 'mus-archmage', 'mus-vesper-hard': 'mus-archmage-hard',   // (Season 2: a silent duel in a hall of glass; Azerath's strings and organ until her own track lands)
+    'mus-ormun': 'mus-hydra', 'mus-ormun-hard': 'mus-hydra-hard',   // (Season 2: slow, vast and drowned; the Hydra's temple theme until his own track lands)
+    'mus-maelis': 'mus-hollowking', 'mus-maelis-hard': 'mus-hollowking-hard',   // (Season 2's finale: a calm regent in her own house; the Hollow King's court theme and war march, the set 1 finale, until her own track lands)
     'mus-sovereign': 'mus-hydra-hard', 'mus-sovereign-hard': 'mus-hydra-hard',
     'mus-hood': 'mus-hollowking', 'mus-seraph': 'mus-hydra-hard',
   };
@@ -425,6 +428,13 @@ const Sound = (() => {
     g.cancelScheduledValues(t);
     g.setTargetAtTime(clamp(1 - amount, 0, 1), t, 0.06);
     g.setTargetAtTime(1, duckUntil, 0.35);
+  });
+  // thin a room's bed for a held beat: the ambience bus (or another) down by `amount` for `secs`, then back to its setting (walls/vesper.js)
+  S.duckBus = (name, amount = 0.6, secs = 1.5) => safe(() => {
+    const g = bus[name] && bus[name].gain; if (!ctx || !g || !BUSES.includes(name)) return;
+    const t = ctx.currentTime;
+    g.cancelScheduledValues(t); g.setTargetAtTime(busLevel(name) * clamp(1 - amount, 0, 1), t, 0.08);
+    g.setTargetAtTime(busLevel(name), t + secs, 0.35);
   });
   // a boss sealed at a wall: the music heard as if from inside him, low-passed to `hz` over `secs` (null or 0: opened again)
   // (it opens to the resting cutoff, music.rest: a low-health room stays dull after a short dip)

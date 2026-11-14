@@ -29,13 +29,13 @@ const CL_ART = (() => {
   const smv = (st, key, target, rate) => { const v = st[key]; if (!v) return (st[key] = target.slice()); const r = typeof rate === 'number' ? rate : 0.1; for (let i = 0; i < v.length; i++) v[i] += (target[i] - v[i]) * r; return v; };
   const sm = (st, key, target, rate = 0.1) => { const v = st[key]; return (st[key] = v == null ? target : v + (target - v) * rate); };
   // where a cast is in its swing: strike 0 (gathering) .. 1 (the blow has landed), then rest 0 .. 1 (back to standing)
+  // (the beats come from strikeBeats in draw-util.js: the blow is fast and lands the moment the cast ends. His settle holds the finished pose a beat first;
+  // load: the last gathering before the blow, ovr: the carry past the mark, land / cloth: the weight of the landing and how far the coat is behind or through it)
   function atk(st) {
-    const a = st.action;
-    if (!a || a.type !== 'attack') return { strike: 0, rest: 0, p: -1 };
-    const p = (actT(st) - a.t0) / a.dur;
-    if (p < 0.3) return { strike: 0, rest: 0, p };
-    if (p < 0.55) return { strike: easeOut((p - 0.3) / 0.25), rest: 0, p };
-    return { strike: 1, rest: p >= 1 ? 1 : easeOut((p - 0.55) / 0.45), p };
+    const B = strikeBeats(st), a = st.action;
+    if (!B.on) return { strike: 0, rest: 0, p: -1, load: 0, ovr: 0, land: 0, cloth: B.cloth, trail: 0, on: false, auto: false, u: -1, coil: 0 };
+    const e = Math.min(a.dur, 1.12), r = clamp((B.u - 0.74) / Math.max(0.1, e - 0.74), 0, 1);
+    return { strike: B.hit, rest: r * r * (3 - 2 * r), p: B.p, load: B.load, ovr: B.ovr, land: B.land, cloth: B.cloth, trail: B.trail, on: true, auto: a.dur <= 1.05, u: B.u, coil: B.coil };
   }
 
   // ---------------------------------------------------------------------------------------------------------- small parts
@@ -70,18 +70,22 @@ const CL_ART = (() => {
   function arm(ctx, sx, sy, hx, hy, bend, lit) {
     const mx = (sx + hx) / 2, my = (sy + hy) / 2, dx = hx - sx, dy = hy - sy, L = Math.hypot(dx, dy) || 1;
     const ex = mx - dy / L * bend, ey = my + dx / L * bend;
-    limb(ctx, [sx, sy, ex, ey, hx, hy], K.glassM, 8);
-    line(ctx, sx, sy, ex, ey, rgba(K.glassE, 0.45), 1.3); line(ctx, ex, ey, hx, hy, rgba(K.glassE, 0.3), 1.1);
-    circle(ctx, ex, ey, 3.8, K.glassP, OUT, 1.5); circle(ctx, ex - 0.6, ey - 0.6, 1.2, rgba(K.vein, 0.5 * lit));   // the elbow's plate
+    // (a heavier arm: a thick upper arm, a forearm in a glass bracer, a plated elbow; the lit edge runs down the side the light falls on)
+    limb(ctx, [sx, sy, ex, ey], '#1c2542', 13.5); limb(ctx, [ex, ey, hx, hy], '#1c2542', 11.5);
+    line(ctx, sx - 2.4, sy, ex - 2.4, ey, rgba(K.glassE, 0.7), 1.6); line(ctx, ex - 2.2, ey, hx - 2.2, hy, rgba(K.glassE, 0.5), 1.4);
+    line(ctx, sx + 3.4, sy + 1, ex + 3.4, ey, rgba('#02030a', 0.35), 2.2);   // the shaded side
+    const bx = lerp(ex, hx, 0.58), by = lerp(ey, hy, 0.58);
+    line(ctx, bx, by, hx, hy, OUT, 12.6); line(ctx, bx, by, hx, hy, K.glassP, 9.6); line(ctx, bx - 2.2, by, hx - 2.2, hy, rgba(K.silverM, 0.5), 1.2);   // the bracer
+    circle(ctx, ex, ey, 5.6, K.glassP, OUT, 1.6); circle(ctx, ex - 0.9, ey - 0.9, 1.6, rgba(K.vein, 0.5 * lit));   // the elbow's plate
     return [ex, ey];
   }
   // a gauntleted hand; open: the palm spread flat (fingers fanned toward a)
   function hand(ctx, x, y, open, a, lit) {
     if (open > 0.3) {
-      for (let i = -2; i <= 2; i++) { const fa = a + i * 0.3; line(ctx, x, y, x + Math.cos(fa) * 8.5, y + Math.sin(fa) * 8.5, OUT, 3.6); line(ctx, x, y, x + Math.cos(fa) * 8.5, y + Math.sin(fa) * 8.5, K.glassM, 2.2); circle(ctx, x + Math.cos(fa) * 8.5, y + Math.sin(fa) * 8.5, 0.9, rgba(K.vein, 0.7 * lit)); }
-      circle(ctx, x, y, 4.4, K.glassP, OUT, 1.6);
-    } else circle(ctx, x, y, 4.2, K.glassP, OUT, 1.7);
-    circle(ctx, x, y, 4.4, null, rgba(K.silverM, 0.55), 1);
+      for (let i = -2; i <= 2; i++) { const fa = a + i * 0.3; line(ctx, x, y, x + Math.cos(fa) * 10.5, y + Math.sin(fa) * 10.5, OUT, 4.8); line(ctx, x, y, x + Math.cos(fa) * 10.5, y + Math.sin(fa) * 10.5, K.glassM, 3.1); circle(ctx, x + Math.cos(fa) * 10.5, y + Math.sin(fa) * 10.5, 1, rgba(K.vein, 0.7 * lit)); }
+      circle(ctx, x, y, 5.8, K.glassP, OUT, 1.7);
+    } else { circle(ctx, x, y, 5.8, K.glassP, OUT, 1.8); line(ctx, x - 2, y - 1.5, x + 2.4, y - 1.5, rgba(K.silverM, 0.45), 1); }   // (a fist with a ridge of knuckles)
+    circle(ctx, x, y, 5.8, null, rgba(K.silverM, 0.55), 1);
   }
 
   // ---------------------------------------------------------------------------------------------------------- the blade
@@ -145,24 +149,29 @@ const CL_ART = (() => {
 
   // ---------------------------------------------------------------------------------------------------------- the figure
   // the long coat of black glass: a cape behind him and two panels in front with a slit between them, the hem in glass tatters
-  function coat(ctx, t, sway, lit, hover) {
+  // part: 0 both, 1 the cape only, 2 the front panels only; top: the lower mantle only (the cape seen from behind, drawn over the back)
+  function coat(ctx, t, sway, lit, hover, part = 0, top = false) {
     const N = 9, HEM = 34;
     // the cape behind: wider, longer, darker
-    const back = [-10, -90, -24, -84, -19, -50, -26, -10];
-    for (let i = 0; i <= N; i++) { const u = i / N, x = -37 + u * 74, y = HEM + 4 + (i % 2 ? 0 : -9 - hash(i, 11) * 5) + Math.sin(t * 1.6 + i * 0.9) * sway; back.push(x + Math.sin(t * 1.2 + i) * sway * 0.5, y - hover * Math.sin(u * Math.PI) * 4); }
-    back.push(26, -10, 19, -50, 24, -84, 10, -90);
+    const back = top ? [-27, -58, -33, -34, -37, -10] : [-13, -90, -33, -84, -28, -50, -35, -10];
+    for (let i = 0; i <= N; i++) { const u = i / N, x = -45 + u * 90, y = HEM + 4 + (i % 2 ? 0 : -9 - hash(i, 11) * 5) + Math.sin(t * 1.6 + i * 0.9) * sway; back.push(x + Math.sin(t * 1.2 + i) * sway * 0.5, y - hover * Math.sin(u * Math.PI) * 4); }
+    if (top) back.push(37, -10, 33, -34, 27, -58); else back.push(35, -10, 28, -50, 33, -84, 13, -90);
+    if (part !== 2) {
     poly(ctx, back, '#080a14', OUT, 2.4);
-    for (let i = 1; i < N; i += 2) line(ctx, (-37 + (i / N) * 74) * 0.5, -36, (-37 + (i / N) * 74), HEM - 6, rgba(K.glassH, 0.35), 1.6);
+    for (let i = 1; i < N; i += 2) line(ctx, (-45 + (i / N) * 90) * 0.5, -36, (-45 + (i / N) * 90), HEM - 6, rgba(K.glassH, 0.35), 1.6);
+    if (top) { line(ctx, 0, -56, 0, HEM - 4, rgba(K.glassH, 0.5), 1.4); line(ctx, -2, -52, -2, HEM - 6, OUT, 0.9); }
+    }
+    if (part === 1) return;
     // the front panels
     for (const sx of [-1, 1]) {
-      const pts = [sx * 3, -54, sx * 17, -56, sx * 24, -12];
-      for (let i = 0; i <= 4; i++) { const u = i / 4; pts.push(sx * (30 - u * 25) + Math.sin(t * 1.8 + i * 1.3 + sx) * sway * 0.5, HEM + (i % 2 ? -8 - hash(i + sx, 12) * 4 : 1) + Math.sin(t * 2 + i + sx * 2) * sway * 0.6); }
+      const pts = [sx * 3, -54, sx * 16, -56, sx * 26, -42, sx * 31, -12];
+      for (let i = 0; i <= 4; i++) { const u = i / 4; pts.push(sx * (38 - u * 33) + Math.sin(t * 1.8 + i * 1.3 + sx) * sway * 0.5, HEM + (i % 2 ? -8 - hash(i + sx, 12) * 4 : 1) + Math.sin(t * 2 + i + sx * 2) * sway * 0.6); }
       pts.push(sx * 3, -14);
       const g = ctx.createLinearGradient(sx * 28, -50, sx * 3, 30); g.addColorStop(0, '#222a4c'); g.addColorStop(1, '#0a0c1a');
       poly(ctx, pts, g, OUT, 2.4);
       ctx.save(); ctx.lineCap = 'round';
       line(ctx, sx * 5, -50, sx * 8, HEM - 8, rgba(K.glassE, 0.4), 1.2);   // the lit edge of the slit
-      line(ctx, sx * 15, -48, sx * 22, HEM - 10, rgba(K.glassH, 0.55), 1.8);
+      line(ctx, sx * 17, -50, sx * 27, HEM - 10, rgba(K.glassH, 0.55), 2);
       ctx.restore();
       crack(ctx, sx * 12, -42, Math.PI / 2 + sx * 0.12, 30, 20 + sx, lit * 0.9, 0.9);
       crack(ctx, sx * 20, -20, Math.PI / 2 + sx * 0.25, 20, 30 + sx, lit * 0.7, 0.8);
@@ -170,11 +179,21 @@ const CL_ART = (() => {
     // a seam of light down the slit, and glass fragments along the hem
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     line(ctx, 0, -50, 0, HEM - 6, rgba(K.veinG, 0.18 * lit), 4); line(ctx, 0, -50, 0, HEM - 6, rgba('#ffffff', 0.3 * lit), 1);
-    for (let i = 0; i <= N; i += 2) circle(ctx, -37 + (i / N) * 74, HEM + 2 - (i % 4 ? 5 : 0), 1.2, rgba('#ffffff', 0.55 * lit));
+    for (let i = 0; i <= N; i += 2) circle(ctx, -45 + (i / N) * 90, HEM + 2 - (i % 4 ? 5 : 0), 1.2, rgba('#ffffff', 0.55 * lit));
     ctx.restore();
   }
+  // the coat as seen from the facing: side on, the cape hangs behind him (away from the face) and the front panels narrow to one; from behind the cape is over the panels
+  function coatView(ctx, t, sway, lit, hov, v) {
+    const cape = () => { ctx.save(); ctx.translate(-v.fx * (1 - v.aw) * 17, 0); ctx.scale(0.62 + 0.38 * v.aw, 1); coat(ctx, t, sway, lit, hov, 1); ctx.restore(); };
+    const panels = () => { ctx.save(); ctx.translate(v.fx * (1 - v.aw) * 3, 0); ctx.scale(0.42 + 0.58 * v.aw, 1); coat(ctx, t, sway, lit, hov, 2); ctx.restore(); };
+    if (v.fy < -0.2) { panels(); cape(); } else { cape(); panels(); }
+  }
   // the helm and the mask: a cowl of glass swept back in spikes, a smooth silver mask with two thin slits
-  function head(ctx, t, look, bow, lit, bright) {
+  // v: the view (fx, fy the facing's screen axes, aw = |fy|): the mask slides to the side he faces and narrows to a sliver in profile, a swept cowl trails off
+  // the back of the head, and from behind there is no mask at all, only the seamed glass
+  function head(ctx, t, look, bow, lit, bright, v) {
+    v = v || { fx: 0, fy: 1, aw: 1 };
+    const hw = 0.76 + 0.24 * v.aw, mAl = clamp((v.fy + 0.14) / 0.14, 0, 1), mw = Math.max(v.fy, 0.34), fxs = v.fx >= 0 ? 1 : -1;
     ctx.save(); ctx.translate(look * 2.4, bow);
     // the sunburst of thin rays behind his head, as on the painted sheet
     ctx.save(); ctx.translate(0, -105);
@@ -184,9 +203,14 @@ const CL_ART = (() => {
     ctx.restore();
     // the hood: smooth black glass with a small peak
     kite(ctx, 0, -112, -Math.PI / 2, 14, 6, K.glassM, OUT, 1.6);
-    ellipse(ctx, 0, -104, 12, 15, 0, K.glassP, OUT, 2.4);
-    ellipse(ctx, -2.8, -108, 6, 9, 0, rgba(K.glassH, 0.4));
+    if (v.aw < 0.8) { ctx.save(); ctx.globalAlpha *= clamp((0.8 - v.aw) * 2.2, 0, 1); kite(ctx, -fxs * 6, -109, fxs > 0 ? Math.PI + 0.32 : -0.32, 17, 5.6, K.glassM, OUT, 1.7); kite(ctx, -fxs * 6, -101, fxs > 0 ? Math.PI - 0.2 : 0.2, 13, 4.4, K.glassP, OUT, 1.5); ctx.restore(); }   // (the cowl swept back, on the side away from the face)
+    ellipse(ctx, 0, -104, 12 * hw, 15, 0, K.glassP, OUT, 2.4);
+    ellipse(ctx, -2.8 * hw - fxs * 1.5 * (1 - v.aw), -108, 6 * hw, 9, 0, rgba(K.glassH, 0.4));
+    if (v.fy < 0.1) { ctx.save(); ctx.globalAlpha *= clamp(0.1 - v.fy, 0, 0.5) * 2; line(ctx, -v.fx * 5, -116, -v.fx * 5, -92.5, rgba('#0b0d19', 0.9), 2.2); line(ctx, -v.fx * 5 + 1.6, -114, -v.fx * 5 + 1.6, -94, rgba(K.glassH, 0.5), 1.1); ctx.restore(); }   // (the seam down the back of the hood)
     // the mask
+    ctx.save(); ctx.globalAlpha *= mAl; ctx.translate(v.fx * 8.5, 0); ctx.scale(mw, 1);
+    if (mAl > 0) {
+    look = 0;
     const g = ctx.createLinearGradient(-8, 0, 8, 0); g.addColorStop(0, '#f8f9fe'); g.addColorStop(0.55, '#c9cfde'); g.addColorStop(1, '#7a839c');
     ctx.beginPath(); ctx.moveTo(look * 1.6, -118); ctx.bezierCurveTo(10, -116, 9.5, -102, 3.6, -92.5); ctx.quadraticCurveTo(look * 1.6, -89, -3.6, -92.5); ctx.bezierCurveTo(-9.5, -102, -10, -116, look * 1.6, -118); ctx.closePath();
     ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = 2; ctx.stroke();
@@ -197,18 +221,39 @@ const CL_ART = (() => {
       ctx.beginPath(); ctx.moveTo(ex - sx * 2.6, -105.2); ctx.lineTo(ex + sx * 2.6, -106.6); ctx.lineTo(ex + sx * 2.2, -105); ctx.closePath(); ctx.fillStyle = '#0b0d19'; ctx.fill();
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(ctx, ex, -105.8, 6 + 3 * bright, '#cdd8ff', 0.18 + 0.4 * lit); circle(ctx, ex + sx * 0.6, -105.9, 0.8, rgba('#ffffff', 0.4 + 0.5 * lit)); ctx.restore();
     }
+    }
+    ctx.restore();
+    if (v.aw < 0.62 && mAl > 0) { ctx.save(); ctx.globalAlpha *= clamp((0.62 - v.aw) * 2.4, 0, 1) * mAl; kite(ctx, v.fx * 9, -98, fxs > 0 ? 0.22 : Math.PI - 0.22, 9, 3.6, '#c9cfde', OUT, 1.5); ctx.restore(); }   // (the mask's chin, standing out of the profile)
     ctx.restore();
   }
   // the breastplate, the collar, the pauldrons: black glass, white edges, the star-fragment at his chest
-  function torso(ctx, t, lit, bright) {
+  // v: the view; the chest (the star-fragment and its cracks) shows only from the front and slides to the side he faces, the back is plain plate with a seam
+  function torso(ctx, t, lit, bright, v) {
+    v = v || { fx: 0, fy: 1, aw: 1, tw: 1 };
+    const fr = clamp(v.fy * 1.7, 0, 1), bk = clamp(-v.fy * 1.7, 0, 1);
+    ctx.save(); ctx.scale(v.tw, 1);
     // the collar standing up behind the head
-    poly(ctx, [-9, -90, -13, -104, -6, -97, 0, -99, 6, -97, 13, -104, 9, -90], K.glassM, OUT, 2);
+    ellipse(ctx, 0, -91, 10.5, 7, 0, K.glassP, OUT, 2);   // the neck, in a glass gorget
+    poly(ctx, [-13, -90, -18, -106, -8, -98, 0, -100, 8, -98, 18, -106, 13, -90], K.glassM, OUT, 2);
     // breastplate
-    const g = ctx.createLinearGradient(-18, -90, 16, -50); g.addColorStop(0, '#2a3358'); g.addColorStop(0.5, '#12172c'); g.addColorStop(1, '#080a14');
-    poly(ctx, [-7, -93, 7, -93, 19, -86, 17, -70, 12, -54, 0, -47, -12, -54, -17, -70, -19, -86], g, OUT, 2.6);
-    line(ctx, -7, -92, -18, -86, rgba(K.glassE, 0.6), 1.3); line(ctx, -18, -85, -16, -70, rgba(K.glassE, 0.35), 1.1);
+    const g = ctx.createLinearGradient(-25, -90, 20, -50); g.addColorStop(0, '#2e3862'); g.addColorStop(0.5, '#12172c'); g.addColorStop(1, '#080a14');
+    poly(ctx, [-9, -94, 9, -94, 25, -88, 26, -72, 18, -57, 13, -50, 0, -46, -13, -50, -18, -57, -26, -72, -25, -88], g, OUT, 2.8);
+    poly(ctx, [0, -93, 9, -94, 25, -88, 26, -72, 18, -57, 13, -50, 0, -46], rgba('#02030a', 0.22));   // the shaded half
+    line(ctx, -9, -93, -25, -88, rgba(K.glassE, 0.65), 1.4); line(ctx, -25, -87, -26, -72, rgba(K.glassE, 0.4), 1.2); line(ctx, -26, -71, -18, -57, rgba(K.glassE, 0.25), 1);
+    ctx.restore();
+    if (bk > 0.02) {   // the back: plain plate, a seam down the spine and two cracked shoulder-blade plates
+      ctx.save(); ctx.globalAlpha *= bk; ctx.translate(-v.fx * 10, 0); ctx.scale(Math.max(v.aw, 0.5), 1);
+      poly(ctx, [-18, -86, -4, -88, -3, -62, -15, -64], rgba('#02030a', 0.3), rgba(K.glassE, 0.4), 1.2); poly(ctx, [18, -86, 4, -88, 3, -62, 15, -64], rgba('#02030a', 0.3), rgba(K.glassE, 0.4), 1.2);
+      line(ctx, 0, -93, 0, -48, OUT, 3); line(ctx, 0, -93, 0, -48, rgba(K.glassH, 0.55), 1.2);
+      for (let i = 0; i < 4; i++) circle(ctx, 0, -84 + i * 10, 1.7, K.glassP, OUT, 1.2);
+      crack(ctx, -6, -80, 1.9, 16, 61, lit * 0.9, 1); crack(ctx, 6, -74, 1.2, 14, 63, lit * 0.8, 1);
+      ctx.restore();
+    }
+    ctx.save(); ctx.scale(v.tw, 1);
+    if (fr > 0.02) { ctx.save(); ctx.globalAlpha *= fr; ctx.translate(v.fx * 22, 0); ctx.scale(Math.max(v.fy, 0.4), 1);
+    line(ctx, 3, -80, 21, -77, rgba(K.glassH, 0.35), 1); line(ctx, -3, -80, -21, -77, rgba(K.glassH, 0.45), 1);   // the pectorals
     line(ctx, 0, -92, 0, -50, rgba(K.glassH, 0.55), 1.3);
-    poly(ctx, [-12, -67, 12, -67, 10, -61, 0, -57, -10, -61], K.glassP, rgba(K.glassE, 0.5), 1.1);   // the lower plate
+    poly(ctx, [-17, -68, 17, -68, 14, -61, 0, -56, -14, -61], K.glassP, rgba(K.glassE, 0.5), 1.2);   // the lower plate
     // the star-fragment: a small kite of light set in the breast
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     glow(ctx, 0, -75, 22 + 10 * bright, K.veinG, (0.18 + 0.35 * lit) * (0.85 + 0.15 * Math.sin(t * 2.2)));
@@ -216,53 +261,63 @@ const CL_ART = (() => {
     kite(ctx, 0, -83, Math.PI / 2, 15, 4.2, rgba('#f4f6ff', 0.55 + 0.4 * lit), rgba('#ffffff', 0.8), 0.9);
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; circle(ctx, 0, -76, 1.8 + 1.2 * lit, rgba('#ffffff', 0.9)); ctx.restore();
     crack(ctx, -3, -72, 2.3, 18, 41, lit, 1); crack(ctx, 3, -70, 0.7, 17, 43, lit, 1); crack(ctx, -2, -64, 1.9, 12, 45, lit * 0.8, 0.9); crack(ctx, 1, -62, 1.2, 12, 46, lit * 0.8, 0.9);
+    ctx.restore(); }
     // the belt
-    line(ctx, -13, -53, 13, -51, OUT, 4.4); line(ctx, -13, -53, 13, -51, K.silverD, 2.6);
+    line(ctx, -16, -53, 16, -51, OUT, 5.4); line(ctx, -16, -53, 16, -51, K.silverD, 3.4);
     poly(ctx, [0, -57, 4, -52, 0, -47, -4, -52], K.silver, OUT, 1.2);
-    // pauldrons
-    for (const sx of [-1, 1]) {
-      plate(ctx, [sx * 13, -92, sx * 25, -102, sx * 40, -95, sx * 36, -83, sx * 27, -75, sx * 13, -80], K.glassM, K.glassE, 0.7, 2.4);
-      kite(ctx, sx * 30, -97, -Math.PI / 2 + sx * 0.3, 20, 4.4, K.glass, OUT, 1.8);
-      line(ctx, sx * 15, -88, sx * 34, -90, rgba(K.silverM, 0.55), 1);
-      crack(ctx, sx * 20, -92, sx > 0 ? 0.1 : Math.PI - 0.1, 17, 50 + sx, lit * 0.9, 0.9);
-      crack(ctx, sx * 29, -86, sx > 0 ? 1.0 : Math.PI - 1.0, 11, 53 + sx, lit * 0.8, 0.8);
-    }
+    ctx.restore();
+  }
+  // a pauldron: a broad cap of black glass over a second, lower lame, a spike rising from it, the light along its upper edge
+  // cx: where its shoulder is (default the front view's), k: its width (narrower as he turns)
+  function pauldron(ctx, sx, lit, cx = sx * 30, k = 1) {
+    ctx.save(); ctx.translate(cx, 0); ctx.scale(k, 1); ctx.translate(-sx * 30, 0);   // (the cap sits lower and flatter side on, so it does not cover the face)
+    ctx.translate(0, 9 * clamp(1 - (k - 0.62) / 0.38, 0, 1));
+    plate(ctx, [sx * 17, -78, sx * 39, -75, sx * 37, -64, sx * 22, -66], K.glassP, K.glassE, 0.5, 2.2);
+    plate(ctx, [sx * 12, -93, sx * 27, -105, sx * 44, -98, sx * 44, -83, sx * 36, -71, sx * 25, -73, sx * 12, -80], K.glassM, K.glassE, 0.75, 2.6);
+    kite(ctx, sx * 34, -99, -Math.PI / 2 + sx * 0.3, 22, 5, K.glass, OUT, 1.9);
+    line(ctx, sx * 15, -91, sx * 40, -93, rgba(K.silverM, 0.6), 1.2);
+    crack(ctx, sx * 21, -93, sx > 0 ? 0.1 : Math.PI - 0.1, 19, 50 + sx, lit * 0.9, 0.9);
+    crack(ctx, sx * 33, -86, sx > 0 ? 1.0 : Math.PI - 1.0, 12, 53 + sx, lit * 0.8, 0.8);
+    ctx.restore();
   }
 
   function body(ctx, st, angle = 0) {
     const pr = st.props || {}, t = st.t || 0, A = atk(st), sky = !!pr.sky, moving = st.moving ? 1 : 0;
     const fx = Math.cos(angle), fy = Math.sin(angle);
+    // the view: fx, fy the facing's screen axes (south, +y, is the camera), aw how square-on he is (1 front or back, 0 side on), tw his chest's width, k the shoulders'
+    const V = { fx, fy, aw: Math.abs(fy) }; V.tw = 0.46 + 0.54 * V.aw; V.k = 0.2 + 0.8 * V.aw;
     let pose = 'idle';
     for (const k of POSES) if (pr['cl' + k[0].toUpperCase() + k.slice(1)]) { pose = k; break; }
     // which hand holds the blade: the side he faces (a turn only when he truly turns)
     if (st.clTs == null) st.clTs = 1;
     if (Math.abs(fx) > 0.32) st.clTs = fx > 0 ? 1 : -1;
     const s = sm(st, 'clSw', st.clTs, 0.1);
-    const kS = A.strike * (1 - A.rest), gather = A.p < 0.3;
+    const kS = A.strike * (1 - A.rest), kO = A.ovr * (1 - A.rest), L = A.load * (1 - A.strike), kk = kS + 0.2 * kO;   // (L: the last gathering, kk: the blow with its carry past the mark)
     const bladeK = pr.clBlade ? clamp(0.82 + (pr.clBlade - 150) / 240 * 0.5, 0.82, 1.34) : 1;
     // what each pose asks of his body (the hand, the way the blade points, the off hand, the lean, the lift, how bright)
     const dir = (x, y) => { const l = Math.hypot(x, y) || 1; return [x / l, y / l]; };
-    let T = { hx: s * 23, hy: -46, d: dir(s * 0.52, 0.85), L: 1.0, ox: -s * 19, oy: -44, lean: 0, lift: sky ? -13 : 0, crouch: 0, halo: 0.55, lit: sky ? 0.95 : 0.78, wheel: sky ? 1 : 0, bow: 0, open: 0 };
+    let T = { hx: s * 23, hy: -46, d: dir(s * 0.52, 0.85), L: 1.0, ox: -s * 19, oy: -44, lean: 0, lift: sky ? -13 : 0, crouch: 0, halo: 0.55, lit: sky ? 0.95 : 0.78, wheel: sky ? 1 : 0, bow: 0, open: 0, mx: 0 };
     switch (pose) {
       case 'glint': {   // a low draw: the blade held back along the floor, then thrown forward along the line he faces
         const back = dir(-fx * 0.95, -fy * 0.5 + 0.3), fwd = dir(fx * 0.97, fy * 0.5 + 0.1);
-        T.hx = s * 22 + fx * 12 * kS; T.hy = -34 + 4 * kS; T.d = dir(lerp(back[0], fwd[0], kS), lerp(back[1], fwd[1], kS)); T.L = 1.08;
-        T.ox = -s * 6 + fx * 16; T.oy = -56; T.lean = -fx * 5 + fx * 24 * kS; T.crouch = 1 - kS * 0.6; T.halo = 0.7 + 0.3 * kS; T.lit = 0.95; break;
+        T.hx = s * 22 + fx * 12 * kk - fx * 9 * L; T.hy = -34 + 4 * kS - 4 * L; T.d = dir(lerp(back[0], fwd[0], kk), lerp(back[1], fwd[1], kk)); T.L = 1.08;
+        T.ox = -s * 6 + fx * 16 - fx * 14 * kS; T.oy = -56 - 6 * kS; T.lean = -fx * 5 - fx * 7 * L + fx * 24 * kk; T.crouch = 1 + 0.5 * L - kS * 0.6; T.halo = 0.7 + 0.3 * kS; T.lit = 0.95; T.mx = fx * 11 * kk; break;
       }
       case 'wake': {   // the blade raised and the halo bright; down along the line he faces at the cut
         const up = dir(s * 0.1, -1), dn = dir(fx * 0.8, 0.55 + fy * 0.25);
-        T.hx = s * 22 + fx * 8 * kS; T.hy = -118 + 50 * kS; T.d = dir(lerp(up[0], dn[0], kS), lerp(up[1], dn[1], kS)); T.L = 1.12; T.ox = -s * 20; T.oy = -70 + 14 * kS; T.open = 1;
-        T.lean = fx * 12 * kS; T.halo = 1; T.lit = 1; break;
+        T.hx = s * 22 + fx * 8 * kS - fx * 7 * L; T.hy = -118 - 16 * L + 50 * kk; T.d = dir(lerp(up[0] - fx * 0.32 * L, dn[0], kk), lerp(up[1], dn[1], kk)); T.L = 1.12; T.ox = -s * (20 + 10 * L) - fx * 4 * kS; T.oy = -70 - 8 * L + 14 * kS; T.open = 1;
+        T.lean = -fx * 7 * L + fx * 12 * kk; T.halo = 1; T.lit = 1; T.mx = fx * 8 * kk; T.crouch = 0.55 * L; break;
       }
       case 'crown': {   // the blade lifted overhead in both hands, embers rising; then brought down on the one he faces
         const up = dir(s * 0.06, -1), dn = dir(fx * 0.6, 0.8);
-        T.hx = s * 7 + fx * 6 * kS; T.hy = -136 + 70 * kS; T.d = dir(lerp(up[0], dn[0], kS), lerp(up[1], dn[1], kS)); T.L = 1.15; T.ox = s * 7 + fx * 6 * kS - s * 0; T.oy = -122 + 62 * kS;
-        T.lean = fx * 10 * kS; T.halo = 0.85; T.lit = 1; break;
+        const rz = st.action && st.action.wk > 0 ? Math.min(1, A.coil * 1.5) : 1;   // (a heavy cast lifts the blade overhead by degrees across the bar, then draws it further back)
+        T.hx = s * 7 + fx * 6 * kS - fx * 6 * L; T.hy = lerp(-62, -136, rz) - 14 * L + 70 * kk; T.d = dir(lerp(up[0] - fx * 0.28 * L, dn[0], kk), lerp(up[1], dn[1], kk)); T.L = 1.15; T.ox = s * 7 + fx * 6 * kS - fx * 6 * L; T.oy = lerp(-60, -122, rz) - 14 * L + 62 * kk;
+        T.lean = -fx * 8 * L + fx * 10 * kk; T.halo = 0.85; T.lit = 1; T.mx = fx * 7 * kk; T.crouch = 0.5 * L; break;
       }
       case 'thrust': {   // a long lunge: the blade drawn back at the hip, then driven out along the line he faces
-        const back = dir(-fx * 0.9, 0.2), fwd = dir(fx * 0.98, fy * 0.55);
-        T.hx = s * 14 + fx * 36 * kS; T.hy = -52 + fy * 8 * kS; T.d = dir(lerp(back[0], fwd[0], kS), lerp(back[1], fwd[1], kS)); T.L = 1.35;
-        T.ox = -s * 18 - fx * 10 * kS; T.oy = -60; T.lean = -fx * 6 + fx * 30 * kS; T.crouch = 1 - kS * 0.2; T.halo = 0.8; T.lit = 0.95; break;
+        const back = dir(fx * 0.86, 0.3 + fy * 0.2), fwd = dir(fx * 0.98, fy * 0.55);   // (chambered along the line he will drive it: the blade does not wheel round, the hand is what comes through)
+        T.hx = s * 14 + fx * 36 * kk - fx * 10 * L; T.hy = -52 + fy * 8 * kS; T.d = dir(lerp(back[0], fwd[0], kk), lerp(back[1], fwd[1], kk)); T.L = 1.35;
+        T.ox = -s * 18 - fx * 10 * kS - fx * 8 * L; T.oy = -60; T.lean = -fx * 6 - fx * 8 * L + fx * 30 * kk; T.crouch = 1 + 0.6 * L - kS * 0.2; T.halo = 0.8; T.lit = 0.95; T.mx = fx * 15 * kk; break;
       }
       case 'grace': {   // one hand open, palm down, the light leaving him; the blade lowered and still
         T.hx = s * 17; T.hy = -40; T.d = dir(s * 0.1, 1); T.L = 0.9; T.ox = -s * 38; T.oy = -62; T.open = 1; T.lit = 0.2; T.halo = 0.4; T.bow = 1.5; break;
@@ -283,21 +338,27 @@ const CL_ART = (() => {
         T.hx = s * 42; T.hy = -80; T.d = dir(s * 0.9, -0.45); T.L = 1.15; T.ox = -s * 42; T.oy = -80; T.open = 1; T.lift = -16; T.halo = 1; T.lit = 1.1; T.wheel = 1; break;
       }
       case 'horizon': {   // the blade drawn wide across the room: out from across his body to the side
-        T.hx = lerp(-s * 12, s * 44, kS); T.hy = lerp(-76, -80, kS); T.d = dir(lerp(-s, s, kS), lerp(-0.12, 0.03, kS)); T.L = 1.38;
-        T.ox = -s * 24; T.oy = -62; T.open = 1; T.lean = s * 6 * kS; T.halo = 0.95; T.lit = 1; T.lift = sky ? -13 : 0; break;
+        T.hx = lerp(-s * 12 - s * 10 * L, s * 44, kk); T.hy = lerp(-76, -80, kS); T.d = dir(lerp(-s, s, kk), lerp(-0.12, 0.03, kS)); T.L = 1.38;
+        T.ox = -s * 24 - s * 6 * kS; T.oy = -62; T.open = 1; T.lean = -s * 5 * L + s * 6 * kk; T.halo = 0.95; T.lit = 1; T.lift = sky ? -13 : 0; T.mx = s * 4 * kk; break;
       }
       case 'rage': {   // both arms up, the blade high, the halo blazing: the sky is coming down
         T.hx = s * 16; T.hy = -134; T.d = dir(s * 0.08, -1); T.L = 1.4; T.ox = -s * 16; T.oy = -132; T.open = 1; T.halo = 1.4; T.lit = 1.3; T.lift = sky ? -20 : -6; T.wheel = sky ? 1 : 0.3; break;
       }
     }
+    if (pose === 'idle' && A.on && A.auto) {   // his plain swing (a boss auto): the blade lifted back, then cut down the line he faces, a short step in with it
+      const up = dir(s * 0.18 - fx * 0.3, -1), dn = dir(fx * 0.85, 0.5 + fy * 0.2);
+      T.hx = s * 22 - fx * 6 * L + fx * 8 * kS; T.hy = lerp(-46, -108, A.load) * (1 - kk) - 64 * kk - 6 * L; T.d = dir(lerp(lerp(T.d[0], up[0], A.load), dn[0], kk), lerp(lerp(T.d[1], up[1], A.load), dn[1], kk)); T.L = 1.05;
+      T.ox = -s * (19 + 8 * L); T.oy = -44 - 10 * L; T.lean = -fx * 5 * L + fx * 10 * kk; T.mx = fx * 6 * kk; T.crouch = 0.35 * L; T.lit = 0.9; T.halo = 0.7;
+    }
+    T.crouch += A.land * (pose === 'grace' || pose === 'night' ? 0 : 0.9);   // the weight of a landing: a small dip
     if (pose === 'idle' && moving) { T.lean = fx * 3; T.hy += 1; }
-    const rate = (A.p >= 0.25 && A.p < 0.62) ? 0.34 : 0.12;
-    const P = smv(st, 'clP', [T.hx, T.hy, T.d[0], T.d[1], T.L, T.ox, T.oy, T.lean, T.lift, T.crouch, T.halo, T.lit, T.wheel, T.bow, T.open], rate);
+    const rate = A.on && A.u >= 0.30 && A.u < 0.82 ? 0.6 : A.on && A.u < 0.30 ? 0.16 : 0.12;   // (quick through the blow and what carries past it, slow in the gathering and the settle)
+    const P = smv(st, 'clP', [T.hx, T.hy, T.d[0], T.d[1], T.L, T.ox, T.oy, T.lean, T.lift, T.crouch, T.halo, T.lit, T.wheel, T.bow, T.open, T.mx], rate);
     const wheel = sm(st, 'clWh', T.wheel, 0.035), openH = P[14];
     const lit = clamp(P[11], 0.05, 1.3), halB = clamp(P[10], 0.2, 1.4);
     const dl = Math.hypot(P[2], P[3]) || 1, bAng = Math.atan2(P[3] / dl, P[2] / dl), bLen = 106 * P[4] * bladeK;
     const bob = Math.sin(t * 0.8) * 1.4 + moving * Math.sin(t * 3.1) * 1.7 + (sky ? Math.sin(t * 1.3) * 2.4 : 0);
-    const lift = P[8], sway = 1.3 + moving * 2.2 + (sky ? 1.8 : 0) + (pose === 'rage' || pose === 'ascend' || pose === 'ascendant' ? 2.5 : 0);
+    const lift = P[8], sway = 1.3 + moving * 2.2 + (sky ? 1.8 : 0) + (pose === 'rage' || pose === 'ascend' || pose === 'ascendant' ? 2.5 : 0) + 3.2 * A.trail;
 
     ctx.save(); ctx.rotate(-angle);
     // ---- on the floor: his shadow (it stays on the ground when he is lifted) and the cold light the glass throws
@@ -316,32 +377,44 @@ const CL_ART = (() => {
     }
     // ---- the figure: leaning from the ground (a shear: the feet stay where they are), lifted, crouched
     ctx.save();
-    ctx.translate(0, lift + bob * 0.5 + P[9] * 2);
+    ctx.translate(P[15], lift + bob * 0.5 + P[9] * 2);
     ctx.transform(1, 0, -P[7] / 135, 1 - P[9] * 0.025, 0, 0);
     // the wheel or the halo, behind everything
-    halo(ctx, t, wheel, halB, 0, -88, sky || wheel > 0.5);
+    halo(ctx, t, wheel, halB, -fx * 6 * A.cloth, -88, sky || wheel > 0.5);
     // the light leaving him (Grace): motes streaming out from the chest, fading
     if (pose === 'grace') {
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       for (let i = 0; i < 22; i++) { const q = (t * 0.55 + i / 22 + hash(i, 4) * 0.2) % 1, a = hash(i, 5) * TAU, d = 14 + q * (90 + 60 * hash(i, 6)); circle(ctx, Math.cos(a) * d, -72 + Math.sin(a) * d * 0.8 - q * 22, 1.1 + (1 - q) * 1.5, rgba('#ffffff', 0.85 * (1 - q) * Math.min(1, q * 5))); }
       ctx.restore();
     }
-    coat(ctx, t, sway, lit, hov);
-    // the boots at the hem
-    for (const sx of [-1, 1]) { const step = moving ? Math.max(0, Math.sin(t * 6.2 + (sx > 0 ? 0 : Math.PI))) * 4 : 0; poly(ctx, [sx * 4, 30 - step, sx * 11, 31 - step, sx * 12, 38 - step, sx * 3, 38 - step], '#0a0c18', OUT, 1.8); line(ctx, sx * 4, 38 - step, sx * 12, 38 - step, rgba(K.silverM, 0.6), 1); }
+    if (A.cloth) { ctx.save(); ctx.translate(0, -70); ctx.transform(1, 0, -fx * 0.09 * A.cloth, 1, 0, 0); ctx.translate(0, 70); coatView(ctx, t, sway, lit, hov, V); ctx.restore(); }   // (the coat is behind the blow, then swings through it)
+    else coatView(ctx, t, sway, lit, hov, V);
+    // the boots at the hem (side on, both toes point the way he faces)
+    ctx.save(); ctx.translate(fx * 5 * (1 - V.aw), 0); ctx.scale(0.5 + 0.5 * V.aw, 1);
+    for (const sx of [-1, 1]) { const step = moving ? Math.max(0, Math.sin(t * 6.2 + (sx > 0 ? 0 : Math.PI))) * 4 : 0; poly(ctx, [sx * 4, 29 - step, sx * 15, 30 - step, sx * 17, 39 - step, sx * 3, 39 - step], '#0a0c18', OUT, 2); line(ctx, sx * 3, 39 - step, sx * 17, 39 - step, rgba(K.silverM, 0.6), 1.2); }
+    ctx.restore();
     // the off arm first (behind the blade arm), the body, then the head and the blade arm
-    const shOff = [-s * 22, -84], shMain = [s * 22, -84];
+    // (a hand held high lifts the joint to the top of the shoulder, so a raised arm rises from the pauldron; a hanging one comes out from under it)
+    const rzO = clamp((-P[6] - 62) / 26, 0, 1), rzM = clamp((-P[1] - 62) / 26, 0, 1);
+    const shOff = [-s * (31 + 3 * rzO) * V.k, -76 - 14 * rzO], shMain = [s * (31 + 3 * rzM) * V.k, -76 - 14 * rzM];
+    const pk = 0.62 + 0.38 * V.aw, pOffFar = V.aw < 0.55;   // (the far shoulder is behind the chest when he stands side on)
     arm(ctx, shOff[0], shOff[1], P[5], P[6], -s * 6, lit);
-    torso(ctx, t, lit, halB);
+    if (pOffFar) pauldron(ctx, -s, lit, shOff[0], pk);
+    torso(ctx, t, lit, halB, V);
+    if (V.fy < -0.05) { ctx.save(); ctx.globalAlpha *= clamp(-V.fy * 1.7, 0, 1); ctx.translate(-fx * (1 - V.aw) * 17, 0); ctx.scale(0.62 + 0.38 * V.aw, 1); coat(ctx, t, sway, lit, hov, 1, true); ctx.restore(); }   // (from behind the cape hangs over his back)
+    if (!pOffFar) pauldron(ctx, -s, lit, shOff[0], pk);
+    pauldron(ctx, s, lit, shMain[0], pk);
     hand(ctx, P[5], P[6], openH, pose === 'grace' ? Math.PI / 2 : pose === 'summon' || pose === 'rage' ? -Math.PI / 2 : s > 0 ? Math.PI * 0.85 : Math.PI * 0.15, lit);
     if (pose === 'ember') {   // the black ember: a seed of dark with a thin white rim, held out in the open hand
       const ex = P[5], ey = P[6] - 8; ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(ctx, ex, ey, 22, K.violetH, 0.28); ctx.restore();
       circle(ctx, ex, ey, 6.4 + Math.sin(t * 9) * 0.5, '#05030a', rgba('#ffffff', 0.9), 1.4); circle(ctx, ex - 1.5, ey - 1.5, 1.6, rgba('#ffffff', 0.55));
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 4; i++) { const q = (t * 1.2 + i / 4) % 1; circle(ctx, ex + Math.sin(i * 3 + t) * 5, ey - q * 14, 1 + (1 - q), rgba(K.violetH, 0.7 * (1 - q))); } ctx.restore();
     }
-    head(ctx, t, clamp(fx, -1, 1), P[13], lit, halB);
+    head(ctx, t, clamp(fx, -1, 1), P[13], lit, halB, V);
     // the blade arm, then the blade over all
     arm(ctx, shMain[0], shMain[1], P[0], P[1], s * 6, lit);
+    if (rzM < 0.95 && V.aw > 0.45) { ctx.save(); ctx.globalAlpha *= 1 - rzM; pauldron(ctx, s, lit, shMain[0], pk); ctx.restore(); }   // (the blade arm comes out from under its own pauldron)
+    { const gx = P[0] + Math.cos(bAng) * 6, gy = P[1] + Math.sin(bAng) * 6; bladeSmear(ctx, st, 'bl', A.on && A.u > 0.3 && A.u < 0.9, gx, gy, gx + Math.cos(bAng) * bLen, gy + Math.sin(bAng) * bLen, K.veinG, { a: pose === 'horizon' ? 0.28 : 0.4, min: 6 }); }   // (the path of the cut, left behind it)
     const tip = blade(ctx, P[0] + Math.cos(bAng) * 6, P[1] + Math.sin(bAng) * 6, bAng, bLen, { t, lit: Math.min(1, lit), bright: halB > 1 ? 1.3 : 1, wide: pose === 'rage' ? 1.5 : 1 });
     if (pose === 'crown' || pose === 'rage') hand(ctx, P[5] + 0, P[6] + 0, 0, 0, lit);   // the second hand on the hilt
     hand(ctx, P[0], P[1], 0, 0, lit);

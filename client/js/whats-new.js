@@ -2,6 +2,21 @@
 const WhatsNew = (() => {
   const LOG = [
     {
+      id: '2026-11-14', title: 'Season 2: the Silver Road', date: 'November 14',
+      groups: [
+        ['Raids', [
+          'Season 2, the Silver Road: four new bosses for parties that have finished the Ultimate, each on Normal, Hard and Extreme.',
+          'Extreme: a third difficulty for every boss, opened one boss at a time by beating it on Hard.',
+          'Boss attacks carry more weight: longer wind-ups, bodies that commit to a swing, and hits that mark the room for a while.',
+          'Bosses that stand upright are sturdier, and they turn to show a side or a back instead of always facing you.',
+        ]],
+        ['Class changes', [
+          "Every class's abilities are redrawn in the class's own material, from first gather to the mark a hit leaves. Timing and damage are unchanged.",
+          'Boss telegraph edges are drawn above hero effects, so a busy party never covers a tell.',
+        ]],
+      ],
+    },
+    {
       id: '2026-11-01', title: 'Wall moments and talent buffs', date: 'November 1',
       groups: [
         ['Raids', [

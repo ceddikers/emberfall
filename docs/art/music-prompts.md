@@ -9,7 +9,7 @@ Instrumental only. The game is dusky low fantasy: warm and a little rustic in to
 - **Two fields on most generators.** Suno-style tools have a short **Style** field (about 120 to 200 characters) and a longer **description / lyrics** field. Each piece below gives both: paste the style line into Style, and the structure block into the lyrics field (the `[Instrumental]` and `[Section]` tags tell it not to sing). For tools with one long box (Udio, ElevenLabs Music and similar), paste the **Full prompt** instead.
 - **Always add "no vocals, instrumental"** (already in each prompt). For the Hollow King, a wordless choir is wanted, so that prompt says "wordless choir, no lyrics".
 - **Looping.** No generator loops perfectly. Ask for the piece to start and end on the same chord or on a held drone, then trim it in an audio editor to a clean loop point (or crossfade the last 4 seconds into the first 4). Aim for 1:30 to 2:30 per track. Boss tracks come in two parts: a main loop, and a harder variant in the same key. On Normal the game crossfades into it at a bar line late in the fight (the moment is in brackets after each harder variant); on Hard it plays the whole fight.
-- **File names** follow `docs/art/sounds.md`: `mus-title`, `mus-town`, `mus-grubnak`, `mus-skitterra`, `mus-volkar`, `mus-hollowking`, `mus-wyrm`, `mus-titan`, `mus-archmage`, `mus-hydra`, `mus-corvane`, `mus-brannoc`, `mus-morrowoak`, `mus-caelum`, `mus-garrow`, `mus-silver-road`, `mus-pull`, `mus-victory`, `mus-wipe`. The harder variant adds `-hard` (`mus-grubnak-hard`). Export `.ogg` (or `.mp3`), stereo, 44.1 kHz, about -16 LUFS so nothing is much louder than the rest.
+- **File names** follow `docs/art/sounds.md`: `mus-title`, `mus-town`, `mus-grubnak`, `mus-skitterra`, `mus-volkar`, `mus-hollowking`, `mus-wyrm`, `mus-titan`, `mus-archmage`, `mus-hydra`, `mus-corvane`, `mus-brannoc`, `mus-morrowoak`, `mus-caelum`, `mus-garrow`, `mus-vesper`, `mus-ormun`, `mus-maelis`, `mus-silver-road`, `mus-pull`, `mus-victory`, `mus-wipe`. The harder variant adds `-hard` (`mus-grubnak-hard`). Export `.ogg` (or `.mp3`), stereo, 44.1 kHz, about -16 LUFS so nothing is much louder than the rest.
 - **Mix note.** Music sits under the telegraph and warning sounds: avoid a constant loud snare or cymbal wash in the top frequencies, and keep the low end tidy so effects stay readable. Each prompt already asks for that.
 - **Tempo and key** are given so the main loop and its harder variant can be switched at a bar line without a clash.
 
@@ -443,6 +443,142 @@ If a take of either half turns into pop, anime rock or EDM, add `no pop, no EDM,
 **Full prompt:** The same four-note tune and key as the hunting theme, now for the chase across the white, around 76 BPM in B minor but felt in double time: the percussion runs at twice the speed while the harmony still changes every two bars. Every section opens on a gust of white wind with a bowed-metal ring in it. The old tune is driven on cellos and basses over a running ostinato, felted toms and a frame drum running like paws on snow, a bowed-metal ring on the first beat of every other bar. The tune is answered a bar late by violas, then violins above, stacked like a pack closing in, while a single wordless voice slides upward like a wolf call and breaks off. A quiet middle of low rolling wind, one held bowed-metal note like a chain pulled taut, one far horn and the ostinato down to its bare pulse, then the whole tune in full strings and low brass with the horn close, the toms booming softly, rising a step in the last four bars. Driven, hard and relentless but never warm, never heroic and never cheerful, leaving room in the mix for sound effects. No lyrics (the voice is wordless and single), no choir, no electric guitars, no synth leads, no snare crack, no cymbal wash. Starts and ends on the wind and one dry paw-tick so it loops.
 
 If a take of either half turns into pop, anime rock or EDM, add `no pop, no EDM, no guitar`. If the first half is too busy or too big, add `sparse, quiet, lots of space between phrases, close and patient`. If the second half is not driven enough, add `running ostinato, double-time felt drums`; if it turns warm or heroic, add `cold, minor, no major-key colour, no fanfare`; if it speeds up, add `same tempo, steady`.
+
+---
+
+## 6m. Vesper, the Mirror Knight (Season 2, `mus-vesper`, second half `mus-vesper-hard`)
+
+**What it is:** a silent duelist in a hall of mirrors, and two moods in one fight. First the hall: still, bright and glassy, polished silver and a great deal of space, a knight who does not speak and does not hurry, every sound answered a moment later by its own reflection. Bowed crystal glasses, harp harmonics, celesta, one solo violin very high and very clean, pizzicato violas and cellos like footsteps on a stone floor, a single low drum far off. Then, from the turn of the mirror on, the sword dance: the same tune precise and driven, every note cut exactly, everything sharper and closer and ticking. Never warm and never romantic, never a march: a duel, not a battle. The town's far glow is the only warmth in the picture and the music never goes there. Mood: polished silver, black water, a pale window, a breath held.
+
+**How the two halves are played (the same system as Garrow's).** `LAYER_AT` in `client/js/sound-hooks.js` lists `vesper: 3` (the course phase as the glass turns, after the wall, about the 48% mark), and `Sound.music.layer` crossfades from `mus-vesper` into `mus-vesper-hard` on the next bar line, starting the second at the same position in time as the first. As for Garrow, `vesper` is not yet in `TURN`, so on Hard and Extreme the fight would start on the `-hard` file: for Vesper both difficulties must start on `mus-vesper` and layer into `mus-vesper-hard` at the turn, because `-hard` here means "the second half", not "the harder fight". Until the files exist `audio.js` borrows Azerath's tracks. The two files must be built as a pair:
+
+- **Same key, same tempo, same bar count** (44 bars at 88 BPM is 2:00), so the bar-line crossfade lands clean. The second half keeps the bar grid and tightens the feel: the strings play short and exact, a phrase landing a half beat sooner each time, while the harmony still moves every two bars.
+- **Same section order and the same tune.** Both halves state a short, plain, rising four-note tune and then its mirror image, the same four notes turned upside down, answered at once. Because the second file starts wherever the first happens to be, every section of it must stand alone; none may depend on a quiet intro before it.
+- **The first beat of every section in the second half is a struck crystal glass, ringing like a blade drawn across a bell**, so a short crossfade is covered by the ring and never sounds like a cut. The first half's sections end on one dry soft tick (a fingertip on glass, a felted wood block), not a long tail, for the same reason.
+- **Percussion stays light, dry and low-pitched**: one soft drum, wood and glass ticks, never a snare crack or a cymbal wash, so the telegraph sounds stay readable. The glass sounds sit high and thin and are never constant.
+
+**First half, the hall, main loop (Style):** `still bright glassy duel boss theme, bowed crystal glasses, harp harmonics, celesta, solo violin in the high register, pizzicato violas and cellos walking, a single far low drum, mirrored melodies, silent, precise, cold, instrumental, no lyrics`
+
+**Structure block:**
+```
+[Instrumental]
+[Hall: one bowed crystal glass held over a still string drone, one harp harmonic and its echo a beat later, one dry glass tick, 4 bars]
+[Duel: the four-note tune on a solo violin, high and still, over pizzicato violas and cellos at a walking pace, the celesta answering with the same four notes turned upside down, one low drum on the first beat of every fourth bar, 12 bars]
+[Glass: the tune and its upside-down copy played together by two violins in opposite directions, a bowed crystal glass beneath, the pizzicato quickening a little, 8 bars]
+[Hush: only the drone, one harp harmonic and one crystal-glass note, the tune stops, 8 bars]
+[Salute: the tune in full strings with its mirror on harp and celesta, the low drum on every other bar, a step higher in the last 4 bars, 12 bars]
+```
+(44 bars. It ends on one dry soft tick and starts on the held glass, so it loops.)
+
+**Full prompt:** Still, bright, glassy, quietly exact cinematic boss music for a silent knight in mirror-bright plate fighting a duel in a hall of polished silver and glass, around 88 BPM in B minor. It begins on one bowed crystal glass held over a still string drone, one harp harmonic and its echo a beat later, and one dry glass tick. A solo violin, very high and clean, states a short, plain, rising four-note tune over pizzicato violas and cellos walking like footsteps on stone, and a celesta answers it at once with the same four notes turned upside down, like a reflection, while one low drum sounds far off on the first beat of every fourth bar. The tune and its upside-down copy are then played together by two violins moving in opposite directions over a bowed crystal glass, the pizzicato quickening a little. A quiet middle of only the drone, one harp harmonic and one crystal-glass note, then the tune in full strings with its mirror on harp and celesta, the low drum on every other bar, rising a step in the last four bars. Calm and silent on the surface, precise and cold underneath, never romantic, never a march, never warm, leaving room in the mix for sound effects. No lyrics, no choir, no electric guitars, no synth leads, no snare crack, no cymbal wash. Starts and ends on the held glass and one dry tick so it loops.
+
+**Dance half `mus-vesper-hard` (layered in when the mirror turns; the whole second half of the fight) (Style):** `driven precise sword dance boss theme, tight staccato strings in unison, col legno, pizzicato basses, glass marimba and harp, struck crystal glasses ringing like blades, low war drum, the tune and its mirror in contrary motion, cold, exact, relentless, instrumental, no lyrics`
+
+**Structure block:**
+```
+[Instrumental]
+[Draw: a struck crystal glass ringing like a blade drawn across a bell, the drone drops a step, one low drum, 4 bars]
+[Cut: the tune driven in unison by staccato strings over pizzicato basses and a steady low drum, the mirror answer on glass marimba, every phrase landing a half beat sooner than the one before, 12 bars]
+[Both: the tune and its mirror stacked in opposite directions by two string choirs, col legno ticking between them, the harp running up and down, 8 bars]
+[Still: the drone and one struck glass left ringing, the drum down to one soft pulse, 8 bars]
+[Last cut: the tune in full strings and low brass, the mirror on bells and harp, the drum booming softly, a step higher in the last 4 bars, 12 bars]
+```
+(44 bars, same grid as the first half. Each section opens on a struck glass. It ends on the ring falling away and one dry tick so it loops.)
+
+**Full prompt:** The same tune, mirror and key as the hall theme, now for the sword dance, around 88 BPM in B minor but tighter: every note cut short and exact, the harmony still changing every two bars. Every section opens on a struck crystal glass ringing like a blade drawn across a bell. The four-note tune is driven in unison by staccato strings over pizzicato basses and a steady low drum, the upside-down answer on a glass marimba, each phrase landing a half beat sooner than the one before so the dance seems to climb. The tune and its mirror are stacked in opposite directions by two string choirs with col legno ticking between them and the harp running up and down. A quiet middle of the drone and one struck glass left ringing, the drum down to a single soft pulse, then the whole tune in full strings and low brass with the mirror on bells and harp, the drum booming softly, rising a step in the last four bars. Precise, driven and relentless but never warm, never heroic and never frantic, leaving room in the mix for sound effects. No lyrics, no choir, no electric guitars, no synth leads, no snare crack, no cymbal wash. Starts and ends on the ring and one dry tick so it loops.
+
+If a take of either half turns into pop, anime rock or EDM, add `no pop, no EDM, no guitar`. If the first half is too busy or too warm, add `sparse, still, lots of space between phrases, glassy and cold`. If the second half is not driven enough, add `staccato, exact, a steady low drum, climbing phrases`; if it turns warm or heroic, add `cold, minor, no major-key colour, no fanfare`; if it speeds up, add `same tempo, steady`.
+
+---
+
+## 6n. Ormun, the Tide-Weigher (Season 2, `mus-ormun`, second half `mus-ormun-hard`)
+
+**What it is:** a patient old god who weighs what comes over his scales, and two moods in one fight. First the weighing: slow, heavy and enormous, a very old thing that has never hurried and does not mean to start, the sea under it breathing. Low bowed basses and contrabassoon, a deep bell tolling now and then with a second bell answering a shade lower so the two are never quite level, dripping water and a long swell, soft low gongs, a solo cello. Then, from the Burdens on, the weight grows: the same tune lower and heavier, the bells in pairs, the sea rising under it, never faster. Never warm, never a fanfare, never quick: pressure, not speed. Mood: black water, silver pans, a very long beam leaning one way and then the other.
+
+**How the two halves are played (the same system as Garrow's).** `LAYER_AT` in `client/js/sound-hooks.js` lists `ormun: 3` (the course phase where the Burdens begin, after the Spring Tide, about the 50% mark), and `Sound.music.layer` crossfades from `mus-ormun` into `mus-ormun-hard` on the next bar line, starting the second at the same position in time as the first. As for Garrow, `ormun` is not yet in `TURN`, so on Hard and Extreme the fight would start on the `-hard` file: for Ormun both difficulties must start on `mus-ormun` and layer into `mus-ormun-hard` at the Burdens, because `-hard` here means "the second half", not "the harder fight". Until the files exist `audio.js` borrows the Hydra's tracks. The two files must be built as a pair:
+
+- **Same key, same tempo, same bar count** (32 bars at 52 BPM is 2:28), so the bar-line crossfade lands clean. The second half keeps the bar grid and the slow pace; it gets heavier by going lower and louder, never faster.
+- **Same section order and the same tune.** Both halves state a short, heavy, four-note tune that leans one way and then the other like a beam: the second half plays it lower. Because the second file starts wherever the first happens to be, every section of it must stand alone; none may depend on a quiet intro before it.
+- **The first beat of every section in the second half is one huge bell toll with a rush of sea under it**, so a short crossfade is covered by the toll and never sounds like a cut. The first half's sections end on one soft drip of water and a bell damped by the hand, not a long tail, for the same reason.
+- **Percussion stays low, soft and slow**: a deep soft bass drum like a slow heartbeat, bells and gongs with soft mallets, never a snare crack or a cymbal wash, so the telegraph sounds stay readable. The tune is answered from the opposite side of the stereo field, like the other pan.
+
+**First half, the weighing, main loop (Style):** `slow heavy ancient sea god boss theme, huge low bowed basses and contrabassoon, deep tolling bell answered by a second bell a shade lower, dripping water and a long swell, soft low gongs, solo cello, patient, immense, instrumental, no lyrics`
+
+**Structure block:**
+```
+[Instrumental]
+[Sea: a long swell of low water under a bowed bass drone, one deep bell toll, slow drips, 4 bars]
+[Beam: the four-note tune on solo cello and contrabassoon, low and slow, leaning one way and then the other, a bell toll every second bar, a soft bass drum like a heartbeat every fourth bar, 8 bars]
+[Pans: the tune answered from the far side by low horns half a bar late, the two lines never quite level, a bowed gong swelling and falling, 8 bars]
+[Still: only the drone, the swell and one bell, the tune stops, 4 bars]
+[Weight: the tune in full low strings with the bells and a soft choir of low voices on one open vowel, the bass drum at full weight but still soft, a step lower in the last 4 bars, 8 bars]
+```
+(32 bars. It ends on one drip and a damped bell and starts on the swell, so it loops.)
+
+**Full prompt:** Slow, heavy, enormous cinematic boss music for a colossus of pale drowned stone who weighs everything that crosses his silver scales over a night sea, around 52 BPM in B minor. It begins with a long swell of low water under a bowed bass drone, one deep bell toll, and slow drips. A solo cello and a contrabassoon state a short, heavy, four-note tune, low and slow, that leans one way and then the other like a beam, with a bell toll every second bar and a soft bass drum like a slow heartbeat every fourth bar. The tune is answered from the far side by low horns half a bar late, the two lines never quite level, while a bowed gong swells and falls. A quiet middle of only the drone, the swell and one bell, then the tune in full low strings with the bells and a soft choir of low voices on one open vowel, the bass drum at full weight but still soft, sinking a step in the last four bars. Patient, vast and unhurried, pressure rather than speed, never warm, never heroic, never quick, leaving room in the mix for sound effects. No lyrics (the choir sings one open vowel), no electric guitars, no synth leads, no snare crack, no cymbal wash. Starts and ends on the swell, one drip and a damped bell so it loops.
+
+**Weight half `mus-ormun-hard` (layered in when the Burdens begin; the whole second half of the fight) (Style):** `heavier deeper sea god boss theme, lowest strings and contrabassoon, low brass, tolling bells in pairs, strings swelling and falling like a rising tide, low choir on one open vowel, slow deep bass drum, bowed gongs, pressing, immense, never faster, instrumental, no lyrics`
+
+**Structure block:**
+```
+[Instrumental]
+[Toll: one huge bell toll with a rush of sea under it, the drone drops a step, 4 bars]
+[Beam: the tune in the lowest strings, contrabassoon and low brass, a bass drum on every beat of every second bar, the bells tolling in pairs, the strings swelling and falling every two bars like a tide, 8 bars]
+[Pans: the tune answered from the far side by low horns and a low choir half a bar late, the two lines further apart, bowed gongs, 8 bars]
+[Deep: the sea at full over one held choir chord, one bell, the pulse down to a single beat, 4 bars]
+[Weight: the tune in full strings, low brass and choir, the bells tolling together, the bass drum booming softly, sinking a step in the last 4 bars, 8 bars]
+```
+(32 bars, same grid as the first half. Each section opens on a huge toll and a rush of sea. It ends on the sea falling away and one drip so it loops.)
+
+**Full prompt:** The same tune and key as the weighing theme, now for the weight that grows, around 52 BPM in B minor and exactly as slow, but everything lower, heavier and larger. Every section opens on one huge bell toll with a rush of sea under it. The old tune is played by the lowest strings, contrabassoon and low brass, with a deep bass drum on every beat of every second bar, the bells tolling in pairs, and the strings swelling and falling every two bars like a rising tide. The tune is answered from the far side by low horns and a low choir half a bar late, the two lines further apart, with bowed gongs. A quiet middle of the sea at full over one held choir chord, one bell and a single beat of the pulse, then the whole tune in full strings, low brass and choir with the bells tolling together and the bass drum booming softly, sinking a step in the last four bars. Pressing, immense and relentless but never faster, never warm, never heroic and never cheerful, leaving room in the mix for sound effects. No lyrics (the choir sings one open vowel), no electric guitars, no synth leads, no snare crack, no cymbal wash. Starts and ends on the toll and the falling sea and one drip so it loops.
+
+If a take of either half turns into pop, anime rock or EDM, add `no pop, no EDM, no guitar`. If the first half is too busy or too warm, add `sparse, very slow, lots of space between phrases, huge and patient`. If the second half is not heavy enough, add `lowest register, deep bass drum, bells in pairs, a rising tide in the strings`; if it speeds up, add `same tempo, very slow and steady`; if it turns warm or heroic, add `cold, minor, no major-key colour, no fanfare`.
+
+---
+
+## 6o. Maelis Orne, the Pale Regent (Season 2, `mus-maelis`, second half `mus-maelis-hard`)
+
+**What it is:** the calm final villain of a Final Fantasy, and two moods in one fight. First the court: grand, quiet and cold, a regent in her own house who does not ask you to leave and does not raise her voice. A very soft wordless choir, a slow pipe organ pedal, harp, celesta, bowed crystal glasses, strings in long lines, a solo wordless voice singing a long, plain, rising four-note tune like a moon coming up, a far soft timpani. Then, from the moment she rides the Hound, the long dark red: the same tune low and heavy in a full dark choir, the strings in dark tremolo over a running ostinato, low brass, the war drums, enormous and doomed, never hysterical. It is the longer half of the fight, so it is built to loop many times. Never warm, never a villain's march and never cruel: grief and majesty. The world's far windows are the only warmth in the picture and the music never goes there. Mood: pale dust, a black sky, a huge slow light going out.
+
+**How the two halves are played (the same system as Garrow's).** Unlike the other three, `maelis` is not in `LAYER_AT`: her staged mount in `client/js/walls/maelis.js` layers the harder music as she vaults onto the Hound, ten seconds into the Hunt (about the 56% mark), and `LAYER_LATE` in `client/js/sound-hooks.js` catches a start or a rejoin after the mount up at the Hunt's second half. `Sound.music.layer` crossfades from `mus-maelis` into `mus-maelis-hard` on the next bar line, starting the second at the same position in time as the first. As for Garrow, `maelis` is not yet in `TURN`, so on Hard and Extreme the fight would start on the `-hard` file: for Maelis both difficulties must start on `mus-maelis` and layer into `mus-maelis-hard` at the mount, because `-hard` here means "the second half", not "the harder fight". Until the files exist `audio.js` borrows the Hollow King's tracks. The two files must be built as a pair:
+
+- **Same key, same tempo, same bar count** (36 bars at 66 BPM is 2:11), so the bar-line crossfade lands clean. The second half is the longer half of the fight (the Hunt and the last act), so it must loop cleanly many times: it ends as it begins. The percussion runs at twice the speed while the harmony still moves every two bars.
+- **Same section order and the same tune.** Both halves state the long, plain, rising four-note tune: the first half sung softly by one voice, the second low and heavy by a full choir. Because the second file starts wherever the first happens to be, every section of it must stand alone; none may depend on a quiet intro before it.
+- **The first beat of every section in the second half is one deep struck gong under a rising choir swell**, so a short crossfade is covered by the swell and never sounds like a cut. The first half's sections end on one soft felted timpani tap, not a long tail, for the same reason.
+- **Percussion stays low and soft** until the second half's drums: felted timpani and low war drums, never a snare crack or a cymbal wash, so the telegraph sounds stay readable. The choir is wordless throughout and sits under the sound effects.
+- **Once per loop in the second half a falling four-note figure sounds low in the cellos, like the hound's own tune from Garrow's fight**; it is a quiet reminder that she rides him, not a second theme.
+
+**First half, the court, main loop (Style):** `grand quiet cold final boss theme, very soft wordless choir, slow pipe organ pedal, harp, celesta, bowed crystal glasses, strings in long lines, solo wordless voice, far soft timpani, regal, patient, grief and majesty, instrumental, no lyrics`
+
+**Structure block:**
+```
+[Instrumental]
+[Moonrise: a pale high choir chord rising out of silence over a deep organ pedal and one harp harmonic, one felted timpani tap, 4 bars]
+[Regent: the four-note tune sung by one wordless voice, quiet and unhurried, over long low strings and a slow harp, a celesta glint every other bar, 8 bars]
+[Court: the tune taken up by a small choir in open fifths, the strings widening beneath, a soft timpani roll every fourth bar, bowed crystal glasses ringing above, 8 bars]
+[Dust: the choir stops, only the pedal, the harp, one celesta note and one far horn, 4 bars]
+[Crown: the tune in full choir and strings with organ and soft horns, grand but still, a step higher in the last 4 bars, 12 bars]
+```
+(36 bars. It ends on one felted timpani tap and starts on the rising choir chord, so it loops.)
+
+**Full prompt:** Grand, quiet, cold cinematic boss music for the calm final villain of a fantasy epic, a pale regent who rules the face of the moon and shows the party the world hanging in her sky, around 66 BPM in B minor (the key of the Season 2 fights). It begins with a pale high choir chord rising out of silence over a deep organ pedal and one harp harmonic, and one soft felted timpani tap. A single wordless voice sings a long, plain, rising four-note tune like a moon coming up, quiet and unhurried, over long low strings and a slow harp, with a celesta glint every other bar. A small choir takes the tune up in open fifths, the strings widening beneath it, a soft timpani roll every fourth bar and bowed crystal glasses ringing above. A quiet middle of only the pedal, the harp, one celesta note and one far horn, then the tune in full choir and strings with organ and soft horns, grand but still, rising a step in the last four bars. Majesty through quiet, grief rather than menace, never a march, never warm, never cruel, leaving room in the mix for sound effects. No lyrics (the choir is wordless), no electric guitars, no synth leads, no snare crack, no cymbal wash. Starts and ends on the rising chord and one soft tap so it loops.
+
+**Dark red half `mus-maelis-hard` (layered in when she mounts the Hound; the whole second half of the fight, the longer half, so it loops many times) (Style):** `dark blood red epic final boss theme, full dark wordless choir in low voices, strings in dark tremolo over a running ostinato, low brass, deep pipe organ, timpani and low war drums running, deep struck gong, enormous, doomed, grief and majesty, never hysterical, instrumental, no lyrics`
+
+**Structure block:**
+```
+[Instrumental]
+[Mount: a deep struck gong and a rising choir swell, the pedal drops a step, one close horn howl far under it, 4 bars]
+[Hunt: the tune driven low by cellos, basses and low brass over a running dark ostinato, timpani and low war drums at double speed, the choir holding dark chords, 12 bars]
+[Eclipse: the tune sung by a full choir in low voices, answered a bar late by a second choir higher and a third higher still, like a crown being covered, the strings in dark tremolo, one falling four-note figure low in the cellos, 8 bars]
+[Hush: the ostinato down to its bare pulse, one held choir chord, one far gong and one bowed crystal glass, 4 bars]
+[Red: the tune in the full choir, strings, low brass and organ, grand and slow and enormous, the drums booming softly, a step higher in the last 4 bars, 8 bars]
+```
+(36 bars, same grid as the first half. Each section opens on a deep struck gong and a rising swell. It ends on the swell falling away and one soft tap so it loops.)
+
+**Full prompt:** The same tune and key as the court theme, now for the long dark red: the regent riding a hound of frost and silver across the moon as the light goes out of her crown, around 66 BPM in B minor but felt in double time, the percussion running at twice the speed while the harmony still changes every two bars. Every section opens on a deep struck gong under a rising wordless choir swell. The long rising tune is driven low by cellos, basses and low brass over a running dark ostinato, timpani and low war drums at double speed, the choir holding dark chords. It is then sung by a full choir in low voices and answered a bar late by a second choir higher and a third higher still, like a crown being covered, the strings in dark tremolo, with one quiet falling four-note figure low in the cellos like the hound's own tune. A quiet middle of the ostinato down to its bare pulse, one held choir chord, one far gong and one bowed crystal glass, then the whole tune in the full choir, strings, low brass and deep organ, grand, slow and enormous, the drums booming softly, rising a step in the last four bars. Dark, doomed and heavy, a long red dusk, never hysterical, never warm, never cheerful and never a metal riff, leaving room in the mix for sound effects. No lyrics (the choir is wordless), no electric guitars, no synth leads, no snare crack, no cymbal wash. Starts and ends on the swell and one soft tap so it loops.
+
+If a take of either half turns into pop, anime rock or EDM, add `no pop, no EDM, no guitar`. If the first half is too busy or too big, add `sparse, quiet, lots of space between phrases, regal and cold`. If the second half is not dark enough, add `low voices, dark tremolo strings, deep organ, slow and enormous`; if it turns warm or heroic, add `cold, minor, no major-key colour, no fanfare`; if it speeds up, add `same tempo, steady`.
 
 ---
 
